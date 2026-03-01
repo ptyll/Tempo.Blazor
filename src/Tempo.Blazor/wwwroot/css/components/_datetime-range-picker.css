@@ -1,0 +1,8 @@
+.tm-datetime-range-picker { display: flex; flex-direction: column; gap: var(--tm-space-2); }
+.tm-datetime-range-body   { display: flex; align-items: flex-start; gap: var(--tm-space-4); flex-wrap: wrap; }
+
+.tm-datetime-range-section { display: flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-datetime-range-label   { font-size: var(--tm-font-size-xs); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.tm-datetime-range-sep { font-size: var(--tm-font-size-xl); color: var(--tm-text-tertiary); padding-top: var(--tm-space-5); }
+.tm-datetime-range--invalid { /* validation styling handled by child components */ }

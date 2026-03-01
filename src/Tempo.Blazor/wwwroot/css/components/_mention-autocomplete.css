@@ -1,0 +1,125 @@
+/* ═══════════════════════════════════════════════════════════════
+   Mention Autocomplete - Dropdown for @mentions
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-rte-mention-dropdown {
+  position: absolute;
+  z-index: var(--tm-z-dropdown);
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  box-shadow: var(--tm-shadow-lg);
+  margin-top: var(--tm-space-1);
+}
+
+.tm-rte-mention-user {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-3);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast);
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-rte-mention-user:last-child {
+  border-bottom: none;
+}
+
+.tm-rte-mention-user:hover,
+.tm-rte-mention-user.tm-rte-mention-highlighted {
+  background: var(--tm-bg-muted);
+}
+
+.tm-rte-mention-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.tm-rte-mention-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--tm-color-primary);
+  color: var(--tm-color-white);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  flex-shrink: 0;
+}
+
+.tm-rte-mention-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tm-rte-mention-display-name {
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-rte-mention-username {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-rte-mention-empty {
+  padding: var(--tm-space-4);
+  text-align: center;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-tertiary);
+}
+
+/* Mention Chip (inside editor content) */
+.tm-rte-mention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: 2px var(--tm-space-2);
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  border-radius: var(--tm-radius-full);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  cursor: default;
+  vertical-align: middle;
+}
+
+.tm-rte-mention-chip-avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.tm-rte-mention-chip-avatar-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--tm-color-primary);
+  color: var(--tm-color-white);
+  font-size: 10px;
+}
+
+.tm-rte-mention-username {
+  color: var(--tm-color-primary);
+}

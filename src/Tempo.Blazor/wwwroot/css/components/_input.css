@@ -1,0 +1,214 @@
+.tm-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+}
+.tm-input-label {
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-primary);
+  line-height: var(--tm-line-height-tight);
+}
+.tm-input-label-required::after {
+  content: ' *';
+  color: var(--tm-color-danger);
+}
+.tm-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.tm-input {
+  width: 100%;
+  height: var(--tm-input-height-md);
+  padding: 0 var(--tm-space-3);
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  outline: none;
+  transition: border-color var(--tm-transition-fast),
+              box-shadow var(--tm-transition-fast);
+}
+.tm-input::placeholder { color: var(--tm-text-secondary); }
+/* Hide browser default clear button for search inputs */
+.tm-input::-webkit-search-decoration,
+.tm-input::-webkit-search-cancel-button,
+.tm-input::-webkit-search-results-button,
+.tm-input::-webkit-search-results-decoration { display: none; }
+.tm-input:focus {
+  border-color: var(--tm-border-color-focus);
+  box-shadow: var(--tm-shadow-focus);
+}
+/* Validation states */
+.tm-input-valid {
+  border-color: var(--tm-color-success) !important;
+  background-color: var(--tm-bg-surface);
+}
+.tm-input-valid:focus {
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15) !important;
+}
+.tm-input-error, .tm-input.input-error {
+  border-color: var(--tm-color-danger) !important;
+}
+.tm-input-error:focus {
+  box-shadow: var(--tm-shadow-focus-danger) !important;
+}
+
+/* Validation icons */
+.tm-input-with-validation-icon {
+  padding-right: 2.25rem;
+}
+.tm-input-validation-icon {
+  position: absolute;
+  right: var(--tm-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.tm-input-validation-success {
+  color: var(--tm-color-success);
+}
+.tm-input-validation-error {
+  color: var(--tm-color-danger);
+}
+.tm-input-disabled, .tm-input[disabled] {
+  background-color: var(--tm-color-gray-50);
+  color: var(--tm-text-disabled);
+  cursor: not-allowed;
+}
+.tm-input-readonly {
+  background-color: var(--tm-bg-surface-secondary);
+  cursor: default;
+}
+.tm-input-with-left-icon  { padding-left: 2.25rem; }
+.tm-input-with-right-icon { padding-right: 2.25rem; }
+.tm-input-left-icon,
+.tm-input-right-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: var(--tm-text-secondary);
+  pointer-events: none;
+}
+.tm-input-left-icon  { left: var(--tm-space-3); }
+.tm-input-right-icon { right: var(--tm-space-3); }
+.tm-input-help-text {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  line-height: var(--tm-line-height-tight);
+}
+.tm-input-error-message {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-danger);
+  line-height: var(--tm-line-height-tight);
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin-top: var(--tm-space-1);
+}
+.tm-input-error-message svg {
+  flex-shrink: 0;
+}
+
+/* Password toggle */
+.tm-password-toggle {
+  position: absolute;
+  right: var(--tm-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--tm-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--tm-radius-sm);
+  transition: color var(--tm-transition-fast);
+}
+.tm-password-toggle:hover { color: var(--tm-text-primary); }
+
+/* Search clear button */
+.tm-search-clear {
+  position: absolute;
+  right: var(--tm-space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--tm-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--tm-radius-sm);
+  transition: color var(--tm-transition-fast), background-color var(--tm-transition-fast);
+}
+.tm-search-clear:hover {
+  color: var(--tm-text-primary);
+  background-color: var(--tm-bg-surface-secondary);
+}
+.tm-search-clear:focus {
+  outline: none;
+  box-shadow: var(--tm-shadow-focus);
+}
+
+/* TextArea */
+.tm-textarea {
+  resize: vertical;
+  height: auto;
+  min-height: 5rem;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  line-height: var(--tm-line-height-normal);
+}
+
+/* Select */
+.tm-select-wrapper  { display: flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-select-label    { font-size: var(--tm-font-size-sm); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-primary); }
+.tm-select-container { position: relative; }
+.tm-select {
+  width: 100%;
+  height: var(--tm-input-height-md);
+  padding: 0 2.25rem 0 var(--tm-space-3);
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
+}
+.tm-select:focus   { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-shadow-focus); }
+.tm-select-error   { border-color: var(--tm-color-danger) !important; }
+.tm-select-disabled, .tm-select[disabled] { background-color: var(--tm-color-gray-50); cursor: not-allowed; }
+.tm-select-arrow {
+  position: absolute;
+  right: var(--tm-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--tm-text-secondary);
+  display: flex;
+  align-items: center;
+}
+.tm-select-error-message,
+.tm-select-help-text { font-size: var(--tm-font-size-xs); margin-top: var(--tm-space-1); }
+.tm-select-error-message { color: var(--tm-color-danger); }
+.tm-select-help-text     { color: var(--tm-text-secondary); }

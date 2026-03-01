@@ -1,0 +1,151 @@
+@namespace Tempo.Blazor.Components.Forms
+@using Tempo.Blazor.Models
+
+<div class="tm-dynamic-form @ColumnsCss">
+    @foreach (var field in Fields)
+    {
+        var fieldValue = GetFieldValue(field);
+        var isDisabled = ReadOnly || field.Disabled;
+
+        <div class="tm-dynamic-form__field">
+            @if (field.FieldType != DynamicFieldType.Checkbox)
+            {
+                <label class="tm-input-label">
+                    @field.Label
+                    @if (field.Required)
+                    {
+                        <span class="tm-dynamic-form__required">*</span>
+                    }
+                </label>
+            }
+
+            @switch (field.FieldType)
+            {
+                case DynamicFieldType.Text:
+                    <input type="text"
+                           value="@fieldValue"
+                           placeholder="@field.Placeholder"
+                           disabled="@isDisabled"
+                           class="tm-dynamic-form__input"
+                           @onchange="@(e => HandleChange(field.Name, e.Value))" />
+                    break;
+
+                case DynamicFieldType.TextArea:
+                    <textarea placeholder="@field.Placeholder"
+                              disabled="@isDisabled"
+                              class="tm-dynamic-form__textarea"
+                              @onchange="@(e => HandleChange(field.Name, e.Value))">@fieldValue</textarea>
+                    break;
+
+                case DynamicFieldType.Number:
+                    <input type="number"
+                           value="@fieldValue"
+                           placeholder="@field.Placeholder"
+                           disabled="@isDisabled"
+                           class="tm-dynamic-form__input"
+                           @onchange="@(e => HandleChange(field.Name, e.Value))" />
+                    break;
+
+                case DynamicFieldType.Date:
+                    <input type="date"
+                           value="@fieldValue"
+                           disabled="@isDisabled"
+                           class="tm-dynamic-form__input"
+                           @onchange="@(e => HandleChange(field.Name, e.Value))" />
+                    break;
+
+                case DynamicFieldType.DateTime:
+                    <input type="datetime-local"
+                           value="@fieldValue"
+                           disabled="@isDisabled"
+                           class="tm-dynamic-form__input"
+                           @onchange="@(e => HandleChange(field.Name, e.Value))" />
+                    break;
+
+                case DynamicFieldType.Time:
+                    <input type="time"
+                           value="@fieldValue"
+                           disabled="@isDisabled"
+                           class="tm-dynamic-form__input"
+                           @onchange="@(e => HandleChange(field.Name, e.Value))" />
+                    break;
+
+                case DynamicFieldType.Checkbox:
+                    <label class="tm-dynamic-form__checkbox-label">
+                        <input type="checkbox"
+                               checked="@(fieldValue == "true" || fieldValue == "True")"
+                               disabled="@isDisabled"
+                               class="tm-dynamic-form__checkbox"
+                               @onchange="@(e => HandleChange(field.Name, e.Value))" />
+                        <span>@field.Label</span>
+                        @if (field.Required)
+                        {
+                            <span class="tm-dynamic-form__required">*</span>
+                        }
+                    </label>
+                    break;
+
+                case DynamicFieldType.Select:
+                    <select disabled="@isDisabled"
+                            class="tm-dynamic-form__select"
+                            @onchange="@(e => HandleChange(field.Name, e.Value))">
+                        <option value="">@(field.Placeholder ?? "-- Select --")</option>
+                        @if (field.Options is not null)
+                        {
+                            @foreach (var opt in field.Options)
+                            {
+                                <option value="@opt.Value" selected="@(opt.Value == fieldValue)">@opt.Label</option>
+                            }
+                        }
+                    </select>
+                    break;
+            }
+
+            @if (!string.IsNullOrEmpty(field.HelpText))
+            {
+                <div class="tm-dynamic-form__help">@field.HelpText</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Field definitions.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<DynamicFieldDefinition> Fields { get; set; } = [];
+
+    /// <summary>Current field values keyed by field name.</summary>
+    [Parameter] public Dictionary<string, object?> Values { get; set; } = new();
+
+    /// <summary>Fires when values change.</summary>
+    [Parameter] public EventCallback<Dictionary<string, object?>> ValuesChanged { get; set; }
+
+    /// <summary>Make all fields read-only.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Number of columns (1–3, default 1).</summary>
+    [Parameter] public int Columns { get; set; } = 1;
+
+    /// <summary>Fires when an individual field changes.</summary>
+    [Parameter] public EventCallback<(string FieldName, object? Value)> OnFieldChanged { get; set; }
+
+    private string ColumnsCss => Columns switch
+    {
+        2 => "tm-dynamic-form--2col",
+        3 => "tm-dynamic-form--3col",
+        _ => ""
+    };
+
+    private string? GetFieldValue(DynamicFieldDefinition field)
+    {
+        if (Values.TryGetValue(field.Name, out var val) && val is not null)
+            return val.ToString();
+        return field.DefaultValue;
+    }
+
+    private async Task HandleChange(string fieldName, object? value)
+    {
+        Values[fieldName] = value;
+        await ValuesChanged.InvokeAsync(Values);
+        await OnFieldChanged.InvokeAsync((fieldName, value));
+    }
+}

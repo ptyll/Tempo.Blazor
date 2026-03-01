@@ -1,0 +1,108 @@
+@namespace Tempo.Blazor.Components.Workflow
+@using System.Globalization
+
+<div class="tm-wf-minimap">
+    <svg viewBox="@ComputedViewBox"
+         preserveAspectRatio="xMidYMid meet"
+         width="100%"
+         height="100%"
+         @onclick="@(() => OnNavigate.InvokeAsync())">
+
+        @if (Definition is not null)
+        {
+            @* Transitions as simple lines *@
+            @foreach (var t in Definition.Transitions)
+            {
+                var from = Definition.States.FirstOrDefault(s => s.Id == t.FromStateId);
+                var to = Definition.States.FirstOrDefault(s => s.Id == t.ToStateId);
+                if (from is null || to is null) continue;
+
+                <line class="tm-wf-minimap__transition"
+                      x1="@F(from.X + 70)" y1="@F(from.Y + 25)"
+                      x2="@F(to.X + 70)" y2="@F(to.Y + 25)"
+                      stroke="#d1d5db" stroke-width="2" />
+            }
+
+            @* States as small rectangles *@
+            @foreach (var state in Definition.States)
+            {
+                var fill = state.Color ?? GetDefaultColor(state.Type);
+                <rect class="tm-wf-minimap__state"
+                      x="@F(state.X)" y="@F(state.Y)"
+                      width="140" height="50"
+                      rx="6" ry="6"
+                      fill="@fill"
+                      stroke="#9ca3af"
+                      stroke-width="1" />
+            }
+
+            @* Viewport rectangle *@
+            <rect class="tm-wf-minimap__viewport"
+                  x="@F(ViewBoxX)" y="@F(ViewBoxY)"
+                  width="@F(ViewBoxW)" height="@F(ViewBoxH)"
+                  fill="rgba(59, 130, 246, 0.08)"
+                  stroke="#3b82f6"
+                  stroke-width="2"
+                  stroke-dasharray="6 3" />
+        }
+    </svg>
+</div>
+
+@code {
+    /// <summary>The workflow definition to display in the minimap.</summary>
+    [Parameter] public WorkflowCanvasDefinition? Definition { get; set; }
+
+    /// <summary>Current viewport X offset.</summary>
+    [Parameter] public double ViewBoxX { get; set; }
+
+    /// <summary>Current viewport Y offset.</summary>
+    [Parameter] public double ViewBoxY { get; set; }
+
+    /// <summary>Current viewport width.</summary>
+    [Parameter] public double ViewBoxW { get; set; } = 800;
+
+    /// <summary>Current viewport height.</summary>
+    [Parameter] public double ViewBoxH { get; set; } = 500;
+
+    /// <summary>Fires when the user clicks on the minimap to navigate.</summary>
+    [Parameter] public EventCallback OnNavigate { get; set; }
+
+    private string ComputedViewBox
+    {
+        get
+        {
+            if (Definition is null || Definition.States.Count == 0)
+                return "0 0 800 500";
+
+            double minX = double.MaxValue, minY = double.MaxValue;
+            double maxX = double.MinValue, maxY = double.MinValue;
+
+            foreach (var s in Definition.States)
+            {
+                minX = Math.Min(minX, s.X);
+                minY = Math.Min(minY, s.Y);
+                maxX = Math.Max(maxX, s.X + 140);
+                maxY = Math.Max(maxY, s.Y + 50);
+            }
+
+            // Also include the viewport rect
+            minX = Math.Min(minX, ViewBoxX);
+            minY = Math.Min(minY, ViewBoxY);
+            maxX = Math.Max(maxX, ViewBoxX + ViewBoxW);
+            maxY = Math.Max(maxY, ViewBoxY + ViewBoxH);
+
+            var padding = 20.0;
+            return $"{F(minX - padding)} {F(minY - padding)} {F(maxX - minX + padding * 2)} {F(maxY - minY + padding * 2)}";
+        }
+    }
+
+    private static string F(double v) =>
+        v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string GetDefaultColor(CanvasStateType type) => type switch
+    {
+        CanvasStateType.Initial => "#dbeafe",
+        CanvasStateType.Final => "#dcfce7",
+        _ => "#f3f4f6"
+    };
+}

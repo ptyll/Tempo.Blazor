@@ -1,0 +1,80 @@
+@namespace Tempo.Blazor.Components.TreeView
+@typeparam TKey
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Feedback
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="tm-tree-view">
+    @foreach (var node in Nodes ?? Enumerable.Empty<ITreeNode<TKey>>())
+    {
+        @RenderNode(node, 0)
+    }
+</div>
+
+@code {
+    private readonly HashSet<object?> _expanded = new();
+
+    /// <summary>Root nodes of the tree.</summary>
+    [Parameter] public IEnumerable<ITreeNode<TKey>>? Nodes { get; set; }
+
+    /// <summary>Fires when a tree node label is clicked.</summary>
+    [Parameter] public EventCallback<ITreeNode<TKey>> OnNodeSelect { get; set; }
+
+    /// <summary>Fires when a tree node is expanded or collapsed.</summary>
+    [Parameter] public EventCallback<ITreeNode<TKey>> OnNodeExpand { get; set; }
+
+    private void ToggleExpand(ITreeNode<TKey> node)
+    {
+        var key = (object?)node.Id;
+        if (!_expanded.Add(key))
+            _expanded.Remove(key);
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderNode(ITreeNode<TKey> node, int depth) => b =>
+    {
+        int seq = 0;
+
+        b.OpenElement(seq++, "div");
+        b.AddAttribute(seq++, "class", "tm-tree-node");
+
+        // Expand toggle button (non-leaf nodes only)
+        if (!node.IsLeaf)
+        {
+            b.OpenElement(seq++, "button");
+            b.AddAttribute(seq++, "class", "tm-tree-expand");
+            b.AddAttribute(seq++, "onclick",
+                EventCallback.Factory.Create<MouseEventArgs>(this, () => ToggleExpand(node)));
+            b.AddContent(seq++, _expanded.Contains((object?)node.Id) ? "▼" : "▶");
+            b.CloseElement();
+        }
+
+        // Node label (clickable)
+        b.OpenElement(seq++, "span");
+        b.AddAttribute(seq++, "class", "tm-tree-node-label");
+        b.AddAttribute(seq++, "onclick",
+            EventCallback.Factory.Create<MouseEventArgs>(this, () => OnNodeSelect.InvokeAsync(node)));
+        b.AddContent(seq++, node.Label);
+        b.CloseElement();
+
+        // Loading spinner
+        if (node.IsLoading)
+        {
+            b.OpenComponent<TmSpinner>(seq++);
+            b.AddAttribute(seq++, "Size", SpinnerSize.Sm);
+            b.CloseComponent();
+        }
+
+        b.CloseElement(); // .tm-tree-node
+
+        // Render children when expanded
+        if (!node.IsLeaf && _expanded.Contains((object?)node.Id) && node.Children.Count > 0)
+        {
+            foreach (var child in node.Children)
+            {
+                var captured = child;
+                b.AddContent(seq++, RenderNode(captured, depth + 1));
+            }
+        }
+    };
+}

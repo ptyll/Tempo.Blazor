@@ -1,0 +1,83 @@
+@namespace Tempo.Blazor.Components.Pickers
+
+<div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-picker-label">@Label</label>
+    }
+
+    <div class="tm-time-range-body">
+        <div class="tm-time-range-section tm-time-range-from">
+            <span class="tm-time-range-label">@Loc["TmTimeRangePicker_From"]</span>
+            <TmTimeInput Value="@Value.Start"
+                         ValueChanged="OnStartChanged"
+                         ShowSeconds="@ShowSeconds"
+                         Disabled="@Disabled" />
+        </div>
+
+        <span class="tm-time-range-sep" aria-hidden="true">–</span>
+
+        <div class="tm-time-range-section tm-time-range-to">
+            <span class="tm-time-range-label">@Loc["TmTimeRangePicker_To"]</span>
+            <TmTimeInput Value="@Value.End"
+                         ValueChanged="OnEndChanged"
+                         ShowSeconds="@ShowSeconds"
+                         Disabled="@Disabled" />
+        </div>
+
+        @if (ShowSwapButton && !Disabled)
+        {
+            <button type="button"
+                    class="tm-time-range-swap-btn tm-btn-icon"
+                    aria-label="@Loc["TmTimeRangePicker_Swap"]"
+                    title="@Loc["TmTimeRangePicker_Swap"]"
+                    @onclick="SwapValues">
+                &#8597;
+            </button>
+        }
+    </div>
+
+    @if (IsInvalid)
+    {
+        <span class="tm-field-error" role="alert">@Loc["TmTimeRangePicker_InvalidRange"]</span>
+    }
+
+    @if (ShowDuration && Value.Start.HasValue && Value.End.HasValue && !IsInvalid)
+    {
+        <span class="tm-time-range-duration">
+            @Loc["TmTimeRangePicker_Duration"]: @FormatDuration()
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter] public (TimeOnly? Start, TimeOnly? End) Value        { get; set; }
+    [Parameter] public EventCallback<(TimeOnly? Start, TimeOnly? End)> ValueChanged { get; set; }
+    [Parameter] public bool    ShowDuration   { get; set; }
+    [Parameter] public bool    ShowSwapButton { get; set; }
+    [Parameter] public bool    ShowSeconds    { get; set; }
+    [Parameter] public string? Label          { get; set; }
+    [Parameter] public bool    Disabled       { get; set; }
+    [Parameter] public string? Class          { get; set; }
+
+    private bool IsInvalid =>
+        Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;
+
+    private async Task OnStartChanged(TimeOnly? t)
+        => await ValueChanged.InvokeAsync((t, Value.End));
+
+    private async Task OnEndChanged(TimeOnly? t)
+        => await ValueChanged.InvokeAsync((Value.Start, t));
+
+    private async Task SwapValues()
+        => await ValueChanged.InvokeAsync((Value.End, Value.Start));
+
+    private string FormatDuration()
+    {
+        if (!Value.Start.HasValue || !Value.End.HasValue) return string.Empty;
+        var span = Value.End.Value - Value.Start.Value;
+        if (span.Hours > 0)
+            return $"{span.Hours}h {span.Minutes:D2}m";
+        return $"{span.Minutes}m";
+    }
+}

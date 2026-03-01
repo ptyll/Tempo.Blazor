@@ -1,0 +1,12 @@
+.tm-spinner {
+  animation: tm-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+.tm-spinner-xs { width: 0.875rem; height: 0.875rem; }
+.tm-spinner-sm { width: 1.125rem; height: 1.125rem; }
+.tm-spinner-md { width: 1.5rem;   height: 1.5rem; }
+.tm-spinner-lg { width: 2.5rem;   height: 2.5rem; }
+.tm-spinner-current { color: currentColor; }
+.tm-spinner-primary { color: var(--tm-color-primary); }
+.tm-spinner-white   { color: var(--tm-color-white); }
+.tm-spinner-muted   { color: var(--tm-text-secondary); }

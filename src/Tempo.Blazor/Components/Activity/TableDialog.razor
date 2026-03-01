@@ -1,0 +1,155 @@
+@namespace Tempo.Blazor.Components.Activity
+
+@if (IsVisible)
+{
+    <div class="tm-rte-table-dialog">
+        <div class="tm-rte-table-backdrop" @onclick="OnBackdropClick"></div>
+        <div class="tm-rte-table-content">
+            <div class="tm-rte-table-header">
+                <h5>@Loc["TmRichEditor_TableDialog_Title"]</h5>
+                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
+            </div>
+            <div class="tm-rte-table-body">
+                <div class="tm-rte-form-row">
+                    <div class="tm-rte-form-group">
+                        <label for="table-rows-input">@Loc["TmRichEditor_TableDialog_Rows"]</label>
+                        <input type="number"
+                               id="table-rows-input"
+                               class="tm-rte-table-rows-input"
+                               min="1"
+                               max="20"
+                               @bind="_rows" />
+                    </div>
+                    <div class="tm-rte-form-group">
+                        <label for="table-cols-input">@Loc["TmRichEditor_TableDialog_Cols"]</label>
+                        <input type="number"
+                               id="table-cols-input"
+                               class="tm-rte-table-cols-input"
+                               min="1"
+                               max="10"
+                               @bind="_cols" />
+                    </div>
+                </div>
+                
+                @* Visual grid preview *@
+                <div class="tm-rte-table-preview">
+                    <label>@Loc["TmRichEditor_TableDialog_Preview"]</label>
+                    <div class="tm-rte-table-grid" @onmouseleave="ClearHover">
+                        @for (int r = 1; r <= 8; r++)
+                        {
+                            <div class="tm-rte-table-grid-row">
+                                @for (int c = 1; c <= 6; c++)
+                                {
+                                    var row = r;
+                                    var col = c;
+                                    <div class="tm-rte-table-grid-cell @GetCellClass(row, col)"
+                                         @onmouseover="() => OnCellHover(row, col)"
+                                         @onclick="() => SelectGridSize(row, col)">
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="tm-rte-table-size-label">@_rows × @_cols</div>
+                </div>
+            </div>
+            <div class="tm-rte-table-footer">
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
+                    @Loc["Tm_Cancel"]
+                </button>
+                <button type="button" 
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
+                        disabled="@(!IsValid())"
+                        @onclick="InsertTable">
+                    @Loc["TmRichEditor_TableDialog_Insert"]
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Whether the dialog is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+    
+    /// <summary>
+    /// Whether to close on backdrop click.
+    /// </summary>
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    
+    /// <summary>
+    /// Callback when table is confirmed.
+    /// </summary>
+    [Parameter] public EventCallback<(int Rows, int Cols)> OnConfirm { get; set; }
+    
+    /// <summary>
+    /// Callback when dialog is cancelled.
+    /// </summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private int _rows = 3;
+    private int _cols = 3;
+    private int _hoverRow = 0;
+    private int _hoverCol = 0;
+
+    private bool IsValid() => _rows > 0 && _rows <= 20 && _cols > 0 && _cols <= 10;
+
+    private void OnCellHover(int row, int col)
+    {
+        _hoverRow = row;
+        _hoverCol = col;
+    }
+
+    private void ClearHover()
+    {
+        _hoverRow = 0;
+        _hoverCol = 0;
+    }
+
+    private string GetCellClass(int row, int col)
+    {
+        var isSelected = row <= _rows && col <= _cols;
+        var isHovered = row <= _hoverRow && col <= _hoverCol;
+        
+        if (isHovered && _hoverRow > 0) return "hovered";
+        if (isSelected) return "selected";
+        return "";
+    }
+
+    private void SelectGridSize(int row, int col)
+    {
+        _rows = row;
+        _cols = col;
+    }
+
+    private async Task InsertTable()
+    {
+        if (!IsValid()) return;
+
+        await OnConfirm.InvokeAsync((_rows, _cols));
+        Reset();
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task OnCancelClick()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private void Reset()
+    {
+        _rows = 3;
+        _cols = 3;
+        _hoverRow = 0;
+        _hoverCol = 0;
+    }
+}

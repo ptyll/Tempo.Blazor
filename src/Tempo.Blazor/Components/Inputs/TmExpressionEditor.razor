@@ -1,0 +1,81 @@
+@namespace Tempo.Blazor.Components.Inputs
+
+<div class="tm-expression-editor @(Error is not null ? "tm-expression-editor--error" : "") @Class">
+    @if (Label is not null)
+    {
+        <label class="tm-expression-editor__label">@Label</label>
+    }
+
+    <div class="tm-expression-editor__body">
+        <textarea class="tm-expression-editor__textarea"
+                  value="@Value"
+                  placeholder="@Placeholder"
+                  disabled="@Disabled"
+                  rows="4"
+                  @oninput="HandleInput" />
+
+        <div class="tm-expression-editor__panel">
+            <div class="tm-expression-editor__panel-title">Variables</div>
+            @if (Variables is not null)
+            {
+                @foreach (var v in Variables)
+                {
+                    <button type="button"
+                            class="tm-expression-editor__var"
+                            title="@v.Description"
+                            disabled="@Disabled"
+                            @onclick="@(() => InsertVariable(v))">
+                        <span class="tm-expression-editor__var-name">@v.Name</span>
+                        <span class="tm-expression-editor__var-desc">@v.Description</span>
+                        <span class="tm-expression-editor__var-type">@v.Type</span>
+                    </button>
+                }
+            }
+        </div>
+    </div>
+
+    @if (Error is not null)
+    {
+        <div class="tm-expression-editor__error">@Error</div>
+    }
+</div>
+
+@code {
+    /// <summary>Current expression text.</summary>
+    [Parameter] public string Value { get; set; } = "";
+
+    /// <summary>Fires when the expression changes.</summary>
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>Available variables for insertion.</summary>
+    [Parameter] public IReadOnlyList<ExpressionVariable>? Variables { get; set; }
+
+    /// <summary>Input placeholder text.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Label above the editor.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Disable the editor.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Error message to display.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private async Task HandleInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString() ?? "";
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task InsertVariable(ExpressionVariable variable)
+    {
+        if (Disabled) return;
+        var token = "{{" + variable.Name + "}}";
+        Value = (Value ?? "") + token;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

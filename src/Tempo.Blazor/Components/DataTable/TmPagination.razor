@@ -1,0 +1,106 @@
+@namespace Tempo.Blazor.Components.DataTable
+
+<div class="tm-pagination">
+    <span class="tm-pagination-info">
+        @Loc["TmDataTable_Pagination", StartItem, EndItem, TotalCount]
+    </span>
+
+    <div class="tm-pagination-controls">
+        <button class="tm-pagination-btn tm-pagination-prev"
+                @onclick="PrevPage"
+                disabled="@(CurrentPage <= 1)"
+                aria-label="@Loc["Tm_Previous"]">
+            &#8249;
+        </button>
+
+        @foreach (var pageNum in GetPageNumbers())
+        {
+            @if (pageNum == -1)
+            {
+                <span class="tm-pagination-ellipsis">&#8230;</span>
+            }
+            else
+            {
+                <button class="tm-page-btn @(pageNum == CurrentPage ? "tm-page-btn-active" : "")"
+                        @onclick="() => GoToPage(pageNum)">
+                    @pageNum
+                </button>
+            }
+        }
+
+        <button class="tm-pagination-btn tm-pagination-next"
+                @onclick="NextPage"
+                disabled="@(CurrentPage >= TotalPages)"
+                aria-label="@Loc["Tm_Next"]">
+            &#8250;
+        </button>
+    </div>
+
+    @if (PageSizeOptions is { Count: > 0 })
+    {
+        <div class="tm-pagination-size">
+            <label class="tm-pagination-size-label">@Loc["TmDataTable_PageSize"]</label>
+            <select class="tm-pagination-page-size"
+                    value="@PageSize"
+                    @onchange="OnPageSizeSelectChange">
+                @foreach (var size in PageSizeOptions)
+                {
+                    <option value="@size" selected="@(size == PageSize)">@size</option>
+                }
+            </select>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; }
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public int PageSize { get; set; } = 25;
+    [Parameter] public IReadOnlyList<int>? PageSizeOptions { get; set; }
+    [Parameter] public EventCallback<int> OnPageChange { get; set; }
+    [Parameter] public EventCallback<int> OnPageSizeChange { get; set; }
+
+    private int StartItem => TotalCount == 0 ? 0 : (CurrentPage - 1) * PageSize + 1;
+    private int EndItem => Math.Min(CurrentPage * PageSize, TotalCount);
+
+    private Task PrevPage() => GoToPage(CurrentPage - 1);
+    private Task NextPage() => GoToPage(CurrentPage + 1);
+
+    private Task GoToPage(int page)
+    {
+        var clamped = Math.Clamp(page, 1, Math.Max(1, TotalPages));
+        return OnPageChange.InvokeAsync(clamped);
+    }
+
+    private Task OnPageSizeSelectChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size))
+            return OnPageSizeChange.InvokeAsync(size);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Computes which page numbers to show. -1 = ellipsis placeholder.</summary>
+    private IEnumerable<int> GetPageNumbers()
+    {
+        if (TotalPages <= 7)
+        {
+            return Enumerable.Range(1, TotalPages);
+        }
+
+        var result = new List<int>();
+        const int window = 2; // pages around current
+
+        result.Add(1);
+
+        int lo = Math.Max(2, CurrentPage - window);
+        int hi = Math.Min(TotalPages - 1, CurrentPage + window);
+
+        if (lo > 2) result.Add(-1); // left ellipsis
+        for (int i = lo; i <= hi; i++) result.Add(i);
+        if (hi < TotalPages - 1) result.Add(-1); // right ellipsis
+
+        result.Add(TotalPages);
+        return result;
+    }
+}

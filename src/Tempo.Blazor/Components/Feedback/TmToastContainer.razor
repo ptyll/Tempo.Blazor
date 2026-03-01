@@ -1,0 +1,86 @@
+@namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Services
+@using Tempo.Blazor.Components.Icons
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="tm-toast-container @PositionClass">
+    @foreach (var toast in VisibleToasts)
+    {
+        <div class="tm-toast tm-toast--@toast.Severity.ToString().ToLowerInvariant()" role="alert">
+            <div class="tm-toast-body">
+                <span class="tm-toast-icon">
+                    <TmIcon Name="@GetIcon(toast.Severity)" Size="IconSize.Sm" />
+                </span>
+                <div class="tm-toast-content">
+                    @if (!string.IsNullOrEmpty(toast.Title))
+                    {
+                        <div class="tm-toast-title">@toast.Title</div>
+                    }
+                    <div class="tm-toast-message">@toast.Message</div>
+                </div>
+                <button class="tm-toast-dismiss"
+                        @onclick="() => Dismiss(toast.Id)"
+                        aria-label="@Loc["TmToast_Close"]">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
+                </button>
+            </div>
+            <div class="tm-toast-progress">
+                <div class="tm-toast-progress-bar"
+                     style="animation-duration: @(toast.Duration)ms">
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Position of the toast container on screen.</summary>
+    [Parameter] public ToastPosition Position { get; set; } = ToastPosition.TopRight;
+
+    /// <summary>Maximum number of toasts visible at once.</summary>
+    [Parameter] public int MaxVisible { get; set; } = 5;
+
+    private IReadOnlyList<ToastInstance> VisibleToasts =>
+        ToastService.Toasts
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(MaxVisible)
+            .Reverse()
+            .ToList();
+
+    private string PositionClass => Position switch
+    {
+        ToastPosition.TopLeft => "tm-toast-container--top-left",
+        ToastPosition.BottomRight => "tm-toast-container--bottom-right",
+        ToastPosition.BottomLeft => "tm-toast-container--bottom-left",
+        _ => "tm-toast-container--top-right"
+    };
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnChange += HandleChange;
+    }
+
+    private void HandleChange()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Dismiss(string id)
+    {
+        ToastService.Remove(id);
+    }
+
+    private static string GetIcon(ToastSeverity severity) => severity switch
+    {
+        ToastSeverity.Success => IconNames.CheckCircle,
+        ToastSeverity.Warning => IconNames.AlertTriangle,
+        ToastSeverity.Error => IconNames.AlertCircle,
+        _ => IconNames.Info
+    };
+
+    public void Dispose()
+    {
+        ToastService.OnChange -= HandleChange;
+    }
+}

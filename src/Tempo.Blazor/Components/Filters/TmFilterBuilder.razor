@@ -1,0 +1,258 @@
+@namespace Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Pickers
+
+<div class="tm-filter-builder @Class">
+    @* Active filter chips *@
+    <div class="tm-filter-chips">
+        @foreach (var f in _filters)
+        {
+            var filter = f;
+            <TmFilterChip Filter="filter"
+                          OnRemove="RemoveFilter"
+                          OnEdit="EditFilter" />
+        }
+
+        @if (_filters.Count > 0 && ShowClearAll)
+        {
+            <button type="button" class="tm-filter-clear-all" @onclick="ClearAllFilters">
+                @Loc["Tm_Clear"]
+            </button>
+        }
+    </div>
+
+    @* Add filter button *@
+    @if (!_showFieldPicker)
+    {
+        <button type="button" class="tm-filter-builder-add" @onclick="OpenFieldPicker">
+            + @Loc["Tm_Add"]
+        </button>
+    }
+
+    @* Field picker *@
+    @if (_showFieldPicker && _editingFilter is null)
+    {
+        <div class="tm-filter-field-picker">
+            @foreach (var def in FilterDefinitions)
+            {
+                var d = def;
+                <button type="button" class="tm-filter-field-option" @onclick="() => SelectField(d)">
+                    @d.FieldLabel
+                </button>
+            }
+            <button type="button" class="tm-filter-cancel" @onclick="Cancel">
+                @Loc["Tm_Cancel"]
+            </button>
+        </div>
+    }
+
+    @* Filter editor *@
+    @if (_selectedDefinition is not null)
+    {
+        <div class="tm-filter-editor">
+            <span class="tm-filter-editor-field">@_selectedDefinition.FieldLabel</span>
+
+            <select class="tm-filter-operator-select"
+                    value="@_selectedOperator"
+                    @onchange="e => _selectedOperator = Enum.Parse<FilterOperator>(e.Value!.ToString()!)">
+                @foreach (var op in GetOperatorsFor(_selectedDefinition.FieldType))
+                {
+                    <option value="@op">@FormatOperator(op)</option>
+                }
+            </select>
+
+            @if (!IsEmptyOperator(_selectedOperator))
+            {
+                @if (_selectedDefinition.FieldType == FilterFieldType.Date)
+                {
+                    <TmDatePicker Value="_dateValue"
+                                  ValueChanged="d => _dateValue = d"
+                                  Class="tm-filter-value-input" />
+                }
+                else if (_selectedDefinition.FieldType == FilterFieldType.Select
+                      || _selectedDefinition.FieldType == FilterFieldType.MultiSelect)
+                {
+                    <select class="tm-filter-select tm-filter-value-input"
+                            value="@_textValue"
+                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
+                        <option value="">@Loc["Tm_Select"]</option>
+                        @if (_selectedDefinition.Options is not null)
+                        {
+                            @foreach (var opt in _selectedDefinition.Options)
+                            {
+                                <option value="@opt.Value">@opt.Label</option>
+                            }
+                        }
+                    </select>
+                }
+                else if (_selectedDefinition.FieldType == FilterFieldType.Boolean)
+                {
+                    <select class="tm-filter-select tm-filter-value-input"
+                            value="@_textValue"
+                            @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty">
+                        <option value="true">@Loc["Tm_Yes"]</option>
+                        <option value="false">@Loc["Tm_No"]</option>
+                    </select>
+                }
+                else
+                {
+                    <input type="@GetInputType(_selectedDefinition.FieldType)"
+                           class="tm-filter-value-input"
+                           value="@_textValue"
+                           @onchange="e => _textValue = e.Value?.ToString() ?? string.Empty" />
+                }
+            }
+
+            <button type="button" class="tm-filter-apply" @onclick="ApplyFilter">
+                @Loc["Tm_Apply"]
+            </button>
+            <button type="button" class="tm-filter-cancel" @onclick="Cancel">
+                @Loc["Tm_Cancel"]
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Definitions of filterable fields.</summary>
+    [Parameter] public IReadOnlyList<FilterDefinition> FilterDefinitions { get; set; } = [];
+
+    /// <summary>Currently applied filters (initial value).</summary>
+    [Parameter] public IReadOnlyList<ActiveFilter> ActiveFilters { get; set; } = [];
+
+    /// <summary>Fires whenever the filter list changes.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<ActiveFilter>> OnFiltersChanged { get; set; }
+
+    /// <summary>Show the "Clear all" button when filters are active.</summary>
+    [Parameter] public bool ShowClearAll { get; set; } = true;
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private List<ActiveFilter>   _filters          = [];
+    private bool                 _showFieldPicker;
+    private FilterDefinition?    _selectedDefinition;
+    private ActiveFilter?        _editingFilter;
+    private FilterOperator       _selectedOperator  = FilterOperator.Contains;
+    private string               _textValue         = string.Empty;
+    private DateOnly?            _dateValue;
+
+    protected override void OnParametersSet()
+    {
+        if (!_filters.Any() && ActiveFilters.Any())
+            _filters = [.. ActiveFilters];
+    }
+
+    private void OpenFieldPicker()
+    {
+        _showFieldPicker    = true;
+        _selectedDefinition = null;
+        _editingFilter      = null;
+        _textValue          = string.Empty;
+        _dateValue          = null;
+    }
+
+    private void SelectField(FilterDefinition def)
+    {
+        _selectedDefinition = def;
+        _selectedOperator   = GetOperatorsFor(def.FieldType).First();
+        _textValue          = string.Empty;
+        _dateValue          = null;
+    }
+
+    private void EditFilter(ActiveFilter filter)
+    {
+        _editingFilter      = filter;
+        _selectedDefinition = FilterDefinitions.FirstOrDefault(d => d.FieldName == filter.FieldName);
+        _selectedOperator   = filter.Operator;
+        _textValue          = filter.Value?.ToString() ?? string.Empty;
+        _showFieldPicker    = true;
+    }
+
+    private async Task ApplyFilter()
+    {
+        if (_selectedDefinition is null) return;
+
+        object? value       = _selectedDefinition.FieldType == FilterFieldType.Date ? _dateValue : _textValue;
+        string  displayVal  = _selectedDefinition.FieldType == FilterFieldType.Date
+            ? _dateValue?.ToString("d") ?? string.Empty
+            : _textValue;
+
+        var newFilter = new ActiveFilter(
+            _selectedDefinition.FieldName,
+            _selectedDefinition.FieldLabel,
+            _selectedOperator,
+            value,
+            displayVal);
+
+        if (_editingFilter is not null)
+            _filters.Remove(_editingFilter);
+
+        _filters.Add(newFilter);
+        await NotifyChanged();
+        Cancel();
+    }
+
+    private async Task RemoveFilter(ActiveFilter filter)
+    {
+        _filters.Remove(filter);
+        await NotifyChanged();
+    }
+
+    private async Task ClearAllFilters()
+    {
+        _filters.Clear();
+        await NotifyChanged();
+    }
+
+    private void Cancel()
+    {
+        _showFieldPicker    = false;
+        _selectedDefinition = null;
+        _editingFilter      = null;
+        _textValue          = string.Empty;
+        _dateValue          = null;
+    }
+
+    private Task NotifyChanged() => OnFiltersChanged.InvokeAsync(_filters.AsReadOnly());
+
+    private static IEnumerable<FilterOperator> GetOperatorsFor(FilterFieldType type) => type switch
+    {
+        FilterFieldType.Text        => [FilterOperator.Contains, FilterOperator.NotContains, FilterOperator.Equals, FilterOperator.NotEquals, FilterOperator.IsEmpty, FilterOperator.IsNotEmpty],
+        FilterFieldType.Number      => [FilterOperator.Equals, FilterOperator.NotEquals, FilterOperator.GreaterThan, FilterOperator.LessThan, FilterOperator.GreaterOrEqual, FilterOperator.LessOrEqual, FilterOperator.Between],
+        FilterFieldType.Date        => [FilterOperator.Equals, FilterOperator.GreaterThan, FilterOperator.LessThan, FilterOperator.GreaterOrEqual, FilterOperator.LessOrEqual, FilterOperator.Between],
+        FilterFieldType.DateTime    => [FilterOperator.Equals, FilterOperator.GreaterThan, FilterOperator.LessThan, FilterOperator.GreaterOrEqual, FilterOperator.LessOrEqual],
+        FilterFieldType.Boolean     => [FilterOperator.Equals],
+        FilterFieldType.Select      => [FilterOperator.Equals, FilterOperator.NotEquals],
+        FilterFieldType.MultiSelect => [FilterOperator.In, FilterOperator.NotIn],
+        _                           => [FilterOperator.Equals],
+    };
+
+    private static bool IsEmptyOperator(FilterOperator op) =>
+        op is FilterOperator.IsEmpty or FilterOperator.IsNotEmpty;
+
+    private static string GetInputType(FilterFieldType type) => type switch
+    {
+        FilterFieldType.Number   => "number",
+        FilterFieldType.DateTime => "datetime-local",
+        _                        => "text",
+    };
+
+    private string FormatOperator(FilterOperator op) => op switch
+    {
+        FilterOperator.Contains      => Loc["TmFilter_Contains"],
+        FilterOperator.NotContains   => Loc["TmFilter_NotContains"],
+        FilterOperator.Equals        => Loc["TmFilter_Equals"],
+        FilterOperator.NotEquals     => Loc["TmFilter_NotEquals"],
+        FilterOperator.GreaterThan   => Loc["TmFilter_GreaterThan"],
+        FilterOperator.LessThan      => Loc["TmFilter_LessThan"],
+        FilterOperator.GreaterOrEqual=> Loc["TmFilter_GreaterOrEqual"],
+        FilterOperator.LessOrEqual   => Loc["TmFilter_LessOrEqual"],
+        FilterOperator.Between       => Loc["TmFilter_Between"],
+        FilterOperator.IsEmpty       => Loc["TmFilter_IsEmpty"],
+        FilterOperator.IsNotEmpty    => Loc["TmFilter_IsNotEmpty"],
+        FilterOperator.In            => Loc["TmFilter_In"],
+        FilterOperator.NotIn         => Loc["TmFilter_NotIn"],
+        _                            => op.ToString(),
+    };
+}

@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" />
+              <xsd:attribute name="xml:space" use="fixed" value="preserve" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- ═══════════════ SHARED ═══════════════ -->
+  <data name="Tm_Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Tm_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Tm_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Tm_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Tm_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Tm_Confirm" xml:space="preserve"><value>Confirm</value></data>
+  <data name="Tm_NoResults" xml:space="preserve"><value>No results found</value></data>
+  <data name="Tm_Error" xml:space="preserve"><value>An error occurred</value></data>
+  <data name="Tm_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="Tm_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Tm_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Tm_Select" xml:space="preserve"><value>Select</value></data>
+  <data name="Tm_SelectAll" xml:space="preserve"><value>Select all</value></data>
+  <data name="Tm_DeselectAll" xml:space="preserve"><value>Deselect all</value></data>
+  <data name="Tm_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Tm_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Tm_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Tm_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Tm_Reset" xml:space="preserve"><value>Reset</value></data>
+  <data name="Tm_Previous" xml:space="preserve"><value>Previous</value></data>
+  <data name="Tm_Next" xml:space="preserve"><value>Next</value></data>
+  <data name="Tm_Download" xml:space="preserve"><value>Download</value></data>
+  <data name="Tm_Upload" xml:space="preserve"><value>Upload</value></data>
+  <data name="Tm_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Tm_Optional" xml:space="preserve"><value>Optional</value></data>
+  <data name="Tm_Required" xml:space="preserve"><value>Required</value></data>
+  <data name="Tm_Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Tm_No" xml:space="preserve"><value>No</value></data>
+
+  <!-- ═══════════════ TmButton ═══════════════ -->
+  <data name="TmButton_Loading" xml:space="preserve"><value>Loading</value></data>
+
+  <!-- ═══════════════ TmImageGallery / TmImageLightbox ═══════════════ -->
+  <data name="TmImageGallery_PreviousImage" xml:space="preserve"><value>Previous image</value></data>
+  <data name="TmImageGallery_NextImage" xml:space="preserve"><value>Next image</value></data>
+  <data name="TmImageGallery_Close" xml:space="preserve"><value>Close gallery</value></data>
+  <data name="TmImageGallery_Counter" xml:space="preserve"><value>{0} of {1}</value></data>
+  <data name="TmImageGallery_LoadingImage" xml:space="preserve"><value>Loading image...</value></data>
+  <data name="TmImageGallery_ErrorLoading" xml:space="preserve"><value>Failed to load image</value></data>
+  <data name="TmImageGallery_ZoomIn" xml:space="preserve"><value>Zoom in</value></data>
+  <data name="TmImageGallery_ZoomOut" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="TmImageGallery_Download" xml:space="preserve"><value>Download image</value></data>
+  <data name="TmImageGallery_Delete" xml:space="preserve"><value>Delete image</value></data>
+  <data name="TmImageGallery_NoImages" xml:space="preserve"><value>No images available</value></data>
+  <data name="TmImageGallery_UploadImages" xml:space="preserve"><value>Upload images</value></data>
+  <data name="TmImageGallery_GridView" xml:space="preserve"><value>Grid view</value></data>
+  <data name="TmImageGallery_GalleryView" xml:space="preserve"><value>Gallery view</value></data>
+
+  <!-- ═══════════════ TmDataTable ═══════════════ -->
+  <data name="TmDataTable_NoResults" xml:space="preserve"><value>No results found</value></data>
+  <data name="TmDataTable_Loading" xml:space="preserve"><value>Loading data...</value></data>
+  <data name="TmDataTable_PageSize" xml:space="preserve"><value>Items per page</value></data>
+  <data name="TmDataTable_Pagination" xml:space="preserve"><value>{0}–{1} of {2}</value></data>
+  <data name="TmDataTable_SearchPlaceholder" xml:space="preserve"><value>Search...</value></data>
+  <data name="TmDataTable_ShowingItems" xml:space="preserve"><value>Showing {0}–{1} of {2}</value></data>
+  <data name="TmDataTable_ItemsPerPage" xml:space="preserve"><value>Items per page</value></data>
+  <data name="TmDataTable_SelectAll" xml:space="preserve"><value>Select all rows</value></data>
+  <data name="TmDataTable_DeselectAll" xml:space="preserve"><value>Deselect all rows</value></data>
+  <data name="TmDataTable_ColumnPicker" xml:space="preserve"><value>Choose columns</value></data>
+  <data name="TmDataTable_ResetColumns" xml:space="preserve"><value>Reset to default</value></data>
+  <data name="TmDataTable_SaveView" xml:space="preserve"><value>Save view</value></data>
+  <data name="TmDataTable_ManageViews" xml:space="preserve"><value>Manage views</value></data>
+  <data name="TmDataTable_DefaultView" xml:space="preserve"><value>Default view</value></data>
+  <data name="TmDataTable_Filter" xml:space="preserve"><value>Filter</value></data>
+  <data name="TmDataTable_ClearFilters" xml:space="preserve"><value>Clear filters</value></data>
+  <data name="TmDataTable_SortAscending" xml:space="preserve"><value>Sort ascending</value></data>
+  <data name="TmDataTable_SortDescending" xml:space="preserve"><value>Sort descending</value></data>
+  <data name="TmDataTable_BulkActions" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="TmDataTable_DeleteSelected" xml:space="preserve"><value>Delete selected</value></data>
+  <data name="TmDataTable_EditInline" xml:space="preserve"><value>Edit</value></data>
+  <data name="TmDataTable_SaveInline" xml:space="preserve"><value>Save changes</value></data>
+  <data name="TmDataTable_CancelInline" xml:space="preserve"><value>Cancel edit</value></data>
+  <data name="TmDataTable_FirstPage" xml:space="preserve"><value>First page</value></data>
+  <data name="TmDataTable_LastPage" xml:space="preserve"><value>Last page</value></data>
+  <data name="TmDataTable_ViewName" xml:space="preserve"><value>View name</value></data>
+  <data name="TmDataTable_ViewNamePlaceholder" xml:space="preserve"><value>Enter view name...</value></data>
+  <data name="TmDataTable_DeleteView" xml:space="preserve"><value>Delete view</value></data>
+
+  <!-- ═══════════════ TmFilterableDropdown ═══════════════ -->
+  <data name="TmFilterableDropdown_Search" xml:space="preserve"><value>Search...</value></data>
+  <data name="TmFilterableDropdown_NoResults" xml:space="preserve"><value>No results found</value></data>
+  <data name="TmFilterableDropdown_Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="TmFilterableDropdown_Error" xml:space="preserve"><value>Failed to load options</value></data>
+  <data name="TmFilterableDropdown_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="TmFilterableDropdown_CreateNew" xml:space="preserve"><value>Create "{0}"</value></data>
+  <data name="TmFilterableDropdown_ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
+  <data name="TmFilterableDropdown_Placeholder" xml:space="preserve"><value>Select an option...</value></data>
+
+  <!-- ═══════════════ TmFileDropZone ═══════════════ -->
+  <data name="TmFileDropZone_DragDrop" xml:space="preserve"><value>Drag and drop files here</value></data>
+  <data name="TmFileDropZone_Or" xml:space="preserve"><value>or</value></data>
+  <data name="TmFileDropZone_Browse" xml:space="preserve"><value>Browse files</value></data>
+  <data name="TmFileDropZone_Uploading" xml:space="preserve"><value>Uploading...</value></data>
+  <data name="TmFileDropZone_Remove" xml:space="preserve"><value>Remove file</value></data>
+  <data name="TmFileDropZone_MaxSize" xml:space="preserve"><value>Maximum file size: {0}</value></data>
+  <data name="TmFileDropZone_AcceptedTypes" xml:space="preserve"><value>Accepted types: {0}</value></data>
+
+  <!-- ═══════════════ TmAttachmentManager ═══════════════ -->
+  <data name="TmAttachmentManager_Upload" xml:space="preserve"><value>Upload file</value></data>
+  <data name="TmAttachmentManager_NoAttachments" xml:space="preserve"><value>No attachments yet</value></data>
+  <data name="TmAttachmentManager_Download" xml:space="preserve"><value>Download</value></data>
+  <data name="TmAttachmentManager_Delete" xml:space="preserve"><value>Delete attachment</value></data>
+  <data name="TmAttachmentManager_ConfirmDelete" xml:space="preserve"><value>Delete this attachment?</value></data>
+
+  <!-- ═══════════════ TmTimeline ═══════════════ -->
+  <data name="TmTimeline_NoEntries" xml:space="preserve"><value>No activity yet</value></data>
+  <data name="TmTimeline_Internal" xml:space="preserve"><value>Internal</value></data>
+  <data name="TmTimeline_JustNow" xml:space="preserve"><value>Just now</value></data>
+  <data name="TmTimeline_MinutesAgo" xml:space="preserve"><value>{0} min ago</value></data>
+  <data name="TmTimeline_HoursAgo" xml:space="preserve"><value>{0} h ago</value></data>
+  <data name="TmTimeline_DaysAgo" xml:space="preserve"><value>{0} days ago</value></data>
+
+  <!-- ═══════════════ TmTreeView ═══════════════ -->
+  <data name="TmTreeView_Search" xml:space="preserve"><value>Search...</value></data>
+  <data name="TmTreeView_NoResults" xml:space="preserve"><value>No items found</value></data>
+  <data name="TmTreeView_Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="TmTreeView_Expand" xml:space="preserve"><value>Expand</value></data>
+  <data name="TmTreeView_Collapse" xml:space="preserve"><value>Collapse</value></data>
+
+  <!-- ═══════════════ TmTagPicker ═══════════════ -->
+  <data name="TmTagPicker_Search" xml:space="preserve"><value>Search tags...</value></data>
+  <data name="TmTagPicker_CreateNew" xml:space="preserve"><value>Create "{0}"</value></data>
+  <data name="TmTagPicker_NoTags" xml:space="preserve"><value>No tags found</value></data>
+  <data name="TmTagPicker_AddTag" xml:space="preserve"><value>Add tag</value></data>
+  <data name="TmTagEditorDialog_Title_New" xml:space="preserve"><value>New tag</value></data>
+  <data name="TmTagEditorDialog_Title_Edit" xml:space="preserve"><value>Edit tag</value></data>
+  <data name="TmTagEditorDialog_Name" xml:space="preserve"><value>Tag name</value></data>
+  <data name="TmTagEditorDialog_Color" xml:space="preserve"><value>Color</value></data>
+
+  <!-- ═══════════════ TmCommandPalette ═══════════════ -->
+  <data name="TmCommandPalette_Placeholder" xml:space="preserve"><value>Type a command or search...</value></data>
+  <data name="TmCommandPalette_NoResults" xml:space="preserve"><value>No commands found</value></data>
+
+  <!-- ═══════════════ TmStepper ═══════════════ -->
+  <data name="TmStepper_Step" xml:space="preserve"><value>Step {0} of {1}</value></data>
+  <data name="TmStepper_Completed" xml:space="preserve"><value>Completed</value></data>
+
+  <!-- ═══════════════ TmAvatar ═══════════════ -->
+  <data name="TmAvatar_ImageAlt" xml:space="preserve"><value>User avatar</value></data>
+
+  <!-- ═══════════════ TmNotificationBell ═══════════════ -->
+  <data name="TmNotificationBell_AriaLabel" xml:space="preserve"><value>Notifications</value></data>
+  <data name="TmNotificationBell_NewCount" xml:space="preserve"><value>{0} new notifications</value></data>
+  <data name="TmNotificationBell_NoNotifications" xml:space="preserve"><value>No notifications</value></data>
+  <data name="TmNotificationBell_MarkAllRead" xml:space="preserve"><value>Mark all as read</value></data>
+
+  <!-- ═══════════════ TmEmptyState ═══════════════ -->
+  <data name="TmEmptyState_DefaultTitle" xml:space="preserve"><value>No data available</value></data>
+
+  <!-- ═══════════════ TmRichEditor ═══════════════ -->
+  <data name="TmRichEditor_Placeholder" xml:space="preserve"><value>Start typing...</value></data>
+  <data name="TmRichEditor_Bold" xml:space="preserve"><value>Bold (Ctrl+B)</value></data>
+  <data name="TmRichEditor_Italic" xml:space="preserve"><value>Italic (Ctrl+I)</value></data>
+  <data name="TmRichEditor_Underline" xml:space="preserve"><value>Underline (Ctrl+U)</value></data>
+  <data name="TmRichEditor_Link" xml:space="preserve"><value>Insert link</value></data>
+  <data name="TmRichEditor_BulletList" xml:space="preserve"><value>Bullet list</value></data>
+  <data name="TmRichEditor_OrderedList" xml:space="preserve"><value>Ordered list</value></data>
+  <data name="TmRichEditor_LinkUrl" xml:space="preserve"><value>URL</value></data>
+  <data name="TmRichEditor_LinkUrlPlaceholder" xml:space="preserve"><value>https://...</value></data>
+  <data name="TmRichEditor_LinkInvalid" xml:space="preserve"><value>Please enter a valid URL</value></data>
+  <data name="TmRichEditor_MentionSearch" xml:space="preserve"><value>Search users...</value></data>
+  <data name="TmRichEditor_Heading1" xml:space="preserve"><value>Heading 1</value></data>
+  <data name="TmRichEditor_Heading2" xml:space="preserve"><value>Heading 2</value></data>
+  <data name="TmRichEditor_UnorderedList" xml:space="preserve"><value>Bullet list</value></data>
+  <data name="TmRichEditor_OrderedList" xml:space="preserve"><value>Numbered list</value></data>
+  <data name="TmRichEditor_LinkDialog_Title" xml:space="preserve"><value>Insert Link</value></data>
+  <data name="TmRichEditor_LinkDialog_Url" xml:space="preserve"><value>URL</value></data>
+  <data name="TmRichEditor_LinkDialog_Text" xml:space="preserve"><value>Link text</value></data>
+  <data name="TmRichEditor_LinkDialog_TextPlaceholder" xml:space="preserve"><value>Link text</value></data>
+  <data name="TmRichEditor_LinkDialog_InvalidUrl" xml:space="preserve"><value>Please enter a valid URL</value></data>
+  <data name="TmRichEditor_LinkDialog_Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="TmRichEditor_MentionEmpty" xml:space="preserve"><value>No users found</value></data>
+  <data name="TmRichEditor_Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="TmRichEditor_Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="TmRichEditor_Heading3" xml:space="preserve"><value>Heading 3</value></data>
+  <data name="TmRichEditor_Heading4" xml:space="preserve"><value>Heading 4</value></data>
+  <data name="TmRichEditor_Strikethrough" xml:space="preserve"><value>Strikethrough</value></data>
+  <data name="TmRichEditor_Subscript" xml:space="preserve"><value>Subscript</value></data>
+  <data name="TmRichEditor_Superscript" xml:space="preserve"><value>Superscript</value></data>
+  <data name="TmRichEditor_Indent" xml:space="preserve"><value>Indent</value></data>
+  <data name="TmRichEditor_Outdent" xml:space="preserve"><value>Outdent</value></data>
+  <data name="TmRichEditor_Code" xml:space="preserve"><value>Code block</value></data>
+  <data name="TmRichEditor_Blockquote" xml:space="preserve"><value>Blockquote</value></data>
+  <data name="TmRichEditor_HorizontalRule" xml:space="preserve"><value>Horizontal line</value></data>
+  <data name="TmRichEditor_TextColor" xml:space="preserve"><value>Text color</value></data>
+  <data name="TmRichEditor_Highlight" xml:space="preserve"><value>Highlight</value></data>
+  <data name="TmRichEditor_Image" xml:space="preserve"><value>Image</value></data>
+  <data name="TmRichEditor_Table" xml:space="preserve"><value>Table</value></data>
+  <data name="TmRichEditor_Video" xml:space="preserve"><value>Video</value></data>
+  <data name="TmRichEditor_RemoveFormat" xml:space="preserve"><value>Remove formatting</value></data>
+  <data name="TmRichEditor_TaskList" xml:space="preserve"><value>Task list</value></data>
+  <data name="TmRichEditor_Emoji" xml:space="preserve"><value>Emoji</value></data>
+  <data name="TmRichEditor_Words" xml:space="preserve"><value>words</value></data>
+  <data name="TmRichEditor_Characters" xml:space="preserve"><value>characters</value></data>
+  <data name="TmRichEditor_ImageDialog_Title" xml:space="preserve"><value>Insert Image</value></data>
+  <data name="TmRichEditor_ImageDialog_Url" xml:space="preserve"><value>Image URL</value></data>
+  <data name="TmRichEditor_ImageDialog_Alt" xml:space="preserve"><value>Alt text</value></data>
+  <data name="TmRichEditor_ImageDialog_AltPlaceholder" xml:space="preserve"><value>Description of the image</value></data>
+  <data name="TmRichEditor_ImageDialog_Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="TmRichEditor_TableDialog_Title" xml:space="preserve"><value>Insert Table</value></data>
+  <data name="TmRichEditor_TableDialog_Rows" xml:space="preserve"><value>Rows</value></data>
+  <data name="TmRichEditor_TableDialog_Cols" xml:space="preserve"><value>Columns</value></data>
+  <data name="TmRichEditor_TableDialog_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="TmRichEditor_TableDialog_Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="TmRichEditor_VideoDialog_Title" xml:space="preserve"><value>Insert Video</value></data>
+  <data name="TmRichEditor_VideoDialog_Url" xml:space="preserve"><value>Video URL</value></data>
+  <data name="TmRichEditor_VideoDialog_Help" xml:space="preserve"><value>Supports YouTube and Vimeo links</value></data>
+  <data name="TmRichEditor_VideoDialog_TitleLabel" xml:space="preserve"><value>Title</value></data>
+  <data name="TmRichEditor_VideoDialog_TitlePlaceholder" xml:space="preserve"><value>Video title</value></data>
+  <data name="TmRichEditor_VideoDialog_Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Title" xml:space="preserve"><value>Find &amp; Replace</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Find" xml:space="preserve"><value>Find</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_FindPlaceholder" xml:space="preserve"><value>Search for...</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Replace" xml:space="preserve"><value>Replace</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_ReplacePlaceholder" xml:space="preserve"><value>Replace with...</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_ReplaceAll" xml:space="preserve"><value>Replace All</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Replaced" xml:space="preserve"><value>{0} occurrence(s) replaced</value></data>
+
+  <!-- ═══════════════ TmFilterBuilder ═══════════════ -->
+  <data name="TmFilter_AddCondition" xml:space="preserve"><value>Add condition</value></data>
+  <data name="TmFilter_AddGroup" xml:space="preserve"><value>Add group</value></data>
+  <data name="TmFilter_And" xml:space="preserve"><value>AND</value></data>
+  <data name="TmFilter_Or" xml:space="preserve"><value>OR</value></data>
+  <data name="TmFilter_SelectField" xml:space="preserve"><value>Select field</value></data>
+  <data name="TmFilter_SelectOperator" xml:space="preserve"><value>Select operator</value></data>
+  <data name="TmFilter_EnterValue" xml:space="preserve"><value>Enter value</value></data>
+  <data name="TmFilter_SaveFilter" xml:space="preserve"><value>Save filter</value></data>
+  <data name="TmFilter_FilterName" xml:space="preserve"><value>Filter name</value></data>
+  <data name="TmFilter_FilterNamePlaceholder" xml:space="preserve"><value>My filter...</value></data>
+  <data name="TmFilter_DeleteFilter" xml:space="preserve"><value>Delete filter</value></data>
+  <data name="TmFilter_Equals" xml:space="preserve"><value>equals</value></data>
+  <data name="TmFilter_NotEquals" xml:space="preserve"><value>not equals</value></data>
+  <data name="TmFilter_Contains" xml:space="preserve"><value>contains</value></data>
+  <data name="TmFilter_NotContains" xml:space="preserve"><value>does not contain</value></data>
+  <data name="TmFilter_StartsWith" xml:space="preserve"><value>starts with</value></data>
+  <data name="TmFilter_EndsWith" xml:space="preserve"><value>ends with</value></data>
+  <data name="TmFilter_GreaterThan" xml:space="preserve"><value>greater than</value></data>
+  <data name="TmFilter_LessThan" xml:space="preserve"><value>less than</value></data>
+  <data name="TmFilter_Between" xml:space="preserve"><value>between</value></data>
+  <data name="TmFilter_IsEmpty" xml:space="preserve"><value>is empty</value></data>
+  <data name="TmFilter_IsNotEmpty" xml:space="preserve"><value>is not empty</value></data>
+
+  <!-- ═══════════════ TmLayout ═══════════════ -->
+  <data name="TmSidebar_CollapseMenu" xml:space="preserve"><value>Collapse menu</value></data>
+  <data name="TmSidebar_ExpandMenu" xml:space="preserve"><value>Expand menu</value></data>
+  <data name="TmTopBar_OpenSearch" xml:space="preserve"><value>Search (Ctrl+K)</value></data>
+  <data name="TmTopBar_OpenNotifications" xml:space="preserve"><value>Open notifications</value></data>
+  <data name="TmTopBar_OpenUserMenu" xml:space="preserve"><value>Open user menu</value></data>
+
+  <!-- ═══════════════ TmSearchInput ═══════════════ -->
+  <data name="TmSearchInput_Placeholder" xml:space="preserve"><value>Search...</value></data>
+
+  <!-- ═══════════════ TmTimeline (extra format key) ═══════════════ -->
+  <data name="TmTimeline_DateFormat" xml:space="preserve"><value>MMM d, yyyy</value></data>
+
+  <!-- ═══════════════ TmCheckbox / TmToggle / TmRadio ═══════════════ -->
+  <data name="TmCheckbox_Indeterminate" xml:space="preserve"><value>Partially selected</value></data>
+  <data name="TmSearchInput_Clear" xml:space="preserve"><value>Clear search</value></data>
+
+  <!-- ═══════════════ Validation ═══════════════ -->
+  <data name="TmValidation_Required" xml:space="preserve"><value>This field is required</value></data>
+  <data name="TmValidation_Invalid" xml:space="preserve"><value>This field contains an invalid value</value></data>
+
+  <!-- ═══════════════ TmActivityTimeline ═══════════════ -->
+  <data name="TmTimeline_Loading" xml:space="preserve"><value>Loading activity...</value></data>
+  <data name="TmTimeline_Empty" xml:space="preserve"><value>No activity yet</value></data>
+
+  <!-- ═══════════════ TmActivityComments ═══════════════ -->
+  <data name="TmActivityComments_Empty" xml:space="preserve"><value>No comments yet</value></data>
+  <data name="TmActivityComments_AddComment" xml:space="preserve"><value>Add comment</value></data>
+  <data name="TmActivityComments_SubmitComment" xml:space="preserve"><value>Post comment</value></data>
+  <data name="TmActivityComments_Edited" xml:space="preserve"><value>edited</value></data>
+  <data name="TmActivityComments_DeleteConfirm" xml:space="preserve"><value>Delete this comment?</value></data>
+
+  <!-- ═══════════════ TmActivityAttachments ═══════════════ -->
+  <data name="TmActivityAttachments_Empty" xml:space="preserve"><value>No attachments yet</value></data>
+  <data name="TmActivityAttachments_DropHere" xml:space="preserve"><value>Drop files here or</value></data>
+  <data name="TmActivityAttachments_Browse" xml:space="preserve"><value>browse</value></data>
+  <data name="TmActivityAttachments_Uploading" xml:space="preserve"><value>Uploading...</value></data>
+  <data name="TmActivityAttachments_UploadComplete" xml:space="preserve"><value>Upload complete</value></data>
+  <data name="TmActivityAttachments_DeleteConfirm" xml:space="preserve"><value>Delete this attachment?</value></data>
+  <data name="TmActivityAttachments_DuplicateFile" xml:space="preserve"><value>A file with this name already exists</value></data>
+  <data name="TmActivityAttachments_UploadedBy" xml:space="preserve"><value>Uploaded by {0}</value></data>
+  <data name="TmActivityAttachments_Download" xml:space="preserve"><value>Download</value></data>
+
+  <!-- ═══════════════ TmActivityLog ═══════════════ -->
+  <data name="TmActivityLog_TimelineTab" xml:space="preserve"><value>Timeline</value></data>
+  <data name="TmActivityLog_CommentsTab" xml:space="preserve"><value>Comments</value></data>
+  <data name="TmActivityLog_AttachmentsTab" xml:space="preserve"><value>Attachments</value></data>
+
+  <!-- ═══════════════ TmTimePicker ═══════════════ -->
+  <data name="TmTimePicker_Hours" xml:space="preserve"><value>Hours</value></data>
+  <data name="TmTimePicker_Minutes" xml:space="preserve"><value>Minutes</value></data>
+  <data name="TmTimePicker_Seconds" xml:space="preserve"><value>Seconds</value></data>
+  <data name="TmTimePicker_Placeholder" xml:space="preserve"><value>HH:mm</value></data>
+  <data name="TmTimePicker_PlaceholderSeconds" xml:space="preserve"><value>HH:mm:ss</value></data>
+  <data name="TmTimePicker_Clear" xml:space="preserve"><value>Clear</value></data>
+
+  <!-- ═══════════════ TmDatePicker ═══════════════ -->
+  <data name="TmDatePicker_Placeholder" xml:space="preserve"><value>Select date</value></data>
+  <data name="TmDatePicker_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="TmDatePicker_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="TmDatePicker_PreviousMonth" xml:space="preserve"><value>Previous month</value></data>
+  <data name="TmDatePicker_NextMonth" xml:space="preserve"><value>Next month</value></data>
+
+  <!-- ═══════════════ TmDateTimePicker ═══════════════ -->
+  <data name="TmDateTimePicker_Placeholder" xml:space="preserve"><value>Select date and time</value></data>
+  <data name="TmDateTimePicker_Clear" xml:space="preserve"><value>Clear</value></data>
+
+  <!-- ═══════════════ TmTimeRangePicker ═══════════════ -->
+  <data name="TmTimeRangePicker_From" xml:space="preserve"><value>From</value></data>
+  <data name="TmTimeRangePicker_To" xml:space="preserve"><value>To</value></data>
+  <data name="TmTimeRangePicker_Duration" xml:space="preserve"><value>Duration</value></data>
+  <data name="TmTimeRangePicker_Swap" xml:space="preserve"><value>Swap</value></data>
+  <data name="TmTimeRangePicker_InvalidRange" xml:space="preserve"><value>End time must be after start time</value></data>
+
+  <!-- ═══════════════ TmDateRangePicker ═══════════════ -->
+  <data name="TmDateRangePicker_From" xml:space="preserve"><value>From</value></data>
+  <data name="TmDateRangePicker_To" xml:space="preserve"><value>To</value></data>
+  <data name="TmDateRangePicker_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="TmDateRangePicker_Done" xml:space="preserve"><value>Done</value></data>
+  <data name="TmDateRangePicker_Preset_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="TmDateRangePicker_Preset_LastWeek" xml:space="preserve"><value>Last week</value></data>
+  <data name="TmDateRangePicker_Preset_LastMonth" xml:space="preserve"><value>Last month</value></data>
+  <data name="TmDateRangePicker_Preset_LastQuarter" xml:space="preserve"><value>Last quarter</value></data>
+  <data name="TmDateRangePicker_Preset_ThisYear" xml:space="preserve"><value>This year</value></data>
+
+  <!-- ═══════════════ TmDateTimeRangePicker ═══════════════ -->
+  <data name="TmDateTimeRangePicker_StartLabel" xml:space="preserve"><value>Start</value></data>
+  <data name="TmDateTimeRangePicker_EndLabel" xml:space="preserve"><value>End</value></data>
+  <data name="TmDateTimeRangePicker_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="TmDateTimeRangePicker_ValidationError" xml:space="preserve"><value>End must be after start</value></data>
+
+  <data name="TmValidationSummary_Title" xml:space="preserve"><value>There were errors with your submission</value></data>
+
+  <data name="TmPasswordStrength_VeryWeak" xml:space="preserve"><value>Very weak</value></data>
+  <data name="TmPasswordStrength_Weak" xml:space="preserve"><value>Weak</value></data>
+  <data name="TmPasswordStrength_Medium" xml:space="preserve"><value>Medium</value></data>
+  <data name="TmPasswordStrength_Strong" xml:space="preserve"><value>Strong</value></data>
+  <data name="TmPasswordStrength_VeryStrong" xml:space="preserve"><value>Very strong</value></data>
+  <data name="TmPasswordStrength_HintUseAtLeast8Chars" xml:space="preserve"><value>Use at least 8 characters</value></data>
+  <data name="TmPasswordStrength_HintAddLetters" xml:space="preserve"><value>Add letters</value></data>
+  <data name="TmPasswordStrength_HintAddNumbers" xml:space="preserve"><value>Add numbers</value></data>
+  <data name="TmPasswordStrength_HintAddSpecialChars" xml:space="preserve"><value>Add special characters</value></data>
+  <data name="TmPasswordStrength_HintAddUppercase" xml:space="preserve"><value>Add uppercase letters</value></data>
+  <data name="TmPasswordStrength_HintAddLowercase" xml:space="preserve"><value>Add lowercase letters</value></data>
+  <data name="TmPasswordStrength_HintMakeItLonger" xml:space="preserve"><value>Make it longer</value></data>
+  <data name="TmPasswordStrength_HintAvoidCommonPatterns" xml:space="preserve"><value>Avoid common patterns</value></data>
+  <data name="TmPasswordStrength_HintAvoidCommonWords" xml:space="preserve"><value>Avoid common words</value></data>
+  <data name="TmPasswordStrength_HintExcellent" xml:space="preserve"><value>Excellent password!</value></data>
+
+  <!-- ═══════════════ TmViewManager ═══════════════ -->
+  <data name="TmViewManager_Views" xml:space="preserve"><value>Views</value></data>
+  <data name="TmViewManager_PersonalViews" xml:space="preserve"><value>Personal Views</value></data>
+  <data name="TmViewManager_TenantViews" xml:space="preserve"><value>Tenant Views</value></data>
+  <data name="TmViewManager_NoPersonalViews" xml:space="preserve"><value>No personal views</value></data>
+  <data name="TmViewManager_NoTenantViews" xml:space="preserve"><value>No tenant views</value></data>
+  <data name="TmViewManager_CreateNew" xml:space="preserve"><value>Create New View</value></data>
+  <data name="TmViewManager_SaveCurrent" xml:space="preserve"><value>Save Current as New</value></data>
+  <data name="TmViewManager_CreateTitle" xml:space="preserve"><value>Create New View</value></data>
+  <data name="TmViewManager_EditTitle" xml:space="preserve"><value>Edit View</value></data>
+  <data name="TmViewManager_ViewName" xml:space="preserve"><value>View Name</value></data>
+  <data name="TmViewManager_NamePlaceholder" xml:space="preserve"><value>Enter view name...</value></data>
+  <data name="TmViewManager_Visibility" xml:space="preserve"><value>Visibility</value></data>
+  <data name="TmViewManager_Personal" xml:space="preserve"><value>Personal (only me)</value></data>
+  <data name="TmViewManager_Tenant" xml:space="preserve"><value>Tenant (everyone)</value></data>
+  <data name="TmViewManager_ScopePersonal" xml:space="preserve"><value>Personal</value></data>
+  <data name="TmViewManager_ScopeTenant" xml:space="preserve"><value>Tenant</value></data>
+  <data name="TmViewManager_Columns" xml:space="preserve"><value>Columns</value></data>
+  <data name="TmViewManager_Filters" xml:space="preserve"><value>Filters</value></data>
+  <data name="TmViewManager_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="TmViewManager_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="TmViewManager_Save" xml:space="preserve"><value>Save Changes</value></data>
+  <data name="TmDataTable_CurrentViewName" xml:space="preserve"><value>Current</value></data>
+
+  <data name="TmToast_Close" xml:space="preserve"><value>Dismiss</value></data>
+  <data name="TmAlert_Dismiss" xml:space="preserve"><value>Dismiss</value></data>
+  <data name="TmDrawer_Close" xml:space="preserve"><value>Close panel</value></data>
+  <data name="TmBulkAction_Toolbar" xml:space="preserve"><value>Bulk actions</value></data>
+  <data name="TmBulkAction_Selected" xml:space="preserve"><value>selected</value></data>
+  <data name="TmBulkAction_ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
+
+</root>

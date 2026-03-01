@@ -1,0 +1,391 @@
+@page "/data-table"
+@using Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+<PageTitle>Data Table – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Data Table</h1>
+    <p class="text-slate-600 dark:text-slate-400">Advanced data tables with sorting, filtering, pagination, and selection capabilities.</p>
+</div>
+
+<!-- Basic Table -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Basic Client-Side Table</h2>
+            <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Sortable & Filterable</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@(() => _loading = !_loading)">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Toggle Loading</span>
+                </span>
+            </TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@(() => _showEmpty = !_showEmpty)">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <span>Toggle Empty</span>
+                </span>
+            </TmButton>
+        </div>
+    </div>
+    
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmDataTable TItem="Employee"
+                     ViewContext="demo-basic"
+                     Items="@(_showEmpty ? [] : _employees)"
+                     IsLoading="@_loading"
+                     EmptyTitle="No employees found"
+                     DefaultPageSize="5"
+                     OnRowClick="@OnRowClick">
+            <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Sortable="true" Filterable="true" Field="e => e.Name" />
+            <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Sortable="true" Filterable="true" FilterType="FilterType.Select" FilterOptions="_roleOptions" Field="e => e.Role" />
+            <TmDataTableColumn TItem="Employee" Title="Dept" PropertyName="Dept" Sortable="true" Filterable="true" Field="e => e.Dept" />
+            <TmDataTableColumn TItem="Employee" Title="Score" PropertyName="Score" Sortable="true" Align="ColumnAlign.Right" Field="e => e.Score" />
+            <TmDataTableColumn TItem="Employee" Title="Email" PropertyName="Email" HiddenByDefault="true" Field="e => e.Email" />
+        </TmDataTable>
+    </div>
+    
+    @if (_lastClicked is not null)
+    {
+        <div class="mt-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg animate-fade-in">
+            <p class="text-sm text-slate-700 dark:text-slate-300">
+                Last clicked: <span class="font-semibold text-primary-600 dark:text-primary-400">@_lastClicked.Name</span> (@_lastClicked.Role)
+            </p>
+        </div>
+    }
+</section>
+
+<!-- Multi-Select Table -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Multi-Select Table</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Selection</span>
+    </div>
+    
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmDataTable TItem="Employee"
+                     ViewContext="demo-selection"
+                     Items="_employees"
+                     Selectable="true"
+                     ShowPagination="false"
+                     OnSelectionChanged="OnSelectionChanged">
+            <TmDataTableColumn TItem="Employee" Title="Name" Field="e => e.Name" />
+            <TmDataTableColumn TItem="Employee" Title="Role" Field="e => e.Role" />
+            <TmDataTableColumn TItem="Employee" Title="Dept" Field="e => e.Dept" />
+            <TmDataTableColumn TItem="Employee" Title="Score" Align="ColumnAlign.Right" Field="e => e.Score" />
+        </TmDataTable>
+    </div>
+    
+    @if (_selectedEmployees.Count > 0)
+    {
+        <div class="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg animate-fade-in">
+            <p class="text-sm text-slate-700 dark:text-slate-300">
+                Selected: <span class="font-medium">@string.Join(", ", _selectedEmployees.Select(e => e.Name))</span>
+            </p>
+        </div>
+    }
+</section>
+
+<!-- Table with External Filter Builder -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">External Filter Builder</h2>
+            <span class="px-2 py-0.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">Advanced</span>
+        </div>
+    </div>
+    
+    <div class="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl mb-4">
+        <p class="text-sm text-orange-800 dark:text-orange-200">
+            External filters built with <code>TmFilterBuilder</code> applied to DataTable. 
+            Filters are sent to server via DataProvider.
+        </p>
+    </div>
+
+    <!-- Filter Builder Panel -->
+    <div class="showcase-card mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Filters</h3>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="ClearFilterBuilder">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Clear All</span>
+                </span>
+            </TmButton>
+        </div>
+        <TmFilterBuilder FilterDefinitions="@_employeeFilterDefs"
+                         ActiveFilters="@_activeEmployeeFilters"
+                         OnFiltersChanged="OnEmployeeFiltersChanged"
+                         ShowClearAll="false" />
+    </div>
+    
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmDataTable TItem="Employee"
+                     ViewContext="demo-filter-builder"
+                     Items="@_filteredEmployees"
+                     EmptyTitle="No employees match the filters"
+                     DefaultPageSize="5">
+            <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Sortable="true" Field="e => e.Name" />
+            <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Sortable="true" Field="e => e.Role" />
+            <TmDataTableColumn TItem="Employee" Title="Dept" PropertyName="Dept" Sortable="true" Field="e => e.Dept" />
+            <TmDataTableColumn TItem="Employee" Title="Score" PropertyName="Score" Sortable="true" Align="ColumnAlign.Right" Field="e => e.Score" />
+        </TmDataTable>
+    </div>
+</section>
+
+<!-- Server-Side Table -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Server-Side DataProvider</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">API</span>
+    </div>
+    
+    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl mb-4">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <p class="text-sm text-blue-800 dark:text-blue-200">
+                    Uses <code>PersonHttpDataProvider</code> calling <code>/api/persons</code>.
+                </p>
+                <p class="text-sm text-blue-600 dark:text-blue-400">Requires Demo.Api running on port 5100.</p>
+            </div>
+        </div>
+    </div>
+    
+    @if (_apiError is not null)
+    {
+        <div class="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center space-x-3">
+            <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p class="text-sm text-amber-800 dark:text-amber-200">@_apiError</p>
+        </div>
+    }
+    
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmDataTable TItem="PersonDto"
+                     DataProvider="_personProvider"
+                     ViewContext="persons"
+                     EmptyTitle="No persons found"
+                     ShowSearch="true"
+                     DefaultPageSize="10">
+            <TmDataTableColumn TItem="PersonDto" Title="Name" PropertyName="LastName" Sortable="true" Filterable="true" Field="p => p.FullName" />
+            <TmDataTableColumn TItem="PersonDto" Title="Email" PropertyName="Email" Sortable="true" Field="p => p.Email" />
+            <TmDataTableColumn TItem="PersonDto" Title="Department" PropertyName="Department" Sortable="true" Filterable="true" FilterType="FilterType.Select" FilterOptions="_deptOptions" Field="p => p.Department" />
+            <TmDataTableColumn TItem="PersonDto" Title="Role" PropertyName="Role" Sortable="true" Field="p => p.Role" />
+            <TmDataTableColumn TItem="PersonDto" Title="Active" PropertyName="IsActive" Sortable="true" Align="ColumnAlign.Center" Field="@(p => p.IsActive ? (object)"Yes" : "No")" />
+            <TmDataTableColumn TItem="PersonDto" Title="Hired" PropertyName="HiredAt" Sortable="true" Field="@(p => p.HiredAt.ToString())" />
+        </TmDataTable>
+    </div>
+</section>
+
+<!-- View Manager Table -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">View Manager</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Saved Views</span>
+    </div>
+    
+    <div class="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl mb-4">
+        <div class="flex items-center space-x-3">
+            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            <p class="text-sm text-purple-800 dark:text-purple-200">
+                Views are loaded from <code>/api/views/persons</code>. Requires Demo.Api.
+            </p>
+        </div>
+    </div>
+    
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmDataTable TItem="Employee"
+                     Items="_employees"
+                     ViewContext="employees"
+                     ViewProvider="_viewProvider"
+                     ViewFilterDefinitions="_employeeViewFilterDefs"
+                     ExternalFilterDefinitions="_employeeExternalFilterDefs"
+                     ShowExternalFilterBuilder="true"
+                     ViewCanCreateTenantViews="true"
+                     CurrentUserId="CurrentUserId"
+                     CurrentTenantId="CurrentTenantId"
+                     DefaultPageSize="5">
+            <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Sortable="true" Field="e => e.Name" />
+            <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Sortable="true" Field="e => e.Role" />
+            <TmDataTableColumn TItem="Employee" Title="Dept" PropertyName="Dept" Field="e => e.Dept" />
+            <TmDataTableColumn TItem="Employee" Title="Score" PropertyName="Score" Sortable="true" Align="ColumnAlign.Right" Field="e => e.Score" />
+        </TmDataTable>
+    </div>
+</section>
+
+<!-- Pagination Demo -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Pagination</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Standalone pagination component</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full">DataTable</span>
+    </div>
+    
+    <div class="showcase-card space-y-4">
+        <TmPagination CurrentPage="_currentPage" 
+                      TotalPages="10" 
+                      OnPageChange="p => _currentPage = p" />
+        <p class="text-sm text-slate-600">Current page: <strong>@_currentPage</strong></p>
+    </div>
+</section>
+
+@code {
+    [Inject] private PersonHttpDataProvider PersonProvider { get; set; } = default!;
+    [Inject] private ViewHttpProvider ViewProvider { get; set; } = default!;
+
+    private bool _loading;
+    private bool _showEmpty;
+    private Employee? _lastClicked;
+    private List<Employee> _selectedEmployees = [];
+    private string? _apiError;
+
+    // Filter Builder
+    private IReadOnlyList<FilterDefinition> _employeeFilterDefs =
+    [
+        new FilterDefinition { FieldName = "name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+        new FilterDefinition { FieldName = "role", FieldLabel = "Role", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Admin", "Admin"), new SelectOption<string>("User", "User"), new SelectOption<string>("Manager", "Manager")] },
+        new FilterDefinition { FieldName = "dept", FieldLabel = "Department", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Sales", "Sales"), new SelectOption<string>("IT", "IT"), new SelectOption<string>("HR", "HR")] },
+        new FilterDefinition { FieldName = "score", FieldLabel = "Score", FieldType = FilterFieldType.Number }
+    ];
+    private IReadOnlyList<ActiveFilter> _activeEmployeeFilters = [];
+
+    private record Employee(string Name, string Role, string Dept, int Score, string Email = "");
+
+    private static readonly string[] Roles = ["Admin", "User", "Manager"];
+    private static readonly string[] Depts = ["Engineering", "Marketing", "Sales", "IT", "HR"];
+
+    private IReadOnlyList<SelectOption<string>> _roleOptions = Roles.Select(r => new SelectOption<string> { Value = r, Label = r }).ToList();
+    private IReadOnlyList<SelectOption<string>> _deptOptions = Depts.Select(d => new SelectOption<string> { Value = d, Label = d }).ToList();
+
+    private readonly List<Employee> _employees = Enumerable.Range(1, 12).Select(i =>
+        new Employee(
+            $"Employee {i:D2}",
+            Roles[i % Roles.Length],
+            Depts[i % Depts.Length],
+            60 + i * 3,
+            $"emp{i}@example.com")).ToList();
+
+    private IEnumerable<Employee> _filteredEmployees => ApplyEmployeeFilters(_employees, _activeEmployeeFilters);
+
+    // View Manager
+    private List<FilterDefinition> _employeeViewFilterDefs = 
+    [
+        new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+        new FilterDefinition { FieldName = "Role", FieldLabel = "Role", FieldType = FilterFieldType.Select, 
+            Options = [new SelectOption<string>("Admin", "Admin"), new SelectOption<string>("User", "User"), new SelectOption<string>("Manager", "Manager")] },
+        new FilterDefinition { FieldName = "Dept", FieldLabel = "Department", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Sales", "Sales"), new SelectOption<string>("IT", "IT"), new SelectOption<string>("HR", "HR")] },
+        new FilterDefinition { FieldName = "Score", FieldLabel = "Score", FieldType = FilterFieldType.Number }
+    ];
+    
+    // External Filter Builder definitions (must match view filter field names)
+    private List<FilterDefinition> _employeeExternalFilterDefs = 
+    [
+        new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+        new FilterDefinition { FieldName = "Role", FieldLabel = "Role", FieldType = FilterFieldType.Select, 
+            Options = [new SelectOption<string>("Admin", "Admin"), new SelectOption<string>("User", "User"), new SelectOption<string>("Manager", "Manager")] },
+        new FilterDefinition { FieldName = "Department", FieldLabel = "Department", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Sales", "Sales"), new SelectOption<string>("Finance", "Finance"), new SelectOption<string>("HR", "HR")] },
+        new FilterDefinition { FieldName = "IsActive", FieldLabel = "Active", FieldType = FilterFieldType.Boolean }
+    ];
+    private string CurrentUserId => "CurrentUserId";
+    private string CurrentTenantId => "CurrentTenantId";
+
+    private IDataTableDataProvider<PersonDto> _personProvider = default!;
+    private IDataTableViewProvider _viewProvider = default!;
+
+    protected override void OnInitialized()
+    {
+        _personProvider = PersonProvider;
+        _viewProvider = ViewProvider;
+    }
+
+    private void OnRowClick(Employee emp) => _lastClicked = emp;
+
+    private void OnSelectionChanged(IReadOnlyList<Employee> sel) =>
+        _selectedEmployees = sel.ToList();
+
+    // Filter Builder methods
+    private void OnEmployeeFiltersChanged(IReadOnlyList<ActiveFilter> filters)
+    {
+        _activeEmployeeFilters = filters;
+    }
+
+    private void ClearFilterBuilder()
+    {
+        _activeEmployeeFilters = [];
+    }
+
+    private static IEnumerable<Employee> ApplyEmployeeFilters(IEnumerable<Employee> employees, IReadOnlyList<ActiveFilter> filters)
+    {
+        if (filters.Count == 0) return employees;
+
+        var query = employees.AsEnumerable();
+        foreach (var filter in filters)
+        {
+            query = filter.FieldName.ToLowerInvariant() switch
+            {
+                "name" => ApplyTextFilter(query, e => e.Name, filter),
+                "role" => ApplySelectFilter(query, e => e.Role, filter),
+                "dept" => ApplySelectFilter(query, e => e.Dept, filter),
+                "score" => ApplyNumberFilter(query, e => e.Score, filter),
+                _ => query
+            };
+        }
+        return query;
+    }
+
+    private static IEnumerable<Employee> ApplyTextFilter(IEnumerable<Employee> query, Func<Employee, string> selector, ActiveFilter filter)
+    {
+        var value = filter.DisplayValue?.ToLowerInvariant() ?? "";
+        return filter.Operator switch
+        {
+            FilterOperator.Contains => query.Where(e => selector(e).ToLowerInvariant().Contains(value)),
+            FilterOperator.Equals => query.Where(e => selector(e).ToLowerInvariant() == value),
+            _ => query.Where(e => selector(e).ToLowerInvariant().StartsWith(value))
+        };
+    }
+
+    private static IEnumerable<Employee> ApplySelectFilter(IEnumerable<Employee> query, Func<Employee, string> selector, ActiveFilter filter)
+    {
+        return query.Where(e => selector(e) == filter.DisplayValue);
+    }
+
+    private static IEnumerable<Employee> ApplyNumberFilter(IEnumerable<Employee> query, Func<Employee, int> selector, ActiveFilter filter)
+    {
+        if (!int.TryParse(filter.DisplayValue, out var value)) return query;
+
+        return filter.Operator switch
+        {
+            FilterOperator.Equals => query.Where(e => selector(e) == value),
+            FilterOperator.GreaterThan => query.Where(e => selector(e) > value),
+            FilterOperator.LessThan => query.Where(e => selector(e) < value),
+            FilterOperator.GreaterOrEqual => query.Where(e => selector(e) >= value),
+            FilterOperator.LessOrEqual => query.Where(e => selector(e) <= value),
+            _ => query
+        };
+    }
+
+    // Pagination
+    private int _currentPage = 1;
+}

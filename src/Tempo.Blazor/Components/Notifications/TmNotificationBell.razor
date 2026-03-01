@@ -1,0 +1,116 @@
+@namespace Tempo.Blazor.Components.Notifications
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-notification-bell">
+    <button type="button"
+            class="tm-notification-bell-button"
+            aria-label="@Loc["TmNotificationBell_AriaLabel"]"
+            @onclick="Toggle">
+        <TmIcon Name="@IconNames.Bell" Size="IconSize.Sm" />
+        @if (UnreadCount > 0)
+        {
+            <span class="tm-notification-badge">@UnreadCount</span>
+        }
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="tm-notification-dropdown">
+            <div class="tm-notification-header">
+                <span class="tm-notification-title">@Loc["TmNotificationBell_AriaLabel"]</span>
+                @if (UnreadCount > 0)
+                {
+                    <button type="button"
+                            class="tm-notification-mark-all-read"
+                            @onclick="async () => await OnMarkAllRead.InvokeAsync()">
+                        @Loc["TmNotificationBell_MarkAllRead"]
+                    </button>
+                }
+            </div>
+
+            <div class="tm-notification-list">
+                @if (VisibleItems.Any())
+                {
+                    @foreach (var item in VisibleItems)
+                    {
+                        var n = item;
+                        <div class="tm-notification-item @(n.IsRead ? "" : "tm-notification-unread")"
+                             @onclick="async () => await OnNotificationClick.InvokeAsync(n)">
+                            <span class="tm-notification-severity tm-notification-severity--@n.Severity.ToString().ToLowerInvariant()"
+                                  aria-hidden="true">
+                                <TmIcon Name="@SeverityIcon(n.Severity)" Size="IconSize.Xs" />
+                            </span>
+                            <div class="tm-notification-item-content">
+                                <span class="tm-notification-item-title">@n.Title</span>
+                                @if (!string.IsNullOrEmpty(n.Body))
+                                {
+                                    <span class="tm-notification-item-message">@n.Body</span>
+                                }
+                                <span class="tm-notification-item-time">@FormatTime(n.CreatedAt)</span>
+                            </div>
+                            @if (!n.IsRead)
+                            {
+                                <button type="button"
+                                        class="tm-notification-mark-read"
+                                        aria-label="@Loc["TmNotificationBell_MarkAllRead"]"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="async () => await OnMarkAsRead.InvokeAsync(n.Id)">
+                                    <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
+                                </button>
+                                <span class="tm-notification-unread-dot" aria-hidden="true"></span>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="tm-notification-empty">@Loc["TmNotificationBell_NoNotifications"]</div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Notification items to display.</summary>
+    [Parameter] public IReadOnlyList<INotificationItem> Notifications { get; set; } = [];
+
+    /// <summary>Fires when "mark as read" is clicked for a single notification. Argument = item Id.</summary>
+    [Parameter] public EventCallback<string> OnMarkAsRead { get; set; }
+
+    /// <summary>Fires when the "Mark all as read" button is clicked.</summary>
+    [Parameter] public EventCallback OnMarkAllRead { get; set; }
+
+    /// <summary>Maximum number of notifications shown in the dropdown.</summary>
+    [Parameter] public int MaxVisible { get; set; } = 10;
+
+    /// <summary>Fires when a notification item is clicked.</summary>
+    [Parameter] public EventCallback<INotificationItem> OnNotificationClick { get; set; }
+
+    private bool _isOpen;
+
+    private int UnreadCount => Notifications.Count(n => !n.IsRead);
+
+    private IEnumerable<INotificationItem> VisibleItems =>
+        Notifications.Take(MaxVisible);
+
+    private void Toggle() => _isOpen = !_isOpen;
+
+    private string FormatTime(DateTimeOffset ts)
+    {
+        var diff = DateTimeOffset.Now - ts;
+        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
+        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
+        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
+        return Loc["TmTimeline_DaysAgo", (int)diff.TotalDays];
+    }
+
+    private static string SeverityIcon(NotificationSeverity severity) => severity switch
+    {
+        NotificationSeverity.Success => IconNames.CheckCircle,
+        NotificationSeverity.Warning => IconNames.AlertTriangle,
+        NotificationSeverity.Error   => IconNames.AlertCircle,
+        _                            => IconNames.Info,
+    };
+}

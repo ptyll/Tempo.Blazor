@@ -1,0 +1,35 @@
+@namespace Tempo.Blazor.Components.DataTable
+
+@if (SelectedCount > 0)
+{
+    <div class="tm-bulk-action-bar @Class" role="toolbar" aria-label="@Loc["TmBulkAction_Toolbar"]">
+        <div class="tm-bulk-action-bar__info">
+            <span class="tm-bulk-action-bar__count">@SelectedCount</span>
+            <span class="tm-bulk-action-bar__text">@Loc["TmBulkAction_Selected"]</span>
+        </div>
+
+        <div class="tm-bulk-action-bar__actions">
+            @ChildContent
+        </div>
+
+        <button type="button"
+                class="tm-bulk-action-bar__clear"
+                @onclick="OnClearSelection">
+            @Loc["TmBulkAction_ClearSelection"]
+        </button>
+    </div>
+}
+
+@code {
+    /// <summary>Number of selected items.</summary>
+    [Parameter] public int SelectedCount { get; set; }
+
+    /// <summary>Fires when the clear selection button is clicked.</summary>
+    [Parameter] public EventCallback OnClearSelection { get; set; }
+
+    /// <summary>Action buttons slot.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+}

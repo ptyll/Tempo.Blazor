@@ -1,0 +1,22 @@
+.tm-attachment-manager { display: flex; flex-direction: column; gap: var(--tm-space-3); }
+.tm-attachment-list { display: flex; flex-direction: column; gap: var(--tm-space-2); }
+.tm-attachment-item {
+  display: flex; align-items: center; gap: var(--tm-space-3);
+  padding: var(--tm-space-2) var(--tm-space-3); background: var(--tm-bg-muted); border-radius: var(--tm-radius-md);
+}
+.tm-attachment-icon { font-size: var(--tm-font-size-xl); flex-shrink: 0; }
+.tm-attachment-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.tm-attachment-name { font-size: var(--tm-font-size-sm); font-weight: var(--tm-font-weight-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-attachment-meta { font-size: var(--tm-font-size-xs); color: var(--tm-text-tertiary); }
+.tm-attachment-actions { display: flex; gap: var(--tm-space-1); flex-shrink: 0; }
+.tm-attachment-download, .tm-attachment-delete {
+  background: none; border: none; cursor: pointer; padding: var(--tm-space-1);
+  border-radius: var(--tm-radius-sm); color: var(--tm-text-secondary); font-size: var(--tm-font-size-base);
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+.tm-attachment-download:hover { background: var(--tm-bg-surface); color: var(--tm-color-primary); }
+.tm-attachment-delete:hover   { background: var(--tm-color-danger-subtle); color: var(--tm-color-danger); }
+.tm-attachment-upload-progress {
+  padding: var(--tm-space-2) var(--tm-space-3); background: var(--tm-color-primary-subtle);
+  border-radius: var(--tm-radius-md); font-size: var(--tm-font-size-sm); color: var(--tm-color-primary);
+}

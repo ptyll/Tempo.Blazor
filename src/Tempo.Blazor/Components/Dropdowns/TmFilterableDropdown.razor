@@ -1,0 +1,229 @@
+@namespace Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@using Microsoft.AspNetCore.Components.Web
+@typeparam TItem
+@typeparam TValue
+
+<div class="tm-filterable-dropdown">
+    <div class="tm-filterable-dropdown-trigger"
+         role="combobox"
+         tabindex="0"
+         aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
+         aria-haspopup="listbox"
+         @onclick="ToggleAsync">
+        @if (Value is null || IsEmptyValue(Value))
+        {
+            <span class="tm-filterable-dropdown-placeholder">@(Placeholder ?? Loc["TmFilterableDropdown_Placeholder"])</span>
+        }
+        else
+        {
+            <span class="tm-filterable-dropdown-value">@GetDisplayText(Value)</span>
+        }
+        @if (ShowClearButton && Value is not null && !IsEmptyValue(Value))
+        {
+            <button type="button"
+                    class="tm-filterable-dropdown-clear"
+                    aria-label="@Loc["TmFilterableDropdown_ClearSelection"]"
+                    @onclick="ClearValueAsync"
+                    @onclick:stopPropagation="true">
+                ✕
+            </button>
+        }
+    </div>
+
+    @if (_isOpen)
+    {
+        <div class="tm-filterable-dropdown-menu" role="listbox" @onkeydown="HandleKeyDownAsync">
+            <div class="tm-filterable-dropdown-filter">
+                <input type="text"
+                       class="tm-filterable-dropdown-filter-input"
+                       placeholder="@(FilterPlaceholder ?? Loc["TmFilterableDropdown_Search"])"
+                       value="@_filterText"
+                       @oninput="OnFilterInput" />
+            </div>
+
+            @if (_isLoading)
+            {
+                <div class="tm-filterable-dropdown-loading">@(LoadingMessage ?? Loc["TmFilterableDropdown_Loading"])</div>
+            }
+            else if (_hasError)
+            {
+                <div class="tm-filterable-dropdown-error">
+                    <span>@(ErrorMessage ?? Loc["TmFilterableDropdown_Error"])</span>
+                    <button type="button" @onclick="RetryAsync">@Loc["TmFilterableDropdown_Retry"]</button>
+                </div>
+            }
+            else
+            {
+                var filtered = GetFilteredItems().ToList();
+                @if (filtered.Count == 0)
+                {
+                    <div class="tm-filterable-dropdown-empty">@(EmptyMessage ?? Loc["TmFilterableDropdown_NoResults"])</div>
+                }
+                else
+                {
+                    @for (int i = 0; i < filtered.Count; i++)
+                    {
+                        var item = filtered[i];
+                        var idx = i;
+                        <div class="tm-filterable-dropdown-item @(idx == _selectedIndex ? "tm-filterable-dropdown-item-selected" : "")"
+                             @key="GetItemKey(item)"
+                             @onclick="() => SelectItemAsync(item)">
+                            @if (ItemTemplate is not null)
+                            {
+                                @ItemTemplate(item)
+                            }
+                            else
+                            {
+                                @GetDisplayText(item)
+                            }
+                        </div>
+                    }
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Items to display (client-side filtering).</summary>
+    [Parameter] public IEnumerable<TItem> Items { get; set; } = [];
+
+    /// <summary>Server-side data provider. When set, Items is ignored.</summary>
+    [Parameter] public IDropdownDataProvider<TItem>? DataProvider { get; set; }
+
+    /// <summary>Currently selected item.</summary>
+    [Parameter] public TItem? Value { get; set; }
+
+    /// <summary>Fires when the selected item changes.</summary>
+    [Parameter] public EventCallback<TItem?> ValueChanged { get; set; }
+
+    /// <summary>Field selector for display text.</summary>
+    [Parameter] public Func<TItem, string>? DisplayField { get; set; }
+
+    /// <summary>Field selector for item key (used for @key).</summary>
+    [Parameter] public Func<TItem, object>? IdField { get; set; }
+
+    /// <summary>Placeholder text when no item is selected. When null, falls back to the localized default.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Placeholder for the filter input. When null, falls back to the localized default.</summary>
+    [Parameter] public string? FilterPlaceholder { get; set; }
+
+    /// <summary>Message when no items match the filter. When null, falls back to the localized default.</summary>
+    [Parameter] public string? EmptyMessage { get; set; }
+
+    /// <summary>Message shown while loading from DataProvider. When null, falls back to the localized default.</summary>
+    [Parameter] public string? LoadingMessage { get; set; }
+
+    /// <summary>Message shown when DataProvider throws. When null, falls back to the localized default.</summary>
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    /// <summary>Shows a clear button when a value is selected.</summary>
+    [Parameter] public bool ShowClearButton { get; set; }
+
+    /// <summary>Custom item rendering template.</summary>
+    [Parameter] public RenderFragment<TItem>? ItemTemplate { get; set; }
+
+    private bool _isOpen;
+    private bool _isLoading;
+    private bool _hasError;
+    private string _filterText = string.Empty;
+    private int _selectedIndex = -1;
+    private List<TItem> _providerItems = [];
+
+    private async Task ToggleAsync()
+    {
+        _isOpen = !_isOpen;
+        if (_isOpen && DataProvider is not null)
+            await LoadFromProviderAsync();
+    }
+
+    private async Task LoadFromProviderAsync()
+    {
+        _isLoading = true;
+        _hasError = false;
+        StateHasChanged();
+        try
+        {
+            var req = new DropdownSearchRequest { SearchText = _filterText, Page = 1, PageSize = 50 };
+            var result = await DataProvider!.GetItemsAsync(req, CancellationToken.None);
+            _providerItems = result.Items.ToList();
+        }
+        catch
+        {
+            _hasError = true;
+            _providerItems.Clear();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RetryAsync() => await LoadFromProviderAsync();
+
+    private async Task SelectItemAsync(TItem item)
+    {
+        Value = item;
+        await ValueChanged.InvokeAsync(item);
+        _isOpen = false;
+        _filterText = string.Empty;
+    }
+
+    private async Task ClearValueAsync()
+    {
+        Value = default;
+        await ValueChanged.InvokeAsync(default);
+    }
+
+    private void OnFilterInput(ChangeEventArgs e) =>
+        _filterText = e.Value?.ToString() ?? string.Empty;
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        var filtered = GetFilteredItems().ToList();
+        switch (e.Key)
+        {
+            case "Escape":
+                _isOpen = false;
+                break;
+            case "ArrowDown":
+                _selectedIndex = Math.Min(_selectedIndex + 1, filtered.Count - 1);
+                break;
+            case "ArrowUp":
+                _selectedIndex = Math.Max(_selectedIndex - 1, 0);
+                break;
+            case "Enter" when _selectedIndex >= 0 && _selectedIndex < filtered.Count:
+                await SelectItemAsync(filtered[_selectedIndex]);
+                break;
+        }
+    }
+
+    private IEnumerable<TItem> GetFilteredItems()
+    {
+        var source = DataProvider is not null ? _providerItems : Items;
+        if (string.IsNullOrWhiteSpace(_filterText)) return source;
+        var search = _filterText.ToLowerInvariant();
+        return source.Where(item => GetDisplayText(item).ToLowerInvariant().Contains(search));
+    }
+
+    private bool IsEmptyValue(TItem value) =>
+        value is null || (value is string s && string.IsNullOrEmpty(s));
+
+    private string GetDisplayText(TItem item)
+    {
+        if (item is null) return string.Empty;
+        if (DisplayField is not null) return DisplayField(item);
+        return item.ToString() ?? string.Empty;
+    }
+
+    private object GetItemKey(TItem item)
+    {
+        if (item is null) return Guid.NewGuid();
+        if (IdField is not null) return IdField(item);
+        return item.GetHashCode();
+    }
+}

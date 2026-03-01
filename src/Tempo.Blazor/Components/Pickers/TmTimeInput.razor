@@ -1,0 +1,88 @@
+@namespace Tempo.Blazor.Components.Pickers
+
+<div class="tm-time-input @(Disabled ? "tm-time-input--disabled" : "")">
+    <input type="number"
+           class="tm-time-seg tm-time-seg--hours"
+           min="0" max="23"
+           value="@_hours"
+           disabled="@Disabled"
+           aria-label="@Loc["TmTimePicker_Hours"]"
+           @onchange="OnHoursChange" />
+    <span class="tm-time-sep" aria-hidden="true">:</span>
+    <input type="number"
+           class="tm-time-seg tm-time-seg--minutes"
+           min="0" max="59"
+           value="@_minutes"
+           disabled="@Disabled"
+           aria-label="@Loc["TmTimePicker_Minutes"]"
+           @onchange="OnMinutesChange" />
+    @if (ShowSeconds)
+    {
+        <span class="tm-time-sep" aria-hidden="true">:</span>
+        <input type="number"
+               class="tm-time-seg tm-time-seg--seconds"
+               min="0" max="59"
+               value="@_seconds"
+               disabled="@Disabled"
+               aria-label="@Loc["TmTimePicker_Seconds"]"
+               @onchange="OnSecondsChange" />
+    }
+</div>
+
+@code {
+    [Parameter] public TimeOnly?  Value        { get; set; }
+    [Parameter] public EventCallback<TimeOnly?> ValueChanged { get; set; }
+    [Parameter] public bool       ShowSeconds  { get; set; }
+    [Parameter] public bool       Disabled     { get; set; }
+    [Parameter] public TimeOnly?  MinTime      { get; set; }
+    [Parameter] public TimeOnly?  MaxTime      { get; set; }
+
+    private string _hours   = "00";
+    private string _minutes = "00";
+    private string _seconds = "00";
+
+    protected override void OnParametersSet()
+    {
+        if (Value.HasValue)
+        {
+            _hours   = Value.Value.Hour.ToString("D2");
+            _minutes = Value.Value.Minute.ToString("D2");
+            _seconds = Value.Value.Second.ToString("D2");
+        }
+        else
+        {
+            _hours = _minutes = _seconds = "00";
+        }
+    }
+
+    private async Task OnHoursChange(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var h) || h < 0 || h > 23) return;
+        var m = Value?.Minute   ?? 0;
+        var s = Value?.Second   ?? 0;
+        await Commit(new TimeOnly(h, m, s));
+    }
+
+    private async Task OnMinutesChange(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var m) || m < 0 || m > 59) return;
+        var h = Value?.Hour   ?? 0;
+        var s = Value?.Second ?? 0;
+        await Commit(new TimeOnly(h, m, s));
+    }
+
+    private async Task OnSecondsChange(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var s) || s < 0 || s > 59) return;
+        var h = Value?.Hour   ?? 0;
+        var m = Value?.Minute ?? 0;
+        await Commit(new TimeOnly(h, m, s));
+    }
+
+    private async Task Commit(TimeOnly t)
+    {
+        if (MinTime.HasValue && t < MinTime.Value) return;
+        if (MaxTime.HasValue && t > MaxTime.Value) return;
+        await ValueChanged.InvokeAsync(t);
+    }
+}

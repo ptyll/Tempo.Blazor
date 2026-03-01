@@ -1,0 +1,96 @@
+@namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+
+@if (!_dismissed)
+{
+    <div class="tm-alert @SeverityClass @VariantClass @Class" role="alert">
+        <span class="tm-alert__icon">
+            <TmIcon Name="@ResolvedIcon" Size="IconSize.Sm" />
+        </span>
+
+        <div class="tm-alert__body">
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <div class="tm-alert__title">@Title</div>
+            }
+            @if (ChildContent is not null)
+            {
+                <div class="tm-alert__description">@ChildContent</div>
+            }
+            @if (Actions is not null)
+            {
+                <div class="tm-alert__actions">@Actions</div>
+            }
+        </div>
+
+        @if (Dismissable)
+        {
+            <button type="button"
+                    class="tm-alert__dismiss"
+                    aria-label="@Loc["TmAlert_Dismiss"]"
+                    @onclick="HandleDismiss">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private bool _dismissed;
+
+    /// <summary>Severity level controlling color and default icon.</summary>
+    [Parameter] public AlertSeverity Severity { get; set; } = AlertSeverity.Info;
+
+    /// <summary>Visual variant: Soft, Filled, or Outlined.</summary>
+    [Parameter] public AlertVariant Variant { get; set; } = AlertVariant.Soft;
+
+    /// <summary>Optional title displayed above the description.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Description content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>When true, a dismiss button is shown.</summary>
+    [Parameter] public bool Dismissable { get; set; }
+
+    /// <summary>Fires when the dismiss button is clicked.</summary>
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    /// <summary>Custom icon name. When null, an icon is auto-selected based on severity.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Optional actions slot (e.g. buttons).</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string SeverityClass => Severity switch
+    {
+        AlertSeverity.Success => "tm-alert--success",
+        AlertSeverity.Warning => "tm-alert--warning",
+        AlertSeverity.Error => "tm-alert--error",
+        _ => "tm-alert--info"
+    };
+
+    private string VariantClass => Variant switch
+    {
+        AlertVariant.Filled => "tm-alert--filled",
+        AlertVariant.Outlined => "tm-alert--outlined",
+        _ => "tm-alert--soft"
+    };
+
+    private string ResolvedIcon => Icon ?? Severity switch
+    {
+        AlertSeverity.Success => "check-circle",
+        AlertSeverity.Warning => "alert-triangle",
+        AlertSeverity.Error => "alert-circle",
+        _ => "info"
+    };
+
+    private async Task HandleDismiss()
+    {
+        _dismissed = true;
+        await OnDismiss.InvokeAsync();
+    }
+}

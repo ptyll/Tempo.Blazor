@@ -1,0 +1,30 @@
+@namespace Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Models
+
+<span class="tm-filter-chip" @onclick="HandleChipClick">
+    <span class="tm-filter-chip-label">
+        <b class="tm-filter-chip-field">@Filter.FieldLabel:</b>
+        <span class="tm-filter-chip-value">@Filter.DisplayValue</span>
+    </span>
+    <button type="button"
+            class="tm-filter-chip-remove"
+            aria-label="@Loc["Tm_Remove"]"
+            @onclick:stopPropagation="true"
+            @onclick="HandleRemoveClick">
+        &times;
+    </button>
+</span>
+
+@code {
+    /// <summary>The active filter to display.</summary>
+    [Parameter, EditorRequired] public ActiveFilter Filter { get; set; } = default!;
+
+    /// <summary>Fires when the remove button is clicked.</summary>
+    [Parameter] public EventCallback<ActiveFilter> OnRemove { get; set; }
+
+    /// <summary>Fires when the chip body is clicked (to re-open edit UI).</summary>
+    [Parameter] public EventCallback<ActiveFilter> OnEdit { get; set; }
+
+    private async Task HandleRemoveClick() => await OnRemove.InvokeAsync(Filter);
+    private async Task HandleChipClick()   => await OnEdit.InvokeAsync(Filter);
+}

@@ -1,0 +1,170 @@
+@namespace Tempo.Blazor.Components.Inputs
+@typeparam TItem
+@typeparam TValue
+
+<div class="tm-input-wrapper">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-input-label">@Label</label>
+    }
+
+    <div class="tm-entity-picker @(Disabled ? "tm-entity-picker--disabled" : "")">
+        <div class="tm-entity-picker__input-wrapper">
+            <svg class="tm-entity-picker__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input type="text"
+                   value="@_searchText"
+                   placeholder="@Placeholder"
+                   disabled="@Disabled"
+                   class="tm-entity-picker__input"
+                   role="combobox"
+                   aria-expanded="@(_showDropdown ? "true" : "false")"
+                   aria-autocomplete="list"
+                   @oninput="HandleSearch"
+                   @onfocus="HandleFocus"
+                   @onblur="HandleBlur" />
+            @if (_isLoading)
+            {
+                <div class="tm-entity-picker__loading">
+                    <div class="tm-spinner tm-spinner--sm"></div>
+                </div>
+            }
+        </div>
+
+        @if (_showDropdown)
+        {
+            <div class="tm-entity-picker__dropdown" role="listbox">
+                @if (_results.Any())
+                {
+                    @foreach (var item in _results)
+                    {
+                        var itemValue = ValueSelector(item);
+                        <div class="tm-entity-picker__option"
+                             role="option"
+                             @onclick="@(() => SelectItem(item))"
+                             @onclick:preventDefault="true">
+                            @DisplaySelector(item)
+                        </div>
+                    }
+                }
+                else if (!_isLoading)
+                {
+                    <div class="tm-entity-picker__no-results">
+                        No results found
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="tm-input-error-message">@Error</div>
+    }
+</div>
+
+@code {
+    private string _searchText = "";
+    private bool _showDropdown;
+    private bool _isLoading;
+    private List<TItem> _results = [];
+    private CancellationTokenSource? _debounceToken;
+
+    /// <summary>Current selected value.</summary>
+    [Parameter] public TValue? Value { get; set; }
+
+    /// <summary>Fires when value changes.</summary>
+    [Parameter] public EventCallback<TValue?> ValueChanged { get; set; }
+
+    /// <summary>Search provider function.</summary>
+    [Parameter, EditorRequired] public Func<string, Task<IEnumerable<TItem>>> SearchProvider { get; set; } = default!;
+
+    /// <summary>Extracts the value from an item.</summary>
+    [Parameter, EditorRequired] public Func<TItem, TValue> ValueSelector { get; set; } = default!;
+
+    /// <summary>Extracts the display text from an item.</summary>
+    [Parameter, EditorRequired] public Func<TItem, string> DisplaySelector { get; set; } = default!;
+
+    /// <summary>Field label.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Placeholder text.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Minimum characters before search triggers.</summary>
+    [Parameter] public int MinSearchLength { get; set; } = 2;
+
+    /// <summary>Debounce delay in ms.</summary>
+    [Parameter] public int Debounce { get; set; } = 300;
+
+    /// <summary>Error message.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Disable the input.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    private async Task HandleSearch(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? "";
+
+        if (_searchText.Length < MinSearchLength)
+        {
+            _showDropdown = false;
+            _results.Clear();
+            return;
+        }
+
+        _debounceToken?.Cancel();
+        _debounceToken = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(Debounce, _debounceToken.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var results = await SearchProvider(_searchText);
+            _results = results.ToList();
+            _showDropdown = true;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        _searchText = DisplaySelector(item);
+        _showDropdown = false;
+        _results.Clear();
+        await ValueChanged.InvokeAsync(ValueSelector(item));
+    }
+
+    private void HandleFocus()
+    {
+        if (_results.Any())
+            _showDropdown = true;
+    }
+
+    private void HandleBlur()
+    {
+        // Delay to allow click on dropdown items
+        _ = Task.Delay(200).ContinueWith(_ =>
+        {
+            _showDropdown = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+}

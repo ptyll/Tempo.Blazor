@@ -1,0 +1,94 @@
+/* ═══════════════════════════════════════════════════════════════
+   Find & Replace Dialog - Find and replace dialog styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-rte-findreplace-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: var(--tm-z-modal, 1050);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-rte-findreplace-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.tm-rte-findreplace-content {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: var(--tm-bg-surface);
+  border-radius: var(--tm-radius-lg);
+  box-shadow: var(--tm-shadow-xl);
+  overflow: hidden;
+}
+
+.tm-rte-findreplace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--tm-space-4);
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-rte-findreplace-header h5 {
+  font-size: var(--tm-font-size-lg);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-primary);
+  margin: 0;
+}
+
+.tm-rte-findreplace-body {
+  padding: var(--tm-space-4);
+}
+
+.tm-rte-findreplace-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-3) var(--tm-space-4);
+  border-top: 1px solid var(--tm-border-color);
+  background: var(--tm-bg-muted);
+}
+
+.tm-rte-findreplace-find-input,
+.tm-rte-findreplace-replace-input {
+  width: 100%;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  color: var(--tm-text-primary);
+  font-size: var(--tm-font-size-sm);
+  transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
+}
+
+.tm-rte-findreplace-find-input:focus,
+.tm-rte-findreplace-replace-input:focus {
+  outline: none;
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-shadow-focus);
+}
+
+.tm-rte-findreplace-result {
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-color-success-100);
+  color: var(--tm-color-success-700);
+  border-radius: var(--tm-radius-md);
+  font-size: var(--tm-font-size-sm);
+  text-align: center;
+}
+
+.tm-rte-btn-replaceall {
+  background: var(--tm-color-warning);
+  color: var(--tm-color-white);
+}
+
+.tm-rte-btn-replaceall:hover:not(:disabled) {
+  background: var(--tm-color-warning-hover);
+}

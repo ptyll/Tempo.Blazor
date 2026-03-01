@@ -1,0 +1,151 @@
+@page "/toolbar-forms"
+<PageTitle>Toolbar & Forms – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Toolbar & Forms</h1>
+    <p class="text-slate-600 dark:text-slate-400">Toolbar components and form layout helpers for consistent page structures.</p>
+</div>
+
+<!-- Toolbars -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Toolbars</h2>
+    </div>
+    
+    <div class="space-y-6">
+        <!-- Basic Toolbar -->
+        <div class="showcase-card p-0 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">Basic Toolbar with Actions</h3>
+            </div>
+            <div class="p-4">
+                <TmToolbar Title="Documents">
+                    <Actions>
+                        <TmToolbarButton Text="New" Icon="@IconNames.Plus" OnClick="@(() => _log = "New clicked")" />
+                        <TmToolbarButton Text="Import" Icon="@IconNames.Upload" />
+                        <TmToolbarDivider />
+                        <TmToolbarButton Icon="@IconNames.Trash" Tooltip="Delete selected" Variant="ButtonVariant.Danger"
+                                         OnClick="@(() => _log = "Delete clicked")" />
+                    </Actions>
+                </TmToolbar>
+                
+                @if (_log is not null)
+                {
+                    <div class="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p class="text-sm text-slate-600 dark:text-slate-400">
+                            Last action: <span class="font-medium text-primary-600 dark:text-primary-400">@_log</span>
+                        </p>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Toolbar with Content -->
+        <div class="showcase-card p-0 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">Toolbar with Custom Content</h3>
+            </div>
+            <div class="p-4">
+                <TmToolbar>
+                    <ChildContent>
+                        <TmSearchInput Placeholder="Search items..." />
+                    </ChildContent>
+                    <Actions>
+                        <TmToolbarButton Text="Filter" Icon="@IconNames.Filter" />
+                        <TmToolbarButton Text="Export" Icon="@IconNames.Download" />
+                    </Actions>
+                </TmToolbar>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Form Layout -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Form Layout</h2>
+    </div>
+    
+    <div class="space-y-6">
+        <!-- Form Section with Rows -->
+        <div class="showcase-card">
+            <TmFormSection Title="Personal Information" Description="Your basic profile details.">
+                <TmFormRow Columns="2">
+                    <TmFormField Label="First name" Required="true">
+                        <TmTextInput Value="@_firstName" ValueChanged="v => _firstName = v" Placeholder="John" />
+                    </TmFormField>
+                    <TmFormField Label="Last name" Required="true">
+                        <TmTextInput Value="@_lastName" ValueChanged="v => _lastName = v" Placeholder="Doe" />
+                    </TmFormField>
+                </TmFormRow>
+                <TmFormRow Columns="2">
+                    <TmFormField Label="Email" HelpText="We'll never share your email.">
+                        <TmTextInput Value="@_email" ValueChanged="v => _email = v" Placeholder="john@example.com" />
+                    </TmFormField>
+                    <TmFormField Label="Phone">
+                        <TmTextInput Value="@_phone" ValueChanged="v => _phone = v" Placeholder="+1 555 000 0000" />
+                    </TmFormField>
+                </TmFormRow>
+            </TmFormSection>
+        </div>
+        
+        <!-- Collapsible Section -->
+        <div class="showcase-card">
+            <TmFormSection Title="Advanced Settings" Description="Configuration options for power users." Collapsible="true" CollapsedByDefault="true">
+                <TmFormRow Columns="1">
+                    <TmFormField Label="API Key" HelpText="Read-only generated key.">
+                        <TmTextInput Value="sk-demo-key-1234" ValueChanged="@(_ => {})" />
+                    </TmFormField>
+                </TmFormRow>
+                <TmFormRow Columns="2">
+                    <TmFormField Label="Timeout (ms)">
+                        <TmTextInput Value="5000" ValueChanged="@(_ => {})" />
+                    </TmFormField>
+                    <TmFormField Label="Max retries">
+                        <TmTextInput Value="3" ValueChanged="@(_ => {})" />
+                    </TmFormField>
+                </TmFormRow>
+            </TmFormSection>
+        </div>
+        
+        <!-- Validation Example -->
+        <div class="showcase-card">
+            <TmFormSection Title="Validation Example">
+                <TmFormRow Columns="2">
+                    <TmFormField Label="Username" Required="true"
+                                 ErrorMessage="@(_username.Length < 3 && _username.Length > 0 ? "Min 3 characters" : null)">
+                        <TmTextInput Value="@_username" ValueChanged="v => _username = v" Placeholder="Enter username" />
+                    </TmFormField>
+                    <TmFormField Label="Role" HelpText="Choose the user's role in the system.">
+                        <TmSelect TValue="string"
+                                  Value="@_role"
+                                  ValueChanged="v => _role = v ?? string.Empty"
+                                  Options="@_roleOptions"
+                                  Placeholder="Select role..." />
+                    </TmFormField>
+                </TmFormRow>
+            </TmFormSection>
+        </div>
+    </div>
+</section>
+
+@code {
+    private string? _log;
+
+    // Form fields
+    private string _firstName = string.Empty;
+    private string _lastName = string.Empty;
+    private string _email = string.Empty;
+    private string _phone = string.Empty;
+    private string _username = string.Empty;
+    private string _role = string.Empty;
+
+    private readonly IReadOnlyList<SelectOption<string>> _roleOptions = new[]
+    {
+        new SelectOption<string>("admin", "Administrator"),
+        new SelectOption<string>("editor", "Editor"),
+        new SelectOption<string>("viewer", "Viewer"),
+        new SelectOption<string>("guest", "Guest"),
+    };
+}

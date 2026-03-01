@@ -1,0 +1,869 @@
+@page "/feedback"
+@inject ToastService Toast
+@using Tempo.Blazor.Components.Workflow
+<PageTitle>Feedback – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Feedback Components</h1>
+    <p class="text-slate-600 dark:text-slate-400">Components for user feedback including notifications, toasts, timelines, and steppers.</p>
+</div>
+
+@using Tempo.Blazor.Components.Feedback
+
+<!-- Toast Container Component -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Toast Container</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Component</span>
+    </div>
+    
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            The <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmToastContainer /&gt;</code> component displays toast notifications. 
+            It is typically placed in your MainLayout. The demo below shows a local instance:
+        </p>
+        
+        <div class="relative h-64 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900">
+            <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-slate-400 text-sm">Toast Container Preview Area</span>
+            </div>
+            <TmToastContainer />
+        </div>
+        
+        <div class="mt-4 flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowSuccess("Success toast!", "Success"))">Show Success</TmButton>
+            <TmButton Variant="ButtonVariant.Danger" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowError("Error toast!", "Error"))">Show Error</TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowWarning("Warning toast!"))">Show Warning</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowInfo("Info toast!"))">Show Info</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Toast Notifications -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Toast Notifications (Global)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">ToastService</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Inject <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ToastService</code> and call
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ShowSuccess</code>,
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ShowError</code>,
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ShowWarning</code>, or
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ShowInfo</code>.
+            These toasts appear in the global toast container in the layout.
+        </p>
+
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary" OnClick="@(() => Toast.ShowSuccess("Record saved successfully!", "Success"))">
+                <span class="flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Success</span>
+                </span>
+            </TmButton>
+
+            <TmButton Variant="ButtonVariant.Danger" OnClick="@(() => Toast.ShowError("Failed to delete record.", "Error"))">
+                <span class="flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Error</span>
+                </span>
+            </TmButton>
+
+            <TmButton Variant="ButtonVariant.Secondary" OnClick="@(() => Toast.ShowWarning("Your session will expire in 5 minutes."))">
+                <span class="flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.27 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span>Warning</span>
+                </span>
+            </TmButton>
+
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="@(() => Toast.ShowInfo("New version available. Refresh to update."))">
+                <span class="flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Info</span>
+                </span>
+            </TmButton>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div class="flex flex-wrap gap-3">
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                          OnClick="@(() => Toast.ShowSuccess("Quick toast — no title, 3s duration.", duration: 3000))">
+                    Short (3s)
+                </TmButton>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost"
+                          OnClick="@(() => Toast.ShowInfo("This toast stays for 10 seconds.", "Long Duration", 10000))">
+                    Long (10s)
+                </TmButton>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@FireMultipleToasts">
+                    Multiple
+                </TmButton>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger" OnClick="@(() => Toast.Clear())">
+                    Clear All
+                </TmButton>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Notification Bell -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Notification Bell</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full">@_unreadCount unread</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="flex items-center justify-between">
+            <TmNotificationBell Items="@_notifications" OnMarkAllRead="@MarkAllRead" />
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="AddNotification">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>Add Notification</span>
+                </span>
+            </TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Alerts -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Alerts</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">4 Severities × 3 Variants</span>
+    </div>
+
+    <!-- Soft variant (default) -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Soft variant (default)</p>
+        <div class="space-y-3">
+            <TmAlert Severity="AlertSeverity.Info" Title="Information">
+                This is an informational alert — it provides additional context.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Success" Title="Success">
+                Your changes have been saved successfully.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Warning" Title="Warning">
+                Your session will expire in 5 minutes.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Error" Title="Error" Dismissable="true">
+                Failed to connect to the server. Please try again.
+            </TmAlert>
+        </div>
+    </div>
+
+    <!-- Filled variant -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Filled variant</p>
+        <div class="space-y-3">
+            <TmAlert Severity="AlertSeverity.Info" Variant="AlertVariant.Filled">
+                A new version is available. Refresh to update.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Success" Variant="AlertVariant.Filled" Dismissable="true">
+                Deployment completed successfully.
+            </TmAlert>
+        </div>
+    </div>
+
+    <!-- Outlined variant -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Outlined variant</p>
+        <div class="space-y-3">
+            <TmAlert Severity="AlertSeverity.Warning" Variant="AlertVariant.Outlined" Title="Disk space low">
+                Only 2.1 GB remaining on the primary volume.
+            </TmAlert>
+            <TmAlert Severity="AlertSeverity.Error" Variant="AlertVariant.Outlined" Title="Action required" Dismissable="true">
+                Your license expires in 3 days. Please renew to avoid interruption.
+            </TmAlert>
+        </div>
+    </div>
+
+    <!-- With actions -->
+    <div class="showcase-card">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">With actions</p>
+        <TmAlert Severity="AlertSeverity.Info" Title="New feature available">
+            <ChildContent>We've added dark mode support. Would you like to try it?</ChildContent>
+            <Actions>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Primary" OnClick="@(() => Toast.ShowSuccess("Feature enabled!"))">Enable</TmButton>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost">Learn more</TmButton>
+            </Actions>
+        </TmAlert>
+    </div>
+</section>
+
+<!-- Tabs -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tabs</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">3 Variants</span>
+    </div>
+
+    <!-- Line variant (default) -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Line variant</p>
+        <TmTabs ActiveTabId="@_tabLineActive" ActiveTabIdChanged="@(v => { _tabLineActive = v; StateHasChanged(); })">
+            <TmTabPanel Id="overview" Title="Overview" Icon="info">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Overview</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">This is the overview panel. Content is lazy-loaded — only the active panel is rendered.</p>
+                </div>
+            </TmTabPanel>
+            <TmTabPanel Id="details" Title="Details" Badge="3">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Details</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">Details panel with a badge showing "3" on the tab header.</p>
+                </div>
+            </TmTabPanel>
+            <TmTabPanel Id="settings" Title="Settings" Icon="settings">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Settings</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">Settings panel with an icon. Use keyboard arrows to navigate between tabs.</p>
+                </div>
+            </TmTabPanel>
+            <TmTabPanel Id="disabled-tab" Title="Archived" Disabled="true">
+                <div class="p-4">Disabled content</div>
+            </TmTabPanel>
+        </TmTabs>
+    </div>
+
+    <!-- Pill variant -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Pill variant</p>
+        <TmTabs ActiveTabId="@_tabPillActive" ActiveTabIdChanged="@(v => { _tabPillActive = v; StateHasChanged(); })" Variant="TabVariant.Pill">
+            <TmTabPanel Id="day" Title="Day">
+                <div class="p-4 text-sm text-slate-600 dark:text-slate-400">Day view content</div>
+            </TmTabPanel>
+            <TmTabPanel Id="week" Title="Week">
+                <div class="p-4 text-sm text-slate-600 dark:text-slate-400">Week view content</div>
+            </TmTabPanel>
+            <TmTabPanel Id="month" Title="Month">
+                <div class="p-4 text-sm text-slate-600 dark:text-slate-400">Month view content</div>
+            </TmTabPanel>
+        </TmTabs>
+    </div>
+
+    <!-- Enclosed variant -->
+    <div class="showcase-card">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Enclosed variant</p>
+        <TmTabs ActiveTabId="@_tabEncActive" ActiveTabIdChanged="@(v => { _tabEncActive = v; StateHasChanged(); })" Variant="TabVariant.Enclosed">
+            <TmTabPanel Id="source" Title="Source" Icon="code">
+                <div class="p-4 text-sm text-slate-600 dark:text-slate-400">Source code view</div>
+            </TmTabPanel>
+            <TmTabPanel Id="preview" Title="Preview" Icon="eye">
+                <div class="p-4 text-sm text-slate-600 dark:text-slate-400">Preview panel</div>
+            </TmTabPanel>
+        </TmTabs>
+    </div>
+</section>
+
+<!-- Timeline -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Activity Timeline</h2>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="flex items-center space-x-4 mb-6 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" @bind="_showInternal" class="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                <span class="text-sm text-slate-700 dark:text-slate-300">Show internal notes</span>
+            </label>
+        </div>
+        
+        <TmTimeline Entries="@_timelineEntries" ShowInternal="@_showInternal" />
+    </div>
+</section>
+
+<!-- Stepper -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Stepper</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Wizard Navigation</span>
+    </div>
+    
+    <div class="showcase-card mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+                <span class="text-sm text-slate-600 dark:text-slate-400">Size:</span>
+                <select @bind="_stepperSize" class="text-sm border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800">
+                    <option value="Small">Small</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Large">Large</option>
+                </select>
+            </div>
+            <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" @bind="_stepperVertical" class="w-4 h-4 rounded border-slate-300 text-primary-600" />
+                <span class="text-sm text-slate-700 dark:text-slate-300">Vertical</span>
+            </label>
+        </div>
+        
+        <TmStepper Steps="@_steps"
+                   ActiveStep="@_activeStep"
+                   OnStepClick="@(i => _activeStep = i)"
+                   Orientation="@(_stepperVertical ? StepperOrientation.Vertical : StepperOrientation.Horizontal)"
+                   Size="@((StepperSize)Enum.Parse(typeof(StepperSize), _stepperSize))"
+                   ShowCheckIcon="true"
+                   ShowConnectors="true" />
+        
+        <!-- Step Content -->
+        <div class="mt-6 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div class="text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                    <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">@(_activeStep + 1)</span>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@_steps[_activeStep].Label</h3>
+                <p class="text-slate-600 dark:text-slate-400">@_steps[_activeStep].Description</p>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <div class="flex items-center justify-between mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+            <TmButton Variant="ButtonVariant.Ghost"
+                      Disabled="@(_activeStep == 0)"
+                      OnClick="@(() => _activeStep--)">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Previous</span>
+                </span>
+            </TmButton>
+            
+            <div class="flex space-x-1">
+                @for (int i = 0; i < _steps.Count; i++)
+                {
+                    var stepIndex = i;
+                    <button @onclick="() => _activeStep = stepIndex"
+                            class="w-2 h-2 rounded-full transition-colors @(i == _activeStep ? "bg-primary-600" : "bg-slate-300 dark:bg-slate-600 hover:bg-slate-400")"
+                            aria-label="Go to step @(i + 1)">
+                    </button>
+                }
+            </div>
+            
+            <TmButton Variant="ButtonVariant.Primary"
+                      Disabled="@(_activeStep >= _steps.Count - 1)"
+                      OnClick="@(() => _activeStep++)">
+                <span class="flex items-center space-x-1">
+                    <span>Next</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </span>
+            </TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Drawer -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Drawer</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">Side Panel</span>
+    </div>
+
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary" OnClick="@(() => _drawerRightOpen = true)">
+                Open Right Drawer
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" OnClick="@(() => _drawerLeftOpen = true)">
+                Open Left Drawer
+            </TmButton>
+        </div>
+    </div>
+</section>
+
+<TmDrawer IsOpen="@_drawerRightOpen" IsOpenChanged="@(v => { _drawerRightOpen = v; StateHasChanged(); })"
+          Title="Edit Record" Width="420px">
+    <div class="space-y-4">
+        <p class="text-sm text-slate-600 dark:text-slate-400">This is a right-side drawer panel. It slides in from the right edge.</p>
+        <TmAlert Severity="AlertSeverity.Info">Click the overlay or press Escape to close.</TmAlert>
+    </div>
+</TmDrawer>
+
+<TmDrawer IsOpen="@_drawerLeftOpen" IsOpenChanged="@(v => { _drawerLeftOpen = v; StateHasChanged(); })"
+          Title="Navigation" Position="DrawerPosition.Left" Width="320px">
+    <FooterContent>
+        <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="@(() => { _drawerLeftOpen = false; StateHasChanged(); })">Close</TmButton>
+    </FooterContent>
+    <ChildContent>
+        <p class="text-sm text-slate-600 dark:text-slate-400">Left-side drawer with a footer action.</p>
+    </ChildContent>
+</TmDrawer>
+
+<!-- Context Menu & Split Button -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Context Menu & Split Button</h2>
+    </div>
+
+    <div class="showcase-card">
+        <div class="flex flex-wrap items-start gap-6">
+            <!-- Context Menu -->
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Context Menu</p>
+                <TmContextMenu>
+                    <Trigger>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">
+                            <span class="flex items-center space-x-1">
+                                <span>Actions</span>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </span>
+                        </TmButton>
+                    </Trigger>
+                    <ChildContent>
+                        <TmContextMenuItem Label="Edit" Icon="edit" OnClick="@(() => Toast.ShowInfo("Edit clicked"))" />
+                        <TmContextMenuItem Label="Duplicate" Icon="copy" OnClick="@(() => Toast.ShowInfo("Duplicate clicked"))" />
+                        <TmContextMenuItem IsDivider="true" />
+                        <TmContextMenuItem Label="Delete" Icon="trash" IsDangerous="true" OnClick="@(() => Toast.ShowError("Delete clicked"))" />
+                    </ChildContent>
+                </TmContextMenu>
+            </div>
+
+            <!-- Split Button -->
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Split Button</p>
+                <TmSplitButton Text="Save" OnClick="@(() => Toast.ShowSuccess("Saved!"))">
+                    <button class="tm-context-menu__item" role="menuitem" @onclick="@(() => Toast.ShowInfo("Saved as draft"))">Save as Draft</button>
+                    <button class="tm-context-menu__item" role="menuitem" @onclick="@(() => Toast.ShowInfo("Saved and closed"))">Save & Close</button>
+                </TmSplitButton>
+            </div>
+
+            <!-- Split Button (Danger) -->
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Danger variant</p>
+                <TmSplitButton Text="Delete" Variant="ButtonVariant.Danger" OnClick="@(() => Toast.ShowError("Deleted!"))">
+                    <button class="tm-context-menu__item tm-context-menu__item--danger" role="menuitem">Delete permanently</button>
+                    <button class="tm-context-menu__item" role="menuitem">Move to trash</button>
+                </TmSplitButton>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Progress Bar -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Progress Bar</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full">6 Variants</span>
+    </div>
+
+    <!-- Basic -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Basic progress</p>
+        <div class="space-y-4">
+            <TmProgressBar Value="25" ShowLabel="true" />
+            <TmProgressBar Value="50" ShowLabel="true" />
+            <TmProgressBar Value="75" ShowLabel="true" />
+            <TmProgressBar Value="100" ShowLabel="true" Variant="ProgressBarVariant.Success" />
+        </div>
+    </div>
+
+    <!-- Sizes -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Sizes</p>
+        <div class="space-y-4">
+            <div>
+                <span class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Small</span>
+                <TmProgressBar Value="60" Size="ProgressBarSize.Sm" />
+            </div>
+            <div>
+                <span class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Medium (default)</span>
+                <TmProgressBar Value="60" Size="ProgressBarSize.Md" />
+            </div>
+            <div>
+                <span class="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Large</span>
+                <TmProgressBar Value="60" Size="ProgressBarSize.Lg" ShowLabel="true" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Variants -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Color variants</p>
+        <div class="space-y-3">
+            <TmProgressBar Value="80" Variant="ProgressBarVariant.Success" ShowLabel="true" LabelFormat="SLA: {0}%" />
+            <TmProgressBar Value="55" Variant="ProgressBarVariant.Warning" ShowLabel="true" />
+            <TmProgressBar Value="30" Variant="ProgressBarVariant.Error" ShowLabel="true" />
+            <TmProgressBar Value="70" Variant="ProgressBarVariant.Gradient" ShowLabel="true" />
+        </div>
+    </div>
+
+    <!-- Striped & Animated -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Striped & Animated</p>
+        <div class="space-y-3">
+            <TmProgressBar Value="65" Striped="true" ShowLabel="true" />
+            <TmProgressBar Value="45" Striped="true" Animated="true" Variant="ProgressBarVariant.Success" ShowLabel="true" />
+        </div>
+    </div>
+
+    <!-- Indeterminate -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Indeterminate</p>
+        <TmProgressBar Indeterminate="true" />
+    </div>
+
+    <!-- Multi-segment -->
+    <div class="showcase-card">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Multi-segment (SLA breakdown)</p>
+        <TmProgressBar Segments="@_progressSegments" Size="ProgressBarSize.Lg" />
+        <div class="flex gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background: var(--tm-color-success-500)"></span> On time (45%)</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background: var(--tm-color-warning-500)"></span> At risk (25%)</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm" style="background: var(--tm-color-error-500)"></span> Overdue (15%)</span>
+        </div>
+    </div>
+</section>
+
+<!-- Bulk Action Bar -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Bulk Action Bar</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Selection Toolbar</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Select items to show the bulk action bar. It appears when <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">SelectedCount &gt; 0</code>.
+        </p>
+        <div class="flex flex-wrap gap-3 mb-4">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" OnClick="@(() => { _bulkCount = 3; StateHasChanged(); })">Select 3</TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Secondary" OnClick="@(() => { _bulkCount = 12; StateHasChanged(); })">Select 12</TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@(() => { _bulkCount = 0; StateHasChanged(); })">Clear</TmButton>
+        </div>
+
+        <TmBulkActionBar SelectedCount="@_bulkCount" OnClearSelection="@(() => { _bulkCount = 0; StateHasChanged(); })">
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@(() => Toast.ShowInfo("Export clicked"))">
+                <span style="color: white;">Export</span>
+            </TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@(() => Toast.ShowWarning("Archive clicked"))">
+                <span style="color: white;">Archive</span>
+            </TmButton>
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger" OnClick="@(() => Toast.ShowError("Delete clicked"))">
+                Delete
+            </TmButton>
+        </TmBulkActionBar>
+    </div>
+</section>
+
+<!-- Tooltip -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tooltip</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full">CSS-only</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Hover or focus the elements below to see tooltips in all 4 positions.</p>
+        <div class="flex flex-wrap items-center justify-center gap-8 py-8">
+            <TmTooltip Text="This is a top tooltip" Position="TooltipPosition.Top">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">Top</TmButton>
+            </TmTooltip>
+            <TmTooltip Text="Bottom tooltip with more detailed content" Position="TooltipPosition.Bottom" MaxWidth="250px">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">Bottom</TmButton>
+            </TmTooltip>
+            <TmTooltip Text="Left tooltip" Position="TooltipPosition.Left">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">Left</TmButton>
+            </TmTooltip>
+            <TmTooltip Text="Right tooltip" Position="TooltipPosition.Right">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">Right</TmButton>
+            </TmTooltip>
+        </div>
+    </div>
+</section>
+
+<!-- Popover -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Popover</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">Rich Content</span>
+    </div>
+
+    <div class="showcase-card">
+        <div class="flex flex-wrap items-start gap-6">
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Click trigger</p>
+                <TmPopover Position="PopoverPosition.Bottom">
+                    <TriggerContent>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">User Info</TmButton>
+                    </TriggerContent>
+                    <ChildContent>
+                        <div style="min-width: 200px;">
+                            <p class="font-semibold text-sm text-slate-900 dark:text-white">Alice Johnson</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">alice.johnson@example.com</p>
+                            <div class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Active</span>
+                            </div>
+                        </div>
+                    </ChildContent>
+                </TmPopover>
+            </div>
+
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">No arrow</p>
+                <TmPopover Position="PopoverPosition.Bottom" ShowArrow="false">
+                    <TriggerContent>
+                        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm">Details</TmButton>
+                    </TriggerContent>
+                    <ChildContent>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Popover without an arrow, clean and minimal.</p>
+                    </ChildContent>
+                </TmPopover>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Accordion -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Accordion</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">2 Modes</span>
+    </div>
+
+    <!-- Single mode -->
+    <div class="showcase-card mb-4">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Single mode (default)</p>
+        <TmAccordion>
+            <TmAccordionItem Title="What is Tempo.Blazor?" Subtitle="About the library">
+                <p class="text-sm">Tempo.Blazor is a comprehensive UI component library for Blazor WebAssembly, designed with beautiful UX and full accessibility.</p>
+            </TmAccordionItem>
+            <TmAccordionItem Title="How do I install it?">
+                <p class="text-sm">Install via NuGet: <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">dotnet add package Tempo.Blazor</code></p>
+            </TmAccordionItem>
+            <TmAccordionItem Title="Is dark mode supported?">
+                <p class="text-sm">Yes! All components support dark mode via the <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">data-theme="dark"</code> attribute and CSS custom properties.</p>
+            </TmAccordionItem>
+            <TmAccordionItem Title="Archived section" Disabled="true">
+                <p class="text-sm">This section is disabled.</p>
+            </TmAccordionItem>
+        </TmAccordion>
+    </div>
+
+    <!-- Multiple mode -->
+    <div class="showcase-card">
+        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Multiple mode</p>
+        <TmAccordion Multiple="true">
+            <TmAccordionItem Title="Step 1: Configuration">
+                <p class="text-sm">Set up your project configuration in <code class="text-xs font-mono">appsettings.json</code>.</p>
+            </TmAccordionItem>
+            <TmAccordionItem Title="Step 2: Authentication">
+                <p class="text-sm">Configure OAuth 2.0 or JWT authentication for your API.</p>
+            </TmAccordionItem>
+            <TmAccordionItem Title="Step 3: Deployment">
+                <p class="text-sm">Deploy to Azure, AWS, or any static hosting provider.</p>
+            </TmAccordionItem>
+        </TmAccordion>
+    </div>
+</section>
+
+<!-- Number Input -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Number Input</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">+/- Buttons</span>
+    </div>
+
+    <div class="showcase-card">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <TmNumberInput Value="@_quantity" ValueChanged="@(v => { _quantity = v; StateHasChanged(); })"
+                           Label="Quantity" Min="1" Max="99" HelpText="Between 1 and 99" />
+
+            <TmNumberInput Value="@_amount" ValueChanged="@(v => { _amount = v; StateHasChanged(); })"
+                           Label="Amount" Prefix="$" Step="10" />
+
+            <TmNumberInput Value="@_days" ValueChanged="@(v => { _days = v; StateHasChanged(); })"
+                           Label="Duration" Suffix="days" Min="0" Max="365" />
+
+            <TmNumberInput Value="5" Label="Without buttons" ShowButtons="false" Placeholder="Enter number" />
+        </div>
+    </div>
+</section>
+
+<!-- Chips -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Chips</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300 rounded-full">3 Variants</span>
+    </div>
+
+    <div class="showcase-card">
+        <div class="space-y-4">
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Soft (default)</p>
+                <TmChipGroup>
+                    <TmChip Label="Active" Variant="ChipVariant.Soft" />
+                    <TmChip Label="Pending" Variant="ChipVariant.Soft" Color="#f59e0b" />
+                    <TmChip Label="Closed" Variant="ChipVariant.Soft" Color="#6b7280" />
+                    <TmChip Label="Removable" Variant="ChipVariant.Soft" Removable="true" OnRemove="@(() => Toast.ShowInfo("Chip removed"))" />
+                </TmChipGroup>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Filled</p>
+                <TmChipGroup>
+                    <TmChip Label="Admin" Variant="ChipVariant.Filled" />
+                    <TmChip Label="Editor" Variant="ChipVariant.Filled" Color="#10b981" />
+                    <TmChip Label="Small" Variant="ChipVariant.Filled" Size="ChipSize.Sm" />
+                </TmChipGroup>
+            </div>
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Outlined &amp; Clickable</p>
+                <TmChipGroup>
+                    <TmChip Label="React" Variant="ChipVariant.Outlined" Clickable="true" OnClick="@(() => Toast.ShowInfo("React clicked"))" />
+                    <TmChip Label="Blazor" Variant="ChipVariant.Outlined" Clickable="true" Selected="true" />
+                    <TmChip Label="Vue" Variant="ChipVariant.Outlined" Clickable="true" />
+                </TmChipGroup>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Copy Button -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Copy Button</h2>
+    </div>
+
+    <div class="showcase-card">
+        <div class="flex items-center gap-3">
+            <code class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded text-sm font-mono">npm install tempo-blazor</code>
+            <TmCopyButton Text="npm install tempo-blazor" />
+        </div>
+    </div>
+</section>
+
+<!-- Dynamic Form -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Dynamic Form Renderer</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-300 rounded-full">Schema-driven</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Render form fields from a list of <code class="text-xs font-mono px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">DynamicFieldDefinition</code> objects.</p>
+        <TmDynamicFormRenderer Fields="@_dynamicFields" Values="@_dynamicValues" Columns="2"
+                               OnFieldChanged="@(e => Toast.ShowInfo($"{e.FieldName} = {e.Value}"))" />
+    </div>
+</section>
+
+@code {
+    private ToastService _demoToastService = new ToastService();
+    private bool _showInternal;
+    private int _activeStep;
+    private string _stepperSize = "Medium";
+    private bool _stepperVertical = false;
+    private bool _drawerRightOpen;
+    private bool _drawerLeftOpen;
+    private int _bulkCount;
+    private int? _quantity = 1;
+    private int? _amount = 100;
+    private int? _days = 30;
+
+    // Tabs demo state
+    private string _tabLineActive = "overview";
+    private string _tabPillActive = "day";
+    private string _tabEncActive = "source";
+
+    // Progress segments
+    private List<ProgressSegment> _progressSegments = new()
+    {
+        new(45, "var(--tm-color-success-500)", "On time"),
+        new(25, "var(--tm-color-warning-500)", "At risk"),
+        new(15, "var(--tm-color-error-500)", "Overdue"),
+    };
+
+    // Dynamic Form demo
+    private List<DynamicFieldDefinition> _dynamicFields = new()
+    {
+        new() { Name = "subject", FieldType = DynamicFieldType.Text, Label = "Subject", Required = true, Placeholder = "Enter subject" },
+        new() { Name = "priority", FieldType = DynamicFieldType.Select, Label = "Priority", Options = new List<SelectOption<string>> { new("low", "Low"), new("medium", "Medium"), new("high", "High") } },
+        new() { Name = "description", FieldType = DynamicFieldType.TextArea, Label = "Description", Placeholder = "Describe the issue..." },
+        new() { Name = "dueDate", FieldType = DynamicFieldType.Date, Label = "Due Date" },
+        new() { Name = "urgent", FieldType = DynamicFieldType.Checkbox, Label = "Mark as urgent" },
+        new() { Name = "count", FieldType = DynamicFieldType.Number, Label = "Quantity", HelpText = "Number of items" },
+    };
+
+    private Dictionary<string, object?> _dynamicValues = new();
+
+    private void FireMultipleToasts()
+    {
+        Toast.ShowSuccess("File uploaded.");
+        Toast.ShowInfo("Processing started…");
+        Toast.ShowWarning("Disk space low.");
+    }
+
+    private int _unreadCount => _notifications.Count(n => !n.IsRead);
+
+    private List<DemoNotification> _notifications = new()
+    {
+        new("n1", "Deployment succeeded", "Build #142 deployed to production.", false),
+        new("n2", "New comment", "Alice commented on PR #88.", false),
+        new("n3", "Issue resolved", "Bug #301 was closed.", true),
+    };
+
+    private record DemoNotification(string Id, string Title, string? Body, bool IsRead,
+        string? IconName = null, string? ActionUrl = null,
+        NotificationSeverity Severity = NotificationSeverity.Info) : INotificationItem
+    {
+        public DateTimeOffset CreatedAt => DateTimeOffset.Now.AddMinutes(-new Random().Next(1, 60));
+    }
+
+    private void MarkAllRead() =>
+        _notifications = _notifications
+            .Select(n => n with { IsRead = true })
+            .ToList();
+
+    private void AddNotification()
+    {
+        var newId = $"n{_notifications.Count + 1}";
+        _notifications.Insert(0, new DemoNotification(
+            newId, 
+            $"New notification {_notifications.Count + 1}", 
+            "This is a dynamically added notification.", 
+            false));
+    }
+
+    private List<DemoEntry> _timelineEntries = new()
+    {
+        new("e1", "status_change", "Alice", DateTimeOffset.Now.AddHours(-5), null, "Changed status to In Progress", false),
+        new("e2", "comment", "Bob", DateTimeOffset.Now.AddHours(-3), null, "LGTM! Ready to merge.", false),
+        new("e3", "internal_note", "System", DateTimeOffset.Now.AddHours(-1), null, "Auto-assigned to Alice.", true),
+    };
+
+    private record DemoEntry(
+        string Id,
+        string EntryType,
+        string AuthorName,
+        DateTimeOffset CreatedAt,
+        string? AuthorAvatarUrl,
+        string? PlainContent,
+        bool IsInternal,
+        string? HtmlContent = null,
+        IReadOnlyDictionary<string, string>? Metadata = null) : ITimelineEntry;
+
+    private List<DemoStep> _steps = new()
+    {
+        new("s1", "Account", "Set up your account details"),
+        new("s2", "Profile", "Complete your profile"),
+        new("s3", "Plan", "Choose a plan"),
+        new("s4", "Confirm", "Review and confirm"),
+    };
+
+    private record DemoStep(string Id, string Label, string? Description, string? Icon = null)
+        : IStepItem;
+}

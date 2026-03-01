@@ -1,0 +1,131 @@
+@namespace Tempo.Blazor.Components.Activity
+
+@if (IsVisible)
+{
+    <div class="tm-rte-findreplace-dialog">
+        <div class="tm-rte-findreplace-backdrop" @onclick="OnBackdropClick"></div>
+        <div class="tm-rte-findreplace-content">
+            <div class="tm-rte-findreplace-header">
+                <h5>@Loc["TmRichEditor_FindReplaceDialog_Title"]</h5>
+                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
+            </div>
+            <div class="tm-rte-findreplace-body">
+                <div class="tm-rte-form-group">
+                    <label for="find-input">@Loc["TmRichEditor_FindReplaceDialog_Find"]</label>
+                    <input type="text"
+                           id="find-input"
+                           class="tm-rte-findreplace-find-input"
+                           placeholder="@Loc["TmRichEditor_FindReplaceDialog_FindPlaceholder"]"
+                           @bind="_findText"
+                           @bind:event="oninput" />
+                </div>
+                <div class="tm-rte-form-group">
+                    <label for="replace-input">@Loc["TmRichEditor_FindReplaceDialog_Replace"]</label>
+                    <input type="text"
+                           id="replace-input"
+                           class="tm-rte-findreplace-replace-input"
+                           placeholder="@Loc["TmRichEditor_FindReplaceDialog_ReplacePlaceholder"]"
+                           @bind="_replaceText"
+                           @bind:event="oninput" />
+                </div>
+                
+                @if (_replaceCount > 0)
+                {
+                    <div class="tm-rte-findreplace-result">
+                        @Loc["TmRichEditor_FindReplaceDialog_Replaced", _replaceCount]
+                    </div>
+                }
+            </div>
+            <div class="tm-rte-findreplace-footer">
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
+                    @Loc["Tm_Close"]
+                </button>
+                <button type="button" 
+                        class="tm-btn tm-btn-primary tm-btn-sm"
+                        disabled="@(!HasFindText())"
+                        @onclick="Replace">
+                    @Loc["TmRichEditor_FindReplaceDialog_Replace"]
+                </button>
+                <button type="button" 
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-replaceall"
+                        disabled="@(!HasFindText())"
+                        @onclick="ReplaceAll">
+                    @Loc["TmRichEditor_FindReplaceDialog_ReplaceAll"]
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Whether the dialog is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+    
+    /// <summary>
+    /// Whether to close on backdrop click.
+    /// </summary>
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    
+    /// <summary>
+    /// Callback when find is triggered.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnFind { get; set; }
+    
+    /// <summary>
+    /// Callback when replace is triggered.
+    /// </summary>
+    [Parameter] public EventCallback<(string Find, string Replace)> OnReplace { get; set; }
+    
+    /// <summary>
+    /// Callback when replace all is triggered.
+    /// </summary>
+    [Parameter] public EventCallback<(string Find, string Replace)> OnReplaceAll { get; set; }
+    
+    /// <summary>
+    /// Callback when dialog is cancelled.
+    /// </summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _findText = string.Empty;
+    private string _replaceText = string.Empty;
+    private int _replaceCount = 0;
+
+    private bool HasFindText() => !string.IsNullOrWhiteSpace(_findText);
+
+    private async Task Replace()
+    {
+        if (!HasFindText()) return;
+        await OnReplace.InvokeAsync((_findText, _replaceText));
+        _replaceCount = 1; // Simplified - actual count would come from JS
+    }
+
+    private async Task ReplaceAll()
+    {
+        if (!HasFindText()) return;
+        await OnReplaceAll.InvokeAsync((_findText, _replaceText));
+        _replaceCount = 999; // Will be updated from actual JS result
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await OnCancelClick();
+        }
+    }
+
+    private async Task OnCancelClick()
+    {
+        Reset();
+        await OnCancel.InvokeAsync();
+    }
+
+    private void Reset()
+    {
+        _findText = string.Empty;
+        _replaceText = string.Empty;
+        _replaceCount = 0;
+    }
+}

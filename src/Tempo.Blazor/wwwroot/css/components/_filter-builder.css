@@ -1,0 +1,46 @@
+.tm-filter-builder { display: flex; flex-wrap: wrap; align-items: center; gap: var(--tm-space-2); }
+.tm-filter-chips   { display: flex; flex-wrap: wrap; gap: var(--tm-space-2); align-items: center; }
+.tm-filter-builder-add {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px dashed var(--tm-border-color); border-radius: var(--tm-radius-full);
+  background: none; cursor: pointer; font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  transition: border-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+.tm-filter-builder-add:hover { border-color: var(--tm-color-primary); color: var(--tm-color-primary); }
+.tm-filter-field-picker {
+  display: flex; flex-direction: column; background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color); border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-lg); padding: var(--tm-space-2); gap: var(--tm-space-1);
+  min-width: 12rem; z-index: var(--tm-z-dropdown);
+}
+.tm-filter-field-option {
+  padding: var(--tm-space-2) var(--tm-space-3); background: none; border: none;
+  cursor: pointer; text-align: left; font-size: var(--tm-font-size-sm);
+  border-radius: var(--tm-radius-sm);
+}
+.tm-filter-field-option:hover { background: var(--tm-bg-muted); }
+.tm-filter-editor {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3); background: var(--tm-bg-muted);
+  border-radius: var(--tm-radius-md);
+}
+.tm-filter-editor-field { font-weight: var(--tm-font-weight-semibold); font-size: var(--tm-font-size-sm); }
+.tm-filter-operator-select, .tm-filter-value-input, .tm-filter-select {
+  padding: var(--tm-space-1) var(--tm-space-2); border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md); background: var(--tm-bg-surface); font-size: var(--tm-font-size-sm);
+}
+.tm-filter-apply {
+  padding: var(--tm-space-1) var(--tm-space-3); background: var(--tm-color-primary);
+  color: white; border: none; border-radius: var(--tm-radius-md); cursor: pointer; font-size: var(--tm-font-size-sm);
+}
+.tm-filter-cancel {
+  padding: var(--tm-space-1) var(--tm-space-3); background: none;
+  border: 1px solid var(--tm-border-color); border-radius: var(--tm-radius-md);
+  cursor: pointer; font-size: var(--tm-font-size-sm);
+}
+.tm-filter-clear-all {
+  padding: var(--tm-space-1) var(--tm-space-2); background: none; border: none;
+  cursor: pointer; font-size: var(--tm-font-size-xs); color: var(--tm-text-tertiary); text-decoration: underline;
+}
+.tm-filter-clear-all:hover { color: var(--tm-color-danger); }

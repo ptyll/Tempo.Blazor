@@ -1,0 +1,195 @@
+@namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Interfaces
+@using Microsoft.AspNetCore.Components
+
+<div class="tm-comments">
+    @if (!Comments.Any() && !_showEditor)
+    {
+        <div class="tm-comments-empty">
+            <TmEmptyState Title="@Loc["TmActivityComments_Empty"]" />
+        </div>
+    }
+    else
+    {
+        <ul class="tm-comment-list">
+            @foreach (var comment in Comments)
+            {
+                var c = comment;
+                <li class="tm-comment-item">
+                    <div class="tm-comment-avatar">
+                        @if (!string.IsNullOrEmpty(c.AuthorAvatarUrl))
+                        {
+                            <TmAvatar Src="@c.AuthorAvatarUrl" Name="@c.AuthorName" Size="AvatarSize.Sm" />
+                        }
+                        else
+                        {
+                            <TmAvatar Name="@c.AuthorName" Size="AvatarSize.Sm" />
+                        }
+                    </div>
+                    <div class="tm-comment-body">
+                        <div class="tm-comment-meta">
+                            <span class="tm-comment-author">@c.AuthorName</span>
+                            <span class="tm-comment-time" title="@c.CreatedAt.ToString("g")">
+                                @FormatRelativeTime(c.CreatedAt)
+                            </span>
+                            @if (c.UpdatedAt.HasValue)
+                            {
+                                <span class="tm-comment-edited">(@Loc["TmActivityComments_Edited"])</span>
+                            }
+                        </div>
+                        @if (_editingCommentId == c.Id)
+                        {
+                            <div class="tm-comment-editor">
+                                <TmRichEditorSimple @bind-Value="_editorContent" />
+                                <div class="tm-comment-editor-actions">
+                                    <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
+                                            type="button"
+                                            @onclick="() => SubmitEditAsync(c.Id)">
+                                        @Loc["Tm_Save"]
+                                    </button>
+                                    <button class="tm-btn-link tm-comment-cancel-btn"
+                                            type="button"
+                                            @onclick="CancelEdit">
+                                        @Loc["Tm_Cancel"]
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="tm-comment-content">@((MarkupString)c.HtmlContent)</div>
+                            <div class="tm-comment-actions">
+                                @if (c.CanEdit)
+                                {
+                                    <button class="tm-btn-link tm-comment-edit-btn"
+                                            type="button"
+                                            @onclick="() => StartEdit(c)">
+                                        @Loc["Tm_Edit"]
+                                    </button>
+                                }
+                                @if (c.CanDelete)
+                                {
+                                    <button class="tm-btn-link tm-comment-delete-btn"
+                                            type="button"
+                                            @onclick="() => DeleteCommentAsync(c.Id)">
+                                        @Loc["Tm_Delete"]
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (ShowAddButton && !_showEditor)
+    {
+        <button class="tm-btn tm-btn-outline tm-btn-sm tm-comments-add-btn"
+                type="button"
+                @onclick="ShowEditor">
+            @Loc["TmActivityComments_AddComment"]
+        </button>
+    }
+
+    @if (_showEditor && _editingCommentId is null)
+    {
+        <div class="tm-comment-editor">
+            <TmRichEditorSimple @bind-Value="_editorContent" 
+                              Placeholder="@Loc["TmActivityComments_AddComment"]" />
+            <div class="tm-comment-editor-actions">
+                <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
+                        type="button"
+                        @onclick="SubmitNewCommentAsync">
+                    @Loc["TmActivityComments_SubmitComment"]
+                </button>
+                <button class="tm-btn-link tm-comment-cancel-btn"
+                        type="button"
+                        @onclick="CancelEditor">
+                    @Loc["Tm_Cancel"]
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ICommentEntry> Comments { get; set; } = [];
+    [Parameter] public EventCallback<string> OnCommentAdded { get; set; }
+    [Parameter] public EventCallback<string> OnCommentDeleted { get; set; }
+    [Parameter] public EventCallback<(string Id, string Html)> OnCommentEdited { get; set; }
+    [Parameter] public bool ShowAddButton { get; set; } = true;
+
+    private bool _showEditor;
+    private string? _editingCommentId;
+    private string _editorContent = string.Empty;
+
+    /// <summary>Public refresh hook – parents can await this after updating <see cref="Comments"/>.</summary>
+    public Task RefreshAsync()
+    {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Used by tests to inject content into the editor without JS.</summary>
+    public void SetEditorContentForTest(string html)
+    {
+        _editorContent = html;
+        StateHasChanged();
+    }
+
+    private void ShowEditor()
+    {
+        _editorContent = string.Empty;
+        _showEditor = true;
+    }
+
+    private void CancelEditor()
+    {
+        _showEditor = false;
+        _editorContent = string.Empty;
+    }
+
+    private void StartEdit(ICommentEntry comment)
+    {
+        _editingCommentId = comment.Id;
+        _editorContent = comment.HtmlContent;
+    }
+
+    private void CancelEdit()
+    {
+        _editingCommentId = null;
+        _editorContent = string.Empty;
+    }
+
+    private async Task SubmitNewCommentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_editorContent)) return;
+        await OnCommentAdded.InvokeAsync(_editorContent);
+        CancelEditor();
+    }
+
+    private async Task SubmitEditAsync(string commentId)
+    {
+        if (string.IsNullOrWhiteSpace(_editorContent)) return;
+        await OnCommentEdited.InvokeAsync((commentId, _editorContent));
+        _editingCommentId = null;
+        _editorContent = string.Empty;
+    }
+
+    private async Task DeleteCommentAsync(string commentId)
+    {
+        await OnCommentDeleted.InvokeAsync(commentId);
+    }
+
+    private string FormatRelativeTime(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.Now - dt;
+        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
+        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
+        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
+        return Loc["TmTimeline_DaysAgo", (int)diff.TotalDays];
+    }
+}

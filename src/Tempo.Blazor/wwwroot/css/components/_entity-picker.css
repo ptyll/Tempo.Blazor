@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════
+   TmEntityPicker — Searchable entity selector
+   ═══════════════════════════════════════════════════════ */
+
+.tm-entity-picker {
+    position: relative;
+}
+
+.tm-entity-picker__input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tm-entity-picker__search-icon {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--tm-color-neutral-400);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.tm-entity-picker__input {
+    width: 100%;
+    padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+    font-size: 0.875rem;
+    color: var(--tm-color-neutral-900);
+    background-color: var(--tm-color-surface, #fff);
+    border: 1px solid var(--tm-color-neutral-300);
+    border-radius: var(--tm-radius-md);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tm-entity-picker__input:focus {
+    border-color: var(--tm-color-primary-500);
+    box-shadow: 0 0 0 3px rgba(var(--tm-color-primary-500-rgb, 59, 130, 246), 0.15);
+}
+
+.tm-entity-picker__loading {
+    position: absolute;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+/* ── Dropdown ──────────────────────────────────────────── */
+.tm-entity-picker__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: var(--tm-z-dropdown, 800);
+    max-height: 240px;
+    overflow-y: auto;
+    background-color: var(--tm-color-surface, #fff);
+    border: 1px solid var(--tm-color-neutral-200);
+    border-radius: var(--tm-radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: tm-fade-in 0.1s ease;
+}
+
+.tm-entity-picker__option {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--tm-color-neutral-700);
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.tm-entity-picker__option:hover {
+    background-color: var(--tm-color-primary-50);
+    color: var(--tm-color-primary-700);
+}
+
+.tm-entity-picker__no-results {
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--tm-color-neutral-500);
+    text-align: center;
+}
+
+/* ── Disabled ──────────────────────────────────────────── */
+.tm-entity-picker--disabled .tm-entity-picker__input {
+    opacity: 0.6;
+    background-color: var(--tm-color-neutral-100);
+    cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark mode
+   ═══════════════════════════════════════════════════════ */
+[data-theme="dark"] .tm-entity-picker__input,
+.tm-dark .tm-entity-picker__input {
+    background-color: var(--tm-color-neutral-800);
+    border-color: var(--tm-color-neutral-600);
+    color: var(--tm-color-neutral-100);
+}
+
+[data-theme="dark"] .tm-entity-picker__dropdown,
+.tm-dark .tm-entity-picker__dropdown {
+    background-color: var(--tm-color-neutral-800);
+    border-color: var(--tm-color-neutral-700);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .tm-entity-picker__option,
+.tm-dark .tm-entity-picker__option {
+    color: var(--tm-color-neutral-300);
+}
+
+[data-theme="dark"] .tm-entity-picker__option:hover,
+.tm-dark .tm-entity-picker__option:hover {
+    background-color: var(--tm-color-neutral-700);
+    color: var(--tm-color-primary-300);
+}

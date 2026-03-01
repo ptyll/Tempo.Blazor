@@ -1,0 +1,41 @@
+@namespace Tempo.Blazor.Components.Inputs
+
+<label class="tm-radio-option @(IsChecked ? "tm-radio-checked" : "") @(Disabled ? "tm-radio-disabled" : "")">
+    <input type="radio"
+           name="@Name"
+           checked="@IsChecked"
+           disabled="@Disabled"
+           class="tm-radio-input"
+           @onchange="HandleChangeAsync" />
+    <span class="tm-radio-custom"></span>
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="tm-radio-text">@Label</span>
+    }
+</label>
+
+@code {
+    /// <summary>The value this radio represents — used by TmRadioGroup.</summary>
+    [Parameter] public object? Value { get; set; }
+
+    /// <summary>Radio group name.</summary>
+    [Parameter] public string Name { get; set; } = string.Empty;
+
+    /// <summary>Label text.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Whether this radio is currently selected.</summary>
+    [Parameter] public bool IsChecked { get; set; }
+
+    /// <summary>Disables this radio option.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Fires when this radio is selected.</summary>
+    [Parameter] public EventCallback OnSelect { get; set; }
+
+    private async Task HandleChangeAsync(ChangeEventArgs _)
+    {
+        if (!Disabled)
+            await OnSelect.InvokeAsync();
+    }
+}

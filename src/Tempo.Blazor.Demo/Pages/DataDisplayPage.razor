@@ -1,0 +1,210 @@
+@page "/data-display"
+<PageTitle>Data Display – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Data Display</h1>
+    <p class="text-slate-600 dark:text-slate-400">Components for presenting data in various formats including badges, cards, stats, and lists.</p>
+</div>
+
+<!-- Badges -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Badges</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Status indicators</span>
+    </div>
+    <div class="showcase-card">
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Variants</h3>
+        <div class="flex flex-wrap gap-3 mb-6">
+            <TmBadge Variant="BadgeVariant.Primary">Primary</TmBadge>
+            <TmBadge Variant="BadgeVariant.Success">Success</TmBadge>
+            <TmBadge Variant="BadgeVariant.Warning">Warning</TmBadge>
+            <TmBadge Variant="BadgeVariant.Danger">Danger</TmBadge>
+            <TmBadge Variant="BadgeVariant.Info">Info</TmBadge>
+        </div>
+        
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Styles</h3>
+        <div class="flex flex-wrap gap-3 mb-6">
+            <TmBadge Variant="BadgeVariant.Primary">Filled (Default)</TmBadge>
+            <TmBadge Variant="BadgeVariant.Primary" Style="BadgeStyle.Outlined">Outlined</TmBadge>
+            <TmBadge Variant="BadgeVariant.Success" Style="BadgeStyle.Subtle">Subtle</TmBadge>
+        </div>
+        
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Features</h3>
+        <div class="flex flex-wrap gap-3">
+            <TmBadge Variant="BadgeVariant.Primary" IsPill="true">Pill Shape</TmBadge>
+            <TmBadge Variant="BadgeVariant.Success" HasDot="true">With Dot</TmBadge>
+            <TmBadge Variant="BadgeVariant.Warning" IsPill="true" HasDot="true">Pill + Dot</TmBadge>
+        </div>
+    </div>
+</section>
+
+<!-- Stat Cards -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Stat Cards</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Metrics display</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <TmStatCard Value="12,345" Label="Total Users" />
+        <TmStatCard Value="98.5%" Label="Uptime" SubValue="+0.3% vs last month" SubValueColor="text-green-600 dark:text-green-400" />
+        <TmStatCard Value="42" Label="Open Issues" />
+        <TmStatCard Value="$124.5K" Label="Revenue" SubValue="↑ 18% MoM" SubValueColor="text-green-600 dark:text-green-400" />
+    </div>
+</section>
+
+<!-- Cards -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Cards</h2>
+    </div>
+    <div class="demo-grid demo-grid-3">
+        <TmCard Header="Default Card">
+            <p class="text-slate-600 dark:text-slate-400 text-sm">
+                This is a basic card with a header and content area. Perfect for displaying grouped information.
+            </p>
+        </TmCard>
+        
+        <TmCard Header="With Footer" Variant="CardVariant.Elevated">
+            <ChildContent>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                    Cards can include footer content for actions or additional information.
+                </p>
+            </ChildContent>
+            <FooterContent>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-slate-500">Last updated: Today</span>
+                    <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm">Action</TmButton>
+                </div>
+            </FooterContent>
+        </TmCard>
+        
+        <TmCard Header="With Icon" HeaderIcon="@IconNames.Star" Variant="CardVariant.Outlined">
+            <p class="text-slate-600 dark:text-slate-400 text-sm">
+                Add icons to card headers for better visual hierarchy and recognition.
+            </p>
+        </TmCard>
+    </div>
+</section>
+
+<!-- Avatars -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Avatars</h2>
+    </div>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Image Avatars</h3>
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col items-center space-y-2">
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=1" Size="AvatarSize.Sm" />
+                    <span class="text-xs text-slate-500">Small</span>
+                </div>
+                <div class="flex flex-col items-center space-y-2">
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=2" Size="AvatarSize.Md" />
+                    <span class="text-xs text-slate-500">Medium</span>
+                </div>
+                <div class="flex flex-col items-center space-y-2">
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=3" Size="AvatarSize.Lg" />
+                    <span class="text-xs text-slate-500">Large</span>
+                </div>
+                <div class="flex flex-col items-center space-y-2">
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=4" Size="AvatarSize.Xl" />
+                    <span class="text-xs text-slate-500">Extra Large</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Initials Avatars</h3>
+            <div class="flex items-center gap-4">
+                <TmAvatar Name="Alice Smith" Size="AvatarSize.Md" />
+                <TmAvatar Name="Bob Jones" Size="AvatarSize.Md" Color="AvatarColor.Blue" />
+                <TmAvatar Name="Carol White" Size="AvatarSize.Md" Color="AvatarColor.Green" />
+                <TmAvatar Name="David Brown" Size="AvatarSize.Md" Color="AvatarColor.Purple" />
+                <TmAvatar Name="Emma Davis" Size="AvatarSize.Md" Color="AvatarColor.Pink" />
+            </div>
+        </div>
+        
+        <div class="showcase-card sm:col-span-2">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Avatar Group</h3>
+            <div class="flex items-center gap-6">
+                <TmAvatarGroup Max="3" Size="AvatarSize.Md">
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=5" />
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=6" />
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=7" />
+                    <TmAvatar Name="D E" />
+                    <TmAvatar Name="F G" />
+                </TmAvatarGroup>
+                
+                <TmAvatarGroup Max="4" Size="AvatarSize.Sm">
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=8" />
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=9" />
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=10" />
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=11" />
+                    <TmAvatar Src="https://i.pravatar.cc/150?img=12" />
+                    <TmAvatar Name="X Y" />
+                </TmAvatarGroup>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Empty State -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Empty State</h2>
+    </div>
+    <div class="showcase-card">
+        <TmEmptyState Title="No results found"
+                      Description="Try adjusting your search or filters to find what you're looking for."
+                      Icon="@IconNames.Search"
+                      ActionText="Clear filters"
+                      OnAction="@(() => { })" />
+    </div>
+</section>
+
+<!-- Multi-View List -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Multi-View List</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">List / Card / Table</span>
+    </div>
+    <div class="showcase-card">
+        <TmMultiViewList Items="@_mvlItems"
+                         ViewContext="demo-mvl"
+                         ViewMode="@_mvlView"
+                         ViewModeChanged="@(m => _mvlView = m)"
+                         ShowViewSwitcher="true"
+                         OnItemClick="@(item => _mvlClicked = item.Title)" />
+        @if (_mvlClicked is not null)
+        {
+            <div class="mt-4 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg animate-fade-in">
+                <p class="text-sm text-slate-700 dark:text-slate-300">
+                    Clicked: <span class="font-semibold text-primary-600 dark:text-primary-400">@_mvlClicked</span>
+                </p>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private ListViewMode _mvlView = ListViewMode.Card;
+    private string? _mvlClicked;
+
+    private readonly IReadOnlyList<IMultiViewListItem> _mvlItems = new[]
+    {
+        new DemoMvlItem("1", "Alice Smith", "Engineering", "Active", "#22c55e", DateTimeOffset.Now.AddDays(-1)),
+        new DemoMvlItem("2", "Bob Jones", "Marketing", "On leave", "#f59e0b", DateTimeOffset.Now.AddDays(-3)),
+        new DemoMvlItem("3", "Carol White", "Design", "Active", "#22c55e", DateTimeOffset.Now.AddDays(-2)),
+        new DemoMvlItem("4", "Dave Black", "Product", "Inactive", "#ef4444", DateTimeOffset.Now.AddDays(-7)),
+        new DemoMvlItem("5", "Eve Green", "Engineering", "Active", "#22c55e", DateTimeOffset.Now.AddDays(-0)),
+    };
+
+    private record DemoMvlItem(string Id, string Title, string? SubTitle,
+        string? StatusLabel, string? StatusColor, DateTimeOffset? Date) : IMultiViewListItem
+    {
+        public string? AvatarUrl => null;
+        public IReadOnlyList<ITag>? Tags => null;
+    }
+}

@@ -1,0 +1,53 @@
+@namespace Tempo.Blazor.Components.DataTable
+
+<div class="tm-column-picker">
+    <button class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
+            type="button"
+            @onclick="ToggleOpen">
+        <span class="tm-icon-columns"></span>
+        @Loc["TmDataTable_ColumnPicker"]
+    </button>
+
+    @if (_open)
+    {
+        <div class="tm-column-picker-panel">
+            <div class="tm-column-picker-items">
+                @foreach (var col in Columns.Where(c => c.IsHideable))
+                {
+                    <label class="tm-column-picker-item">
+                        <input type="checkbox"
+                               data-key="@col.Key"
+                               checked="@col.IsVisible"
+                               @onchange="() => Toggle(col.Key)" />
+                        <span>@col.Title</span>
+                    </label>
+                }
+            </div>
+            <div class="tm-column-picker-footer">
+                <button class="tm-column-picker-reset tm-btn-link"
+                        type="button"
+                        @onclick="Reset">
+                    @Loc["TmDataTable_ResetColumns"]
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ColumnVisibilityItem> Columns { get; set; } = [];
+    [Parameter] public EventCallback<string> OnToggleColumn { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private bool _open;
+
+    private void ToggleOpen() => _open = !_open;
+
+    private Task Toggle(string key) => OnToggleColumn.InvokeAsync(key);
+
+    private async Task Reset()
+    {
+        _open = false;
+        await OnReset.InvokeAsync();
+    }
+}

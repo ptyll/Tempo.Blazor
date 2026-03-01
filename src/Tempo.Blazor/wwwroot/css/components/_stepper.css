@@ -1,0 +1,323 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmStepper - Modern Stepper / Wizard Navigation
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper {
+  display: flex;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Horizontal Layout (default)
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper--horizontal {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.tm-stepper--horizontal .tm-stepper-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.tm-stepper--horizontal .tm-stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 2;
+  background: var(--tm-bg-surface);
+  padding: 0 var(--tm-space-2);
+}
+
+.tm-stepper--horizontal .tm-stepper-content {
+  margin-top: var(--tm-space-3);
+  max-width: 160px;
+}
+
+.tm-stepper--horizontal .tm-stepper-connector {
+  position: absolute;
+  top: calc(var(--tm-stepper-indicator-size, 40px) / 2);
+  left: 50%;
+  right: -50%;
+  height: 2px;
+  z-index: 1;
+  transform: translateY(-50%);
+}
+
+.tm-stepper--horizontal .tm-stepper-item--last .tm-stepper-connector {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Vertical Layout
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper--vertical {
+  flex-direction: column;
+  gap: 0;
+}
+
+.tm-stepper--vertical .tm-stepper-item {
+  display: flex;
+  position: relative;
+  min-height: calc(var(--tm-stepper-indicator-size, 40px) + var(--tm-space-6));
+}
+
+.tm-stepper--vertical .tm-stepper-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tm-space-4);
+  z-index: 2;
+  background: var(--tm-bg-surface);
+  padding-right: var(--tm-space-4);
+}
+
+.tm-stepper--vertical .tm-stepper-content {
+  padding-top: calc((var(--tm-stepper-indicator-size, 40px) - var(--tm-font-size-base)) / 2);
+}
+
+.tm-stepper--vertical .tm-stepper-connector {
+  position: absolute;
+  left: calc(var(--tm-stepper-indicator-size, 40px) / 2);
+  top: var(--tm-stepper-indicator-size, 40px);
+  bottom: 0;
+  width: 2px;
+  z-index: 1;
+  transform: translateX(-50%);
+}
+
+.tm-stepper--vertical .tm-stepper-item--last {
+  min-height: auto;
+}
+
+.tm-stepper--vertical .tm-stepper-item--last .tm-stepper-connector {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Step Indicator (Circle)
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper-indicator {
+  --tm-stepper-indicator-size: 40px;
+  
+  width: var(--tm-stepper-indicator-size);
+  height: var(--tm-stepper-indicator-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-bg-muted);
+  border: 2px solid var(--tm-border-color);
+  color: var(--tm-text-secondary);
+  font-weight: var(--tm-font-weight-semibold);
+  font-size: var(--tm-font-size-sm);
+  transition: all var(--tm-transition-base);
+  flex-shrink: 0;
+}
+
+.tm-stepper-number {
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Step States
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Completed Step */
+.tm-stepper-step--completed .tm-stepper-indicator {
+  background: var(--tm-color-success);
+  border-color: var(--tm-color-success);
+  color: white;
+}
+
+.tm-stepper-step--completed:hover .tm-stepper-indicator {
+  background: var(--tm-color-success-hover, #059669);
+  border-color: var(--tm-color-success-hover, #059669);
+}
+
+/* Active Step */
+.tm-stepper-step--active .tm-stepper-indicator {
+  background: var(--tm-color-primary);
+  border-color: var(--tm-color-primary);
+  color: white;
+  box-shadow: 0 0 0 4px var(--tm-color-primary-subtle);
+}
+
+.tm-stepper-step--active:hover .tm-stepper-indicator {
+  background: var(--tm-color-primary-hover);
+  border-color: var(--tm-color-primary-hover);
+}
+
+/* Pending Step */
+.tm-stepper-step--pending .tm-stepper-indicator {
+  background: var(--tm-bg-surface);
+  border-color: var(--tm-border-color);
+  color: var(--tm-text-muted);
+}
+
+/* Clickable Steps */
+.tm-stepper-step--clickable {
+  cursor: pointer;
+}
+
+.tm-stepper-step--clickable:hover {
+  opacity: 0.9;
+}
+
+.tm-stepper-step--clickable:hover .tm-stepper-indicator {
+  transform: scale(1.05);
+}
+
+.tm-stepper-step--clickable:focus {
+  outline: 2px solid var(--tm-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--tm-radius-md);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Step Content
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper-label {
+  font-weight: var(--tm-font-weight-semibold);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  line-height: 1.4;
+}
+
+.tm-stepper-step--active .tm-stepper-label {
+  color: var(--tm-color-primary);
+}
+
+.tm-stepper-step--pending .tm-stepper-label {
+  color: var(--tm-text-muted);
+}
+
+.tm-stepper-description {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  margin-top: var(--tm-space-1);
+  line-height: 1.4;
+}
+
+.tm-stepper-step--pending .tm-stepper-description {
+  color: var(--tm-text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Connector Lines
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper-connector-line {
+  width: 100%;
+  height: 100%;
+  background: var(--tm-border-color);
+  transition: background var(--tm-transition-base);
+}
+
+.tm-stepper-connector-line--completed {
+  background: var(--tm-color-success);
+}
+
+/* Animated progress for completed line */
+.tm-stepper-connector-line--completed {
+  animation: stepperLineComplete 0.4s ease forwards;
+}
+
+@keyframes stepperLineComplete {
+  from {
+    background: linear-gradient(to right, var(--tm-color-success) 0%, var(--tm-border-color) 0%);
+  }
+  to {
+    background: linear-gradient(to right, var(--tm-color-success) 100%, var(--tm-border-color) 100%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Size Variants
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-stepper--small .tm-stepper-indicator {
+  --tm-stepper-indicator-size: 28px;
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-stepper--small .tm-stepper-label {
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-stepper--small .tm-stepper-description {
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-stepper--large .tm-stepper-indicator {
+  --tm-stepper-indicator-size: 56px;
+  font-size: var(--tm-font-size-base);
+}
+
+.tm-stepper--large .tm-stepper-content {
+  max-width: 200px;
+}
+
+.tm-stepper--large .tm-stepper-label {
+  font-size: var(--tm-font-size-base);
+}
+
+.tm-stepper--large .tm-stepper-description {
+  font-size: var(--tm-font-size-sm);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive Adjustments
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .tm-stepper--horizontal {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--tm-space-2);
+  }
+  
+  .tm-stepper--horizontal .tm-stepper-item {
+    flex: 0 0 auto;
+    min-width: 100px;
+    scroll-snap-align: start;
+  }
+  
+  .tm-stepper--horizontal .tm-stepper-step {
+    padding: 0 var(--tm-space-1);
+  }
+  
+  .tm-stepper--horizontal .tm-stepper-content {
+    max-width: 100px;
+  }
+  
+  .tm-stepper-description {
+    display: none; /* Hide descriptions on mobile horizontal */
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Dark Mode Adjustments
+   ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] .tm-stepper-step {
+  background: var(--tm-bg-surface);
+}
+
+[data-theme="dark"] .tm-stepper-step--pending .tm-stepper-indicator {
+  background: var(--tm-bg-surface-secondary);
+  border-color: var(--tm-border-color);
+}
+
+[data-theme="dark"] .tm-stepper-connector-line {
+  background: var(--tm-border-color-subtle, #374151);
+}

@@ -1,0 +1,43 @@
+@namespace Tempo.Blazor.Components.Feedback
+
+<div class="tm-tooltip tm-tooltip--@PositionCss @Class">
+    <div class="tm-tooltip__trigger" aria-describedby="@_tooltipId">
+        @ChildContent
+    </div>
+    <div class="tm-tooltip__content"
+         id="@_tooltipId"
+         role="tooltip"
+         style="max-width: @MaxWidth;">
+        @Text
+    </div>
+</div>
+
+@code {
+    private readonly string _tooltipId = $"tooltip-{Guid.NewGuid():N}";
+
+    /// <summary>Tooltip text to display.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = default!;
+
+    /// <summary>Position relative to trigger (default Top).</summary>
+    [Parameter] public TooltipPosition Position { get; set; } = TooltipPosition.Top;
+
+    /// <summary>Delay in ms before showing (CSS transition-delay).</summary>
+    [Parameter] public int Delay { get; set; } = 200;
+
+    /// <summary>Maximum width of the tooltip.</summary>
+    [Parameter] public string MaxWidth { get; set; } = "200px";
+
+    /// <summary>Trigger element.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string PositionCss => Position switch
+    {
+        TooltipPosition.Bottom => "bottom",
+        TooltipPosition.Left => "left",
+        TooltipPosition.Right => "right",
+        _ => "top"
+    };
+}

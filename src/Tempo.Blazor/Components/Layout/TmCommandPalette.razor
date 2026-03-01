@@ -1,0 +1,64 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Interfaces
+
+@if (IsOpen)
+{
+    <div class="tm-command-palette-overlay">
+        <div class="tm-command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+            <div class="tm-command-palette-header">
+                <input class="tm-command-palette-input"
+                       value="@_query"
+                       @oninput="e => _query = e.Value?.ToString() ?? string.Empty"
+                       placeholder="Type a command…"
+                       aria-label="Search commands"
+                       autocomplete="off" />
+                <button class="tm-command-palette-close" aria-label="Close" @onclick="CloseAsync">×</button>
+            </div>
+            <ul class="tm-command-palette-list" role="listbox">
+                @foreach (var action in FilteredActions)
+                {
+                    var a = action;
+                    <li class="tm-command-palette-item" role="option" @onclick="() => ExecuteAsync(a)">
+                        <span class="tm-command-palette-title">@a.Title</span>
+                        @if (!string.IsNullOrEmpty(a.Description))
+                        {
+                            <span class="tm-command-palette-description">@a.Description</span>
+                        }
+                        @if (!string.IsNullOrEmpty(a.Shortcut))
+                        {
+                            <kbd class="tm-command-palette-shortcut">@a.Shortcut</kbd>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+@code {
+    private string _query = string.Empty;
+
+    /// <summary>Whether the command palette is visible.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Fires when IsOpen should change (two-way binding).</summary>
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>Actions available in the palette.</summary>
+    [Parameter] public IEnumerable<ICommandPaletteAction>? Actions { get; set; }
+
+    private IEnumerable<ICommandPaletteAction> FilteredActions =>
+        string.IsNullOrWhiteSpace(_query)
+            ? Actions ?? Enumerable.Empty<ICommandPaletteAction>()
+            : (Actions ?? Enumerable.Empty<ICommandPaletteAction>())
+                .Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
+                         || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true));
+
+    private async Task ExecuteAsync(ICommandPaletteAction action)
+    {
+        await IsOpenChanged.InvokeAsync(false);
+        await action.Execute();
+    }
+
+    private Task CloseAsync() => IsOpenChanged.InvokeAsync(false);
+}

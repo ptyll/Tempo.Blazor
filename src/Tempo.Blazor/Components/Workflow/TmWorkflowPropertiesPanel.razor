@@ -1,0 +1,206 @@
+@namespace Tempo.Blazor.Components.Workflow
+
+@if (SelectedState is not null)
+{
+    <div class="tm-wf-properties">
+        <div class="tm-wf-properties__header">State</div>
+        <div class="tm-wf-properties__body">
+            <div class="tm-wf-properties__field">
+                <label class="tm-wf-properties__label">Name</label>
+                <input type="text"
+                       class="tm-wf-properties__input"
+                       value="@_editName"
+                       disabled="@ReadOnly"
+                       @onchange="OnNameChanged" />
+            </div>
+
+            <div class="tm-wf-properties__field">
+                <label class="tm-wf-properties__label">Type</label>
+                <div class="tm-wf-type-group">
+                    @foreach (var type in _stateTypes)
+                    {
+                        var capturedType = type;
+                        <label class="tm-wf-type-option">
+                            <input type="radio"
+                                   name="state-type-@_editId"
+                                   checked="@(_editType == capturedType)"
+                                   disabled="@ReadOnly"
+                                   @onchange="@(() => _editType = capturedType)" />
+                            @type.ToString()
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="tm-wf-properties__field">
+                <label class="tm-wf-properties__label">Color</label>
+                <div class="tm-wf-color-swatches">
+                    @foreach (var color in _colorPalette)
+                    {
+                        var capturedColor = color;
+                        <button type="button"
+                                class="tm-wf-color-swatch @(_editColor == capturedColor ? "tm-wf-color-swatch--selected" : "")"
+                                style="background-color: @capturedColor;"
+                                disabled="@ReadOnly"
+                                @onclick="@(() => _editColor = capturedColor)">
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!ReadOnly)
+        {
+            <div class="tm-wf-properties__footer">
+                <button class="tm-wf-properties__save" @onclick="SaveState">Save</button>
+            </div>
+        }
+    </div>
+}
+else if (SelectedTransition is not null)
+{
+    <div class="tm-wf-properties">
+        <div class="tm-wf-properties__header">Transition</div>
+        <div class="tm-wf-properties__body">
+            <div class="tm-wf-properties__field">
+                <label class="tm-wf-properties__label">Label</label>
+                <input type="text"
+                       class="tm-wf-properties__input"
+                       value="@_editLabel"
+                       disabled="@ReadOnly"
+                       @onchange="OnLabelChanged" />
+            </div>
+
+            <div class="tm-wf-properties__field">
+                <label class="tm-wf-properties__label">From → To</label>
+                <div class="tm-wf-properties__from-to">
+                    <span>@GetStateName(SelectedTransition.FromStateId)</span>
+                    <span class="tm-wf-properties__arrow">→</span>
+                    <span>@GetStateName(SelectedTransition.ToStateId)</span>
+                </div>
+            </div>
+
+            <div class="tm-wf-properties__field">
+                <label class="tm-wf-properties__label">Color</label>
+                <div class="tm-wf-color-swatches">
+                    @foreach (var color in _colorPalette)
+                    {
+                        var capturedColor = color;
+                        <button type="button"
+                                class="tm-wf-color-swatch @(_editTransitionColor == capturedColor ? "tm-wf-color-swatch--selected" : "")"
+                                style="background-color: @capturedColor;"
+                                disabled="@ReadOnly"
+                                @onclick="@(() => _editTransitionColor = capturedColor)">
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!ReadOnly)
+        {
+            <div class="tm-wf-properties__footer">
+                <button class="tm-wf-properties__save" @onclick="SaveTransition">Save</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private static readonly CanvasStateType[] _stateTypes =
+        [CanvasStateType.Initial, CanvasStateType.Intermediate, CanvasStateType.Final];
+
+    private static readonly string[] _colorPalette =
+        ["#dbeafe", "#dcfce7", "#fef9c3", "#fee2e2", "#f3e8ff", "#e0e7ff", "#f3f4f6", "#fce7f3"];
+
+    // ── Edit state for State ──
+    private string _editId = "";
+    private string _editName = "";
+    private CanvasStateType _editType;
+    private string? _editColor;
+
+    // ── Edit state for Transition ──
+    private string _editTransitionId = "";
+    private string _editLabel = "";
+    private string? _editTransitionColor;
+
+    /// <summary>The currently selected state to edit (null if none).</summary>
+    [Parameter] public CanvasState? SelectedState { get; set; }
+
+    /// <summary>The currently selected transition to edit (null if none).</summary>
+    [Parameter] public CanvasTransition? SelectedTransition { get; set; }
+
+    /// <summary>All states, used for displaying From/To names on transitions.</summary>
+    [Parameter] public IReadOnlyList<CanvasState>? States { get; set; }
+
+    /// <summary>Fires when the user saves changes to a state.</summary>
+    [Parameter] public EventCallback<CanvasState> OnStateChanged { get; set; }
+
+    /// <summary>Fires when the user saves changes to a transition.</summary>
+    [Parameter] public EventCallback<CanvasTransition> OnTransitionChanged { get; set; }
+
+    /// <summary>Whether the panel is read-only (inputs disabled, no save button).</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (SelectedState is not null && _editId != SelectedState.Id)
+        {
+            _editId = SelectedState.Id;
+            _editName = SelectedState.Name;
+            _editType = SelectedState.Type;
+            _editColor = SelectedState.Color;
+        }
+
+        if (SelectedTransition is not null && _editTransitionId != SelectedTransition.Id)
+        {
+            _editTransitionId = SelectedTransition.Id;
+            _editLabel = SelectedTransition.Label ?? "";
+            _editTransitionColor = SelectedTransition.Color;
+        }
+    }
+
+    private void OnNameChanged(ChangeEventArgs e) => _editName = e.Value?.ToString() ?? "";
+
+    private void OnLabelChanged(ChangeEventArgs e) => _editLabel = e.Value?.ToString() ?? "";
+
+    private Task SaveState()
+    {
+        if (SelectedState is null) return Task.CompletedTask;
+
+        var updated = SelectedState with
+        {
+            Name = _editName,
+            Type = _editType,
+            Color = _editColor
+        };
+
+        // Update mutable properties on the original (since it's a record with set props)
+        SelectedState.Name = _editName;
+        SelectedState.Type = _editType;
+        SelectedState.Color = _editColor;
+
+        return OnStateChanged.InvokeAsync(updated);
+    }
+
+    private Task SaveTransition()
+    {
+        if (SelectedTransition is null) return Task.CompletedTask;
+
+        var updated = SelectedTransition with
+        {
+            Label = _editLabel,
+            Color = _editTransitionColor
+        };
+
+        SelectedTransition.Label = _editLabel;
+        SelectedTransition.Color = _editTransitionColor;
+
+        return OnTransitionChanged.InvokeAsync(updated);
+    }
+
+    private string GetStateName(string stateId)
+    {
+        return States?.FirstOrDefault(s => s.Id == stateId)?.Name ?? stateId;
+    }
+}

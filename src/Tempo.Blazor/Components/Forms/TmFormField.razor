@@ -1,0 +1,51 @@
+@namespace Tempo.Blazor.Components.Forms
+
+<div class="tm-form-field @(!string.IsNullOrEmpty(ErrorMessage) ? "tm-form-field--error" : string.Empty) @Class">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-form-field-label" for="@For">
+            @Label
+            @if (Required)
+            {
+                <span class="tm-form-field-required" aria-hidden="true"> *</span>
+            }
+        </label>
+    }
+
+    <div class="tm-form-field-control">
+        @ChildContent
+    </div>
+
+    @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p class="tm-form-field-help">@HelpText</p>
+    }
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p class="tm-form-field-error" role="alert">@ErrorMessage</p>
+    }
+</div>
+
+@code {
+    /// <summary>Label text displayed above the field.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>When true, a required asterisk is appended to the label.</summary>
+    [Parameter] public bool Required { get; set; }
+
+    /// <summary>Helper text shown below the field when there is no error.</summary>
+    [Parameter] public string? HelpText { get; set; }
+
+    /// <summary>Validation error message shown below the field in red.</summary>
+    [Parameter] public string? ErrorMessage { get; set; }
+
+    /// <summary>Input(s) wrapped by this field.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Value for the label's for attribute to associate it with a form control.</summary>
+    [Parameter] public string? For { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+}

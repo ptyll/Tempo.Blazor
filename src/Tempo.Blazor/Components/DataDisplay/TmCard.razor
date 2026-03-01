@@ -1,0 +1,62 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-card @VariantClass @Class" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrEmpty(Header))
+    {
+        <div class="tm-card-header">
+            @if (!string.IsNullOrEmpty(HeaderIcon))
+            {
+                <span class="tm-card-header-icon">
+                    <TmIcon Name="@HeaderIcon" Size="IconSize.Sm" />
+                </span>
+            }
+            <span class="tm-card-header-title">@Header</span>
+        </div>
+    }
+    <div class="tm-card-content">
+        @ChildContent
+    </div>
+    @if (FooterContent is not null)
+    {
+        <div class="tm-card-footer">@FooterContent</div>
+    }
+    else if (!string.IsNullOrEmpty(Footer))
+    {
+        <div class="tm-card-footer">@Footer</div>
+    }
+</div>
+
+@code {
+    /// <summary>Visual style variant. Defaults to Default.</summary>
+    [Parameter] public CardVariant Variant { get; set; } = CardVariant.Default;
+
+    /// <summary>Optional header text.</summary>
+    [Parameter] public string? Header { get; set; }
+
+    /// <summary>Optional icon shown in the header.</summary>
+    [Parameter] public string? HeaderIcon { get; set; }
+
+    /// <summary>Card body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional footer text (plain string).</summary>
+    [Parameter] public string? Footer { get; set; }
+
+    /// <summary>Optional footer RenderFragment. Takes precedence over Footer string.</summary>
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes passed to the root div.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string VariantClass => Variant switch
+    {
+        CardVariant.Elevated => "tm-card-elevated",
+        CardVariant.Outlined => "tm-card-outlined",
+        _                    => "tm-card-default"
+    };
+}

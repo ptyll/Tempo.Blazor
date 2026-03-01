@@ -1,0 +1,74 @@
+.tm-date-range-picker { display: inline-flex; flex-direction: column; gap: var(--tm-space-1); position: relative; }
+.tm-date-range-input-row { display: inline-flex; align-items: center; gap: var(--tm-space-1); }
+
+.tm-date-range-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-width: 14rem;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
+}
+.tm-date-range-trigger:hover:not(:disabled) { border-color: var(--tm-color-primary); }
+.tm-date-range-trigger:focus { outline: none; border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+
+.tm-date-range-popup {
+  position: absolute;
+  top: calc(100% + var(--tm-space-1));
+  left: 0;
+  z-index: var(--tm-z-dropdown);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  box-shadow: var(--tm-shadow-lg);
+  padding: var(--tm-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+}
+
+.tm-date-range-calendars {
+  display: flex;
+  gap: var(--tm-space-4);
+  flex-wrap: nowrap;
+}
+
+.tm-date-range-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tm-space-2);
+  padding-top: var(--tm-space-3);
+  border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-date-range-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+  padding-bottom: var(--tm-space-3);
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-date-range-preset-btn {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-full);
+  background: none;
+  cursor: pointer;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+.tm-date-range-preset-btn:hover {
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  border-color: var(--tm-color-primary);
+}

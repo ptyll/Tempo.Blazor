@@ -1,0 +1,98 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Avatars
+
+<header class="tm-topbar">
+    <div class="tm-topbar-brand">
+        @if (BrandContent is not null)
+        {
+            @BrandContent
+        }
+        else if (!string.IsNullOrEmpty(BrandTitle))
+        {
+            <span class="tm-topbar-brand-title">@BrandTitle</span>
+        }
+    </div>
+
+    @if (CenterContent is not null)
+    {
+        <div class="tm-topbar-center">@CenterContent</div>
+    }
+
+    <div class="tm-topbar-actions">
+        @if (OnCommandPalette.HasDelegate)
+        {
+            <button class="tm-topbar-search-trigger"
+                    type="button"
+                    aria-label="Open command palette"
+                    @onclick="async () => await OnCommandPalette.InvokeAsync()">
+                <TmIcon Name="@IconNames.Search" Size="IconSize.Sm" />
+                <span class="tm-topbar-search-hint">⌘K</span>
+            </button>
+        }
+
+        @if (ActionsContent is not null)
+        {
+            @ActionsContent
+        }
+
+        @if (User is not null)
+        {
+            <div class="tm-topbar-user">
+                <button class="tm-topbar-user-button"
+                        type="button"
+                        aria-label="User menu"
+                        @onclick="ToggleUserMenu">
+                    <TmAvatar Src="@User.AvatarSrc" Name="@User.DisplayName" Size="AvatarSize.Sm" />
+                    @if (!string.IsNullOrEmpty(User.DisplayName))
+                    {
+                        <span class="tm-topbar-user-name">@User.DisplayName</span>
+                    }
+                </button>
+
+                @if (_userMenuOpen)
+                {
+                    <div class="tm-topbar-user-menu">
+                        @if (OnLogout.HasDelegate)
+                        {
+                            <button class="tm-topbar-user-menu-item tm-topbar-user-menu-logout"
+                                    type="button"
+                                    @onclick="async () => { _userMenuOpen = false; await OnLogout.InvokeAsync(); }">
+                                <TmIcon Name="@IconNames.LogOut" Size="IconSize.Sm" />
+                                Sign out
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</header>
+
+@code {
+    /// <summary>Brand title text (simple string).</summary>
+    [Parameter] public string? BrandTitle { get; set; }
+
+    /// <summary>Custom brand content (logo, etc.).</summary>
+    [Parameter] public RenderFragment? BrandContent { get; set; }
+
+    /// <summary>Center slot content (e.g. breadcrumbs).</summary>
+    [Parameter] public RenderFragment? CenterContent { get; set; }
+
+    /// <summary>Actions slot content (e.g. notification bell).</summary>
+    [Parameter] public RenderFragment? ActionsContent { get; set; }
+
+    /// <summary>Currently logged-in user. When set, renders user avatar and menu.</summary>
+    [Parameter] public IUserInfo? User { get; set; }
+
+    /// <summary>Fires when the command palette trigger is clicked.</summary>
+    [Parameter] public EventCallback OnCommandPalette { get; set; }
+
+    /// <summary>Fires when the user clicks "Sign out".</summary>
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private bool _userMenuOpen;
+
+    private void ToggleUserMenu() => _userMenuOpen = !_userMenuOpen;
+}

@@ -1,0 +1,409 @@
+@page "/forms"
+@using Tempo.Blazor.Demo.Shared
+@using Tempo.Blazor.Components.Inputs
+<PageTitle>Form Inputs – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Form Inputs</h1>
+    <p class="text-slate-600 dark:text-slate-400">Complete set of form controls with validation, states, and accessibility support.</p>
+</div>
+
+<!-- Text Inputs -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Text Inputs</h2>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Basic Inputs</h3>
+            <div class="space-y-4">
+                <TmTextInput Label="Full Name" Placeholder="Enter your name" @bind-Value="_name" />
+                <TmTextInput Label="Email Address" Placeholder="user@example.com" Type="email" @bind-Value="_email" />
+            </div>
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">States</h3>
+            <div class="space-y-4">
+                <TmTextInput Label="With Error" Value="bad value" Error="This field contains an error" />
+                <TmTextInput Label="With Help Text" HelpText="We'll never share your email with anyone." @bind-Value="_help" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Text Area -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Text Area</h2>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Description</h3>
+            <TmTextArea Label="Description" Placeholder="Enter a detailed description..." Rows="4" @bind-Value="_description" />
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Character Limit</h3>
+            <TmTextArea Label="Limited Input" MaxLength="100" Placeholder="Type here (max 100 chars)..." @bind-Value="_limited" />
+            <p class="text-xs text-slate-500 mt-2">@(_limited?.Length ?? 0) / 100 characters</p>
+        </div>
+    </div>
+</section>
+
+<!-- Select & Search -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Select & Search</h2>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Select Dropdown</h3>
+            <TmSelect TValue="string"
+                      Label="Role"
+                      Options="@_roleOptions"
+                      @bind-Value="_selectedRole"
+                      Placeholder="Select a role..." />
+            @if (!string.IsNullOrEmpty(_selectedRole))
+            {
+                <div class="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Selected: <span class="font-medium text-primary-600 dark:text-primary-400">@_selectedRole</span>
+                    </p>
+                </div>
+            }
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Search Input</h3>
+            <TmSearchInput Placeholder="Search..." @bind-Value="_search" />
+            @if (!string.IsNullOrEmpty(_search))
+            {
+                <div class="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Query: <span class="font-medium text-primary-600 dark:text-primary-400">@_search</span>
+                    </p>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Checkboxes & Toggles -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Checkboxes & Toggles</h2>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Checkboxes</h3>
+            <div class="space-y-3">
+                <TmCheckbox Label="Accept terms and conditions" @bind-Value="_accepted" />
+                <TmCheckbox Label="Subscribe to newsletter" @bind-Value="_subscribed" />
+                <TmCheckbox Label="Indeterminate state" Indeterminate="true" />
+                <TmCheckbox Label="Disabled checkbox" Disabled="true" />
+            </div>
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Toggles</h3>
+            <div class="space-y-4">
+                <TmToggle Label="Push notifications" @bind-Value="_notifications" />
+                <TmToggle Label="Email notifications" @bind-Value="_emailNotifications" />
+                <TmToggle Label="Dark mode preview" @bind-Value="_darkMode" />
+                <TmToggle Label="Disabled toggle" @bind-Value="_disabledToggle" Disabled="true" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Radio Group -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Radio Groups</h2>
+    <div class="showcase-card">
+        <div class="demo-grid demo-grid-2">
+            <div>
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Select a Plan</h3>
+                <TmRadioGroup T="string"
+                              Label="Subscription Plan"
+                              Options="@_planOptions"
+                              @bind-Value="_selectedPlan" />
+            </div>
+            <div class="flex items-center">
+                @if (!string.IsNullOrEmpty(_selectedPlan))
+                {
+                    <div class="w-full p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-600 dark:text-slate-400">Selected Plan</p>
+                                <p class="text-lg font-semibold text-primary-600 dark:text-primary-400">@GetPlanName(_selectedPlan)</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Password Strength -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Password Strength Indicator</h2>
+    <div class="showcase-card">
+        <div class="max-w-md">
+            <TmTextInput Label="Password" 
+                         Type="password" 
+                         @bind-Value="_password" 
+                         Placeholder="Enter a strong password..."
+                         HelpText="Use at least 8 characters with letters, numbers, and symbols." />
+            <div class="mt-4">
+                <TmPasswordStrengthIndicator Password="@_password" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Real-time Validation -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Real-time Validation</h2>
+            <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Instant Feedback</span>
+        </div>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            Validation feedback appears immediately as you type. Green indicates valid input, red shows errors.
+        </p>
+        <div class="space-y-4 max-w-md">
+            <TmTextInput Label="Username" 
+                         @bind-Value="_validationModel.Username"
+                         Placeholder="Enter username (min 3 characters)"
+                         ShowValidationIcons="true"
+                         IsValid="IsUsernameValid"
+                         Error="@UsernameError" />
+            
+            <TmTextInput Label="Email Address" 
+                         Type="email"
+                         @bind-Value="_validationModel.Email"
+                         Placeholder="user@example.com"
+                         ShowValidationIcons="true"
+                         IsValid="IsEmailValid"
+                         Error="@EmailError" />
+            
+            <TmTextInput Label="Phone Number" 
+                         @bind-Value="_validationModel.Phone"
+                         Placeholder="+1 555 000 0000"
+                         ShowValidationIcons="true"
+                         IsValid="IsPhoneValid"
+                         Error="@PhoneError" />
+        </div>
+    </div>
+</section>
+
+<!-- FluentValidation Form -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">FluentValidation Form</h2>
+            <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Validation</span>
+        </div>
+    </div>
+    
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            This form demonstrates server-style validation using <code>FluentValidationValidator</code>.
+        </p>
+
+        <EditForm Model="_personModel" OnValidSubmit="HandleValidSubmit" OnInvalidSubmit="HandleInvalidSubmit">
+            <FluentValidationValidator />
+
+            @if (_submitSuccess)
+            {
+                <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center space-x-3 animate-fade-in">
+                    <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-green-800 dark:text-green-200">Success!</p>
+                        <p class="text-sm text-green-600 dark:text-green-400">Form submitted successfully.</p>
+                    </div>
+                </div>
+            }
+
+            <TmValidationSummary />
+
+            <TmFormSection Title="Personal Information" class="mb-6">
+                <TmFormRow>
+                    <TmValidatedField 
+                        Label="First Name" 
+                        Required="true"
+                        @bind-Value="_personModel.FirstName" 
+                        Placeholder="Enter first name" />
+                    <TmValidatedField 
+                        Label="Last Name" 
+                        Required="true"
+                        @bind-Value="_personModel.LastName" 
+                        Placeholder="Enter last name" />
+                </TmFormRow>
+                <TmFormRow>
+                    <TmValidatedField 
+                        Label="Email" 
+                        Required="true"
+                        Type="email"
+                        @bind-Value="_personModel.Email" 
+                        Placeholder="user@example.com" />
+                    <div>
+                        <label class="tm-input-label">
+                            Age <span class="tm-input-label-required">*</span>
+                        </label>
+                        <InputNumber @bind-Value="_personModel.Age" class="tm-input" />
+                        <ValidationMessage For="() => _personModel.Age" />
+                    </div>
+                </TmFormRow>
+            </TmFormSection>
+
+            <TmFormSection Title="Work Information">
+                <TmFormRow>
+                    <TmValidatedField 
+                        Label="Department" 
+                        Required="true"
+                        @bind-Value="_personModel.Department" 
+                        Placeholder="e.g. Engineering" />
+                </TmFormRow>
+                <TmFormRow>
+                    <div>
+                        <label class="tm-input-label">
+                            Start Date <span class="tm-input-label-required">*</span>
+                        </label>
+                        <TmDatePicker @bind-Value="_personModel.StartDate" />
+                        <ValidationMessage For="() => _personModel.StartDate" />
+                    </div>
+                    <div>
+                        <label class="tm-input-label">End Date</label>
+                        <TmDatePicker @bind-Value="_personModel.EndDate" />
+                        <ValidationMessage For="() => _personModel.EndDate" />
+                    </div>
+                </TmFormRow>
+            </TmFormSection>
+
+            <div class="flex items-center space-x-3 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                <TmButton Type="ButtonType.Submit" Variant="ButtonVariant.Primary" IsLoading="_isSubmitting">Submit</TmButton>
+                <TmButton Type="ButtonType.Button" Variant="ButtonVariant.Ghost" OnClick="ResetForm">Reset</TmButton>
+            </div>
+        </EditForm>
+    </div>
+</section>
+
+<!-- Expression Editor -->
+<section class="demo-section mt-8">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Expression Editor</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Templates</span>
+    </div>
+    <div class="showcase-card">
+        <TmExpressionEditor Label="Email Subject Template"
+                            Value="@_exprValue"
+                            ValueChanged="v => _exprValue = v"
+                            Placeholder="Type your template... Click a variable to insert it."
+                            Variables="_exprVars" />
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Result: <code>@_exprValue</code></p>
+    </div>
+</section>
+
+@code {
+    // Expression Editor
+    private string _exprValue = "Dear {{sender.name}}, your message ";
+    private static readonly IReadOnlyList<ExpressionVariable> _exprVars =
+    [
+        new() { Name = "sender.name", Description = "Full name of the sender", Type = "string" },
+        new() { Name = "sender.email", Description = "Email address of the sender", Type = "string" },
+        new() { Name = "message.subject", Description = "Subject line of the message", Type = "string" },
+        new() { Name = "message.date", Description = "Date the message was received", Type = "DateTime" },
+        new() { Name = "message.id", Description = "Unique message identifier", Type = "string" },
+    ];
+
+    private string _name = string.Empty;
+    private string _email = string.Empty;
+    private string _help = string.Empty;
+    private string _description = string.Empty;
+    private string _limited = string.Empty;
+    private string? _selectedRole;
+    private bool _accepted;
+    private bool _subscribed;
+    private bool _notifications = true;
+    private bool _emailNotifications;
+    private bool _darkMode;
+    private bool _disabledToggle;
+    private string? _selectedPlan = "starter";
+    private string _search = string.Empty;
+    private string _password = string.Empty;
+
+    // Real-time validation
+    private ValidationModel _validationModel = new();
+
+    private bool? IsUsernameValid => string.IsNullOrEmpty(_validationModel.Username) 
+        ? null 
+        : _validationModel.Username.Length >= 3;
+    
+    private bool? IsEmailValid => string.IsNullOrEmpty(_validationModel.Email) 
+        ? null 
+        : System.Text.RegularExpressions.Regex.IsMatch(_validationModel.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    
+    private bool? IsPhoneValid => string.IsNullOrEmpty(_validationModel.Phone) 
+        ? null 
+        : _validationModel.Phone.Length >= 10 && _validationModel.Phone.All(c => char.IsDigit(c) || c == ' ' || c == '+' || c == '-' || c == '(' || c == ')');
+
+    private string? UsernameError => IsUsernameValid == false ? "Username must be at least 3 characters" : null;
+    private string? EmailError => IsEmailValid == false ? "Please enter a valid email address" : null;
+    private string? PhoneError => IsPhoneValid == false ? "Please enter a valid phone number (at least 10 digits)" : null;
+
+    public class ValidationModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+    }
+
+    private List<SelectOption<string>> _roleOptions = new()
+    {
+        new("admin", "Admin"),
+        new("editor", "Editor"),
+        new("viewer", "Viewer"),
+    };
+
+    private List<RadioOption<string>> _planOptions = new()
+    {
+        new("Free plan", "free"),
+        new("Starter plan", "starter"),
+        new("Pro plan", "pro"),
+    };
+
+    private string GetPlanName(string? value) => value switch
+    {
+        "free" => "Free Plan",
+        "starter" => "Starter Plan",
+        "pro" => "Pro Plan",
+        _ => value ?? "Unknown"
+    };
+
+    // FluentValidation form
+    private PersonFormModel _personModel = new();
+    private bool _submitSuccess;
+    private bool _isSubmitting;
+
+    private async Task HandleValidSubmit()
+    {
+        _isSubmitting = true;
+        await Task.Delay(800); // Simulate API call
+        _isSubmitting = false;
+        _submitSuccess = true;
+    }
+
+    private void HandleInvalidSubmit()
+    {
+        _submitSuccess = false;
+    }
+
+    private void ResetForm()
+    {
+        _personModel = new PersonFormModel();
+        _submitSuccess = false;
+    }
+}

@@ -1,0 +1,105 @@
+@namespace Tempo.Blazor.Components.Activity
+
+@if (IsVisible)
+{
+    <div class="tm-rte-image-dialog">
+        <div class="tm-rte-image-backdrop" @onclick="OnBackdropClick"></div>
+        <div class="tm-rte-image-content">
+            <div class="tm-rte-image-header">
+                <h5>@Loc["TmRichEditor_ImageDialog_Title"]</h5>
+                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
+            </div>
+            <div class="tm-rte-image-body">
+                <div class="tm-rte-form-group">
+                    <label for="image-url-input">@Loc["TmRichEditor_ImageDialog_Url"]</label>
+                    <input type="text"
+                           id="image-url-input"
+                           class="tm-rte-image-url-input"
+                           placeholder="https://example.com/image.jpg"
+                           @bind="_url"
+                           @bind:event="oninput" />
+                </div>
+                <div class="tm-rte-form-group">
+                    <label for="image-alt-input">@Loc["TmRichEditor_ImageDialog_Alt"]</label>
+                    <input type="text"
+                           id="image-alt-input"
+                           class="tm-rte-image-alt-input"
+                           placeholder="@Loc["TmRichEditor_ImageDialog_AltPlaceholder"]"
+                           @bind="_alt"
+                           @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="tm-rte-image-footer">
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
+                    @Loc["Tm_Cancel"]
+                </button>
+                <button type="button" 
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
+                        disabled="@(!IsValidUrl())"
+                        @onclick="InsertImage">
+                    @Loc["TmRichEditor_ImageDialog_Insert"]
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Whether the dialog is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+    
+    /// <summary>
+    /// Whether to close on backdrop click.
+    /// </summary>
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    
+    /// <summary>
+    /// Callback when image is confirmed.
+    /// </summary>
+    [Parameter] public EventCallback<(string Url, string Alt)> OnConfirm { get; set; }
+    
+    /// <summary>
+    /// Callback when dialog is cancelled.
+    /// </summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _url = string.Empty;
+    private string _alt = string.Empty;
+
+    private bool IsValidUrl()
+    {
+        if (string.IsNullOrWhiteSpace(_url))
+            return false;
+
+        return Uri.TryCreate(_url, UriKind.Absolute, out _);
+    }
+
+    private async Task InsertImage()
+    {
+        if (!IsValidUrl()) return;
+
+        await OnConfirm.InvokeAsync((_url, _alt));
+        Reset();
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task OnCancelClick()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private void Reset()
+    {
+        _url = string.Empty;
+        _alt = string.Empty;
+    }
+}

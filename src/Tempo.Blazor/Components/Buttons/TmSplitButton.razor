@@ -1,0 +1,84 @@
+@namespace Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "")">
+    <button type="button"
+            class="tm-split-button__primary"
+            disabled="@Disabled"
+            @onclick="HandlePrimaryClick">
+        @if (IsLoading)
+        {
+            <span class="tm-split-button__spinner"></span>
+        }
+        <span class="tm-split-button__text">@Text</span>
+    </button>
+
+    <button type="button"
+            class="tm-split-button__toggle"
+            disabled="@Disabled"
+            aria-haspopup="true"
+            aria-expanded="@(_isOpen ? "true" : "false")"
+            @onclick="ToggleDropdown">
+        <TmIcon Name="chevron-down" Size="IconSize.Xs" />
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="tm-split-button__dropdown" role="menu" @onkeydown="HandleKeyDown">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isOpen;
+
+    /// <summary>Text label on the primary button.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = default!;
+
+    /// <summary>Fires when the primary button is clicked.</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>Visual style variant.</summary>
+    [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    /// <summary>Button size.</summary>
+    [Parameter] public ButtonSize? Size { get; set; }
+
+    /// <summary>Disables both the primary and dropdown buttons.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Shows a loading spinner on the primary button.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Dropdown menu items (e.g. TmDropdownItem or TmContextMenuItem).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string VariantClass => $"tm-split-button--{Variant.ToString().ToLowerInvariant()}";
+
+    private string SizeClass => Size switch
+    {
+        ButtonSize.Xs => "tm-split-button--xs",
+        ButtonSize.Sm => "tm-split-button--sm",
+        ButtonSize.Lg => "tm-split-button--lg",
+        _ => ""
+    };
+
+    private async Task HandlePrimaryClick()
+    {
+        if (!Disabled && !IsLoading)
+            await OnClick.InvokeAsync();
+    }
+
+    private void ToggleDropdown()
+    {
+        if (!Disabled)
+            _isOpen = !_isOpen;
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            _isOpen = false;
+    }
+}

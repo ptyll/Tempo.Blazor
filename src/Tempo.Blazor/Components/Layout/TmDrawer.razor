@@ -1,0 +1,114 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Icons
+
+@if (IsOpen)
+{
+    @if (ShowOverlay)
+    {
+        <div class="tm-drawer__overlay" @onclick="HandleOverlayClick"></div>
+    }
+
+    <div class="tm-drawer @PositionClass"
+         role="dialog"
+         aria-modal="true"
+         @onkeydown="HandleKeyDown">
+
+        <div class="tm-drawer__panel" style="width: @Width;">
+            <!-- Header -->
+            <div class="tm-drawer__header">
+                @if (HeaderContent is not null)
+                {
+                    @HeaderContent
+                }
+                else if (!string.IsNullOrEmpty(Title))
+                {
+                    <h2 class="tm-drawer__title">@Title</h2>
+                }
+
+                @if (ShowCloseButton)
+                {
+                    <button type="button"
+                            class="tm-drawer__close"
+                            aria-label="@Loc["TmDrawer_Close"]"
+                            @onclick="Close">
+                        <TmIcon Name="x" Size="IconSize.Sm" />
+                    </button>
+                }
+            </div>
+
+            <!-- Body -->
+            <div class="tm-drawer__body">
+                @ChildContent
+            </div>
+
+            <!-- Footer -->
+            @if (FooterContent is not null)
+            {
+                <div class="tm-drawer__footer">
+                    @FooterContent
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Whether the drawer is open.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Fires when the drawer should open or close.</summary>
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>Side from which the drawer slides in.</summary>
+    [Parameter] public DrawerPosition Position { get; set; } = DrawerPosition.Right;
+
+    /// <summary>Width of the drawer panel.</summary>
+    [Parameter] public string Width { get; set; } = "400px";
+
+    /// <summary>Title shown in the header.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Show a semi-transparent backdrop behind the drawer.</summary>
+    [Parameter] public bool ShowOverlay { get; set; } = true;
+
+    /// <summary>Close the drawer when clicking the overlay.</summary>
+    [Parameter] public bool CloseOnOverlayClick { get; set; } = true;
+
+    /// <summary>Close the drawer when pressing Escape.</summary>
+    [Parameter] public bool CloseOnEscape { get; set; } = true;
+
+    /// <summary>Show the X close button in the header.</summary>
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+
+    /// <summary>Custom header content (replaces Title).</summary>
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+
+    /// <summary>Main body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional footer with action buttons.</summary>
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    private string PositionClass => Position switch
+    {
+        DrawerPosition.Left => "tm-drawer--left",
+        _ => "tm-drawer--right"
+    };
+
+    private async Task Close()
+    {
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private async Task HandleOverlayClick()
+    {
+        if (CloseOnOverlayClick)
+            await Close();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && CloseOnEscape)
+            await Close();
+    }
+}

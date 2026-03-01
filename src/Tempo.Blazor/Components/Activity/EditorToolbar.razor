@@ -1,0 +1,473 @@
+@namespace Tempo.Blazor.Components.Activity
+
+<div class="tm-rte-toolbar @GetModeClass()">
+    @if (Mode == ToolbarMode.Full)
+    {
+        @* Undo/Redo Group *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="undo"
+                title="@Loc["TmRichEditor_Undo"] (Ctrl+Z)"
+                aria-label="@Loc["TmRichEditor_Undo"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("undo"))">
+            ↶
+        </button>
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="redo"
+                title="@Loc["TmRichEditor_Redo"] (Ctrl+Y)"
+                aria-label="@Loc["TmRichEditor_Redo"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("redo"))">
+            ↷
+        </button>
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+        @* Headings Group *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="h1"
+                title="@Loc["TmRichEditor_Heading1"]"
+                aria-label="@Loc["TmRichEditor_Heading1"]"
+                aria-pressed="@(IsFormatActive("h1").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("h1"))">
+            H1
+        </button>
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="h2"
+                title="@Loc["TmRichEditor_Heading2"]"
+                aria-label="@Loc["TmRichEditor_Heading2"]"
+                aria-pressed="@(IsFormatActive("h2").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("h2"))">
+            H2
+        </button>
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="h3"
+                title="@Loc["TmRichEditor_Heading3"]"
+                aria-label="@Loc["TmRichEditor_Heading3"]"
+                aria-pressed="@(IsFormatActive("h3").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("h3"))">
+            H3
+        </button>
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="h4"
+                title="@Loc["TmRichEditor_Heading4"]"
+                aria-label="@Loc["TmRichEditor_Heading4"]"
+                aria-pressed="@(IsFormatActive("h4").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("h4"))">
+            H4
+        </button>
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+    }
+
+    @* Basic Formatting Group *@
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="bold"
+            title="@Loc["TmRichEditor_Bold"] (Ctrl+B)"
+            aria-label="@Loc["TmRichEditor_Bold"]"
+            aria-pressed="@(IsFormatActive("bold").ToString().ToLower())"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("bold"))">
+        <strong>B</strong>
+    </button>
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="italic"
+            title="@Loc["TmRichEditor_Italic"] (Ctrl+I)"
+            aria-label="@Loc["TmRichEditor_Italic"]"
+            aria-pressed="@(IsFormatActive("italic").ToString().ToLower())"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("italic"))">
+        <em>I</em>
+    </button>
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="underline"
+            title="@Loc["TmRichEditor_Underline"] (Ctrl+U)"
+            aria-label="@Loc["TmRichEditor_Underline"]"
+            aria-pressed="@(IsFormatActive("underline").ToString().ToLower())"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("underline"))">
+        <u>U</u>
+    </button>
+
+    @if (Mode == ToolbarMode.Full)
+    {
+        @* Strikethrough *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="strikethrough"
+                title="@Loc["TmRichEditor_Strikethrough"]"
+                aria-label="@Loc["TmRichEditor_Strikethrough"]"
+                aria-pressed="@(IsFormatActive("strikethrough").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("strikethrough"))">
+            <s>S</s>
+        </button>
+
+        @* Subscript/Superscript *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="subscript"
+                title="@Loc["TmRichEditor_Subscript"]"
+                aria-label="@Loc["TmRichEditor_Subscript"]"
+                aria-pressed="@(IsFormatActive("subscript").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("subscript"))">
+            x₂
+        </button>
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="superscript"
+                title="@Loc["TmRichEditor_Superscript"]"
+                aria-label="@Loc["TmRichEditor_Superscript"]"
+                aria-pressed="@(IsFormatActive("superscript").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("superscript"))">
+            x²
+        </button>
+    }
+
+    <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+    @* Lists Group - Available in both modes *@
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="insertUnorderedList"
+            title="@Loc["TmRichEditor_UnorderedList"]"
+            aria-label="@Loc["TmRichEditor_UnorderedList"]"
+            aria-pressed="@(IsFormatActive("insertUnorderedList").ToString().ToLower())"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("insertUnorderedList"))">
+        •
+    </button>
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="insertOrderedList"
+            title="@Loc["TmRichEditor_OrderedList"]"
+            aria-label="@Loc["TmRichEditor_OrderedList"]"
+            aria-pressed="@(IsFormatActive("insertOrderedList").ToString().ToLower())"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("insertOrderedList"))">
+        1.
+    </button>
+
+    @if (Mode == ToolbarMode.Full)
+    {
+        @* Indent/Outdent *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="outdent"
+                title="@Loc["TmRichEditor_Outdent"]"
+                aria-label="@Loc["TmRichEditor_Outdent"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("outdent"))">
+            ←
+        </button>
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="indent"
+                title="@Loc["TmRichEditor_Indent"]"
+                aria-label="@Loc["TmRichEditor_Indent"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("indent"))">
+            →
+        </button>
+    }
+
+    @* Task List - Available in both modes *@
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="taskList"
+            title="@Loc["TmRichEditor_TaskList"]"
+            aria-label="@Loc["TmRichEditor_TaskList"]"
+            aria-pressed="@(IsFormatActive("taskList").ToString().ToLower())"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("taskList"))">
+        ☑
+    </button>
+
+    <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+    @* Link *@
+    <button class="tm-rte-btn"
+            type="button"
+            data-format="link"
+            title="@Loc["TmRichEditor_Link"] (Ctrl+K)"
+            aria-label="@Loc["TmRichEditor_Link"]"
+            disabled="@IsDisabled"
+            @onclick="@(() => OnFormat.InvokeAsync("link"))">
+            🔗
+    </button>
+
+    @if (Mode == ToolbarMode.Full)
+    {
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+        @* Code *@
+        <button class="tm-rte-btn tm-rte-btn-code"
+                type="button"
+                data-format="code"
+                title="@Loc["TmRichEditor_Code"]"
+                aria-label="@Loc["TmRichEditor_Code"]"
+                aria-pressed="@(IsFormatActive("code").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("code"))">
+            &lt;/&gt;
+        </button>
+
+        @* Blockquote *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="blockquote"
+                title="@Loc["TmRichEditor_Blockquote"]"
+                aria-label="@Loc["TmRichEditor_Blockquote"]"
+                aria-pressed="@(IsFormatActive("blockquote").ToString().ToLower())"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("blockquote"))">
+            "
+        </button>
+
+        @* Horizontal Line *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="horizontalRule"
+                title="@Loc["TmRichEditor_HorizontalRule"]"
+                aria-label="@Loc["TmRichEditor_HorizontalRule"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("horizontalRule"))">
+            —
+        </button>
+
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+        @* Text Color *@
+        <div class="tm-rte-color-wrapper">
+            <button class="tm-rte-btn tm-rte-color-btn"
+                    type="button"
+                    title="@Loc["TmRichEditor_TextColor"]"
+                    aria-label="@Loc["TmRichEditor_TextColor"]"
+                    disabled="@IsDisabled"
+                    @onclick="ToggleColorPicker">
+                <span style="color: var(--tm-color-red-500)">A</span>
+            </button>
+            @if (_showColorPicker)
+            {
+                <div class="tm-rte-color-picker">
+                    @foreach (var color in TextColors)
+                    {
+                        <button class="tm-rte-color-option"
+                                style="background-color: @color"
+                                @onclick="@(() => ApplyColor(color))"
+                                title="@color">
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        @* Highlight *@
+        <div class="tm-rte-color-wrapper">
+            <button class="tm-rte-btn tm-rte-highlight-btn"
+                    type="button"
+                    title="@Loc["TmRichEditor_Highlight"]"
+                    aria-label="@Loc["TmRichEditor_Highlight"]"
+                    disabled="@IsDisabled"
+                    @onclick="ToggleHighlightPicker">
+                <span style="background-color: yellow; padding: 0 2px;">H</span>
+            </button>
+            @if (_showHighlightPicker)
+            {
+                <div class="tm-rte-color-picker">
+                    @foreach (var color in HighlightColors)
+                    {
+                        <button class="tm-rte-color-option"
+                                style="background-color: @color"
+                                @onclick="@(() => ApplyHighlight(color))"
+                                title="@color">
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+        @* Image *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="image"
+                title="@Loc["TmRichEditor_Image"]"
+                aria-label="@Loc["TmRichEditor_Image"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("image"))">
+            🖼
+        </button>
+
+        @* Table *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="table"
+                title="@Loc["TmRichEditor_Table"]"
+                aria-label="@Loc["TmRichEditor_Table"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("table"))">
+            ⊞
+        </button>
+
+        @* Video *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="video"
+                title="@Loc["TmRichEditor_Video"]"
+                aria-label="@Loc["TmRichEditor_Video"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("video"))">
+            🎬
+        </button>
+
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+
+        @* Remove Format *@
+        <button class="tm-rte-btn"
+                type="button"
+                data-format="removeFormat"
+                title="@Loc["TmRichEditor_RemoveFormat"]"
+                aria-label="@Loc["TmRichEditor_RemoveFormat"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnFormat.InvokeAsync("removeFormat"))">
+            <span class="tm-rte-clear-format">Tx</span>
+        </button>
+    }
+
+    @* Emoji Picker - Available in both modes *@
+    <div class="tm-rte-emoji-wrapper">
+        <button class="tm-rte-btn tm-rte-emoji-btn"
+                type="button"
+                title="@Loc["TmRichEditor_Emoji"]"
+                aria-label="@Loc["TmRichEditor_Emoji"]"
+                disabled="@IsDisabled"
+                @onclick="ToggleEmojiPicker">
+            😊
+        </button>
+        @if (_showEmojiPicker)
+        {
+            <div class="tm-rte-emoji-picker">
+                @foreach (var emoji in CommonEmojis)
+                {
+                    <button class="tm-rte-emoji-option"
+                            @onclick="@(() => HandleEmojiSelected(emoji))"
+                            title="@emoji">
+                        @emoji
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// The mode of the toolbar (Simple or Full).
+    /// </summary>
+    [Parameter] public ToolbarMode Mode { get; set; } = ToolbarMode.Simple;
+
+    /// <summary>
+    /// Whether the toolbar is disabled.
+    /// </summary>
+    [Parameter] public bool IsDisabled { get; set; }
+
+    /// <summary>
+    /// Callback when a format command is triggered.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnFormat { get; set; }
+
+    /// <summary>
+    /// Callback when an emoji is selected.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnEmojiSelected { get; set; }
+
+    /// <summary>
+    /// List of currently active formats.
+    /// </summary>
+    [Parameter] public List<string> ActiveFormats { get; set; } = new();
+
+    private bool _showColorPicker;
+    private bool _showHighlightPicker;
+    private bool _showEmojiPicker;
+
+    private static readonly string[] TextColors = new[]
+    {
+        "#000000", "#434343", "#666666", "#999999", "#b7b7b7", "#cccccc", "#d9d9d9", "#efefef", "#f3f3f3", "#ffffff",
+        "#980000", "#ff0000", "#ff9900", "#ffff00", "#00ff00", "#00ffff", "#4a86e8", "#0000ff", "#9900ff", "#ff00ff",
+        "#e6b8af", "#f4cccc", "#fce5cd", "#fff2cc", "#d9ead3", "#d0e0e3", "#c9daf8", "#cfe2f3", "#d9d2e9", "#ead1dc"
+    };
+
+    private static readonly string[] HighlightColors = new[]
+    {
+        "#ffff00", "#00ff00", "#00ffff", "#ff00ff", "#ff0000", "#0000ff",
+        "#ffffcc", "#ccffcc", "#ccffff", "#ffccff", "#ffcccc", "#ccccff",
+        "#ffff99", "#99ff99", "#99ffff", "#ff99ff", "#ff9999", "#9999ff"
+    };
+
+    private static readonly string[] CommonEmojis = new[]
+    {
+        "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂",
+        "👍", "👎", "👏", "🙌", "🤝", "🙏", "✌️", "🤞", "🤘", "👌",
+        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💯",
+        "🔥", "⭐", "✨", "⚡", "💡", "📌", "📍", "📝", "✅", "❌",
+        "🎉", "🎊", "🎁", "🎈", "🚀", "💻", "📱", "💾", "📂", "📅"
+    };
+
+    private string GetModeClass() => Mode == ToolbarMode.Simple ? "tm-rte-toolbar-simple" : "tm-rte-toolbar-full";
+
+    private bool IsFormatActive(string format) => ActiveFormats.Contains(format);
+
+    private void ToggleColorPicker()
+    {
+        _showColorPicker = !_showColorPicker;
+        _showHighlightPicker = false;
+        _showEmojiPicker = false;
+    }
+
+    private void ToggleHighlightPicker()
+    {
+        _showHighlightPicker = !_showHighlightPicker;
+        _showColorPicker = false;
+        _showEmojiPicker = false;
+    }
+
+    private void ToggleEmojiPicker()
+    {
+        _showEmojiPicker = !_showEmojiPicker;
+        _showColorPicker = false;
+        _showHighlightPicker = false;
+    }
+
+    private async Task ApplyColor(string color)
+    {
+        _showColorPicker = false;
+        await OnFormat.InvokeAsync($"foreColor:{color}");
+    }
+
+    private async Task ApplyHighlight(string color)
+    {
+        _showHighlightPicker = false;
+        await OnFormat.InvokeAsync($"hiliteColor:{color}");
+    }
+
+    private async Task HandleEmojiSelected(string emoji)
+    {
+        _showEmojiPicker = false;
+        await OnEmojiSelected.InvokeAsync(emoji);
+    }
+}

@@ -1,0 +1,59 @@
+@namespace Tempo.Blazor.Components.Avatars
+
+<div class="@CssClass">
+    @if (!string.IsNullOrEmpty(Src))
+    {
+        <img src="@Src" alt="@Alt" class="tm-avatar-image" />
+    }
+    else if (!string.IsNullOrEmpty(Name))
+    {
+        <div class="tm-avatar-fallback">@GetInitials(Name)</div>
+    }
+</div>
+
+@code {
+    /// <summary>Image source URL. When set, renders an img element.</summary>
+    [Parameter] public string? Src { get; set; }
+
+    /// <summary>Alt text for the avatar image.</summary>
+    [Parameter] public string? Alt { get; set; }
+
+    /// <summary>Full name used to derive initials when no Src is provided.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>Display size. Defaults to Md.</summary>
+    [Parameter] public AvatarSize Size { get; set; } = AvatarSize.Md;
+
+    /// <summary>Shape variant. Defaults to Circle.</summary>
+    [Parameter] public AvatarShape Shape { get; set; } = AvatarShape.Circle;
+
+    /// <summary>Background color for the initials fallback. Defaults to Gray.</summary>
+    [Parameter] public AvatarColor Color { get; set; } = AvatarColor.Gray;
+
+    private string CssClass
+    {
+        get
+        {
+            var sizeClass = Size switch
+            {
+                AvatarSize.Xs  => "tm-avatar-xs",
+                AvatarSize.Sm  => "tm-avatar-sm",
+                AvatarSize.Lg  => "tm-avatar-lg",
+                AvatarSize.Xl  => "tm-avatar-xl",
+                AvatarSize.Xxl => "tm-avatar-2xl",
+                _              => "tm-avatar-md"
+            };
+            var shapeClass  = Shape == AvatarShape.Square ? "tm-avatar-square" : "tm-avatar-circle";
+            var colorClass  = $"tm-avatar-{Color.ToString().ToLowerInvariant()}";
+            return $"tm-avatar {sizeClass} {shapeClass} {colorClass}";
+        }
+    }
+
+    private static string GetInitials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0) return string.Empty;
+        if (words.Length == 1) return char.ToUpperInvariant(words[0][0]).ToString();
+        return $"{char.ToUpperInvariant(words[0][0])}{char.ToUpperInvariant(words[^1][0])}";
+    }
+}

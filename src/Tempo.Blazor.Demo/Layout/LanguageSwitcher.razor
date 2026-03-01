@@ -1,0 +1,31 @@
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+    <button @onclick='() => SetCultureAsync("en")'
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("en") 
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
+        EN
+    </button>
+    <button @onclick='() => SetCultureAsync("cs")'
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("cs") 
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
+        CS
+    </button>
+</div>
+
+@code {
+    private readonly string _currentCulture =
+        System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    private bool IsActiveCulture(string lang) =>
+        string.Equals(_currentCulture, lang, StringComparison.OrdinalIgnoreCase);
+
+    private async Task SetCultureAsync(string culture)
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "tm-demo-culture", culture);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+}

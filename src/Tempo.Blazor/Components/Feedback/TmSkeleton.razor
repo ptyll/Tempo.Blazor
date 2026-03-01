@@ -1,0 +1,32 @@
+@namespace Tempo.Blazor.Components.Feedback
+
+<div class="@CssClass" style="@Style"></div>
+
+@code {
+    /// <summary>Shape variant. Defaults to Text.</summary>
+    [Parameter] public SkeletonVariant Variant { get; set; } = SkeletonVariant.Text;
+
+    /// <summary>Optional CSS width (e.g. "200px", "100%").</summary>
+    [Parameter] public string? Width { get; set; }
+
+    /// <summary>Optional CSS height (e.g. "40px", "1rem").</summary>
+    [Parameter] public string? Height { get; set; }
+
+    private string CssClass => Variant switch
+    {
+        SkeletonVariant.Circle => "tm-skeleton tm-skeleton-circle",
+        SkeletonVariant.Rect   => "tm-skeleton tm-skeleton-rect",
+        _                      => "tm-skeleton tm-skeleton-text"
+    };
+
+    private string Style
+    {
+        get
+        {
+            var parts = new List<string>(2);
+            if (!string.IsNullOrEmpty(Width))  parts.Add($"width: {Width}");
+            if (!string.IsNullOrEmpty(Height)) parts.Add($"height: {Height}");
+            return string.Join("; ", parts);
+        }
+    }
+}

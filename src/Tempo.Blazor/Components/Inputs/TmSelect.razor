@@ -1,0 +1,94 @@
+@namespace Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Models
+@typeparam TValue
+
+<div class="tm-select-wrapper">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@Id" class="tm-select-label">@Label</label>
+    }
+    <div class="tm-select-container">
+        <select id="@Id"
+                disabled="@Disabled"
+                class="@SelectCssClass"
+                @onchange="HandleChangeAsync">
+            @if (!string.IsNullOrEmpty(Placeholder))
+            {
+                <option value="" disabled selected>@Placeholder</option>
+            }
+            @if (Options is not null)
+            {
+                @foreach (var opt in Options)
+                {
+                    <option value="@opt.Value" disabled="@opt.IsDisabled">@opt.Label</option>
+                }
+            }
+            @ChildContent
+        </select>
+        <div class="tm-select-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                <polyline points="6 9 12 15 18 9" />
+            </svg>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div data-testid="select-error" class="tm-select-error-message">@Error</div>
+    }
+    @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(Error))
+    {
+        <div data-testid="select-help" class="tm-select-help-text">@HelpText</div>
+    }
+</div>
+
+@code {
+    /// <summary>Selected value.</summary>
+    [Parameter] public TValue? Value { get; set; }
+
+    /// <summary>Fires when the selection changes.</summary>
+    [Parameter] public EventCallback<TValue?> ValueChanged { get; set; }
+
+    /// <summary>Label shown above the select.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Placeholder option shown when no value is selected.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Validation error message.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Help text shown below the select when no error is present.</summary>
+    [Parameter] public string? HelpText { get; set; }
+
+    /// <summary>HTML id attribute.</summary>
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
+
+    /// <summary>Disables the select.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Typed option list. When provided, &lt;option&gt; elements are generated automatically.</summary>
+    [Parameter] public IReadOnlyList<SelectOption<TValue>>? Options { get; set; }
+
+    /// <summary>&lt;option&gt; elements for the select.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string SelectCssClass =>
+        $"tm-select{(string.IsNullOrEmpty(Error) ? "" : " tm-select-error")}{(Disabled ? " tm-select-disabled" : "")}";
+
+    private async Task HandleChangeAsync(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        TValue? value = default;
+        if (raw is not null)
+        {
+            if (typeof(TValue) == typeof(string))
+                value = (TValue?)(object?)raw;
+            else if (typeof(TValue) == typeof(int) && int.TryParse(raw, out var i))
+                value = (TValue?)(object?)i;
+            else if (typeof(TValue) == typeof(Guid) && Guid.TryParse(raw, out var g))
+                value = (TValue?)(object?)g;
+        }
+        await ValueChanged.InvokeAsync(value);
+    }
+}

@@ -1,0 +1,456 @@
+@page "/pickers"
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Pickers
+@using Tempo.Blazor.Components.Files
+@using Tempo.Blazor.Demo.Services
+<PageTitle>Pickers & Files – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Pickers & Files</h1>
+    <p class="text-slate-600 dark:text-slate-400">Date/time pickers, dropdowns, tag selectors, and file upload components.</p>
+</div>
+
+<!-- Filter Builder -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Filter Builder</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Advanced Filtering</span>
+    </div>
+    
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Build complex, multi-field filters interactively. Active filters appear as removable chips.
+        </p>
+        
+        <TmFilterBuilder FilterDefinitions="@_filterDefs"
+                         ActiveFilters="@_activeFilters"
+                         OnFiltersChanged="@(f => _activeFilters = f)"
+                         ShowClearAll="true" />
+        
+        @if (_activeFilters.Count > 0)
+        {
+            <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                    <span class="font-medium">Active filters:</span> 
+                    @string.Join("; ", _activeFilters.Select(f => $"{f.FieldLabel} {f.Operator} \"{f.DisplayValue}\""))
+                </p>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Time Pickers -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Time Pickers</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-3">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Basic Time Picker</h3>
+            <TmTimePicker Label="Start time"
+                          Value="@_time"
+                          ValueChanged="@(t => _time = t)" />
+            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_time?.ToString("HH:mm") ?? "—")</span></p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Seconds & Limits</h3>
+            <TmTimePicker Label="Meeting time"
+                          Value="@_timeSeconds"
+                          ValueChanged="@(t => _timeSeconds = t)"
+                          ShowSeconds="true"
+                          MinTime="@(new TimeOnly(8, 0))"
+                          MaxTime="@(new TimeOnly(18, 0))" />
+            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_timeSeconds?.ToString("HH:mm:ss") ?? "—")</span></p>
+            <p class="text-xs text-slate-400">Allowed: 08:00–18:00</p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled State</h3>
+            <TmTimePicker Label="Locked time"
+                          Value="@(new TimeOnly(14, 30))"
+                          ValueChanged="@(_ => {})"
+                          Disabled="true" />
+        </div>
+    </div>
+</section>
+
+<!-- Time Range Picker -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Time Range Picker</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Duration & Swap</h3>
+            <TmTimeRangePicker Label="Work hours"
+                               Value="@_timeRange"
+                               ValueChanged="@(v => _timeRange = v)"
+                               ShowDuration="true"
+                               ShowSwapButton="true" />
+            <p class="text-sm text-slate-500 mt-3">
+                From: <span class="font-mono">@(_timeRange.Start?.ToString("HH:mm") ?? "—")</span> 
+                to <span class="font-mono">@(_timeRange.End?.ToString("HH:mm") ?? "—")</span>
+            </p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Seconds</h3>
+            <TmTimeRangePicker Label="Precise interval"
+                               Value="@_timeRangeSec"
+                               ValueChanged="@(v => _timeRangeSec = v)"
+                               ShowSeconds="true"
+                               ShowDuration="true" />
+        </div>
+    </div>
+</section>
+
+<!-- Date Pickers -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Date Pickers</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-3">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Basic Date Picker</h3>
+            <TmDatePicker Label="Select date"
+                          Value="@_date"
+                          ValueChanged="@(d => _date = d)" />
+            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_date?.ToString("dd.MM.yyyy") ?? "—")</span></p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Min/Max</h3>
+            <TmDatePicker Label="Booking date"
+                          Value="@_dateLimited"
+                          ValueChanged="@(d => _dateLimited = d)"
+                          MinDate="@(DateOnly.FromDateTime(DateTime.Today))"
+                          MaxDate="@(DateOnly.FromDateTime(DateTime.Today.AddDays(30)))" />
+            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_dateLimited?.ToString("dd.MM.yyyy") ?? "—")</span></p>
+            <p class="text-xs text-slate-400">Range: Today + 30 days</p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled State</h3>
+            <TmDatePicker Label="Locked date"
+                          Value="@(DateOnly.FromDateTime(DateTime.Today))"
+                          ValueChanged="@(_ => {})"
+                          Disabled="true" />
+        </div>
+    </div>
+</section>
+
+<!-- Date Range Picker -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Date Range Picker</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Presets</h3>
+            <TmDateRangePicker Label="Report period"
+                               Value="@_dateRange"
+                               ValueChanged="@(v => _dateRange = v)"
+                               ShowPresets="true" />
+            <p class="text-sm text-slate-500 mt-3">
+                <span class="font-mono">@(_dateRange.Start?.ToString("dd.MM.yyyy") ?? "—")</span>
+                –
+                <span class="font-mono">@(_dateRange.End?.ToString("dd.MM.yyyy") ?? "—")</span>
+            </p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Custom Presets</h3>
+            <TmDateRangePicker Label="Analysis window"
+                               Value="@_dateRangeCustom"
+                               ValueChanged="@(v => _dateRangeCustom = v)"
+                               Presets="@_customPresets"
+                               ShowPresets="true" />
+            <p class="text-sm text-slate-500 mt-3">
+                <span class="font-mono">@(_dateRangeCustom.Start?.ToString("dd.MM.yyyy") ?? "—")</span>
+                –
+                <span class="font-mono">@(_dateRangeCustom.End?.ToString("dd.MM.yyyy") ?? "—")</span>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- DateTime Pickers -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">DateTime Pickers</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-3">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Basic DateTime</h3>
+            <TmDateTimePicker Label="Event date & time"
+                              Value="@_dateTime"
+                              ValueChanged="@(dt => _dateTime = dt)" />
+            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_dateTime?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span></p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">With Seconds & Limits</h3>
+            <TmDateTimePicker Label="Scheduled at"
+                              Value="@_dateTimeSeconds"
+                              ValueChanged="@(dt => _dateTimeSeconds = dt)"
+                              ShowSeconds="true"
+                              MinValue="@DateTime.Today"
+                              MaxValue="@DateTime.Today.AddDays(90)" />
+            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_dateTimeSeconds?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")</span></p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled State</h3>
+            <TmDateTimePicker Label="Completed at"
+                              Value="@(DateTime.Today.AddHours(9))"
+                              ValueChanged="@(_ => {})"
+                              Disabled="true" />
+        </div>
+    </div>
+</section>
+
+<!-- DateTime Range Picker -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">DateTime Range Picker</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Event Duration</h3>
+            <TmDateTimeRangePicker Label="Event period"
+                                   Value="@_dateTimeRange"
+                                   ValueChanged="@(v => _dateTimeRange = v)"
+                                   ShowSeconds="false" />
+            <p class="text-sm text-slate-500 mt-3">
+                <span class="font-mono">@(_dateTimeRange.Start?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span>
+                –
+                <span class="font-mono">@(_dateTimeRange.End?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span>
+            </p>
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled State</h3>
+            <TmDateTimeRangePicker Label="Past event"
+                                   Value="@((DateTime.Today.AddDays(-2), DateTime.Today.AddDays(-1)))"
+                                   ValueChanged="@(_ => {})"
+                                   Disabled="true" />
+        </div>
+    </div>
+</section>
+
+<!-- Other Pickers -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Other Pickers</h2>
+    </div>
+    
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Tag Picker</h3>
+            <TmTagPicker AllTags="@_allTags"
+                         SelectedTags="@_selectedTags"
+                         OnTagsChanged="@(t => _selectedTags = t.ToList())"
+                         AllowCreate="true" />
+            @if (_selectedTags.Any())
+            {
+                <p class="text-sm text-slate-500 mt-3">
+                    Selected: <span class="font-medium">@string.Join(", ", _selectedTags.Select(t => t.Name))</span>
+                </p>
+            }
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Dropdown</h3>
+            <TmDropdown Text="@(_dropdownVal ?? "Select action")" OnSelect="@(v => _dropdownVal = v)">
+                <TmDropdownItem Value="edit" Icon="@IconNames.Edit">Edit</TmDropdownItem>
+                <TmDropdownItem Value="clone" Icon="@IconNames.Copy">Clone</TmDropdownItem>
+                <TmDropdownItem Value="delete" Icon="@IconNames.Trash">Delete</TmDropdownItem>
+            </TmDropdown>
+            @if (_dropdownVal is not null)
+            {
+                <p class="text-sm text-slate-500 mt-3">Selected: <span class="font-medium">@_dropdownVal</span></p>
+            }
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Filterable Dropdown (API)</h3>
+            <p class="text-sm text-slate-500 mb-3">Countries loaded from Demo.Api with server-side search.</p>
+            <TmFilterableDropdown TItem="DropdownItem<string>" TValue="string"
+                                  DataProvider="@_countriesProvider"
+                                  Value="@_selectedCountry"
+                                  ValueChanged="@(c => _selectedCountry = c)"
+                                  DisplayField="@(item => item.Label)"
+                                  IdField="@(item => (object)item.Value)"
+                                  Placeholder="Select a country..."
+                                  FilterPlaceholder="Search countries..."
+                                  ShowClearButton="true" />
+            @if (_selectedCountry is not null)
+            {
+                <p class="text-sm text-slate-500 mt-3">
+                    Selected: <span class="font-medium">@_selectedCountry.Label</span> (@_selectedCountry.Value)
+                </p>
+            }
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">File Drop Zone</h3>
+            <TmFileDropZone Multiple="true" Accept="image/*,.pdf" />
+            <p class="text-xs text-slate-400 mt-2">Accepts: images and PDFs</p>
+        </div>
+    </div>
+</section>
+
+<!-- Attachment Manager -->
+<section class="demo-section mt-8">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Attachment Manager</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Full-featured file attachment management with upload, download, and delete (uses Demo API)</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">Files</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p class="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Entity ID:</strong> <code class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 rounded">@_attachmentEntityId</code>
+                <span class="text-xs ml-2">(Attachments are stored per entity in Demo API)</span>
+            </p>
+        </div>
+        
+        <TmAttachmentManager Provider="_attachmentProvider"
+                            EntityId="_attachmentEntityId" />
+    </div>
+</section>
+
+<!-- Calendar View -->
+<section class="demo-section mt-8">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Calendar View</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Month View</span>
+    </div>
+
+    <div class="showcase-card" style="max-width: 700px;">
+        <TmCalendarView SelectedDate="@_calSelectedDate"
+                        Events="_calEvents"
+                        HighlightedDates="_calHighlighted"
+                        OnDateClick="d => _calSelectedDate = d"
+                        OnEventClick="e => _calClickedEvent = e.Title" />
+
+        @if (_calSelectedDate.HasValue)
+        {
+            <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">Selected: <strong>@_calSelectedDate.Value.ToString("d")</strong></p>
+        }
+        @if (_calClickedEvent is not null)
+        {
+            <p class="text-sm text-slate-600 dark:text-slate-400">Last event clicked: <strong>@_calClickedEvent</strong></p>
+        }
+    </div>
+</section>
+
+@code {
+    [Inject] private IHttpClientFactory HttpFactory { get; set; } = default!;
+
+    // Countries Dropdown (API)
+    private DropdownHttpProvider? _countriesProvider;
+    private DropdownItem<string>? _selectedCountry;
+
+    // Attachment Manager
+    private AttachmentHttpProvider? _attachmentProvider;
+    private string _attachmentEntityId = "demo-task-1";
+
+    protected override void OnInitialized()
+    {
+        _countriesProvider = new DropdownHttpProvider(HttpFactory, "countries");
+        _attachmentProvider = new AttachmentHttpProvider(HttpFactory);
+    }
+
+    // Filter Builder
+    private IReadOnlyList<ActiveFilter> _activeFilters = [];
+
+    private readonly IReadOnlyList<FilterDefinition> _filterDefs =
+    [
+        new FilterDefinition { FieldName = "name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
+        new FilterDefinition { FieldName = "status", FieldLabel = "Status", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("active", "Active"),
+                       new SelectOption<string>("inactive", "Inactive"),
+                       new SelectOption<string>("pending", "Pending")] },
+        new FilterDefinition { FieldName = "created", FieldLabel = "Created", FieldType = FilterFieldType.Date },
+        new FilterDefinition { FieldName = "amount", FieldLabel = "Amount", FieldType = FilterFieldType.Number },
+        new FilterDefinition { FieldName = "verified", FieldLabel = "Verified", FieldType = FilterFieldType.Boolean },
+    ];
+
+    // Time Pickers
+    private TimeOnly? _time;
+    private TimeOnly? _timeSeconds;
+    private (TimeOnly? Start, TimeOnly? End) _timeRange;
+    private (TimeOnly? Start, TimeOnly? End) _timeRangeSec;
+
+    // Date Pickers
+    private DateOnly? _date;
+    private DateOnly? _dateLimited;
+    private (DateOnly? Start, DateOnly? End) _dateRange;
+    private (DateOnly? Start, DateOnly? End) _dateRangeCustom;
+
+    // DateTime Pickers
+    private DateTime? _dateTime;
+    private DateTime? _dateTimeSeconds;
+    private (DateTime? Start, DateTime? End) _dateTimeRange;
+
+    // Other
+    private string? _dropdownVal;
+
+    private List<DemoTag> _allTags = new()
+    {
+        new("t1", "Bug", "#ef4444"),
+        new("t2", "Feature", "#3b82f6"),
+        new("t3", "Docs", "#10b981"),
+        new("t4", "Design", "#8b5cf6"),
+        new("t5", "DevOps", "#f59e0b"),
+    };
+    private List<ITag> _selectedTags = [];
+
+    private readonly IReadOnlyList<DateRangePreset> _customPresets =
+    [
+        new("This month",
+            new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1),
+            DateOnly.FromDateTime(DateTime.Today)),
+        new("Q1",
+            new DateOnly(DateTime.Today.Year, 1, 1),
+            new DateOnly(DateTime.Today.Year, 3, 31)),
+        new("H1",
+            new DateOnly(DateTime.Today.Year, 1, 1),
+            new DateOnly(DateTime.Today.Year, 6, 30)),
+    ];
+
+    private record DemoTag(string Id, string Name, string Color) : ITag;
+
+    // Calendar View
+    private DateOnly? _calSelectedDate = DateOnly.FromDateTime(DateTime.Today);
+    private string? _calClickedEvent;
+
+    private readonly List<CalendarEvent> _calEvents = new()
+    {
+        new() { Date = DateOnly.FromDateTime(DateTime.Today), Title = "Team standup", Color = "#3b82f6" },
+        new() { Date = DateOnly.FromDateTime(DateTime.Today.AddDays(2)), Title = "Sprint review", Color = "#10b981" },
+        new() { Date = DateOnly.FromDateTime(DateTime.Today.AddDays(5)), Title = "Design sync", Color = "#8b5cf6" },
+        new() { Date = DateOnly.FromDateTime(DateTime.Today.AddDays(5)), Title = "Deployment", Color = "#ef4444" },
+        new() { Date = DateOnly.FromDateTime(DateTime.Today.AddDays(10)), Title = "1:1 meeting", Color = "#f59e0b" },
+    };
+
+    private readonly HashSet<DateOnly> _calHighlighted = new()
+    {
+        DateOnly.FromDateTime(DateTime.Today.AddDays(1)),
+        DateOnly.FromDateTime(DateTime.Today.AddDays(7)),
+        DateOnly.FromDateTime(DateTime.Today.AddDays(14)),
+    };
+
+}

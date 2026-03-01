@@ -1,0 +1,93 @@
+@namespace Tempo.Blazor.Components.Tags
+@using Tempo.Blazor.Interfaces
+
+<div class="tm-tag-picker">
+    @* Selected tag chips *@
+    @foreach (var tag in SelectedTagSet)
+    {
+        var t = tag;
+        <span class="tm-tag-chip" style="background-color: @t.Color">
+            @t.Name
+            <button class="tm-tag-chip-remove" type="button"
+                    @onclick:stopPropagation="true"
+                    @onclick="() => RemoveTagAsync(t)">×</button>
+        </span>
+    }
+
+    @* Open dropdown trigger *@
+    <button class="tm-tag-picker-trigger" type="button" @onclick="ToggleOpen">+</button>
+
+    @* Dropdown *@
+    @if (_isOpen)
+    {
+        <div class="tm-tag-picker-dropdown">
+            @if (AllowCreate)
+            {
+                <input class="tm-tag-picker-search"
+                       value="@_searchText"
+                       @oninput="e => _searchText = e.Value?.ToString() ?? string.Empty"
+                       placeholder="@Loc["TmTagPicker_Search"]" />
+            }
+
+            @foreach (var tag in AvailableTags)
+            {
+                var t = tag;
+                <div class="tm-tag-option" @onclick="() => AddTagAsync(t)">
+                    <span class="tm-tag-dot" style="background-color: @t.Color"></span>
+                    @t.Name
+                </div>
+            }
+
+            @if (AllowCreate && !string.IsNullOrWhiteSpace(_searchText) && !TagExists(_searchText))
+            {
+                <div class="tm-tag-create-option" @onclick="CreateTagAsync">
+                    @Loc["TmTagPicker_CreateNew", _searchText]
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isOpen;
+    private string _searchText = string.Empty;
+
+    /// <summary>All tags available for selection.</summary>
+    [Parameter] public IEnumerable<ITag>? AllTags { get; set; }
+
+    /// <summary>Currently selected tags.</summary>
+    [Parameter] public IEnumerable<ITag>? SelectedTags { get; set; }
+
+    /// <summary>Fires when the selection changes, passing the updated list.</summary>
+    [Parameter] public EventCallback<IEnumerable<ITag>> OnTagsChanged { get; set; }
+
+    /// <summary>When true, shows an option to create a new tag inline.</summary>
+    [Parameter] public bool AllowCreate { get; set; }
+
+    private IEnumerable<ITag> SelectedTagSet => SelectedTags ?? Enumerable.Empty<ITag>();
+
+    private IEnumerable<ITag> AvailableTags =>
+        (AllTags ?? Enumerable.Empty<ITag>())
+            .Where(t => !SelectedTagSet.Any(s => s.Id == t.Id));
+
+    private bool TagExists(string name) =>
+        (AllTags ?? Enumerable.Empty<ITag>())
+            .Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+    private void ToggleOpen() => _isOpen = !_isOpen;
+
+    private Task AddTagAsync(ITag tag)
+    {
+        var updated = SelectedTagSet.Append(tag).ToList();
+        _isOpen = false;
+        return OnTagsChanged.InvokeAsync(updated);
+    }
+
+    private Task RemoveTagAsync(ITag tag)
+    {
+        var updated = SelectedTagSet.Where(t => t.Id != tag.Id).ToList();
+        return OnTagsChanged.InvokeAsync(updated);
+    }
+
+    private Task CreateTagAsync() => Task.CompletedTask;
+}

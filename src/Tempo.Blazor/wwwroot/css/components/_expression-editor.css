@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmExpressionEditor — Template expression editor with variables
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-expression-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-spacing-2, 0.5rem);
+}
+
+.tm-expression-editor__label {
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-weight: 500;
+    color: var(--tm-color-neutral-700, #374151);
+}
+
+.tm-expression-editor__body {
+    display: flex;
+    gap: var(--tm-spacing-3, 0.75rem);
+    border: 1px solid var(--tm-color-neutral-300, #d1d5db);
+    border-radius: var(--tm-radius-md, 0.5rem);
+    overflow: hidden;
+}
+
+.tm-expression-editor--error .tm-expression-editor__body {
+    border-color: var(--tm-color-danger-500, #ef4444);
+}
+
+/* ── Textarea ── */
+
+.tm-expression-editor__textarea {
+    flex: 1;
+    min-height: 100px;
+    padding: var(--tm-spacing-3, 0.75rem);
+    border: none;
+    outline: none;
+    resize: vertical;
+    font-family: var(--tm-font-mono, ui-monospace, monospace);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-color-neutral-900, #111827);
+    background: transparent;
+    line-height: 1.6;
+}
+
+.tm-expression-editor__textarea::placeholder {
+    color: var(--tm-color-neutral-400, #9ca3af);
+}
+
+.tm-expression-editor__textarea:disabled {
+    background-color: var(--tm-color-neutral-50, #f9fafb);
+    color: var(--tm-color-neutral-400, #9ca3af);
+    cursor: not-allowed;
+}
+
+/* ── Variables panel ── */
+
+.tm-expression-editor__panel {
+    width: 220px;
+    min-width: 220px;
+    background-color: var(--tm-color-neutral-50, #f9fafb);
+    border-left: 1px solid var(--tm-color-neutral-200, #e5e7eb);
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.tm-expression-editor__panel-title {
+    padding: var(--tm-spacing-2, 0.5rem) var(--tm-spacing-3, 0.75rem);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tm-color-neutral-500, #6b7280);
+    border-bottom: 1px solid var(--tm-color-neutral-200, #e5e7eb);
+}
+
+.tm-expression-editor__var {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: var(--tm-spacing-2, 0.5rem) var(--tm-spacing-3, 0.75rem);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid var(--tm-color-neutral-100, #f3f4f6);
+}
+
+.tm-expression-editor__var:hover:not(:disabled) {
+    background-color: var(--tm-color-primary-50, #eff6ff);
+}
+
+.tm-expression-editor__var:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.tm-expression-editor__var-name {
+    font-family: var(--tm-font-mono, ui-monospace, monospace);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--tm-color-primary-700, #1d4ed8);
+}
+
+.tm-expression-editor__var-desc {
+    font-size: 0.7rem;
+    color: var(--tm-color-neutral-500, #6b7280);
+    line-height: 1.3;
+}
+
+.tm-expression-editor__var-type {
+    font-size: 0.65rem;
+    font-family: var(--tm-font-mono, ui-monospace, monospace);
+    color: var(--tm-color-neutral-400, #9ca3af);
+}
+
+/* ── Error ── */
+
+.tm-expression-editor__error {
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-color-danger-600, #dc2626);
+}
+
+/* ── Dark mode ── */
+
+[data-theme="dark"] .tm-expression-editor__label,
+.tm-dark .tm-expression-editor__label {
+    color: var(--tm-color-neutral-300, #d1d5db);
+}
+
+[data-theme="dark"] .tm-expression-editor__body,
+.tm-dark .tm-expression-editor__body {
+    border-color: var(--tm-color-neutral-700, #374151);
+}
+
+[data-theme="dark"] .tm-expression-editor__textarea,
+.tm-dark .tm-expression-editor__textarea {
+    color: var(--tm-color-neutral-100, #f3f4f6);
+}
+
+[data-theme="dark"] .tm-expression-editor__textarea:disabled,
+.tm-dark .tm-expression-editor__textarea:disabled {
+    background-color: var(--tm-color-neutral-900, #111827);
+}
+
+[data-theme="dark"] .tm-expression-editor__panel,
+.tm-dark .tm-expression-editor__panel {
+    background-color: var(--tm-color-neutral-900, #111827);
+    border-left-color: var(--tm-color-neutral-700, #374151);
+}
+
+[data-theme="dark"] .tm-expression-editor__panel-title,
+.tm-dark .tm-expression-editor__panel-title {
+    border-bottom-color: var(--tm-color-neutral-700, #374151);
+}
+
+[data-theme="dark"] .tm-expression-editor__var:hover:not(:disabled),
+.tm-dark .tm-expression-editor__var:hover:not(:disabled) {
+    background-color: var(--tm-color-neutral-800, #1f2937);
+}
+
+[data-theme="dark"] .tm-expression-editor__var-name,
+.tm-dark .tm-expression-editor__var-name {
+    color: var(--tm-color-primary-400, #60a5fa);
+}

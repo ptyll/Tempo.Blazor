@@ -1,0 +1,81 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+
+<span class="tm-chip @VariantCss @SizeCss @(Selected ? "tm-chip--selected" : "") @(Clickable ? "tm-chip--clickable" : "")"
+      style="@ColorStyle"
+      @onclick="HandleClick">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <span class="tm-chip__icon">
+            <TmIcon Name="@Icon" Size="IconSize.Xs" />
+        </span>
+    }
+    <span class="tm-chip__label">@Label</span>
+    @if (Removable)
+    {
+        <button type="button" class="tm-chip__remove" aria-label="Remove" @onclick="HandleRemove" @onclick:stopPropagation="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </button>
+    }
+</span>
+
+@code {
+    /// <summary>Chip label text.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+
+    /// <summary>Custom CSS color.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>Visual variant.</summary>
+    [Parameter] public ChipVariant Variant { get; set; } = ChipVariant.Soft;
+
+    /// <summary>Chip size.</summary>
+    [Parameter] public ChipSize Size { get; set; } = ChipSize.Md;
+
+    /// <summary>Optional icon name.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Show remove button.</summary>
+    [Parameter] public bool Removable { get; set; }
+
+    /// <summary>Fires when remove is clicked.</summary>
+    [Parameter] public EventCallback OnRemove { get; set; }
+
+    /// <summary>Make the chip clickable.</summary>
+    [Parameter] public bool Clickable { get; set; }
+
+    /// <summary>Fires when chip is clicked.</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>Whether the chip is selected.</summary>
+    [Parameter] public bool Selected { get; set; }
+
+    private string VariantCss => Variant switch
+    {
+        ChipVariant.Filled => "tm-chip--filled",
+        ChipVariant.Outlined => "tm-chip--outlined",
+        _ => "tm-chip--soft"
+    };
+
+    private string SizeCss => Size switch
+    {
+        ChipSize.Sm => "tm-chip--sm",
+        _ => "tm-chip--md"
+    };
+
+    private string? ColorStyle => !string.IsNullOrEmpty(Color) ? $"--tm-chip-color: {Color};" : null;
+
+    private async Task HandleClick()
+    {
+        if (Clickable)
+            await OnClick.InvokeAsync();
+    }
+
+    private async Task HandleRemove()
+    {
+        await OnRemove.InvokeAsync();
+    }
+}

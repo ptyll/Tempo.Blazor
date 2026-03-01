@@ -1,0 +1,198 @@
+@page "/buttons"
+<PageTitle>Buttons & Spinners – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Buttons & Spinners</h1>
+    <p class="text-slate-600 dark:text-slate-400">Interactive button components with various styles, states, and loading indicators.</p>
+</div>
+
+<!-- Button Variants -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Button Variants</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">6 styles</span>
+    </div>
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary">Primary</TmButton>
+            <TmButton Variant="ButtonVariant.Secondary">Secondary</TmButton>
+            <TmButton Variant="ButtonVariant.Outline">Outline</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost">Ghost</TmButton>
+            <TmButton Variant="ButtonVariant.Danger">Danger</TmButton>
+            <TmButton Variant="ButtonVariant.Link">Link</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Button Sizes -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Button Sizes</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">4 sizes</span>
+    </div>
+    <div class="showcase-card">
+        <div class="flex flex-wrap items-center gap-3">
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Xs">Extra Small</TmButton>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm">Small</TmButton>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Md">Medium</TmButton>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Lg">Large</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Button States -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Button States</h2>
+    </div>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Loading State</h3>
+            <div class="flex flex-wrap gap-3">
+                <TmButton Variant="ButtonVariant.Primary" IsLoading="true">Loading</TmButton>
+                <TmButton Variant="ButtonVariant.Secondary" IsLoading="true">Loading</TmButton>
+            </div>
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Disabled State</h3>
+            <div class="flex flex-wrap gap-3">
+                <TmButton Variant="ButtonVariant.Primary" Disabled="true">Disabled</TmButton>
+                <TmButton Variant="ButtonVariant.Outline" Disabled="true">Disabled</TmButton>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Buttons with Icons -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">With Icons</h2>
+    </div>
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary" Icon="@IconNames.Star">With Icon</TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Icon="@IconNames.ArrowRight" IconRight="true">Icon Right</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" Icon="@IconNames.Plus">Add New</TmButton>
+            <TmButton Variant="ButtonVariant.Danger" Icon="@IconNames.Trash">Delete</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Interactive Demo -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Interactive Demo</h2>
+    </div>
+    <div class="showcase-card">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center space-x-4">
+                <TmButton Variant="ButtonVariant.Primary" OnClick="@(() => _count++)">
+                    <span class="flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>Click me</span>
+                    </span>
+                </TmButton>
+                <div class="flex items-center space-x-2 text-slate-600 dark:text-slate-400">
+                    <span class="text-sm">Clicked</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200">
+                        @_count
+                    </span>
+                    <span class="text-sm">@(_count == 1 ? "time" : "times")</span>
+                </div>
+            </div>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="() => _count = 0">Reset</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Spinners -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Spinners</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Loading indicators</span>
+    </div>
+    <div class="showcase-card">
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Sizes</h3>
+        <div class="flex items-center gap-6 mb-6">
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Size="SpinnerSize.Xs" />
+                <span class="text-xs text-slate-500">XS</span>
+            </div>
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Size="SpinnerSize.Sm" />
+                <span class="text-xs text-slate-500">SM</span>
+            </div>
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Size="SpinnerSize.Md" />
+                <span class="text-xs text-slate-500">MD</span>
+            </div>
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Size="SpinnerSize.Lg" />
+                <span class="text-xs text-slate-500">LG</span>
+            </div>
+        </div>
+        
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Colors</h3>
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Color="SpinnerColor.Primary" />
+                <span class="text-xs text-slate-500">Primary</span>
+            </div>
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Color="SpinnerColor.White" />
+                <span class="text-xs text-slate-500">Secondary</span>
+            </div>
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Color="SpinnerColor.Primary" />
+                <span class="text-xs text-slate-500">Success</span>
+            </div>
+            <div class="flex flex-col items-center space-y-2">
+                <TmSpinner Color="SpinnerColor.Current" />
+                <span class="text-xs text-slate-500">Danger</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Skeleton Loaders -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Skeleton Loaders</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Content placeholders</span>
+    </div>
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Text Skeletons</h3>
+            <div class="space-y-3">
+                <TmSkeleton Variant="SkeletonVariant.Text" Width="100%" />
+                <TmSkeleton Variant="SkeletonVariant.Text" Width="85%" />
+                <TmSkeleton Variant="SkeletonVariant.Text" Width="70%" />
+            </div>
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Mixed Content</h3>
+            <div class="flex items-start space-x-4">
+                <TmSkeleton Variant="SkeletonVariant.Circle" Width="48px" Height="48px" />
+                <div class="flex-1 space-y-2">
+                    <TmSkeleton Variant="SkeletonVariant.Text" Width="60%" />
+                    <TmSkeleton Variant="SkeletonVariant.Text" Width="40%" />
+                </div>
+            </div>
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Rectangle</h3>
+            <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="120px" />
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Rounded</h3>
+            <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="80px" />
+        </div>
+    </div>
+</section>
+
+@code {
+    private int _count;
+}

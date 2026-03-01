@@ -1,0 +1,224 @@
+@namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@if (Show)
+{
+    <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass()">
+        <div class="tm-modal-container tm-modal--center">
+            <div class="tm-dialog @GetDialogClasses()"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@_titleId"
+                 tabindex="-1"
+                 @ref="_dialogElement"
+                 @onkeyup="HandleKeyUp">
+                
+                @* Icon *@
+                <div class="tm-dialog-icon">
+                    <TmIcon Name="@GetIconName()" Size="IconSize.Xl" />
+                </div>
+                
+                @* Content *@
+                <div class="tm-dialog-content">
+                    @if (!string.IsNullOrEmpty(Title))
+                    {
+                        <h3 id="@_titleId" class="tm-dialog-title">@Title</h3>
+                    }
+                    @if (!string.IsNullOrEmpty(Message))
+                    {
+                        <p class="tm-dialog-message">@Message</p>
+                    }
+                    
+                    @* Prompt Input *@
+                    @if (Type == DialogType.Prompt)
+                    {
+                        <div class="tm-dialog-input-wrapper">
+                            <TmTextInput @bind-Value="_promptValue"
+                                         Placeholder="@PromptPlaceholder"
+                                         Class="tm-dialog-input"
+                                         @onkeyup="HandlePromptKeyUp" />
+                        </div>
+                    }
+                    
+                    @* Custom Content *@
+                    @if (Type == DialogType.Custom)
+                    {
+                        @ChildContent
+                    }
+                </div>
+                
+                @* Footer Buttons *@
+                <div class="tm-dialog-footer">
+                    @if (Type == DialogType.Alert)
+                    {
+                        <TmButton Variant="GetOkButtonVariant()"
+                                  OnClick="OnOkClick"
+                                  Class="tm-dialog-btn-ok">
+                            @OkButtonText
+                        </TmButton>
+                    }
+                    else if (Type == DialogType.Confirm || Type == DialogType.Prompt)
+                    {
+                        <TmButton Variant="ButtonVariant.Ghost"
+                                  OnClick="OnCancelClick"
+                                  Class="tm-dialog-btn-cancel">
+                            @CancelButtonText
+                        </TmButton>
+                        <TmButton Variant="GetOkButtonVariant()"
+                                  OnClick="OnOkClick"
+                                  Disabled="IsOkDisabled()"
+                                  Class="tm-dialog-btn-ok">
+                            @OkButtonText
+                        </TmButton>
+                    }
+                    else if (Type == DialogType.Custom && FooterContent is not null)
+                    {
+                        @FooterContent
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public DialogType Type { get; set; } = DialogType.Alert;
+    [Parameter] public DialogVariant Variant { get; set; } = DialogVariant.Info;
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Message { get; set; } = string.Empty;
+    [Parameter] public string? DefaultValue { get; set; }
+    [Parameter] public string PromptPlaceholder { get; set; } = "Enter value...";
+    [Parameter] public bool IsDangerous { get; set; } = false;
+    
+    [Parameter] public string OkButtonText { get; set; } = "OK";
+    [Parameter] public string CancelButtonText { get; set; } = "Cancel";
+    
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+    
+    [Parameter] public EventCallback<bool?> OnResult { get; set; }
+    [Parameter] public EventCallback<string?> OnPromptResult { get; set; }
+    
+    private ElementReference _dialogElement;
+    private string _titleId = Guid.NewGuid().ToString("N");
+    private string _promptValue = string.Empty;
+    private bool _wasShown;
+    
+    protected override void OnParametersSet()
+    {
+        if (Show && !_wasShown)
+        {
+            _wasShown = true;
+            _promptValue = DefaultValue ?? string.Empty;
+        }
+        else if (!Show)
+        {
+            _wasShown = false;
+        }
+    }
+    
+    private string GetVisibleClass() => Show ? "tm-modal--visible" : "";
+    
+    private string GetDialogClasses()
+    {
+        var classes = new List<string> { $"tm-dialog--{Type.ToString().ToLowerInvariant()}" };
+        
+        if (IsDangerous)
+        {
+            classes.Add("tm-dialog--dangerous");
+        }
+        else
+        {
+            classes.Add(Variant switch
+            {
+                DialogVariant.Success => "tm-dialog--success",
+                DialogVariant.Warning => "tm-dialog--warning",
+                DialogVariant.Error => "tm-dialog--error",
+                _ => "tm-dialog--info"
+            });
+        }
+        
+        return string.Join(" ", classes);
+    }
+    
+    private string GetIconName()
+    {
+        if (IsDangerous) return "alert-triangle";
+        
+        return Type switch
+        {
+            DialogType.Alert => Variant switch
+            {
+                DialogVariant.Success => "check-circle",
+                DialogVariant.Warning => "alert-triangle",
+                DialogVariant.Error => "x-circle",
+                _ => "info"
+            },
+            DialogType.Confirm => "help-circle",
+            DialogType.Prompt => "edit",
+            _ => "info"
+        };
+    }
+    
+    private ButtonVariant GetOkButtonVariant()
+    {
+        if (IsDangerous) return ButtonVariant.Danger;
+        
+        return Variant switch
+        {
+            DialogVariant.Success => ButtonVariant.Primary,
+            DialogVariant.Error => ButtonVariant.Danger,
+            _ => ButtonVariant.Primary
+        };
+    }
+    
+    private bool IsOkDisabled()
+    {
+        return Type == DialogType.Prompt && string.IsNullOrWhiteSpace(_promptValue);
+    }
+    
+    private void OnOkClick()
+    {
+        if (Type == DialogType.Prompt)
+        {
+            OnPromptResult.InvokeAsync(_promptValue);
+        }
+        else
+        {
+            OnResult.InvokeAsync(true);
+        }
+    }
+    
+    private void OnCancelClick()
+    {
+        if (Type == DialogType.Prompt)
+        {
+            OnPromptResult.InvokeAsync(null);
+        }
+        else
+        {
+            OnResult.InvokeAsync(false);
+        }
+    }
+    
+    private void HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            OnCancelClick();
+        }
+    }
+    
+    private void HandlePromptKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_promptValue))
+        {
+            OnOkClick();
+        }
+    }
+}
+
+

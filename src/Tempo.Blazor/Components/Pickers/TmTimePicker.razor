@@ -1,0 +1,59 @@
+@namespace Tempo.Blazor.Components.Pickers
+
+<div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "")"
+     data-required="@(Required ? "true" : null)"
+     aria-disabled="@(IsOutOfRange ? "true" : null)">
+
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-picker-label">@Label</label>
+    }
+
+    <div class="tm-time-picker-body">
+        <TmTimeInput Value="@Value"
+                     ValueChanged="OnTimeChanged"
+                     ShowSeconds="@ShowSeconds"
+                     Disabled="@Disabled"
+                     MinTime="@MinTime"
+                     MaxTime="@MaxTime" />
+
+        @if (Value.HasValue && !Disabled)
+        {
+            <button type="button"
+                    class="tm-picker-clear"
+                    aria-label="@Loc["TmTimePicker_Clear"]"
+                    @onclick="ClearValue">
+                &#x2715;
+            </button>
+        }
+    </div>
+
+    @if (!Value.HasValue)
+    {
+        <span class="tm-picker-placeholder" aria-hidden="true">
+            @(Placeholder ?? (ShowSeconds ? Loc["TmTimePicker_PlaceholderSeconds"] : Loc["TmTimePicker_Placeholder"]))
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter] public TimeOnly?  Value        { get; set; }
+    [Parameter] public EventCallback<TimeOnly?> ValueChanged { get; set; }
+    [Parameter] public TimeOnly?  MinTime      { get; set; }
+    [Parameter] public TimeOnly?  MaxTime      { get; set; }
+    [Parameter] public bool       ShowSeconds  { get; set; }
+    [Parameter] public string?    Placeholder  { get; set; }
+    [Parameter] public bool       Disabled     { get; set; }
+    [Parameter] public bool       Required     { get; set; }
+    [Parameter] public string?    Label        { get; set; }
+    [Parameter] public string?    Class        { get; set; }
+
+    private bool IsOutOfRange =>
+        Value.HasValue &&
+        ((MinTime.HasValue && Value.Value < MinTime.Value) ||
+         (MaxTime.HasValue && Value.Value > MaxTime.Value));
+
+    private async Task OnTimeChanged(TimeOnly? t) => await ValueChanged.InvokeAsync(t);
+
+    private async Task ClearValue() => await ValueChanged.InvokeAsync(null);
+}

@@ -1,0 +1,181 @@
+@page "/workflow-designer"
+@using Tempo.Blazor.Components.Workflow
+
+<PageTitle>Workflow Designer – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Workflow Designer</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        Interactive SVG workflow designer with drag &amp; drop, toolbox, properties panel, zoom, pan, and minimap.
+    </p>
+</div>
+
+<!-- Full Interactive Designer -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Interactive Designer</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        Drag nodes to reposition. Use the toolbox to add/delete states. Click a node or transition to edit in the properties panel.
+        Scroll to zoom, drag empty space to pan. Drag from a connection port (right side of a node) to another node to create a transition.
+    </p>
+
+    <div style="display: flex; gap: 0.5rem; min-height: 500px;">
+        <!-- Toolbox -->
+        <TmWorkflowToolbox OnAddState="HandleAddState"
+                           OnDeleteSelected="HandleDeleteSelected"
+                           HasSelection="@(_selectedState is not null || _selectedTransition is not null)"
+                           ZoomLevel="_zoomLevel"
+                           OnZoomChanged="HandleZoomFromToolbox"
+                           OnFitToView="HandleFitToView" />
+
+        <!-- Canvas -->
+        <div style="position: relative; flex: 1; min-width: 0;">
+            <TmWorkflowDesignerCanvas @ref="_canvasRef"
+                                     Definition="_workflow"
+                                     DefinitionChanged="HandleDefinitionChanged"
+                                     SelectedStateId="@_selectedState?.Id"
+                                     SelectedTransitionId="@_selectedTransition?.Id"
+                                     OnStateSelected="HandleStateSelected"
+                                     OnTransitionSelected="HandleTransitionSelected"
+                                     OnZoomLevelChanged="HandleZoomChanged" />
+
+            <TmWorkflowMinimap Definition="_workflow"
+                               ViewBoxX="0" ViewBoxY="0"
+                               ViewBoxW="800" ViewBoxH="500" />
+        </div>
+
+        <!-- Properties Panel -->
+        <TmWorkflowPropertiesPanel SelectedState="@_selectedState"
+                                   SelectedTransition="@_selectedTransition"
+                                   States="@_workflow.States"
+                                   OnStateChanged="HandleStateChanged"
+                                   OnTransitionChanged="HandleTransitionChanged" />
+    </div>
+
+    <div class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+        States: <strong>@_workflow.States.Count</strong> |
+        Transitions: <strong>@_workflow.Transitions.Count</strong> |
+        Zoom: <strong>@((int)Math.Round(_zoomLevel * 100))%</strong>
+    </div>
+</section>
+
+<!-- Read-Only Workflow -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Read-Only Mode (No Grid)</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        Read-only visualization without toolbox or properties panel. No drag, no ports, no editing.
+    </p>
+    <TmWorkflowDesignerCanvas Definition="_simpleWorkflow"
+                               ReadOnly="true"
+                               ShowGrid="false" />
+</section>
+
+@code {
+    private TmWorkflowDesignerCanvas? _canvasRef;
+    private CanvasState? _selectedState;
+    private CanvasTransition? _selectedTransition;
+    private double _zoomLevel = 1.0;
+
+    private void HandleStateSelected(CanvasState? state)
+    {
+        _selectedState = state;
+        _selectedTransition = null;
+    }
+
+    private void HandleTransitionSelected(CanvasTransition? transition)
+    {
+        _selectedTransition = transition;
+        _selectedState = null;
+    }
+
+    private void HandleDefinitionChanged(WorkflowCanvasDefinition def)
+    {
+        // Definition is mutated in place; trigger re-render
+        StateHasChanged();
+    }
+
+    private void HandleAddState(CanvasStateType type)
+    {
+        // Add state at center of viewport
+        _canvasRef?.AddState(type, 300, 200);
+    }
+
+    private void HandleDeleteSelected()
+    {
+        if (_selectedState is not null)
+        {
+            _canvasRef?.RemoveState(_selectedState.Id);
+            _selectedState = null;
+        }
+        else if (_selectedTransition is not null)
+        {
+            _canvasRef?.RemoveTransition(_selectedTransition.Id);
+            _selectedTransition = null;
+        }
+    }
+
+    private void HandleStateChanged(CanvasState updated)
+    {
+        StateHasChanged();
+    }
+
+    private void HandleTransitionChanged(CanvasTransition updated)
+    {
+        StateHasChanged();
+    }
+
+    private void HandleZoomChanged(double zoom)
+    {
+        _zoomLevel = zoom;
+    }
+
+    private void HandleZoomFromToolbox(double zoom)
+    {
+        _zoomLevel = zoom;
+        _canvasRef?.SetZoom(zoom);
+    }
+
+    private async Task HandleFitToView()
+    {
+        if (_canvasRef is not null)
+        {
+            await _canvasRef.FitToView();
+            _zoomLevel = _canvasRef.ZoomLevel;
+        }
+    }
+
+    private readonly WorkflowCanvasDefinition _workflow = new()
+    {
+        States =
+        [
+            new CanvasState { Id = "draft", Name = "Draft", Type = CanvasStateType.Initial, X = 30, Y = 200 },
+            new CanvasState { Id = "submitted", Name = "Submitted", Type = CanvasStateType.Intermediate, X = 220, Y = 100 },
+            new CanvasState { Id = "review", Name = "Under Review", Type = CanvasStateType.Intermediate, X = 420, Y = 100, Color = "#fef3c7" },
+            new CanvasState { Id = "revision", Name = "Needs Revision", Type = CanvasStateType.Intermediate, X = 220, Y = 320, Color = "#fee2e2" },
+            new CanvasState { Id = "approved", Name = "Approved", Type = CanvasStateType.Final, X = 620, Y = 200 },
+        ],
+        Transitions =
+        [
+            new CanvasTransition { Id = "t1", FromStateId = "draft", ToStateId = "submitted", Label = "Submit" },
+            new CanvasTransition { Id = "t2", FromStateId = "submitted", ToStateId = "review", Label = "Assign reviewer" },
+            new CanvasTransition { Id = "t3", FromStateId = "review", ToStateId = "approved", Label = "Approve", Color = "#10b981" },
+            new CanvasTransition { Id = "t4", FromStateId = "review", ToStateId = "revision", Label = "Request changes", Color = "#ef4444" },
+            new CanvasTransition { Id = "t5", FromStateId = "revision", ToStateId = "submitted", Label = "Resubmit" },
+        ]
+    };
+
+    private static readonly WorkflowCanvasDefinition _simpleWorkflow = new()
+    {
+        States =
+        [
+            new CanvasState { Id = "new", Name = "New", Type = CanvasStateType.Initial, X = 100, Y = 200 },
+            new CanvasState { Id = "active", Name = "Active", Type = CanvasStateType.Intermediate, X = 350, Y = 200 },
+            new CanvasState { Id = "closed", Name = "Closed", Type = CanvasStateType.Final, X = 600, Y = 200 },
+        ],
+        Transitions =
+        [
+            new CanvasTransition { Id = "t1", FromStateId = "new", ToStateId = "active", Label = "Activate" },
+            new CanvasTransition { Id = "t2", FromStateId = "active", ToStateId = "closed", Label = "Close" },
+        ]
+    };
+}

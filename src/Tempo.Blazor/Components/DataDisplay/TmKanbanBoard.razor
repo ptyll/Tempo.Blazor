@@ -1,0 +1,115 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@typeparam TItem
+
+<div class="tm-kanban @Class">
+    @if (Columns is not null)
+    {
+        @foreach (var col in Columns)
+        {
+            var colItems = GetColumnItems(col.Id);
+            var isOverLimit = col.MaxItems.HasValue && colItems.Count > col.MaxItems.Value;
+            var colCss = "tm-kanban__column" + (isOverLimit ? " tm-kanban__column--over-limit" : "");
+
+            <div class="@colCss"
+                 @ondragover="HandleDragOver"
+                 @ondragover:preventDefault="true"
+                 @ondrop="@(() => HandleDrop(col.Id))">
+
+                <div class="tm-kanban__header">
+                    @if (col.Color is not null)
+                    {
+                        <span class="tm-kanban__header-color" style="background-color: @col.Color;"></span>
+                    }
+                    <span class="tm-kanban__header-title">@col.Title</span>
+                    <span class="tm-kanban__count">@colItems.Count</span>
+                    @if (col.MaxItems.HasValue)
+                    {
+                        <span class="tm-kanban__wip-limit">/ @col.MaxItems</span>
+                    }
+                </div>
+
+                <div class="tm-kanban__cards">
+                    @if (colItems.Count == 0)
+                    {
+                        <div class="tm-kanban__empty">No items</div>
+                    }
+                    else
+                    {
+                        @foreach (var item in colItems)
+                        {
+                            var capturedItem = item;
+                            <div class="tm-kanban__card"
+                                 draggable="true"
+                                 @ondragstart="@(() => HandleDragStart(capturedItem, col.Id))"
+                                 @onclick="@(() => HandleCardClick(capturedItem))">
+                                @CardTemplate?.Invoke(capturedItem)
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private TItem? _draggedItem;
+    private string? _dragSourceColumn;
+
+    /// <summary>Column definitions.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<KanbanColumn>? Columns { get; set; }
+
+    /// <summary>All items on the board.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<TItem>? Items { get; set; }
+
+    /// <summary>Function to determine which column an item belongs to.</summary>
+    [Parameter, EditorRequired] public Func<TItem, string>? ColumnSelector { get; set; }
+
+    /// <summary>Template for rendering a card.</summary>
+    [Parameter, EditorRequired] public RenderFragment<TItem>? CardTemplate { get; set; }
+
+    /// <summary>Fires when a card is dragged to a different column.</summary>
+    [Parameter] public EventCallback<KanbanMoveEvent<TItem>> OnItemMoved { get; set; }
+
+    /// <summary>Fires when a card is clicked.</summary>
+    [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
+
+    /// <summary>Custom column header template.</summary>
+    [Parameter] public RenderFragment<KanbanColumn>? ColumnHeaderTemplate { get; set; }
+
+    /// <summary>Template for empty columns.</summary>
+    [Parameter] public RenderFragment? EmptyColumnTemplate { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private List<TItem> GetColumnItems(string columnId)
+    {
+        if (Items is null || ColumnSelector is null) return [];
+        return Items.Where(i => ColumnSelector(i) == columnId).ToList();
+    }
+
+    private void HandleDragStart(TItem item, string fromColumn)
+    {
+        _draggedItem = item;
+        _dragSourceColumn = fromColumn;
+    }
+
+    private void HandleDragOver()
+    {
+        // Allow drop — preventDefault is set via directive
+    }
+
+    private async Task HandleDrop(string toColumn)
+    {
+        if (_draggedItem is null || _dragSourceColumn is null) return;
+        if (_dragSourceColumn != toColumn && OnItemMoved.HasDelegate)
+        {
+            await OnItemMoved.InvokeAsync(new KanbanMoveEvent<TItem>(_draggedItem, _dragSourceColumn, toColumn));
+        }
+        _draggedItem = default;
+        _dragSourceColumn = null;
+    }
+
+    private Task HandleCardClick(TItem item) => OnCardClick.InvokeAsync(item);
+}

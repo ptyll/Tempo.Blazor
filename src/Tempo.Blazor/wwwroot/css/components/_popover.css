@@ -1,0 +1,145 @@
+/* ═══════════════════════════════════════════════════════
+   TmPopover — Rich content popup
+   ═══════════════════════════════════════════════════════ */
+
+.tm-popover {
+    position: relative;
+    display: inline-flex;
+}
+
+.tm-popover__trigger {
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.tm-popover__body {
+    position: absolute;
+    z-index: var(--tm-z-popover, 900);
+    min-width: 200px;
+    padding: 0.75rem 1rem;
+    background-color: var(--tm-color-surface, #fff);
+    border: 1px solid var(--tm-color-neutral-200);
+    border-radius: var(--tm-radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.tm-popover__body--open {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+/* ── Arrow ─────────────────────────────────────────────── */
+.tm-popover__arrow {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: var(--tm-color-surface, #fff);
+    border: 1px solid var(--tm-color-neutral-200);
+    transform: rotate(45deg);
+}
+
+/* ── Bottom position ───────────────────────────────────── */
+.tm-popover--bottom .tm-popover__body {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+}
+
+.tm-popover--bottom .tm-popover__body--open {
+    transform: translateX(-50%) scale(1);
+}
+
+.tm-popover--bottom .tm-popover__arrow {
+    top: -6px;
+    left: 50%;
+    margin-left: -5px;
+    border-right: none;
+    border-bottom: none;
+}
+
+/* ── Top position ──────────────────────────────────────── */
+.tm-popover--top .tm-popover__body {
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+}
+
+.tm-popover--top .tm-popover__body--open {
+    transform: translateX(-50%) scale(1);
+}
+
+.tm-popover--top .tm-popover__arrow {
+    bottom: -6px;
+    left: 50%;
+    margin-left: -5px;
+    border-left: none;
+    border-top: none;
+}
+
+/* ── Left position ─────────────────────────────────────── */
+.tm-popover--left .tm-popover__body {
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%) scale(0.95);
+}
+
+.tm-popover--left .tm-popover__body--open {
+    transform: translateY(-50%) scale(1);
+}
+
+.tm-popover--left .tm-popover__arrow {
+    right: -6px;
+    top: 50%;
+    margin-top: -5px;
+    border-left: none;
+    border-bottom: none;
+}
+
+/* ── Right position ────────────────────────────────────── */
+.tm-popover--right .tm-popover__body {
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%) scale(0.95);
+}
+
+.tm-popover--right .tm-popover__body--open {
+    transform: translateY(-50%) scale(1);
+}
+
+.tm-popover--right .tm-popover__arrow {
+    left: -6px;
+    top: 50%;
+    margin-top: -5px;
+    border-right: none;
+    border-top: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark mode
+   ═══════════════════════════════════════════════════════ */
+[data-theme="dark"] .tm-popover__body,
+.tm-dark .tm-popover__body {
+    background-color: var(--tm-color-neutral-800);
+    border-color: var(--tm-color-neutral-700);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .tm-popover__arrow,
+.tm-dark .tm-popover__arrow {
+    background-color: var(--tm-color-neutral-800);
+    border-color: var(--tm-color-neutral-700);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Reduced motion
+   ═══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    .tm-popover__body {
+        transition: none;
+    }
+}

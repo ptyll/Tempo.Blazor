@@ -1,0 +1,318 @@
+/* Tailwind CSS Base Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base styles */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Selection */
+::selection {
+    background: rgba(99, 102, 241, 0.2);
+    color: inherit;
+}
+
+/* Focus styles */
+*:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+}
+
+/* Page transitions */
+.page-transition {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading progress custom styles */
+.loading-progress {
+    position: absolute;
+    display: block;
+    width: 8rem;
+    height: 8rem;
+    inset: 20vh 0 auto 0;
+    margin: 0 auto 0 auto;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 0.6rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: #6366f1;
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: 600;
+    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading");
+}
+
+/* Blazor Error UI */
+#blazor-error-ui {
+    display: none;
+}
+
+#blazor-error-ui.active {
+    display: block;
+}
+
+/* Validation styles */
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #22c55e;
+}
+
+.invalid {
+    outline: 1px solid #ef4444;
+}
+
+.validation-message {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Code blocks */
+code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.875em;
+    color: #ec4899;
+    background: rgba(236, 72, 153, 0.1);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+}
+
+.dark code {
+    color: #f472b6;
+    background: rgba(244, 114, 182, 0.1);
+}
+
+/* Preformatted text */
+pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+/* Links */
+a {
+    color: #6366f1;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: #4f46e5;
+}
+
+.dark a {
+    color: #818cf8;
+}
+
+.dark a:hover {
+    color: #6366f1;
+}
+
+/* Blazor error boundary */
+.blazor-error-boundary {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    padding: 1rem 1rem 1rem 3.5rem;
+    color: #991b1b;
+    position: relative;
+}
+
+.blazor-error-boundary::before {
+    content: "";
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.5rem;
+    height: 1.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ef4444'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'/%3E%3C/svg%3E");
+    background-size: contain;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
+
+.dark .blazor-error-boundary {
+    background: #450a0a;
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+
+/* Utility classes for component demos */
+.demo-section {
+    margin-bottom: 3rem;
+}
+
+.demo-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .demo-section-title {
+    color: #f1f5f9;
+    border-color: #334155;
+}
+
+.demo-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.demo-grid-2 {
+    grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 768px) {
+    .demo-grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.demo-grid-3 {
+    grid-template-columns: repeat(1, 1fr);
+}
+
+@media (min-width: 768px) {
+    .demo-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .demo-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.demo-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 768px) {
+    .demo-grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Status colors */
+.status-success { color: #22c55e; }
+.status-warning { color: #f59e0b; }
+.status-error { color: #ef4444; }
+.status-info { color: #3b82f6; }
+
+/* Component showcase cards */
+.showcase-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    transition: all 0.2s;
+}
+
+.showcase-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dark .showcase-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark .showcase-card:hover {
+    border-color: #475569;
+}
+
+/* Form elements */
+input, textarea, select {
+    font-family: inherit;
+}
+
+/* Disabled state */
+.disabled, [disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}

@@ -1,0 +1,124 @@
+@namespace Tempo.Blazor.Components.Activity
+
+@if (IsVisible)
+{
+    <div class="tm-rte-mention-dropdown">
+        @if (FilteredUsers.Any())
+        {
+            @foreach (var (user, index) in FilteredUsers.Select((u, i) => (u, i)))
+            {
+                <div class="tm-rte-mention-user @(index == HighlightedIndex ? "tm-rte-mention-highlighted" : "")"
+                     @onclick="() => SelectUser(user)"
+                     @onclick:stopPropagation
+                     @onmouseenter="() => OnMouseEnter(index)"
+                     @onmousedown:preventDefault>
+                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                    {
+                        <img src="@user.AvatarUrl" alt="@user.DisplayName" class="tm-rte-mention-avatar" />
+                    }
+                    else
+                    {
+                        <div class="tm-rte-mention-avatar tm-rte-mention-avatar-placeholder">
+                            @(user.DisplayName.FirstOrDefault())
+                        </div>
+                    }
+                    <div class="tm-rte-mention-user-info">
+                        <div class="tm-rte-mention-display-name">@user.DisplayName</div>
+                        <div class="tm-rte-mention-username">@@@user.UserName</div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="tm-rte-mention-empty">@Loc["TmRichEditor_MentionEmpty"]</div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Whether the autocomplete dropdown is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// The list of users to display.
+    /// </summary>
+    [Parameter] public IEnumerable<MentionUser> Users { get; set; } = Array.Empty<MentionUser>();
+
+    /// <summary>
+    /// The search query to filter users.
+    /// </summary>
+    [Parameter] public string Query { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The currently highlighted index.
+    /// </summary>
+    [Parameter] public int HighlightedIndex { get; set; }
+
+    /// <summary>
+    /// Callback when a user is selected.
+    /// </summary>
+    [Parameter] public EventCallback<MentionUser> OnUserSelected { get; set; }
+
+    /// <summary>
+    /// Callback when the highlighted index changes.
+    /// </summary>
+    [Parameter] public EventCallback<int> OnHighlightedIndexChanged { get; set; }
+
+    private IEnumerable<MentionUser> FilteredUsers => 
+        string.IsNullOrWhiteSpace(Query) 
+            ? Users 
+            : Users.Where(u => 
+                u.UserName.Contains(Query, StringComparison.OrdinalIgnoreCase) ||
+                u.DisplayName.Contains(Query, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Moves the highlight up.
+    /// </summary>
+    public async Task MoveHighlightUp()
+    {
+        if (HighlightedIndex > 0)
+        {
+            HighlightedIndex--;
+            await OnHighlightedIndexChanged.InvokeAsync(HighlightedIndex);
+        }
+    }
+
+    /// <summary>
+    /// Moves the highlight down.
+    /// </summary>
+    public async Task MoveHighlightDown()
+    {
+        var maxIndex = FilteredUsers.Count() - 1;
+        if (HighlightedIndex < maxIndex)
+        {
+            HighlightedIndex++;
+            await OnHighlightedIndexChanged.InvokeAsync(HighlightedIndex);
+        }
+    }
+
+    /// <summary>
+    /// Selects the highlighted user.
+    /// </summary>
+    public async Task SelectHighlighted()
+    {
+        var user = FilteredUsers.ElementAtOrDefault(HighlightedIndex);
+        if (user != null)
+        {
+            await SelectUser(user);
+        }
+    }
+
+    private async Task SelectUser(MentionUser user)
+    {
+        await OnUserSelected.InvokeAsync(user);
+    }
+
+    private async Task OnMouseEnter(int index)
+    {
+        HighlightedIndex = index;
+        await OnHighlightedIndexChanged.InvokeAsync(index);
+    }
+}

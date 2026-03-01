@@ -1,0 +1,88 @@
+@namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Interfaces
+
+<div class="tm-timeline">
+    @if (_isLoading)
+    {
+        <div class="tm-timeline-loading">
+            <TmSpinner Size="SpinnerSize.Sm" />
+            <span>@Loc["TmTimeline_Loading"]</span>
+        </div>
+    }
+    else if (!_sorted.Any())
+    {
+        <div class="tm-timeline-empty">
+            <TmEmptyState Title="@Loc["TmTimeline_Empty"]" />
+        </div>
+    }
+    else
+    {
+        <ul class="tm-timeline-list">
+            @foreach (var entry in _sorted)
+            {
+                <li class="tm-timeline-item tm-timeline-@entry.EntryType.ToLowerInvariant().Replace(" ", "_")">
+                    <div class="tm-timeline-connector" aria-hidden="true"></div>
+                    <div class="tm-timeline-avatar">
+                        @if (!string.IsNullOrEmpty(entry.AuthorAvatarUrl))
+                        {
+                            <TmAvatar Src="@entry.AuthorAvatarUrl" Name="@entry.AuthorName" Size="AvatarSize.Sm" />
+                        }
+                        else
+                        {
+                            <TmAvatar Name="@entry.AuthorName" Size="AvatarSize.Sm" />
+                        }
+                    </div>
+                    <div class="tm-timeline-body">
+                        <div class="tm-timeline-meta">
+                            <span class="tm-timeline-author">@entry.AuthorName</span>
+                            <span class="tm-timeline-time" title="@entry.CreatedAt.ToString("g")">
+                                @FormatRelativeTime(entry.CreatedAt)
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(entry.HtmlContent))
+                        {
+                            <div class="tm-timeline-content">@((MarkupString)entry.HtmlContent)</div>
+                        }
+                        else if (!string.IsNullOrEmpty(entry.PlainContent))
+                        {
+                            <div class="tm-timeline-content">@entry.PlainContent</div>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>Timeline entries to display. Sorted newest-first.</summary>
+    [Parameter] public IEnumerable<ITimelineEntry> Entries { get; set; } = [];
+
+    private IReadOnlyList<ITimelineEntry> _sorted = [];
+    private bool _isLoading;
+
+    protected override void OnParametersSet()
+    {
+        _sorted = Entries.OrderByDescending(e => e.CreatedAt).ToList();
+    }
+
+    /// <summary>Re-renders the component – call from a parent after new entries are fetched.</summary>
+    public Task RefreshAsync()
+    {
+        _sorted = Entries.OrderByDescending(e => e.CreatedAt).ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private string FormatRelativeTime(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.Now - dt;
+        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
+        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
+        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
+        return Loc["TmTimeline_DaysAgo", (int)diff.TotalDays];
+    }
+}

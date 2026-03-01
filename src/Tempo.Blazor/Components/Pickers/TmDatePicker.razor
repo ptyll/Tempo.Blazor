@@ -1,0 +1,119 @@
+@namespace Tempo.Blazor.Components.Pickers
+
+<div class="tm-date-picker @Class" @onkeydown="OnKeyDown">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-picker-label">@Label</label>
+    }
+
+    <div class="tm-date-picker-input-row">
+        <button type="button"
+                class="tm-date-picker-trigger"
+                disabled="@Disabled"
+                aria-haspopup="true"
+                aria-expanded="@_isOpen"
+                @onclick="ToggleCalendar">
+            @if (Value.HasValue)
+            {
+                @Value.Value.ToString(DateFormat)
+            }
+            else
+            {
+                <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDatePicker_Placeholder"])</span>
+            }
+            <span class="tm-date-picker-icon" aria-hidden="true"></span>
+        </button>
+
+        @if (Value.HasValue && !Disabled)
+        {
+            <button type="button"
+                    class="tm-picker-clear"
+                    aria-label="@Loc["TmDatePicker_Clear"]"
+                    @onclick="ClearValue">
+                &#x2715;
+            </button>
+        }
+    </div>
+
+    @if (_isOpen)
+    {
+        <div class="tm-date-picker-popup" role="dialog" aria-modal="true">
+            <TmCalendarGrid DisplayYear="@_displayYear"
+                            DisplayMonth="@_displayMonth"
+                            SelectedDate="@Value"
+                            MinDate="@MinDate"
+                            MaxDate="@MaxDate"
+                            OnDateSelected="OnDateSelected"
+                            OnNavigate="OnNavigate" />
+
+            <div class="tm-date-picker-footer">
+                <button type="button"
+                        class="tm-btn-link tm-date-today-btn"
+                        @onclick="SelectToday">
+                    @Loc["TmDatePicker_Today"]
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DateOnly?  Value        { get; set; }
+    [Parameter] public EventCallback<DateOnly?> ValueChanged { get; set; }
+    [Parameter] public DateOnly?  MinDate      { get; set; }
+    [Parameter] public DateOnly?  MaxDate      { get; set; }
+    [Parameter] public string     DateFormat   { get; set; } = "dd.MM.yyyy";
+    [Parameter] public string?    Placeholder  { get; set; }
+    [Parameter] public bool       Disabled     { get; set; }
+    [Parameter] public bool       Required     { get; set; }
+    [Parameter] public string?    Label        { get; set; }
+    [Parameter] public string?    Class        { get; set; }
+
+    private bool _isOpen;
+    private int  _displayYear  = DateTime.Today.Year;
+    private int  _displayMonth = DateTime.Today.Month;
+
+    protected override void OnParametersSet()
+    {
+        if (Value.HasValue)
+        {
+            _displayYear  = Value.Value.Year;
+            _displayMonth = Value.Value.Month;
+        }
+    }
+
+    private void ToggleCalendar()
+    {
+        if (!Disabled) _isOpen = !_isOpen;
+    }
+
+    private async Task OnDateSelected(DateOnly d)
+    {
+        _isOpen = false;
+        await ValueChanged.InvokeAsync(d);
+    }
+
+    private void OnNavigate((int Year, int Month) nav)
+    {
+        _displayYear  = nav.Year;
+        _displayMonth = nav.Month;
+    }
+
+    private async Task ClearValue()
+    {
+        _isOpen = false;
+        await ValueChanged.InvokeAsync(null);
+    }
+
+    private async Task SelectToday()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        _isOpen = false;
+        await ValueChanged.InvokeAsync(today);
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _isOpen = false;
+    }
+}

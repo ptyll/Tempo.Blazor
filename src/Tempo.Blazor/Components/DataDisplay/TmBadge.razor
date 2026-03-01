@@ -1,0 +1,70 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+
+<span class="@CssClass">
+    @if (Dot)
+    {
+        <span class="tm-badge-dot"></span>
+    }
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <TmIcon Name="@Icon" Size="IconSize.Xs" />
+    }
+    @ChildContent
+</span>
+
+@code {
+    /// <summary>Color variant. Defaults to Default.</summary>
+    [Parameter] public BadgeVariant Variant { get; set; } = BadgeVariant.Default;
+
+    /// <summary>Size variant. Defaults to Md.</summary>
+    [Parameter] public BadgeSize Size { get; set; } = BadgeSize.Md;
+
+    /// <summary>Fill style (Filled / Outline / Subtle). Defaults to Filled.</summary>
+    [Parameter] public BadgeStyle BadgeStyle { get; set; } = BadgeStyle.Filled;
+
+    /// <summary>Alias for BadgeStyle. Defaults to Filled.</summary>
+    [Parameter] public BadgeStyle Style { get => BadgeStyle; set => BadgeStyle = value; }
+
+    /// <summary>Optional icon name shown before child content.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Renders with fully rounded pill shape.</summary>
+    [Parameter] public bool Pill { get; set; }
+
+    /// <summary>Alias for Pill.</summary>
+    [Parameter] public bool IsPill { get => Pill; set => Pill = value; }
+
+    /// <summary>Renders a small status dot before the content.</summary>
+    [Parameter] public bool Dot { get; set; }
+
+    /// <summary>Alias for Dot.</summary>
+    [Parameter] public bool HasDot { get => Dot; set => Dot = value; }
+
+    /// <summary>Badge content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var variantClass = Variant switch
+            {
+                BadgeVariant.Primary => "tm-badge-primary",
+                BadgeVariant.Success => "tm-badge-success",
+                BadgeVariant.Danger  => "tm-badge-danger",
+                BadgeVariant.Warning => "tm-badge-warning",
+                BadgeVariant.Info    => "tm-badge-info",
+                _                    => "tm-badge-default"
+            };
+            var sizeClass = Size == BadgeSize.Sm ? "tm-badge-sm" : "tm-badge-md";
+            var styleClass = BadgeStyle switch
+            {
+                BadgeStyle.Outline => "tm-badge-outline",
+                BadgeStyle.Subtle  => "tm-badge-subtle",
+                _                  => "tm-badge-filled"
+            };
+            return $"tm-badge {variantClass} {sizeClass} {styleClass}{(Pill ? " tm-badge-pill" : "")}";
+        }
+    }
+}

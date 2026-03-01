@@ -1,0 +1,39 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor — Responsive Breakpoints & Utilities
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Breakpoints:
+   --tm-bp-sm:  640px
+   --tm-bp-md:  768px
+   --tm-bp-lg:  1024px
+   --tm-bp-xl:  1280px
+   --tm-bp-2xl: 1536px
+*/
+
+/* ── Mobile-first responsive helpers ──────────────────────────── */
+
+@media (max-width: 640px) {
+  .tm-hide-sm { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .tm-hide-mobile { display: none !important; }
+
+  /* Data table horizontal scroll */
+  .tm-data-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Stack date range pickers vertically */
+  .tm-date-range-picker { flex-direction: column; }
+  .tm-datetime-range-picker { flex-direction: column; }
+
+  /* Collapse form rows */
+  .tm-form-row { flex-direction: column; }
+}
+
+@media (min-width: 769px) {
+  .tm-hide-desktop { display: none !important; }
+}
+
+@media (min-width: 1024px) {
+  .tm-hide-lg-up { display: none !important; }
+}

@@ -1,0 +1,199 @@
+@namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+
+@if (Show)
+{
+    <div class="tm-modal-overlay @GetOverlayClasses()"
+         @onclick="OnClose"
+         @ref="_overlayElement">
+        
+        <div class="tm-modal-container @GetContainerClasses()" @onclick:stopPropagation>
+            <div class="tm-modal @GetModalClasses()"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@_titleId"
+                 tabindex="-1"
+                 @ref="_modalElement"
+                 @onkeyup="HandleKeyUp">
+                
+                @* Header *@
+                <div class="tm-modal-header">
+                    @if (!string.IsNullOrEmpty(Icon))
+                    {
+                        <div class="tm-modal-header-icon">
+                            <TmIcon Name="@Icon" Size="IconSize.Lg" />
+                        </div>
+                    }
+                    <div class="tm-modal-header-content">
+                        @if (!string.IsNullOrEmpty(Title))
+                        {
+                            <h3 id="@_titleId" class="tm-modal-title">@Title</h3>
+                        }
+                        @if (!string.IsNullOrEmpty(Subtitle))
+                        {
+                            <p class="tm-modal-subtitle">@Subtitle</p>
+                        }
+                    </div>
+                    @if (ShowCloseButton)
+                    {
+                        <button type="button"
+                                class="tm-modal-close"
+                                @onclick="OnClose"
+                                aria-label="Close">
+                            <TmIcon Name="x" Size="IconSize.Sm" />
+                        </button>
+                    }
+                </div>
+                
+                @* Body *@
+                <div class="tm-modal-body">
+                    @ChildContent
+                </div>
+                
+                @* Footer *@
+                @if (ShowFooter)
+                {
+                    <div class="tm-modal-footer">
+                        @if (Footer is not null)
+                        {
+                            @Footer
+                        }
+                        else if (ShowDefaultFooterButtons)
+                        {
+                            @if (ShowCancelButton)
+                            {
+                                <TmButton Variant="ButtonVariant.Ghost"
+                                          OnClick="OnClose"
+                                          Class="tm-modal-btn-cancel">
+                                    @CancelButtonText
+                                </TmButton>
+                            }
+                            @if (ShowOkButton)
+                            {
+                                <TmButton Variant="OkButtonVariant"
+                                          OnClick="OnOkClick"
+                                          Disabled="OkButtonDisabled"
+                                          Class="tm-modal-btn-ok">
+                                    @OkButtonText
+                                </TmButton>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    
+    [Parameter] public ModalSize Size { get; set; } = ModalSize.Medium;
+    [Parameter] public ModalPosition Position { get; set; } = ModalPosition.Center;
+    [Parameter] public bool Animated { get; set; } = true;
+    
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+    [Parameter] public bool ShowFooter { get; set; } = true;
+    [Parameter] public bool ShowDefaultFooterButtons { get; set; } = false;
+    [Parameter] public bool ShowOkButton { get; set; } = true;
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
+    [Parameter] public string OkButtonText { get; set; } = "OK";
+    [Parameter] public string CancelButtonText { get; set; } = "Cancel";
+    [Parameter] public ButtonVariant OkButtonVariant { get; set; } = ButtonVariant.Primary;
+    [Parameter] public bool OkButtonDisabled { get; set; } = false;
+    
+    [Parameter] public bool CloseOnOverlayClick { get; set; } = true;
+    [Parameter] public bool CloseOnEscape { get; set; } = true;
+    
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnOk { get; set; }
+    [Parameter] public EventCallback OnOpen { get; set; }
+    
+    private ElementReference _modalElement;
+    private ElementReference _overlayElement;
+    private string _titleId = Guid.NewGuid().ToString("N");
+    private bool _wasShown;
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Show && !_wasShown)
+        {
+            _wasShown = true;
+            await OnOpen.InvokeAsync();
+            await FocusModal();
+        }
+        else if (!Show)
+        {
+            _wasShown = false;
+        }
+    }
+    
+    private async Task FocusModal()
+    {
+        if (_modalElement.Context is not null)
+        {
+            try
+            {
+                await _modalElement.FocusAsync();
+            }
+            catch { }
+        }
+    }
+    
+    
+    
+    private void HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (CloseOnEscape && e.Key == "Escape")
+        {
+            OnClose.InvokeAsync();
+        }
+    }
+    
+    private async Task OnOkClick()
+    {
+        await OnOk.InvokeAsync();
+    }
+    
+    private string GetOverlayClasses()
+    {
+        var classes = new List<string>();
+        if (Animated) classes.Add("tm-modal--animated");
+        if (Show) classes.Add("tm-modal--visible");
+        return string.Join(" ", classes);
+    }
+    
+    private string GetContainerClasses()
+    {
+        var classes = new List<string>();
+        classes.Add(Position switch
+        {
+            ModalPosition.Top => "tm-modal--top",
+            ModalPosition.Bottom => "tm-modal--bottom",
+            _ => "tm-modal--center"
+        });
+        return string.Join(" ", classes);
+    }
+    
+    private string GetModalClasses()
+    {
+        var classes = new List<string>();
+        classes.Add(Size switch
+        {
+            ModalSize.Small => "tm-modal--sm",
+            ModalSize.Large => "tm-modal--lg",
+            ModalSize.XLarge => "tm-modal--xl",
+            ModalSize.Fullscreen => "tm-modal--fullscreen",
+            _ => "tm-modal--md"
+        });
+        return string.Join(" ", classes);
+    }
+}
+
+

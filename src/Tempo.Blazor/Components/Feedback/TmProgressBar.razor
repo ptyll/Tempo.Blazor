@@ -1,0 +1,95 @@
+@namespace Tempo.Blazor.Components.Feedback
+
+<div class="tm-progress-bar @SizeClass @VariantClass @(Striped ? "tm-progress-bar--striped" : "") @(Animated ? "tm-progress-bar--animated" : "") @(Indeterminate ? "tm-progress-bar--indeterminate" : "") @Class"
+     role="progressbar"
+     aria-valuenow="@(Indeterminate ? null : Percentage)"
+     aria-valuemin="0"
+     aria-valuemax="@Max">
+
+    <div class="tm-progress-bar__track">
+        @if (Indeterminate)
+        {
+            <div class="tm-progress-bar__fill tm-progress-bar__fill--indeterminate"></div>
+        }
+        else if (Segments is { Count: > 0 })
+        {
+            @foreach (var seg in Segments)
+            {
+                var segWidth = Math.Min(seg.Value / Max * 100, 100);
+                <div class="tm-progress-bar__fill tm-progress-bar__segment"
+                     style="width: @(segWidth.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%; background-color: @seg.Color;"
+                     title="@(seg.Label ?? $"{segWidth:F0}%")">
+                </div>
+            }
+        }
+        else
+        {
+            <div class="tm-progress-bar__fill"
+                 style="width: @(Percentage.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%; @(Color is not null ? $"background-color: {Color};" : "")">
+            </div>
+        }
+    </div>
+
+    @if (ShowLabel)
+    {
+        <span class="tm-progress-bar__label">
+            @string.Format(LabelFormat ?? "{0}%", Percentage.ToString("F0"))
+        </span>
+    }
+</div>
+
+@code {
+    /// <summary>Current value (0 to Max).</summary>
+    [Parameter] public double Value { get; set; }
+
+    /// <summary>Maximum value (default 100).</summary>
+    [Parameter] public double Max { get; set; } = 100;
+
+    /// <summary>Size variant.</summary>
+    [Parameter] public ProgressBarSize Size { get; set; } = ProgressBarSize.Md;
+
+    /// <summary>Override the fill color with a custom CSS color.</summary>
+    [Parameter] public string? Color { get; set; }
+
+    /// <summary>Color variant preset.</summary>
+    [Parameter] public ProgressBarVariant Variant { get; set; } = ProgressBarVariant.Default;
+
+    /// <summary>Show a percentage label.</summary>
+    [Parameter] public bool ShowLabel { get; set; }
+
+    /// <summary>Format string for the label. {0} is the percentage.</summary>
+    [Parameter] public string? LabelFormat { get; set; }
+
+    /// <summary>Show diagonal stripe pattern.</summary>
+    [Parameter] public bool Striped { get; set; }
+
+    /// <summary>Animate the stripe pattern.</summary>
+    [Parameter] public bool Animated { get; set; }
+
+    /// <summary>Show an indeterminate loading animation instead of a fixed value.</summary>
+    [Parameter] public bool Indeterminate { get; set; }
+
+    /// <summary>Multi-segment bar with different colors.</summary>
+    [Parameter] public List<ProgressSegment>? Segments { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private double Percentage => Max > 0 ? Math.Clamp(Value / Max * 100, 0, 100) : 0;
+
+    private string SizeClass => Size switch
+    {
+        ProgressBarSize.Sm => "tm-progress-bar--sm",
+        ProgressBarSize.Lg => "tm-progress-bar--lg",
+        _ => "tm-progress-bar--md"
+    };
+
+    private string VariantClass => Variant switch
+    {
+        ProgressBarVariant.Success => "tm-progress-bar--success",
+        ProgressBarVariant.Warning => "tm-progress-bar--warning",
+        ProgressBarVariant.Error => "tm-progress-bar--error",
+        ProgressBarVariant.Gradient => "tm-progress-bar--gradient",
+        _ => ""
+    };
+}

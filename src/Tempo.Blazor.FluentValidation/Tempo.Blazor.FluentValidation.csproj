@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet Package Metadata -->
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>Tempo.Blazor.FluentValidation</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>ptyll</Authors>
+    <Description>FluentValidation integration for Tempo.Blazor component library. Provides FluentValidationValidator component for EditForm and assembly scanning for validator registration.</Description>
+    <PackageTags>blazor;fluentvalidation;validation;forms</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tempo.Blazor.Abstractions\Tempo.Blazor.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Tempo.Blazor.FluentValidation.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,153 @@
+@page "/charts"
+@using Tempo.Blazor.Components.Charts
+
+<PageTitle>Charts – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Charts</h1>
+    <p class="text-slate-600 dark:text-slate-400">Pure SVG charts with no JavaScript dependencies. Bar, Line, Pie, Donut and Horizontal Bar types.</p>
+</div>
+
+<!-- Bar Chart -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Bar Chart</h2>
+    <TmChart Type="ChartType.Bar"
+             Data="_barData"
+             Height="350px"
+             OnSegmentClick="HandleSegmentClick" />
+    @if (_clickedSegment is not null)
+    {
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+            Clicked: <strong>@_clickedSegment.Label</strong> = @_clickedSegment.Value (Dataset @_clickedSegment.DatasetIndex)
+        </p>
+    }
+</section>
+
+<!-- Grouped Bar Chart -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Grouped Bar Chart</h2>
+    <TmChart Type="ChartType.Bar"
+             Data="_groupedBarData"
+             Height="350px"
+             ShowValues="true" />
+</section>
+
+<!-- Line Chart -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Line Chart</h2>
+    <TmChart Type="ChartType.Line"
+             Data="_lineData"
+             Height="350px" />
+</section>
+
+<!-- Pie Chart -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Pie Chart</h2>
+    <div style="max-width: 500px;">
+        <TmChart Type="ChartType.Pie"
+                 Data="_pieData"
+                 Height="400px" />
+    </div>
+</section>
+
+<!-- Donut Chart -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Donut Chart</h2>
+    <div style="max-width: 500px;">
+        <TmChart Type="ChartType.Donut"
+                 Data="_donutData"
+                 Height="400px" />
+    </div>
+</section>
+
+<!-- Horizontal Bar Chart -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Horizontal Bar Chart</h2>
+    <TmChart Type="ChartType.HorizontalBar"
+             Data="_horizontalData"
+             Height="300px"
+             ShowValues="true" />
+</section>
+
+<!-- No Animation / No Legend -->
+<section class="demo-section mb-8">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Minimal (No Animation, No Legend, No Grid)</h2>
+    <TmChart Type="ChartType.Bar"
+             Data="_barData"
+             Height="250px"
+             Animated="false"
+             ShowLegend="false"
+             ShowGrid="false" />
+</section>
+
+@code {
+    private ChartSegment? _clickedSegment;
+
+    private void HandleSegmentClick(ChartSegment segment)
+    {
+        _clickedSegment = segment;
+    }
+
+    private static readonly ChartData _barData = new()
+    {
+        Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        Datasets =
+        [
+            new ChartDataset
+            {
+                Label = "Revenue",
+                Values = [12000, 19000, 15000, 22000, 18000, 25000],
+                Color = "#3b82f6",
+                BackgroundColor = "#93c5fd"
+            }
+        ]
+    };
+
+    private static readonly ChartData _groupedBarData = new()
+    {
+        Labels = ["Q1", "Q2", "Q3", "Q4"],
+        Datasets =
+        [
+            new ChartDataset { Label = "2024", Values = [45, 62, 58, 71], Color = "#3b82f6" },
+            new ChartDataset { Label = "2025", Values = [52, 70, 65, 80], Color = "#10b981" }
+        ]
+    };
+
+    private static readonly ChartData _lineData = new()
+    {
+        Labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        Datasets =
+        [
+            new ChartDataset { Label = "Visitors", Values = [120, 180, 150, 210, 190, 280, 240], Color = "#8b5cf6" },
+            new ChartDataset { Label = "Conversions", Values = [30, 45, 38, 52, 48, 70, 60], Color = "#f59e0b" }
+        ]
+    };
+
+    private static readonly ChartData _pieData = new()
+    {
+        Labels = ["Desktop", "Mobile", "Tablet", "Other"],
+        Datasets =
+        [
+            new ChartDataset { Label = "Traffic", Values = [45, 35, 15, 5], Color = "#3b82f6" }
+        ]
+    };
+
+    private static readonly ChartData _donutData = new()
+    {
+        Labels = ["Completed", "In Progress", "Pending", "Cancelled"],
+        Datasets =
+        [
+            new ChartDataset { Label = "Tasks", Values = [42, 28, 18, 12], Color = "#10b981" }
+        ]
+    };
+
+    private static readonly ChartData _horizontalData = new()
+    {
+        Labels = ["Chrome", "Firefox", "Safari", "Edge", "Other"],
+        Datasets =
+        [
+            new ChartDataset { Label = "Usage %", Values = [65, 12, 10, 8, 5], Color = "#6366f1" }
+        ]
+    };
+}

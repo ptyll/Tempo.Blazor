@@ -1,0 +1,38 @@
+@namespace Tempo.Blazor.Components.Avatars
+
+<div class="tm-avatar-group @SizeClass">
+    @ChildContent
+    @if (Max.HasValue && TotalCount > Max.Value)
+    {
+        <div class="tm-avatar @AvatarSizeClass tm-avatar-overflow tm-avatar-circle">
+            +@(TotalCount - Max.Value)
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Maximum number of avatars to show before showing overflow count.</summary>
+    [Parameter] public int? Max { get; set; }
+
+    /// <summary>Total number of items in the full collection (used to calculate overflow).</summary>
+    [Parameter] public int TotalCount { get; set; }
+
+    /// <summary>Size applied to overflow avatar bubble and group spacing. Defaults to Md.</summary>
+    [Parameter] public AvatarSize Size { get; set; } = AvatarSize.Md;
+
+    /// <summary>Avatar elements to render.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string SizeClass => $"tm-avatar-group-{GetSizeKey()}";
+    private string AvatarSizeClass => $"tm-avatar-{GetSizeKey()}";
+
+    private string GetSizeKey() => Size switch
+    {
+        AvatarSize.Xs  => "xs",
+        AvatarSize.Sm  => "sm",
+        AvatarSize.Lg  => "lg",
+        AvatarSize.Xl  => "xl",
+        AvatarSize.Xxl => "2xl",
+        _              => "md"
+    };
+}

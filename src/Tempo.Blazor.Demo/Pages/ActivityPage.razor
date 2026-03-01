@@ -1,0 +1,201 @@
+@page "/activity"
+<PageTitle>Activity – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Activity Components</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        Complete activity tracking system with timeline, comments, and attachments.
+        Data loaded from Demo.Api (<code>task-1</code>).
+    </p>
+</div>
+
+<!-- API Error -->
+@if (_loadError is not null)
+{
+    <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <p class="text-sm font-medium text-amber-800 dark:text-amber-200">Connection Error</p>
+                <p class="text-sm text-amber-600 dark:text-amber-400 mt-1">@_loadError</p>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Activity Log -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Activity Log</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Full Panel</span>
+    </div>
+    
+    <div class="max-w-3xl">
+        <TmActivityLog EntityId="task-1"
+                       TimelineEntries="@_timelineEntries"
+                       Comments="@_comments"
+                       Attachments="@_attachments"
+                       AttachmentProvider="@_attachmentProvider"
+                       OnCommentAdded="@AddComment"
+                       OnCommentDeleted="@DeleteComment" />
+    </div>
+</section>
+
+<!-- Activity Timeline -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Activity Timeline</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Standalone</span>
+    </div>
+    
+    <div class="max-w-2xl showcase-card">
+        <TmActivityTimeline Entries="@_timelineEntries" />
+    </div>
+</section>
+
+<!-- Rich Text Editor Simple -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Rich Text Editor Simple</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Basic</span>
+    </div>
+    
+    <div class="max-w-2xl">
+        <div class="showcase-card">
+            <TmRichEditorSimple Value="@_simpleEditorValue"
+                                ValueChanged="@(v => _simpleEditorValue = v)"
+                                Placeholder="Type something with **bold**, _italic_, or lists..."
+                                MaxLength="500"
+                                OnSubmit="@HandleSimpleSubmit" />
+            
+            @if (!string.IsNullOrEmpty(_simpleEditorValue))
+            {
+                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Raw HTML Output</p>
+                    <pre class="text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-lg overflow-x-auto"><code>@_simpleEditorValue</code></pre>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Rich Text Editor Full -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Rich Text Editor Full</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Advanced</span>
+    </div>
+    
+    <div class="max-w-3xl">
+        <div class="showcase-card">
+            <TmRichEditorFull Value="@_fullEditorValue"
+                              ValueChanged="@(v => _fullEditorValue = v)"
+                              Placeholder="Create rich content with headings, lists, and links..."
+                              Height="300px"
+                              MaxLength="2000"
+                              SupportsMentions="true"
+                              MentionProvider="@_mentionProvider" />
+            
+            @if (!string.IsNullOrEmpty(_fullEditorValue))
+            {
+                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Raw HTML Output</p>
+                    <pre class="text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-lg overflow-x-auto"><code>@_fullEditorValue</code></pre>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Legacy Rich Text Editor (for comparison) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Rich Text Editor (Full)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">New</span>
+    </div>
+    
+    <div class="max-w-2xl">
+        <div class="showcase-card">
+            <TmRichEditorFull @bind-Value="_editorValue"
+                              Placeholder="Type something with formatting, tables, colors..." />
+            
+            @if (!string.IsNullOrEmpty(_editorValue))
+            {
+                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Raw HTML Output</p>
+                    <pre class="text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-lg overflow-x-auto"><code>@_editorValue</code></pre>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    [Inject] private ActivityHttpService ActivityService { get; set; } = default!;
+    [Inject] private AttachmentHttpProvider AttachmentProvider { get; set; } = default!;
+
+    private const string EntityId = "task-1";
+    private string _editorValue = string.Empty;
+    private string _simpleEditorValue = string.Empty;
+    private string _fullEditorValue = string.Empty;
+    private string? _loadError;
+    private IMentionDataProvider? _mentionProvider;
+
+    private IReadOnlyList<ITimelineEntry> _timelineEntries = [];
+    private IReadOnlyList<ICommentEntry> _comments = [];
+    private IReadOnlyList<IFileAttachment> _attachments = [];
+    private IFileAttachmentProvider _attachmentProvider = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _attachmentProvider = AttachmentProvider;
+        _mentionProvider = new DemoMentionProvider();
+        try
+        {
+            _timelineEntries = await ActivityService.GetTimelineAsync(EntityId);
+            _comments = await ActivityService.GetCommentsAsync(EntityId);
+            _attachments = await AttachmentProvider.GetAttachmentsAsync(EntityId);
+        }
+        catch (HttpRequestException)
+        {
+            _loadError = "Could not connect to Demo.Api. Start it on port 5100 to see live data.";
+        }
+    }
+
+    private async Task HandleSimpleSubmit()
+    {
+        // Demo: just clear the editor after submit
+        _simpleEditorValue = string.Empty;
+        await Task.CompletedTask;
+    }
+
+    private async Task AddComment(string html)
+    {
+        try
+        {
+            await ActivityService.AddCommentAsync(EntityId, html);
+            _comments = await ActivityService.GetCommentsAsync(EntityId);
+            _timelineEntries = await ActivityService.GetTimelineAsync(EntityId);
+        }
+        catch (HttpRequestException)
+        {
+            _loadError = "Failed to add comment. Is the API running?";
+        }
+    }
+
+    private async Task DeleteComment(string id)
+    {
+        try
+        {
+            await ActivityService.DeleteCommentAsync(EntityId, id);
+            _comments = await ActivityService.GetCommentsAsync(EntityId);
+        }
+        catch (HttpRequestException)
+        {
+            _loadError = "Failed to delete comment. Is the API running?";
+        }
+    }
+}

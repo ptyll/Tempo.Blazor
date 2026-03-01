@@ -1,0 +1,270 @@
+@namespace Tempo.Blazor.Components.Pickers
+@using Tempo.Blazor.Models
+
+<div class="tm-date-range-picker @Class">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-picker-label">@Label</label>
+    }
+
+    <div class="tm-date-range-input-row">
+        <button type="button"
+                class="tm-date-range-trigger"
+                disabled="@Disabled"
+                aria-haspopup="true"
+                aria-expanded="@_isOpen"
+                @onclick="TogglePopup">
+            @if (Value.Start.HasValue || Value.End.HasValue)
+            {
+                <span>@FormatRange()</span>
+            }
+            else
+            {
+                <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDateRangePicker_From"])</span>
+            }
+            <span class="tm-date-picker-icon" aria-hidden="true">&#128197;</span>
+        </button>
+
+        @if ((Value.Start.HasValue || Value.End.HasValue) && !Disabled)
+        {
+            <button type="button"
+                    class="tm-picker-clear"
+                    aria-label="@Loc["TmDateRangePicker_Clear"]"
+                    @onclick="ClearRange">
+                &#x2715;
+            </button>
+        }
+    </div>
+
+    @if (_isOpen)
+    {
+        <div class="tm-date-range-popup" role="dialog" aria-modal="true">
+            @if (ShowPresets && EffectivePresets.Count > 0)
+            {
+                <div class="tm-date-range-presets">
+                    @foreach (var preset in EffectivePresets)
+                    {
+                        var p = preset;
+                        <button type="button"
+                                class="tm-date-range-preset-btn"
+                                @onclick="() => ApplyPreset(p)">
+                            @p.Label
+                        </button>
+                    }
+                </div>
+            }
+
+            <div class="tm-date-range-calendars">
+                <!-- Left calendar: start month -->
+                <TmCalendarGrid DisplayYear="@_leftYear"
+                                DisplayMonth="@_leftMonth"
+                                SelectedDate="@_selectionStart"
+                                RangeStart="@_selectionStart"
+                                RangeEnd="@(_hoverDate.HasValue && _selectionStart.HasValue && _hoverDate.Value >= _selectionStart.Value
+                                              ? _hoverDate : _selectionEnd)"
+                                MinDate="@MinDate"
+                                MaxDate="@MaxDate"
+                                OnDateSelected="OnLeftDaySelected"
+                                OnDateHovered="OnDayHovered"
+                                OnNavigate="OnLeftNavigate" />
+
+                <!-- Right calendar: start+1 month -->
+                <TmCalendarGrid DisplayYear="@_rightYear"
+                                DisplayMonth="@_rightMonth"
+                                SelectedDate="@_selectionEnd"
+                                RangeStart="@_selectionStart"
+                                RangeEnd="@(_hoverDate.HasValue && _selectionStart.HasValue && _hoverDate.Value >= _selectionStart.Value
+                                              ? _hoverDate : _selectionEnd)"
+                                MinDate="@MinDate"
+                                MaxDate="@MaxDate"
+                                OnDateSelected="OnRightDaySelected"
+                                OnDateHovered="OnDayHovered"
+                                OnNavigate="OnRightNavigate" />
+            </div>
+
+            <div class="tm-date-range-footer">
+                <button type="button"
+                        class="tm-btn tm-btn-primary tm-btn-sm"
+                        @onclick="ClosePopup">
+                    @Loc["TmDateRangePicker_Done"]
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public (DateOnly? Start, DateOnly? End) Value        { get; set; }
+    [Parameter] public EventCallback<(DateOnly? Start, DateOnly? End)> ValueChanged { get; set; }
+    [Parameter] public DateOnly?                  MinDate      { get; set; }
+    [Parameter] public DateOnly?                  MaxDate      { get; set; }
+    [Parameter] public string                     DateFormat   { get; set; } = "dd.MM.yyyy";
+    [Parameter] public IReadOnlyList<DateRangePreset>? Presets  { get; set; }
+    [Parameter] public bool                       ShowPresets  { get; set; } = true;
+    [Parameter] public bool                       Disabled     { get; set; }
+    [Parameter] public string?                    Placeholder  { get; set; }
+    [Parameter] public string?                    Label        { get; set; }
+    [Parameter] public string?                    Class        { get; set; }
+
+    private bool      _isOpen;
+    private int       _leftYear, _leftMonth, _rightYear, _rightMonth;
+    private DateOnly? _hoverDate;
+    // Selection state: first click = start, second = end
+    private bool      _awaitingEnd;
+    // Internal mirror of selection so calendar updates immediately without waiting for parent re-render
+    private DateOnly? _selectionStart;
+    private DateOnly? _selectionEnd;
+    // Tracks the last Value we received from the parent to detect external changes
+    private (DateOnly? Start, DateOnly? End) _lastReceivedValue = (null, null);
+
+    private IReadOnlyList<DateRangePreset> EffectivePresets => Presets ?? DefaultPresets;
+    private static readonly IReadOnlyList<DateRangePreset> DefaultPresets =
+    [
+        DateRangePresets.Today,
+        DateRangePresets.LastWeek,
+        DateRangePresets.LastMonth,
+        DateRangePresets.LastQuarter,
+        DateRangePresets.ThisYear,
+    ];
+
+    protected override void OnParametersSet()
+    {
+        // Only sync internal selection state when Value was externally changed (parent update / initial render)
+        // Don't reset _awaitingEnd if we're waiting for the second date (Value.End is null but we have Value.Start)
+        if (Value != _lastReceivedValue)
+        {
+            var wasAwaitingEnd = _awaitingEnd;
+            _lastReceivedValue = Value;
+            _selectionStart    = Value.Start;
+            _selectionEnd      = Value.End;
+            
+            // If we were waiting for end and Value now has Start but no End, preserve awaiting state
+            // This happens after first click when parent re-renders with updated Value
+            if (wasAwaitingEnd && Value.Start.HasValue && !Value.End.HasValue)
+            {
+                _awaitingEnd = true;
+            }
+            else if (Value.End.HasValue)
+            {
+                // Range is complete, no longer waiting
+                _awaitingEnd = false;
+            }
+            else if (!Value.Start.HasValue)
+            {
+                // No selection at all
+                _awaitingEnd = false;
+            }
+        }
+        ResetDisplayMonths();
+    }
+
+    private void ResetDisplayMonths()
+    {
+        var pivot = _selectionStart ?? DateOnly.FromDateTime(DateTime.Today);
+        _leftYear   = pivot.Year;
+        _leftMonth  = pivot.Month;
+        var right = pivot.AddMonths(1);
+        _rightYear  = right.Year;
+        _rightMonth = right.Month;
+    }
+
+    private void TogglePopup()
+    {
+        if (!Disabled) _isOpen = !_isOpen;
+    }
+
+    private void ClosePopup()
+    {
+        _isOpen = false;
+    }
+
+    private async Task OnLeftDaySelected(DateOnly d) => await HandleDaySelected(d);
+    private async Task OnRightDaySelected(DateOnly d) => await HandleDaySelected(d);
+
+    private async Task HandleDaySelected(DateOnly d)
+    {
+        if (!_awaitingEnd)
+        {
+            // First click → set start, clear end
+            _awaitingEnd    = true;
+            _selectionStart = d;
+            _selectionEnd   = null;
+            _hoverDate      = null;
+            await ValueChanged.InvokeAsync((d, null));
+        }
+        else
+        {
+            // Second click
+            _awaitingEnd = false;
+            _hoverDate   = null;
+
+            if (_selectionStart.HasValue && d < _selectionStart.Value)
+            {
+                // Clicked before start → treat as new start
+                _selectionStart = d;
+                _selectionEnd   = null;
+                await ValueChanged.InvokeAsync((d, null));
+                _awaitingEnd = true;
+            }
+            else
+            {
+                _selectionEnd = d;
+                await ValueChanged.InvokeAsync((_selectionStart, d));
+                // Close popup after brief delay so user can see the selection
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(300);
+                    await InvokeAsync(() => { _isOpen = false; StateHasChanged(); });
+                });
+            }
+        }
+    }
+
+    private void OnDayHovered(DateOnly d) => _hoverDate = d;
+
+    private void OnLeftNavigate((int Year, int Month) nav)
+    {
+        _leftYear  = nav.Year;
+        _leftMonth = nav.Month;
+        // Keep right one month ahead
+        var right = new DateOnly(_leftYear, _leftMonth, 1).AddMonths(1);
+        _rightYear  = right.Year;
+        _rightMonth = right.Month;
+    }
+
+    private void OnRightNavigate((int Year, int Month) nav)
+    {
+        _rightYear  = nav.Year;
+        _rightMonth = nav.Month;
+        // Keep left one month behind
+        var left = new DateOnly(_rightYear, _rightMonth, 1).AddMonths(-1);
+        _leftYear  = left.Year;
+        _leftMonth = left.Month;
+    }
+
+    private async Task ClearRange()
+    {
+        _awaitingEnd    = false;
+        _hoverDate      = null;
+        _selectionStart = null;
+        _selectionEnd   = null;
+        await ValueChanged.InvokeAsync((null, null));
+    }
+
+    private async Task ApplyPreset(DateRangePreset preset)
+    {
+        _awaitingEnd    = false;
+        _hoverDate      = null;
+        _isOpen         = false;
+        _selectionStart = preset.Start;
+        _selectionEnd   = preset.End;
+        await ValueChanged.InvokeAsync((preset.Start, preset.End));
+    }
+
+    private string FormatRange()
+    {
+        var s = Value.Start.HasValue ? Value.Start.Value.ToString(DateFormat) : Loc["TmDateRangePicker_From"].ToString();
+        var e = Value.End.HasValue   ? Value.End.Value.ToString(DateFormat)   : Loc["TmDateRangePicker_To"].ToString();
+        return $"{s} – {e}";
+    }
+}

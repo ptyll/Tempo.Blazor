@@ -1,0 +1,30 @@
+.tm-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-3);
+  height: var(--tm-topbar-height);
+  padding: 0 var(--tm-space-4);
+  background-color: var(--tm-bg-surface);
+  border-bottom: 1px solid var(--tm-border-color);
+  position: sticky;
+  top: 0;
+  z-index: var(--tm-z-sticky);
+}
+.tm-topbar-brand { font-size: var(--tm-font-size-lg); font-weight: var(--tm-font-weight-bold); color: var(--tm-text-primary); text-decoration: none; }
+.tm-topbar-spacer { flex: 1; }
+.tm-topbar-actions { display: flex; align-items: center; gap: var(--tm-space-1); }
+.tm-topbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--tm-text-secondary);
+  border-radius: var(--tm-radius-md);
+  border: none;
+  background: none;
+  cursor: pointer;
+  position: relative;
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+.tm-topbar-icon-btn:hover { background-color: var(--tm-color-gray-100); color: var(--tm-text-primary); }

@@ -1,0 +1,139 @@
+@namespace Tempo.Blazor.Components.Inputs
+
+<div class="tm-input-wrapper">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-input-label">@Label</label>
+    }
+    <div class="tm-number-input @(Disabled ? "tm-number-input--disabled" : "") @(HasError ? "tm-number-input--error" : "")">
+        @if (ShowButtons)
+        {
+            <button type="button"
+                    class="tm-number-input__decrement"
+                    disabled="@(Disabled || IsAtMin)"
+                    aria-label="Decrease"
+                    @onclick="Decrement">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        }
+
+        @if (!string.IsNullOrEmpty(Prefix))
+        {
+            <span class="tm-number-input__prefix">@Prefix</span>
+        }
+
+        <input type="number"
+               value="@Value"
+               placeholder="@Placeholder"
+               disabled="@Disabled"
+               min="@Min"
+               max="@Max"
+               step="@Step"
+               class="tm-number-input__input"
+               @onchange="HandleChange" />
+
+        @if (!string.IsNullOrEmpty(Suffix))
+        {
+            <span class="tm-number-input__suffix">@Suffix</span>
+        }
+
+        @if (ShowButtons)
+        {
+            <button type="button"
+                    class="tm-number-input__increment"
+                    disabled="@(Disabled || IsAtMax)"
+                    aria-label="Increase"
+                    @onclick="Increment">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="tm-input-error-message">@Error</div>
+    }
+    @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(Error))
+    {
+        <div class="tm-input-help-text">@HelpText</div>
+    }
+</div>
+
+@code {
+    /// <summary>Current numeric value.</summary>
+    [Parameter] public int? Value { get; set; }
+
+    /// <summary>Fires when value changes.</summary>
+    [Parameter] public EventCallback<int?> ValueChanged { get; set; }
+
+    /// <summary>Minimum allowed value.</summary>
+    [Parameter] public int? Min { get; set; }
+
+    /// <summary>Maximum allowed value.</summary>
+    [Parameter] public int? Max { get; set; }
+
+    /// <summary>Step increment/decrement (default 1).</summary>
+    [Parameter] public int Step { get; set; } = 1;
+
+    /// <summary>Field label.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Placeholder text.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Error message.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Help text below the input.</summary>
+    [Parameter] public string? HelpText { get; set; }
+
+    /// <summary>Disable the input.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Show +/- buttons (default true).</summary>
+    [Parameter] public bool ShowButtons { get; set; } = true;
+
+    /// <summary>Prefix text (e.g. "$").</summary>
+    [Parameter] public string? Prefix { get; set; }
+
+    /// <summary>Suffix text (e.g. "days").</summary>
+    [Parameter] public string? Suffix { get; set; }
+
+    private bool HasError => !string.IsNullOrEmpty(Error);
+    private bool IsAtMin => Min.HasValue && Value.HasValue && Value.Value <= Min.Value;
+    private bool IsAtMax => Max.HasValue && Value.HasValue && Value.Value >= Max.Value;
+
+    private async Task Increment()
+    {
+        var newValue = (Value ?? 0) + Step;
+        if (Max.HasValue && newValue > Max.Value)
+            newValue = Max.Value;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task Decrement()
+    {
+        var newValue = (Value ?? 0) - Step;
+        if (Min.HasValue && newValue < Min.Value)
+            newValue = Min.Value;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var parsed))
+        {
+            if (Min.HasValue && parsed < Min.Value) parsed = Min.Value;
+            if (Max.HasValue && parsed > Max.Value) parsed = Max.Value;
+            await ValueChanged.InvokeAsync(parsed);
+        }
+        else
+        {
+            await ValueChanged.InvokeAsync(null);
+        }
+    }
+}

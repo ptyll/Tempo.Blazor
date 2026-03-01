@@ -1,0 +1,80 @@
+@namespace Tempo.Blazor.Components.Inputs
+@typeparam T
+
+<div class="tm-radio-group @LayoutCssClass @Class" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-radio-group-label">@Label</label>
+    }
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <span class="tm-radio-group-help">@HelpText</span>
+    }
+    <div class="tm-radio-group-options">
+        @foreach (var option in Options)
+        {
+            <TmRadio Value="@((object?)option.Value)"
+                     Name="@Name"
+                     Label="@option.Label"
+                     IsChecked="@IsSelected(option.Value)"
+                     Disabled="@(Disabled || option.IsDisabled)"
+                     OnSelect="@(() => SelectOptionAsync(option.Value))" />
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <span class="tm-radio-group-error">@Error</span>
+    }
+</div>
+
+@code {
+    /// <summary>Radio group name attribute (shared by all radio inputs).</summary>
+    [Parameter] public string Name { get; set; } = Guid.NewGuid().ToString("n")[..8];
+
+    /// <summary>Group label shown above the options.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Help text shown below the label.</summary>
+    [Parameter] public string? HelpText { get; set; }
+
+    /// <summary>Validation error message.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    /// <summary>Currently selected value.</summary>
+    [Parameter] public T? Value { get; set; }
+
+    /// <summary>Fires when the selection changes.</summary>
+    [Parameter] public EventCallback<T?> ValueChanged { get; set; }
+
+    /// <summary>List of options to render.</summary>
+    [Parameter] public List<RadioOption<T>> Options { get; set; } = [];
+
+    /// <summary>Disables all options.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Layout direction. Defaults to Vertical.</summary>
+    [Parameter] public RadioLayout Layout { get; set; } = RadioLayout.Vertical;
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes passed to the root div.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string LayoutCssClass => Layout == RadioLayout.Horizontal
+        ? "tm-radio-group-horizontal"
+        : "tm-radio-group-vertical";
+
+    private bool IsSelected(T? optionValue)
+        => Value is not null && EqualityComparer<T>.Default.Equals(Value, optionValue);
+
+    private async Task SelectOptionAsync(T? optionValue)
+    {
+        if (!Disabled)
+        {
+            Value = optionValue;
+            await ValueChanged.InvokeAsync(optionValue);
+        }
+    }
+}

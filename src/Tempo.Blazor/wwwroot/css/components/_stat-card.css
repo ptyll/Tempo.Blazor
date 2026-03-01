@@ -1,0 +1,26 @@
+.tm-stat-card {
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  padding: var(--tm-space-5);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tm-space-4);
+}
+.tm-stat-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: var(--tm-color-primary-subtle);
+  border-radius: var(--tm-radius-md);
+  color: var(--tm-color-primary);
+  flex-shrink: 0;
+}
+.tm-stat-card-body   { flex: 1; min-width: 0; }
+.tm-stat-card-value  { font-size: var(--tm-font-size-2xl); font-weight: var(--tm-font-weight-bold); color: var(--tm-text-primary); line-height: 1; }
+.tm-stat-card-label  { font-size: var(--tm-font-size-sm); color: var(--tm-text-secondary); margin-top: var(--tm-space-1); }
+.tm-stat-card-trend  { font-size: var(--tm-font-size-xs); font-weight: var(--tm-font-weight-medium); margin-top: var(--tm-space-2); }
+.tm-stat-card-trend-up   { color: var(--tm-color-success-text); }
+.tm-stat-card-trend-down { color: var(--tm-color-danger-text); }

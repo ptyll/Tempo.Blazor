@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════════════
+   TmProgressBar — Progress indicator
+   ═══════════════════════════════════════════════════════ */
+
+.tm-progress-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* ── Track ─────────────────────────────────────────────── */
+.tm-progress-bar__track {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: var(--tm-color-neutral-200);
+}
+
+/* ── Fill ──────────────────────────────────────────────── */
+.tm-progress-bar__fill {
+    height: 100%;
+    border-radius: 9999px;
+    background-color: var(--tm-color-primary-600);
+    transition: width 0.3s ease;
+}
+
+/* ── Label ─────────────────────────────────────────────── */
+.tm-progress-bar__label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--tm-color-neutral-600);
+    white-space: nowrap;
+    min-width: 2.5rem;
+    text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sizes
+   ═══════════════════════════════════════════════════════ */
+.tm-progress-bar--sm .tm-progress-bar__track {
+    height: 0.375rem;
+}
+
+.tm-progress-bar--md .tm-progress-bar__track {
+    height: 0.625rem;
+}
+
+.tm-progress-bar--lg .tm-progress-bar__track {
+    height: 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Variants
+   ═══════════════════════════════════════════════════════ */
+.tm-progress-bar--success .tm-progress-bar__fill {
+    background-color: #22c55e;
+}
+
+.tm-progress-bar--warning .tm-progress-bar__fill {
+    background-color: #f59e0b;
+}
+
+.tm-progress-bar--error .tm-progress-bar__fill {
+    background-color: #ef4444;
+}
+
+.tm-progress-bar--gradient .tm-progress-bar__fill {
+    background: linear-gradient(90deg, var(--tm-color-primary-500), #8b5cf6, #ec4899);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Striped
+   ═══════════════════════════════════════════════════════ */
+.tm-progress-bar--striped .tm-progress-bar__fill {
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 1rem 1rem;
+}
+
+.tm-progress-bar--animated .tm-progress-bar__fill {
+    animation: tm-progress-stripe 1s linear infinite;
+}
+
+@keyframes tm-progress-stripe {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Indeterminate
+   ═══════════════════════════════════════════════════════ */
+.tm-progress-bar--indeterminate .tm-progress-bar__fill--indeterminate {
+    width: 40% !important;
+    animation: tm-progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes tm-progress-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Segments
+   ═══════════════════════════════════════════════════════ */
+.tm-progress-bar__segment {
+    border-radius: 0;
+    transition: width 0.3s ease;
+}
+
+.tm-progress-bar__segment:first-child {
+    border-radius: 9999px 0 0 9999px;
+}
+
+.tm-progress-bar__segment:last-child {
+    border-radius: 0 9999px 9999px 0;
+}
+
+.tm-progress-bar__segment:only-child {
+    border-radius: 9999px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark mode
+   ═══════════════════════════════════════════════════════ */
+[data-theme="dark"] .tm-progress-bar__track,
+.tm-dark .tm-progress-bar__track {
+    background-color: var(--tm-color-neutral-700);
+}
+
+[data-theme="dark"] .tm-progress-bar__label,
+.tm-dark .tm-progress-bar__label {
+    color: var(--tm-color-neutral-400);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Reduced motion
+   ═══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    .tm-progress-bar__fill {
+        transition: none;
+    }
+    .tm-progress-bar--animated .tm-progress-bar__fill,
+    .tm-progress-bar--indeterminate .tm-progress-bar__fill--indeterminate {
+        animation: none;
+    }
+}

@@ -1,0 +1,74 @@
+@namespace Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-input-wrapper">
+    <div class="tm-input-container">
+        <div class="tm-input-left-icon">
+            <TmIcon Name="@IconNames.Search" Size="IconSize.Sm" />
+        </div>
+        <input type="search"
+               value="@Value"
+               placeholder="@(Placeholder ?? Loc["TmSearchInput_Placeholder"])"
+               disabled="@Disabled"
+               class="@InputCssClass tm-input-with-right-icon"
+               @oninput="HandleInputAsync"
+               @onchange="HandleChangeAsync" />
+        @if (!string.IsNullOrEmpty(Value))
+        {
+            <button class="tm-search-clear"
+                    type="button"
+                    aria-label="@Loc["TmSearchInput_Clear"]"
+                    @onclick="ClearValueAsync">
+                <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>Current search text.</summary>
+    [Parameter] public string Value { get; set; } = string.Empty;
+
+    /// <summary>Fires when the search value changes.</summary>
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>Placeholder text. When null, falls back to the localized default.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Disables the search input.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Debounce delay in milliseconds (0 = no debounce).</summary>
+    [Parameter] public int DebounceMs { get; set; } = 0;
+
+    private string InputCssClass =>
+        $"tm-input tm-input-search tm-input-with-left-icon{(Disabled ? " tm-input-disabled" : "")}";
+
+    private System.Timers.Timer? _debounce;
+
+    private async Task HandleInputAsync(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        if (DebounceMs > 0)
+        {
+            _debounce?.Stop();
+            _debounce = new System.Timers.Timer(DebounceMs) { AutoReset = false };
+            _debounce.Elapsed += async (_, _) =>
+            {
+                _debounce.Stop();
+                await InvokeAsync(() => ValueChanged.InvokeAsync(value));
+            };
+            _debounce.Start();
+        }
+        else
+        {
+            await ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task HandleChangeAsync(ChangeEventArgs e)
+        => await ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+
+    private async Task ClearValueAsync()
+        => await ValueChanged.InvokeAsync(string.Empty);
+}

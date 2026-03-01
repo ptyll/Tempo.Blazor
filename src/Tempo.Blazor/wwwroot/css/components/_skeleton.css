@@ -1,0 +1,13 @@
+.tm-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--tm-color-gray-200) 25%,
+    var(--tm-bg-surface-secondary) 50%,
+    var(--tm-color-gray-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: tm-shimmer 1.5s ease-in-out infinite;
+}
+.tm-skeleton-text      { height: 1em; border-radius: var(--tm-radius-sm); }
+.tm-skeleton-circle    { border-radius: var(--tm-radius-full); }
+.tm-skeleton-rectangle { border-radius: var(--tm-radius-md); }

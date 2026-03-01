@@ -1,0 +1,80 @@
+@page "/tree-view"
+<PageTitle>Tree View – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Tree View</h1>
+    <p class="text-slate-600 dark:text-slate-400">Hierarchical data display with expandable nodes, lazy loading, and selection support.</p>
+</div>
+
+<!-- Tree Views -->
+<section class="demo-section">
+    <div class="demo-grid demo-grid-2">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">File System</h3>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                <TmTreeView TKey="string"
+                            Nodes="@_fileTree"
+                            OnNodeSelect="@(n => _selected = n.Label)" />
+            </div>
+            @if (!string.IsNullOrEmpty(_selected))
+            {
+                <div class="mt-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg animate-fade-in">
+                    <p class="text-sm text-slate-700 dark:text-slate-300">
+                        Selected: <span class="font-semibold text-primary-600 dark:text-primary-400">@_selected</span>
+                    </p>
+                </div>
+            }
+        </div>
+        
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Organization Chart</h3>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                <TmTreeView TKey="string" Nodes="@_orgTree" />
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private string _selected = string.Empty;
+
+    private record TreeNode(string Id, string Label, string? Icon, bool IsLeaf, bool IsLoading,
+        IReadOnlyList<ITreeNode<string>> Children) : ITreeNode<string>;
+
+    private List<ITreeNode<string>> _fileTree = new()
+    {
+        new TreeNode("src", "src", IconNames.Folder, false, false, new List<ITreeNode<string>>
+        {
+            new TreeNode("src-c1", "components", IconNames.Folder, false, false, new List<ITreeNode<string>>
+            {
+                new TreeNode("btn", "TmButton.razor", IconNames.File, true, false, new List<ITreeNode<string>>()),
+                new TreeNode("badge", "TmBadge.razor", IconNames.File, true, false, new List<ITreeNode<string>>()),
+                new TreeNode("card", "TmCard.razor", IconNames.File, true, false, new List<ITreeNode<string>>()),
+            }.AsReadOnly()),
+            new TreeNode("src-c2", "wwwroot", IconNames.Folder, true, false, new List<ITreeNode<string>>()),
+        }.AsReadOnly()),
+        new TreeNode("tests", "tests", IconNames.Folder, false, false, new List<ITreeNode<string>>
+        {
+            new TreeNode("t1", "TmButtonTests.cs", IconNames.File, true, false, new List<ITreeNode<string>>()),
+            new TreeNode("t2", "TmBadgeTests.cs", IconNames.File, true, false, new List<ITreeNode<string>>()),
+        }.AsReadOnly()),
+        new TreeNode("readme", "README.md", IconNames.File, true, false, new List<ITreeNode<string>>()),
+    };
+
+    private List<ITreeNode<string>> _orgTree = new()
+    {
+        new TreeNode("ceo", "CEO", IconNames.User, false, false, new List<ITreeNode<string>>
+        {
+            new TreeNode("cto", "CTO", IconNames.User, false, false, new List<ITreeNode<string>>
+            {
+                new TreeNode("dev1", "Alice (Lead Dev)", IconNames.User, true, false, new List<ITreeNode<string>>()),
+                new TreeNode("dev2", "Bob (Dev)", IconNames.User, true, false, new List<ITreeNode<string>>()),
+            }.AsReadOnly()),
+            new TreeNode("cmo", "CMO", IconNames.User, false, false, new List<ITreeNode<string>>
+            {
+                new TreeNode("m1", "Carol (Marketing)", IconNames.User, true, false, new List<ITreeNode<string>>()),
+            }.AsReadOnly()),
+        }.AsReadOnly()),
+    };
+}

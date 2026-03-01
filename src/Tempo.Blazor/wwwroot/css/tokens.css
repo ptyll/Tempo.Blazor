@@ -1,0 +1,163 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor — Design Tokens (Light Theme)
+   Override these in your app to customize the visual design.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Color Palette ──────────────────────────────────────────── */
+
+  /* Primary (blue) */
+  --tm-color-primary-50:   #eff6ff;
+  --tm-color-primary-100:  #dbeafe;
+  --tm-color-primary-200:  #bfdbfe;
+  --tm-color-primary-300:  #93c5fd;
+  --tm-color-primary-400:  #60a5fa;
+  --tm-color-primary-500:  #3b82f6;
+  --tm-color-primary-600:  #2563eb;
+  --tm-color-primary-700:  #1d4ed8;
+  --tm-color-primary-800:  #1e40af;
+  --tm-color-primary-900:  #1e3a8a;
+
+  --tm-color-primary:          var(--tm-color-primary-500);
+  --tm-color-primary-hover:    var(--tm-color-primary-600);
+  --tm-color-primary-active:   var(--tm-color-primary-700);
+  --tm-color-primary-subtle:   var(--tm-color-primary-50);
+  --tm-color-primary-text:     var(--tm-color-primary-800);
+
+  /* Secondary (gray) */
+  --tm-color-secondary:        #6b7280;
+  --tm-color-secondary-hover:  #4b5563;
+  --tm-color-secondary-subtle: #f9fafb;
+
+  /* Danger */
+  --tm-color-danger:           #ef4444;
+  --tm-color-danger-hover:     #dc2626;
+  --tm-color-danger-subtle:    #fef2f2;
+  --tm-color-danger-text:      #991b1b;
+
+  /* Success */
+  --tm-color-success:          #22c55e;
+  --tm-color-success-hover:    #16a34a;
+  --tm-color-success-subtle:   #f0fdf4;
+  --tm-color-success-text:     #166534;
+
+  /* Warning */
+  --tm-color-warning:          #f59e0b;
+  --tm-color-warning-hover:    #d97706;
+  --tm-color-warning-subtle:   #fffbeb;
+  --tm-color-warning-text:     #92400e;
+
+  /* Info */
+  --tm-color-info:             #06b6d4;
+  --tm-color-info-hover:       #0891b2;
+  --tm-color-info-subtle:      #ecfeff;
+  --tm-color-info-text:        #164e63;
+
+  /* Soft badge border colors */
+  --tm-color-primary-soft-border: var(--tm-color-primary-200);
+  --tm-color-success-soft-border: #bbf7d0;
+  --tm-color-warning-soft-border: #fde68a;
+  --tm-color-danger-soft-border:  #fecaca;
+  --tm-color-info-soft-border:    #a5f3fc;
+
+  /* ── Neutrals ───────────────────────────────────────────────── */
+  --tm-color-white:            #ffffff;
+  --tm-color-gray-50:          #f9fafb;
+  --tm-color-gray-100:         #f3f4f6;
+  --tm-color-gray-200:         #e5e7eb;
+  --tm-color-gray-300:         #d1d5db;
+  --tm-color-gray-400:         #9ca3af;
+  --tm-color-gray-500:         #6b7280;
+  --tm-color-gray-600:         #4b5563;
+  --tm-color-gray-700:         #374151;
+  --tm-color-gray-800:         #1f2937;
+  --tm-color-gray-900:         #111827;
+
+  /* ── Semantic Surface Colors ────────────────────────────────── */
+  --tm-bg-page:                var(--tm-color-white);
+  --tm-bg-surface:             var(--tm-color-white);
+  --tm-bg-surface-secondary:   var(--tm-color-gray-50);
+  --tm-bg-muted:               var(--tm-color-gray-100);
+  --tm-bg-overlay:             rgba(0, 0, 0, 0.5);
+
+  /* ── Border ─────────────────────────────────────────────────── */
+  --tm-border-color:           var(--tm-color-gray-200);
+  --tm-border-color-focus:     var(--tm-color-primary);
+
+  /* ── Text ───────────────────────────────────────────────────── */
+  --tm-text-primary:           var(--tm-color-gray-900);
+  --tm-text-secondary:         var(--tm-color-gray-500);
+  --tm-text-tertiary:          var(--tm-color-gray-400);
+  --tm-text-disabled:          var(--tm-color-gray-400);
+  --tm-text-inverse:           var(--tm-color-white);
+  --tm-text-link:              var(--tm-color-primary);
+
+  /* ── Typography ─────────────────────────────────────────────── */
+  --tm-font-sans:              system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tm-font-mono:              ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+  --tm-font-size-xs:           0.75rem;
+  --tm-font-size-sm:           0.875rem;
+  --tm-font-size-md:           1rem;
+  --tm-font-size-lg:           1.125rem;
+  --tm-font-size-xl:           1.25rem;
+  --tm-font-size-2xl:          1.5rem;
+  --tm-font-size-3xl:          1.875rem;
+  --tm-font-weight-normal:     400;
+  --tm-font-weight-medium:     500;
+  --tm-font-weight-semibold:   600;
+  --tm-font-weight-bold:       700;
+  --tm-line-height-tight:      1.25;
+  --tm-line-height-normal:     1.5;
+  --tm-line-height-relaxed:    1.75;
+
+  /* ── Spacing ────────────────────────────────────────────────── */
+  --tm-space-1:  0.25rem;   /* 4px */
+  --tm-space-2:  0.5rem;    /* 8px */
+  --tm-space-3:  0.75rem;   /* 12px */
+  --tm-space-4:  1rem;      /* 16px */
+  --tm-space-5:  1.25rem;   /* 20px */
+  --tm-space-6:  1.5rem;    /* 24px */
+  --tm-space-8:  2rem;      /* 32px */
+  --tm-space-10: 2.5rem;    /* 40px */
+  --tm-space-12: 3rem;      /* 48px */
+  --tm-space-16: 4rem;      /* 64px */
+
+  /* ── Border Radius ──────────────────────────────────────────── */
+  --tm-radius-none:   0;
+  --tm-radius-sm:     0.25rem;
+  --tm-radius-md:     0.375rem;
+  --tm-radius-lg:     0.5rem;
+  --tm-radius-xl:     0.75rem;
+  --tm-radius-2xl:    1rem;
+  --tm-radius-full:   9999px;
+
+  /* ── Shadows ────────────────────────────────────────────────── */
+  --tm-shadow-sm:           0 1px 2px 0 rgba(0,0,0,0.05);
+  --tm-shadow-md:           0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --tm-shadow-lg:           0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --tm-shadow-xl:           0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  --tm-shadow-focus:        0 0 0 3px rgba(59,130,246,0.4);
+  --tm-shadow-focus-danger: 0 0 0 3px rgba(239,68,68,0.3);
+
+  /* ── Transitions ────────────────────────────────────────────── */
+  --tm-transition-fast:   100ms ease;
+  --tm-transition-normal: 200ms ease;
+  --tm-transition-slow:   300ms ease;
+
+  /* ── Z-Index Scale ──────────────────────────────────────────── */
+  --tm-z-dropdown:    1000;
+  --tm-z-sticky:      1020;
+  --tm-z-modal:       1040;
+  --tm-z-overlay:     1060;
+  --tm-z-toast:       1080;
+  --tm-z-tooltip:     1090;
+
+  /* ── Component-specific ─────────────────────────────────────── */
+  --tm-input-height-xs:  1.75rem;
+  --tm-input-height-sm:  2rem;
+  --tm-input-height-md:  2.375rem;
+  --tm-input-height-lg:  2.75rem;
+  --tm-sidebar-width:    16rem;
+  --tm-sidebar-collapsed: 3.5rem;
+  --tm-topbar-height:    3.5rem;
+}

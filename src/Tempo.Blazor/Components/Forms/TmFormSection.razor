@@ -1,0 +1,63 @@
+@namespace Tempo.Blazor.Components.Forms
+
+<section class="tm-form-section @Class">
+    @if (!string.IsNullOrEmpty(Title) || Collapsible)
+    {
+        <div class="tm-form-section-header @(Collapsible ? "tm-form-section-header--collapsible" : string.Empty)"
+             @onclick="ToggleCollapse">
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <h3 class="tm-form-section-title">@Title</h3>
+            }
+            @if (Collapsible)
+            {
+                <span class="tm-form-section-toggle" aria-hidden="true">@(_isExpanded ? "▲" : "▼")</span>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <p class="tm-form-section-desc">@Description</p>
+    }
+
+    @if (_isExpanded)
+    {
+        <div class="tm-form-section-body">
+            @ChildContent
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>Section heading displayed in the header.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Optional description text below the heading.</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Content rendered inside the section body.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>When true, the section header is clickable and can collapse the body.</summary>
+    [Parameter] public bool Collapsible { get; set; }
+
+    /// <summary>When true and Collapsible is true, the section starts collapsed.</summary>
+    [Parameter] public bool CollapsedByDefault { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private bool _isExpanded = true;
+
+    protected override void OnInitialized()
+    {
+        _isExpanded = !CollapsedByDefault;
+    }
+
+    private void ToggleCollapse()
+    {
+        if (Collapsible)
+            _isExpanded = !_isExpanded;
+    }
+}

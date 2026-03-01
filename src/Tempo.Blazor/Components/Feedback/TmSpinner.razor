@@ -1,0 +1,37 @@
+@namespace Tempo.Blazor.Components.Feedback
+
+<svg class="tm-spinner @SizeClass @ColorClass"
+     viewBox="0 0 24 24"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="2"
+     aria-hidden="true"
+     role="status">
+    <circle cx="12" cy="12" r="10"
+            stroke-dasharray="60"
+            stroke-dashoffset="15" />
+</svg>
+
+@code {
+    /// <summary>Display size of the spinner. Defaults to Sm.</summary>
+    [Parameter] public SpinnerSize Size { get; set; } = SpinnerSize.Sm;
+
+    /// <summary>Color variant of the spinner. Defaults to Current.</summary>
+    [Parameter] public SpinnerColor Color { get; set; } = SpinnerColor.Current;
+
+    private string SizeClass => Size switch
+    {
+        SpinnerSize.Xs => "tm-spinner-xs",
+        SpinnerSize.Sm => "tm-spinner-sm",
+        SpinnerSize.Md => "tm-spinner-md",
+        SpinnerSize.Lg => "tm-spinner-lg",
+        _              => "tm-spinner-sm"
+    };
+
+    private string ColorClass => Color switch
+    {
+        SpinnerColor.Primary => "tm-spinner-primary",
+        SpinnerColor.White   => "tm-spinner-white",
+        _                    => "tm-spinner-current"
+    };
+}

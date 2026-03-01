@@ -1,0 +1,39 @@
+@page "/dashboard"
+@using Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Interfaces
+
+<PageTitle>Dashboard – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Dashboard</h1>
+    <p class="text-slate-600 dark:text-slate-400">Customizable dashboard with draggable widgets, views, and real-time data.</p>
+</div>
+
+<!-- Dashboard Component -->
+<section class="demo-section">
+    <TmDashboard @ref="_dashboard"
+                 UserId="CurrentUserId"
+                 ShowTitle="false"
+                 AllowEdit="true"
+                 OnDashboardChanged="OnDashboardChanged" />
+</section>
+
+@code {
+    [Inject] public IDashboardProvider DashboardProvider { get; set; } = default!;
+    [Inject] public IWidgetRegistry WidgetRegistry { get; set; } = default!;
+    
+    private TmDashboard? _dashboard;
+    private string CurrentUserId => "demo-user";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Widgets are already registered in InMemoryWidgetRegistry
+        await base.OnInitializedAsync();
+    }
+    
+    private void OnDashboardChanged(DashboardConfig dashboard)
+    {
+        Console.WriteLine($"Dashboard changed: {dashboard.Name} with {dashboard.Widgets.Count} widgets");
+    }
+}

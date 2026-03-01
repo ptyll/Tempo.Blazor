@@ -1,0 +1,32 @@
+@namespace Tempo.Blazor.Components.Toolbar
+
+<div class="tm-toolbar @(Sticky ? "tm-toolbar--sticky" : string.Empty) @Class">
+    <div class="tm-toolbar-start">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <span class="tm-toolbar-title">@Title</span>
+        }
+        @ChildContent
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="tm-toolbar-actions">@Actions</div>
+    }
+</div>
+
+@code {
+    /// <summary>Optional title displayed at the start of the toolbar.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Content for the left/start section of the toolbar.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Content for the right/actions section of the toolbar.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>When true, the toolbar sticks to the top of its scroll container.</summary>
+    [Parameter] public bool Sticky { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+}

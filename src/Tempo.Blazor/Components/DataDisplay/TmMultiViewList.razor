@@ -1,0 +1,404 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Filters
+@using Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Components.Inputs
+
+<div class="tm-multi-view-list @Class">
+    
+    @* ── Toolbar ─────────────────────────────────────────────── *@
+    <div class="tm-mvl-toolbar">
+        @* Left: Search *@
+        @if (ShowSearch)
+        {
+            <div class="tm-mvl-toolbar-left">
+                <TmSearchInput Value="@_searchText" 
+                               ValueChanged="OnSearchChangedAsync" 
+                               Placeholder="@Loc["TmDataTable_SearchPlaceholder"]" />
+            </div>
+        }
+        
+        @* Right: View switcher, Column picker, View manager *@
+        <div class="tm-mvl-toolbar-right">
+            @if (ShowViewSwitcher)
+            {
+                <div class="tm-mvl-switcher">
+                    <button type="button"
+                            class="tm-mvl-switch-table @(_viewMode == ListViewMode.Table ? "tm-mvl-switch--active" : "")"
+                            aria-label="@Loc["TmMvl_TableView"]"
+                            @onclick="() => SwitchView(ListViewMode.Table)">
+                        <span>&#9783;</span>
+                    </button>
+                    <button type="button"
+                            class="tm-mvl-switch-card @(_viewMode == ListViewMode.Card ? "tm-mvl-switch--active" : "")"
+                            aria-label="@Loc["TmMvl_CardView"]"
+                            @onclick="() => SwitchView(ListViewMode.Card)">
+                        <span>&#9645;</span>
+                    </button>
+                    <button type="button"
+                            class="tm-mvl-switch-list @(_viewMode == ListViewMode.List ? "tm-mvl-switch--active" : "")"
+                            aria-label="@Loc["TmMvl_ListView"]"
+                            @onclick="() => SwitchView(ListViewMode.List)">
+                        <span>&#9776;</span>
+                    </button>
+                </div>
+            }
+            @if (ViewProvider is not null)
+            {
+                <TmViewManager Provider="ViewProvider"
+                               ViewContext="@ViewContext"
+                               OnViewApplied="ApplyViewAsync"
+                               GetCurrentView="GetCurrentView"
+                               GetCurrentFilters="() => _externalFilters"
+                               AvailableColumns="GetAvailableColumns()"
+                               FilterDefinitions="ViewFilterDefinitions"
+                               CanCreateTenantViews="ViewCanCreateTenantViews"
+                               CurrentUserId="CurrentUserId"
+                               CurrentTenantId="CurrentTenantId" />
+            }
+        </div>
+    </div>
+
+    @* ── External Filter Builder ────────────────────────────── *@
+    @if (ShowExternalFilterBuilder && ViewProvider is not null && ExternalFilterDefinitions?.Any() == true)
+    {
+        <div class="tm-mvl-external-filters" @key="_activeViewId">
+            <TmFilterBuilder FilterDefinitions="ExternalFilterDefinitions"
+                             ActiveFilters="_externalFilters"
+                             OnFiltersChanged="OnExternalFiltersChanged"
+                             ShowClearAll="true" />
+        </div>
+    }
+
+    @* ── Content ─────────────────────────────────────────────── *@
+    @if (!HasItems)
+    {
+        <TmEmptyState Title="@(!string.IsNullOrEmpty(EmptyTitle) ? EmptyTitle : Loc["Tm_NoResults"])" />
+    }
+    else if (_viewMode == ListViewMode.Table)
+    {
+        <table class="tm-mvl-table">
+            <thead>
+                <tr>
+                    @if (_visibleColumns.Contains("Title"))
+                    {
+                        <th>@Loc["TmMvl_ColTitle"]</th>
+                    }
+                    @if (_visibleColumns.Contains("SubTitle"))
+                    {
+                        <th>@Loc["TmMvl_ColSubTitle"]</th>
+                    }
+                    @if (_visibleColumns.Contains("Status"))
+                    {
+                        <th>@Loc["TmMvl_ColStatus"]</th>
+                    }
+                    @if (_visibleColumns.Contains("Date"))
+                    {
+                        <th>@Loc["TmMvl_ColDate"]</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in FilteredItems!)
+                {
+                    var it = item;
+                    <tr class="tm-mvl-row" @onclick="async () => await OnItemClick.InvokeAsync(it)">
+                        @if (_visibleColumns.Contains("Title"))
+                        {
+                            <td>
+                                @if (!string.IsNullOrEmpty(it.AvatarUrl))
+                                {
+                                    <img src="@it.AvatarUrl" alt="" class="tm-mvl-avatar" />
+                                }
+                                <span>@it.Title</span>
+                            </td>
+                        }
+                        @if (_visibleColumns.Contains("SubTitle"))
+                        {
+                            <td>@it.SubTitle</td>
+                        }
+                        @if (_visibleColumns.Contains("Status"))
+                        {
+                            <td>
+                                @if (!string.IsNullOrEmpty(it.StatusLabel))
+                                {
+                                    <span class="tm-mvl-status"
+                                          style="@(!string.IsNullOrEmpty(it.StatusColor) ? $"background:{it.StatusColor}" : "")">
+                                        @it.StatusLabel
+                                    </span>
+                                }
+                            </td>
+                        }
+                        @if (_visibleColumns.Contains("Date"))
+                        {
+                            <td>@(it.Date?.ToString("d"))</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (_viewMode == ListViewMode.Card)
+    {
+        <div class="tm-mvl-card-grid">
+            @foreach (var item in FilteredItems!)
+            {
+                var it = item;
+                <div class="tm-mvl-card" @onclick="async () => await OnItemClick.InvokeAsync(it)">
+                    <div class="tm-mvl-card-header">
+                        @if (_visibleColumns.Contains("Avatar") && !string.IsNullOrEmpty(it.AvatarUrl))
+                        {
+                            <img src="@it.AvatarUrl" alt="" class="tm-mvl-card-avatar" />
+                        }
+                        <div class="tm-mvl-card-info">
+                            <div class="tm-mvl-card-title-row">
+                                @if (_visibleColumns.Contains("Title"))
+                                {
+                                    <span class="tm-mvl-card-title">@it.Title</span>
+                                }
+                                @if (_visibleColumns.Contains("Status") && !string.IsNullOrEmpty(it.StatusLabel))
+                                {
+                                    <span class="tm-mvl-status"
+                                          style="@(!string.IsNullOrEmpty(it.StatusColor) ? $"background:{it.StatusColor}" : "")">
+                                        @it.StatusLabel
+                                    </span>
+                                }
+                            </div>
+                            @if (_visibleColumns.Contains("SubTitle") && !string.IsNullOrEmpty(it.SubTitle))
+                            {
+                                <span class="tm-mvl-card-subtitle">@it.SubTitle</span>
+                            }
+                        </div>
+                    </div>
+                    
+                    @if (_visibleColumns.Contains("Date") && it.Date.HasValue)
+                    {
+                        <div class="tm-mvl-card-footer">
+                            <span class="tm-mvl-card-date">@it.Date.Value.ToString("d")</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (_viewMode == ListViewMode.List)
+    {
+        <ul class="tm-mvl-list">
+            @foreach (var item in FilteredItems!)
+            {
+                var it = item;
+                <li class="tm-mvl-list-item" @onclick="async () => await OnItemClick.InvokeAsync(it)">
+                    @if (_visibleColumns.Contains("Avatar") && !string.IsNullOrEmpty(it.AvatarUrl))
+                    {
+                        <img src="@it.AvatarUrl" alt="" class="tm-mvl-avatar" />
+                    }
+                    <div class="tm-mvl-list-item-body">
+                        @if (_visibleColumns.Contains("Title"))
+                        {
+                            <span class="tm-mvl-list-item-title">@it.Title</span>
+                        }
+                        @if (_visibleColumns.Contains("SubTitle") && !string.IsNullOrEmpty(it.SubTitle))
+                        {
+                            <span class="tm-mvl-list-item-subtitle">@it.SubTitle</span>
+                        }
+                    </div>
+                    @if (_visibleColumns.Contains("Status") && !string.IsNullOrEmpty(it.StatusLabel))
+                    {
+                        <span class="tm-mvl-status"
+                              style="@(!string.IsNullOrEmpty(it.StatusColor) ? $"background:{it.StatusColor}" : "")">
+                            @it.StatusLabel
+                        </span>
+                    }
+                    @if (_visibleColumns.Contains("Date") && it.Date.HasValue)
+                    {
+                        <span class="tm-mvl-list-item-date">@it.Date.Value.ToString("d")</span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>Items to display in the list.</summary>
+    [Parameter] public IReadOnlyList<IMultiViewListItem>? Items { get; set; }
+
+    /// <summary>Current display mode (Table/Card/List). Two-way bindable.</summary>
+    [Parameter] public ListViewMode ViewMode { get; set; } = ListViewMode.Table;
+
+    /// <summary>Fires when the user switches the view mode.</summary>
+    [Parameter] public EventCallback<ListViewMode> ViewModeChanged { get; set; }
+
+    /// <summary>Fires when an item row/card is clicked.</summary>
+    [Parameter] public EventCallback<IMultiViewListItem> OnItemClick { get; set; }
+
+    /// <summary>When true, shows the view-mode switcher buttons above the list.</summary>
+    [Parameter] public bool ShowViewSwitcher { get; set; } = true;
+
+    /// <summary>When true, shows the global search input.</summary>
+    [Parameter] public bool ShowSearch { get; set; } = true;
+
+    /// <summary>Title for the empty state when Items is empty.</summary>
+    [Parameter] public string? EmptyTitle { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    // ── View Manager Parameters ───────────────────────────────────
+    
+    /// <summary>
+    /// Unique identifier for this list instance. 
+    /// Used to scope saved views to specific lists (e.g., "team-members", "projects").
+    /// </summary>
+    [Parameter, EditorRequired] public string ViewContext { get; set; } = default!;
+    
+    /// <summary>Optional view persistence provider. When set, shows TmViewManager.</summary>
+    [Parameter] public IDataTableViewProvider? ViewProvider { get; set; }
+
+    /// <summary>Filter definitions for the view manager filter builder.</summary>
+    [Parameter] public List<FilterDefinition> ViewFilterDefinitions { get; set; } = [];
+
+    /// <summary>When true, shows FilterBuilder for external filtering.</summary>
+    [Parameter] public bool ShowExternalFilterBuilder { get; set; } = true;
+
+    /// <summary>Filter definitions for the external filter builder.</summary>
+    [Parameter] public List<FilterDefinition> ExternalFilterDefinitions { get; set; } = [];
+
+    /// <summary>Whether the user can create tenant-wide views.</summary>
+    [Parameter] public bool ViewCanCreateTenantViews { get; set; }
+
+    /// <summary>Current user ID for personal view scoping.</summary>
+    [Parameter] public string? CurrentUserId { get; set; }
+
+    /// <summary>Current tenant ID for tenant view scoping.</summary>
+    [Parameter] public string? CurrentTenantId { get; set; }
+
+    // ── State ─────────────────────────────────────────────────────
+    private ListViewMode _viewMode = ListViewMode.Table;
+    private string _searchText = string.Empty;
+    private List<ActiveFilter> _externalFilters = [];
+    private string? _activeViewId;
+    private HashSet<string> _visibleColumns = ["Title", "SubTitle", "Status", "Date"];
+
+    private bool HasItems => FilteredItems?.Count > 0;
+
+    private IReadOnlyList<IMultiViewListItem>? FilteredItems
+    {
+        get
+        {
+            if (Items == null) return null;
+            
+            var query = Items.AsEnumerable();
+            
+            // Apply search
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var term = _searchText.Trim().ToLowerInvariant();
+                query = query.Where(i => 
+                    (i.Title?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (i.SubTitle?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (i.StatusLabel?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+            
+            // Apply filters
+            foreach (var filter in _externalFilters)
+            {
+                query = ApplyFilter(query, filter);
+            }
+            
+            return query.ToList();
+        }
+    }
+
+    private IEnumerable<IMultiViewListItem> ApplyFilter(IEnumerable<IMultiViewListItem> query, ActiveFilter filter)
+    {
+        var value = filter.DisplayValue?.ToLowerInvariant() ?? "";
+        return filter.FieldName.ToLowerInvariant() switch
+        {
+            "title" => query.Where(i => i.Title?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false),
+            "subtitle" => query.Where(i => i.SubTitle?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false),
+            "status" => query.Where(i => i.StatusLabel?.Equals(value, StringComparison.OrdinalIgnoreCase) ?? false),
+            _ => query
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        _viewMode = ViewMode;
+    }
+
+    private async Task SwitchView(ListViewMode mode)
+    {
+        _viewMode = mode;
+        await ViewModeChanged.InvokeAsync(mode);
+    }
+
+    private async Task OnSearchChangedAsync(string? value)
+    {
+        _searchText = value ?? string.Empty;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private async Task OnExternalFiltersChanged(IEnumerable<ActiveFilter> filters)
+    {
+        _externalFilters = filters.ToList();
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private async Task ApplyViewAsync(DataTableView view)
+    {
+        _activeViewId = view.Id;
+        
+        // Update visible columns
+        if (view.VisibleColumns?.Count > 0)
+        {
+            _visibleColumns = new HashSet<string>(view.VisibleColumns);
+        }
+        
+        // Update filters
+        _externalFilters = view.Filters?.Where(f => !string.IsNullOrEmpty(f.Value)).Select(f => new ActiveFilter(
+            f.FieldName,
+            f.FieldName,
+            ParseFilterOperator(f.Operator),
+            f.Value,
+            f.Value
+        )).ToList() ?? [];
+        
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private DataTableView GetCurrentView() => new()
+    {
+        Name = "Current",
+        VisibleColumns = _visibleColumns.ToList(),
+        Filters = _externalFilters.Select(f => new FilterConfig
+        {
+            FieldName = f.FieldName,
+            Operator = f.Operator.ToString(),
+            Value = f.Value?.ToString() ?? ""
+        }).ToList()
+    };
+
+    private List<ViewColumnInfo> GetAvailableColumns() =>
+    [
+        new ViewColumnInfo { Key = "Title", Title = "Title", Visible = _visibleColumns.Contains("Title") },
+        new ViewColumnInfo { Key = "SubTitle", Title = "Sub Title", Visible = _visibleColumns.Contains("SubTitle") },
+        new ViewColumnInfo { Key = "Status", Title = "Status", Visible = _visibleColumns.Contains("Status") },
+        new ViewColumnInfo { Key = "Date", Title = "Date", Visible = _visibleColumns.Contains("Date") },
+        new ViewColumnInfo { Key = "Avatar", Title = "Avatar", Visible = _visibleColumns.Contains("Avatar") }
+    ];
+
+    private static FilterOperator ParseFilterOperator(string? op) => op?.ToLowerInvariant() switch
+    {
+        "contains" => FilterOperator.Contains,
+        "equals" => FilterOperator.Equals,
+        "notequals" => FilterOperator.NotEquals,
+        "greaterthan" => FilterOperator.GreaterThan,
+        "lessthan" => FilterOperator.LessThan,
+        _ => FilterOperator.Contains
+    };
+}

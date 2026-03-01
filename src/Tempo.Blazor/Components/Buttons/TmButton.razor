@@ -1,0 +1,115 @@
+@namespace Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Feedback
+
+<button type="@HtmlType"
+        class="@CssClass"
+        disabled="@(Disabled || IsLoading)"
+        tabindex="@TabIndex"
+        aria-label="@AriaLabel"
+        @onclick="HandleClickAsync"
+        @onkeydown="HandleKeyDownAsync"
+        @onkeydown:preventDefault>
+
+    @if (IsLoading)
+    {
+        <TmSpinner Size="SpinnerSize.Sm" />
+    }
+    else if (!string.IsNullOrEmpty(Icon) && !IconRight)
+    {
+        <TmIcon Name="@Icon" Size="IconSize.Sm" />
+    }
+
+    @ChildContent
+
+    @if (!IsLoading && !string.IsNullOrEmpty(Icon) && IconRight)
+    {
+        <TmIcon Name="@Icon" Size="IconSize.Sm" />
+    }
+</button>
+
+@code {
+    /// <summary>HTML button type attribute. Defaults to Button.</summary>
+    [Parameter] public ButtonType Type { get; set; } = ButtonType.Button;
+
+    /// <summary>Visual style variant. Defaults to Primary.</summary>
+    [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    /// <summary>Size variant. Defaults to Md.</summary>
+    [Parameter] public ButtonSize Size { get; set; } = ButtonSize.Md;
+
+    /// <summary>Icon name (use IconNames constants). Shown left of content by default.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>When true the icon renders after the child content.</summary>
+    [Parameter] public bool IconRight { get; set; }
+
+    /// <summary>Shows a loading spinner and disables the button.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Disables the button.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Stretches the button to full width of its container.</summary>
+    [Parameter] public bool Block { get; set; }
+
+    /// <summary>Tab order index. Defaults to 0.</summary>
+    [Parameter] public int TabIndex { get; set; } = 0;
+
+    /// <summary>Accessible label. Omitted from HTML when null.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>Fired when the button is clicked (and not disabled/loading).</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>Button content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class(es) to apply to the button.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string HtmlType => Type switch
+    {
+        ButtonType.Submit => "submit",
+        ButtonType.Reset  => "reset",
+        _                 => "button"
+    };
+
+    private string CssClass
+    {
+        get
+        {
+            var variantClass = Variant switch
+            {
+                ButtonVariant.Secondary => "tm-btn-secondary",
+                ButtonVariant.Ghost     => "tm-btn-ghost",
+                ButtonVariant.Danger    => "tm-btn-danger",
+                ButtonVariant.Outline   => "tm-btn-outline",
+                ButtonVariant.Link      => "tm-btn-link",
+                ButtonVariant.Default   => "tm-btn-default",
+                _                       => "tm-btn-primary"
+            };
+            var sizeClass = Size switch
+            {
+                ButtonSize.Xs => "tm-btn-xs",
+                ButtonSize.Sm => "tm-btn-sm",
+                ButtonSize.Lg => "tm-btn-lg",
+                _             => "tm-btn-md"
+            };
+            var baseClass = $"tm-btn {variantClass} {sizeClass}{(Block ? " tm-btn-block" : "")}";
+            return string.IsNullOrWhiteSpace(Class) ? baseClass : $"{baseClass} {Class}";
+        }
+    }
+
+    private async Task HandleClickAsync()
+    {
+        if (!Disabled && !IsLoading)
+            await OnClick.InvokeAsync();
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+            await HandleClickAsync();
+    }
+}

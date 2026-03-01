@@ -1,0 +1,149 @@
+@namespace Tempo.Blazor.Components.Workflow
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-stepper @OrientationClass @GetSizeClass()">
+    @{
+        var steps = Steps?.ToList() ?? new List<IStepItem>();
+    }
+    @for (int i = 0; i < steps.Count; i++)
+    {
+        var step = steps[i];
+        var index = i;
+        var isCompleted = index < ActiveStep;
+        var isActive = index == ActiveStep;
+        var isPending = index > ActiveStep;
+        var isLast = index == steps.Count - 1;
+        
+        <div class="tm-stepper-item @(isLast ? "tm-stepper-item--last" : "")">
+            @* Connector line (not for last item) *@
+            @if (!isLast && ShowConnectors)
+            {
+                <div class="tm-stepper-connector">
+                    <div class="tm-stepper-connector-line @GetConnectorClass(isCompleted)"></div>
+                </div>
+            }
+            
+            @* Step content *@
+            <div class="tm-stepper-step @GetStepClass(index)"
+                 @onclick="() => HandleStepClick(index)"
+                 role="button"
+                 tabindex="@(AllowStepClick && (isCompleted || isActive) ? 0 : -1)"
+                 aria-current="@(isActive ? "step" : "false")"
+                 aria-disabled="@(isPending && !AllowStepClick ? "true" : "false")">
+                
+                @* Step indicator (circle with number or icon) *@
+                <div class="tm-stepper-indicator">
+                    @if (isCompleted && ShowCheckIcon)
+                    {
+                        <TmIcon Name="check" Size="GetIconSize()" />
+                    }
+                    else if (isActive && ActiveIcon is not null)
+                    {
+                        <TmIcon Name="@ActiveIcon" Size="GetIconSize()" />
+                    }
+                    else if (step.Icon is not null)
+                    {
+                        <TmIcon Name="@step.Icon" Size="GetIconSize()" />
+                    }
+                    else
+                    {
+                        <span class="tm-stepper-number">@(index + 1)</span>
+                    }
+                </div>
+                
+                @* Step label and description *@
+                <div class="tm-stepper-content">
+                    <div class="tm-stepper-label">
+                        @step.Label
+                    </div>
+                    @if (!string.IsNullOrEmpty(step.Description) && ShowDescriptions)
+                    {
+                        <div class="tm-stepper-description">
+                            @step.Description
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Step definitions in order.</summary>
+    [Parameter] public IEnumerable<IStepItem>? Steps { get; set; }
+
+    /// <summary>Zero-based index of the currently active step.</summary>
+    [Parameter] public int ActiveStep { get; set; }
+
+    /// <summary>Fires when a step is clicked, passing its zero-based index.</summary>
+    [Parameter] public EventCallback<int> OnStepClick { get; set; }
+
+    /// <summary>Layout orientation. Defaults to Horizontal.</summary>
+    [Parameter] public StepperOrientation Orientation { get; set; } = StepperOrientation.Horizontal;
+
+    /// <summary>Size variant. Defaults to Medium.</summary>
+    [Parameter] public StepperSize Size { get; set; } = StepperSize.Medium;
+
+    /// <summary>When true, shows checkmark icon for completed steps.</summary>
+    [Parameter] public bool ShowCheckIcon { get; set; } = true;
+
+    /// <summary>When true, shows connector lines between steps.</summary>
+    [Parameter] public bool ShowConnectors { get; set; } = true;
+
+    /// <summary>When true, shows step descriptions.</summary>
+    [Parameter] public bool ShowDescriptions { get; set; } = true;
+
+    /// <summary>When true, allows clicking on completed and active steps.</summary>
+    [Parameter] public bool AllowStepClick { get; set; } = true;
+
+    /// <summary>Optional icon name for the active step.</summary>
+    [Parameter] public string? ActiveIcon { get; set; }
+
+    private string OrientationClass => Orientation == StepperOrientation.Vertical 
+        ? "tm-stepper--vertical" 
+        : "tm-stepper--horizontal";
+
+    private string GetSizeClass() => $"tm-stepper--{Size.ToString().ToLowerInvariant()}";
+
+    private IconSize GetIconSize() => Size switch
+    {
+        StepperSize.Small => IconSize.Sm,
+        StepperSize.Large => IconSize.Lg,
+        _ => IconSize.Md
+    };
+
+    private string GetStepClass(int index)
+    {
+        var classes = new List<string> { "tm-stepper-step" };
+
+        if (index < ActiveStep)
+            classes.Add("tm-stepper-step--completed");
+        else if (index == ActiveStep)
+            classes.Add("tm-stepper-step--active");
+        else
+            classes.Add("tm-stepper-step--pending");
+
+        if (AllowStepClick && (index <= ActiveStep))
+            classes.Add("tm-stepper-step--clickable");
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetConnectorClass(bool isCompleted)
+    {
+        return isCompleted 
+            ? "tm-stepper-connector-line--completed" 
+            : "tm-stepper-connector-line--pending";
+    }
+
+    private async Task HandleStepClick(int index)
+    {
+        if (!AllowStepClick) return;
+        if (index > ActiveStep) return; // Prevent jumping ahead
+
+        await OnStepClick.InvokeAsync(index);
+    }
+}
+
+

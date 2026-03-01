@@ -1,0 +1,126 @@
+@namespace Tempo.Blazor.Components.Gallery
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.DataDisplay
+
+<div class="tm-image-gallery">
+    @if (IsLoading)
+    {
+        <TmSpinner />
+    }
+    else if (!HasImages)
+    {
+        <TmEmptyState Title="@(!string.IsNullOrEmpty(EmptyTitle) ? EmptyTitle : Loc["TmImageGallery_NoImages"])" />
+    }
+    else
+    {
+        <div class="tm-gallery-grid">
+            @foreach (var (img, idx) in _indexedImages)
+            {
+                var image = img;
+                var i     = idx;
+                <div class="tm-gallery-item" @onclick="async () => await OpenLightboxAsync(image, i)">
+                    <img src="@(image.ThumbnailUrl ?? image.Url)"
+                         alt="@image.Title"
+                         class="tm-gallery-item-img" />
+                    @if (!string.IsNullOrEmpty(image.Title))
+                    {
+                        <div class="tm-gallery-item-title">@image.Title</div>
+                    }
+                </div>
+            }
+        </div>
+
+        <TmLightbox IsOpen="@_lightboxIndex.HasValue"
+                    ImageUrl="@_lightboxUrl"
+                    ImageAlt="@(_currentImage?.Title)"
+                    IsFirst="@(_lightboxIndex == 0)"
+                    IsLast="@(_lightboxIndex == _imageList.Count - 1)"
+                    CurrentIndex="@(_lightboxIndex ?? 0)"
+                    TotalCount="@_imageList.Count"
+                    CanDelete="@CanDelete"
+                    OnClose="CloseLightbox"
+                    OnPrev="PrevImage"
+                    OnNext="NextImage"
+                    OnDelete="DeleteCurrentAsync" />
+    }
+</div>
+
+@code {
+    /// <summary>Images to display in the gallery grid.</summary>
+    [Parameter] public IEnumerable<IGalleryImage>? Images { get; set; }
+
+    /// <summary>When true, shows a loading spinner instead of the grid.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Heading for the empty state when Images is empty.</summary>
+    [Parameter] public string? EmptyTitle { get; set; }
+
+    /// <summary>Fires when an image item is clicked (before lightbox opens).</summary>
+    [Parameter] public EventCallback<IGalleryImage> OnImageClick { get; set; }
+
+    /// <summary>Optional URL resolver for full-size images (ticket-based APIs, legacy).</summary>
+    [Parameter] public IImageUrlResolver? UrlResolver { get; set; }
+
+    /// <summary>Data provider for secure ticket URLs and delete operations.</summary>
+    [Parameter] public IImageGalleryDataProvider? DataProvider { get; set; }
+
+    /// <summary>When true, shows a delete button in the lightbox.</summary>
+    [Parameter] public bool CanDelete { get; set; }
+
+    private List<IGalleryImage>             _imageList     = [];
+    private List<(IGalleryImage img, int)>  _indexedImages = [];
+    private int?                             _lightboxIndex;
+    private string?                          _lightboxUrl;
+    private IGalleryImage?                   _currentImage;
+
+    private bool HasImages => _imageList.Count > 0;
+
+    protected override void OnParametersSet()
+    {
+        _imageList     = Images?.ToList() ?? [];
+        _indexedImages = _imageList.Select((img, i) => (img, i)).ToList();
+    }
+
+    private async Task OpenLightboxAsync(IGalleryImage image, int index)
+    {
+        _lightboxIndex = index;
+        _currentImage  = image;
+        _lightboxUrl   = image.Url;
+
+        if (DataProvider is not null)
+            _lightboxUrl = await DataProvider.GetImageTicketUrlAsync(image.Id);
+
+        await OnImageClick.InvokeAsync(image);
+    }
+
+    private void CloseLightbox()
+    {
+        _lightboxIndex = null;
+        _currentImage  = null;
+        _lightboxUrl   = null;
+    }
+
+    private async Task NextImage()
+    {
+        if (_lightboxIndex.HasValue && _lightboxIndex < _imageList.Count - 1)
+            await OpenLightboxAsync(_imageList[_lightboxIndex.Value + 1], _lightboxIndex.Value + 1);
+    }
+
+    private async Task PrevImage()
+    {
+        if (_lightboxIndex.HasValue && _lightboxIndex > 0)
+            await OpenLightboxAsync(_imageList[_lightboxIndex.Value - 1], _lightboxIndex.Value - 1);
+    }
+
+    private async Task DeleteCurrentAsync()
+    {
+        if (_currentImage is not null && DataProvider is not null)
+        {
+            await DataProvider.DeleteImageAsync(_currentImage.Id);
+            _imageList.Remove(_currentImage);
+            _indexedImages = _imageList.Select((img, i) => (img, i)).ToList();
+            CloseLightbox();
+        }
+    }
+}

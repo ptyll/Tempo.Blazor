@@ -1,0 +1,44 @@
+.tm-tree-view {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+}
+
+.tm-tree-node {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) 0;
+}
+
+.tm-tree-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--tm-text-secondary);
+  border-radius: var(--tm-radius-sm);
+  flex-shrink: 0;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+.tm-tree-expand:hover {
+  background: var(--tm-color-gray-200);
+  color: var(--tm-text-primary);
+}
+
+.tm-tree-node-label {
+  cursor: pointer;
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border-radius: var(--tm-radius-sm);
+  transition: background var(--tm-transition-fast);
+}
+.tm-tree-node-label:hover {
+  background: var(--tm-color-gray-100);
+}

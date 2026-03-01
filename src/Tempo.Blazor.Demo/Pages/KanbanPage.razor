@@ -1,0 +1,84 @@
+@page "/kanban"
+@using Tempo.Blazor.Components.DataDisplay
+
+<PageTitle>Kanban Board – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Kanban Board</h1>
+    <p class="text-slate-600 dark:text-slate-400">Drag-and-drop Kanban board with WIP limits and customizable columns.</p>
+</div>
+
+<section class="demo-section">
+    <TmKanbanBoard TItem="TaskItem"
+                   Columns="_columns"
+                   Items="_tasks"
+                   ColumnSelector="t => t.Status"
+                   CardTemplate="RenderCard"
+                   OnCardClick="HandleCardClick"
+                   OnItemMoved="HandleItemMoved" />
+
+    @if (_clickedTask is not null)
+    {
+        <p class="mt-4 text-sm text-slate-600 dark:text-slate-400">
+            Clicked: <strong>@_clickedTask.Title</strong> (Priority: @_clickedTask.Priority)
+        </p>
+    }
+    @if (_lastMove is not null)
+    {
+        <p class="text-sm text-slate-600 dark:text-slate-400">
+            Last move: <strong>@_lastMove</strong>
+        </p>
+    }
+</section>
+
+@code {
+    private record TaskItem(int Id, string Title, string Status, string Priority, string Assignee);
+
+    private TaskItem? _clickedTask;
+    private string? _lastMove;
+
+    private static readonly RenderFragment<TaskItem> RenderCard = task => __builder =>
+    {
+        <div>
+            <div class="font-medium text-sm">@task.Title</div>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">@task.Priority</span>
+                <span class="text-xs text-slate-500">@task.Assignee</span>
+            </div>
+        </div>
+    };
+
+    private static readonly IReadOnlyList<KanbanColumn> _columns =
+    [
+        new("backlog", "Backlog", "#6b7280"),
+        new("todo", "To Do", "#3b82f6", MaxItems: 5),
+        new("doing", "In Progress", "#f59e0b", MaxItems: 3),
+        new("review", "Review", "#8b5cf6", MaxItems: 2),
+        new("done", "Done", "#10b981"),
+    ];
+
+    private List<TaskItem> _tasks =
+    [
+        new(1, "Design login page", "backlog", "Medium", "Alice"),
+        new(2, "Setup CI/CD pipeline", "backlog", "High", "Bob"),
+        new(3, "Write API docs", "todo", "Low", "Charlie"),
+        new(4, "Implement auth module", "todo", "High", "Alice"),
+        new(5, "Code review PR #42", "doing", "High", "Bob"),
+        new(6, "Fix navigation bug", "doing", "Critical", "Charlie"),
+        new(7, "Update dependencies", "review", "Low", "Alice"),
+        new(8, "Deploy v1.0", "done", "High", "Bob"),
+        new(9, "User testing", "done", "Medium", "Charlie"),
+    ];
+
+    private void HandleCardClick(TaskItem task) => _clickedTask = task;
+
+    private void HandleItemMoved(KanbanMoveEvent<TaskItem> move)
+    {
+        _lastMove = $"'{move.Item.Title}' moved from {move.FromColumn} to {move.ToColumn}";
+        // Update item status
+        var idx = _tasks.FindIndex(t => t.Id == move.Item.Id);
+        if (idx >= 0)
+            _tasks[idx] = move.Item with { Status = move.ToColumn };
+    }
+}

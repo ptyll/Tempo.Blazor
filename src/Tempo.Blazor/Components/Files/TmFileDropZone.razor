@@ -1,0 +1,145 @@
+@namespace Tempo.Blazor.Components.Files
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="@ContainerClass">
+    <div class="tm-file-drop-zone__area @(_isDragging ? "tm-file-drop-zone__area--drag-over" : "")"
+         @ondragenter="HandleDragEnter"
+         @ondragleave="HandleDragLeave"
+         @ondragover:preventDefault="true"
+         @ondrop="HandleDrop">
+        <div class="tm-file-drop-zone__content">
+            @if (ChildContent is not null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                <span class="tm-file-drop-zone__icon">📁</span>
+                <span class="tm-file-drop-zone__hint">
+                    @Loc["TmFileDropZone_DragDrop"]
+                </span>
+                <span class="tm-file-drop-zone__or">@Loc["TmFileDropZone_Or"]</span>
+                <span class="tm-file-drop-zone__browse">@Loc["TmFileDropZone_Browse"]</span>
+            }
+        </div>
+        <InputFile OnChange="HandleFileSelected"
+                   multiple="@Multiple"
+                   accept="@Accept"
+                   disabled="@Disabled"
+                   class="tm-file-drop-zone__input" />
+    </div>
+
+    @if (_selectedFiles.Count > 0)
+    {
+        <div class="tm-file-drop-zone__file-list">
+            @foreach (var file in _selectedFiles)
+            {
+                var f = file;
+                <div class="tm-file-drop-zone__file-item">
+                    <div class="tm-file-drop-zone__file-info">
+                        <span class="tm-file-drop-zone__file-icon">@GetFileIcon(f.Name)</span>
+                        <div class="tm-file-drop-zone__file-details">
+                            <span class="tm-file-drop-zone__file-name">@f.Name</span>
+                            <span class="tm-file-drop-zone__file-size">@FormatSize(f.Size)</span>
+                        </div>
+                    </div>
+                    @if (!Disabled)
+                    {
+                        <button type="button"
+                                class="tm-file-drop-zone__file-remove"
+                                aria-label="Remove"
+                                @onclick="() => RemoveFile(f)">
+                            ×
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Fires when files are selected via click or drag-and-drop.</summary>
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFilesSelected { get; set; }
+
+    /// <summary>Allow selecting multiple files at once.</summary>
+    [Parameter] public bool Multiple { get; set; }
+
+    /// <summary>Accepted file types (e.g. "image/*" or ".pdf,.docx").</summary>
+    [Parameter] public string? Accept { get; set; }
+
+    /// <summary>When true, the drop zone is disabled and no files can be selected.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Optional custom content to display inside the drop zone.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Maximum number of files to accept from a single selection. Default 10.</summary>
+    [Parameter] public int MaxFileCount { get; set; } = 10;
+
+    private List<IBrowserFile> _selectedFiles = [];
+    private bool _isDragging;
+
+    /// <summary>Gets the currently selected files.</summary>
+    public IReadOnlyList<IBrowserFile> SelectedFiles => _selectedFiles;
+
+    private string ContainerClass =>
+        Disabled ? "tm-file-drop-zone tm-file-drop-zone--disabled" : "tm-file-drop-zone";
+
+    private void HandleDragEnter() => _isDragging = true;
+    private void HandleDragLeave() => _isDragging = false;
+    private void HandleDrop() => _isDragging = false;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        if (Multiple)
+        {
+            var files = e.GetMultipleFiles(MaxFileCount);
+            foreach (var file in files)
+            {
+                if (!_selectedFiles.Any(f => f.Name == file.Name && f.Size == file.Size))
+                {
+                    _selectedFiles.Add(file);
+                }
+            }
+        }
+        else
+        {
+            _selectedFiles.Clear();
+            _selectedFiles.Add(e.File);
+        }
+        await OnFilesSelected.InvokeAsync(e);
+    }
+
+    private void RemoveFile(IBrowserFile file)
+    {
+        _selectedFiles.Remove(file);
+    }
+
+    /// <summary>Clears all selected files.</summary>
+    public void ClearFiles()
+    {
+        _selectedFiles.Clear();
+    }
+
+    private static string GetFileIcon(string fileName)
+    {
+        var ext = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => "📄",
+            ".doc" or ".docx" => "📝",
+            ".xls" or ".xlsx" => "📊",
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".svg" => "🖼",
+            ".zip" or ".rar" or ".7z" => "🗜",
+            _ => "📎"
+        };
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:N1} KB";
+        return $"{bytes / (1024.0 * 1024.0):N1} MB";
+    }
+}

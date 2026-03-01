@@ -1,0 +1,562 @@
+@namespace Tempo.Blazor.Components.Workflow
+@using System.Globalization
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="tm-wf-designer">
+    <div class="tm-wf-canvas @(ReadOnly ? "tm-wf-canvas--readonly" : "") @Class"
+         @onclick="HandleCanvasClick">
+        <svg @ref="_svgRef"
+             viewBox="@ViewBoxString"
+             preserveAspectRatio="xMidYMid meet"
+             width="100%"
+             height="100%"
+             aria-label="Workflow designer canvas"
+             role="img">
+
+            <defs>
+                @if (ShowGrid)
+                {
+                    <pattern id="wf-grid-@_instanceId" width="@GridSize" height="@GridSize"
+                             patternUnits="userSpaceOnUse">
+                        <circle cx="1" cy="1" r="0.5" fill="#d1d5db" />
+                    </pattern>
+                }
+                <marker id="wf-arrow-@_instanceId"
+                        markerWidth="10" markerHeight="7"
+                        refX="10" refY="3.5"
+                        orient="auto" markerUnits="strokeWidth">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+                </marker>
+            </defs>
+
+            @if (ShowGrid)
+            {
+                <rect x="@F(_viewBoxX)" y="@F(_viewBoxY)"
+                      width="@F(_viewBoxW)" height="@F(_viewBoxH)"
+                      fill="url(#wf-grid-@_instanceId)" />
+            }
+
+            @CanvasContent
+        </svg>
+
+        @if (_ctxMenuVisible && !ReadOnly)
+        {
+            <div class="tm-wf-context-menu" role="menu"
+                 style="left: @(_ctxMenuClientX.ToString("0", System.Globalization.CultureInfo.InvariantCulture))px; top: @(_ctxMenuClientY.ToString("0", System.Globalization.CultureInfo.InvariantCulture))px;">
+                @if (_ctxMenuStateId is not null)
+                {
+                    <button class="tm-wf-context-menu__item" role="menuitem"
+                            @onclick="ContextSelectState">
+                        Edit properties
+                    </button>
+                    <div class="tm-wf-context-menu__divider" role="separator"></div>
+                    <button class="tm-wf-context-menu__item tm-wf-context-menu__item--danger" role="menuitem"
+                            @onclick="ContextDeleteState">
+                        Delete state
+                    </button>
+                }
+                else if (_ctxMenuTransitionId is not null)
+                {
+                    <button class="tm-wf-context-menu__item" role="menuitem"
+                            @onclick="ContextSelectTransition">
+                        Edit properties
+                    </button>
+                    <div class="tm-wf-context-menu__divider" role="separator"></div>
+                    <button class="tm-wf-context-menu__item tm-wf-context-menu__item--danger" role="menuitem"
+                            @onclick="ContextDeleteTransition">
+                        Delete transition
+                    </button>
+                }
+                else
+                {
+                    <button class="tm-wf-context-menu__item" role="menuitem"
+                            @onclick="@(() => ContextAddState(CanvasStateType.Initial))">
+                        <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--initial"></span>
+                        Add initial state
+                    </button>
+                    <button class="tm-wf-context-menu__item" role="menuitem"
+                            @onclick="@(() => ContextAddState(CanvasStateType.Intermediate))">
+                        <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--intermediate"></span>
+                        Add state
+                    </button>
+                    <button class="tm-wf-context-menu__item" role="menuitem"
+                            @onclick="@(() => ContextAddState(CanvasStateType.Final))">
+                        <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--final"></span>
+                        Add final state
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const int DefaultW = 800;
+    private const int DefaultH = 500;
+    private const int NodeW = 140;
+    private const int NodeH = 50;
+    private const int PortR = 6;
+
+    private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
+    private ElementReference _svgRef;
+    private DotNetObjectReference<TmWorkflowDesignerCanvas>? _dotNetRef;
+    private bool _jsInitialized;
+
+    private double _viewBoxX;
+    private double _viewBoxY;
+    private double _viewBoxW = DefaultW;
+    private double _viewBoxH = DefaultH;
+
+    // Context menu state
+    private bool _ctxMenuVisible;
+    private double _ctxMenuClientX;
+    private double _ctxMenuClientY;
+    private double _ctxMenuSvgX;
+    private double _ctxMenuSvgY;
+    private string? _ctxMenuStateId;
+    private string? _ctxMenuTransitionId;
+
+    [Parameter, EditorRequired] public WorkflowCanvasDefinition? Definition { get; set; }
+    [Parameter] public EventCallback<WorkflowCanvasDefinition> DefinitionChanged { get; set; }
+    [Parameter] public bool ShowGrid { get; set; } = true;
+    [Parameter] public int GridSize { get; set; } = 20;
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public EventCallback<CanvasState?> OnStateSelected { get; set; }
+    [Parameter] public EventCallback<CanvasTransition?> OnTransitionSelected { get; set; }
+    [Parameter] public string? SelectedStateId { get; set; }
+    [Parameter] public string? SelectedTransitionId { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Fires when zoom level changes (from mouse wheel or JS).</summary>
+    [Parameter] public EventCallback<double> OnZoomLevelChanged { get; set; }
+
+    /// <summary>Current zoom level (1.0 = 100%).</summary>
+    public double ZoomLevel { get; private set; } = 1.0;
+
+    private string ViewBoxString =>
+        $"{F(_viewBoxX)} {F(_viewBoxY)} {F(_viewBoxW)} {F(_viewBoxH)}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_jsInitialized)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("tmWorkflowDesigner.init", _svgRef, _dotNetRef, ReadOnly);
+                _jsInitialized = true;
+            }
+            catch (JSException) { /* bUnit - no JS runtime */ }
+            catch (InvalidOperationException) { /* prerender */ }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsInitialized)
+        {
+            try { await JS.InvokeVoidAsync("tmWorkflowDesigner.destroy", _svgRef); }
+            catch { /* disposal */ }
+        }
+        _dotNetRef?.Dispose();
+    }
+
+    // ── JS callbacks ──
+
+    [JSInvokable]
+    public void OnNodeDragged(string stateId, double x, double y)
+    {
+        if (Definition is null) return;
+        var state = Definition.States.FirstOrDefault(s => s.Id == stateId);
+        if (state is null) return;
+
+        // Snap to grid
+        var snappedX = Math.Round(x / GridSize) * GridSize;
+        var snappedY = Math.Round(y / GridSize) * GridSize;
+
+        state.X = snappedX;
+        state.Y = snappedY;
+
+        DefinitionChanged.InvokeAsync(Definition);
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnTransitionCreated(string fromId, string toId)
+    {
+        if (Definition is null) return;
+        // Reject self-loops
+        if (fromId == toId) return;
+        // Reject duplicates
+        if (Definition.Transitions.Any(t => t.FromStateId == fromId && t.ToStateId == toId)) return;
+        // Verify both states exist
+        if (!Definition.States.Any(s => s.Id == fromId) || !Definition.States.Any(s => s.Id == toId)) return;
+
+        var newTransition = new CanvasTransition
+        {
+            Id = Guid.NewGuid().ToString("N")[..8],
+            FromStateId = fromId,
+            ToStateId = toId,
+            Label = "New"
+        };
+        Definition.Transitions.Add(newTransition);
+        DefinitionChanged.InvokeAsync(Definition);
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnZoomChanged(double scale)
+    {
+        ZoomLevel = scale;
+        OnZoomLevelChanged.InvokeAsync(scale);
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnViewBoxChanged(double x, double y, double w, double h)
+    {
+        _viewBoxX = x;
+        _viewBoxY = y;
+        _viewBoxW = w;
+        _viewBoxH = h;
+    }
+
+    [JSInvokable]
+    public void OnContextMenu(double svgX, double svgY, double clientX, double clientY, string? stateId, string? transitionId = null)
+    {
+        _ctxMenuSvgX = svgX;
+        _ctxMenuSvgY = svgY;
+        _ctxMenuClientX = clientX;
+        _ctxMenuClientY = clientY;
+        _ctxMenuStateId = stateId;
+        _ctxMenuTransitionId = transitionId;
+        _ctxMenuVisible = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Context menu actions ──
+
+    private void CloseContextMenu() => _ctxMenuVisible = false;
+
+    private void HandleCanvasClick()
+    {
+        if (_ctxMenuVisible) CloseContextMenu();
+    }
+
+    private void ContextAddState(CanvasStateType type)
+    {
+        AddState(type, _ctxMenuSvgX, _ctxMenuSvgY);
+        CloseContextMenu();
+    }
+
+    private void ContextSelectState()
+    {
+        if (_ctxMenuStateId is not null && Definition is not null)
+        {
+            var state = Definition.States.FirstOrDefault(s => s.Id == _ctxMenuStateId);
+            if (state is not null)
+            {
+                OnStateSelected.InvokeAsync(state);
+            }
+        }
+        CloseContextMenu();
+    }
+
+    private void ContextDeleteState()
+    {
+        if (_ctxMenuStateId is not null)
+        {
+            RemoveState(_ctxMenuStateId);
+        }
+        CloseContextMenu();
+    }
+
+    private void ContextSelectTransition()
+    {
+        if (_ctxMenuTransitionId is not null && Definition is not null)
+        {
+            var transition = Definition.Transitions.FirstOrDefault(t => t.Id == _ctxMenuTransitionId);
+            if (transition is not null)
+            {
+                OnTransitionSelected.InvokeAsync(transition);
+            }
+        }
+        CloseContextMenu();
+    }
+
+    private void ContextDeleteTransition()
+    {
+        if (_ctxMenuTransitionId is not null)
+        {
+            RemoveTransition(_ctxMenuTransitionId);
+        }
+        CloseContextMenu();
+    }
+
+    // ── Public API for Toolbox ──
+
+    public void AddState(CanvasStateType type, double x, double y)
+    {
+        if (Definition is null) return;
+
+        var newState = new CanvasState
+        {
+            Id = Guid.NewGuid().ToString("N")[..8],
+            Name = type switch
+            {
+                CanvasStateType.Initial => "Start",
+                CanvasStateType.Final => "End",
+                _ => "New state"
+            },
+            Type = type,
+            X = Math.Round(x / GridSize) * GridSize,
+            Y = Math.Round(y / GridSize) * GridSize
+        };
+        Definition.States.Add(newState);
+        DefinitionChanged.InvokeAsync(Definition);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void RemoveState(string stateId)
+    {
+        if (Definition is null) return;
+        var state = Definition.States.FirstOrDefault(s => s.Id == stateId);
+        if (state is null) return;
+
+        Definition.States.Remove(state);
+        Definition.Transitions.RemoveAll(t => t.FromStateId == stateId || t.ToStateId == stateId);
+        DefinitionChanged.InvokeAsync(Definition);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void RemoveTransition(string transitionId)
+    {
+        if (Definition is null) return;
+        var transition = Definition.Transitions.FirstOrDefault(t => t.Id == transitionId);
+        if (transition is null) return;
+
+        Definition.Transitions.Remove(transition);
+        DefinitionChanged.InvokeAsync(Definition);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Sets zoom level programmatically (also calls JS to update viewBox).</summary>
+    public void SetZoom(double scale)
+    {
+        ZoomLevel = Math.Clamp(scale, 0.25, 4.0);
+        if (_jsInitialized)
+        {
+            _ = JS.InvokeVoidAsync("tmWorkflowDesigner.zoomTo", _svgRef, ZoomLevel);
+        }
+        OnZoomLevelChanged.InvokeAsync(ZoomLevel);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Fits the canvas view to show all nodes.</summary>
+    public async Task FitToView()
+    {
+        if (_jsInitialized)
+        {
+            var scale = await JS.InvokeAsync<double>("tmWorkflowDesigner.fitToView", _svgRef, 40);
+            ZoomLevel = scale;
+            await OnZoomLevelChanged.InvokeAsync(scale);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // ── Helpers ──
+
+    private static string F(double v) =>
+        v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string GetDefaultColor(CanvasStateType type) => type switch
+    {
+        CanvasStateType.Initial => "#dbeafe",
+        CanvasStateType.Final => "#dcfce7",
+        _ => "#f3f4f6"
+    };
+
+    private Task SelectState(CanvasState state) => OnStateSelected.InvokeAsync(state);
+    private Task SelectTransition(CanvasTransition transition) => OnTransitionSelected.InvokeAsync(transition);
+
+    // ── SVG content via RenderTreeBuilder (avoids <text> vs @<text> Razor conflict) ──
+
+    private RenderFragment CanvasContent => builder =>
+    {
+        if (Definition is null) return;
+        var seq = 0;
+
+        // ── Transitions ──
+        foreach (var t in Definition.Transitions)
+        {
+            var from = Definition.States.FirstOrDefault(s => s.Id == t.FromStateId);
+            var to = Definition.States.FirstOrDefault(s => s.Id == t.ToStateId);
+            if (from is null || to is null) continue;
+
+            var isSel = SelectedTransitionId == t.Id;
+            var pathCss = "tm-wf-transition" + (isSel ? " tm-wf-transition--selected" : "");
+
+            var fx = from.X + NodeW / 2.0;
+            var fy = from.Y + NodeH / 2.0;
+            var tx = to.X + NodeW / 2.0;
+            var ty = to.Y + NodeH / 2.0;
+            var dx = tx - fx;
+            var cx1 = fx + dx * 0.4;
+            var cx2 = tx - dx * 0.4;
+            var pathD = $"M {F(fx)},{F(fy)} C {F(cx1)},{F(fy)} {F(cx2)},{F(ty)} {F(tx)},{F(ty)}";
+
+            var capturedT = t;
+
+            builder.OpenElement(seq++, "g");
+            builder.AddAttribute(seq++, "class", pathCss);
+            builder.AddAttribute(seq++, "data-transition-id", t.Id);
+            builder.AddAttribute(seq++, "style", "cursor: pointer;");
+            builder.AddAttribute(seq++, "onclick",
+                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                    this, () => SelectTransition(capturedT)));
+
+            // Invisible wider hit area
+            builder.OpenElement(seq++, "path");
+            builder.AddAttribute(seq++, "d", pathD);
+            builder.AddAttribute(seq++, "fill", "none");
+            builder.AddAttribute(seq++, "stroke", "transparent");
+            builder.AddAttribute(seq++, "stroke-width", "12");
+            builder.CloseElement();
+
+            // Visible path
+            builder.OpenElement(seq++, "path");
+            builder.AddAttribute(seq++, "d", pathD);
+            builder.AddAttribute(seq++, "fill", "none");
+            builder.AddAttribute(seq++, "stroke", t.Color ?? (isSel ? "#3b82f6" : "#9ca3af"));
+            builder.AddAttribute(seq++, "stroke-width", isSel ? "3" : "2");
+            builder.AddAttribute(seq++, "marker-end", $"url(#wf-arrow-{_instanceId})");
+            builder.CloseElement();
+
+            // Transition label
+            if (t.Label is not null)
+            {
+                var lx = (fx + tx) / 2;
+                var ly = (fy + ty) / 2 - 8;
+                builder.OpenElement(seq++, "text");
+                builder.AddAttribute(seq++, "class", "tm-wf-transition__label");
+                builder.AddAttribute(seq++, "x", F(lx));
+                builder.AddAttribute(seq++, "y", F(ly));
+                builder.AddAttribute(seq++, "text-anchor", "middle");
+                builder.AddAttribute(seq++, "font-size", "11");
+                builder.AddAttribute(seq++, "fill", "#6b7280");
+                builder.AddContent(seq++, t.Label);
+                builder.CloseElement();
+            }
+
+            builder.CloseElement(); // g
+        }
+
+        // ── States ──
+        foreach (var state in Definition.States)
+        {
+            var isSel = SelectedStateId == state.Id;
+            var typeCss = state.Type switch
+            {
+                CanvasStateType.Initial => "tm-wf-state--initial",
+                CanvasStateType.Final => "tm-wf-state--final",
+                _ => "tm-wf-state--intermediate"
+            };
+            var stateCss = $"tm-wf-state {typeCss}" + (isSel ? " tm-wf-state--selected" : "");
+            var fill = state.Color ?? GetDefaultColor(state.Type);
+            var strokeColor = isSel ? "#3b82f6" : "#d1d5db";
+            var strokeW = isSel ? "3" : "1.5";
+            var capturedState = state;
+
+            builder.OpenElement(seq++, "g");
+            builder.AddAttribute(seq++, "class", stateCss);
+            builder.AddAttribute(seq++, "data-state-id", state.Id);
+            builder.AddAttribute(seq++, "transform", $"translate({F(state.X)}, {F(state.Y)})");
+            builder.AddAttribute(seq++, "style", "cursor: pointer;");
+            builder.AddAttribute(seq++, "onclick",
+                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                    this, () => SelectState(capturedState)));
+
+            if (state.Type == CanvasStateType.Initial)
+            {
+                // Rounded pill
+                builder.OpenElement(seq++, "rect");
+                builder.AddAttribute(seq++, "width", NodeW.ToString());
+                builder.AddAttribute(seq++, "height", NodeH.ToString());
+                builder.AddAttribute(seq++, "rx", (NodeH / 2).ToString());
+                builder.AddAttribute(seq++, "ry", (NodeH / 2).ToString());
+                builder.AddAttribute(seq++, "fill", fill);
+                builder.AddAttribute(seq++, "stroke", strokeColor);
+                builder.AddAttribute(seq++, "stroke-width", strokeW);
+                builder.CloseElement();
+            }
+            else if (state.Type == CanvasStateType.Final)
+            {
+                // Double border
+                builder.OpenElement(seq++, "rect");
+                builder.AddAttribute(seq++, "width", NodeW.ToString());
+                builder.AddAttribute(seq++, "height", NodeH.ToString());
+                builder.AddAttribute(seq++, "rx", "8");
+                builder.AddAttribute(seq++, "ry", "8");
+                builder.AddAttribute(seq++, "fill", fill);
+                builder.AddAttribute(seq++, "stroke", strokeColor);
+                builder.AddAttribute(seq++, "stroke-width", strokeW);
+                builder.CloseElement();
+
+                builder.OpenElement(seq++, "rect");
+                builder.AddAttribute(seq++, "x", "4");
+                builder.AddAttribute(seq++, "y", "4");
+                builder.AddAttribute(seq++, "width", (NodeW - 8).ToString());
+                builder.AddAttribute(seq++, "height", (NodeH - 8).ToString());
+                builder.AddAttribute(seq++, "rx", "4");
+                builder.AddAttribute(seq++, "ry", "4");
+                builder.AddAttribute(seq++, "fill", "none");
+                builder.AddAttribute(seq++, "stroke", strokeColor);
+                builder.AddAttribute(seq++, "stroke-width", "1");
+                builder.CloseElement();
+            }
+            else
+            {
+                // Standard rounded rect
+                builder.OpenElement(seq++, "rect");
+                builder.AddAttribute(seq++, "width", NodeW.ToString());
+                builder.AddAttribute(seq++, "height", NodeH.ToString());
+                builder.AddAttribute(seq++, "rx", "8");
+                builder.AddAttribute(seq++, "ry", "8");
+                builder.AddAttribute(seq++, "fill", fill);
+                builder.AddAttribute(seq++, "stroke", strokeColor);
+                builder.AddAttribute(seq++, "stroke-width", strokeW);
+                builder.CloseElement();
+            }
+
+            // State label
+            builder.OpenElement(seq++, "text");
+            builder.AddAttribute(seq++, "class", "tm-wf-state__label");
+            builder.AddAttribute(seq++, "x", (NodeW / 2).ToString());
+            builder.AddAttribute(seq++, "y", (NodeH / 2 + 5).ToString());
+            builder.AddAttribute(seq++, "text-anchor", "middle");
+            builder.AddAttribute(seq++, "font-size", "13");
+            builder.AddAttribute(seq++, "font-weight", "500");
+            builder.AddAttribute(seq++, "fill", "#374151");
+            builder.AddContent(seq++, state.Name);
+            builder.CloseElement();
+
+            // Connection port (right side) — only in edit mode
+            if (!ReadOnly)
+            {
+                builder.OpenElement(seq++, "circle");
+                builder.AddAttribute(seq++, "class", "tm-wf-port");
+                builder.AddAttribute(seq++, "data-port", state.Id);
+                builder.AddAttribute(seq++, "cx", NodeW.ToString());
+                builder.AddAttribute(seq++, "cy", (NodeH / 2).ToString());
+                builder.AddAttribute(seq++, "r", PortR.ToString());
+                builder.AddAttribute(seq++, "fill", "#3b82f6");
+                builder.AddAttribute(seq++, "stroke", "white");
+                builder.AddAttribute(seq++, "stroke-width", "2");
+                builder.CloseElement();
+            }
+
+            builder.CloseElement(); // g
+        }
+    };
+}

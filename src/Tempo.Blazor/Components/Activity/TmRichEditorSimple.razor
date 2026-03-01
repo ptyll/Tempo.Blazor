@@ -1,0 +1,518 @@
+@namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Interfaces
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="tm-rich-editor-simple @(_isFocused ? "tm-rte-focused" : "") @(IsDisabled ? "tm-rte-disabled" : "") @(Class)"
+     @attributes="AdditionalAttributes">
+    
+    <EditorToolbar 
+        Mode="ToolbarMode.Simple"
+        IsDisabled="@IsDisabled"
+        OnFormat="@HandleFormat"
+        OnEmojiSelected="@HandleEmojiSelected"
+        ActiveFormats="@_activeFormats" />
+    
+    <div class="tm-rte-editor-content-wrapper">
+        <div class="tm-rte-editor-content"
+             @ref="_editorRef"
+             contenteditable="@(!IsDisabled)"
+             @oninput="@HandleInput"
+             @onfocus="@HandleFocus"
+             @onblur="@HandleBlur"
+             @onkeydown="@HandleKeyDown"
+             data-placeholder="@Placeholder">
+        </div>
+        
+        @if (_isEmpty && !string.IsNullOrEmpty(Placeholder))
+        {
+            <div class="tm-rte-placeholder">@Placeholder</div>
+        }
+    </div>
+    
+    @if (MaxLength > 0)
+    {
+        <div class="tm-rte-footer">
+            <span class="tm-rte-char-count @(IsOverLimit ? "tm-rte-char-count-over" : "")">
+                @(_charCount) / @MaxLength
+            </span>
+        </div>
+    }
+
+    @if (_showLinkDialog)
+    {
+        <LinkDialog 
+            IsVisible="true"
+            OnConfirm="@OnLinkConfirm"
+            OnCancel="@OnLinkCancel" />
+    }
+
+    @if (_showMentionDropdown && SupportsMentions)
+    {
+        <MentionAutocomplete 
+            IsVisible="true"
+            Users="@_mentionUsers"
+            Query="@_mentionQuery"
+            HighlightedIndex="@_highlightedMentionIndex"
+            OnUserSelected="@OnMentionSelected"
+            OnHighlightedIndexChanged="@OnMentionIndexChanged" />
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The HTML content of the editor.
+    /// </summary>
+    [Parameter] public string Value { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Callback when the value changes.
+    /// </summary>
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Placeholder text when empty.
+    /// </summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>
+    /// Maximum length of content.
+    /// </summary>
+    [Parameter] public int MaxLength { get; set; }
+
+    /// <summary>
+    /// Whether mentions are supported.
+    /// </summary>
+    [Parameter] public bool SupportsMentions { get; set; }
+
+    /// <summary>
+    /// Data provider for mentions.
+    /// </summary>
+    [Parameter] public IMentionDataProvider? MentionProvider { get; set; }
+
+    /// <summary>
+    /// Whether the editor is disabled.
+    /// </summary>
+    [Parameter] public bool IsDisabled { get; set; }
+
+    /// <summary>
+    /// Callback when content is submitted (Ctrl+Enter).
+    /// </summary>
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    /// <summary>
+    /// Additional CSS class for the container.
+    /// </summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Additional attributes for the editor container.
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private ElementReference _editorRef;
+    private List<string> _activeFormats = new();
+    private bool _isFocused;
+    private bool _isEmpty = true;
+    private int _charCount = 0;
+    private bool _showLinkDialog;
+    private bool _showMentionDropdown;
+    private string _mentionQuery = string.Empty;
+    private int _highlightedMentionIndex;
+    private List<MentionUser> _mentionUsers = new();
+    private DotNetObjectReference<TmRichEditorSimple>? _dotNetRef;
+    private bool _isInitialized = false;
+
+    private bool IsOverLimit => MaxLength > 0 && _charCount > MaxLength;
+
+    protected override void OnParametersSet()
+    {
+        // Check if content is empty (for placeholder)
+        UpdateEmptyState();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                // Initialize content from Value parameter
+                if (!string.IsNullOrEmpty(Value))
+                {
+                    await JS.InvokeVoidAsync("tmRichEditor.setHtml", _editorRef, Value);
+                }
+                await JS.InvokeVoidAsync("tmRichEditor.initKeyboardShortcuts", _editorRef);
+                _isInitialized = true;
+            }
+            catch { /* JS not available in tests / SSR */ }
+        }
+        else if (_isInitialized)
+        {
+            // Sync external Value changes to editor (only if different from current)
+            try
+            {
+                var currentHtml = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
+                if (currentHtml != Value)
+                {
+                    await JS.InvokeVoidAsync("tmRichEditor.setHtml", _editorRef, Value ?? "");
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void UpdateEmptyState()
+    {
+        _isEmpty = string.IsNullOrWhiteSpace(Value) || Value == "<br>" || Value == "<br/>" || Value == "<br />" || Value == "<div><br></div>";
+        _charCount = string.IsNullOrEmpty(Value) ? 0 : System.Text.RegularExpressions.Regex.Replace(Value, "<[^>]*>", "").Length;
+    }
+
+    private async Task HandleInput()
+    {
+        try
+        {
+            var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
+            Value = html ?? string.Empty;
+            UpdateEmptyState();
+            await ValueChanged.InvokeAsync(Value);
+            
+            // Update mention query if dropdown is open
+            if (_showMentionDropdown && SupportsMentions)
+            {
+                await UpdateMentionQueryAsync();
+            }
+            
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { /* JS not available in tests / SSR */ }
+    }
+
+    private async Task UpdateMentionQueryAsync()
+    {
+        try
+        {
+            // Get the current word being typed (text after @)
+            var textBeforeCursor = await JS.InvokeAsync<string>("tmRichEditor.getTextBeforeCursor", _editorRef, 50);
+            if (textBeforeCursor != null)
+            {
+                // Find the last @ and extract text after it
+                var lastAtIndex = textBeforeCursor.LastIndexOf('@');
+                if (lastAtIndex >= 0)
+                {
+                    var query = textBeforeCursor.Substring(lastAtIndex + 1);
+                    // Only update if query changed and doesn't contain whitespace or new @
+                    if (query != _mentionQuery && !query.Contains(' ') && !query.Contains('\n') && !query.Contains('@'))
+                    {
+                        _mentionQuery = query;
+                        await LoadMentionUsersAsync();
+                    }
+                    else if (query.Contains(' ') || query.Contains('\n') || query.Contains('@'))
+                    {
+                        // Close dropdown if space, newline, or another @ is typed
+                        _showMentionDropdown = false;
+                    }
+                }
+                else
+                {
+                    // No @ found, close dropdown
+                    _showMentionDropdown = false;
+                }
+            }
+        }
+        catch { /* JS not available */ }
+    }
+
+    private async Task HandleFormat(string format)
+    {
+        if (IsDisabled) return;
+
+        // Handle special formats
+        if (format == "link")
+        {
+            _showLinkDialog = true;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (format == "taskList")
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("tmRichEditor.toggleTaskList");
+            }
+            catch { /* JS not available */ }
+            await UpdateActiveFormats();
+            return;
+        }
+
+        // Handle color formats (foreColor:#ff0000, hiliteColor:#ffff00)
+        if (format.StartsWith("foreColor:") || format.StartsWith("hiliteColor:"))
+        {
+            var parts = format.Split(':');
+            if (parts.Length == 2)
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("tmRichEditor.execCommand", parts[0], parts[1]);
+                }
+                catch { }
+            }
+            return;
+        }
+
+        // Standard format commands
+        var formatMap = new Dictionary<string, string>
+        {
+            { "insertUnorderedList", "insertUnorderedList" },
+            { "insertOrderedList", "insertOrderedList" }
+        };
+
+        var command = formatMap.ContainsKey(format) ? formatMap[format] : format;
+
+        // Toggle format in active formats list for UI feedback
+        if (_activeFormats.Contains(format))
+        {
+            _activeFormats.Remove(format);
+        }
+        else
+        {
+            // For mutually exclusive formats (headings), remove others
+            if (format.StartsWith("h") && format.Length == 2)
+            {
+                _activeFormats.RemoveAll(f => f.StartsWith("h") && f.Length == 2);
+            }
+            _activeFormats.Add(format);
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.execCommand", command);
+        }
+        catch { /* JS not available in tests / SSR */ }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleEmojiSelected(string emoji)
+    {
+        if (IsDisabled) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.insertEmoji", emoji);
+            await HandleInput(); // Update content
+        }
+        catch { /* JS not available */ }
+    }
+
+    private async Task UpdateActiveFormats()
+    {
+        // Query current state from browser
+        var formats = new[] { "bold", "italic", "underline", "insertUnorderedList", "insertOrderedList" };
+        _activeFormats.Clear();
+        
+        foreach (var format in formats)
+        {
+            try
+            {
+                var isActive = await JS.InvokeAsync<bool>("tmRichEditor.queryCommandState", format);
+                if (isActive)
+                {
+                    _activeFormats.Add(format);
+                }
+            }
+            catch { }
+        }
+        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleFocus()
+    {
+        _isFocused = true;
+    }
+
+    private void HandleBlur()
+    {
+        _isFocused = false;
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        // Handle submit on Ctrl+Enter
+        if (e.Key == "Enter" && e.CtrlKey)
+        {
+            await Submit();
+        }
+        // Handle mention navigation
+        else if (_showMentionDropdown)
+        {
+            switch (e.Key)
+            {
+                case "ArrowUp":
+                    await MoveMentionHighlightUp();
+                    break;
+                case "ArrowDown":
+                    await MoveMentionHighlightDown();
+                    break;
+                case "Enter":
+                    await SelectHighlightedMention();
+                    break;
+                case "Escape":
+                    _showMentionDropdown = false;
+                    break;
+            }
+        }
+        // Check for @ mention trigger
+        else if (e.Key == "@" && SupportsMentions)
+        {
+            _mentionQuery = "";
+            _showMentionDropdown = true;
+            _highlightedMentionIndex = 0;
+            await LoadMentionUsersAsync();
+        }
+    }
+
+    private async Task LoadMentionUsersAsync()
+    {
+        if (MentionProvider == null) return;
+        
+        var users = await MentionProvider.SearchUsersAsync(_mentionQuery);
+        _mentionUsers = users.Select(u => new MentionUser
+        {
+            Id = u.Id,
+            UserName = u.UserName,
+            DisplayName = u.DisplayName,
+            AvatarUrl = u.AvatarUrl
+        }).ToList();
+        _showMentionDropdown = _mentionUsers.Count > 0;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task MoveMentionHighlightUp()
+    {
+        if (_highlightedMentionIndex > 0)
+        {
+            _highlightedMentionIndex--;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task MoveMentionHighlightDown()
+    {
+        if (_highlightedMentionIndex < _mentionUsers.Count - 1)
+        {
+            _highlightedMentionIndex++;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SelectHighlightedMention()
+    {
+        if (_highlightedMentionIndex >= 0 && _highlightedMentionIndex < _mentionUsers.Count)
+        {
+            await OnMentionSelected(_mentionUsers[_highlightedMentionIndex]);
+        }
+    }
+
+    private async Task OnLinkConfirm((string Url, string Text) link)
+    {
+        _showLinkDialog = false;
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.insertLink", link.Url, link.Text);
+            await HandleInput(); // Update content
+        }
+        catch { /* JS not available in tests / SSR */ }
+    }
+
+    private void OnLinkCancel()
+    {
+        _showLinkDialog = false;
+    }
+
+    private async Task OnMentionSelected(MentionUser user)
+    {
+        _showMentionDropdown = false;
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.insertMention", user.UserName, user.DisplayName, user.Id);
+            await HandleInput(); // Update content
+        }
+        catch { /* JS not available in tests / SSR */ }
+    }
+
+    private void OnMentionIndexChanged(int index)
+    {
+        _highlightedMentionIndex = index;
+    }
+
+    /// <summary>
+    /// Gets the current HTML content.
+    /// </summary>
+    public string GetHtml()
+    {
+        return Value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Clears the editor content.
+    /// </summary>
+    public async Task Clear()
+    {
+        Value = string.Empty;
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.setHtml", _editorRef, "");
+        }
+        catch { }
+        UpdateEmptyState();
+        _activeFormats.Clear();
+        await ValueChanged.InvokeAsync(Value);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Submits the current content.
+    /// </summary>
+    public async Task Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(Value) && !IsOverLimit)
+        {
+            await OnSubmit.InvokeAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
+
+    // Test helper methods
+    public async Task NotifyContentChangedForTest(string html)
+    {
+        Value = html;
+        UpdateEmptyState();
+        await ValueChanged.InvokeAsync(html);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task TriggerMentionSearchForTest(string query)
+    {
+        if (MentionProvider == null) return;
+        _mentionQuery = query;
+        var users = await MentionProvider.SearchUsersAsync(query);
+        _mentionUsers = users.Select(u => new MentionUser
+        {
+            Id = u.Id,
+            UserName = u.UserName,
+            DisplayName = u.DisplayName,
+            AvatarUrl = u.AvatarUrl
+        }).ToList();
+        _showMentionDropdown = _mentionUsers.Count > 0;
+        _highlightedMentionIndex = 0;
+        await InvokeAsync(StateHasChanged);
+    }
+}

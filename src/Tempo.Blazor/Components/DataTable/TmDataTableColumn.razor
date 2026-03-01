@@ -1,0 +1,65 @@
+@namespace Tempo.Blazor.Components.DataTable
+@typeparam TItem
+@using Tempo.Blazor.Models
+
+@* Column is a headless descriptor; it renders nothing itself. *@
+
+@code {
+    [CascadingParameter] private TmDataTable<TItem> Parent { get; set; } = default!;
+
+    /// <summary>Column header text.</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Field accessor that returns the cell value for a given row item.</summary>
+    [Parameter] public Func<TItem, object?> Field { get; set; } = default!;
+
+    /// <summary>Optional custom cell template. When set, overrides Field rendering.</summary>
+    [Parameter] public RenderFragment<TItem>? CellTemplate { get; set; }
+
+    /// <summary>Property name for sorting and filtering (e.g. "Name", "CreatedAt"). Defaults to Title when null.</summary>
+    [Parameter] public string? PropertyName { get; set; }
+
+    /// <summary>Whether this column can be sorted by clicking its header.</summary>
+    [Parameter] public bool Sortable { get; set; }
+
+    /// <summary>Whether this column shows an inline filter input.</summary>
+    [Parameter] public bool Filterable { get; set; }
+
+    /// <summary>Type of filter control to render (Text, Number, Date, Boolean, Select).</summary>
+    [Parameter] public FilterType FilterType { get; set; } = FilterType.Text;
+
+    /// <summary>Options for Select filter type (string-keyed values).</summary>
+    [Parameter] public IReadOnlyList<SelectOption<string>>? FilterOptions { get; set; }
+
+    /// <summary>Whether this column can be toggled via the column picker. Default true.</summary>
+    [Parameter] public bool Hideable { get; set; } = true;
+
+    /// <summary>Whether this column is hidden by default (user must show it via column picker).</summary>
+    [Parameter] public bool HiddenByDefault { get; set; }
+
+    /// <summary>Column width CSS value (e.g. "200px", "20%").</summary>
+    [Parameter] public string? Width { get; set; }
+
+    /// <summary>Minimum column width CSS value.</summary>
+    [Parameter] public string? MinWidth { get; set; }
+
+    /// <summary>Horizontal text alignment in cells.</summary>
+    [Parameter] public ColumnAlign Align { get; set; } = ColumnAlign.Left;
+
+    /// <summary>Additional CSS class applied to each data cell in this column.</summary>
+    [Parameter] public string? CssClass { get; set; }
+
+    /// <summary>Custom header render fragment (replaces plain Title text when set).</summary>
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
+
+    /// <summary>Display order (lower index = further left). Columns with same order preserve declaration order.</summary>
+    [Parameter] public int Order { get; set; }
+
+    /// <summary>Computed key: PropertyName ?? Title.</summary>
+    public string Key => PropertyName ?? Title;
+
+    protected override void OnInitialized()
+    {
+        Parent?.AddColumn(this);
+    }
+}

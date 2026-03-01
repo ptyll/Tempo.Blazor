@@ -1,0 +1,126 @@
+@namespace Tempo.Blazor.Components.Files
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="tm-attachment-manager @Class">
+    @if (Provider is not null && _attachments.Count > 0)
+    {
+        <div class="tm-attachment-list">
+            @foreach (var attachment in _attachments)
+            {
+                var att = attachment;
+                <div class="tm-attachment-item">
+                    <span class="tm-attachment-icon">@FileIcon(att.ContentType)</span>
+                    <div class="tm-attachment-info">
+                        <span class="tm-attachment-name">@att.FileName</span>
+                        <span class="tm-attachment-meta">
+                            @FormatSize(att.FileSizeBytes)
+                            @if (!string.IsNullOrEmpty(att.UploadedByName))
+                            {
+                                <span>&nbsp;· @att.UploadedByName</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="tm-attachment-actions">
+                        <button type="button"
+                                class="tm-attachment-download"
+                                aria-label="@Loc["Tm_Download"]"
+                                @onclick="async () => await DownloadAsync(att)">
+                            ↓
+                        </button>
+                        @if (att.CanDelete)
+                        {
+                            <button type="button"
+                                    class="tm-attachment-delete"
+                                    aria-label="@Loc["Tm_Delete"]"
+                                    @onclick="async () => await DeleteAsync(att)">
+                                ×
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <TmFileDropZone Multiple="true"
+                    Disabled="@Disabled"
+                    OnFilesSelected="HandleFilesSelectedAsync" />
+
+    @if (_isUploading)
+    {
+        <div class="tm-attachment-upload-progress" role="status">
+            <span>@Loc["TmFileDropZone_Uploading"]</span>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Data provider for loading, downloading, deleting, and uploading attachments.</summary>
+    [Parameter] public IFileAttachmentProvider? Provider { get; set; }
+
+    /// <summary>Entity ID used to load and upload attachments.</summary>
+    [Parameter] public string? EntityId { get; set; }
+
+    /// <summary>When true, upload and delete controls are disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Fires when an attachment is deleted.</summary>
+    [Parameter] public EventCallback<IFileAttachment> OnDeleted { get; set; }
+
+    private List<IFileAttachment> _attachments = [];
+    private bool                  _isUploading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Provider is not null && !string.IsNullOrEmpty(EntityId))
+        {
+            _attachments = [.. await Provider.GetAttachmentsAsync(EntityId)];
+        }
+    }
+
+    private async Task HandleFilesSelectedAsync(InputFileChangeEventArgs e)
+    {
+        if (Provider is null || string.IsNullOrEmpty(EntityId)) return;
+        _isUploading = true;
+        StateHasChanged();
+        await Task.Delay(0); // yield for re-render
+        _isUploading = false;
+    }
+
+    private async Task DownloadAsync(IFileAttachment att)
+    {
+        if (Provider is null) return;
+        var _ = await Provider.GetDownloadUrlAsync(att.Id);
+        // Navigation to download URL is handled by the host application
+    }
+
+    private async Task DeleteAsync(IFileAttachment att)
+    {
+        if (Provider is null) return;
+        await Provider.DeleteAttachmentAsync(att.Id);
+        _attachments.Remove(att);
+        await OnDeleted.InvokeAsync(att);
+    }
+
+    private static string FileIcon(string contentType) => contentType switch
+    {
+        var ct when ct.StartsWith("image/") => "🖼",
+        "application/pdf"                   => "📄",
+        var ct when ct.Contains("word")     => "📝",
+        var ct when ct.Contains("excel")    => "📊",
+        var ct when ct.Contains("zip")      => "🗜",
+        _                                   => "📎",
+    };
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024} KB";
+        return $"{bytes / (1024 * 1024)} MB";
+    }
+}

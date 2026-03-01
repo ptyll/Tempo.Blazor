@@ -1,0 +1,129 @@
+@namespace Tempo.Blazor.Components.Activity
+
+@if (IsVisible)
+{
+    <div class="tm-rte-link-dialog">
+        <div class="tm-rte-link-backdrop" @onclick="OnBackdropClick"></div>
+        <div class="tm-rte-link-content">
+            <div class="tm-rte-link-header">
+                <h5>@Loc["TmRichEditor_LinkDialog_Title"]</h5>
+                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
+            </div>
+            <div class="tm-rte-link-body">
+                <div class="tm-rte-form-group">
+                    <label for="url-input">@Loc["TmRichEditor_LinkDialog_Url"]</label>
+                    <input type="text"
+                           id="url-input"
+                           class="tm-rte-link-url-input"
+                           placeholder="https://example.com"
+                           @bind="_url"
+                           @bind:event="oninput" />
+                    @if (_showError)
+                    {
+                        <div class="tm-rte-link-error">@Loc["TmRichEditor_LinkDialog_InvalidUrl"]</div>
+                    }
+                </div>
+                <div class="tm-rte-form-group">
+                    <label for="text-input">@Loc["TmRichEditor_LinkDialog_Text"]</label>
+                    <input type="text"
+                           id="text-input"
+                           class="tm-rte-link-text-input"
+                           placeholder="@Loc["TmRichEditor_LinkDialog_TextPlaceholder"]"
+                           @bind="_text"
+                           @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="tm-rte-link-footer">
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
+                    @Loc["Tm_Cancel"]
+                </button>
+                <button type="button" 
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
+                        disabled="@(!IsValidUrl())"
+                        @onclick="InsertLink">
+                    @Loc["TmRichEditor_LinkDialog_Insert"]
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Whether the dialog is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+    
+    /// <summary>
+    /// Preselected text for the link.
+    /// </summary>
+    [Parameter] public string? PreselectedText { get; set; }
+    
+    /// <summary>
+    /// Whether to close on backdrop click.
+    /// </summary>
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    
+    /// <summary>
+    /// Callback when link is confirmed.
+    /// </summary>
+    [Parameter] public EventCallback<(string Url, string Text)> OnConfirm { get; set; }
+    
+    /// <summary>
+    /// Callback when dialog is cancelled.
+    /// </summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _url = string.Empty;
+    private string _text = string.Empty;
+    private bool _showError = false;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(PreselectedText) && string.IsNullOrEmpty(_text))
+        {
+            _text = PreselectedText;
+        }
+    }
+
+    private bool IsValidUrl()
+    {
+        if (string.IsNullOrWhiteSpace(_url))
+            return false;
+
+        return Uri.TryCreate(_url, UriKind.Absolute, out _);
+    }
+
+    private async Task InsertLink()
+    {
+        if (!IsValidUrl())
+        {
+            _showError = true;
+            return;
+        }
+
+        _showError = false;
+        await OnConfirm.InvokeAsync((_url, string.IsNullOrWhiteSpace(_text) ? _url : _text));
+        Reset();
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task OnCancelClick()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private void Reset()
+    {
+        _url = string.Empty;
+        _text = string.Empty;
+        _showError = false;
+    }
+}

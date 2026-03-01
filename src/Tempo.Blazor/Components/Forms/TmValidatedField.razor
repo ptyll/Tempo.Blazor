@@ -1,0 +1,99 @@
+@namespace Tempo.Blazor.Components.Forms
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Linq.Expressions
+@using Tempo.Blazor.Components.Inputs
+@implements IDisposable
+
+<div class="tm-validated-field">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-input-label" for="@Id">
+            @Label
+            @if (Required)
+            {
+                <span class="tm-input-label-required"> *</span>
+            }
+        </label>
+    }
+    
+    <TmTextInput 
+        Id="@Id"
+        Value="@Value"
+        ValueChanged="@ValueChanged"
+        Placeholder="@Placeholder"
+        Type="@Type"
+        Error="@ErrorMessage"
+        ShowValidationIcons="true"
+        IsValid="@IsValid" />
+    
+    @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p class="tm-input-help-text">@HelpText</p>
+    }
+</div>
+
+@code {
+    [CascadingParameter] private EditContext? EditContext { get; set; }
+    
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public string? HelpText { get; set; }
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
+    
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    
+    // This is automatically set by @bind-Value
+    [Parameter] public Expression<Func<string>>? ValueExpression { get; set; }
+    
+    private FieldIdentifier? _fieldIdentifier;
+    
+    private FieldIdentifier FieldIdentifier 
+    { 
+        get 
+        {
+            if (_fieldIdentifier == null && ValueExpression != null)
+            {
+                _fieldIdentifier = FieldIdentifier.Create(ValueExpression);
+            }
+            return _fieldIdentifier ?? new FieldIdentifier(this, nameof(Value));
+        }
+    }
+    
+    private string? ErrorMessage 
+    { 
+        get 
+        {
+            if (EditContext == null) return null;
+            var messages = EditContext.GetValidationMessages(FieldIdentifier);
+            return messages.FirstOrDefault();
+        }
+    }
+    
+    private bool? IsValid => string.IsNullOrEmpty(Value) 
+        ? null 
+        : string.IsNullOrEmpty(ErrorMessage);
+    
+    protected override void OnInitialized()
+    {
+        if (EditContext != null)
+        {
+            EditContext.OnValidationStateChanged += HandleValidationStateChanged;
+        }
+    }
+    
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+    
+    public void Dispose()
+    {
+        if (EditContext != null)
+        {
+            EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+    }
+}

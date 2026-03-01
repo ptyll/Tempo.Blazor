@@ -1,0 +1,267 @@
+@page "/multi-view-list"
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+
+<PageTitle>Multi View List – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Multi View List</h1>
+    <p class="text-slate-600 dark:text-slate-400">Flexible list component with table, card, and list views. Supports saved views, filtering, and search.</p>
+</div>
+
+<!-- Info Alert -->
+<div class="p-4 mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+    <div class="flex items-center space-x-3">
+        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+            <p class="text-sm text-blue-800 dark:text-blue-200">
+                MultiViewList with <strong>View Manager</strong> - Save and load custom views with filters.
+            </p>
+            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                Uses <code>ViewHttpProvider</code> for persistence. Requires Demo.Api.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Multi View List with Views -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Team Members</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">With Views</span>
+    </div>
+    
+    <TmMultiViewList Items="_teamMembers"
+                     ViewContext="team-members"
+                     ViewProvider="_viewProvider"
+                     ViewFilterDefinitions="_filterDefs"
+                     ExternalFilterDefinitions="_filterDefs"
+                     ShowExternalFilterBuilder="true"
+                     ViewCanCreateTenantViews="true"
+                     CurrentUserId="CurrentUserId"
+                     CurrentTenantId="CurrentTenantId"
+                     ShowSearch="true"
+                     ShowViewSwitcher="true"
+                     EmptyTitle="No team members found"
+                     OnItemClick="OnItemClick" />
+</section>
+
+<!-- Simple Multi View List (without views) -->
+<section class="demo-section mt-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Projects</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full">Simple</span>
+    </div>
+    
+    <TmMultiViewList Items="_projects"
+                     ViewContext="demo-projects"
+                     ShowSearch="true"
+                     ShowViewSwitcher="true"
+                     EmptyTitle="No projects found"
+                     OnItemClick="OnItemClick" />
+</section>
+
+@code {
+    [Inject] private ViewHttpProvider ViewProvider { get; set; } = default!;
+
+    private IDataTableViewProvider _viewProvider = default!;
+    private string CurrentUserId => "CurrentUserId";
+    private string CurrentTenantId => "CurrentTenantId";
+
+    // Filter definitions for View Manager
+    private List<FilterDefinition> _filterDefs = 
+    [
+        new FilterDefinition 
+        { 
+            FieldName = "Title", 
+            FieldLabel = "Name", 
+            FieldType = FilterFieldType.Text 
+        },
+        new FilterDefinition 
+        { 
+            FieldName = "Status", 
+            FieldLabel = "Status", 
+            FieldType = FilterFieldType.Select,
+            Options = 
+            [
+                new SelectOption<string>("Active", "Active"),
+                new SelectOption<string>("Inactive", "Inactive"),
+                new SelectOption<string>("Pending", "Pending"),
+                new SelectOption<string>("Completed", "Completed")
+            ]
+        },
+        new FilterDefinition 
+        { 
+            FieldName = "Role", 
+            FieldLabel = "Role", 
+            FieldType = FilterFieldType.Select,
+            Options = 
+            [
+                new SelectOption<string>("Developer", "Developer"),
+                new SelectOption<string>("Designer", "Designer"),
+                new SelectOption<string>("Manager", "Manager"),
+                new SelectOption<string>("Analyst", "Analyst")
+            ]
+        }
+    ];
+
+    // Sample data - Team Members
+    private List<IMultiViewListItem> _teamMembers = 
+    [
+        new TeamMember 
+        { 
+            Title = "Alice Johnson", 
+            SubTitle = "Senior Developer", 
+            StatusLabel = "Active", 
+            StatusColor = "#22c55e",
+            Date = DateTimeOffset.Now.AddDays(-30),
+            AvatarUrl = "https://i.pravatar.cc/150?u=alice"
+        },
+        new TeamMember 
+        { 
+            Title = "Bob Smith", 
+            SubTitle = "UI Designer", 
+            StatusLabel = "Active", 
+            StatusColor = "#22c55e",
+            Date = DateTimeOffset.Now.AddDays(-60),
+            AvatarUrl = "https://i.pravatar.cc/150?u=bob"
+        },
+        new TeamMember 
+        { 
+            Title = "Carol Williams", 
+            SubTitle = "Project Manager", 
+            StatusLabel = "Inactive", 
+            StatusColor = "#ef4444",
+            Date = DateTimeOffset.Now.AddDays(-90),
+            AvatarUrl = "https://i.pravatar.cc/150?u=carol"
+        },
+        new TeamMember 
+        { 
+            Title = "David Brown", 
+            SubTitle = "Frontend Developer", 
+            StatusLabel = "Active", 
+            StatusColor = "#22c55e",
+            Date = DateTimeOffset.Now.AddDays(-15),
+            AvatarUrl = "https://i.pravatar.cc/150?u=david"
+        },
+        new TeamMember 
+        { 
+            Title = "Eva Martinez", 
+            SubTitle = "UX Designer", 
+            StatusLabel = "Pending", 
+            StatusColor = "#f59e0b",
+            Date = DateTimeOffset.Now.AddDays(-5),
+            AvatarUrl = "https://i.pravatar.cc/150?u=eva"
+        },
+        new TeamMember 
+        { 
+            Title = "Frank Lee", 
+            SubTitle = "Backend Developer", 
+            StatusLabel = "Active", 
+            StatusColor = "#22c55e",
+            Date = DateTimeOffset.Now.AddDays(-45),
+            AvatarUrl = "https://i.pravatar.cc/150?u=frank"
+        },
+        new TeamMember 
+        { 
+            Title = "Grace Chen", 
+            SubTitle = "Data Analyst", 
+            StatusLabel = "Active", 
+            StatusColor = "#22c55e",
+            Date = DateTimeOffset.Now.AddDays(-20),
+            AvatarUrl = "https://i.pravatar.cc/150?u=grace"
+        },
+        new TeamMember 
+        { 
+            Title = "Henry Wilson", 
+            SubTitle = "DevOps Engineer", 
+            StatusLabel = "Inactive", 
+            StatusColor = "#ef4444",
+            Date = DateTimeOffset.Now.AddDays(-75),
+            AvatarUrl = "https://i.pravatar.cc/150?u=henry"
+        }
+    ];
+
+    // Sample data - Projects
+    private List<IMultiViewListItem> _projects = 
+    [
+        new Project 
+        { 
+            Title = "Website Redesign", 
+            SubTitle = "Marketing Department", 
+            StatusLabel = "In Progress", 
+            StatusColor = "#3b82f6",
+            Date = DateTimeOffset.Now.AddDays(30)
+        },
+        new Project 
+        { 
+            Title = "Mobile App v2.0", 
+            SubTitle = "Product Team", 
+            StatusLabel = "Planning", 
+            StatusColor = "#f59e0b",
+            Date = DateTimeOffset.Now.AddDays(60)
+        },
+        new Project 
+        { 
+            Title = "Database Migration", 
+            SubTitle = "Backend Team", 
+            StatusLabel = "Completed", 
+            StatusColor = "#22c55e",
+            Date = DateTimeOffset.Now.AddDays(-10)
+        },
+        new Project 
+        { 
+            Title = "API Integration", 
+            SubTitle = "External Partners", 
+            StatusLabel = "On Hold", 
+            StatusColor = "#6b7280",
+            Date = DateTimeOffset.Now.AddDays(45)
+        }
+    ];
+
+    protected override void OnInitialized()
+    {
+        _viewProvider = ViewProvider;
+    }
+
+    private void OnItemClick(IMultiViewListItem item)
+    {
+        Console.WriteLine($"Clicked: {item.Title}");
+    }
+
+    // Implementation classes
+    private class TeamMember : IMultiViewListItem
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Title { get; set; } = "";
+        public string? SubTitle { get; set; }
+        public string? StatusLabel { get; set; }
+        public string? StatusColor { get; set; }
+        public DateTimeOffset? Date { get; set; }
+        public string? AvatarUrl { get; set; }
+        public IReadOnlyList<ITag> Tags { get; set; } = Array.Empty<ITag>();
+    }
+
+    private class Project : IMultiViewListItem
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Title { get; set; } = "";
+        public string? SubTitle { get; set; }
+        public string? StatusLabel { get; set; }
+        public string? StatusColor { get; set; }
+        public DateTimeOffset? Date { get; set; }
+        public string? AvatarUrl { get; set; }
+        public IReadOnlyList<ITag> Tags { get; set; } = Array.Empty<ITag>();
+    }
+
+    private class SimpleTag : ITag
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Color { get; set; } = "";
+    }
+}

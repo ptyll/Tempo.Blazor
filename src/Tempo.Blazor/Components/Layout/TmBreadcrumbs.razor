@@ -1,0 +1,68 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Icons
+
+@if (Items is { Count: > 0 })
+{
+    <nav class="tm-breadcrumbs" aria-label="Breadcrumb">
+        <ol class="tm-breadcrumb-list">
+            @for (int i = 0; i < Items.Count; i++)
+            {
+                var item = Items[i];
+                var isLast = i == Items.Count - 1;
+                var index = i;
+
+                <li class="tm-breadcrumb-item @(isLast ? "tm-breadcrumb-current" : "")">
+                    @if (!isLast && OnItemClick.HasDelegate)
+                    {
+                        <button type="button" class="tm-breadcrumb-link" @onclick="() => OnItemClick.InvokeAsync(item)">
+                            @if (!string.IsNullOrEmpty(item.Icon))
+                            {
+                                <TmIcon Name="@item.Icon" Size="IconSize.Xs" />
+                            }
+                            @item.Label
+                        </button>
+                    }
+                    else if (!isLast && item.Href is not null)
+                    {
+                        <a href="@item.Href" class="tm-breadcrumb-link">
+                            @if (!string.IsNullOrEmpty(item.Icon))
+                            {
+                                <TmIcon Name="@item.Icon" Size="IconSize.Xs" />
+                            }
+                            @item.Label
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="tm-breadcrumb-text">
+                            @if (!string.IsNullOrEmpty(item.Icon))
+                            {
+                                <TmIcon Name="@item.Icon" Size="IconSize.Xs" />
+                            }
+                            @item.Label
+                        </span>
+                    }
+                </li>
+
+                @if (!isLast)
+                {
+                    <li class="tm-breadcrumb-separator" aria-hidden="true">
+                        <span>@Separator</span>
+                    </li>
+                }
+            }
+        </ol>
+    </nav>
+}
+
+@code {
+    /// <summary>Breadcrumb items to render. Accepts any IBreadcrumbItem implementation.</summary>
+    [Parameter] public IReadOnlyList<IBreadcrumbItem>? Items { get; set; }
+
+    /// <summary>Separator character between items. Defaults to "/".</summary>
+    [Parameter] public string Separator { get; set; } = "/";
+
+    /// <summary>Optional callback when a breadcrumb item is clicked. When set, renders items as buttons instead of links.</summary>
+    [Parameter] public EventCallback<IBreadcrumbItem> OnItemClick { get; set; }
+}

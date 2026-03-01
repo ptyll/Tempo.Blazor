@@ -1,0 +1,315 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmRichEditorFull - Full Rich Text Editor
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-rich-editor-full {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  overflow: hidden;
+  background: var(--tm-bg-surface);
+  min-height: 200px;
+  transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
+}
+
+.tm-rich-editor-full:focus-within {
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-shadow-focus);
+}
+
+.tm-rich-editor-full.tm-rte-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Editor Content */
+.tm-rich-editor-full .tm-rte-editor-content-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 150px;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content {
+  flex: 1;
+  padding: var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  line-height: var(--tm-line-height-relaxed);
+  outline: none;
+  overflow-y: auto;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--tm-text-tertiary);
+  pointer-events: none;
+}
+
+.tm-rich-editor-full.tm-rte-disabled .tm-rte-editor-content {
+  background: var(--tm-bg-muted);
+}
+
+/* Placeholder */
+.tm-rich-editor-full .tm-rte-placeholder {
+  position: absolute;
+  top: var(--tm-space-3);
+  left: var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-tertiary);
+  pointer-events: none;
+  user-select: none;
+  line-height: var(--tm-line-height-relaxed);
+}
+
+/* Footer with character count */
+.tm-rich-editor-full .tm-rte-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-bg-muted);
+  border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-rich-editor-full .tm-rte-char-count {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+}
+
+.tm-rich-editor-full .tm-rte-char-count-over {
+  color: var(--tm-color-danger);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+/* Formatted text styles */
+.tm-rich-editor-full .tm-rte-editor-content h1,
+.tm-rich-editor-full .tm-rte-editor-content h2 {
+  font-weight: var(--tm-font-weight-bold);
+  margin: var(--tm-space-3) 0 var(--tm-space-2);
+  color: var(--tm-text-primary);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content h1 {
+  font-size: var(--tm-font-size-2xl);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content h2 {
+  font-size: var(--tm-font-size-xl);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content strong,
+.tm-rich-editor-full .tm-rte-editor-content b {
+  font-weight: var(--tm-font-weight-bold);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content em,
+.tm-rich-editor-full .tm-rte-editor-content i {
+  font-style: italic;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content u {
+  text-decoration: underline;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content a {
+  color: var(--tm-color-primary);
+  text-decoration: underline;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content a:hover {
+  color: var(--tm-color-primary-hover);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content ul {
+  list-style-type: disc;
+  padding-left: var(--tm-space-5);
+  margin: var(--tm-space-2) 0;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content ol {
+  list-style-type: decimal;
+  padding-left: var(--tm-space-5);
+  margin: var(--tm-space-2) 0;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content li {
+  margin: var(--tm-space-1) 0;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content blockquote {
+  border-left: 4px solid var(--tm-border-color);
+  padding-left: var(--tm-space-3);
+  margin: var(--tm-space-3) 0;
+  color: var(--tm-text-secondary);
+  font-style: italic;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content code {
+  background: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+  padding: 2px 4px;
+  border-radius: var(--tm-radius-sm);
+  font-family: monospace;
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content pre {
+  background: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+  padding: var(--tm-space-3);
+  border-radius: var(--tm-radius-md);
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: var(--tm-font-size-xs);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* Headings H3, H4 */
+.tm-rich-editor-full .tm-rte-editor-content h3,
+.tm-rich-editor-full .tm-rte-editor-content h4 {
+  font-weight: var(--tm-font-weight-semibold);
+  margin: var(--tm-space-2) 0 var(--tm-space-1);
+  color: var(--tm-text-primary);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content h3 {
+  font-size: var(--tm-font-size-lg);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content h4 {
+  font-size: var(--tm-font-size-base);
+}
+
+/* Strikethrough */
+.tm-rich-editor-full .tm-rte-editor-content s,
+.tm-rich-editor-full .tm-rte-editor-content strike,
+.tm-rich-editor-full .tm-rte-editor-content del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Subscript/Superscript */
+.tm-rich-editor-full .tm-rte-editor-content sub,
+.tm-rich-editor-full .tm-rte-editor-content sup {
+  font-size: var(--tm-font-size-xs);
+}
+
+/* Task list */
+.tm-rich-editor-full .tm-rte-editor-content .tm-task-item {
+  list-style-type: none;
+  position: relative;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content .tm-task-checkbox {
+  cursor: pointer;
+  user-select: none;
+  margin-right: var(--tm-space-1);
+  font-size: 1.1em;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content .tm-task-checked {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+/* Mention styles */
+.tm-rich-editor-full .tm-rte-editor-content .tm-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: 2px 6px;
+  background: var(--tm-color-primary-100);
+  color: var(--tm-color-primary-700);
+  border-radius: var(--tm-radius-sm);
+  font-weight: var(--tm-font-weight-medium);
+  font-size: 0.95em;
+}
+
+.dark .tm-rich-editor-full .tm-rte-editor-content .tm-mention {
+  background: var(--tm-color-primary-900);
+  color: var(--tm-color-primary-300);
+}
+
+/* Table styles */
+.tm-rich-editor-full .tm-rte-editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--tm-space-3) 0;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content table td,
+.tm-rich-editor-full .tm-rte-editor-content table th {
+  border: 1px solid var(--tm-border-color);
+  padding: var(--tm-space-2);
+  text-align: left;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content table th {
+  background: var(--tm-bg-muted);
+  font-weight: var(--tm-font-weight-semibold);
+}
+
+/* Image styles */
+.tm-rich-editor-full .tm-rte-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--tm-radius-md);
+}
+
+.tm-rich-editor-full .tm-rte-editor-content .tm-rte-image {
+  display: block;
+  margin: var(--tm-space-3) 0;
+}
+
+/* Video embed wrapper */
+.tm-rich-editor-full .tm-rte-editor-content .tm-rte-video-wrapper {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  overflow: hidden;
+  margin: var(--tm-space-3) 0;
+}
+
+.tm-rich-editor-full .tm-rte-editor-content .tm-rte-video-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: var(--tm-radius-md);
+}
+
+/* Horizontal rule */
+.tm-rich-editor-full .tm-rte-editor-content hr {
+  border: none;
+  border-top: 1px solid var(--tm-border-color);
+  margin: var(--tm-space-4) 0;
+}
+
+/* Footer word count */
+.tm-rich-editor-full .tm-rte-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tm-rich-editor-full .tm-rte-word-count {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+}
+
+/* Nested lists */
+.tm-rich-editor-full .tm-rte-editor-content ul ul,
+.tm-rich-editor-full .tm-rte-editor-content ol ol,
+.tm-rich-editor-full .tm-rte-editor-content ul ol,
+.tm-rich-editor-full .tm-rte-editor-content ol ul {
+  margin: var(--tm-space-1) 0;
+}

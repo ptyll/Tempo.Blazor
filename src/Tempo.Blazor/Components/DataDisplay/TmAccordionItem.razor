@@ -1,0 +1,93 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@implements IDisposable
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-accordion-item @(IsExpanded ? "tm-accordion-item--expanded" : "") @(Disabled ? "tm-accordion-item--disabled" : "")">
+    <button type="button"
+            class="tm-accordion-item__header"
+            aria-expanded="@(IsExpanded ? "true" : "false")"
+            disabled="@(Disabled ? true : (bool?)null)"
+            @onclick="Toggle"
+            @onkeydown="HandleKeyDown">
+        <div class="tm-accordion-item__header-text">
+            @if (!string.IsNullOrEmpty(Icon))
+            {
+                <span class="tm-accordion-item__icon">
+                    <TmIcon Name="@Icon" Size="IconSize.Sm" />
+                </span>
+            }
+            <div>
+                <span class="tm-accordion-item__title">@Title</span>
+                @if (!string.IsNullOrEmpty(Subtitle))
+                {
+                    <span class="tm-accordion-item__subtitle">@Subtitle</span>
+                }
+            </div>
+        </div>
+        <span class="tm-accordion-item__chevron">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </span>
+    </button>
+
+    @if (IsExpanded)
+    {
+        <div class="tm-accordion-item__body" role="region">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] private TmAccordion? Parent { get; set; }
+
+    /// <summary>Header title.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+
+    /// <summary>Optional subtitle below the title.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Optional icon name.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Whether this item is expanded.</summary>
+    [Parameter] public bool IsExpanded { get; set; }
+
+    /// <summary>Whether this item is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Item body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterItem(this);
+    }
+
+    public void Dispose()
+    {
+        Parent?.UnregisterItem(this);
+    }
+
+    internal void Collapse()
+    {
+        IsExpanded = false;
+        StateHasChanged();
+    }
+
+    private void Toggle()
+    {
+        if (Disabled) return;
+        IsExpanded = !IsExpanded;
+        Parent?.OnItemToggled(this);
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            Toggle();
+        }
+    }
+}

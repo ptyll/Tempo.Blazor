@@ -1,0 +1,328 @@
+@page "/richtext"
+@using Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Demo.Shared
+@using Tempo.Blazor.Interfaces
+@inject IHttpClientFactory HttpFactory
+<PageTitle>Rich Text Editor – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Rich Text Editor</h1>
+    <p class="text-slate-600 dark:text-slate-400">Rich text editing with formatting, mentions, emojis, and more.</p>
+</div>
+
+<!-- Simple Editor -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Simple Editor</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Basic formatting with lists, tasks, and emojis</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Basic</span>
+    </div>
+    
+    <div class="showcase-card">
+        <TmRichEditorSimple 
+            @ref="_simpleEditor"
+            @bind-Value="_simpleValue"
+            Placeholder="Type something with **bold**, _italic_, or lists..."
+            MaxLength="500"
+            SupportsMentions="true"
+            MentionProvider="_mentionProvider"
+            OnSubmit="OnSimpleSubmit" />
+        
+        <div class="mt-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="OnSimpleSubmit">Submit</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="ClearSimple">Clear</TmButton>
+            </div>
+            <span class="text-xs text-slate-500">Ctrl+Enter to submit</span>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_simpleSubmitted))
+        {
+            <div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                <p class="text-sm font-medium text-green-800 dark:text-green-200 mb-2">Submitted Content:</p>
+                <div class="p-3 bg-white dark:bg-slate-800 rounded-lg border border-green-200 dark:border-green-800">
+                    <div class="prose dark:prose-invert max-w-none">@((MarkupString)_simpleSubmitted)</div>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Full Editor -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Full Editor</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Complete formatting with headings, tables, images, and more</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Advanced</span>
+    </div>
+    
+    <div class="showcase-card">
+        <TmRichEditorFull 
+            @ref="_fullEditor"
+            @bind-Value="_fullValue"
+            Placeholder="Create rich content with headings, lists, and links..."
+            Height="400px"
+            MaxLength="2000"
+            ShowWordCount="true"
+            SupportsMentions="true"
+            MentionProvider="_mentionProvider"
+            SupportsImages="true"
+            SupportsTables="true"
+            SupportsCodeBlocks="true"
+            SupportsBlockquotes="true" />
+        
+        <div class="mt-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="ShowHtml">Show HTML</TmButton>
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="PreviewContent">Preview</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="ClearFull">Clear</TmButton>
+            </div>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_htmlPreview))
+        {
+            <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">HTML Output:</p>
+                <pre class="p-3 bg-slate-100 dark:bg-slate-900 rounded-lg text-xs overflow-x-auto text-slate-800 dark:text-slate-200"><code>@_htmlPreview</code></pre>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(_contentPreview))
+        {
+            <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Rendered Preview:</p>
+                <div class="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 prose dark:prose-invert max-w-none">
+                    @((MarkupString)_contentPreview)
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Editor Features -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Available Features</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Simple Features -->
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center">
+                <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                Simple Editor
+            </h3>
+            <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Bold, Italic, Underline</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Links (Ctrl+K)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Bulleted Lists</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Numbered Lists</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Task/Check Lists</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Emoji Picker</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> @@Mentions (@@username)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Character Count</li>
+            </ul>
+        </div>
+        
+        <!-- Full Features -->
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center">
+                <span class="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                Full Editor
+            </h3>
+            <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Everything from Simple</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Undo/Redo (Ctrl+Z/Y)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Headings H1-H4</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Strikethrough</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Sub/Superscript</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Indent/Outdent</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Code Blocks</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Blockquotes</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Text Colors</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Text Highlight</li>
+            </ul>
+        </div>
+        
+        <!-- Media & Advanced -->
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center">
+                <span class="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                Media & Tools
+            </h3>
+            <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Images (URL)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Tables (visual picker)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Video Embed (YouTube/Vimeo)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Horizontal Line</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Remove Formatting</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Find & Replace</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Word Count</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Keyboard Shortcuts</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- Keyboard Shortcuts -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Keyboard Shortcuts</h2>
+    
+    <div class="showcase-card">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+B</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Bold</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+I</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Italic</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+U</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Underline</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+K</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Insert Link</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+Z</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Undo</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+Y</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Redo</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+F</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Find</span>
+            </div>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <kbd class="px-2 py-1 bg-white dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">Ctrl+Enter</kbd>
+                <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">Submit</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private TmRichEditorSimple? _simpleEditor;
+    private TmRichEditorFull? _fullEditor;
+    private string _simpleValue = string.Empty;
+    private string _fullValue = string.Empty;
+    private string _simpleSubmitted = string.Empty;
+    private string _htmlPreview = string.Empty;
+    private string _contentPreview = string.Empty;
+    
+    private ApiMentionProvider? _mentionProvider;
+
+    protected override void OnInitialized()
+    {
+        _mentionProvider = new ApiMentionProvider(HttpFactory.CreateClient("DemoApi"));
+    }
+
+    private async Task OnSimpleSubmit()
+    {
+        if (_simpleEditor != null)
+        {
+            _simpleSubmitted = _simpleEditor.GetHtml();
+            await _simpleEditor.Clear();
+        }
+    }
+
+    private async Task ClearSimple()
+    {
+        if (_simpleEditor != null)
+        {
+            await _simpleEditor.Clear();
+        }
+        _simpleSubmitted = string.Empty;
+    }
+
+    private async Task ShowHtml()
+    {
+        // Get current value from editor if available
+        if (_fullEditor != null)
+        {
+            _fullValue = _fullEditor.GetHtml();
+        }
+        _htmlPreview = _fullValue;
+        _contentPreview = string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PreviewContent()
+    {
+        // Get current value from editor if available
+        if (_fullEditor != null)
+        {
+            _fullValue = _fullEditor.GetHtml();
+        }
+        _contentPreview = _fullValue;
+        _htmlPreview = string.Empty;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearFull()
+    {
+        if (_fullEditor != null)
+        {
+            await _fullEditor.Clear();
+        }
+        _htmlPreview = string.Empty;
+        _contentPreview = string.Empty;
+    }
+
+    /// <summary>
+    /// API-based mention provider for the demo.
+    /// </summary>
+    private class ApiMentionProvider : IMentionDataProvider
+    {
+        private readonly HttpClient _http;
+
+        public ApiMentionProvider(HttpClient http)
+        {
+            _http = http;
+        }
+
+        public async Task<IEnumerable<IMentionUser>> SearchUsersAsync(string query, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<List<UserDto>>(
+                    $"api/users/search?q={Uri.EscapeDataString(query)}&limit=8", 
+                    cancellationToken);
+                
+                if (response == null) return Array.Empty<IMentionUser>();
+                
+                return response.Select(u => new MentionUserAdapter(u)).ToList();
+            }
+            catch
+            {
+                return Array.Empty<IMentionUser>();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adapter to convert UserDto to IMentionUser.
+    /// </summary>
+    private class MentionUserAdapter : IMentionUser
+    {
+        private readonly UserDto _user;
+
+        public MentionUserAdapter(UserDto user)
+        {
+            _user = user;
+        }
+
+        public string Id => _user.Id;
+        public string UserName => _user.UserName;
+        public string DisplayName => _user.DisplayName;
+        public string? AvatarUrl => _user.AvatarUrl;
+    }
+}

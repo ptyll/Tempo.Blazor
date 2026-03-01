@@ -1,0 +1,53 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor — Animations & Transitions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ────────────────────────────────────────────────── */
+
+@keyframes tm-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes tm-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+@keyframes tm-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tm-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tm-slide-in-right {
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes tm-shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* ── Utility Classes ──────────────────────────────────────────── */
+
+.tm-animate-spin     { animation: tm-spin 1s linear infinite; }
+.tm-animate-pulse    { animation: tm-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.tm-animate-fade-in  { animation: tm-fade-in var(--tm-transition-normal) ease forwards; }
+.tm-animate-fade-out { animation: tm-fade-out var(--tm-transition-normal) ease forwards; }
+.tm-animate-slide-in { animation: tm-slide-in-right var(--tm-transition-normal) ease forwards; }
+
+/* ── Reduced Motion ───────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

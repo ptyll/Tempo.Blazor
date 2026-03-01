@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════
+   TmSplitButton — Primary action + dropdown
+   ═══════════════════════════════════════════════════════ */
+
+.tm-split-button {
+    display: inline-flex;
+    position: relative;
+    border-radius: var(--tm-radius-md);
+}
+
+/* ── Primary button ────────────────────────────────────── */
+.tm-split-button__primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    border: none;
+    border-radius: var(--tm-radius-md) 0 0 var(--tm-radius-md);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+/* ── Toggle button ─────────────────────────────────────── */
+.tm-split-button__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.5rem;
+    font-size: 0.875rem;
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0 var(--tm-radius-md) var(--tm-radius-md) 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+/* ── Spinner ───────────────────────────────────────────── */
+.tm-split-button__spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: tm-spin 0.6s linear infinite;
+}
+
+/* ── Dropdown ──────────────────────────────────────────── */
+.tm-split-button__dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: var(--tm-z-dropdown, 1020);
+    min-width: 10rem;
+    padding: 0.25rem;
+    margin-top: 0.25rem;
+    background-color: #fff;
+    border: 1px solid var(--tm-color-neutral-200);
+    border-radius: var(--tm-radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+    animation: tm-fade-in 0.12s ease;
+}
+
+/* ── Disabled state ────────────────────────────────────── */
+.tm-split-button--disabled .tm-split-button__primary,
+.tm-split-button--disabled .tm-split-button__toggle {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Variant: Primary (default)
+   ═══════════════════════════════════════════════════════ */
+.tm-split-button--primary .tm-split-button__primary,
+.tm-split-button--primary .tm-split-button__toggle {
+    background-color: var(--tm-color-primary-600);
+    color: #fff;
+}
+
+.tm-split-button--primary .tm-split-button__primary:hover:not(:disabled),
+.tm-split-button--primary .tm-split-button__toggle:hover:not(:disabled) {
+    background-color: var(--tm-color-primary-700);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Variant: Secondary
+   ═══════════════════════════════════════════════════════ */
+.tm-split-button--secondary .tm-split-button__primary,
+.tm-split-button--secondary .tm-split-button__toggle {
+    background-color: var(--tm-color-neutral-100);
+    color: var(--tm-color-neutral-700);
+    border-left-color: var(--tm-color-neutral-300);
+}
+
+.tm-split-button--secondary .tm-split-button__primary:hover:not(:disabled),
+.tm-split-button--secondary .tm-split-button__toggle:hover:not(:disabled) {
+    background-color: var(--tm-color-neutral-200);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Variant: Danger
+   ═══════════════════════════════════════════════════════ */
+.tm-split-button--danger .tm-split-button__primary,
+.tm-split-button--danger .tm-split-button__toggle {
+    background-color: var(--tm-color-danger-600, #dc2626);
+    color: #fff;
+}
+
+.tm-split-button--danger .tm-split-button__primary:hover:not(:disabled),
+.tm-split-button--danger .tm-split-button__toggle:hover:not(:disabled) {
+    background-color: var(--tm-color-danger-700, #b91c1c);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sizes
+   ═══════════════════════════════════════════════════════ */
+.tm-split-button--xs .tm-split-button__primary {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+.tm-split-button--xs .tm-split-button__toggle {
+    padding: 0.25rem 0.375rem;
+}
+
+.tm-split-button--sm .tm-split-button__primary {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
+.tm-split-button--sm .tm-split-button__toggle {
+    padding: 0.375rem 0.4375rem;
+}
+
+.tm-split-button--lg .tm-split-button__primary {
+    padding: 0.625rem 1.25rem;
+    font-size: 1rem;
+}
+.tm-split-button--lg .tm-split-button__toggle {
+    padding: 0.625rem 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark mode
+   ═══════════════════════════════════════════════════════ */
+[data-theme="dark"] .tm-split-button__dropdown,
+.tm-dark .tm-split-button__dropdown {
+    background-color: var(--tm-color-neutral-800);
+    border-color: var(--tm-color-neutral-700);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .tm-split-button--secondary .tm-split-button__primary,
+[data-theme="dark"] .tm-split-button--secondary .tm-split-button__toggle,
+.tm-dark .tm-split-button--secondary .tm-split-button__primary,
+.tm-dark .tm-split-button--secondary .tm-split-button__toggle {
+    background-color: var(--tm-color-neutral-700);
+    color: var(--tm-color-neutral-200);
+    border-left-color: var(--tm-color-neutral-600);
+}
+
+[data-theme="dark"] .tm-split-button--secondary .tm-split-button__primary:hover:not(:disabled),
+[data-theme="dark"] .tm-split-button--secondary .tm-split-button__toggle:hover:not(:disabled),
+.tm-dark .tm-split-button--secondary .tm-split-button__primary:hover:not(:disabled),
+.tm-dark .tm-split-button--secondary .tm-split-button__toggle:hover:not(:disabled) {
+    background-color: var(--tm-color-neutral-600);
+}

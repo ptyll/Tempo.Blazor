@@ -1,0 +1,76 @@
+@namespace Tempo.Blazor.Components.Pickers
+@using Tempo.Blazor.Models
+
+<div class="tm-datetime-range-picker @Class @(IsInvalid ? "tm-datetime-range--invalid" : "")">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="tm-picker-label">@Label</label>
+    }
+
+    <div class="tm-datetime-range-body">
+        <!-- Start -->
+        <div class="tm-datetime-range-section tm-datetime-range-start">
+            <span class="tm-datetime-range-label">@Loc["TmDateTimeRangePicker_StartLabel"]</span>
+            <TmDateTimePicker Value="@Value.Start"
+                              ValueChanged="OnStartChanged"
+                              MinValue="@MinValue"
+                              MaxValue="@Value.End"
+                              ShowSeconds="@ShowSeconds"
+                              Disabled="@Disabled"
+                              HideClear="true" />
+        </div>
+
+        <span class="tm-datetime-range-sep" aria-hidden="true">–</span>
+
+        <!-- End -->
+        <div class="tm-datetime-range-section tm-datetime-range-end">
+            <span class="tm-datetime-range-label">@Loc["TmDateTimeRangePicker_EndLabel"]</span>
+            <TmDateTimePicker Value="@Value.End"
+                              ValueChanged="OnEndChanged"
+                              MinValue="@Value.Start"
+                              MaxValue="@MaxValue"
+                              ShowSeconds="@ShowSeconds"
+                              Disabled="@Disabled"
+                              HideClear="true" />
+        </div>
+
+        @if ((Value.Start.HasValue || Value.End.HasValue) && !Disabled)
+        {
+            <button type="button"
+                    class="tm-picker-clear"
+                    aria-label="@Loc["TmDateTimeRangePicker_Clear"]"
+                    @onclick="ClearValues">
+                &#x2715;
+            </button>
+        }
+    </div>
+
+    @if (IsInvalid)
+    {
+        <span class="tm-field-error" role="alert">@Loc["TmDateTimeRangePicker_ValidationError"]</span>
+    }
+</div>
+
+@code {
+    [Parameter] public (DateTime? Start, DateTime? End) Value        { get; set; }
+    [Parameter] public EventCallback<(DateTime? Start, DateTime? End)> ValueChanged { get; set; }
+    [Parameter] public DateTime?                  MinValue     { get; set; }
+    [Parameter] public DateTime?                  MaxValue     { get; set; }
+    [Parameter] public IReadOnlyList<DateRangePreset>? Presets  { get; set; }
+    [Parameter] public bool    ShowSeconds  { get; set; }
+    [Parameter] public bool    Disabled     { get; set; }
+    [Parameter] public string? Label        { get; set; }
+    [Parameter] public string? Class        { get; set; }
+
+    private bool IsInvalid =>
+        Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;
+
+    private async Task OnStartChanged(DateTime? dt)
+        => await ValueChanged.InvokeAsync((dt, Value.End));
+
+    private async Task OnEndChanged(DateTime? dt)
+        => await ValueChanged.InvokeAsync((Value.Start, dt));
+
+    private async Task ClearValues()
+        => await ValueChanged.InvokeAsync((null, null));
+}

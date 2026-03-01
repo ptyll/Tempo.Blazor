@@ -1,0 +1,203 @@
+@namespace Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Components.Filters
+
+<div class="tm-view-manager">
+    <button type="button" class="tm-btn tm-btn-secondary tm-view-manager-toggle" @onclick="ToggleDropdownAsync">
+        <TmIcon Name="view-list" />
+        <span>@(Loc["TmViewManager_Views"] ?? "Views")</span>
+        <TmIcon Name="chevron-down" />
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="tm-view-manager-panel">
+            @* Personal Views Section *@
+            <div class="tm-view-section">
+                <div class="tm-view-section-header">
+                    <TmIcon Name="user" Size="IconSize.Sm" />
+                    <span>@(Loc["TmViewManager_PersonalViews"] ?? "Personal Views")</span>
+                </div>
+                <div class="tm-view-list">
+                    @foreach (var view in _views.Where(v => v.Scope == ViewScope.Personal))
+                    {
+                        <div class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                             @onclick="() => ApplyViewAsync(view)">
+                            <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+                            @if (view.IsDefault)
+                            {
+                                <span class="tm-view-item-badge">★</span>
+                            }
+                            @if (CanEditView(view))
+                            {
+                                <button type="button" class="tm-view-edit-btn" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
+                                    <TmIcon Name="edit" Size="IconSize.Sm" />
+                                </button>
+                            }
+                            @if (CanDeleteView(view))
+                            {
+                                <button type="button" class="tm-view-delete-btn" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
+                                    <TmIcon Name="trash" Size="IconSize.Sm" />
+                                </button>
+                            }
+                        </div>
+                    }
+                    @if (!_views.Any(v => v.Scope == ViewScope.Personal))
+                    {
+                        <div class="tm-empty-state" style="padding: var(--tm-space-3); font-size: var(--tm-font-size-sm);">
+                            @(Loc["TmViewManager_NoPersonalViews"] ?? "No personal views")
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Tenant Views Section *@
+            @if (_views.Any(v => v.Scope == ViewScope.Tenant) || CanCreateTenantViews)
+            {
+                <div class="tm-view-section">
+                    <div class="tm-view-section-header">
+                        <TmIcon Name="building" Size="IconSize.Sm" />
+                        <span>@(Loc["TmViewManager_TenantViews"] ?? "Tenant Views")</span>
+                    </div>
+                    <div class="tm-view-list">
+                        @foreach (var view in _views.Where(v => v.Scope == ViewScope.Tenant))
+                        {
+                            <div class="tm-view-item @(_activeView?.Id == view.Id ? "tm-view-item--active" : "")"
+                                 @onclick="() => ApplyViewAsync(view)">
+                                <span class="tm-view-item-name" title="@view.Name">@view.Name</span>
+                                @if (view.IsDefault)
+                                {
+                                    <span class="tm-view-item-badge">★</span>
+                                }
+                                @if (CanEditView(view))
+                                {
+                                    <button type="button" class="tm-view-edit-btn" @onclick="() => OpenEditModal(view)" @onclick:stopPropagation>
+                                        <TmIcon Name="edit" Size="IconSize.Sm" />
+                                    </button>
+                                }
+                                @if (CanDeleteView(view))
+                                {
+                                    <button type="button" class="tm-view-delete-btn" @onclick="() => DeleteViewAsync(view)" @onclick:stopPropagation>
+                                        <TmIcon Name="trash" Size="IconSize.Sm" />
+                                    </button>
+                                }
+                            </div>
+                        }
+                        @if (!_views.Any(v => v.Scope == ViewScope.Tenant))
+                        {
+                            <div class="tm-empty-state" style="padding: var(--tm-space-3); font-size: var(--tm-font-size-sm);">
+                                @(Loc["TmViewManager_NoTenantViews"] ?? "No tenant views")
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* Footer Actions *@
+            <div class="tm-view-manager-footer">
+                <button type="button" class="tm-btn tm-btn-primary tm-btn-sm tm-btn-block" @onclick="OpenCreateModal">
+                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                    <span>@(Loc["TmViewManager_CreateNew"] ?? "Create New View")</span>
+                </button>
+                @if (GetCurrentView != null)
+                {
+                    <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-btn-block tm-mt-2" @onclick="CreateViewFromCurrentAsync">
+                        <TmIcon Name="duplicate" Size="IconSize.Sm" />
+                        <span>@(Loc["TmViewManager_SaveCurrent"] ?? "Save Current as New")</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        @* Click outside to close *@
+        <div class="tm-overlay" @onclick="CloseDropdown"></div>
+    }
+</div>
+
+@* Modal for creating/editing views *@
+@if (_showModal)
+{
+    <div class="tm-view-modal-overlay" @onclick="CloseModal">
+        <div class="tm-view-modal" @onclick:stopPropagation>
+            <div class="tm-view-modal-header">
+                <h3>@(_editingView == null
+                    ? (Loc["TmViewManager_CreateTitle"] ?? "Create New View")
+                    : (Loc["TmViewManager_EditTitle"] ?? "Edit View"))</h3>
+                <button type="button" class="tm-view-modal-close" @onclick="CloseModal">&times;</button>
+            </div>
+
+            <div class="tm-view-modal-body">
+                @* View Name *@
+                <div class="tm-form-group tm-mb-4">
+                    <label class="tm-form-label">@(Loc["TmViewManager_ViewName"] ?? "View Name")</label>
+                    <TmTextInput @bind-Value="_viewName"
+                                 Placeholder="@(Loc["TmViewManager_NamePlaceholder"] ?? "Enter view name...")" />
+                </div>
+
+                @* Scope Selection *@
+                <div class="tm-form-group tm-mb-4">
+                    <label class="tm-form-label">@(Loc["TmViewManager_Visibility"] ?? "Visibility")</label>
+                    <div class="tm-radio-group">
+                        <label class="tm-radio-label">
+                            <input type="radio" name="viewScope" value="Personal"
+                                   checked="@(_viewScope == ViewScope.Personal)"
+                                   @onchange="() => _viewScope = ViewScope.Personal" />
+                            <span>@(Loc["TmViewManager_Personal"] ?? "Personal (only me)")</span>
+                        </label>
+                        @if (true) // Always show tenant option for demo, use: CanCreateTenantViews
+                        {
+                            <label class="tm-radio-label">
+                                <input type="radio" name="viewScope" value="Tenant"
+                                       checked="@(_viewScope == ViewScope.Tenant)"
+                                       @onchange="() => _viewScope = ViewScope.Tenant" />
+                                <span>@(Loc["TmViewManager_Tenant"] ?? "Tenant (everyone)")</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                @* Column Selection *@
+                <div class="tm-form-group tm-mb-4">
+                    <label class="tm-form-label">
+                        @(Loc["TmViewManager_Columns"] ?? "Columns")
+                        <span class="tm-text-secondary">(@_selectedColumns.Count / @AvailableColumns.Count)</span>
+                    </label>
+                    <div class="tm-view-columns-list">
+                        @foreach (var col in AvailableColumns)
+                        {
+                            <label class="tm-view-column-item">
+                                <input type="checkbox"
+                                       checked="@_selectedColumns.Contains(col.Key)"
+                                       @onchange="e => ToggleColumn(col.Key, (bool)e.Value!)" />
+                                <span>@col.Title</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                @* Filter Builder *@
+                @if (FilterDefinitions?.Any() == true)
+                {
+                    <div class="tm-form-group">
+                        <label class="tm-form-label">@(Loc["TmViewManager_Filters"] ?? "Filters")</label>
+                        <TmFilterBuilder FilterDefinitions="FilterDefinitions"
+                                         ActiveFilters="_viewFilters"
+                                         OnFiltersChanged="f => _viewFilters = f.ToList()"
+                                         ShowClearAll="true" />
+                    </div>
+                }
+            </div>
+
+            <div class="tm-view-modal-footer">
+                <button type="button" class="tm-btn tm-btn-ghost" @onclick="CloseModal">
+                    @(Loc["TmViewManager_Cancel"] ?? "Cancel")
+                </button>
+                <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveViewAsync"
+                        disabled="@(string.IsNullOrWhiteSpace(_viewName) || !_selectedColumns.Any())">
+                    @(_editingView == null
+                        ? (Loc["TmViewManager_Create"] ?? "Create")
+                        : (Loc["TmViewManager_Save"] ?? "Save Changes"))
+                </button>
+            </div>
+        </div>
+    </div>
+}

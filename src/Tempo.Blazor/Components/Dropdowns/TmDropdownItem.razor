@@ -1,0 +1,32 @@
+@namespace Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
+
+<button type="button"
+        class="tm-dropdown-item"
+        role="menuitem"
+        @onclick="HandleClickAsync">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <TmIcon Name="@Icon" Size="IconSize.Sm" />
+    }
+    @ChildContent
+</button>
+
+@code {
+    /// <summary>Value passed to TmDropdown.OnSelect when clicked.</summary>
+    [Parameter] public string Value { get; set; } = string.Empty;
+
+    /// <summary>Optional leading icon.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Item content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [CascadingParameter] private TmDropdown? Parent { get; set; }
+
+    private async Task HandleClickAsync()
+    {
+        if (Parent is not null)
+            await Parent.SelectItemAsync(Value);
+    }
+}

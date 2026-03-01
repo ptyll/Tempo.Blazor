@@ -1,0 +1,43 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor — Reset & Base Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+.tm-root, [data-tm] {
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-md);
+  color: var(--tm-text-primary);
+  line-height: var(--tm-line-height-normal);
+  background-color: var(--tm-bg-page);
+}
+
+/* Focus ring (WCAG 2.1 AA) */
+:focus-visible {
+  outline: 2px solid var(--tm-border-color-focus);
+  outline-offset: 2px;
+}
+
+/* Screen-reader only utility */
+.tm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Alignment helpers */
+.tm-text-center { text-align: center; }
+.tm-text-right  { text-align: right; }
+
+/* Scrollbar (Webkit) */
+.tm-root ::-webkit-scrollbar       { width: 6px; height: 6px; }
+.tm-root ::-webkit-scrollbar-track  { background: var(--tm-bg-muted); }
+.tm-root ::-webkit-scrollbar-thumb  { background: var(--tm-color-gray-300); border-radius: var(--tm-radius-full); }

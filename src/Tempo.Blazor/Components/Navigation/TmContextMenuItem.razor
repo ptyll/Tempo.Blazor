@@ -1,0 +1,54 @@
+@namespace Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Icons
+
+@if (IsDivider)
+{
+    <div class="tm-context-menu__divider" role="separator"></div>
+}
+else
+{
+    <button type="button"
+            role="menuitem"
+            class="tm-context-menu__item @(IsDangerous ? "tm-context-menu__item--danger" : "") @(Disabled ? "tm-context-menu__item--disabled" : "")"
+            disabled="@Disabled"
+            @onclick="HandleClick">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <span class="tm-context-menu__item-icon">
+                <TmIcon Name="@Icon" Size="IconSize.Sm" />
+            </span>
+        }
+        <span class="tm-context-menu__item-label">@Label</span>
+    </button>
+}
+
+@code {
+    [CascadingParameter] private TmContextMenu? Parent { get; set; }
+
+    /// <summary>Menu item text.</summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    /// <summary>Optional icon name.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Disables the menu item.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Renders as a horizontal divider line instead of a clickable item.</summary>
+    [Parameter] public bool IsDivider { get; set; }
+
+    /// <summary>Renders in danger/red color.</summary>
+    [Parameter] public bool IsDangerous { get; set; }
+
+    /// <summary>Fires when the item is clicked.</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private async Task HandleClick()
+    {
+        if (!Disabled)
+        {
+            await OnClick.InvokeAsync();
+            Parent?.CloseMenu();
+        }
+    }
+}

@@ -1,0 +1,65 @@
+@namespace Tempo.Blazor.Components.Workflow
+@using System.Globalization
+
+<div class="tm-wf-toolbox">
+    <span class="tm-wf-toolbox__title">Tools</span>
+
+    <div class="tm-wf-toolbox__section">
+        <span class="tm-wf-toolbox__section-title">States</span>
+
+        <button class="tm-wf-toolbox__btn" @onclick="@(() => OnAddState.InvokeAsync(CanvasStateType.Initial))">
+            <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--initial"></span>
+            Initial
+        </button>
+        <button class="tm-wf-toolbox__btn" @onclick="@(() => OnAddState.InvokeAsync(CanvasStateType.Intermediate))">
+            <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--intermediate"></span>
+            State
+        </button>
+        <button class="tm-wf-toolbox__btn" @onclick="@(() => OnAddState.InvokeAsync(CanvasStateType.Final))">
+            <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--final"></span>
+            Final
+        </button>
+    </div>
+
+    <div class="tm-wf-toolbox__divider"></div>
+
+    <div class="tm-wf-toolbox__section">
+        <button class="tm-wf-toolbox__btn tm-wf-toolbox__btn--danger"
+                disabled="@(!HasSelection)"
+                @onclick="@(() => OnDeleteSelected.InvokeAsync())">
+            Delete
+        </button>
+    </div>
+
+    <div class="tm-wf-zoom-controls">
+        <button class="tm-wf-zoom-btn" @onclick="ZoomIn" title="Zoom in">+</button>
+        <button class="tm-wf-zoom-btn" @onclick="ZoomOut" title="Zoom out">-</button>
+        <span class="tm-wf-zoom-level">@ZoomPercent%</span>
+        <button class="tm-wf-zoom-btn" @onclick="@(() => OnFitToView.InvokeAsync())" title="Fit to view">Fit</button>
+    </div>
+</div>
+
+@code {
+    /// <summary>Fires when user clicks add state button with the state type.</summary>
+    [Parameter] public EventCallback<CanvasStateType> OnAddState { get; set; }
+
+    /// <summary>Fires when user clicks delete button.</summary>
+    [Parameter] public EventCallback OnDeleteSelected { get; set; }
+
+    /// <summary>Whether a state or transition is currently selected.</summary>
+    [Parameter] public bool HasSelection { get; set; }
+
+    /// <summary>Current zoom level (1.0 = 100%).</summary>
+    [Parameter] public double ZoomLevel { get; set; } = 1.0;
+
+    /// <summary>Fires when zoom level changes.</summary>
+    [Parameter] public EventCallback<double> OnZoomChanged { get; set; }
+
+    /// <summary>Fires when "Fit to view" is clicked.</summary>
+    [Parameter] public EventCallback OnFitToView { get; set; }
+
+    private int ZoomPercent => (int)Math.Round(ZoomLevel * 100);
+
+    private Task ZoomIn() => OnZoomChanged.InvokeAsync(Math.Min(ZoomLevel + 0.25, 4.0));
+    private Task ZoomOut() => OnZoomChanged.InvokeAsync(Math.Max(ZoomLevel - 0.25, 0.25));
+}

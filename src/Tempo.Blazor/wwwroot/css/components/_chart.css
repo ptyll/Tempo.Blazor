@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmChart — SVG chart component
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-chart {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-spacing-2, 0.5rem);
+}
+
+.tm-chart svg {
+    display: block;
+}
+
+/* ── Empty state ── */
+
+.tm-chart__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 200px;
+    color: var(--tm-color-neutral-400, #9ca3af);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    border: 2px dashed var(--tm-color-neutral-200, #e5e7eb);
+    border-radius: var(--tm-radius-md, 0.5rem);
+}
+
+/* ── Grid lines ── */
+
+.tm-chart__grid-line {
+    stroke: var(--tm-color-neutral-200, #e5e7eb);
+    stroke-width: 1;
+    stroke-dasharray: 4, 4;
+}
+
+.tm-chart__axis-label {
+    fill: var(--tm-color-neutral-500, #6b7280);
+    font-size: 11px;
+}
+
+/* ── Bars ── */
+
+.tm-chart__bar {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.tm-chart__bar:hover {
+    opacity: 0.8;
+}
+
+/* ── Line chart ── */
+
+.tm-chart__line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+}
+
+.tm-chart__point {
+    cursor: pointer;
+    transition: r 0.15s ease;
+}
+
+.tm-chart__point:hover {
+    r: 6;
+}
+
+/* ── Pie / Donut ── */
+
+.tm-chart__slice {
+    cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    transform-origin: center;
+}
+
+.tm-chart__slice:hover {
+    opacity: 0.85;
+}
+
+/* ── Labels & values ── */
+
+.tm-chart__label {
+    fill: var(--tm-color-neutral-500, #6b7280);
+    font-size: 12px;
+    user-select: none;
+    pointer-events: none;
+}
+
+.tm-chart__value {
+    fill: var(--tm-color-neutral-700, #374151);
+    font-size: 11px;
+    font-weight: 500;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* ── Legend ── */
+
+.tm-chart__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-spacing-3, 0.75rem);
+    justify-content: center;
+    padding: var(--tm-spacing-2, 0.5rem) 0;
+}
+
+.tm-chart__legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-spacing-1, 0.25rem);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-color-neutral-600, #4b5563);
+}
+
+.tm-chart__legend-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    flex-shrink: 0;
+}
+
+.tm-chart__legend-label {
+    white-space: nowrap;
+}
+
+/* ── Animation ── */
+
+.tm-chart--animated .tm-chart__bar {
+    animation: tm-chart-bar-grow 0.6s ease-out;
+    transform-origin: bottom;
+}
+
+.tm-chart--animated .tm-chart__line {
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    animation: tm-chart-line-draw 1.2s ease-out forwards;
+}
+
+.tm-chart--animated .tm-chart__point {
+    animation: tm-chart-point-pop 0.4s ease-out;
+    animation-delay: 0.6s;
+    animation-fill-mode: both;
+}
+
+.tm-chart--animated .tm-chart__slice {
+    animation: tm-chart-slice-grow 0.6s ease-out;
+    transform-origin: center;
+}
+
+@keyframes tm-chart-bar-grow {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+@keyframes tm-chart-line-draw {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes tm-chart-point-pop {
+    from { r: 0; }
+    to { r: 4; }
+}
+
+@keyframes tm-chart-slice-grow {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-chart--animated .tm-chart__bar,
+    .tm-chart--animated .tm-chart__line,
+    .tm-chart--animated .tm-chart__point,
+    .tm-chart--animated .tm-chart__slice {
+        animation: none;
+    }
+    .tm-chart--animated .tm-chart__line {
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
+    }
+}
+
+/* ── Dark mode ── */
+
+[data-theme="dark"] .tm-chart__empty,
+.tm-dark .tm-chart__empty {
+    color: var(--tm-color-neutral-500, #6b7280);
+    border-color: var(--tm-color-neutral-700, #374151);
+}
+
+[data-theme="dark"] .tm-chart__grid-line,
+.tm-dark .tm-chart__grid-line {
+    stroke: var(--tm-color-neutral-700, #374151);
+}
+
+[data-theme="dark"] .tm-chart__axis-label,
+.tm-dark .tm-chart__axis-label,
+[data-theme="dark"] .tm-chart__label,
+.tm-dark .tm-chart__label {
+    fill: var(--tm-color-neutral-400, #9ca3af);
+}
+
+[data-theme="dark"] .tm-chart__value,
+.tm-dark .tm-chart__value {
+    fill: var(--tm-color-neutral-300, #d1d5db);
+}
+
+[data-theme="dark"] .tm-chart__legend-item,
+.tm-dark .tm-chart__legend-item {
+    color: var(--tm-color-neutral-400, #9ca3af);
+}

@@ -1,0 +1,38 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Buttons
+
+<div class="tm-empty-state">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <div class="tm-empty-state-icon">
+            <TmIcon Name="@Icon" Size="IconSize.Lg" />
+        </div>
+    }
+    <h3 class="tm-empty-state-title">@Title</h3>
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <p class="tm-empty-state-description">@Description</p>
+    }
+    @if (!string.IsNullOrEmpty(ActionText) && OnAction.HasDelegate)
+    {
+        <TmButton Variant="ButtonVariant.Primary" OnClick="OnAction">@ActionText</TmButton>
+    }
+</div>
+
+@code {
+    /// <summary>Heading shown in the empty state.</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Optional longer description text.</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Optional icon name (use IconNames constants).</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Label for the call-to-action button. Button is rendered only when this is set and OnAction has a delegate.</summary>
+    [Parameter] public string? ActionText { get; set; }
+
+    /// <summary>Fires when the action button is clicked.</summary>
+    [Parameter] public EventCallback OnAction { get; set; }
+}

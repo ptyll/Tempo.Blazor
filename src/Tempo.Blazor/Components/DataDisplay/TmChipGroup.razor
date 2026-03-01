@@ -1,0 +1,13 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+
+<div class="tm-chip-group @Class">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Chip children.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+}

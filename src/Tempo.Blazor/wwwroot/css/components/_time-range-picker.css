@@ -1,0 +1,27 @@
+.tm-time-range-picker { display: inline-flex; flex-direction: column; gap: var(--tm-space-2); }
+.tm-time-range-body   { display: inline-flex; align-items: center; gap: var(--tm-space-3); flex-wrap: wrap; }
+
+.tm-time-range-section { display: flex; flex-direction: column; gap: 2px; }
+.tm-time-range-label   { font-size: var(--tm-font-size-xs); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.tm-time-range-sep { font-size: var(--tm-font-size-lg); color: var(--tm-text-tertiary); line-height: 1; padding-top: var(--tm-space-4); }
+
+.tm-time-range-swap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-sm);
+  background: none;
+  cursor: pointer;
+  color: var(--tm-text-secondary);
+  font-size: 1.125rem;
+  margin-top: var(--tm-space-4);
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+.tm-time-range-swap-btn:hover { background: var(--tm-color-gray-100); color: var(--tm-text-primary); }
+
+.tm-time-range--invalid .tm-time-input { border-color: var(--tm-color-danger); }
+.tm-time-range-duration { font-size: var(--tm-font-size-xs); color: var(--tm-text-tertiary); }

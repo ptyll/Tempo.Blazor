@@ -1,0 +1,369 @@
+@namespace Tempo.Blazor.Components.Charts
+@using System.Globalization
+
+<div class="tm-chart @(Animated ? "tm-chart--animated" : "") @Class"
+     style="width: @Width; height: @Height;">
+
+    @if (Data is null || Data.Labels.Length == 0 || Data.Datasets.Length == 0)
+    {
+        <div class="tm-chart__empty">No data available</div>
+    }
+    else
+    {
+        <svg viewBox="0 0 @SvgW @SvgH"
+             preserveAspectRatio="xMidYMid meet"
+             aria-label="@ChartAriaLabel"
+             role="img"
+             width="100%"
+             height="100%">
+            @ChartContent
+        </svg>
+
+        @if (ShowLegend && Data.Datasets.Length > 0)
+        {
+            <div class="tm-chart__legend">
+                @foreach (var ds in Data.Datasets)
+                {
+                    <div class="tm-chart__legend-item">
+                        <span class="tm-chart__legend-color" style="background-color: @ds.Color;"></span>
+                        <span class="tm-chart__legend-label">@ds.Label</span>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private const int SvgW = 600;
+    private const int SvgH = 400;
+    private const int PL = 50;  // pad-left
+    private const int PR = 20;  // pad-right
+    private const int PT = 20;  // pad-top
+    private const int PB = 40;  // pad-bottom
+    private int CW => SvgW - PL - PR;  // chart width
+    private int CH => SvgH - PT - PB;  // chart height
+
+    [Parameter, EditorRequired] public ChartType Type { get; set; }
+    [Parameter, EditorRequired] public ChartData Data { get; set; } = default!;
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public string Height { get; set; } = "300px";
+    [Parameter] public bool ShowLegend { get; set; } = true;
+    [Parameter] public bool ShowGrid { get; set; } = true;
+    [Parameter] public bool ShowValues { get; set; }
+    [Parameter] public bool Animated { get; set; } = true;
+    [Parameter] public EventCallback<ChartSegment> OnSegmentClick { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private string ChartAriaLabel => $"{Type} chart";
+
+    private double MaxVal
+    {
+        get
+        {
+            double m = 0;
+            foreach (var ds in Data.Datasets)
+                foreach (var v in ds.Values)
+                    if (v > m) m = v;
+            return m == 0 ? 1 : m;
+        }
+    }
+
+    private static string F(double v) =>
+        v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static readonly string[] Palette =
+        ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
+         "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"];
+
+    private async Task HandleClick(int di, int idx)
+    {
+        if (!OnSegmentClick.HasDelegate) return;
+        var label = idx < Data.Labels.Length ? Data.Labels[idx] : "";
+        var value = di < Data.Datasets.Length && idx < Data.Datasets[di].Values.Length
+            ? Data.Datasets[di].Values[idx] : 0;
+        await OnSegmentClick.InvokeAsync(new ChartSegment(di, idx, label, value));
+    }
+
+    // ── All chart rendering via RenderTreeBuilder to avoid SVG <text> / Razor @<text> conflict ──
+
+    private RenderFragment ChartContent => builder =>
+    {
+        switch (Type)
+        {
+            case ChartType.Bar:
+                BuildGrid(builder);
+                BuildBarChart(builder);
+                break;
+            case ChartType.Line:
+                BuildGrid(builder);
+                BuildLineChart(builder);
+                break;
+            case ChartType.Pie:
+                BuildPieDonut(builder, false);
+                break;
+            case ChartType.Donut:
+                BuildPieDonut(builder, true);
+                break;
+            case ChartType.HorizontalBar:
+                BuildHorizontalGrid(builder);
+                BuildHorizontalBarChart(builder);
+                break;
+        }
+    };
+
+    private void BuildGrid(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
+    {
+        if (!ShowGrid) return;
+        var max = MaxVal;
+        for (int i = 0; i <= 5; i++)
+        {
+            var y = PT + CH - (CH * i / 5.0);
+            SvgLine(b, "tm-chart__grid-line", PL, y, PL + CW, y);
+            SvgText(b, "tm-chart__axis-label", PL - 8, y + 4, F(max * i / 5.0), "end");
+        }
+    }
+
+    private void BuildHorizontalGrid(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
+    {
+        if (!ShowGrid) return;
+        for (int s = 0; s <= 5; s++)
+        {
+            var x = PL + (CW * s / 5.0);
+            SvgLine(b, "tm-chart__grid-line", x, PT, x, PT + CH);
+        }
+    }
+
+    private void BuildBarChart(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
+    {
+        var max = MaxVal;
+        var lc = Data.Labels.Length;
+        var dc = Data.Datasets.Length;
+        var gw = CW / (double)lc;
+        var bw = (gw * 0.7) / dc;
+        var gp = gw * 0.15;
+
+        for (int di = 0; di < dc; di++)
+        {
+            var ds = Data.Datasets[di];
+            for (int i = 0; i < ds.Values.Length && i < lc; i++)
+            {
+                var val = ds.Values[i];
+                var bh = (val / max) * CH;
+                var x = PL + i * gw + gp + di * bw;
+                var y = PT + CH - bh;
+                SvgRect(b, x, y, bw, bh, ds.BackgroundColor ?? ds.Color, ds.Color, di, i);
+                if (ShowValues)
+                    SvgText(b, "tm-chart__value", x + bw / 2, y - 4, F(val), "middle");
+            }
+        }
+        for (int i = 0; i < lc; i++)
+        {
+            var cx = PL + i * gw + gw / 2.0;
+            SvgText(b, "tm-chart__label", cx, PT + CH + 24, Data.Labels[i], "middle");
+        }
+    }
+
+    private void BuildHorizontalBarChart(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
+    {
+        var max = MaxVal;
+        var lc = Data.Labels.Length;
+        var dc = Data.Datasets.Length;
+        var gh = CH / (double)lc;
+        var bh = (gh * 0.7) / dc;
+        var gp = gh * 0.15;
+
+        for (int di = 0; di < dc; di++)
+        {
+            var ds = Data.Datasets[di];
+            for (int i = 0; i < ds.Values.Length && i < lc; i++)
+            {
+                var val = ds.Values[i];
+                var bw = (val / max) * CW;
+                var y = PT + i * gh + gp + di * bh;
+                SvgRect(b, PL, y, bw, bh, ds.BackgroundColor ?? ds.Color, ds.Color, di, i);
+                if (ShowValues)
+                    SvgText(b, "tm-chart__value", PL + bw + 6, y + bh / 2 + 4, F(val), "start");
+            }
+        }
+        for (int i = 0; i < lc; i++)
+        {
+            var cy = PT + i * gh + gh / 2.0;
+            SvgText(b, "tm-chart__label", PL - 8, cy + 4, Data.Labels[i], "end");
+        }
+    }
+
+    private void BuildLineChart(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
+    {
+        var max = MaxVal;
+        var lc = Data.Labels.Length;
+        var sx = CW / (double)Math.Max(lc - 1, 1);
+
+        for (int di = 0; di < Data.Datasets.Length; di++)
+        {
+            var ds = Data.Datasets[di];
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < ds.Values.Length && i < lc; i++)
+            {
+                var x = PL + i * sx;
+                var y = PT + CH - (ds.Values[i] / max) * CH;
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(F(x)).Append(',').Append(F(y));
+            }
+
+            // Polyline
+            b.OpenElement(0, "polyline");
+            b.AddAttribute(1, "class", "tm-chart__line");
+            b.AddAttribute(2, "points", sb.ToString());
+            b.AddAttribute(3, "fill", "none");
+            b.AddAttribute(4, "stroke", ds.Color);
+            b.AddAttribute(5, "stroke-width", "2");
+            b.AddAttribute(6, "stroke-linejoin", "round");
+            b.CloseElement();
+
+            // Data points
+            for (int i = 0; i < ds.Values.Length && i < lc; i++)
+            {
+                var x = PL + i * sx;
+                var y = PT + CH - (ds.Values[i] / max) * CH;
+                var cdi = di;
+                var ci = i;
+
+                b.OpenElement(0, "circle");
+                b.AddAttribute(1, "class", "tm-chart__point");
+                b.AddAttribute(2, "cx", F(x));
+                b.AddAttribute(3, "cy", F(y));
+                b.AddAttribute(4, "r", "4");
+                b.AddAttribute(5, "fill", ds.Color);
+                b.AddAttribute(6, "stroke", "white");
+                b.AddAttribute(7, "stroke-width", "2");
+                b.AddAttribute(8, "onclick",
+                    EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                        this, () => HandleClick(cdi, ci)));
+                b.CloseElement();
+
+                if (ShowValues)
+                    SvgText(b, "tm-chart__value", x, y - 10, F(ds.Values[i]), "middle");
+            }
+        }
+
+        // X labels
+        for (int i = 0; i < lc; i++)
+        {
+            var cx = PL + i * sx;
+            SvgText(b, "tm-chart__label", cx, PT + CH + 24, Data.Labels[i], "middle");
+        }
+    }
+
+    private void BuildPieDonut(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b, bool isDonut)
+    {
+        if (Data.Datasets.Length == 0) return;
+        var ds = Data.Datasets[0];
+        var total = ds.Values.Sum();
+        if (total == 0) return;
+
+        var cx = SvgW / 2.0;
+        var cy = SvgH / 2.0;
+        var outerR = Math.Min(SvgW, SvgH) / 2.0 - 20;
+        var innerR = isDonut ? outerR * 0.55 : 0.0;
+
+        double startAngle = -Math.PI / 2;
+
+        for (int i = 0; i < ds.Values.Length; i++)
+        {
+            var val = ds.Values[i];
+            var sliceAngle = (val / total) * 2 * Math.PI;
+            var endAngle = startAngle + sliceAngle;
+            var largeArc = sliceAngle > Math.PI ? 1 : 0;
+
+            var x1o = cx + outerR * Math.Cos(startAngle);
+            var y1o = cy + outerR * Math.Sin(startAngle);
+            var x2o = cx + outerR * Math.Cos(endAngle);
+            var y2o = cy + outerR * Math.Sin(endAngle);
+
+            string path;
+            if (isDonut)
+            {
+                var x1i = cx + innerR * Math.Cos(startAngle);
+                var y1i = cy + innerR * Math.Sin(startAngle);
+                var x2i = cx + innerR * Math.Cos(endAngle);
+                var y2i = cy + innerR * Math.Sin(endAngle);
+                path = $"M {F(x1o)},{F(y1o)} " +
+                       $"A {F(outerR)},{F(outerR)} 0 {largeArc},1 {F(x2o)},{F(y2o)} " +
+                       $"L {F(x2i)},{F(y2i)} " +
+                       $"A {F(innerR)},{F(innerR)} 0 {largeArc},0 {F(x1i)},{F(y1i)} Z";
+            }
+            else
+            {
+                path = $"M {F(cx)},{F(cy)} " +
+                       $"L {F(x1o)},{F(y1o)} " +
+                       $"A {F(outerR)},{F(outerR)} 0 {largeArc},1 {F(x2o)},{F(y2o)} Z";
+            }
+
+            var capturedI = i;
+            b.OpenElement(0, "path");
+            b.AddAttribute(1, "class", "tm-chart__slice");
+            b.AddAttribute(2, "d", path);
+            b.AddAttribute(3, "fill", Palette[i % Palette.Length]);
+            b.AddAttribute(4, "stroke", "white");
+            b.AddAttribute(5, "stroke-width", "2");
+            b.AddAttribute(6, "onclick",
+                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                    this, () => HandleClick(0, capturedI)));
+            b.CloseElement();
+
+            startAngle = endAngle;
+        }
+    }
+
+    // ── SVG element helpers ──
+
+    private void SvgLine(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b,
+        string cls, double x1, double y1, double x2, double y2)
+    {
+        b.OpenElement(0, "line");
+        b.AddAttribute(1, "class", cls);
+        b.AddAttribute(2, "x1", F(x1));
+        b.AddAttribute(3, "y1", F(y1));
+        b.AddAttribute(4, "x2", F(x2));
+        b.AddAttribute(5, "y2", F(y2));
+        b.AddAttribute(6, "stroke", "#e5e7eb");
+        b.AddAttribute(7, "stroke-width", "1");
+        b.AddAttribute(8, "stroke-dasharray", "4,4");
+        b.CloseElement();
+    }
+
+    private void SvgText(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b,
+        string cls, double x, double y, string content, string anchor)
+    {
+        b.OpenElement(0, "text");
+        b.AddAttribute(1, "class", cls);
+        b.AddAttribute(2, "x", F(x));
+        b.AddAttribute(3, "y", F(y));
+        b.AddAttribute(4, "text-anchor", anchor);
+        b.AddAttribute(5, "font-size", "11");
+        b.AddAttribute(6, "fill", "#6b7280");
+        b.AddContent(7, content);
+        b.CloseElement();
+    }
+
+    private void SvgRect(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b,
+        double x, double y, double w, double h, string fill, string stroke, int di, int idx)
+    {
+        var cdi = di;
+        var ci = idx;
+        b.OpenElement(0, "rect");
+        b.AddAttribute(1, "class", "tm-chart__bar");
+        b.AddAttribute(2, "x", F(x));
+        b.AddAttribute(3, "y", F(y));
+        b.AddAttribute(4, "width", F(w));
+        b.AddAttribute(5, "height", F(h));
+        b.AddAttribute(6, "fill", fill);
+        b.AddAttribute(7, "stroke", stroke);
+        b.AddAttribute(8, "stroke-width", "1");
+        b.AddAttribute(9, "onclick",
+            EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
+                this, () => HandleClick(cdi, ci)));
+        b.CloseElement();
+    }
+}

@@ -1,0 +1,114 @@
+@namespace Tempo.Blazor.Components.Gallery
+@using Tempo.Blazor.Components.Icons
+
+@if (IsOpen)
+{
+    <div class="tm-lightbox"
+         role="dialog"
+         aria-modal="true"
+         aria-label="Image lightbox"
+         tabindex="-1"
+         @onkeydown="HandleKeyAsync"
+         @onkeydown:stopPropagation="true">
+        <div class="tm-lightbox-backdrop" aria-hidden="true" @onclick="async () => await OnClose.InvokeAsync()"></div>
+
+        <div class="tm-lightbox-content">
+            <button type="button"
+                    class="tm-lightbox-close"
+                    aria-label="@Loc["TmImageGallery_Close"]"
+                    @onclick="async () => await OnClose.InvokeAsync()">
+                <TmIcon Name="@IconNames.X" />
+            </button>
+
+            <button type="button"
+                    class="tm-lightbox-prev"
+                    aria-label="@Loc["TmImageGallery_PreviousImage"]"
+                    disabled="@IsFirst"
+                    @onclick="async () => await OnPrev.InvokeAsync()">
+                <TmIcon Name="@IconNames.ChevronLeft" />
+            </button>
+
+            <div class="tm-lightbox-image-wrap">
+                @if (string.IsNullOrEmpty(ImageUrl))
+                {
+                    <p class="tm-lightbox-loading">@Loc["TmImageGallery_LoadingImage"]</p>
+                }
+                else
+                {
+                    <img src="@ImageUrl" alt="@ImageAlt" class="tm-lightbox-img" />
+                }
+            </div>
+
+            <button type="button"
+                    class="tm-lightbox-next"
+                    aria-label="@Loc["TmImageGallery_NextImage"]"
+                    disabled="@IsLast"
+                    @onclick="async () => await OnNext.InvokeAsync()">
+                <TmIcon Name="@IconNames.ChevronRight" />
+            </button>
+
+            <div class="tm-lightbox-footer">
+                <span class="tm-lightbox-counter">
+                    @Loc["TmImageGallery_Counter", CurrentIndex + 1, TotalCount]
+                </span>
+                @if (CanDelete)
+                {
+                    <button type="button"
+                            class="tm-lightbox-delete"
+                            aria-label="@Loc["TmImageGallery_Delete"]"
+                            @onclick="async () => await OnDelete.InvokeAsync()">
+                        <TmIcon Name="@IconNames.Trash" />
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Controls lightbox visibility.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Full-size image URL to display.</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>Alt text for the displayed image.</summary>
+    [Parameter] public string? ImageAlt { get; set; }
+
+    /// <summary>True when the current image is the first in the sequence.</summary>
+    [Parameter] public bool IsFirst { get; set; }
+
+    /// <summary>True when the current image is the last in the sequence.</summary>
+    [Parameter] public bool IsLast { get; set; }
+
+    /// <summary>0-based index of the currently displayed image.</summary>
+    [Parameter] public int CurrentIndex { get; set; }
+
+    /// <summary>Total number of images in the gallery.</summary>
+    [Parameter] public int TotalCount { get; set; }
+
+    /// <summary>When true, shows a delete button.</summary>
+    [Parameter] public bool CanDelete { get; set; }
+
+    /// <summary>Fires when the lightbox should be closed.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Fires when the user navigates to the previous image.</summary>
+    [Parameter] public EventCallback OnPrev { get; set; }
+
+    /// <summary>Fires when the user navigates to the next image.</summary>
+    [Parameter] public EventCallback OnNext { get; set; }
+
+    /// <summary>Fires when the delete button is clicked.</summary>
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private async Task HandleKeyAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":                        await OnClose.InvokeAsync(); break;
+            case "ArrowRight" when !IsLast:       await OnNext.InvokeAsync();  break;
+            case "ArrowLeft"  when !IsFirst:      await OnPrev.InvokeAsync();  break;
+        }
+    }
+}

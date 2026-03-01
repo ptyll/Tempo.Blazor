@@ -1,0 +1,12 @@
+.tm-icon { display: inline-block; flex-shrink: 0; vertical-align: middle; }
+.tm-icon-xs { width: 0.75rem; height: 0.75rem; }
+.tm-icon-sm { width: 1rem;    height: 1rem; }
+.tm-icon-md { width: 1.25rem; height: 1.25rem; }
+.tm-icon-lg { width: 1.5rem;  height: 1.5rem; }
+.tm-icon-xl { width: 2rem;    height: 2rem; }
+.tm-icon-current { color: currentColor; }
+.tm-icon-primary  { color: var(--tm-color-primary); }
+.tm-icon-danger   { color: var(--tm-color-danger); }
+.tm-icon-success  { color: var(--tm-color-success); }
+.tm-icon-warning  { color: var(--tm-color-warning); }
+.tm-icon-muted    { color: var(--tm-text-secondary); }

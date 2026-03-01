@@ -1,0 +1,96 @@
+@page "/gallery"
+<PageTitle>Gallery – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Image Gallery</h1>
+    <p class="text-slate-600 dark:text-slate-400">Responsive image gallery with lightbox, lazy loading, and thumbnail grid.</p>
+</div>
+
+<!-- Controls -->
+<section class="mb-6">
+    <div class="flex flex-wrap items-center gap-3">
+        <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@(() => _loading = !_loading)">
+            <span class="flex items-center space-x-1">
+                @if (_loading)
+                {
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Stop Loading</span>
+                }
+                else
+                {
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Toggle Loading</span>
+                }
+            </span>
+        </TmButton>
+        
+        <TmButton Size="ButtonSize.Sm" Variant="@(_canDelete ? ButtonVariant.Primary : ButtonVariant.Ghost)" OnClick="@(() => _canDelete = !_canDelete)">
+            <span class="flex items-center space-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Delete Mode: @(_canDelete ? "ON" : "OFF")</span>
+            </span>
+        </TmButton>
+    </div>
+</section>
+
+<!-- API Warning -->
+@if (_loadError is not null)
+{
+    <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+                <p class="text-sm font-medium text-amber-800 dark:text-amber-200">Connection Error</p>
+                <p class="text-sm text-amber-600 dark:text-amber-400 mt-1">@_loadError</p>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Gallery -->
+<section class="showcase-card p-0 overflow-hidden">
+    <TmImageGallery Images="@_images"
+                    IsLoading="@_loading"
+                    EmptyTitle="No images uploaded yet"
+                    CanDelete="@_canDelete"
+                    DataProvider="@_galleryProvider"
+                    OnImageClick="@OnImageClick" />
+</section>
+
+@code {
+    [Inject] private ImageHttpGalleryProvider GalleryProvider { get; set; } = default!;
+
+    private bool _loading;
+    private bool _canDelete;
+    private string? _loadError;
+    private IGalleryImage? _lastClicked;
+    private IReadOnlyList<IGalleryImage> _images = [];
+    private IImageGalleryDataProvider? _galleryProvider;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _galleryProvider = GalleryProvider;
+        try
+        {
+            _images = await GalleryProvider.GetImagesAsync("gallery");
+        }
+        catch (HttpRequestException)
+        {
+            _loadError = "Could not connect to Demo.Api. Start it on port 5100 to see live images.";
+        }
+    }
+
+    private void OnImageClick(IGalleryImage img)
+    {
+        _lastClicked = img;
+    }
+}

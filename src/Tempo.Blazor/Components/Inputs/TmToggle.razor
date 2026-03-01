@@ -1,0 +1,49 @@
+@namespace Tempo.Blazor.Components.Inputs
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="tm-toggle-wrapper @(Value ? "tm-toggle-checked" : "") @(Disabled ? "tm-toggle-disabled" : "")">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="tm-toggle-label-text">@Label</span>
+    }
+    <label class="tm-toggle-label">
+        <input type="checkbox"
+               checked="@Value"
+               disabled="@Disabled"
+               class="tm-toggle-input"
+               role="switch"
+               aria-checked="@Value.ToString().ToLowerInvariant()"
+               @onchange="HandleChangeAsync"
+               @onkeydown="HandleKeyDownAsync" />
+        <span class="tm-toggle-track">
+            <span class="tm-toggle-slider @(Value ? "tm-toggle-checked" : "")"></span>
+        </span>
+    </label>
+</div>
+
+@code {
+    /// <summary>Toggle state (on/off).</summary>
+    [Parameter] public bool Value { get; set; }
+
+    /// <summary>Fires when the toggle state changes.</summary>
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+
+    /// <summary>Label text shown beside the toggle.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Disables the toggle.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    private async Task HandleChangeAsync(ChangeEventArgs e)
+    {
+        if (Disabled) return;
+        var newValue = e.Value is bool b && b;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == " " && !Disabled)
+            await ValueChanged.InvokeAsync(!Value);
+    }
+}

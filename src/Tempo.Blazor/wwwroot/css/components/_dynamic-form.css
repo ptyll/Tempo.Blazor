@@ -1,0 +1,124 @@
+/* ═══════════════════════════════════════════════════════
+   TmDynamicFormRenderer — Dynamic field grid layout
+   ═══════════════════════════════════════════════════════ */
+
+.tm-dynamic-form {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+.tm-dynamic-form--2col {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.tm-dynamic-form--3col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+/* ── Field wrapper ─────────────────────────────────────── */
+.tm-dynamic-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* ── Inputs ────────────────────────────────────────────── */
+.tm-dynamic-form__input,
+.tm-dynamic-form__textarea,
+.tm-dynamic-form__select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--tm-color-neutral-900);
+    background-color: var(--tm-color-surface, #fff);
+    border: 1px solid var(--tm-color-neutral-300);
+    border-radius: var(--tm-radius-md);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tm-dynamic-form__input:focus,
+.tm-dynamic-form__textarea:focus,
+.tm-dynamic-form__select:focus {
+    border-color: var(--tm-color-primary-500);
+    box-shadow: 0 0 0 3px rgba(var(--tm-color-primary-500-rgb, 59, 130, 246), 0.15);
+}
+
+.tm-dynamic-form__textarea {
+    min-height: 5rem;
+    resize: vertical;
+}
+
+.tm-dynamic-form__input:disabled,
+.tm-dynamic-form__textarea:disabled,
+.tm-dynamic-form__select:disabled {
+    opacity: 0.6;
+    background-color: var(--tm-color-neutral-100);
+    cursor: not-allowed;
+}
+
+/* ── Checkbox ──────────────────────────────────────────── */
+.tm-dynamic-form__checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--tm-color-neutral-700);
+    cursor: pointer;
+}
+
+.tm-dynamic-form__checkbox {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* ── Required star ─────────────────────────────────────── */
+.tm-dynamic-form__required {
+    color: var(--tm-color-error-500);
+    margin-left: 0.125rem;
+}
+
+/* ── Help text ─────────────────────────────────────────── */
+.tm-dynamic-form__help {
+    font-size: 0.75rem;
+    color: var(--tm-color-neutral-500);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Responsive — stack on mobile
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+    .tm-dynamic-form--2col,
+    .tm-dynamic-form--3col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark mode
+   ═══════════════════════════════════════════════════════ */
+[data-theme="dark"] .tm-dynamic-form__input,
+[data-theme="dark"] .tm-dynamic-form__textarea,
+[data-theme="dark"] .tm-dynamic-form__select,
+.tm-dark .tm-dynamic-form__input,
+.tm-dark .tm-dynamic-form__textarea,
+.tm-dark .tm-dynamic-form__select {
+    background-color: var(--tm-color-neutral-800);
+    border-color: var(--tm-color-neutral-600);
+    color: var(--tm-color-neutral-100);
+}
+
+[data-theme="dark"] .tm-dynamic-form__checkbox-label,
+.tm-dark .tm-dynamic-form__checkbox-label {
+    color: var(--tm-color-neutral-300);
+}
+
+[data-theme="dark"] .tm-dynamic-form__input:disabled,
+[data-theme="dark"] .tm-dynamic-form__textarea:disabled,
+[data-theme="dark"] .tm-dynamic-form__select:disabled,
+.tm-dark .tm-dynamic-form__input:disabled,
+.tm-dark .tm-dynamic-form__textarea:disabled,
+.tm-dark .tm-dynamic-form__select:disabled {
+    background-color: var(--tm-color-neutral-900);
+}

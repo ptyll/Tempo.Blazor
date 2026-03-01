@@ -1,0 +1,79 @@
+@namespace Tempo.Blazor.Components.Forms
+@using Tempo.Blazor.Components.Icons
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDisposable
+
+@if (ShouldShow)
+{
+    <div class="tm-validation-summary @Class" role="alert">
+        <div class="tm-validation-summary-header">
+            <span class="tm-validation-summary-icon">
+                <TmIcon Name="@IconNames.AlertCircle" Size="IconSize.Sm" />
+            </span>
+            <h3 class="tm-validation-summary-title">@DisplayTitle</h3>
+        </div>
+        @if (ShowErrorsList && Errors.Any())
+        {
+            <div class="tm-validation-summary-body">
+                <ul class="tm-validation-summary-list">
+                    @foreach (var error in Errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Cascading EditContext from the parent EditForm.</summary>
+    [CascadingParameter] private EditContext? EditContext { get; set; }
+
+    /// <summary>Title text displayed at the top of the error summary. Falls back to a localized default.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>When true, individual error messages are listed below the title. Default: true.</summary>
+    [Parameter] public bool ShowErrorsList { get; set; } = true;
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>When true, visibility is controlled by the Show parameter instead of automatic error detection.</summary>
+    [Parameter] public bool ManualMode { get; set; }
+
+    /// <summary>Controls visibility when ManualMode is true. Ignored in automatic mode.</summary>
+    [Parameter] public bool Show { get; set; }
+
+    private string DisplayTitle => !string.IsNullOrEmpty(Title)
+        ? Title
+        : Loc["TmValidationSummary_Title"];
+
+    private bool ShouldShow => ManualMode
+        ? Show && Errors.Any()
+        : Errors.Any();
+
+    private IEnumerable<string> Errors =>
+        EditContext?.GetValidationMessages() ?? Enumerable.Empty<string>();
+
+    protected override void OnInitialized()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged += HandleValidationStateChanged;
+        }
+    }
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+    }
+}

@@ -1,0 +1,27 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+
+<div class="tm-stat-card">
+    <span class="tm-stat-value">@Value</span>
+    <span class="tm-stat-label">@Title</span>
+    @if (!string.IsNullOrEmpty(SubValue))
+    {
+        <span class="tm-stat-subvalue @SubValueColor">@SubValue</span>
+    }
+</div>
+
+@code {
+    /// <summary>Card label / metric name.</summary>
+    [Parameter] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Alias for Title.</summary>
+    [Parameter] public string Label { get => Title; set => Title = value; }
+
+    /// <summary>Primary metric value (e.g. "1,234" or "$5,000").</summary>
+    [Parameter] public string? Value { get; set; }
+
+    /// <summary>Secondary value or trend indicator (e.g. "+12% this month").</summary>
+    [Parameter] public string? SubValue { get; set; }
+
+    /// <summary>CSS classes for the SubValue color (e.g. "text-green-600").</summary>
+    [Parameter] public string? SubValueColor { get; set; }
+}

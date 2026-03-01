@@ -1,0 +1,159 @@
+.tm-attachments { display: flex; flex-direction: column; gap: var(--tm-space-4); }
+.tm-attach-empty { padding: var(--tm-space-4) 0; }
+
+.tm-attach-error {
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-color-danger-subtle);
+  color: var(--tm-color-danger-text);
+  border: 1px solid var(--tm-color-danger);
+  border-radius: var(--tm-radius-md);
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-attach-progress {
+  position: relative;
+  height: 24px;
+  background: var(--tm-color-gray-100);
+  border-radius: var(--tm-radius-full);
+  overflow: hidden;
+}
+
+.tm-attach-progress-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--tm-color-primary);
+  transition: width 0.2s ease;
+}
+
+.tm-attach-progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-primary);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-attach-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+}
+
+.tm-attach-item {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-3);
+  background: var(--tm-color-gray-50);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+}
+
+.tm-attach-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--tm-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-bold);
+  color: var(--tm-color-white);
+  background: var(--tm-color-secondary);
+}
+
+.tm-attach-icon::after { content: attr(class); font-size: 0; }
+
+/* File type icon variants */
+.tm-attach-icon-image   { background: var(--tm-color-info);    }
+.tm-attach-icon-pdf     { background: var(--tm-color-danger);  }
+.tm-attach-icon-video   { background: var(--tm-color-warning); }
+.tm-attach-icon-word    { background: #2b579a; }
+.tm-attach-icon-excel   { background: #217346; }
+.tm-attach-icon-archive { background: var(--tm-color-warning); }
+.tm-attach-icon-file    { background: var(--tm-color-secondary); }
+
+/* Icon letter labels */
+.tm-attach-icon-image::before   { content: 'IMG'; font-size: 9px; }
+.tm-attach-icon-pdf::before     { content: 'PDF'; font-size: 9px; }
+.tm-attach-icon-video::before   { content: 'VID'; font-size: 9px; }
+.tm-attach-icon-word::before    { content: 'DOC'; font-size: 9px; }
+.tm-attach-icon-excel::before   { content: 'XLS'; font-size: 9px; }
+.tm-attach-icon-archive::before { content: 'ZIP'; font-size: 9px; }
+.tm-attach-icon-file::before    { content: 'FILE'; font-size: 8px; }
+
+.tm-attach-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tm-attach-name {
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-attach-size,
+.tm-attach-uploader {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+}
+
+.tm-attach-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  flex-shrink: 0;
+}
+
+.tm-attach-upload-zone {
+  border: 2px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  transition: border-color var(--tm-transition-fast), background var(--tm-transition-fast);
+}
+.tm-attach-upload-zone:hover {
+  border-color: var(--tm-color-primary);
+  background: var(--tm-color-primary-subtle);
+}
+
+.tm-attach-upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-5) var(--tm-space-4);
+  cursor: pointer;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+
+.tm-attach-browse-link {
+  color: var(--tm-color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tm-attach-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

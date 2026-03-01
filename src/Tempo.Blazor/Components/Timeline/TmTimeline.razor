@@ -1,0 +1,55 @@
+@namespace Tempo.Blazor.Components.Timeline
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Avatars
+
+<div class="tm-timeline">
+    @if (!VisibleEntries.Any())
+    {
+        <div class="tm-timeline-empty">@Loc["TmTimeline_NoEntries"]</div>
+    }
+    else
+    {
+        @foreach (var entry in VisibleEntries)
+        {
+            <div class="tm-timeline-entry @(entry.IsInternal ? "tm-timeline-entry-internal" : "")">
+                <div class="tm-timeline-header">
+                    @if (!string.IsNullOrEmpty(entry.AuthorAvatarUrl))
+                    {
+                        <TmAvatar Src="@entry.AuthorAvatarUrl" Size="AvatarSize.Sm" />
+                    }
+                    <span class="tm-timeline-author">@entry.AuthorName</span>
+                    <span class="tm-timeline-timestamp">@FormatTime(entry.CreatedAt)</span>
+                    @if (entry.IsInternal)
+                    {
+                        <span class="tm-timeline-internal-badge">@Loc["TmTimeline_Internal"]</span>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(entry.PlainContent) || !string.IsNullOrEmpty(entry.HtmlContent))
+                {
+                    <div class="tm-timeline-content">@(entry.PlainContent ?? entry.HtmlContent)</div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Timeline entries to display.</summary>
+    [Parameter] public IEnumerable<ITimelineEntry>? Entries { get; set; }
+
+    /// <summary>When true, internal entries are shown; otherwise they are hidden.</summary>
+    [Parameter] public bool ShowInternal { get; set; }
+
+    private IEnumerable<ITimelineEntry> VisibleEntries =>
+        (Entries ?? Enumerable.Empty<ITimelineEntry>())
+            .Where(e => ShowInternal || !e.IsInternal);
+
+    private string FormatTime(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.Now - dt;
+        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
+        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
+        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
+        return dt.ToString(Loc["TmTimeline_DateFormat"]);
+    }
+}

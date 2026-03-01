@@ -1,0 +1,106 @@
+@namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Interfaces
+
+<div class="tm-activity-log">
+    <div class="tm-activity-tabs" role="tablist">
+        @if (ShowTimeline)
+        {
+            <button class="tm-activity-tab @ActiveClass(ActivityTab.Timeline)"
+                    type="button"
+                    role="tab"
+                    aria-selected="@(_activeTab == ActivityTab.Timeline)"
+                    @onclick="() => _activeTab = ActivityTab.Timeline">
+                @Loc["TmActivityLog_TimelineTab"]
+            </button>
+        }
+        @if (ShowComments)
+        {
+            <button class="tm-activity-tab @ActiveClass(ActivityTab.Comments)"
+                    type="button"
+                    role="tab"
+                    aria-selected="@(_activeTab == ActivityTab.Comments)"
+                    @onclick="() => _activeTab = ActivityTab.Comments">
+                @Loc["TmActivityLog_CommentsTab"]
+                @if (Comments.Count > 0)
+                {
+                    <span class="tm-tab-badge">@Comments.Count</span>
+                }
+            </button>
+        }
+        @if (ShowAttachments)
+        {
+            <button class="tm-activity-tab @ActiveClass(ActivityTab.Attachments)"
+                    type="button"
+                    role="tab"
+                    aria-selected="@(_activeTab == ActivityTab.Attachments)"
+                    @onclick="() => _activeTab = ActivityTab.Attachments">
+                @Loc["TmActivityLog_AttachmentsTab"]
+                @if (Attachments.Count > 0)
+                {
+                    <span class="tm-tab-badge">@Attachments.Count</span>
+                }
+            </button>
+        }
+    </div>
+
+    <div class="tm-activity-content" role="tabpanel">
+        @switch (_activeTab)
+        {
+            case ActivityTab.Timeline:
+                <TmActivityTimeline @ref="_timelineRef" Entries="TimelineEntries" />
+                break;
+            case ActivityTab.Comments:
+                <TmActivityComments @ref="_commentsRef"
+                                    Comments="Comments"
+                                    OnCommentAdded="OnCommentAdded"
+                                    OnCommentDeleted="OnCommentDeleted" />
+                break;
+            case ActivityTab.Attachments:
+                <TmActivityAttachments @ref="_attachmentsRef"
+                                       Attachments="Attachments"
+                                       Provider="AttachmentProvider"
+                                       EntityId="EntityId" />
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    private enum ActivityTab { Timeline, Comments, Attachments }
+
+    // ── Parameters ────────────────────────────────────────────────
+    [Parameter] public string? EntityId { get; set; }
+    [Parameter] public IReadOnlyList<ITimelineEntry> TimelineEntries { get; set; } = [];
+    [Parameter] public IReadOnlyList<ICommentEntry> Comments { get; set; } = [];
+    [Parameter] public IReadOnlyList<IFileAttachment> Attachments { get; set; } = [];
+    [Parameter] public IFileAttachmentProvider? AttachmentProvider { get; set; }
+    [Parameter] public bool ShowTimeline { get; set; } = true;
+    [Parameter] public bool ShowComments { get; set; } = true;
+    [Parameter] public bool ShowAttachments { get; set; } = true;
+    [Parameter] public EventCallback<string> OnCommentAdded { get; set; }
+    [Parameter] public EventCallback<string> OnCommentDeleted { get; set; }
+
+    // ── State ─────────────────────────────────────────────────────
+    private ActivityTab _activeTab = ActivityTab.Timeline;
+    private TmActivityTimeline? _timelineRef;
+    private TmActivityComments? _commentsRef;
+    private TmActivityAttachments? _attachmentsRef;
+
+    protected override void OnParametersSet()
+    {
+        // Default to Timeline; if hidden, use first visible tab
+        if (!ShowTimeline && _activeTab == ActivityTab.Timeline)
+            _activeTab = ShowComments ? ActivityTab.Comments : ActivityTab.Attachments;
+    }
+
+    /// <summary>Re-renders all child tabs; call after external data updates.</summary>
+    public async Task RefreshAsync()
+    {
+        if (_timelineRef is not null) await _timelineRef.RefreshAsync();
+        if (_commentsRef is not null) await _commentsRef.RefreshAsync();
+        if (_attachmentsRef is not null) await _attachmentsRef.RefreshAsync();
+    }
+
+    private string ActiveClass(ActivityTab tab) =>
+        _activeTab == tab ? "tm-activity-tab-active" : string.Empty;
+}

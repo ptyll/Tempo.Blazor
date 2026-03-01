@@ -1,0 +1,70 @@
+@namespace Tempo.Blazor.Components.Inputs
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="tm-checkbox-wrapper @(Disabled ? "tm-checkbox-disabled" : "")">
+    <label class="tm-checkbox-label">
+        <input type="checkbox"
+               checked="@Value"
+               disabled="@Disabled"
+               class="tm-checkbox-input"
+               @onchange="HandleChangeAsync"
+               @onkeydown="HandleKeyDownAsync" />
+        <span class="tm-checkbox-custom">
+            @if (Value)
+            {
+                <svg class="tm-checkbox-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            }
+            else if (Indeterminate)
+            {
+                <svg class="tm-checkbox-indeterminate" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            }
+        </span>
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <span class="tm-checkbox-text">@Label</span>
+        }
+    </label>
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <div data-testid="checkbox-help" class="tm-checkbox-help">@HelpText</div>
+    }
+</div>
+
+@code {
+    /// <summary>Checked state.</summary>
+    [Parameter] public bool Value { get; set; }
+
+    /// <summary>Fires when checked state changes.</summary>
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+
+    /// <summary>Label text rendered next to the checkbox.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Help text shown below the checkbox.</summary>
+    [Parameter] public string? HelpText { get; set; }
+
+    /// <summary>Disables the checkbox.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Shows an indeterminate (dash) state when true and Value is false.</summary>
+    [Parameter] public bool Indeterminate { get; set; }
+
+    private async Task HandleChangeAsync(ChangeEventArgs e)
+    {
+        if (Disabled) return;
+        var newValue = e.Value is bool b && b;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == " " && !Disabled)
+            await ValueChanged.InvokeAsync(!Value);
+    }
+}

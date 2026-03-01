@@ -1,0 +1,92 @@
+@namespace Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Models
+
+<div class="tm-col-filter">
+    @if (FilterType == FilterType.Boolean)
+    {
+        <select class="tm-col-filter-select"
+                value="@_value"
+                @onchange="OnSelectChange">
+            <option value=""></option>
+            <option value="true">@Loc["Tm_Yes"]</option>
+            <option value="false">@Loc["Tm_No"]</option>
+        </select>
+    }
+    else if (FilterType == FilterType.Select)
+    {
+        <select class="tm-col-filter-select"
+                value="@_value"
+                @onchange="OnSelectChange">
+            <option value=""></option>
+            @if (FilterOptions != null)
+            {
+                @foreach (var opt in FilterOptions)
+                {
+                    <option value="@opt.Value">@opt.Label</option>
+                }
+            }
+        </select>
+    }
+    else
+    {
+        <div class="tm-col-filter-input-wrap">
+            <input class="tm-col-filter-input"
+                   type="@InputType"
+                   value="@_value"
+                   placeholder="@Loc["TmDataTable_Filter"]"
+                   @onchange="OnInputChange" />
+            @if (!string.IsNullOrEmpty(_value))
+            {
+                <button class="tm-col-filter-clear"
+                        type="button"
+                        aria-label="@Loc["Tm_Clear"]"
+                        @onclick="Clear">
+                    &#215;
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string ColumnKey { get; set; } = string.Empty;
+    [Parameter] public FilterType FilterType { get; set; } = FilterType.Text;
+    [Parameter] public IReadOnlyList<SelectOption<string>>? FilterOptions { get; set; }
+    [Parameter] public EventCallback<DataTableFilter?> OnFilterChange { get; set; }
+
+    private string _value = string.Empty;
+
+    private string InputType => FilterType switch
+    {
+        FilterType.Number => "number",
+        FilterType.Date   => "date",
+        _                 => "text",
+    };
+
+    private Task OnInputChange(ChangeEventArgs e)
+    {
+        _value = e.Value?.ToString() ?? string.Empty;
+        return EmitFilter();
+    }
+
+    private Task OnSelectChange(ChangeEventArgs e)
+    {
+        _value = e.Value?.ToString() ?? string.Empty;
+        return EmitFilter();
+    }
+
+    private Task EmitFilter()
+    {
+        if (string.IsNullOrEmpty(_value))
+            return OnFilterChange.InvokeAsync(null);
+
+        var filter = new DataTableFilter(ColumnKey, "contains", _value);
+        return OnFilterChange.InvokeAsync(filter);
+    }
+
+    private Task Clear()
+    {
+        _value = string.Empty;
+        return OnFilterChange.InvokeAsync(null);
+    }
+}

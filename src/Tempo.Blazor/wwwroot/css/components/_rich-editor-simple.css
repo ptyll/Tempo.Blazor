@@ -1,0 +1,165 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmRichEditorSimple - Simple Rich Text Editor
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-rich-editor-simple {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  overflow: visible;
+  background: var(--tm-bg-surface);
+  transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
+}
+
+.tm-rich-editor-simple.tm-rte-focused {
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-shadow-focus);
+}
+
+.tm-rich-editor-simple.tm-rte-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Editor Content */
+.tm-rich-editor-simple .tm-rte-editor-content-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 80px;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content {
+  min-height: 80px;
+  padding: var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  line-height: var(--tm-line-height-relaxed);
+  outline: none;
+  overflow-y: auto;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--tm-text-tertiary);
+  pointer-events: none;
+}
+
+.tm-rich-editor-simple.tm-rte-disabled .tm-rte-editor-content {
+  background: var(--tm-bg-muted);
+}
+
+/* Placeholder */
+.tm-rich-editor-simple .tm-rte-placeholder {
+  position: absolute;
+  top: var(--tm-space-3);
+  left: var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-tertiary);
+  pointer-events: none;
+  user-select: none;
+  line-height: var(--tm-line-height-relaxed);
+}
+
+/* Footer with character count */
+.tm-rich-editor-simple .tm-rte-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-bg-muted);
+  border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-rich-editor-simple .tm-rte-char-count {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+}
+
+.tm-rich-editor-simple .tm-rte-char-count-over {
+  color: var(--tm-color-danger);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+/* Formatted text styles */
+.tm-rich-editor-simple .tm-rte-editor-content strong,
+.tm-rich-editor-simple .tm-rte-editor-content b {
+  font-weight: var(--tm-font-weight-bold);
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content em,
+.tm-rich-editor-simple .tm-rte-editor-content i {
+  font-style: italic;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content u {
+  text-decoration: underline;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content a {
+  color: var(--tm-color-primary);
+  text-decoration: underline;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content a:hover {
+  color: var(--tm-color-primary-hover);
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content ul {
+  list-style-type: disc;
+  padding-left: var(--tm-space-5);
+  margin: var(--tm-space-2) 0;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content ol {
+  list-style-type: decimal;
+  padding-left: var(--tm-space-5);
+  margin: var(--tm-space-2) 0;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content li {
+  margin: var(--tm-space-1) 0;
+}
+
+/* Task list styles */
+.tm-rich-editor-simple .tm-rte-editor-content .tm-task-item {
+  list-style-type: none;
+  position: relative;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content .tm-task-checkbox {
+  cursor: pointer;
+  user-select: none;
+  margin-right: var(--tm-space-1);
+  font-size: 1.1em;
+}
+
+.tm-rich-editor-simple .tm-rte-editor-content .tm-task-checked {
+  opacity: 0.6;
+}
+
+/* Mention styles */
+.tm-rich-editor-simple .tm-rte-editor-content .tm-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: 2px 6px;
+  background: var(--tm-color-primary-100);
+  color: var(--tm-color-primary-700);
+  border-radius: var(--tm-radius-sm);
+  font-weight: var(--tm-font-weight-medium);
+  font-size: 0.95em;
+}
+
+.dark .tm-rich-editor-simple .tm-rte-editor-content .tm-mention {
+  background: var(--tm-color-primary-900);
+  color: var(--tm-color-primary-300);
+}
+
+/* Nested lists indentation */
+.tm-rich-editor-simple .tm-rte-editor-content ul ul,
+.tm-rich-editor-simple .tm-rte-editor-content ol ol,
+.tm-rich-editor-simple .tm-rte-editor-content ul ol,
+.tm-rich-editor-simple .tm-rte-editor-content ol ul {
+  margin: var(--tm-space-1) 0;
+}

@@ -1,0 +1,36 @@
+@namespace Tempo.Blazor.Components.Navigation
+@implements IDisposable
+
+@* Content is rendered by TmTabs parent, not here *@
+
+@code {
+    [CascadingParameter] private TmTabs? Parent { get; set; }
+
+    /// <summary>Unique ID for this tab panel (required).</summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = default!;
+
+    /// <summary>Tab header title.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+
+    /// <summary>Optional icon name shown before the title.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Optional badge text/number shown on the tab header.</summary>
+    [Parameter] public string? Badge { get; set; }
+
+    /// <summary>When true, the tab cannot be selected.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Content rendered when this tab is active.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterPanel(this);
+    }
+
+    public void Dispose()
+    {
+        Parent?.UnregisterPanel(this);
+    }
+}

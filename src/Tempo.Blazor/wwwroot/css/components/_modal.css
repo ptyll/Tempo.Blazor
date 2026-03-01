@@ -1,0 +1,342 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmModal & TmDialog - Modern Modal and Dialog Components
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Modal Overlay */
+.tm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--tm-z-modal, 1000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--tm-space-4);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.tm-modal-overlay.tm-modal--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tm-modal-overlay.tm-modal--animated {
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Container */
+.tm-modal-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+.tm-modal-container.tm-modal--top {
+  align-items: flex-start;
+  padding-top: var(--tm-space-16);
+}
+
+.tm-modal-container.tm-modal--bottom {
+  align-items: flex-end;
+  padding-bottom: var(--tm-space-16);
+}
+
+/* Modal Base */
+.tm-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - var(--tm-space-8));
+  background: var(--tm-bg-surface);
+  border-radius: var(--tm-radius-xl);
+  box-shadow: var(--tm-shadow-2xl);
+  overflow: hidden;
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tm-modal--visible .tm-modal {
+  transform: scale(1) translateY(0);
+}
+
+/* Modal Sizes */
+.tm-modal--sm {
+  max-width: 360px;
+}
+
+.tm-modal--md {
+  max-width: 520px;
+}
+
+.tm-modal--lg {
+  max-width: 680px;
+}
+
+.tm-modal--xl {
+  max-width: 900px;
+}
+
+.tm-modal--fullscreen {
+  max-width: 100%;
+  max-height: 100%;
+  width: calc(100% - var(--tm-space-8));
+  height: calc(100% - var(--tm-space-8));
+  border-radius: var(--tm-radius-xl);
+}
+
+/* Modal Header */
+.tm-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tm-space-4);
+  padding: var(--tm-space-6) var(--tm-space-6) var(--tm-space-4);
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-modal-header-icon {
+  flex-shrink: 0;
+  color: var(--tm-color-primary);
+}
+
+.tm-modal-header-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tm-modal-title {
+  font-size: var(--tm-font-size-xl);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.tm-modal-subtitle {
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+  margin: var(--tm-space-1) 0 0 0;
+}
+
+.tm-modal-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--tm-radius-md);
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  transition: all var(--tm-transition-fast);
+}
+
+.tm-modal-close:hover {
+  background: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+}
+
+/* Modal Body */
+.tm-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--tm-space-6);
+  font-size: var(--tm-font-size-base);
+  line-height: 1.6;
+  color: var(--tm-text-primary);
+}
+
+/* Modal Footer */
+.tm-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-4) var(--tm-space-6);
+  border-top: 1px solid var(--tm-border-color);
+  background: var(--tm-bg-surface-secondary);
+}
+
+.tm-modal-footer .tm-btn {
+  min-width: 100px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TmDialog - Alert, Confirm, Prompt Dialogs
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+  padding: var(--tm-space-8);
+  background: var(--tm-bg-surface);
+  border-radius: var(--tm-radius-xl);
+  box-shadow: var(--tm-shadow-2xl);
+  text-align: center;
+  transform: scale(0.9);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tm-modal--visible .tm-dialog {
+  transform: scale(1);
+}
+
+/* Dialog Icon */
+.tm-dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--tm-space-5);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-bg-muted);
+  color: var(--tm-color-primary);
+}
+
+/* Dialog Variants */
+.tm-dialog--info .tm-dialog-icon {
+  background: var(--tm-color-info-subtle);
+  color: var(--tm-color-info);
+}
+
+.tm-dialog--success .tm-dialog-icon {
+  background: var(--tm-color-success-subtle);
+  color: var(--tm-color-success);
+}
+
+.tm-dialog--warning .tm-dialog-icon {
+  background: var(--tm-color-warning-subtle);
+  color: var(--tm-color-warning);
+}
+
+.tm-dialog--error .tm-dialog-icon,
+.tm-dialog--dangerous .tm-dialog-icon {
+  background: var(--tm-color-danger-subtle);
+  color: var(--tm-color-danger);
+}
+
+/* Dialog Content */
+.tm-dialog-content {
+  width: 100%;
+  margin-bottom: var(--tm-space-6);
+}
+
+.tm-dialog-title {
+  font-size: var(--tm-font-size-xl);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-primary);
+  margin: 0 0 var(--tm-space-3) 0;
+}
+
+.tm-dialog-message {
+  font-size: var(--tm-font-size-base);
+  color: var(--tm-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Dialog Input (Prompt) */
+.tm-dialog-input-wrapper {
+  margin-top: var(--tm-space-5);
+}
+
+.tm-dialog-input {
+  width: 100%;
+  text-align: center;
+}
+
+.tm-dialog-input input {
+  text-align: center;
+  font-size: var(--tm-font-size-lg);
+}
+
+/* Dialog Footer */
+.tm-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-3);
+  width: 100%;
+}
+
+.tm-dialog-footer .tm-btn {
+  min-width: 120px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .tm-modal-overlay {
+    padding: var(--tm-space-2);
+  }
+
+  .tm-modal {
+    max-width: 100%;
+    border-radius: var(--tm-radius-lg);
+  }
+
+  .tm-modal--fullscreen {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  .tm-modal-header {
+    padding: var(--tm-space-4) var(--tm-space-4) var(--tm-space-3);
+  }
+
+  .tm-modal-body {
+    padding: var(--tm-space-4);
+  }
+
+  .tm-modal-footer {
+    padding: var(--tm-space-3) var(--tm-space-4);
+    flex-direction: column-reverse;
+  }
+
+  .tm-modal-footer .tm-btn {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .tm-dialog {
+    padding: var(--tm-space-6);
+    max-width: 100%;
+    margin: var(--tm-space-4);
+  }
+
+  .tm-dialog-footer {
+    flex-direction: column-reverse;
+  }
+
+  .tm-dialog-footer .tm-btn {
+    width: 100%;
+  }
+}

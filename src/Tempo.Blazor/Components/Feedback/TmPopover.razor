@@ -1,0 +1,88 @@
+@namespace Tempo.Blazor.Components.Feedback
+
+<div class="tm-popover tm-popover--@PositionCss @Class" @onkeydown="HandleKeyDown">
+    <div class="tm-popover__trigger"
+         role="button"
+         aria-expanded="@(IsVisible ? "true" : "false")"
+         @onclick="Toggle">
+        @TriggerContent
+    </div>
+
+    <div class="tm-popover__body @(IsVisible ? "tm-popover__body--open" : "")">
+        @if (ShowArrow)
+        {
+            <div class="tm-popover__arrow"></div>
+        }
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    private bool _internalOpen;
+
+    /// <summary>Trigger content.</summary>
+    [Parameter, EditorRequired] public RenderFragment TriggerContent { get; set; } = default!;
+
+    /// <summary>Popover body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Position relative to trigger.</summary>
+    [Parameter] public PopoverPosition Position { get; set; } = PopoverPosition.Bottom;
+
+    /// <summary>Controlled open state.</summary>
+    [Parameter] public bool? IsOpen { get; set; }
+
+    /// <summary>Fires when open state changes.</summary>
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>Show arrow pointing to trigger.</summary>
+    [Parameter] public bool ShowArrow { get; set; } = true;
+
+    /// <summary>Close when clicking outside.</summary>
+    [Parameter] public bool CloseOnClickOutside { get; set; } = true;
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private bool IsVisible => IsOpen ?? _internalOpen;
+
+    private string PositionCss => Position switch
+    {
+        PopoverPosition.Top => "top",
+        PopoverPosition.Left => "left",
+        PopoverPosition.Right => "right",
+        _ => "bottom"
+    };
+
+    private async Task Toggle()
+    {
+        if (IsOpen.HasValue)
+        {
+            await IsOpenChanged.InvokeAsync(!IsOpen.Value);
+        }
+        else
+        {
+            _internalOpen = !_internalOpen;
+        }
+    }
+
+    private async Task Close()
+    {
+        if (IsOpen.HasValue)
+        {
+            await IsOpenChanged.InvokeAsync(false);
+        }
+        else
+        {
+            _internalOpen = false;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && IsVisible)
+        {
+            await Close();
+        }
+    }
+}

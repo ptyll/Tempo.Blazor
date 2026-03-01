@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" />
+              <xsd:attribute name="xml:space" use="fixed" value="preserve" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <!-- ═══════════════ SHARED ═══════════════ -->
+  <data name="Tm_Loading" xml:space="preserve"><value>Načítání...</value></data>
+  <data name="Tm_Close" xml:space="preserve"><value>Zavřít</value></data>
+  <data name="Tm_Cancel" xml:space="preserve"><value>Zrušit</value></data>
+  <data name="Tm_Save" xml:space="preserve"><value>Uložit</value></data>
+  <data name="Tm_Delete" xml:space="preserve"><value>Smazat</value></data>
+  <data name="Tm_Confirm" xml:space="preserve"><value>Potvrdit</value></data>
+  <data name="Tm_NoResults" xml:space="preserve"><value>Žádné výsledky</value></data>
+  <data name="Tm_Error" xml:space="preserve"><value>Došlo k chybě</value></data>
+  <data name="Tm_Retry" xml:space="preserve"><value>Zkusit znovu</value></data>
+  <data name="Tm_Search" xml:space="preserve"><value>Hledat</value></data>
+  <data name="Tm_Clear" xml:space="preserve"><value>Vymazat</value></data>
+  <data name="Tm_Select" xml:space="preserve"><value>Vybrat</value></data>
+  <data name="Tm_SelectAll" xml:space="preserve"><value>Vybrat vše</value></data>
+  <data name="Tm_DeselectAll" xml:space="preserve"><value>Zrušit výběr</value></data>
+  <data name="Tm_Edit" xml:space="preserve"><value>Upravit</value></data>
+  <data name="Tm_Add" xml:space="preserve"><value>Přidat</value></data>
+  <data name="Tm_Remove" xml:space="preserve"><value>Odebrat</value></data>
+  <data name="Tm_Apply" xml:space="preserve"><value>Použít</value></data>
+  <data name="Tm_Reset" xml:space="preserve"><value>Obnovit</value></data>
+  <data name="Tm_Previous" xml:space="preserve"><value>Předchozí</value></data>
+  <data name="Tm_Next" xml:space="preserve"><value>Další</value></data>
+  <data name="Tm_Download" xml:space="preserve"><value>Stáhnout</value></data>
+  <data name="Tm_Upload" xml:space="preserve"><value>Nahrát</value></data>
+  <data name="Tm_Create" xml:space="preserve"><value>Vytvořit</value></data>
+  <data name="Tm_Optional" xml:space="preserve"><value>Volitelné</value></data>
+  <data name="Tm_Required" xml:space="preserve"><value>Povinné</value></data>
+  <data name="Tm_Yes" xml:space="preserve"><value>Ano</value></data>
+  <data name="Tm_No" xml:space="preserve"><value>Ne</value></data>
+
+  <!-- ═══════════════ TmButton ═══════════════ -->
+  <data name="TmButton_Loading" xml:space="preserve"><value>Načítání</value></data>
+
+  <!-- ═══════════════ TmImageGallery / TmImageLightbox ═══════════════ -->
+  <data name="TmImageGallery_PreviousImage" xml:space="preserve"><value>Předchozí obrázek</value></data>
+  <data name="TmImageGallery_NextImage" xml:space="preserve"><value>Další obrázek</value></data>
+  <data name="TmImageGallery_Close" xml:space="preserve"><value>Zavřít galerii</value></data>
+  <data name="TmImageGallery_Counter" xml:space="preserve"><value>{0} z {1}</value></data>
+  <data name="TmImageGallery_LoadingImage" xml:space="preserve"><value>Načítání obrázku...</value></data>
+  <data name="TmImageGallery_ErrorLoading" xml:space="preserve"><value>Obrázek se nepodařilo načíst</value></data>
+  <data name="TmImageGallery_ZoomIn" xml:space="preserve"><value>Přiblížit</value></data>
+  <data name="TmImageGallery_ZoomOut" xml:space="preserve"><value>Oddálit</value></data>
+  <data name="TmImageGallery_Download" xml:space="preserve"><value>Stáhnout obrázek</value></data>
+  <data name="TmImageGallery_Delete" xml:space="preserve"><value>Smazat obrázek</value></data>
+  <data name="TmImageGallery_NoImages" xml:space="preserve"><value>Žádné obrázky</value></data>
+  <data name="TmImageGallery_UploadImages" xml:space="preserve"><value>Nahrát obrázky</value></data>
+  <data name="TmImageGallery_GridView" xml:space="preserve"><value>Mřížka</value></data>
+  <data name="TmImageGallery_GalleryView" xml:space="preserve"><value>Galerie</value></data>
+
+  <!-- ═══════════════ TmDataTable ═══════════════ -->
+  <data name="TmDataTable_NoResults" xml:space="preserve"><value>Žádné výsledky</value></data>
+  <data name="TmDataTable_Loading" xml:space="preserve"><value>Načítání dat...</value></data>
+  <data name="TmDataTable_PageSize" xml:space="preserve"><value>Položek na stránku</value></data>
+  <data name="TmDataTable_Pagination" xml:space="preserve"><value>{0}–{1} z {2}</value></data>
+  <data name="TmDataTable_SearchPlaceholder" xml:space="preserve"><value>Hledat...</value></data>
+  <data name="TmDataTable_ShowingItems" xml:space="preserve"><value>Zobrazeno {0}–{1} z {2}</value></data>
+  <data name="TmDataTable_ItemsPerPage" xml:space="preserve"><value>Položek na stránku</value></data>
+  <data name="TmDataTable_SelectAll" xml:space="preserve"><value>Vybrat všechny řádky</value></data>
+  <data name="TmDataTable_DeselectAll" xml:space="preserve"><value>Zrušit výběr</value></data>
+  <data name="TmDataTable_ColumnPicker" xml:space="preserve"><value>Vybrat sloupce</value></data>
+  <data name="TmDataTable_ResetColumns" xml:space="preserve"><value>Obnovit výchozí</value></data>
+  <data name="TmDataTable_SaveView" xml:space="preserve"><value>Uložit pohled</value></data>
+  <data name="TmDataTable_ManageViews" xml:space="preserve"><value>Spravovat pohledy</value></data>
+  <data name="TmDataTable_DefaultView" xml:space="preserve"><value>Výchozí pohled</value></data>
+  <data name="TmDataTable_Filter" xml:space="preserve"><value>Filtr</value></data>
+  <data name="TmDataTable_ClearFilters" xml:space="preserve"><value>Zrušit filtry</value></data>
+  <data name="TmDataTable_SortAscending" xml:space="preserve"><value>Řadit vzestupně</value></data>
+  <data name="TmDataTable_SortDescending" xml:space="preserve"><value>Řadit sestupně</value></data>
+  <data name="TmDataTable_BulkActions" xml:space="preserve"><value>{0} vybráno</value></data>
+  <data name="TmDataTable_DeleteSelected" xml:space="preserve"><value>Smazat vybrané</value></data>
+  <data name="TmDataTable_EditInline" xml:space="preserve"><value>Upravit</value></data>
+  <data name="TmDataTable_SaveInline" xml:space="preserve"><value>Uložit změny</value></data>
+  <data name="TmDataTable_CancelInline" xml:space="preserve"><value>Zrušit úpravy</value></data>
+  <data name="TmDataTable_FirstPage" xml:space="preserve"><value>První stránka</value></data>
+  <data name="TmDataTable_LastPage" xml:space="preserve"><value>Poslední stránka</value></data>
+  <data name="TmDataTable_ViewName" xml:space="preserve"><value>Název pohledu</value></data>
+  <data name="TmDataTable_ViewNamePlaceholder" xml:space="preserve"><value>Zadejte název pohledu...</value></data>
+  <data name="TmDataTable_DeleteView" xml:space="preserve"><value>Smazat pohled</value></data>
+
+  <!-- ═══════════════ TmFilterableDropdown ═══════════════ -->
+  <data name="TmFilterableDropdown_Search" xml:space="preserve"><value>Hledat...</value></data>
+  <data name="TmFilterableDropdown_NoResults" xml:space="preserve"><value>Žádné výsledky</value></data>
+  <data name="TmFilterableDropdown_Loading" xml:space="preserve"><value>Načítání...</value></data>
+  <data name="TmFilterableDropdown_Error" xml:space="preserve"><value>Nepodařilo se načíst možnosti</value></data>
+  <data name="TmFilterableDropdown_Retry" xml:space="preserve"><value>Zkusit znovu</value></data>
+  <data name="TmFilterableDropdown_CreateNew" xml:space="preserve"><value>Vytvořit „{0}"</value></data>
+  <data name="TmFilterableDropdown_ClearSelection" xml:space="preserve"><value>Zrušit výběr</value></data>
+  <data name="TmFilterableDropdown_Placeholder" xml:space="preserve"><value>Vyberte možnost...</value></data>
+
+  <!-- ═══════════════ TmFileDropZone ═══════════════ -->
+  <data name="TmFileDropZone_DragDrop" xml:space="preserve"><value>Přetáhněte soubory sem</value></data>
+  <data name="TmFileDropZone_Or" xml:space="preserve"><value>nebo</value></data>
+  <data name="TmFileDropZone_Browse" xml:space="preserve"><value>Vybrat soubory</value></data>
+  <data name="TmFileDropZone_Uploading" xml:space="preserve"><value>Nahrávání...</value></data>
+  <data name="TmFileDropZone_Remove" xml:space="preserve"><value>Odebrat soubor</value></data>
+  <data name="TmFileDropZone_MaxSize" xml:space="preserve"><value>Maximální velikost: {0}</value></data>
+  <data name="TmFileDropZone_AcceptedTypes" xml:space="preserve"><value>Povolené typy: {0}</value></data>
+
+  <!-- ═══════════════ TmAttachmentManager ═══════════════ -->
+  <data name="TmAttachmentManager_Upload" xml:space="preserve"><value>Nahrát soubor</value></data>
+  <data name="TmAttachmentManager_NoAttachments" xml:space="preserve"><value>Žádné přílohy</value></data>
+  <data name="TmAttachmentManager_Download" xml:space="preserve"><value>Stáhnout</value></data>
+  <data name="TmAttachmentManager_Delete" xml:space="preserve"><value>Smazat přílohu</value></data>
+  <data name="TmAttachmentManager_ConfirmDelete" xml:space="preserve"><value>Smazat tuto přílohu?</value></data>
+
+  <!-- ═══════════════ TmTimeline ═══════════════ -->
+  <data name="TmTimeline_NoEntries" xml:space="preserve"><value>Žádná aktivita</value></data>
+  <data name="TmTimeline_Internal" xml:space="preserve"><value>Interní</value></data>
+  <data name="TmTimeline_JustNow" xml:space="preserve"><value>Právě teď</value></data>
+  <data name="TmTimeline_MinutesAgo" xml:space="preserve"><value>před {0} min</value></data>
+  <data name="TmTimeline_HoursAgo" xml:space="preserve"><value>před {0} h</value></data>
+  <data name="TmTimeline_DaysAgo" xml:space="preserve"><value>před {0} dny</value></data>
+
+  <!-- ═══════════════ TmTreeView ═══════════════ -->
+  <data name="TmTreeView_Search" xml:space="preserve"><value>Hledat...</value></data>
+  <data name="TmTreeView_NoResults" xml:space="preserve"><value>Žádné položky</value></data>
+  <data name="TmTreeView_Loading" xml:space="preserve"><value>Načítání...</value></data>
+  <data name="TmTreeView_Expand" xml:space="preserve"><value>Rozbalit</value></data>
+  <data name="TmTreeView_Collapse" xml:space="preserve"><value>Sbalit</value></data>
+
+  <!-- ═══════════════ TmTagPicker ═══════════════ -->
+  <data name="TmTagPicker_Search" xml:space="preserve"><value>Hledat štítky...</value></data>
+  <data name="TmTagPicker_CreateNew" xml:space="preserve"><value>Vytvořit „{0}"</value></data>
+  <data name="TmTagPicker_NoTags" xml:space="preserve"><value>Žádné štítky</value></data>
+  <data name="TmTagPicker_AddTag" xml:space="preserve"><value>Přidat štítek</value></data>
+  <data name="TmTagEditorDialog_Title_New" xml:space="preserve"><value>Nový štítek</value></data>
+  <data name="TmTagEditorDialog_Title_Edit" xml:space="preserve"><value>Upravit štítek</value></data>
+  <data name="TmTagEditorDialog_Name" xml:space="preserve"><value>Název štítku</value></data>
+  <data name="TmTagEditorDialog_Color" xml:space="preserve"><value>Barva</value></data>
+
+  <!-- ═══════════════ TmCommandPalette ═══════════════ -->
+  <data name="TmCommandPalette_Placeholder" xml:space="preserve"><value>Zadejte příkaz nebo hledejte...</value></data>
+  <data name="TmCommandPalette_NoResults" xml:space="preserve"><value>Žádné příkazy nenalezeny</value></data>
+
+  <!-- ═══════════════ TmStepper ═══════════════ -->
+  <data name="TmStepper_Step" xml:space="preserve"><value>Krok {0} z {1}</value></data>
+  <data name="TmStepper_Completed" xml:space="preserve"><value>Dokončeno</value></data>
+
+  <!-- ═══════════════ TmAvatar ═══════════════ -->
+  <data name="TmAvatar_ImageAlt" xml:space="preserve"><value>Avatar uživatele</value></data>
+
+  <!-- ═══════════════ TmNotificationBell ═══════════════ -->
+  <data name="TmNotificationBell_AriaLabel" xml:space="preserve"><value>Oznámení</value></data>
+  <data name="TmNotificationBell_NewCount" xml:space="preserve"><value>{0} nových oznámení</value></data>
+  <data name="TmNotificationBell_NoNotifications" xml:space="preserve"><value>Žádná oznámení</value></data>
+  <data name="TmNotificationBell_MarkAllRead" xml:space="preserve"><value>Označit vše jako přečtené</value></data>
+
+  <!-- ═══════════════ TmEmptyState ═══════════════ -->
+  <data name="TmEmptyState_DefaultTitle" xml:space="preserve"><value>Žádná data</value></data>
+
+  <!-- ═══════════════ TmRichEditor ═══════════════ -->
+  <data name="TmRichEditor_Placeholder" xml:space="preserve"><value>Začněte psát...</value></data>
+  <data name="TmRichEditor_Bold" xml:space="preserve"><value>Tučné (Ctrl+B)</value></data>
+  <data name="TmRichEditor_Italic" xml:space="preserve"><value>Kurzíva (Ctrl+I)</value></data>
+  <data name="TmRichEditor_Underline" xml:space="preserve"><value>Podtržené (Ctrl+U)</value></data>
+  <data name="TmRichEditor_Link" xml:space="preserve"><value>Vložit odkaz</value></data>
+  <data name="TmRichEditor_BulletList" xml:space="preserve"><value>Odrážkový seznam</value></data>
+  <data name="TmRichEditor_OrderedList" xml:space="preserve"><value>Číslovaný seznam</value></data>
+  <data name="TmRichEditor_LinkUrl" xml:space="preserve"><value>URL adresa</value></data>
+  <data name="TmRichEditor_LinkUrlPlaceholder" xml:space="preserve"><value>https://...</value></data>
+  <data name="TmRichEditor_LinkInvalid" xml:space="preserve"><value>Zadejte platnou URL adresu</value></data>
+  <data name="TmRichEditor_MentionSearch" xml:space="preserve"><value>Hledat uživatele...</value></data>
+  <data name="TmRichEditor_Heading1" xml:space="preserve"><value>Nadpis 1</value></data>
+  <data name="TmRichEditor_Heading2" xml:space="preserve"><value>Nadpis 2</value></data>
+  <data name="TmRichEditor_UnorderedList" xml:space="preserve"><value>Odrážkový seznam</value></data>
+  <data name="TmRichEditor_OrderedList" xml:space="preserve"><value>Číslovaný seznam</value></data>
+  <data name="TmRichEditor_LinkDialog_Title" xml:space="preserve"><value>Vložit odkaz</value></data>
+  <data name="TmRichEditor_LinkDialog_Url" xml:space="preserve"><value>URL adresa</value></data>
+  <data name="TmRichEditor_LinkDialog_Text" xml:space="preserve"><value>Text odkazu</value></data>
+  <data name="TmRichEditor_LinkDialog_TextPlaceholder" xml:space="preserve"><value>Text odkazu</value></data>
+  <data name="TmRichEditor_LinkDialog_InvalidUrl" xml:space="preserve"><value>Zadejte platnou URL adresu</value></data>
+  <data name="TmRichEditor_LinkDialog_Insert" xml:space="preserve"><value>Vložit</value></data>
+  <data name="TmRichEditor_MentionEmpty" xml:space="preserve"><value>Uživatelé nenalezeni</value></data>
+  <data name="TmRichEditor_Undo" xml:space="preserve"><value>Zpět</value></data>
+  <data name="TmRichEditor_Redo" xml:space="preserve"><value>Znovu</value></data>
+  <data name="TmRichEditor_Heading3" xml:space="preserve"><value>Nadpis 3</value></data>
+  <data name="TmRichEditor_Heading4" xml:space="preserve"><value>Nadpis 4</value></data>
+  <data name="TmRichEditor_Strikethrough" xml:space="preserve"><value>Přeškrtnuté</value></data>
+  <data name="TmRichEditor_Subscript" xml:space="preserve"><value>Dolní index</value></data>
+  <data name="TmRichEditor_Superscript" xml:space="preserve"><value>Horní index</value></data>
+  <data name="TmRichEditor_Indent" xml:space="preserve"><value>Odsadit</value></data>
+  <data name="TmRichEditor_Outdent" xml:space="preserve"><value>Předsadit</value></data>
+  <data name="TmRichEditor_Code" xml:space="preserve"><value>Blok kódu</value></data>
+  <data name="TmRichEditor_Blockquote" xml:space="preserve"><value>Citace</value></data>
+  <data name="TmRichEditor_HorizontalRule" xml:space="preserve"><value>Vodorovná čára</value></data>
+  <data name="TmRichEditor_TextColor" xml:space="preserve"><value>Barva textu</value></data>
+  <data name="TmRichEditor_Highlight" xml:space="preserve"><value>Zvýraznění</value></data>
+  <data name="TmRichEditor_Image" xml:space="preserve"><value>Obrázek</value></data>
+  <data name="TmRichEditor_Table" xml:space="preserve"><value>Tabulka</value></data>
+  <data name="TmRichEditor_Video" xml:space="preserve"><value>Video</value></data>
+  <data name="TmRichEditor_RemoveFormat" xml:space="preserve"><value>Odstranit formátování</value></data>
+  <data name="TmRichEditor_TaskList" xml:space="preserve"><value>Seznam úkolů</value></data>
+  <data name="TmRichEditor_Emoji" xml:space="preserve"><value>Emoji</value></data>
+  <data name="TmRichEditor_Words" xml:space="preserve"><value>slov</value></data>
+  <data name="TmRichEditor_Characters" xml:space="preserve"><value>znaků</value></data>
+  <data name="TmRichEditor_ImageDialog_Title" xml:space="preserve"><value>Vložit obrázek</value></data>
+  <data name="TmRichEditor_ImageDialog_Url" xml:space="preserve"><value>URL obrázku</value></data>
+  <data name="TmRichEditor_ImageDialog_Alt" xml:space="preserve"><value>Alternativní text</value></data>
+  <data name="TmRichEditor_ImageDialog_AltPlaceholder" xml:space="preserve"><value>Popis obrázku</value></data>
+  <data name="TmRichEditor_ImageDialog_Insert" xml:space="preserve"><value>Vložit</value></data>
+  <data name="TmRichEditor_TableDialog_Title" xml:space="preserve"><value>Vložit tabulku</value></data>
+  <data name="TmRichEditor_TableDialog_Rows" xml:space="preserve"><value>Řádky</value></data>
+  <data name="TmRichEditor_TableDialog_Cols" xml:space="preserve"><value>Sloupce</value></data>
+  <data name="TmRichEditor_TableDialog_Preview" xml:space="preserve"><value>Náhled</value></data>
+  <data name="TmRichEditor_TableDialog_Insert" xml:space="preserve"><value>Vložit</value></data>
+  <data name="TmRichEditor_VideoDialog_Title" xml:space="preserve"><value>Vložit video</value></data>
+  <data name="TmRichEditor_VideoDialog_Url" xml:space="preserve"><value>URL videa</value></data>
+  <data name="TmRichEditor_VideoDialog_Help" xml:space="preserve"><value>Podporuje odkazy z YouTube a Vimeo</value></data>
+  <data name="TmRichEditor_VideoDialog_TitleLabel" xml:space="preserve"><value>Název</value></data>
+  <data name="TmRichEditor_VideoDialog_TitlePlaceholder" xml:space="preserve"><value>Název videa</value></data>
+  <data name="TmRichEditor_VideoDialog_Insert" xml:space="preserve"><value>Vložit</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Title" xml:space="preserve"><value>Najít a nahradit</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Find" xml:space="preserve"><value>Najít</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_FindPlaceholder" xml:space="preserve"><value>Hledat...</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Replace" xml:space="preserve"><value>Nahradit</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_ReplacePlaceholder" xml:space="preserve"><value>Nahradit za...</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_ReplaceAll" xml:space="preserve"><value>Nahradit vše</value></data>
+  <data name="TmRichEditor_FindReplaceDialog_Replaced" xml:space="preserve"><value>{0} výskyt(ů) nahrazeno</value></data>
+
+  <!-- ═══════════════ TmFilterBuilder ═══════════════ -->
+  <data name="TmFilter_AddCondition" xml:space="preserve"><value>Přidat podmínku</value></data>
+  <data name="TmFilter_AddGroup" xml:space="preserve"><value>Přidat skupinu</value></data>
+  <data name="TmFilter_And" xml:space="preserve"><value>A</value></data>
+  <data name="TmFilter_Or" xml:space="preserve"><value>NEBO</value></data>
+  <data name="TmFilter_SelectField" xml:space="preserve"><value>Vyberte pole</value></data>
+  <data name="TmFilter_SelectOperator" xml:space="preserve"><value>Vyberte operátor</value></data>
+  <data name="TmFilter_EnterValue" xml:space="preserve"><value>Zadejte hodnotu</value></data>
+  <data name="TmFilter_SaveFilter" xml:space="preserve"><value>Uložit filtr</value></data>
+  <data name="TmFilter_FilterName" xml:space="preserve"><value>Název filtru</value></data>
+  <data name="TmFilter_FilterNamePlaceholder" xml:space="preserve"><value>Můj filtr...</value></data>
+  <data name="TmFilter_DeleteFilter" xml:space="preserve"><value>Smazat filtr</value></data>
+  <data name="TmFilter_Equals" xml:space="preserve"><value>rovná se</value></data>
+  <data name="TmFilter_NotEquals" xml:space="preserve"><value>nerovná se</value></data>
+  <data name="TmFilter_Contains" xml:space="preserve"><value>obsahuje</value></data>
+  <data name="TmFilter_NotContains" xml:space="preserve"><value>neobsahuje</value></data>
+  <data name="TmFilter_StartsWith" xml:space="preserve"><value>začíná na</value></data>
+  <data name="TmFilter_EndsWith" xml:space="preserve"><value>končí na</value></data>
+  <data name="TmFilter_GreaterThan" xml:space="preserve"><value>větší než</value></data>
+  <data name="TmFilter_LessThan" xml:space="preserve"><value>menší než</value></data>
+  <data name="TmFilter_Between" xml:space="preserve"><value>mezi</value></data>
+  <data name="TmFilter_IsEmpty" xml:space="preserve"><value>je prázdné</value></data>
+  <data name="TmFilter_IsNotEmpty" xml:space="preserve"><value>není prázdné</value></data>
+
+  <!-- ═══════════════ TmLayout ═══════════════ -->
+  <data name="TmSidebar_CollapseMenu" xml:space="preserve"><value>Sbalit menu</value></data>
+  <data name="TmSidebar_ExpandMenu" xml:space="preserve"><value>Rozbalit menu</value></data>
+  <data name="TmTopBar_OpenSearch" xml:space="preserve"><value>Hledat (Ctrl+K)</value></data>
+  <data name="TmTopBar_OpenNotifications" xml:space="preserve"><value>Otevřít oznámení</value></data>
+  <data name="TmTopBar_OpenUserMenu" xml:space="preserve"><value>Otevřít nabídku uživatele</value></data>
+
+  <!-- ═══════════════ TmSearchInput ═══════════════ -->
+  <data name="TmSearchInput_Placeholder" xml:space="preserve"><value>Hledat...</value></data>
+
+  <!-- ═══════════════ TmTimeline (extra format key) ═══════════════ -->
+  <data name="TmTimeline_DateFormat" xml:space="preserve"><value>d. M. yyyy</value></data>
+
+  <!-- ═══════════════ TmCheckbox / TmToggle / TmRadio ═══════════════ -->
+  <data name="TmCheckbox_Indeterminate" xml:space="preserve"><value>Částečně vybráno</value></data>
+  <data name="TmSearchInput_Clear" xml:space="preserve"><value>Vymazat hledání</value></data>
+
+  <!-- ═══════════════ Validation ═══════════════ -->
+  <data name="TmValidation_Required" xml:space="preserve"><value>Toto pole je povinné</value></data>
+  <data name="TmValidation_Invalid" xml:space="preserve"><value>Toto pole obsahuje neplatnou hodnotu</value></data>
+
+  <!-- ═══════════════ TmActivityTimeline ═══════════════ -->
+  <data name="TmTimeline_Loading" xml:space="preserve"><value>Načítám aktivitu...</value></data>
+  <data name="TmTimeline_Empty" xml:space="preserve"><value>Zatím žádná aktivita</value></data>
+
+  <!-- ═══════════════ TmActivityComments ═══════════════ -->
+  <data name="TmActivityComments_Empty" xml:space="preserve"><value>Zatím žádné komentáře</value></data>
+  <data name="TmActivityComments_AddComment" xml:space="preserve"><value>Přidat komentář</value></data>
+  <data name="TmActivityComments_SubmitComment" xml:space="preserve"><value>Odeslat komentář</value></data>
+  <data name="TmActivityComments_Edited" xml:space="preserve"><value>upraveno</value></data>
+  <data name="TmActivityComments_DeleteConfirm" xml:space="preserve"><value>Smazat tento komentář?</value></data>
+
+  <!-- ═══════════════ TmActivityAttachments ═══════════════ -->
+  <data name="TmActivityAttachments_Empty" xml:space="preserve"><value>Zatím žádné přílohy</value></data>
+  <data name="TmActivityAttachments_DropHere" xml:space="preserve"><value>Přetáhněte soubory sem nebo</value></data>
+  <data name="TmActivityAttachments_Browse" xml:space="preserve"><value>vyberte soubory</value></data>
+  <data name="TmActivityAttachments_Uploading" xml:space="preserve"><value>Nahrávání...</value></data>
+  <data name="TmActivityAttachments_UploadComplete" xml:space="preserve"><value>Nahrávání dokončeno</value></data>
+  <data name="TmActivityAttachments_DeleteConfirm" xml:space="preserve"><value>Smazat tuto přílohu?</value></data>
+  <data name="TmActivityAttachments_DuplicateFile" xml:space="preserve"><value>Soubor s tímto názvem již existuje</value></data>
+  <data name="TmActivityAttachments_UploadedBy" xml:space="preserve"><value>Nahrál {0}</value></data>
+  <data name="TmActivityAttachments_Download" xml:space="preserve"><value>Stáhnout</value></data>
+
+  <!-- ═══════════════ TmActivityLog ═══════════════ -->
+  <data name="TmActivityLog_TimelineTab" xml:space="preserve"><value>Timeline</value></data>
+  <data name="TmActivityLog_CommentsTab" xml:space="preserve"><value>Komentáře</value></data>
+  <data name="TmActivityLog_AttachmentsTab" xml:space="preserve"><value>Přílohy</value></data>
+
+  <!-- ═══════════════ TmTimePicker ═══════════════ -->
+  <data name="TmTimePicker_Hours" xml:space="preserve"><value>Hodiny</value></data>
+  <data name="TmTimePicker_Minutes" xml:space="preserve"><value>Minuty</value></data>
+  <data name="TmTimePicker_Seconds" xml:space="preserve"><value>Sekundy</value></data>
+  <data name="TmTimePicker_Placeholder" xml:space="preserve"><value>HH:mm</value></data>
+  <data name="TmTimePicker_PlaceholderSeconds" xml:space="preserve"><value>HH:mm:ss</value></data>
+  <data name="TmTimePicker_Clear" xml:space="preserve"><value>Smazat</value></data>
+
+  <!-- ═══════════════ TmDatePicker ═══════════════ -->
+  <data name="TmDatePicker_Placeholder" xml:space="preserve"><value>Vyberte datum</value></data>
+  <data name="TmDatePicker_Clear" xml:space="preserve"><value>Smazat</value></data>
+  <data name="TmDatePicker_Today" xml:space="preserve"><value>Dnes</value></data>
+  <data name="TmDatePicker_PreviousMonth" xml:space="preserve"><value>Předchozí měsíc</value></data>
+  <data name="TmDatePicker_NextMonth" xml:space="preserve"><value>Příští měsíc</value></data>
+
+  <!-- ═══════════════ TmDateTimePicker ═══════════════ -->
+  <data name="TmDateTimePicker_Placeholder" xml:space="preserve"><value>Vyberte datum a čas</value></data>
+  <data name="TmDateTimePicker_Clear" xml:space="preserve"><value>Smazat</value></data>
+
+  <!-- ═══════════════ TmTimeRangePicker ═══════════════ -->
+  <data name="TmTimeRangePicker_From" xml:space="preserve"><value>Od</value></data>
+  <data name="TmTimeRangePicker_To" xml:space="preserve"><value>Do</value></data>
+  <data name="TmTimeRangePicker_Duration" xml:space="preserve"><value>Délka</value></data>
+  <data name="TmTimeRangePicker_Swap" xml:space="preserve"><value>Prohodit</value></data>
+  <data name="TmTimeRangePicker_InvalidRange" xml:space="preserve"><value>Čas konce musí být po čase začátku</value></data>
+
+  <!-- ═══════════════ TmDateRangePicker ═══════════════ -->
+  <data name="TmDateRangePicker_From" xml:space="preserve"><value>Od</value></data>
+  <data name="TmDateRangePicker_To" xml:space="preserve"><value>Do</value></data>
+  <data name="TmDateRangePicker_Clear" xml:space="preserve"><value>Smazat</value></data>
+  <data name="TmDateRangePicker_Done" xml:space="preserve"><value>Hotovo</value></data>
+  <data name="TmDateRangePicker_Preset_Today" xml:space="preserve"><value>Dnes</value></data>
+  <data name="TmDateRangePicker_Preset_LastWeek" xml:space="preserve"><value>Minulý týden</value></data>
+  <data name="TmDateRangePicker_Preset_LastMonth" xml:space="preserve"><value>Minulý měsíc</value></data>
+  <data name="TmDateRangePicker_Preset_LastQuarter" xml:space="preserve"><value>Minulý kvartál</value></data>
+  <data name="TmDateRangePicker_Preset_ThisYear" xml:space="preserve"><value>Letos</value></data>
+
+  <!-- ═══════════════ TmDateTimeRangePicker ═══════════════ -->
+  <data name="TmDateTimeRangePicker_StartLabel" xml:space="preserve"><value>Začátek</value></data>
+  <data name="TmDateTimeRangePicker_EndLabel" xml:space="preserve"><value>Konec</value></data>
+  <data name="TmDateTimeRangePicker_Clear" xml:space="preserve"><value>Smazat</value></data>
+  <data name="TmDateTimeRangePicker_ValidationError" xml:space="preserve"><value>Konec musí být po začátku</value></data>
+
+  <data name="TmValidationSummary_Title" xml:space="preserve"><value>Při odesílání formuláře došlo k chybám</value></data>
+
+  <data name="TmPasswordStrength_VeryWeak" xml:space="preserve"><value>Velmi slabé</value></data>
+  <data name="TmPasswordStrength_Weak" xml:space="preserve"><value>Slabé</value></data>
+  <data name="TmPasswordStrength_Medium" xml:space="preserve"><value>Střední</value></data>
+  <data name="TmPasswordStrength_Strong" xml:space="preserve"><value>Silné</value></data>
+  <data name="TmPasswordStrength_VeryStrong" xml:space="preserve"><value>Velmi silné</value></data>
+  <data name="TmPasswordStrength_HintUseAtLeast8Chars" xml:space="preserve"><value>Použijte alespoň 8 znaků</value></data>
+  <data name="TmPasswordStrength_HintAddLetters" xml:space="preserve"><value>Přidejte písmena</value></data>
+  <data name="TmPasswordStrength_HintAddNumbers" xml:space="preserve"><value>Přidejte čísla</value></data>
+  <data name="TmPasswordStrength_HintAddSpecialChars" xml:space="preserve"><value>Přidejte speciální znaky</value></data>
+  <data name="TmPasswordStrength_HintAddUppercase" xml:space="preserve"><value>Přidejte velká písmena</value></data>
+  <data name="TmPasswordStrength_HintAddLowercase" xml:space="preserve"><value>Přidejte malá písmena</value></data>
+  <data name="TmPasswordStrength_HintMakeItLonger" xml:space="preserve"><value>Prodlužte heslo</value></data>
+  <data name="TmPasswordStrength_HintAvoidCommonPatterns" xml:space="preserve"><value>Vyhněte se běžným vzorům</value></data>
+  <data name="TmPasswordStrength_HintAvoidCommonWords" xml:space="preserve"><value>Vyhněte se běžným slovům</value></data>
+  <data name="TmPasswordStrength_HintExcellent" xml:space="preserve"><value>Vynikající heslo!</value></data>
+
+  <data name="TmToast_Close" xml:space="preserve"><value>Zavřít</value></data>
+  <data name="TmAlert_Dismiss" xml:space="preserve"><value>Zavřít</value></data>
+  <data name="TmDrawer_Close" xml:space="preserve"><value>Zavřít panel</value></data>
+  <data name="TmBulkAction_Toolbar" xml:space="preserve"><value>Hromadné akce</value></data>
+  <data name="TmBulkAction_Selected" xml:space="preserve"><value>vybráno</value></data>
+  <data name="TmBulkAction_ClearSelection" xml:space="preserve"><value>Zrušit výběr</value></data>
+
+</root>

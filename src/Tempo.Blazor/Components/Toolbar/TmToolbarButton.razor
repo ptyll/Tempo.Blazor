@@ -1,0 +1,41 @@
+@namespace Tempo.Blazor.Components.Toolbar
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+
+<button type="button"
+        class="tm-toolbar-btn tm-toolbar-btn--@Variant.ToString().ToLowerInvariant() @Class"
+        title="@Tooltip"
+        disabled="@Disabled"
+        @onclick="async () => await OnClick.InvokeAsync()">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <TmIcon Name="@Icon" Size="IconSize.Sm" />
+    }
+    @if (!string.IsNullOrEmpty(Text))
+    {
+        <span class="tm-toolbar-btn-text">@Text</span>
+    }
+</button>
+
+@code {
+    /// <summary>Button label text. Omit for icon-only buttons.</summary>
+    [Parameter] public string? Text { get; set; }
+
+    /// <summary>Icon name from IconNames. Displayed before the text.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Tooltip text shown as the native title attribute.</summary>
+    [Parameter] public string? Tooltip { get; set; }
+
+    /// <summary>Fires when the button is clicked.</summary>
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    /// <summary>When true, the button is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Visual style variant.</summary>
+    [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Ghost;
+
+    /// <summary>Additional CSS class for the button element.</summary>
+    [Parameter] public string? Class { get; set; }
+}

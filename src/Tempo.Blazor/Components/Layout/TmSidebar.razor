@@ -1,0 +1,86 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Components.Icons
+
+<aside class="tm-sidebar @(Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded") @(Class)">
+    <div class="tm-sidebar-header">
+        @if (Header is not null)
+        {
+            @Header
+        }
+        <button class="tm-sidebar-toggle"
+                type="button"
+                aria-label="@(Collapsed ? "Expand sidebar" : "Collapse sidebar")"
+                @onclick="HandleToggleAsync">
+            <TmIcon Name="@(Collapsed ? IconNames.ChevronRight : IconNames.ChevronLeft)" Size="IconSize.Sm" />
+        </button>
+    </div>
+
+    <nav class="tm-sidebar-nav">
+        <ul class="tm-sidebar-nav-list">
+            @foreach (var item in Items)
+            {
+                <li class="tm-sidebar-nav-item @(item.IsActive ? "tm-sidebar-nav-item-active" : "")">
+                    <a href="@item.Href" class="tm-sidebar-nav-link">
+                        @if (!string.IsNullOrEmpty(item.Icon))
+                        {
+                            <TmIcon Name="@item.Icon" Size="IconSize.Sm" />
+                        }
+                        @if (!Collapsed)
+                        {
+                            <span class="tm-sidebar-nav-label">@item.Label</span>
+                            @if (item.BadgeCount.HasValue && item.BadgeCount.Value > 0)
+                            {
+                                <span class="tm-sidebar-badge">@item.BadgeCount</span>
+                            }
+                        }
+                    </a>
+                    @if (!Collapsed && item.Children is { Count: > 0 })
+                    {
+                        <ul class="tm-sidebar-nav-children">
+                            @foreach (var child in item.Children)
+                            {
+                                <li class="tm-sidebar-nav-item @(child.IsActive ? "tm-sidebar-nav-item-active" : "")">
+                                    <a href="@child.Href" class="tm-sidebar-nav-link tm-sidebar-nav-link-child">
+                                        @if (!string.IsNullOrEmpty(child.Icon))
+                                        {
+                                            <TmIcon Name="@child.Icon" Size="IconSize.Xs" />
+                                        }
+                                        <span class="tm-sidebar-nav-label">@child.Label</span>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </li>
+            }
+        </ul>
+    </nav>
+
+    @if (Footer is not null)
+    {
+        <div class="tm-sidebar-footer">@Footer</div>
+    }
+</aside>
+
+@code {
+    /// <summary>Navigation items to display.</summary>
+    [Parameter] public IReadOnlyList<ISidebarNavItem> Items { get; set; } = [];
+
+    /// <summary>Whether the sidebar is in collapsed (icon-only) state.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Fires when the toggle button is clicked.</summary>
+    [Parameter] public EventCallback OnToggle { get; set; }
+
+    /// <summary>Optional header content (e.g. logo).</summary>
+    [Parameter] public RenderFragment? Header { get; set; }
+
+    /// <summary>Optional footer content (e.g. user info, version).</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private async Task HandleToggleAsync() => await OnToggle.InvokeAsync();
+}

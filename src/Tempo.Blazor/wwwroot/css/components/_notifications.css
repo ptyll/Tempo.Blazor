@@ -1,0 +1,11 @@
+.tm-notification-severity { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tm-notification-severity--info    { color: var(--tm-color-primary); }
+.tm-notification-severity--success { color: var(--tm-color-success); }
+.tm-notification-severity--warning { color: var(--tm-color-warning); }
+.tm-notification-severity--error   { color: var(--tm-color-danger); }
+.tm-notification-mark-read {
+  background: none; border: none; cursor: pointer;
+  color: var(--tm-text-tertiary); padding: 0 var(--tm-space-1);
+  opacity: 0.6; transition: opacity var(--tm-transition-fast);
+}
+.tm-notification-mark-read:hover { opacity: 1; color: var(--tm-color-primary); }

@@ -1,0 +1,61 @@
+@namespace Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="tm-dropdown-wrapper" @onkeydown="HandleKeyDownAsync">
+    <button type="button"
+            class="tm-dropdown-trigger"
+            aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
+            aria-haspopup="true"
+            @onclick="Toggle">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <TmIcon Name="@Icon" Size="IconSize.Sm" />
+        }
+        <span>@Text</span>
+        <TmIcon Name="@((_isOpen ? IconNames.ChevronUp : IconNames.ChevronDown))" Size="IconSize.Sm" />
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="tm-dropdown-menu" role="menu">
+            <CascadingValue Value="this">
+                @ChildContent
+            </CascadingValue>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Trigger button label.</summary>
+    [Parameter] public string Text { get; set; } = string.Empty;
+
+    /// <summary>Optional leading icon on the trigger button.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Fires when a dropdown item is selected (value = item key).</summary>
+    [Parameter] public EventCallback<string> OnSelect { get; set; }
+
+    /// <summary>Menu content — typically TmDropdownItem elements.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _isOpen;
+
+    private void Toggle() => _isOpen = !_isOpen;
+
+    /// <summary>Called by TmDropdownItem when an item is selected.</summary>
+    public async Task SelectItemAsync(string value)
+    {
+        await OnSelect.InvokeAsync(value);
+        _isOpen = false;
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _isOpen = false;
+            await Task.CompletedTask;
+        }
+    }
+}

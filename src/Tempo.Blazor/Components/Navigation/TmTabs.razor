@@ -1,0 +1,148 @@
+@namespace Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-tabs @VariantClass @Class">
+    <div class="tm-tabs__header" role="tablist" @onkeydown="HandleKeyDown">
+        @foreach (var panel in _panels)
+        {
+            var isActive = panel.Id == ActiveTabId;
+            var tabClass = "tm-tab" +
+                (isActive ? " tm-tab--active" : "") +
+                (panel.Disabled ? " tm-tab--disabled" : "");
+
+            <button type="button"
+                    role="tab"
+                    class="@tabClass"
+                    aria-selected="@(isActive ? "true" : "false")"
+                    aria-disabled="@(panel.Disabled ? "true" : null)"
+                    aria-controls="@($"tabpanel-{panel.Id}")"
+                    tabindex="@(isActive ? 0 : -1)"
+                    @onclick="@(() => SelectTab(panel))">
+                @if (!string.IsNullOrEmpty(panel.Icon))
+                {
+                    <span class="tm-tab__icon">
+                        <TmIcon Name="@panel.Icon" Size="IconSize.Sm" />
+                    </span>
+                }
+                <span class="tm-tab__label">@panel.Title</span>
+                @if (!string.IsNullOrEmpty(panel.Badge))
+                {
+                    <span class="tm-tab__badge">@panel.Badge</span>
+                }
+            </button>
+        }
+    </div>
+
+    <CascadingValue Value="this" IsFixed="true">
+        @ChildContent
+    </CascadingValue>
+
+    @{
+        var activePanel = _panels.FirstOrDefault(p => p.Id == ActiveTabId);
+    }
+    @if (activePanel?.ChildContent is not null)
+    {
+        <div class="tm-tabs__panel"
+             role="tabpanel"
+             id="@($"tabpanel-{activePanel.Id}")"
+             aria-labelledby="@($"tab-{activePanel.Id}")"
+             tabindex="0">
+            @activePanel.ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<TmTabPanel> _panels = [];
+
+    /// <summary>ID of the currently active tab.</summary>
+    [Parameter] public string ActiveTabId { get; set; } = default!;
+
+    /// <summary>Fires when the active tab changes.</summary>
+    [Parameter] public EventCallback<string> ActiveTabIdChanged { get; set; }
+
+    /// <summary>Visual variant of the tab strip.</summary>
+    [Parameter] public TabVariant Variant { get; set; } = TabVariant.Line;
+
+    /// <summary>Tab panel children.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string VariantClass => Variant switch
+    {
+        TabVariant.Pill => "tm-tabs--pill",
+        TabVariant.Enclosed => "tm-tabs--enclosed",
+        _ => "tm-tabs--line"
+    };
+
+    internal void RegisterPanel(TmTabPanel panel)
+    {
+        if (!_panels.Any(p => p.Id == panel.Id))
+        {
+            _panels.Add(panel);
+            StateHasChanged();
+        }
+    }
+
+    internal void UnregisterPanel(TmTabPanel panel)
+    {
+        _panels.RemoveAll(p => p.Id == panel.Id);
+        StateHasChanged();
+    }
+
+    private async Task SelectTab(TmTabPanel panel)
+    {
+        if (panel.Disabled || panel.Id == ActiveTabId)
+            return;
+
+        await ActiveTabIdChanged.InvokeAsync(panel.Id);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (_panels.Count == 0) return;
+
+        var currentIndex = _panels.FindIndex(p => p.Id == ActiveTabId);
+        if (currentIndex < 0) currentIndex = 0;
+
+        int newIndex = currentIndex;
+
+        if (e.Key == "ArrowRight")
+        {
+            // Move forward, skip disabled
+            for (int i = 1; i <= _panels.Count; i++)
+            {
+                var candidate = (currentIndex + i) % _panels.Count;
+                if (!_panels[candidate].Disabled)
+                {
+                    newIndex = candidate;
+                    break;
+                }
+            }
+        }
+        else if (e.Key == "ArrowLeft")
+        {
+            // Move backward, skip disabled
+            for (int i = 1; i <= _panels.Count; i++)
+            {
+                var candidate = (currentIndex - i + _panels.Count) % _panels.Count;
+                if (!_panels[candidate].Disabled)
+                {
+                    newIndex = candidate;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        if (newIndex != currentIndex)
+        {
+            await ActiveTabIdChanged.InvokeAsync(_panels[newIndex].Id);
+        }
+    }
+}

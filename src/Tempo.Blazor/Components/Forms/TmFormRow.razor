@@ -1,0 +1,16 @@
+@namespace Tempo.Blazor.Components.Forms
+
+<div class="tm-form-row tm-form-row--cols-@Columns @Class">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Content items rendered as columns.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Number of equal-width columns (1–4).</summary>
+    [Parameter] public int Columns { get; set; } = 2;
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+}

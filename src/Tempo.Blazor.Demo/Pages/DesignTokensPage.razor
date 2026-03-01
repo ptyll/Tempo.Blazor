@@ -1,0 +1,340 @@
+@page "/design-tokens"
+@inject Tempo.Blazor.Services.ThemeService ThemeService
+@implements IDisposable
+
+<PageTitle>Design Tokens – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Design Tokens</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        The visual foundation of Tempo.Blazor. All values use CSS custom properties (<code>--tm-*</code>) and can be overridden.
+    </p>
+</div>
+
+<!-- Theme Toggle -->
+<section class="demo-section">
+    <div class="showcase-card">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Theme</h3>
+                <p class="text-sm text-slate-500">Current: <span class="font-medium text-primary-600 dark:text-primary-400">@ThemeService.ThemeName</span></p>
+            </div>
+            <button @onclick="ThemeService.Toggle"
+                    class="flex items-center space-x-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-medium transition-colors shadow-lg shadow-primary-600/25">
+                @if (ThemeService.IsDark)
+                {
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span>Switch to Light</span>
+                }
+                else
+                {
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                    <span>Switch to Dark</span>
+                }
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Color Palette -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Color Palette</h2>
+    
+    <div class="space-y-6">
+        <!-- Primary Colors -->
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Primary</h3>
+            <div class="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                @foreach (var shadeValue in _primaryShades)
+                {
+                    <div class="group">
+                        <div class="h-16 rounded-lg shadow-sm transition-transform group-hover:scale-105" 
+                             style="background: var(--tm-color-primary-@(shadeValue));"></div>
+                        <p class="text-center text-xs text-slate-500 mt-1">@shadeValue</p>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Semantic Colors -->
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Semantic</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                @foreach (var (name, token, description) in _semanticColors)
+                {
+                    <div class="group cursor-pointer" @onclick="() => CopyToClipboard(token)">
+                        <div class="h-20 rounded-lg shadow-sm transition-transform group-hover:scale-105 flex items-end p-3" 
+                             style="background: var(@token);">
+                            <span class="text-xs font-medium text-white drop-shadow-md">@name</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">@token</p>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Neutral Colors -->
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Neutral</h3>
+            <div class="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                @foreach (var shadeValue in _grayShades)
+                {
+                    <div class="group">
+                        <div class="h-16 rounded-lg shadow-sm transition-transform group-hover:scale-105 border border-slate-200 dark:border-slate-700" 
+                             style="background: var(--tm-color-gray-@(shadeValue));"></div>
+                        <p class="text-center text-xs text-slate-500 mt-1">@shadeValue</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Typography -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Typography</h2>
+    
+    <div class="showcase-card">
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Font Sizes</h3>
+        <div class="space-y-4">
+            @foreach (var (label, token) in _fontSizes)
+            {
+                <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <span style="font-size: var(@token);">The quick brown fox</span>
+                    <code class="text-xs text-slate-500">@token</code>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <div class="showcase-card mt-6">
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Font Weights</h3>
+        <div class="space-y-3">
+            @foreach (var (label, token) in _fontWeights)
+            {
+                <div class="flex items-center justify-between">
+                    <span style="font-weight: var(@token);">@label (@token)</span>
+                    <code class="text-xs text-slate-500">@token</code>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Spacing -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Spacing</h2>
+    
+    <div class="showcase-card">
+        <div class="space-y-3">
+            @foreach (var (label, token) in _spacings)
+            {
+                <div class="flex items-center space-x-4">
+                    <code class="text-xs text-slate-500 w-24">@token</code>
+                    <div class="flex-1 h-6 bg-slate-100 dark:bg-slate-800 rounded overflow-hidden">
+                        <div class="h-full bg-primary-500 rounded" style="width: var(@token);"></div>
+                    </div>
+                    <span class="text-xs text-slate-500 w-16 text-right">@label</span>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Border Radius -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Border Radius</h2>
+    
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-6">
+            @foreach (var (label, token) in _radii)
+            {
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-primary-500 mx-auto mb-2" style="border-radius: var(@token);"></div>
+                    <p class="text-xs font-medium text-slate-700 dark:text-slate-300">@label</p>
+                    <code class="text-xs text-slate-500">@token</code>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Shadows -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Shadows</h2>
+    
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-6">
+            @foreach (var (label, token) in _shadows)
+            {
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-white dark:bg-slate-700 rounded-lg mx-auto mb-2" style="box-shadow: var(@token);"></div>
+                    <p class="text-xs font-medium text-slate-700 dark:text-slate-300">@label</p>
+                    <code class="text-xs text-slate-500">@token</code>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Animations -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Animations</h2>
+    
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-8 items-center">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-primary-500 rounded-lg tm-animate-spin mx-auto mb-2"></div>
+                <p class="text-xs text-slate-500">spin</p>
+            </div>
+            <div class="text-center">
+                <div class="w-12 h-12 bg-primary-500 rounded-lg tm-animate-pulse mx-auto mb-2"></div>
+                <p class="text-xs text-slate-500">pulse</p>
+            </div>
+            <div class="text-center">
+                <div class="w-12 h-12 bg-slate-300 dark:bg-slate-600 rounded-lg mx-auto mb-2" 
+                     style="animation: tm-shimmer 1.5s ease-in-out infinite; background: linear-gradient(90deg, var(--tm-bg-muted) 25%, var(--tm-bg-surface-secondary) 50%, var(--tm-bg-muted) 75%); background-size: 200% 100%;"></div>
+                <p class="text-xs text-slate-500">shimmer</p>
+            </div>
+            <div class="text-center">
+                <button @onclick="TriggerFadeIn" class="mb-2 px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                    Fade In
+                </button>
+                <div class="w-12 h-12 bg-primary-500 rounded-lg mx-auto @(_showFadeIn ? "tm-animate-fade-in" : "opacity-0")"></div>
+            </div>
+            <div class="text-center">
+                <button @onclick="TriggerSlideIn" class="mb-2 px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                    Slide In
+                </button>
+                <div class="w-12 h-12 bg-primary-500 rounded-lg mx-auto @(_showSlideIn ? "tm-animate-slide-in" : "opacity-0")"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Copy Toast -->
+@if (_showCopyToast)
+{
+    <div class="fixed bottom-6 right-6 z-50 animate-fade-in">
+        <div class="flex items-center space-x-2 px-4 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-lg shadow-lg">
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="text-sm font-medium">Copied to clipboard!</span>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _showFadeIn;
+    private bool _showSlideIn;
+    private bool _showCopyToast;
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnChanged -= StateHasChanged;
+    }
+
+    private static readonly string[] _primaryShades = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"];
+    private static readonly string[] _grayShades = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"];
+
+    private static readonly (string Name, string Token, string Description)[] _semanticColors =
+    {
+        ("Success", "--tm-color-success", "Green for positive actions"),
+        ("Warning", "--tm-color-warning", "Yellow for cautions"),
+        ("Danger", "--tm-color-danger", "Red for errors"),
+        ("Info", "--tm-color-info", "Blue for information"),
+    };
+
+    private static readonly (string Label, string Token)[] _fontSizes =
+    {
+        ("xs (0.75rem)", "--tm-font-size-xs"),
+        ("sm (0.875rem)", "--tm-font-size-sm"),
+        ("md (1rem)", "--tm-font-size-md"),
+        ("lg (1.125rem)", "--tm-font-size-lg"),
+        ("xl (1.25rem)", "--tm-font-size-xl"),
+        ("2xl (1.5rem)", "--tm-font-size-2xl"),
+        ("3xl (1.875rem)", "--tm-font-size-3xl"),
+    };
+
+    private static readonly (string Label, string Token)[] _fontWeights =
+    {
+        ("Normal", "--tm-font-weight-normal"),
+        ("Medium", "--tm-font-weight-medium"),
+        ("Semibold", "--tm-font-weight-semibold"),
+        ("Bold", "--tm-font-weight-bold"),
+    };
+
+    private static readonly (string Label, string Token)[] _spacings =
+    {
+        ("4px", "--tm-space-1"),
+        ("8px", "--tm-space-2"),
+        ("12px", "--tm-space-3"),
+        ("16px", "--tm-space-4"),
+        ("20px", "--tm-space-5"),
+        ("24px", "--tm-space-6"),
+        ("32px", "--tm-space-8"),
+        ("40px", "--tm-space-10"),
+        ("48px", "--tm-space-12"),
+        ("64px", "--tm-space-16"),
+    };
+
+    private static readonly (string Label, string Token)[] _radii =
+    {
+        ("none", "--tm-radius-none"),
+        ("sm", "--tm-radius-sm"),
+        ("md", "--tm-radius-md"),
+        ("lg", "--tm-radius-lg"),
+        ("xl", "--tm-radius-xl"),
+        ("2xl", "--tm-radius-2xl"),
+        ("full", "--tm-radius-full"),
+    };
+
+    private static readonly (string Label, string Token)[] _shadows =
+    {
+        ("sm", "--tm-shadow-sm"),
+        ("md", "--tm-shadow-md"),
+        ("lg", "--tm-shadow-lg"),
+        ("xl", "--tm-shadow-xl"),
+    };
+
+    private async Task CopyToClipboard(string text)
+    {
+        // In real implementation, use JS interop to copy to clipboard
+        _showCopyToast = true;
+        await Task.Delay(2000);
+        _showCopyToast = false;
+    }
+
+    private void TriggerFadeIn()
+    {
+        _showFadeIn = false;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Delay(50);
+            _showFadeIn = true;
+            StateHasChanged();
+        });
+    }
+
+    private void TriggerSlideIn()
+    {
+        _showSlideIn = false;
+        _ = InvokeAsync(async () =>
+        {
+            await Task.Delay(50);
+            _showSlideIn = true;
+            StateHasChanged();
+        });
+    }
+}

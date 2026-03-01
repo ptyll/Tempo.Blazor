@@ -1,0 +1,45 @@
+@namespace Tempo.Blazor.Components.Navigation
+
+<div class="tm-context-menu-wrapper" @onkeydown="HandleKeyDown">
+    <div class="tm-context-menu__trigger" @onclick="ToggleMenu">
+        @Trigger
+    </div>
+
+    @if (_isOpen)
+    {
+        <div class="tm-context-menu" role="menu">
+            <CascadingValue Value="this" IsFixed="true">
+                @ChildContent
+            </CascadingValue>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _isOpen;
+
+    /// <summary>The trigger element that opens the menu.</summary>
+    [Parameter] public RenderFragment? Trigger { get; set; }
+
+    /// <summary>Menu item children (TmContextMenuItem).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private void ToggleMenu()
+    {
+        _isOpen = !_isOpen;
+    }
+
+    internal void CloseMenu()
+    {
+        _isOpen = false;
+        StateHasChanged();
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && _isOpen)
+        {
+            CloseMenu();
+        }
+    }
+}

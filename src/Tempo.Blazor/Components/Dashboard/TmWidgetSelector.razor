@@ -1,0 +1,195 @@
+@namespace Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Buttons
+
+<div class="tm-widget-selector-overlay" @onclick="OnClose">
+    <div class="tm-widget-selector-modal" @onclick:stopPropagation>
+        
+        @* Header ──────────────────────────────────────────────── *@
+        <div class="tm-widget-selector-header">
+            <h3>Add Widgets</h3>
+            <p>Choose widgets to add to your dashboard</p>
+            <button type="button" class="tm-widget-selector-close" @onclick="OnClose">
+                <TmIcon Name="x" Size="IconSize.Sm" />
+            </button>
+        </div>
+        
+        @* Search ──────────────────────────────────────────────── *@
+        <div class="tm-widget-selector-search">
+            <TmSearchInput @bind-Value="_searchText" 
+                          Placeholder="Search widgets..." />
+        </div>
+        
+        @* Content ─────────────────────────────────────────────── *@
+        <div class="tm-widget-selector-content">
+            
+            @* Category Sidebar ─────────────────────────────────── *@
+            <div class="tm-widget-selector-sidebar">
+                <div class="tm-widget-selector-categories">
+                    <button type="button" 
+                            class="tm-widget-selector-category @(_selectedCategory == null ? "tm-widget-selector-category--active" : "")"
+                            @onclick="() => SelectCategory(null)">
+                        <TmIcon Name="grid" Size="IconSize.Sm" />
+                        <span>All Widgets</span>
+                        <span class="tm-widget-selector-count">@GetTotalWidgetCount()</span>
+                    </button>
+                    
+                    @foreach (var category in GetCategories())
+                    {
+                        var count = GetWidgetCountByCategory(category.Id);
+                        if (count > 0)
+                        {
+                            <button type="button" 
+                                    class="tm-widget-selector-category @(_selectedCategory == category.Id ? "tm-widget-selector-category--active" : "")"
+                                    @onclick="() => SelectCategory(category.Id)"
+                                    style="--category-color: @(category.Color ?? "#6366f1")">
+                                <TmIcon Name="@category.Icon" Size="IconSize.Sm" />
+                                <span>@category.Name</span>
+                                <span class="tm-widget-selector-count">@count</span>
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+            
+            @* Widget Grid ──────────────────────────────────────── *@
+            <div class="tm-widget-selector-widgets">
+                @if (_filteredWidgets.Any())
+                {
+                    <div class="tm-widget-selector-grid">
+                        @foreach (var widget in _filteredWidgets)
+                        {
+                            <div class="tm-widget-card @(!CanAddWidget(widget) ? "tm-widget-card--disabled" : "")"
+                                 @onclick="() => SelectWidget(widget)">
+                                
+                                <div class="tm-widget-card-icon" style="background: @GetCategoryColor(widget.Category)">
+                                    <TmIcon Name="@widget.Icon" Size="IconSize.Lg" />
+                                </div>
+                                
+                                <div class="tm-widget-card-info">
+                                    <h4>@widget.Name</h4>
+                                    <p>@widget.Description</p>
+                                    <div class="tm-widget-card-meta">
+                                        <span class="tm-widget-card-size">@widget.DefaultWidth×@widget.DefaultHeight</span>
+                                        @if (!widget.AllowMultiple && IsAlreadyAdded(widget))
+                                        {
+                                            <span class="tm-widget-card-badge tm-widget-card-badge--added">Added</span>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                @if (CanAddWidget(widget))
+                                {
+                                    <div class="tm-widget-card-add">
+                                        <TmIcon Name="plus" Size="IconSize.Sm" />
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="tm-widget-selector-empty">
+                        <TmIcon Name="search" Size="IconSize.Xl" />
+                        <p>No widgets found</p>
+                        <span>Try adjusting your search or category filter</span>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        @* Footer ──────────────────────────────────────────────── *@
+        <div class="tm-widget-selector-footer">
+            <span class="tm-widget-selector-hint">
+                <TmIcon Name="info" Size="IconSize.Sm" />
+                Click on a widget to add it to your dashboard
+            </span>
+            <button type="button" class="tm-btn tm-btn-ghost" @onclick="OnClose">
+                Done
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public IWidgetRegistry? WidgetRegistry { get; set; }
+    [Parameter] public List<string> ExistingWidgets { get; set; } = [];
+    [Parameter] public EventCallback<WidgetDefinition> OnSelect { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    
+    private string _searchText = "";
+    private string? _selectedCategory;
+    
+    private IEnumerable<WidgetDefinition> _filteredWidgets => FilterWidgets();
+    
+    private IEnumerable<WidgetDefinition> FilterWidgets()
+    {
+        if (WidgetRegistry is null) return Enumerable.Empty<WidgetDefinition>();
+        
+        var widgets = WidgetRegistry.GetAllWidgets();
+        
+        // Filter by category
+        if (!string.IsNullOrEmpty(_selectedCategory))
+        {
+            widgets = widgets.Where(w => w.Category == _selectedCategory);
+        }
+        
+        // Filter by search
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var term = _searchText.Trim().ToLowerInvariant();
+            widgets = widgets.Where(w => 
+                w.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                (w.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+        
+        return widgets.OrderBy(w => w.Category).ThenBy(w => w.Name);
+    }
+    
+    private IEnumerable<WidgetCategory> GetCategories()
+    {
+        if (WidgetRegistry is null) return Enumerable.Empty<WidgetCategory>();
+        return WidgetRegistry.GetCategories().OrderBy(c => c.Order);
+    }
+    
+    private int GetTotalWidgetCount()
+    {
+        return WidgetRegistry?.GetAllWidgets().Count() ?? 0;
+    }
+    
+    private int GetWidgetCountByCategory(string categoryId)
+    {
+        return WidgetRegistry?.GetWidgetsByCategory(categoryId).Count() ?? 0;
+    }
+    
+    private string GetCategoryColor(string categoryId)
+    {
+        var category = WidgetCategories.All.FirstOrDefault(c => c.Id == categoryId);
+        return category?.Color ?? "#6366f1";
+    }
+    
+    private void SelectCategory(string? categoryId)
+    {
+        _selectedCategory = categoryId;
+    }
+    
+    private bool CanAddWidget(WidgetDefinition widget)
+    {
+        if (widget.AllowMultiple) return true;
+        return !IsAlreadyAdded(widget);
+    }
+    
+    private bool IsAlreadyAdded(WidgetDefinition widget)
+    {
+        return ExistingWidgets.Contains(widget.Id);
+    }
+    
+    private async Task SelectWidget(WidgetDefinition widget)
+    {
+        if (!CanAddWidget(widget)) return;
+        await OnSelect.InvokeAsync(widget);
+    }
+}

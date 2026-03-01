@@ -1,0 +1,96 @@
+@namespace Tempo.Blazor.Components.Pickers
+@using System.Globalization
+
+<div class="tm-calendar" role="grid">
+    <div class="tm-cal-nav" role="row">
+        <button class="tm-cal-nav-btn"
+                type="button"
+                aria-label="@Loc["TmDatePicker_PreviousMonth"]"
+                @onclick="PrevMonth">&#8249;</button>
+        <span class="tm-cal-title" aria-live="polite">@_monthName @DisplayYear</span>
+        <button class="tm-cal-nav-btn"
+                type="button"
+                aria-label="@Loc["TmDatePicker_NextMonth"]"
+                @onclick="NextMonth">&#8250;</button>
+    </div>
+
+    <div class="tm-cal-grid">
+        @foreach (var header in _dayHeaders)
+        {
+            <div class="tm-cal-header-cell" aria-label="@header">@header</div>
+        }
+        @foreach (var day in _days)
+        {
+            var d         = day;
+            var isOther   = d.Month != DisplayMonth;
+            var isToday   = DateTimeHelpers.IsToday(d);
+            var isSelected = SelectedDate.HasValue && d == SelectedDate.Value;
+            var isStart    = RangeStart.HasValue  && d == RangeStart.Value;
+            var isEnd      = RangeEnd.HasValue    && d == RangeEnd.Value;
+            var inRange    = DateTimeHelpers.IsInRange(d, RangeStart, RangeEnd) && !isStart && !isEnd;
+            var disabled   = (MinDate.HasValue && d < MinDate.Value) ||
+                             (MaxDate.HasValue && d > MaxDate.Value);
+
+            var css = "tm-cal-day"
+                + (isOther    ? " tm-cal-day--other-month"  : "")
+                + (isToday    ? " tm-cal-day--today"        : "")
+                + (isSelected ? " tm-cal-day--selected"     : "")
+                + (isStart    ? " tm-cal-day--range-start"  : "")
+                + (isEnd      ? " tm-cal-day--range-end"    : "")
+                + (inRange    ? " tm-cal-day--in-range"     : "")
+                + (disabled   ? " tm-cal-day--disabled"     : "");
+
+            <button class="@css"
+                    type="button"
+                    tabindex="@(disabled || isOther ? "-1" : "0")"
+                    disabled="@disabled"
+                    aria-label="@d.ToString("d")"
+                    aria-pressed="@isSelected.ToString().ToLowerInvariant()"
+                    @onclick="() => SelectDay(d)"
+                    @onmouseover="() => HoverDay(d)">
+                @d.Day
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int      DisplayYear  { get; set; } = DateTime.Today.Year;
+    [Parameter] public int      DisplayMonth { get; set; } = DateTime.Today.Month;
+    [Parameter] public DateOnly? SelectedDate { get; set; }
+    [Parameter] public DateOnly? RangeStart   { get; set; }
+    [Parameter] public DateOnly? RangeEnd     { get; set; }
+    [Parameter] public DateOnly? HoverDate    { get; set; }
+    [Parameter] public DateOnly? MinDate      { get; set; }
+    [Parameter] public DateOnly? MaxDate      { get; set; }
+    [Parameter] public EventCallback<DateOnly>             OnDateSelected { get; set; }
+    [Parameter] public EventCallback<DateOnly>             OnDateHovered  { get; set; }
+    [Parameter] public EventCallback<(int Year, int Month)> OnNavigate    { get; set; }
+
+    private IReadOnlyList<DateOnly> _days       = [];
+    private IReadOnlyList<string>   _dayHeaders = [];
+    private string                  _monthName  = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        _days       = DateTimeHelpers.GetCalendarDays(DisplayYear, DisplayMonth);
+        _dayHeaders = DateTimeHelpers.GetDayHeaders(culture);
+        _monthName  = DateTimeHelpers.GetMonthName(DisplayMonth, culture);
+    }
+
+    private Task PrevMonth()
+    {
+        var dt = new DateOnly(DisplayYear, DisplayMonth, 1).AddMonths(-1);
+        return OnNavigate.InvokeAsync((dt.Year, dt.Month));
+    }
+
+    private Task NextMonth()
+    {
+        var dt = new DateOnly(DisplayYear, DisplayMonth, 1).AddMonths(1);
+        return OnNavigate.InvokeAsync((dt.Year, dt.Month));
+    }
+
+    private Task SelectDay(DateOnly d) => OnDateSelected.InvokeAsync(d);
+    private Task HoverDay(DateOnly d)  => OnDateHovered.InvokeAsync(d);
+}

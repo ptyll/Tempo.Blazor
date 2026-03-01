@@ -1,0 +1,3 @@
+.tm-time-picker { display: inline-flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-time-picker-body { display: inline-flex; align-items: center; gap: var(--tm-space-1); position: relative; }
+.tm-time-picker--invalid .tm-time-input { border-color: var(--tm-color-danger); }

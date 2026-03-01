@@ -1,0 +1,18 @@
+.tm-form-field { display: flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-form-label {
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-primary);
+}
+.tm-form-label-required::after { content: ' *'; color: var(--tm-color-danger); }
+.tm-form-help { font-size: var(--tm-font-size-xs); color: var(--tm-text-secondary); }
+.tm-form-control { display: flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-validation-message {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-danger);
+  line-height: var(--tm-line-height-tight);
+}
+.tm-validation-icon { flex-shrink: 0; width: 0.875rem; height: 0.875rem; }

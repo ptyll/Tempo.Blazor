@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo.Shared/Tempo.Blazor.Demo.Shared.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo/Tempo.Blazor.Demo.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo.Api/Tempo.Blazor.Demo.Api.csproj" />
+    <Project Path="src/Tempo.Blazor/Tempo.Blazor.csproj" />
+    <Project Path="src/Tempo.Blazor.FluentValidation/Tempo.Blazor.FluentValidation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tempo.Blazor.E2E/Tempo.Blazor.E2E.csproj" />
+    <Project Path="tests/Tempo.Blazor.Tests/Tempo.Blazor.Tests.csproj" />
+    <Project Path="tests/Tempo.Blazor.Demo.Api.Tests/Tempo.Blazor.Demo.Api.Tests.csproj" />
+    <Project Path="tests/Tempo.Blazor.FluentValidation.Tests/Tempo.Blazor.FluentValidation.Tests.csproj" />
+  </Folder>
+</Solution>

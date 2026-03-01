@@ -1,0 +1,49 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+
+<div class="tm-accordion @Class">
+    <CascadingValue Value="this" IsFixed="true">
+        @ChildContent
+    </CascadingValue>
+</div>
+
+@code {
+    private readonly List<TmAccordionItem> _items = [];
+
+    /// <summary>Allow multiple items open at once.</summary>
+    [Parameter] public bool Multiple { get; set; }
+
+    /// <summary>Accordion items.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    internal void RegisterItem(TmAccordionItem item)
+    {
+        if (!_items.Contains(item))
+        {
+            _items.Add(item);
+            StateHasChanged();
+        }
+    }
+
+    internal void UnregisterItem(TmAccordionItem item)
+    {
+        _items.Remove(item);
+    }
+
+    internal void OnItemToggled(TmAccordionItem expandedItem)
+    {
+        if (!Multiple && expandedItem.IsExpanded)
+        {
+            foreach (var item in _items)
+            {
+                if (item != expandedItem && item.IsExpanded)
+                {
+                    item.Collapse();
+                }
+            }
+        }
+        StateHasChanged();
+    }
+}

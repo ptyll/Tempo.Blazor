@@ -1,0 +1,740 @@
+@namespace Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Inputs
+@using System.Text.Json
+@implements IAsyncDisposable
+
+<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") @Class" 
+     @ref="_dashboardElement">
+    
+    @* ── Toolbar ─────────────────────────────────────────────── *@
+    <div class="tm-dashboard-toolbar">
+        <div class="tm-dashboard-toolbar-left">
+            @if (ShowTitle)
+            {
+                @if (_isEditMode && _isEditingName)
+                {
+                    <div class="tm-dashboard-name-edit">
+                        <TmTextInput @bind-Value="_editingName"
+                                     Placeholder="Dashboard name"
+                                     Class="tm-dashboard-name-input" />
+                        <button type="button" class="tm-btn tm-btn-primary tm-btn-sm" @onclick="SaveNameEdit">
+                            <TmIcon Name="check" Size="IconSize.Sm" />
+                        </button>
+                        <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" @onclick="CancelNameEdit">
+                            <TmIcon Name="x" Size="IconSize.Sm" />
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="tm-dashboard-title-wrapper">
+                        <h2 class="tm-dashboard-title">@(_currentDashboard?.Name ?? "Dashboard")</h2>
+                        @if (_isEditMode)
+                        {
+                            <button type="button" class="tm-btn tm-btn-ghost tm-btn-icon tm-btn-sm" 
+                                    @onclick="StartNameEdit"
+                                    title="Rename dashboard">
+                                <TmIcon Name="edit" Size="IconSize.Sm" />
+                            </button>
+                        }
+                    </div>
+                }
+            }
+            @if (_isEditMode)
+            {
+                <span class="tm-dashboard-edit-badge">Edit Mode</span>
+            }
+        </div>
+        
+        <div class="tm-dashboard-toolbar-right">
+            @if (_isEditMode)
+            {
+                <button type="button" class="tm-btn tm-btn-primary" @onclick="OpenWidgetSelector">
+                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                    <span>Add Widget</span>
+                </button>
+                <button type="button" class="tm-btn tm-btn-secondary" @onclick="SaveLayout">
+                    <TmIcon Name="save" Size="IconSize.Sm" />
+                    <span>Save Changes</span>
+                </button>
+                <button type="button" class="tm-btn tm-btn-ghost" @onclick="CancelEdit">
+                    <TmIcon Name="x" Size="IconSize.Sm" />
+                    <span>Cancel</span>
+                </button>
+            }
+            else
+            {
+                @if (DashboardProvider is not null)
+                {
+                    <div class="tm-dashboard-views">
+                        <button type="button" class="tm-btn tm-btn-ghost" 
+                                @onclick="ToggleDashboardMenu"
+                                title="Switch Dashboard">
+                            <TmIcon Name="layout" Size="IconSize.Sm" />
+                            <span>Dashboards</span>
+                            <TmIcon Name="chevron-down" Size="IconSize.Sm" />
+                        </button>
+                        @if (_showDashboardMenu)
+                        {
+                            <div class="tm-dashboard-menu">
+                                <div class="tm-dashboard-menu-header">
+                                    <span>My Dashboards</span>
+                                </div>
+                                @foreach (var dash in _availableDashboards)
+                                {
+                                    <div class="tm-dashboard-menu-item @(_currentDashboard?.Id == dash.Id ? "tm-dashboard-menu-item--active" : "")"
+                                         @onclick="() => LoadDashboard(dash.Id)">
+                                        <TmIcon Name="layout" Size="IconSize.Sm" />
+                                        <span>@dash.Name</span>
+                                        @if (dash.IsDefault)
+                                        {
+                                            <span class="tm-dashboard-menu-badge" title="Default dashboard">★</span>
+                                        }
+                                        @if (!dash.IsDefault && _currentDashboard?.Id == dash.Id)
+                                        {
+                                            <button type="button" 
+                                                    class="tm-dashboard-menu-action" 
+                                                    @onclick:stopPropagation
+                                                    @onclick="() => SetAsDefault(dash.Id)"
+                                                    title="Set as default">
+                                                <TmIcon Name="star" Size="IconSize.Sm" />
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                <div class="tm-dashboard-menu-divider"></div>
+                                <div class="tm-dashboard-menu-item" @onclick="CreateNewDashboard">
+                                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                                    <span>Create New Dashboard</span>
+                                </div>
+                            </div>
+                            <div class="tm-overlay" @onclick="() => _showDashboardMenu = false"></div>
+                        }
+                    </div>
+                }
+                
+                <button type="button" class="tm-btn tm-btn-secondary" 
+                        @onclick="() => EnterEditMode()"
+                        title="Edit Dashboard">
+                    <TmIcon Name="edit" Size="IconSize.Sm" />
+                    <span>Edit</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    @* ── Grid Container ───────────────────────────────────────── *@
+    <div class="tm-dashboard-grid-container">
+        <div class="tm-dashboard-grid"
+             style="--grid-columns: @(_currentDashboard?.Grid.Columns ?? 12);
+                    --row-height: @(_currentDashboard?.Grid.RowHeight ?? 60)px;
+                    --grid-gap: @(_currentDashboard?.Grid.Gap ?? 16)px;">
+            
+            @* Grid Background (visible in edit mode) *@
+            @if (_isEditMode)
+            {
+                <div class="tm-dashboard-grid-bg">
+                    @for (int i = 0; i < (_currentDashboard?.Grid.Columns ?? 12); i++)
+                    {
+                        <div class="tm-dashboard-grid-col"></div>
+                    }
+                </div>
+            }
+            
+            @* Widgets ───────────────────────────────────────────── *@
+            @foreach (var widget in _widgets)
+            {
+                <div class="tm-widget @GetWidgetClasses(widget)"
+                     style="@GetWidgetStyles(widget)"
+                     @key="widget.InstanceId"
+                     data-instance-id="@widget.InstanceId">
+                    
+                    @* Widget Header ───────────────────────────────── *@
+                    <div class="tm-widget-header"
+                         @ondragstart="(e) => OnDragStart(e, widget)"
+                         @ondragend="OnDragEnd"
+                         draggable="@(_isEditMode && IsDraggable(widget) ? "true" : "false")">
+                        
+                        <div class="tm-widget-header-left">
+                            @if (_isEditMode && IsDraggable(widget))
+                            {
+                                <span class="tm-widget-drag-handle" title="Drag to move">
+                                    <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
+                                </span>
+                            }
+                            <span class="tm-widget-title">@(widget.CustomTitle ?? GetWidgetName(widget))</span>
+                        </div>
+                        
+                        <div class="tm-widget-header-actions">
+                            @if (!_isEditMode)
+                            {
+                                @if (CanCollapse(widget))
+                                {
+                                    <button type="button" class="tm-widget-btn" @onclick="() => ToggleCollapse(widget)"
+                                            title="@(widget.IsCollapsed ? "Expand" : "Collapse")">
+                                        <TmIcon Name="@(widget.IsCollapsed ? "chevron-down" : "chevron-up")" Size="IconSize.Sm" />
+                                    </button>
+                                }
+                            }
+                            else
+                            {
+                                <button type="button" class="tm-widget-btn tm-widget-btn--danger" 
+                                        @onclick="() => RemoveWidget(widget)"
+                                        title="Remove widget">
+                                    <TmIcon Name="trash" Size="IconSize.Sm" />
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    
+                    @* Widget Content ──────────────────────────────── *@
+                    @if (!widget.IsCollapsed)
+                    {
+                        <div class="tm-widget-content">
+                            @RenderWidgetContent(widget)
+                        </div>
+                    }
+                    
+                    @* Resize Handles (edit mode only) ─────────────── *@
+                    @if (_isEditMode && IsResizable(widget))
+                    {
+                        <div class="tm-widget-resize-handle tm-widget-resize-se"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "se"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-sw"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "sw"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-ne"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "ne"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-nw"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "nw"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-e"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "e"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-w"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "w"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-s"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "s"))"></div>
+                        <div class="tm-widget-resize-handle tm-widget-resize-n"
+                             @onmousedown="@(e => OnResizeStart(e, widget, "n"))"></div>
+                    }
+                </div>
+            }
+            
+            @* Drop Zone (visible during drag) ───────────────────── *@
+            @if (_isDragging && _dropTarget is not null)
+            {
+                <div class="tm-widget-drop-preview"
+                     style="grid-column: @(_dropTarget.X + 1) / span @(_dropTarget.Width);
+                             grid-row: @(_dropTarget.Y + 1) / span @(_dropTarget.Height);">
+                </div>
+            }
+        </div>
+    </div>
+    
+    @* ── Empty State ─────────────────────────────────────────── *@
+    @if (!_widgets.Any())
+    {
+        <div class="tm-dashboard-empty">
+            <div class="tm-dashboard-empty-icon">
+                <TmIcon Name="layout" Size="IconSize.Xl" />
+            </div>
+            <h3>No widgets yet</h3>
+            <p>Add widgets to customize your dashboard</p>
+            @if (!_isEditMode)
+            {
+                <button type="button" class="tm-btn tm-btn-primary" @onclick="() => EnterEditMode()">
+                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                    <span>Add Widgets</span>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@* ── Widget Selector Modal ───────────────────────────────────── *@
+@if (_showWidgetSelector)
+{
+    <TmWidgetSelector 
+        WidgetRegistry="WidgetRegistry"
+        ExistingWidgets="_widgets.Select(w => w.WidgetId).ToList()"
+        OnSelect="OnWidgetSelected"
+        OnClose="() => _showWidgetSelector = false" />
+}
+
+@* ── New Dashboard Name Modal ────────────────────────────────── *@
+@if (_showNewDashboardDialog)
+{
+    <div class="tm-modal-overlay" @onclick="CancelNewDashboard">
+        <div class="tm-modal" @onclick:stopPropagation>
+            <div class="tm-modal-header">
+                <h3>Create New Dashboard</h3>
+                <button type="button" class="tm-modal-close" @onclick="CancelNewDashboard">&times;</button>
+            </div>
+            <div class="tm-modal-body">
+                <div class="tm-form-group">
+                    <label class="tm-form-label">Dashboard Name</label>
+                    <TmTextInput @bind-Value="_newDashboardName"
+                                 Placeholder="Enter dashboard name..."
+                                 @onkeydown="HandleNewDashboardKeyDown" />
+                </div>
+            </div>
+            <div class="tm-modal-footer">
+                <button type="button" class="tm-btn tm-btn-ghost" @onclick="CancelNewDashboard">Cancel</button>
+                <button type="button" class="tm-btn tm-btn-primary" 
+                        @onclick="ConfirmCreateDashboard"
+                        disabled="@string.IsNullOrWhiteSpace(_newDashboardName)">
+                    Create
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? DashboardId { get; set; }
+    [Parameter] public string? UserId { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public bool ShowTitle { get; set; } = true;
+    [Parameter] public bool AllowEdit { get; set; } = true;
+    [Parameter] public EventCallback<DashboardConfig> OnDashboardChanged { get; set; }
+    
+    [Inject] public IDashboardProvider? DashboardProvider { get; set; }
+    [Inject] public IWidgetRegistry? WidgetRegistry { get; set; }
+    [Inject] public IJSRuntime JS { get; set; } = default!;
+    
+    private ElementReference _dashboardElement;
+    private DotNetObjectReference<TmDashboard>? _dotNetRef;
+    private DashboardConfig? _currentDashboard;
+    private List<WidgetInstance> _widgets = [];
+    private List<DashboardConfig> _availableDashboards = [];
+    private bool _isEditMode;
+    private bool _showWidgetSelector;
+    private bool _showDashboardMenu;
+    private bool _isDragging;
+    private WidgetInstance? _draggedWidget;
+    private WidgetInstance? _dropTarget;
+    private string? _resizeDirection;
+    
+    // Name editing
+    private bool _isEditingName;
+    private string _editingName = "";
+    
+    // New dashboard dialog
+    private bool _showNewDashboardDialog;
+    private string _newDashboardName = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardsList();
+        
+        if (!string.IsNullOrEmpty(DashboardId))
+        {
+            await LoadDashboard(DashboardId);
+        }
+        else
+        {
+            await LoadDefaultDashboard();
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("tempoDashboard.init", _dashboardElement, _dotNetRef);
+        }
+    }
+    
+    private async Task LoadDashboardsList()
+    {
+        if (DashboardProvider is null) return;
+        _availableDashboards = (await DashboardProvider.GetDashboardsAsync(UserId)).ToList();
+    }
+    
+    private async Task LoadDefaultDashboard()
+    {
+        if (DashboardProvider is null) return;
+        var defaultDash = await DashboardProvider.GetDefaultDashboardAsync(UserId);
+        if (defaultDash is not null)
+        {
+            await LoadDashboard(defaultDash.Id);
+        }
+        else
+        {
+            CreateEmptyDashboard();
+        }
+    }
+    
+    private async Task LoadDashboard(string dashboardId)
+    {
+        if (DashboardProvider is null) return;
+        
+        _currentDashboard = await DashboardProvider.GetDashboardAsync(dashboardId);
+        if (_currentDashboard is not null)
+        {
+            _widgets = _currentDashboard.Widgets.ToList();
+            _showDashboardMenu = false;
+            await OnDashboardChanged.InvokeAsync(_currentDashboard);
+            StateHasChanged();
+        }
+    }
+    
+    private void CreateEmptyDashboard()
+    {
+        _currentDashboard = new DashboardConfig
+        {
+            Name = "New Dashboard",
+            CreatedBy = UserId ?? "anonymous",
+            Grid = new GridConfig { Columns = 12, RowHeight = 60, Gap = 16, AllowOverlap = false }
+        };
+        _widgets = [];
+    }
+    
+    private void EnterEditMode()
+    {
+        if (!AllowEdit) return;
+        _isEditMode = true;
+        StateHasChanged();
+    }
+    
+    private async Task SaveLayout()
+    {
+        if (_currentDashboard is null || DashboardProvider is null) return;
+        
+        _currentDashboard.Widgets = _widgets.ToList();
+        _currentDashboard.ModifiedAt = DateTime.UtcNow;
+        
+        _currentDashboard = await DashboardProvider.SaveDashboardAsync(_currentDashboard);
+        _isEditMode = false;
+        _isEditingName = false;
+        
+        await LoadDashboardsList();
+        await OnDashboardChanged.InvokeAsync(_currentDashboard);
+        StateHasChanged();
+    }
+    
+    private void CancelEdit()
+    {
+        if (_currentDashboard is not null)
+        {
+            _widgets = _currentDashboard.Widgets.ToList();
+        }
+        _isEditMode = false;
+        _isEditingName = false;
+        StateHasChanged();
+    }
+    
+    private void OpenWidgetSelector()
+    {
+        _showWidgetSelector = true;
+        StateHasChanged();
+    }
+    
+    private void OnWidgetSelected(WidgetDefinition widget)
+    {
+        var instance = new WidgetInstance
+        {
+            WidgetId = widget.Id,
+            Width = widget.DefaultWidth,
+            Height = widget.DefaultHeight,
+            X = 0,
+            Y = 0
+        };
+        
+        // Find non-overlapping position
+        var position = FindNonOverlappingPosition(instance);
+        instance.X = position.X;
+        instance.Y = position.Y;
+        
+        _widgets.Add(instance);
+        _showWidgetSelector = false;
+        StateHasChanged();
+    }
+    
+    private (int X, int Y) FindNonOverlappingPosition(WidgetInstance newWidget)
+    {
+        if (_widgets.Count == 0) return (0, 0);
+        
+        var grid = _currentDashboard?.Grid ?? new GridConfig();
+        int maxColumns = grid.Columns;
+        
+        // Try to find a position starting from top-left
+        for (int y = 0; y < 100; y++)
+        {
+            for (int x = 0; x <= maxColumns - newWidget.Width; x++)
+            {
+                newWidget.X = x;
+                newWidget.Y = y;
+                
+                if (!WouldOverlap(newWidget))
+                {
+                    return (x, y);
+                }
+            }
+        }
+        
+        // Fallback: place below all widgets
+        int maxY = _widgets.Any() ? _widgets.Max(w => w.Y + w.Height) : 0;
+        return (0, maxY);
+    }
+    
+    private bool WouldOverlap(WidgetInstance widget)
+    {
+        foreach (var existing in _widgets.Where(w => w.InstanceId != widget.InstanceId))
+        {
+            if (HasOverlap(widget, existing))
+                return true;
+        }
+        return false;
+    }
+    
+    private void PushOverlappingWidgets(WidgetInstance movedWidget)
+    {
+        var widgetsToPush = _widgets
+            .Where(w => w.InstanceId != movedWidget.InstanceId && HasOverlap(movedWidget, w))
+            .ToList();
+        
+        foreach (var widget in widgetsToPush)
+        {
+            int pushAmount = movedWidget.Y + movedWidget.Height - widget.Y;
+            widget.Y += pushAmount;
+            
+            // Recursively push widgets that this one now overlaps
+            PushOverlappingWidgets(widget);
+        }
+    }
+    
+    private void RemoveWidget(WidgetInstance widget)
+    {
+        _widgets.Remove(widget);
+        StateHasChanged();
+    }
+    
+    private void ToggleCollapse(WidgetInstance widget)
+    {
+        widget.IsCollapsed = !widget.IsCollapsed;
+        StateHasChanged();
+    }
+    
+    private void OnDragStart(DragEventArgs e, WidgetInstance widget)
+    {
+        if (!_isEditMode) return;
+        _isDragging = true;
+        _draggedWidget = widget;
+    }
+    
+    private void OnDragEnd(DragEventArgs e)
+    {
+        if (_draggedWidget is not null && _dropTarget is not null)
+        {
+            // Apply the drop position
+            _draggedWidget.X = _dropTarget.X;
+            _draggedWidget.Y = _dropTarget.Y;
+            
+            // Push any widgets that would overlap
+            if (_currentDashboard?.Grid.AllowOverlap == false)
+            {
+                PushOverlappingWidgets(_draggedWidget);
+            }
+        }
+        
+        _isDragging = false;
+        _draggedWidget = null;
+        _dropTarget = null;
+        StateHasChanged();
+    }
+    
+    private void OnResizeStart(MouseEventArgs e, WidgetInstance widget, string direction)
+    {
+        if (!_isEditMode) return;
+        _resizeDirection = direction;
+        _draggedWidget = widget;
+    }
+    
+    private string GetWidgetClasses(WidgetInstance widget)
+    {
+        var classes = new List<string>();
+        if (widget.IsCollapsed) classes.Add("tm-widget--collapsed");
+        if (widget.IsMinimized) classes.Add("tm-widget--minimized");
+        if (_isDragging && _draggedWidget == widget) classes.Add("tm-widget--dragging");
+        return string.Join(" ", classes);
+    }
+    
+    private string GetWidgetStyles(WidgetInstance widget)
+    {
+        return $"grid-column: {widget.X + 1} / span {widget.Width}; grid-row: {widget.Y + 1} / span {widget.Height}; z-index: {widget.ZIndex};";
+    }
+    
+    private string GetWidgetName(WidgetInstance widget)
+    {
+        return WidgetRegistry?.GetWidget(widget.WidgetId)?.Name ?? "Unknown Widget";
+    }
+    
+    private bool IsDraggable(WidgetInstance widget)
+    {
+        return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsDraggable ?? true;
+    }
+    
+    private bool IsResizable(WidgetInstance widget)
+    {
+        return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsResizable ?? true;
+    }
+    
+    private bool CanCollapse(WidgetInstance widget)
+    {
+        return true;
+    }
+    
+    private bool HasOverlap(WidgetInstance a, WidgetInstance b)
+    {
+        return a.X < b.X + b.Width &&
+               a.X + a.Width > b.X &&
+               a.Y < b.Y + b.Height &&
+               a.Y + a.Height > b.Y;
+    }
+    
+    private RenderFragment RenderWidgetContent(WidgetInstance widget)
+    {
+        return builder =>
+        {
+            builder.AddContent(0, $"Widget: {GetWidgetName(widget)}");
+        };
+    }
+    
+    private void ToggleDashboardMenu()
+    {
+        _showDashboardMenu = !_showDashboardMenu;
+        StateHasChanged();
+    }
+    
+    private void CreateNewDashboard()
+    {
+        _showDashboardMenu = false;
+        _newDashboardName = "";
+        _showNewDashboardDialog = true;
+        StateHasChanged();
+    }
+    
+    private void ConfirmCreateDashboard()
+    {
+        if (string.IsNullOrWhiteSpace(_newDashboardName)) return;
+        
+        _currentDashboard = new DashboardConfig
+        {
+            Name = _newDashboardName.Trim(),
+            CreatedBy = UserId ?? "anonymous",
+            Grid = new GridConfig { Columns = 12, RowHeight = 60, Gap = 16, AllowOverlap = false }
+        };
+        _widgets = [];
+        _showNewDashboardDialog = false;
+        _isEditMode = true;
+        StateHasChanged();
+    }
+    
+    private void CancelNewDashboard()
+    {
+        _showNewDashboardDialog = false;
+        _newDashboardName = "";
+        StateHasChanged();
+    }
+    
+    private void HandleNewDashboardKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_newDashboardName))
+        {
+            ConfirmCreateDashboard();
+        }
+        else if (e.Key == "Escape")
+        {
+            CancelNewDashboard();
+        }
+    }
+    
+    private async Task SetAsDefault(string dashboardId)
+    {
+        if (DashboardProvider is null) return;
+        
+        await DashboardProvider.SetDefaultDashboardAsync(dashboardId, UserId);
+        await LoadDashboardsList();
+        StateHasChanged();
+    }
+    
+    private void StartNameEdit()
+    {
+        _editingName = _currentDashboard?.Name ?? "";
+        _isEditingName = true;
+        StateHasChanged();
+    }
+    
+    private void SaveNameEdit()
+    {
+        if (_currentDashboard is not null && !string.IsNullOrWhiteSpace(_editingName))
+        {
+            _currentDashboard.Name = _editingName.Trim();
+        }
+        _isEditingName = false;
+        StateHasChanged();
+    }
+    
+    private void CancelNameEdit()
+    {
+        _isEditingName = false;
+        _editingName = "";
+        StateHasChanged();
+    }
+    
+    [JSInvokable]
+    public void OnGridPositionChanged(string instanceId, int x, int y)
+    {
+        var widget = _widgets.FirstOrDefault(w => w.InstanceId == instanceId);
+        if (widget is not null)
+        {
+            widget.X = x;
+            widget.Y = y;
+            
+            // Push overlapping widgets
+            if (_currentDashboard?.Grid.AllowOverlap == false)
+            {
+                PushOverlappingWidgets(widget);
+            }
+            
+            StateHasChanged();
+        }
+    }
+    
+    [JSInvokable]
+    public void OnWidgetResized(string instanceId, int width, int height)
+    {
+        var widget = _widgets.FirstOrDefault(w => w.InstanceId == instanceId);
+        if (widget is not null)
+        {
+            widget.Width = width;
+            widget.Height = height;
+            
+            // Push overlapping widgets after resize
+            if (_currentDashboard?.Grid.AllowOverlap == false)
+            {
+                PushOverlappingWidgets(widget);
+            }
+            
+            StateHasChanged();
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        _dotNetRef?.Dispose();
+        if (_dashboardElement.Context is not null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("tempoDashboard.destroy", _dashboardElement);
+            }
+            catch { }
+        }
+    }
+}

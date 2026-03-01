@@ -1,0 +1,172 @@
+@namespace Tempo.Blazor.Components.Pickers
+@using System.Globalization
+
+<div class="tm-calendar-view @Class">
+    <div class="tm-calendar" role="grid">
+        <div class="tm-cal-nav" role="row">
+            <button class="tm-cal-nav-btn"
+                    type="button"
+                    aria-label="@Loc["TmDatePicker_PreviousMonth"]"
+                    @onclick="PrevMonth">&#8249;</button>
+            <span class="tm-cal-title" aria-live="polite">@_monthName @_year</span>
+            <button class="tm-cal-nav-btn"
+                    type="button"
+                    aria-label="@Loc["TmDatePicker_NextMonth"]"
+                    @onclick="NextMonth">&#8250;</button>
+        </div>
+
+        <div class="tm-cal-grid">
+            @foreach (var header in _dayHeaders)
+            {
+                <div class="tm-cal-header-cell" aria-label="@header">@header</div>
+            }
+            @foreach (var day in _days)
+            {
+                var d = day;
+                var isOther = d.Month != _month;
+                var isToday = DateTimeHelpers.IsToday(d);
+                var isSelected = SelectedDate.HasValue && d == SelectedDate.Value;
+                var disabled = (MinDate.HasValue && d < MinDate.Value) ||
+                               (MaxDate.HasValue && d > MaxDate.Value);
+                var isHighlighted = HighlightedDates is not null && HighlightedDates.Contains(d);
+
+                var css = "tm-cal-day"
+                    + (isOther ? " tm-cal-day--other-month" : "")
+                    + (isToday ? " tm-cal-day--today" : "")
+                    + (isSelected ? " tm-cal-day--selected" : "")
+                    + (disabled ? " tm-cal-day--disabled" : "");
+
+                <div class="tm-calendar-view__day-cell">
+                    <button class="@css"
+                            type="button"
+                            tabindex="@(disabled || isOther ? "-1" : "0")"
+                            disabled="@disabled"
+                            aria-label="@d.ToString("d")"
+                            @onclick="@(() => HandleDateClick(d))">
+                        @d.Day
+                    </button>
+
+                    @if (isHighlighted)
+                    {
+                        <span class="tm-calendar-view__highlighted"></span>
+                    }
+
+                    @if (!isOther)
+                    {
+                        @foreach (var evt in GetEventsForDate(d))
+                        {
+                            var e = evt;
+                            <div class="tm-calendar-view__event"
+                                 style="@(e.Color is not null ? $"background-color: {e.Color}; border-left-color: {e.Color};" : "")"
+                                 title="@e.Title"
+                                 @onclick="@(() => HandleEventClick(e))"
+                                 @onclick:stopPropagation="true">
+                                @e.Title
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int _year;
+    private int _month;
+    private IReadOnlyList<DateOnly> _days = [];
+    private IReadOnlyList<string> _dayHeaders = [];
+    private string _monthName = string.Empty;
+    private Dictionary<DateOnly, List<CalendarEvent>> _eventMap = new();
+
+    /// <summary>Currently selected date.</summary>
+    [Parameter] public DateOnly? SelectedDate { get; set; }
+
+    /// <summary>Fires when a date is clicked.</summary>
+    [Parameter] public EventCallback<DateOnly> OnDateClick { get; set; }
+
+    /// <summary>Events to display on the calendar.</summary>
+    [Parameter] public IReadOnlyList<CalendarEvent>? Events { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<CalendarEvent> OnEventClick { get; set; }
+
+    /// <summary>Minimum selectable date.</summary>
+    [Parameter] public DateOnly? MinDate { get; set; }
+
+    /// <summary>Maximum selectable date.</summary>
+    [Parameter] public DateOnly? MaxDate { get; set; }
+
+    /// <summary>Dates to highlight with a dot indicator.</summary>
+    [Parameter] public HashSet<DateOnly>? HighlightedDates { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (SelectedDate.HasValue)
+        {
+            _year = SelectedDate.Value.Year;
+            _month = SelectedDate.Value.Month;
+        }
+        else
+        {
+            _year = DateTime.Today.Year;
+            _month = DateTime.Today.Month;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        BuildCalendar();
+        BuildEventMap();
+    }
+
+    private void BuildCalendar()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        _days = DateTimeHelpers.GetCalendarDays(_year, _month);
+        _dayHeaders = DateTimeHelpers.GetDayHeaders(culture);
+        _monthName = DateTimeHelpers.GetMonthName(_month, culture);
+    }
+
+    private void BuildEventMap()
+    {
+        _eventMap.Clear();
+        if (Events is null) return;
+        foreach (var evt in Events)
+        {
+            if (!_eventMap.TryGetValue(evt.Date, out var list))
+            {
+                list = new List<CalendarEvent>();
+                _eventMap[evt.Date] = list;
+            }
+            list.Add(evt);
+        }
+    }
+
+    private IEnumerable<CalendarEvent> GetEventsForDate(DateOnly date)
+        => _eventMap.TryGetValue(date, out var list) ? list : [];
+
+    private Task PrevMonth()
+    {
+        var dt = new DateOnly(_year, _month, 1).AddMonths(-1);
+        _year = dt.Year;
+        _month = dt.Month;
+        BuildCalendar();
+        return Task.CompletedTask;
+    }
+
+    private Task NextMonth()
+    {
+        var dt = new DateOnly(_year, _month, 1).AddMonths(1);
+        _year = dt.Year;
+        _month = dt.Month;
+        BuildCalendar();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDateClick(DateOnly d) => OnDateClick.InvokeAsync(d);
+    private Task HandleEventClick(CalendarEvent e) => OnEventClick.InvokeAsync(e);
+}

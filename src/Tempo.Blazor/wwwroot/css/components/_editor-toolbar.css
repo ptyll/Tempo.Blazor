@@ -1,0 +1,201 @@
+/* ═══════════════════════════════════════════════════════════════
+   Editor Toolbar - Shared toolbar styles for Rich Text Editors
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-rte-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-bg-muted);
+  border-bottom: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md) var(--tm-radius-md) 0 0;
+  flex-wrap: wrap;
+}
+
+.tm-rte-toolbar-simple {
+  /* Simple mode - minimal padding */
+}
+
+.tm-rte-toolbar-full {
+  /* Full mode - can have additional styling if needed */
+}
+
+/* Toolbar Buttons */
+.tm-rte-toolbar .tm-rte-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-sm);
+  background: var(--tm-bg-surface);
+  cursor: pointer;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-secondary);
+  transition: background var(--tm-transition-fast), 
+              color var(--tm-transition-fast),
+              border-color var(--tm-transition-fast), 
+              box-shadow var(--tm-transition-fast);
+}
+
+.tm-rte-toolbar .tm-rte-btn:hover:not(:disabled) {
+  background: var(--tm-bg-surface);
+  color: var(--tm-color-primary);
+  border-color: var(--tm-color-primary);
+}
+
+.tm-rte-toolbar .tm-rte-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.tm-rte-toolbar .tm-rte-btn[aria-pressed="true"] {
+  background: var(--tm-color-primary);
+  color: var(--tm-color-white);
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-shadow-sm);
+}
+
+.tm-rte-toolbar .tm-rte-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tm-rte-toolbar .tm-rte-btn strong {
+  font-weight: var(--tm-font-weight-bold);
+}
+
+.tm-rte-toolbar .tm-rte-btn em {
+  font-style: italic;
+}
+
+.tm-rte-toolbar .tm-rte-btn u {
+  text-decoration: underline;
+}
+
+/* Toolbar Separator */
+.tm-rte-toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: var(--tm-border-color);
+  margin: 0 var(--tm-space-1);
+}
+
+/* Code button style */
+.tm-rte-toolbar .tm-rte-btn.tm-rte-btn-code {
+  font-family: var(--tm-font-mono, monospace);
+  font-size: var(--tm-font-size-xs);
+}
+
+/* Clear format button */
+.tm-rte-toolbar .tm-rte-clear-format {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Color picker wrapper */
+.tm-rte-color-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.tm-rte-color-btn,
+.tm-rte-highlight-btn {
+  position: relative;
+}
+
+.tm-rte-color-btn span,
+.tm-rte-highlight-btn span {
+  font-weight: var(--tm-font-weight-bold);
+}
+
+/* Color picker dropdown */
+.tm-rte-color-picker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: var(--tm-z-dropdown, 1000);
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  padding: var(--tm-space-2);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-lg);
+  margin-top: var(--tm-space-1);
+  min-width: 220px;
+}
+
+.tm-rte-color-option {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-sm);
+  cursor: pointer;
+  transition: transform var(--tm-transition-fast),
+              border-color var(--tm-transition-fast);
+}
+
+.tm-rte-color-option:hover {
+  transform: scale(1.1);
+  border-color: var(--tm-color-primary);
+}
+
+/* Emoji picker wrapper */
+.tm-rte-emoji-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.tm-rte-emoji-picker {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: var(--tm-z-dropdown, 1000);
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  padding: var(--tm-space-2);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  box-shadow: var(--tm-shadow-lg);
+  margin-top: var(--tm-space-1);
+  max-height: 200px;
+  overflow-y: auto;
+  min-width: 280px;
+}
+
+.tm-rte-emoji-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--tm-radius-sm);
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: background var(--tm-transition-fast),
+              transform var(--tm-transition-fast);
+}
+
+.tm-rte-emoji-option:hover {
+  background: var(--tm-bg-muted);
+  transform: scale(1.1);
+}
+
+/* Full toolbar specific */
+.tm-rte-toolbar-full {
+  padding: var(--tm-space-2);
+}
+
+.tm-rte-toolbar-full .tm-rte-btn {
+  width: 28px;
+  height: 28px;
+  font-size: var(--tm-font-size-xs);
+}
