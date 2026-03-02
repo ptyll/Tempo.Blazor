@@ -143,9 +143,14 @@ public class TmActivityAttachmentsTests : LocalizationTestBase
     public async Task Attachments_UploadProgress_Displayed()
     {
         var blocker = new TaskCompletionSource<string?>();
+        var chunkCalled = new SemaphoreSlim(0, 1);
         var provider = BuildProvider(new List<IFileAttachment>());
         provider.UploadChunkAsync(Arg.Any<FileChunkData>(), Arg.Any<CancellationToken>())
-                .Returns(blocker.Task);
+                .Returns(_ =>
+                {
+                    chunkCalled.Release();
+                    return blocker.Task;
+                });
 
         var cut = RenderComponent<TmActivityAttachments>(p => p
             .Add(c => c.Provider, provider)
@@ -157,8 +162,8 @@ public class TmActivityAttachmentsTests : LocalizationTestBase
             cut.FindComponent<InputFile>().UploadFiles(
                 InputFileContent.CreateFromBinary(new byte[100], "f.bin", contentType: "application/octet-stream")));
 
-        // Brief yield to let the component reach its first await
-        await Task.Delay(80);
+        // Wait until the component has called UploadChunkAsync (_uploading=true and StateHasChanged already ran)
+        await chunkCalled.WaitAsync(TimeSpan.FromSeconds(5));
         cut.Render();
 
         cut.FindAll(".tm-attach-progress").Should().NotBeEmpty();
