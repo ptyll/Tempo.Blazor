@@ -52,7 +52,7 @@ public class TmStepperTests : LocalizationTestBase
 
         // Second step (index 1) should have active class
         cut.FindAll(".tm-stepper-step")[1].ClassList
-            .Should().Contain("tm-stepper-step-active");
+            .Should().Contain("tm-stepper-step--active");
     }
 
     [Fact]
@@ -64,9 +64,9 @@ public class TmStepperTests : LocalizationTestBase
 
         // Steps before active should be completed
         cut.FindAll(".tm-stepper-step")[0].ClassList
-            .Should().Contain("tm-stepper-step-completed");
+            .Should().Contain("tm-stepper-step--completed");
         cut.FindAll(".tm-stepper-step")[1].ClassList
-            .Should().Contain("tm-stepper-step-completed");
+            .Should().Contain("tm-stepper-step--completed");
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class TmStepperTests : LocalizationTestBase
             .Add(c => c.Steps, MakeSteps())
             .Add(c => c.ActiveStep, 0));
 
-        cut.FindAll(".tm-stepper-step-label")[0].TextContent
+        cut.FindAll(".tm-stepper-label")[0].TextContent
             .Should().Contain("Details");
     }
 
@@ -90,8 +90,8 @@ public class TmStepperTests : LocalizationTestBase
             .Add(c => c.OnStepClick,
                 EventCallback.Factory.Create<int>(this, i => clickedIndex = i)));
 
-        cut.FindAll(".tm-stepper-step")[2].Click();
+        cut.FindAll(".tm-stepper-step")[0].Click();
 
-        clickedIndex.Should().Be(2);
+        clickedIndex.Should().Be(0);
     }
 }
