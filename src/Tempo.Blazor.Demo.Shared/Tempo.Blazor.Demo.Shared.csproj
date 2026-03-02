@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor.Abstractions\Tempo.Blazor.Abstractions.csproj" />
