@@ -60,6 +60,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
       # Nastavíme verzi podle tagu nebo inputu
       - name: Set version
         id: version
