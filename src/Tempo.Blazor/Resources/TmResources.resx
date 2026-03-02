@@ -428,4 +428,29 @@
   <data name="TmScheduler_Prev" xml:space="preserve"><value>Previous</value></data>
   <data name="TmScheduler_Next" xml:space="preserve"><value>Next</value></data>
 
+  <!-- DataTable Grouping -->
+  <data name="TmDataTable_GroupDropPlaceholder" xml:space="preserve"><value>Drag column headers here to group</value></data>
+  <data name="TmDataTable_ExpandAll" xml:space="preserve"><value>Expand all</value></data>
+  <data name="TmDataTable_CollapseAll" xml:space="preserve"><value>Collapse all</value></data>
+  <data name="TmDataTable_GroupCount" xml:space="preserve"><value>{0} items</value></data>
+  <data name="TmDataTable_GroupSum" xml:space="preserve"><value>Sum</value></data>
+  <data name="TmDataTable_GroupAvg" xml:space="preserve"><value>Avg</value></data>
+  <data name="TmDataTable_GroupMin" xml:space="preserve"><value>Min</value></data>
+  <data name="TmDataTable_GroupMax" xml:space="preserve"><value>Max</value></data>
+
+  <!-- MultiViewList Grouping -->
+  <data name="TmMvl_GroupBy" xml:space="preserve"><value>Group by</value></data>
+  <data name="TmMvl_GroupNone" xml:space="preserve"><value>No grouping</value></data>
+  <data name="TmMvl_TableView" xml:space="preserve"><value>Table view</value></data>
+  <data name="TmMvl_CardView" xml:space="preserve"><value>Card view</value></data>
+  <data name="TmMvl_ListView" xml:space="preserve"><value>List view</value></data>
+  <data name="TmMvl_ColTitle" xml:space="preserve"><value>Title</value></data>
+  <data name="TmMvl_ColSubTitle" xml:space="preserve"><value>Subtitle</value></data>
+  <data name="TmMvl_ColStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="TmMvl_ColDate" xml:space="preserve"><value>Date</value></data>
+
+  <!-- View Manager Grouping -->
+  <data name="TmViewManager_Grouping" xml:space="preserve"><value>Group By</value></data>
+  <data name="TmViewManager_GroupByColumns" xml:space="preserve"><value>Group by columns</value></data>
+
 </root>

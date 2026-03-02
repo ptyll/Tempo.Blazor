@@ -281,6 +281,23 @@ public abstract class LocalizationTestBase : TestContext
         ["TmBulkAction_Toolbar"] = "Bulk actions",
         ["TmBulkAction_Selected"] = "selected",
         ["TmBulkAction_ClearSelection"] = "Clear selection",
+
+        // TmDataTable Grouping
+        ["TmDataTable_GroupDropPlaceholder"] = "Drag column headers here to group",
+        ["TmDataTable_ExpandAll"] = "Expand all",
+        ["TmDataTable_CollapseAll"] = "Collapse all",
+        ["TmDataTable_GroupCount"] = "{0} items",
+        ["TmDataTable_SearchPlaceholder"] = "Search...",
+        ["TmDataTable_ShowingItems"] = "{0}–{1} of {2}",
+        ["TmDataTable_CurrentViewName"] = "Current",
+
+        // TmMultiViewList Grouping
+        ["TmMvl_GroupBy"] = "Group by",
+        ["TmMvl_GroupNone"] = "No grouping",
+
+        // TmViewManager Grouping
+        ["TmViewManager_Grouping"] = "Grouping",
+        ["TmViewManager_GroupByColumns"] = "Group by columns",
     });
 
     private static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -534,6 +551,23 @@ public abstract class LocalizationTestBase : TestContext
         ["TmBulkAction_Toolbar"] = "Hromadné akce",
         ["TmBulkAction_Selected"] = "vybráno",
         ["TmBulkAction_ClearSelection"] = "Zrušit výběr",
+
+        // TmDataTable Grouping
+        ["TmDataTable_GroupDropPlaceholder"] = "Přetáhněte záhlaví sloupce pro seskupení",
+        ["TmDataTable_ExpandAll"] = "Rozbalit vše",
+        ["TmDataTable_CollapseAll"] = "Sbalit vše",
+        ["TmDataTable_GroupCount"] = "{0} položek",
+        ["TmDataTable_SearchPlaceholder"] = "Hledat...",
+        ["TmDataTable_ShowingItems"] = "{0}–{1} z {2}",
+        ["TmDataTable_CurrentViewName"] = "Aktuální",
+
+        // TmMultiViewList Grouping
+        ["TmMvl_GroupBy"] = "Seskupit podle",
+        ["TmMvl_GroupNone"] = "Bez seskupení",
+
+        // TmViewManager Grouping
+        ["TmViewManager_Grouping"] = "Seskupování",
+        ["TmViewManager_GroupByColumns"] = "Seskupit podle sloupců",
     });
 }
 

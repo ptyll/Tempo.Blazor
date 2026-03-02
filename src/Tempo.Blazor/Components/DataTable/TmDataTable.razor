@@ -6,6 +6,7 @@
 @using Tempo.Blazor.Components.Filters
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Services
 
 @* Hidden container to trigger TmDataTableColumn registration via CascadingValue. *@
 <CascadingValue Value="this" IsFixed="true">
@@ -73,8 +74,49 @@
         </div>
     }
 
+    @* ── Grouping drop zone ────────────────────────────────────── *@
+    @if (ShowGrouping)
+    {
+        <div class="tm-data-table-group-zone @(_isDragOver ? "tm-data-table-group-zone--dragover" : "")"
+             @ondragover="HandleGroupZoneDragOver"
+             @ondragover:preventDefault="true"
+             @ondrop="HandleGroupZoneDrop"
+             @ondragenter="() => _isDragOver = true"
+             @ondragleave="() => _isDragOver = false">
+            @if (_groupByColumns.Count == 0)
+            {
+                <span class="tm-data-table-group-placeholder">@Loc["TmDataTable_GroupDropPlaceholder"]</span>
+            }
+            else
+            {
+                @for (var i = 0; i < _groupByColumns.Count; i++)
+                {
+                    var index = i;
+                    var colKey = _groupByColumns[i];
+                    var col = _columns.FirstOrDefault(c => c.Key == colKey);
+                    <div class="tm-data-table-group-chip"
+                         draggable="true"
+                         @ondragstart="() => OnChipDragStart(index)"
+                         @ondrop="() => OnChipDrop(index)"
+                         @ondragover:preventDefault="true">
+                        <span>@(col?.Title ?? colKey)</span>
+                        <button type="button"
+                                class="tm-data-table-group-chip-remove"
+                                @onclick="() => HandleRemoveGroupChip(colKey)">×</button>
+                    </div>
+                }
+                <div class="tm-data-table-group-actions">
+                    <button type="button" class="tm-data-table-group-expand-all"
+                            @onclick="ExpandAllGroups">@Loc["TmDataTable_ExpandAll"]</button>
+                    <button type="button" class="tm-data-table-group-collapse-all"
+                            @onclick="CollapseAllGroups">@Loc["TmDataTable_CollapseAll"]</button>
+                </div>
+            }
+        </div>
+    }
+
     @* ── Table ────────────────────────────────────────────────── *@
-    <div class="tm-data-table-scroll">
+    <div class="@GetScrollContainerClass()" style="@GetScrollContainerStyle()">
         <table class="tm-data-table" role="grid">
             @if (_visibleColumns.Count > 0 || Selectable)
             {
@@ -94,7 +136,10 @@
                             <th class="@GetHeaderClass(col)"
                                 style="@GetHeaderStyle(col)"
                                 data-sortable="@col.Sortable.ToString().ToLower()"
+                                draggable="@(col.Groupable ? "true" : "false")"
                                 aria-sort="@GetAriaSortValue(col)"
+                                @ondragstart="() => OnColumnDragStart(col.Key)"
+                                @ondragend="OnColumnDragEnd"
                                 @onclick="() => SortByAsync(col)">
                                 @if (col.HeaderTemplate is not null)
                                 {
@@ -140,6 +185,22 @@
                         </td>
                     </tr>
                 }
+                else if (_groupByColumns.Count > 0 && _groupedData is not null)
+                {
+                    @* ── Grouped rendering ── *@
+                    @if (_groupedData.Count == 0 && !string.IsNullOrEmpty(EmptyTitle))
+                    {
+                        <tr>
+                            <td colspan="@ColSpan">
+                                <TmEmptyState Title="@EmptyTitle" />
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @RenderGroupRows(_groupedData, 0)
+                    }
+                }
                 else if (!_displayedItems.Any())
                 {
                     @if (!string.IsNullOrEmpty(EmptyTitle))
@@ -150,6 +211,38 @@
                             </td>
                         </tr>
                     }
+                }
+                else if (ScrollMode == DataTableScrollMode.Virtualized)
+                {
+                    <Virtualize Items="@_displayedItems"
+                                Context="rowItem"
+                                ItemSize="VirtualItemSize"
+                                OverscanCount="VirtualOverscanCount">
+                        <tr class="@GetRowClass(rowItem)" @onclick="() => HandleRowClickAsync(rowItem)">
+                            @if (Selectable)
+                            {
+                                <td class="tm-col-check">
+                                    <input type="checkbox"
+                                           checked="@IsSelected(rowItem)"
+                                           @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
+                                           @onclick:stopPropagation="true" />
+                                </td>
+                            }
+                            @foreach (var col in _visibleColumns)
+                            {
+                                <td class="@GetCellClass(col)" style="@GetCellStyle(col)">
+                                    @if (col.CellTemplate is not null)
+                                    {
+                                        @col.CellTemplate(rowItem)
+                                    }
+                                    else
+                                    {
+                                        @col.Field?.Invoke(rowItem)
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    </Virtualize>
                 }
                 else
                 {
@@ -185,9 +278,8 @@
             </tbody>
         </table>
     </div>
-
     @* ── Pagination ───────────────────────────────────────────── *@
-    @if (ShowPagination && _totalPages > 1)
+    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination)
     {
         <div class="tm-pagination-container">
             @* Left: Info *@
@@ -226,7 +318,7 @@
     private int _totalPages;
 
     // ── Data ─────────────────────────────────────────────────────
-    private IReadOnlyList<TItem> _displayedItems = [];
+    private List<TItem> _displayedItems = [];
     private bool _isLoading;
 
     // ── Selection ────────────────────────────────────────────────
@@ -237,6 +329,14 @@
     private string _searchText = string.Empty;
     private List<ActiveFilter> _externalFilters = [];
     private string? _activeViewId;
+
+    // ── Grouping state ─────────────────────────────────────────
+    private readonly List<string> _groupByColumns = [];
+    private readonly HashSet<string> _expandedGroups = new();
+    private IReadOnlyList<DataGroup<TItem>>? _groupedData;
+    private string? _draggedColumnKey;
+    private int? _draggedChipIndex;
+    private bool _isDragOver;
 
     // ── Parameters: data ─────────────────────────────────────────
 
@@ -302,6 +402,28 @@
     /// </summary>
     [Parameter, EditorRequired] public string ViewContext { get; set; } = default!;
 
+    // ── Parameters: virtualization ──────────────────────────────────
+
+    /// <summary>Scroll/pagination mode. Default: Pagination.</summary>
+    [Parameter] public DataTableScrollMode ScrollMode { get; set; } = DataTableScrollMode.Pagination;
+
+    /// <summary>Height of a single row in pixels (required for Virtualize). Default: 48.</summary>
+    [Parameter] public float VirtualItemSize { get; set; } = 48f;
+
+    /// <summary>Number of extra items to render above/below viewport. Default: 3.</summary>
+    [Parameter] public int VirtualOverscanCount { get; set; } = 3;
+
+    /// <summary>Fixed height for the virtualized scroll container (e.g. "600px", "80vh").</summary>
+    [Parameter] public string? VirtualScrollHeight { get; set; }
+
+    // ── Parameters: grouping ────────────────────────────────────────
+
+    /// <summary>Whether to show the grouping drop zone above the table.</summary>
+    [Parameter] public bool ShowGrouping { get; set; }
+
+    /// <summary>Whether groups are collapsed by default.</summary>
+    [Parameter] public bool GroupsCollapsedByDefault { get; set; } = true;
+
     // ── Parameters: events ────────────────────────────────────────
 
     /// <summary>Fires when a data row is clicked.</summary>
@@ -309,6 +431,9 @@
 
     /// <summary>Fires when the selection changes.</summary>
     [Parameter] public EventCallback<IReadOnlyList<TItem>> OnSelectionChanged { get; set; }
+
+    /// <summary>Fires when grouping configuration changes.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> OnGroupingChanged { get; set; }
 
     // ── Parameters: slots ─────────────────────────────────────────
 
@@ -414,14 +539,28 @@
 
         var list = items.ToList();
         _totalCount = list.Count;
-        _totalPages = _pageSize > 0 ? (int)Math.Ceiling((double)_totalCount / _pageSize) : 0;
 
-        if (_currentPage > _totalPages && _totalPages > 0)
-            _currentPage = _totalPages;
-        else if (_currentPage < 1)
-            _currentPage = 1;
+        if (ScrollMode == DataTableScrollMode.Virtualized)
+        {
+            // Virtualized mode: no pagination, show all items
+            _displayedItems = list;
+            _totalPages = 0;
+        }
+        else
+        {
+            _totalPages = _pageSize > 0 ? (int)Math.Ceiling((double)_totalCount / _pageSize) : 0;
 
-        _displayedItems = list.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+            if (_currentPage > _totalPages && _totalPages > 0)
+                _currentPage = _totalPages;
+            else if (_currentPage < 1)
+                _currentPage = 1;
+
+            _displayedItems = list.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+        }
+
+        // Refresh grouping if active
+        if (_groupByColumns.Count > 0)
+            RefreshGroupedData();
     }
 
     private static IEnumerable<TItem> ApplyClientFilter(
@@ -448,7 +587,7 @@
         try
         {
             var result = await DataProvider!.GetDataAsync(BuildQuery());
-            _displayedItems = result.Items;
+            _displayedItems = result.Items.ToList();
             _totalCount = result.TotalCount;
             _currentPage = result.Page;
             _pageSize = result.PageSize;
@@ -469,6 +608,7 @@
         SortDescending = _sortDescending,
         Filters    = _activeFilters.Values.ToList(),
         SearchText = _searchText,
+        GroupByColumns = _groupByColumns.ToList(),
     };
 
     // ── Sort ──────────────────────────────────────────────────────
@@ -666,6 +806,19 @@
         foreach (var filter in _externalFilters)
             _activeFilters[filter.FieldName] = new DataTableFilter(filter.FieldName, filter.Operator.ToString(), filter.Value);
 
+        // Apply grouping
+        _groupByColumns.Clear();
+        if (view.GroupByColumns?.Count > 0)
+        {
+            _groupByColumns.AddRange(view.GroupByColumns);
+            _expandedGroups.Clear();
+            RefreshGroupedData();
+        }
+        else
+        {
+            _groupedData = null;
+        }
+
         _currentPage = 1;
         if (DataProvider is not null)
             await LoadFromProviderAsync();
@@ -687,6 +840,7 @@
             Value = kv.Value.Value?.ToString() ?? ""
         }).ToList(),
         FiltersLegacy = _activeFilters.ToDictionary(kv => kv.Key, kv => (string?)kv.Value.Value?.ToString()),
+        GroupByColumns = _groupByColumns.ToList(),
     };
 
     private List<ViewColumnInfo> GetAvailableColumns() =>
@@ -696,6 +850,289 @@
             Title = c.Title,
             Visible = !_hiddenColumns.Contains(c.Key)
         }).ToList();
+
+    // ── Grouping ────────────────────────────────────────────────────
+
+    /// <summary>Add a column to the grouping configuration.</summary>
+    public void AddGroupColumn(string columnKey)
+    {
+        if (_groupByColumns.Contains(columnKey)) return;
+        var col = _columns.FirstOrDefault(c => c.Key == columnKey);
+        if (col is null || !col.Groupable) return;
+
+        _groupByColumns.Add(columnKey);
+
+        if (DataProvider is not null)
+            _ = LoadFromProviderAsync();
+        else
+            RefreshGroupedData();
+
+        _ = OnGroupingChanged.InvokeAsync(_groupByColumns.ToList());
+        StateHasChanged();
+    }
+
+    /// <summary>Remove a column from the grouping configuration.</summary>
+    public void RemoveGroupColumn(string columnKey)
+    {
+        if (!_groupByColumns.Remove(columnKey)) return;
+
+        _expandedGroups.Clear();
+        if (_groupByColumns.Count > 0)
+        {
+            if (DataProvider is not null)
+                _ = LoadFromProviderAsync();
+            else
+                RefreshGroupedData();
+        }
+        else
+            _groupedData = null;
+
+        _ = OnGroupingChanged.InvokeAsync(_groupByColumns.ToList());
+        StateHasChanged();
+    }
+
+    /// <summary>Expand all groups.</summary>
+    public void ExpandAllGroups()
+    {
+        if (_groupedData is null) return;
+        ExpandAllGroupsRecursive(_groupedData);
+        StateHasChanged();
+    }
+
+    /// <summary>Collapse all groups.</summary>
+    public void CollapseAllGroups()
+    {
+        _expandedGroups.Clear();
+        StateHasChanged();
+    }
+
+    private void ExpandAllGroupsRecursive(IReadOnlyList<DataGroup<TItem>> groups)
+    {
+        foreach (var g in groups)
+        {
+            _expandedGroups.Add(GetGroupId(g));
+            if (g.SubGroups.Count > 0)
+                ExpandAllGroupsRecursive(g.SubGroups);
+        }
+    }
+
+    private void ToggleGroupExpansion(DataGroup<TItem> group)
+    {
+        var id = GetGroupId(group);
+        if (!_expandedGroups.Remove(id))
+            _expandedGroups.Add(id);
+        StateHasChanged();
+    }
+
+    private bool IsGroupExpanded(DataGroup<TItem> group)
+    {
+        return _expandedGroups.Contains(GetGroupId(group));
+    }
+
+    private static string GetGroupId(DataGroup<TItem> group)
+    {
+        return $"{group.FieldName}:{group.Key}";
+    }
+
+    private void RefreshGroupedData()
+    {
+        if (_groupByColumns.Count == 0)
+        {
+            _groupedData = null;
+            return;
+        }
+
+        // Build filtered + sorted items (before pagination)
+        var items = (Items ?? []).AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var search = _searchText.Trim();
+            items = items.Where(item =>
+                _columns.Any(col =>
+                    col.Field?.Invoke(item)?.ToString()
+                       ?.Contains(search, StringComparison.OrdinalIgnoreCase) == true));
+        }
+
+        foreach (var filter in _activeFilters.Values)
+        {
+            var col = _columns.FirstOrDefault(c => c.Key == filter.Column);
+            if (col?.Field != null)
+                items = ApplyClientFilter(items, col.Field, filter);
+        }
+
+        if (_sortColumn != null)
+        {
+            var sortCol = _columns.FirstOrDefault(c => c.Key == _sortColumn);
+            if (sortCol?.Field != null)
+            {
+                items = _sortDescending
+                    ? items.OrderByDescending(x => sortCol.Field(x))
+                    : items.OrderBy(x => sortCol.Field(x));
+            }
+        }
+
+        var levels = _groupByColumns.Select(key =>
+        {
+            var col = _columns.FirstOrDefault(c => c.Key == key);
+            var aggregateAccessors = _columns
+                .Where(c => c.GroupAggregates is { Count: > 0 })
+                .ToDictionary(c => c.Key, c => c.Field!);
+            var aggregateTypes = _columns
+                .Where(c => c.GroupAggregates is { Count: > 0 })
+                .SelectMany(c => c.GroupAggregates!)
+                .Distinct()
+                .ToList();
+
+            return new GroupingLevel<TItem>(
+                key,
+                col?.Field ?? (_ => null),
+                DisplayFormatter: col?.GroupDisplayFormatter,
+                AggregateAccessors: aggregateAccessors.Count > 0 ? new Dictionary<string, Func<TItem, object?>>(aggregateAccessors) : null,
+                AggregateTypes: aggregateTypes.Count > 0 ? aggregateTypes : null
+            );
+        }).ToList();
+
+        _groupedData = DataGroupingService.GroupItems(items, levels);
+
+        // Set initial expand state
+        if (!GroupsCollapsedByDefault && _expandedGroups.Count == 0)
+        {
+            ExpandAllGroupsRecursive(_groupedData);
+        }
+    }
+
+    private RenderFragment RenderGroupRows(IReadOnlyList<DataGroup<TItem>> groups, int level) => builder =>
+    {
+        var seq = 0;
+        foreach (var group in groups)
+        {
+            var g = group;
+            var expanded = IsGroupExpanded(g);
+
+            // Group header row
+            builder.OpenElement(seq++, "tr");
+            builder.AddAttribute(seq++, "class", $"tm-data-table-group-row tm-data-table-group-level-{level}");
+            builder.OpenElement(seq++, "td");
+            builder.AddAttribute(seq++, "colspan", ColSpan);
+
+            // Toggle button
+            builder.OpenElement(seq++, "button");
+            builder.AddAttribute(seq++, "type", "button");
+            builder.AddAttribute(seq++, "class", "tm-data-table-group-toggle");
+            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleGroupExpansion(g)));
+            builder.AddContent(seq++, expanded ? "▼" : "▶");
+            builder.CloseElement(); // button
+
+            // Group label
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "tm-data-table-group-label");
+            builder.AddContent(seq++, g.DisplayValue);
+            builder.CloseElement(); // span
+
+            // Count
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "tm-data-table-group-count");
+            builder.AddContent(seq++, $"({g.Count})");
+            builder.CloseElement(); // span
+
+            builder.CloseElement(); // td
+            builder.CloseElement(); // tr
+
+            // Expanded content
+            if (expanded)
+            {
+                if (g.SubGroups.Count > 0)
+                {
+                    builder.AddContent(seq++, RenderGroupRows(g.SubGroups, level + 1));
+                }
+                else
+                {
+                    foreach (var item in g.Items)
+                    {
+                        var rowItem = item;
+                        builder.OpenElement(seq++, "tr");
+                        builder.AddAttribute(seq++, "class", GetRowClass(rowItem));
+                        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleRowClickAsync(rowItem)));
+
+                        if (Selectable)
+                        {
+                            builder.OpenElement(seq++, "td");
+                            builder.AddAttribute(seq++, "class", "tm-col-check");
+                            builder.OpenElement(seq++, "input");
+                            builder.AddAttribute(seq++, "type", "checkbox");
+                            builder.AddAttribute(seq++, "checked", IsSelected(rowItem));
+                            builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => ToggleRowSelectionAsync(rowItem, e)));
+                            builder.CloseElement(); // input
+                            builder.CloseElement(); // td
+                        }
+
+                        foreach (var col in _visibleColumns)
+                        {
+                            builder.OpenElement(seq++, "td");
+                            builder.AddAttribute(seq++, "class", GetCellClass(col));
+                            builder.AddAttribute(seq++, "style", GetCellStyle(col));
+                            if (col.CellTemplate is not null)
+                                builder.AddContent(seq++, col.CellTemplate(rowItem));
+                            else
+                                builder.AddContent(seq++, col.Field?.Invoke(rowItem)?.ToString());
+                            builder.CloseElement(); // td
+                        }
+
+                        builder.CloseElement(); // tr
+                    }
+                }
+            }
+        }
+    };
+
+    private void HandleRemoveGroupChip(string columnKey)
+    {
+        RemoveGroupColumn(columnKey);
+    }
+
+    /// <summary>Sets the dragged column key when a column header drag starts.</summary>
+    public void OnColumnDragStart(string columnKey) => _draggedColumnKey = columnKey;
+
+    private void OnColumnDragEnd()
+    {
+        _draggedColumnKey = null;
+        _isDragOver = false;
+    }
+
+    private void HandleGroupZoneDragOver()
+    {
+        // Just allow drag over - preventDefault is on the element
+    }
+
+    private void HandleGroupZoneDrop()
+    {
+        _isDragOver = false;
+        if (_draggedColumnKey != null && !_groupByColumns.Contains(_draggedColumnKey))
+        {
+            AddGroupColumn(_draggedColumnKey);
+            _draggedColumnKey = null;
+        }
+    }
+
+    private void OnChipDragStart(int index)
+    {
+        _draggedChipIndex = index;
+    }
+
+    private void OnChipDrop(int targetIndex)
+    {
+        if (_draggedChipIndex.HasValue && _draggedChipIndex.Value != targetIndex)
+        {
+            var item = _groupByColumns[_draggedChipIndex.Value];
+            _groupByColumns.RemoveAt(_draggedChipIndex.Value);
+            _groupByColumns.Insert(targetIndex, item);
+            RefreshGroupedData();
+            _ = OnGroupingChanged.InvokeAsync(_groupByColumns.ToList());
+            StateHasChanged();
+        }
+        _draggedChipIndex = null;
+    }
 
     // ── Row click ─────────────────────────────────────────────────
 
@@ -727,6 +1164,7 @@
     {
         var parts = new List<string>();
         if (col.Sortable) parts.Add("tm-col-sortable");
+        if (col.Groupable) parts.Add("tm-col-groupable");
         if (col.Key == _sortColumn)
             parts.Add(_sortDescending ? "tm-col-sorted-desc" : "tm-col-sorted-asc");
         if (col.Align == ColumnAlign.Center) parts.Add("tm-text-center");
@@ -768,4 +1206,16 @@
     }
 
     private string GetRowClass(TItem item) => IsSelected(item) ? "tm-row-selected" : string.Empty;
+
+    // ── Scroll container helpers ─────────────────────────────────
+
+    private string GetScrollContainerClass() =>
+        ScrollMode == DataTableScrollMode.Virtualized
+            ? "tm-data-table-scroll tm-data-table-virtual-scroll"
+            : "tm-data-table-scroll";
+
+    private string GetScrollContainerStyle() =>
+        ScrollMode == DataTableScrollMode.Virtualized
+            ? $"height: {VirtualScrollHeight ?? "600px"}; overflow-y: auto;"
+            : string.Empty;
 }

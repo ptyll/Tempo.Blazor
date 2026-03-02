@@ -1,4 +1,7 @@
 @page "/data-display"
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.DataTable
+@inject ToastService Toast
 <PageTitle>Data Display – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -171,7 +174,8 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">List / Card / Table</span>
     </div>
     <div class="showcase-card">
-        <TmMultiViewList Items="@_mvlItems"
+        <TmMultiViewList TItem="DemoMvlItem"
+                         Items="@_mvlItems"
                          ViewContext="demo-mvl"
                          ViewMode="@_mvlView"
                          ViewModeChanged="@(m => _mvlView = m)"
@@ -188,11 +192,121 @@
     </div>
 </section>
 
+<!-- Multi-View List with Grouping -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Multi-View List with Grouping</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">Groupable</span>
+    </div>
+    <div class="showcase-card">
+        <TmMultiViewList TItem="DemoMvlItem"
+                         Items="@_mvlItems"
+                         ViewContext="demo-mvl-grouped"
+                         TitleField="@(x => x.Title)"
+                         SubTitleField="@(x => x.SubTitle)"
+                         StatusLabelField="@(x => x.StatusLabel)"
+                         StatusColorField="@(x => x.StatusColor)"
+                         DateField="@(x => x.Date)"
+                         GroupableFields="@_mvlGroupFields"
+                         GroupsCollapsedByDefault="false"
+                         ShowViewSwitcher="true" />
+    </div>
+</section>
+
+<!-- Change Diff -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Change Diff</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Display property changes with old and new values</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Audit</span>
+    </div>
+    
+    <div class="showcase-card space-y-6">
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Simple Changes</h3>
+            <TmChangeDiff Changes="_simpleChanges" />
+        </div>
+        
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">User Profile Changes</h3>
+            <TmChangeDiff Changes="_userChanges" />
+        </div>
+        
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Empty / Null Values</h3>
+            <TmChangeDiff Changes="_nullChanges" />
+        </div>
+        
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Interactive Demo</h3>
+            <p class="text-sm text-slate-500 mb-3">Click to simulate a change:</p>
+            <div class="flex gap-2 mb-4">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="AddRandomChange">
+                    Add Random Change
+                </TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="ClearChanges">
+                    Clear
+                </TmButton>
+            </div>
+            <TmChangeDiff Changes="_interactiveChanges" />
+        </div>
+    </div>
+</section>
+
 @code {
     private ListViewMode _mvlView = ListViewMode.Card;
     private string? _mvlClicked;
 
-    private readonly IReadOnlyList<IMultiViewListItem> _mvlItems = new[]
+    // Change Diff
+    private List<TmChangeInfo> _simpleChanges = new()
+    {
+        new("Status", "Draft", "Published"),
+        new("Title", "Old Title", "New Title"),
+    };
+
+    private List<TmChangeInfo> _userChanges = new()
+    {
+        new("Name", "John Smith", "John Doe"),
+        new("Email", "john.smith@example.com", "john.doe@example.com"),
+        new("Department", "Sales", "Engineering"),
+        new("Role", "User", "Admin"),
+        new("Active", "false", "true"),
+    };
+
+    private List<TmChangeInfo> _nullChanges = new()
+    {
+        new("Description", null, "Added description text"),
+        new("Deleted Field", "Previous value", null),
+        new("Both Empty", null, null),
+    };
+
+    private List<TmChangeInfo> _interactiveChanges = new();
+    private int _changeCounter = 0;
+
+    private void AddRandomChange()
+    {
+        _changeCounter++;
+        var properties = new[] { "Name", "Email", "Status", "Priority", "Assignee" };
+        var values = new[] { "Value A", "Value B", "Value C", "Updated", "New" };
+        
+        var prop = properties[Random.Shared.Next(properties.Length)];
+        var oldVal = values[Random.Shared.Next(values.Length)];
+        var newVal = values[Random.Shared.Next(values.Length)];
+        
+        _interactiveChanges.Add(new($"{prop} #{_changeCounter}", oldVal, newVal));
+        Toast.ShowInfo($"Added change: {prop}");
+    }
+
+    private void ClearChanges()
+    {
+        _interactiveChanges.Clear();
+        _changeCounter = 0;
+        Toast.ShowInfo("Changes cleared");
+    }
+
+    private readonly IReadOnlyList<DemoMvlItem> _mvlItems = new[]
     {
         new DemoMvlItem("1", "Alice Smith", "Engineering", "Active", "#22c55e", DateTimeOffset.Now.AddDays(-1)),
         new DemoMvlItem("2", "Bob Jones", "Marketing", "On leave", "#f59e0b", DateTimeOffset.Now.AddDays(-3)),
@@ -207,4 +321,20 @@
         public string? AvatarUrl => null;
         public IReadOnlyList<ITag>? Tags => null;
     }
+
+    private readonly IReadOnlyList<GroupFieldDefinition<DemoMvlItem>> _mvlGroupFields = new[]
+    {
+        new GroupFieldDefinition<DemoMvlItem>
+        {
+            FieldName = "SubTitle",
+            Label = "Department",
+            FieldAccessor = x => x.SubTitle ?? ""
+        },
+        new GroupFieldDefinition<DemoMvlItem>
+        {
+            FieldName = "StatusLabel",
+            Label = "Status",
+            FieldAccessor = x => x.StatusLabel ?? ""
+        }
+    };
 }

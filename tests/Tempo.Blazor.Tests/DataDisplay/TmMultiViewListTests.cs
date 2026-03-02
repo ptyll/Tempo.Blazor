@@ -20,15 +20,15 @@ public class TmMultiViewListTests : LocalizationTestBase
         public DateTimeOffset?      Date => null;
     }
 
-    private static IReadOnlyList<IMultiViewListItem> Items(int count = 3) =>
+    private static IReadOnlyList<TestItem> Items(int count = 3) =>
         Enumerable.Range(1, count)
             .Select(i => new TestItem(i.ToString(), $"Item {i}", $"Sub {i}"))
-            .ToArray<IMultiViewListItem>();
+            .ToArray();
 
     [Fact]
     public void MultiViewList_DefaultView_IsTable()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p.Add(c => c.Items, Items()));
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p.Add(c => c.Items, Items()));
 
         cut.FindAll(".tm-mvl-table").Should().HaveCount(1);
     }
@@ -36,7 +36,7 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_SwitchToCard_ChangesView()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p.Add(c => c.Items, Items()));
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p.Add(c => c.Items, Items()));
 
         cut.Find(".tm-mvl-switch-card").Click();
 
@@ -47,7 +47,7 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_SwitchToList_ChangesView()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p.Add(c => c.Items, Items()));
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p.Add(c => c.Items, Items()));
 
         cut.Find(".tm-mvl-switch-list").Click();
 
@@ -58,8 +58,8 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_Empty_RendersEmptyState()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p
-            .Add(c => c.Items,       Array.Empty<IMultiViewListItem>())
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p
+            .Add(c => c.Items,       Array.Empty<TestItem>())
             .Add(c => c.EmptyTitle,  "Nothing here"));
 
         cut.Find(".tm-empty-state").Should().NotBeNull();
@@ -68,10 +68,10 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_RowClick_FiresCallback()
     {
-        IMultiViewListItem? clicked = null;
-        var cut = RenderComponent<TmMultiViewList>(p => p
+        TestItem? clicked = null;
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p
             .Add(c => c.Items,       Items())
-            .Add(c => c.OnItemClick, (IMultiViewListItem item) => clicked = item));
+            .Add(c => c.OnItemClick, (TestItem item) => clicked = item));
 
         cut.FindAll(".tm-mvl-row").First().Click();
 
@@ -81,7 +81,7 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_TableView_RendersColumns()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p.Add(c => c.Items, Items()));
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p.Add(c => c.Items, Items()));
 
         // Table view is default, should render item titles in rows
         cut.FindAll(".tm-mvl-row").Should().NotBeEmpty();
@@ -90,7 +90,7 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_CardView_RendersCards()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p.Add(c => c.Items, Items(2)));
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p.Add(c => c.Items, Items(2)));
 
         cut.Find(".tm-mvl-switch-card").Click();
 
@@ -100,7 +100,7 @@ public class TmMultiViewListTests : LocalizationTestBase
     [Fact]
     public void MultiViewList_ListViewMode_RendersListItems()
     {
-        var cut = RenderComponent<TmMultiViewList>(p => p.Add(c => c.Items, Items(2)));
+        var cut = RenderComponent<TmMultiViewList<TestItem>>(p => p.Add(c => c.Items, Items(2)));
 
         cut.Find(".tm-mvl-switch-list").Click();
 

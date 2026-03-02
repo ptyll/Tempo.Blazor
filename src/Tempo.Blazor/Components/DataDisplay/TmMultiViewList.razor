@@ -1,26 +1,50 @@
 @namespace Tempo.Blazor.Components.DataDisplay
+@typeparam TItem
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Filters
 @using Tempo.Blazor.Components.DataTable
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Services
 
 <div class="tm-multi-view-list @Class">
-    
+
     @* ── Toolbar ─────────────────────────────────────────────── *@
     <div class="tm-mvl-toolbar">
         @* Left: Search *@
         @if (ShowSearch)
         {
             <div class="tm-mvl-toolbar-left">
-                <TmSearchInput Value="@_searchText" 
-                               ValueChanged="OnSearchChangedAsync" 
+                <TmSearchInput Value="@_searchText"
+                               ValueChanged="OnSearchChangedAsync"
                                Placeholder="@Loc["TmDataTable_SearchPlaceholder"]" />
             </div>
         }
-        
-        @* Right: View switcher, Column picker, View manager *@
+
+        @* Right: Group picker, View switcher, View manager *@
         <div class="tm-mvl-toolbar-right">
+            @if (GroupableFields is not null && GroupableFields.Count > 0)
+            {
+                <div class="tm-mvl-group-picker">
+                    <button type="button" class="tm-mvl-group-btn" @onclick="ToggleGroupPicker">
+                        @Loc["TmMvl_GroupBy"]
+                    </button>
+                    @if (_groupPickerOpen)
+                    {
+                        <div class="tm-mvl-group-dropdown">
+                            @foreach (var field in GroupableFields)
+                            {
+                                <label class="tm-mvl-group-option">
+                                    <input type="checkbox"
+                                           checked="@_activeGroupFields.Contains(field.FieldName)"
+                                           @onchange="e => ToggleGroupField(field.FieldName, (bool)e.Value!)" />
+                                    @field.Label
+                                </label>
+                            }
+                        </div>
+                    }
+                </div>
+            }
             @if (ShowViewSwitcher)
             {
                 <div class="tm-mvl-switcher">
@@ -76,153 +100,189 @@
     {
         <TmEmptyState Title="@(!string.IsNullOrEmpty(EmptyTitle) ? EmptyTitle : Loc["Tm_NoResults"])" />
     }
-    else if (_viewMode == ListViewMode.Table)
+    else
     {
-        <table class="tm-mvl-table">
-            <thead>
-                <tr>
-                    @if (_visibleColumns.Contains("Title"))
-                    {
-                        <th>@Loc["TmMvl_ColTitle"]</th>
-                    }
-                    @if (_visibleColumns.Contains("SubTitle"))
-                    {
-                        <th>@Loc["TmMvl_ColSubTitle"]</th>
-                    }
-                    @if (_visibleColumns.Contains("Status"))
-                    {
-                        <th>@Loc["TmMvl_ColStatus"]</th>
-                    }
-                    @if (_visibleColumns.Contains("Date"))
-                    {
-                        <th>@Loc["TmMvl_ColDate"]</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in FilteredItems!)
-                {
-                    var it = item;
-                    <tr class="tm-mvl-row" @onclick="async () => await OnItemClick.InvokeAsync(it)">
-                        @if (_visibleColumns.Contains("Title"))
-                        {
-                            <td>
-                                @if (!string.IsNullOrEmpty(it.AvatarUrl))
-                                {
-                                    <img src="@it.AvatarUrl" alt="" class="tm-mvl-avatar" />
-                                }
-                                <span>@it.Title</span>
-                            </td>
-                        }
-                        @if (_visibleColumns.Contains("SubTitle"))
-                        {
-                            <td>@it.SubTitle</td>
-                        }
-                        @if (_visibleColumns.Contains("Status"))
-                        {
-                            <td>
-                                @if (!string.IsNullOrEmpty(it.StatusLabel))
-                                {
-                                    <span class="tm-mvl-status"
-                                          style="@(!string.IsNullOrEmpty(it.StatusColor) ? $"background:{it.StatusColor}" : "")">
-                                        @it.StatusLabel
-                                    </span>
-                                }
-                            </td>
-                        }
-                        @if (_visibleColumns.Contains("Date"))
-                        {
-                            <td>@(it.Date?.ToString("d"))</td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else if (_viewMode == ListViewMode.Card)
-    {
-        <div class="tm-mvl-card-grid">
-            @foreach (var item in FilteredItems!)
+        <div class="@GetMvlScrollContainerClass()" style="@GetMvlScrollContainerStyle()">
+            @if (_viewMode == ListViewMode.Table)
             {
-                var it = item;
-                <div class="tm-mvl-card" @onclick="async () => await OnItemClick.InvokeAsync(it)">
-                    <div class="tm-mvl-card-header">
-                        @if (_visibleColumns.Contains("Avatar") && !string.IsNullOrEmpty(it.AvatarUrl))
+                <table class="tm-mvl-table">
+                    <thead>
+                        <tr>
+                            @if (_visibleColumns.Contains("Title")) { <th>@Loc["TmMvl_ColTitle"]</th> }
+                            @if (_visibleColumns.Contains("SubTitle")) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
+                            @if (_visibleColumns.Contains("Status")) { <th>@Loc["TmMvl_ColStatus"]</th> }
+                            @if (_visibleColumns.Contains("Date")) { <th>@Loc["TmMvl_ColDate"]</th> }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (IsGrouped)
                         {
-                            <img src="@it.AvatarUrl" alt="" class="tm-mvl-card-avatar" />
+                            @RenderTableGroupRows(_groupedData!, 0)
                         }
-                        <div class="tm-mvl-card-info">
-                            <div class="tm-mvl-card-title-row">
-                                @if (_visibleColumns.Contains("Title"))
-                                {
-                                    <span class="tm-mvl-card-title">@it.Title</span>
-                                }
-                                @if (_visibleColumns.Contains("Status") && !string.IsNullOrEmpty(it.StatusLabel))
-                                {
-                                    <span class="tm-mvl-status"
-                                          style="@(!string.IsNullOrEmpty(it.StatusColor) ? $"background:{it.StatusColor}" : "")">
-                                        @it.StatusLabel
-                                    </span>
-                                }
-                            </div>
-                            @if (_visibleColumns.Contains("SubTitle") && !string.IsNullOrEmpty(it.SubTitle))
+                        else if (IsVirtualized)
+                        {
+                            <Virtualize Items="FilteredItems" Context="item" ItemSize="VirtualItemSize">
+                                @RenderTableDataRow(item)
+                            </Virtualize>
+                        }
+                        else
+                        {
+                            @foreach (var item in FilteredItems!)
                             {
-                                <span class="tm-mvl-card-subtitle">@it.SubTitle</span>
+                                @RenderTableDataRow(item)
                             }
-                        </div>
+                        }
+                    </tbody>
+                </table>
+            }
+            else if (_viewMode == ListViewMode.Card)
+            {
+                @if (IsGrouped)
+                {
+                    @RenderGroupSections(_groupedData!, 0, "card")
+                }
+                else if (IsVirtualized)
+                {
+                    <div class="tm-mvl-card-grid">
+                        <Virtualize Items="FilteredItems" Context="item" ItemSize="VirtualCardHeight">
+                            @RenderCardItem(item)
+                        </Virtualize>
                     </div>
-                    
-                    @if (_visibleColumns.Contains("Date") && it.Date.HasValue)
-                    {
-                        <div class="tm-mvl-card-footer">
-                            <span class="tm-mvl-card-date">@it.Date.Value.ToString("d")</span>
-                        </div>
-                    }
-                </div>
+                }
+                else
+                {
+                    <div class="tm-mvl-card-grid">
+                        @foreach (var item in FilteredItems!)
+                        {
+                            @RenderCardItem(item)
+                        }
+                    </div>
+                }
+            }
+            else if (_viewMode == ListViewMode.List)
+            {
+                @if (IsGrouped)
+                {
+                    @RenderGroupSections(_groupedData!, 0, "list")
+                }
+                else if (IsVirtualized)
+                {
+                    <ul class="tm-mvl-list">
+                        <Virtualize Items="FilteredItems" Context="item" ItemSize="VirtualListItemHeight">
+                            @RenderListItem(item)
+                        </Virtualize>
+                    </ul>
+                }
+                else
+                {
+                    <ul class="tm-mvl-list">
+                        @foreach (var item in FilteredItems!)
+                        {
+                            @RenderListItem(item)
+                        }
+                    </ul>
+                }
             }
         </div>
     }
-    else if (_viewMode == ListViewMode.List)
+
+    @* ── Pagination ───────────────────────────────────────────── *@
+    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination)
     {
-        <ul class="tm-mvl-list">
-            @foreach (var item in FilteredItems!)
-            {
-                var it = item;
-                <li class="tm-mvl-list-item" @onclick="async () => await OnItemClick.InvokeAsync(it)">
-                    @if (_visibleColumns.Contains("Avatar") && !string.IsNullOrEmpty(it.AvatarUrl))
-                    {
-                        <img src="@it.AvatarUrl" alt="" class="tm-mvl-avatar" />
-                    }
-                    <div class="tm-mvl-list-item-body">
-                        @if (_visibleColumns.Contains("Title"))
-                        {
-                            <span class="tm-mvl-list-item-title">@it.Title</span>
-                        }
-                        @if (_visibleColumns.Contains("SubTitle") && !string.IsNullOrEmpty(it.SubTitle))
-                        {
-                            <span class="tm-mvl-list-item-subtitle">@it.SubTitle</span>
-                        }
-                    </div>
-                    @if (_visibleColumns.Contains("Status") && !string.IsNullOrEmpty(it.StatusLabel))
-                    {
-                        <span class="tm-mvl-status"
-                              style="@(!string.IsNullOrEmpty(it.StatusColor) ? $"background:{it.StatusColor}" : "")">
-                            @it.StatusLabel
-                        </span>
-                    }
-                    @if (_visibleColumns.Contains("Date") && it.Date.HasValue)
-                    {
-                        <span class="tm-mvl-list-item-date">@it.Date.Value.ToString("d")</span>
-                    }
-                </li>
-            }
-        </ul>
+        <div class="tm-pagination-container">
+            <div class="tm-pagination-info">
+                @Loc["TmDataTable_ShowingItems", ((_currentPage - 1) * _pageSize) + 1, Math.Min(_currentPage * _pageSize, _totalCount), _totalCount]
+            </div>
+            <div class="tm-pagination-center">
+                <TmPagination CurrentPage="@_currentPage"
+                              TotalPages="@_totalPages"
+                              TotalCount="@_totalCount"
+                              PageSize="@_pageSize"
+                              OnPageChange="GoToPageAsync"
+                              OnPageSizeChange="ChangePageSizeAsync" />
+            </div>
+        </div>
     }
 </div>
 
 @code {
-    /// <summary>Items to display in the list.</summary>
-    [Parameter] public IReadOnlyList<IMultiViewListItem>? Items { get; set; }
+    // ── Parameters: data ─────────────────────────────────────────
+
+    /// <summary>Items to display in the list (client-side mode).</summary>
+    [Parameter] public IReadOnlyList<TItem>? Items { get; set; }
+
+    /// <summary>Server-side data provider. When set, data is loaded via this provider.</summary>
+    [Parameter] public IDataTableDataProvider<TItem>? DataProvider { get; set; }
+
+    /// <summary>When true, shows pagination bar when more than one page. Default: true.</summary>
+    [Parameter] public bool ShowPagination { get; set; } = true;
+
+    /// <summary>Default page size for pagination. Default: 25.</summary>
+    [Parameter] public int DefaultPageSize { get; set; } = 25;
+
+    // ── Parameters: mapping (quick setup) ────────────────────────
+
+    /// <summary>Maps an item to its display title.</summary>
+    [Parameter] public Func<TItem, string>? TitleField { get; set; }
+
+    /// <summary>Maps an item to its secondary text.</summary>
+    [Parameter] public Func<TItem, string?>? SubTitleField { get; set; }
+
+    /// <summary>Maps an item to its avatar/thumbnail URL.</summary>
+    [Parameter] public Func<TItem, string?>? AvatarUrlField { get; set; }
+
+    /// <summary>Maps an item to its status label text.</summary>
+    [Parameter] public Func<TItem, string?>? StatusLabelField { get; set; }
+
+    /// <summary>Maps an item to its status badge CSS color.</summary>
+    [Parameter] public Func<TItem, string?>? StatusColorField { get; set; }
+
+    /// <summary>Maps an item to its date value.</summary>
+    [Parameter] public Func<TItem, DateTimeOffset?>? DateField { get; set; }
+
+    /// <summary>Maps an item to its unique identifier.</summary>
+    [Parameter] public Func<TItem, string>? IdField { get; set; }
+
+    // ── Parameters: template overrides ───────────────────────────
+
+    /// <summary>Custom card template. When set, overrides default card rendering.</summary>
+    [Parameter] public RenderFragment<TItem>? CardTemplate { get; set; }
+
+    /// <summary>Custom list item template. When set, overrides default list rendering.</summary>
+    [Parameter] public RenderFragment<TItem>? ListItemTemplate { get; set; }
+
+    /// <summary>Custom table row template. When set, overrides default table row rendering.</summary>
+    [Parameter] public RenderFragment<TItem>? TableRowTemplate { get; set; }
+
+    // ── Parameters: grouping ─────────────────────────────────────
+
+    /// <summary>Fields available for grouping in the dropdown picker.</summary>
+    [Parameter] public IReadOnlyList<GroupFieldDefinition<TItem>>? GroupableFields { get; set; }
+
+    /// <summary>Whether groups are collapsed by default.</summary>
+    [Parameter] public bool GroupsCollapsedByDefault { get; set; } = true;
+
+    /// <summary>Fires when grouping configuration changes.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<string>> OnGroupingChanged { get; set; }
+
+    // ── Parameters: virtualization ────────────────────────────────
+
+    /// <summary>Scroll mode: Pagination (default) or Virtualized.</summary>
+    [Parameter] public DataTableScrollMode ScrollMode { get; set; } = DataTableScrollMode.Pagination;
+
+    /// <summary>Height of the virtual scroll container. Default: "600px".</summary>
+    [Parameter] public string? VirtualScrollHeight { get; set; }
+
+    /// <summary>Estimated item height for table row virtualization.</summary>
+    [Parameter] public float VirtualItemSize { get; set; } = 48f;
+
+    /// <summary>Estimated card height for card view virtualization.</summary>
+    [Parameter] public float VirtualCardHeight { get; set; } = 180f;
+
+    /// <summary>Estimated list item height for list view virtualization.</summary>
+    [Parameter] public float VirtualListItemHeight { get; set; } = 56f;
+
+    // ── Parameters: display ──────────────────────────────────────
 
     /// <summary>Current display mode (Table/Card/List). Two-way bindable.</summary>
     [Parameter] public ListViewMode ViewMode { get; set; } = ListViewMode.Table;
@@ -231,7 +291,7 @@
     [Parameter] public EventCallback<ListViewMode> ViewModeChanged { get; set; }
 
     /// <summary>Fires when an item row/card is clicked.</summary>
-    [Parameter] public EventCallback<IMultiViewListItem> OnItemClick { get; set; }
+    [Parameter] public EventCallback<TItem> OnItemClick { get; set; }
 
     /// <summary>When true, shows the view-mode switcher buttons above the list.</summary>
     [Parameter] public bool ShowViewSwitcher { get; set; } = true;
@@ -246,13 +306,13 @@
     [Parameter] public string? Class { get; set; }
 
     // ── View Manager Parameters ───────────────────────────────────
-    
+
     /// <summary>
-    /// Unique identifier for this list instance. 
+    /// Unique identifier for this list instance.
     /// Used to scope saved views to specific lists (e.g., "team-members", "projects").
     /// </summary>
     [Parameter, EditorRequired] public string ViewContext { get; set; } = default!;
-    
+
     /// <summary>Optional view persistence provider. When set, shows TmViewManager.</summary>
     [Parameter] public IDataTableViewProvider? ViewProvider { get; set; }
 
@@ -281,51 +341,152 @@
     private string? _activeViewId;
     private HashSet<string> _visibleColumns = ["Title", "SubTitle", "Status", "Date"];
 
-    private bool HasItems => FilteredItems?.Count > 0;
+    // ── Server-side state ─────────────────────────────────────────
+    private List<TItem> _serverItems = [];
+    private bool _isLoading;
+    private int _currentPage = 1;
+    private int _pageSize = 25;
+    private int _totalCount;
+    private int _totalPages;
 
-    private IReadOnlyList<IMultiViewListItem>? FilteredItems
+    // ── Grouping state ───────────────────────────────────────────
+    private readonly List<string> _activeGroupFields = [];
+    private readonly HashSet<string> _expandedGroups = new();
+    private IReadOnlyList<DataGroup<TItem>>? _groupedData;
+    private bool _groupPickerOpen;
+    private bool IsGrouped => _activeGroupFields.Count > 0 && _groupedData is not null;
+    private bool IsVirtualized => ScrollMode == DataTableScrollMode.Virtualized;
+
+    private bool HasItems => (IsGrouped ? _groupedData?.Count > 0 : FilteredItems?.Count > 0) == true;
+
+    private List<TItem>? FilteredItems
     {
         get
         {
+            // Server-side: use loaded items directly
+            if (DataProvider is not null)
+                return _serverItems.Count > 0 ? _serverItems : null;
+
             if (Items == null) return null;
-            
+
             var query = Items.AsEnumerable();
-            
+
             // Apply search
             if (!string.IsNullOrWhiteSpace(_searchText))
             {
-                var term = _searchText.Trim().ToLowerInvariant();
-                query = query.Where(i => 
-                    (i.Title?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (i.SubTitle?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (i.StatusLabel?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+                var term = _searchText.Trim();
+                query = query.Where(item =>
+                    (GetTitle(item)?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (GetSubTitle(item)?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (GetStatusLabel(item)?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
             }
-            
+
             // Apply filters
             foreach (var filter in _externalFilters)
             {
                 query = ApplyFilter(query, filter);
             }
-            
+
             return query.ToList();
         }
     }
 
-    private IEnumerable<IMultiViewListItem> ApplyFilter(IEnumerable<IMultiViewListItem> query, ActiveFilter filter)
+    // ── Field accessors (Hybrid: mapping > IMultiViewListItem > null) ──
+
+    private string? GetTitle(TItem item) =>
+        TitleField is not null ? TitleField(item) :
+        item is IMultiViewListItem mvl ? mvl.Title : null;
+
+    private string? GetSubTitle(TItem item) =>
+        SubTitleField is not null ? SubTitleField(item) :
+        item is IMultiViewListItem mvl ? mvl.SubTitle : null;
+
+    private string? GetAvatarUrl(TItem item) =>
+        AvatarUrlField is not null ? AvatarUrlField(item) :
+        item is IMultiViewListItem mvl ? mvl.AvatarUrl : null;
+
+    private string? GetStatusLabel(TItem item) =>
+        StatusLabelField is not null ? StatusLabelField(item) :
+        item is IMultiViewListItem mvl ? mvl.StatusLabel : null;
+
+    private string? GetStatusColor(TItem item) =>
+        StatusColorField is not null ? StatusColorField(item) :
+        item is IMultiViewListItem mvl ? mvl.StatusColor : null;
+
+    private DateTimeOffset? GetDate(TItem item) =>
+        DateField is not null ? DateField(item) :
+        item is IMultiViewListItem mvl ? mvl.Date : null;
+
+    // ── Filter logic ─────────────────────────────────────────────
+
+    private IEnumerable<TItem> ApplyFilter(IEnumerable<TItem> query, ActiveFilter filter)
     {
         var value = filter.DisplayValue?.ToLowerInvariant() ?? "";
         return filter.FieldName.ToLowerInvariant() switch
         {
-            "title" => query.Where(i => i.Title?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false),
-            "subtitle" => query.Where(i => i.SubTitle?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false),
-            "status" => query.Where(i => i.StatusLabel?.Equals(value, StringComparison.OrdinalIgnoreCase) ?? false),
+            "title" => query.Where(i => GetTitle(i)?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false),
+            "subtitle" => query.Where(i => GetSubTitle(i)?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false),
+            "status" => query.Where(i => GetStatusLabel(i)?.Equals(value, StringComparison.OrdinalIgnoreCase) ?? false),
             _ => query
         };
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        _pageSize = DefaultPageSize;
+
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
     }
 
     protected override void OnParametersSet()
     {
         _viewMode = ViewMode;
+    }
+
+    // ── Server-side data loading ─────────────────────────────────
+
+    private async Task LoadFromProviderAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+        try
+        {
+            var query = new DataTableQuery
+            {
+                Page = _currentPage,
+                PageSize = _pageSize,
+                SearchText = _searchText,
+            };
+            var result = await DataProvider!.GetDataAsync(query);
+            _serverItems = result.Items.ToList();
+            _totalCount = result.TotalCount;
+            _currentPage = result.Page;
+            _pageSize = result.PageSize;
+            _totalPages = result.TotalPages;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
+    }
+
+    private async Task ChangePageSizeAsync(int size)
+    {
+        _pageSize = size;
+        _currentPage = 1;
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
     }
 
     private async Task SwitchView(ListViewMode mode)
@@ -337,27 +498,41 @@
     private async Task OnSearchChangedAsync(string? value)
     {
         _searchText = value ?? string.Empty;
-        StateHasChanged();
-        await Task.CompletedTask;
+        if (DataProvider is not null)
+        {
+            _currentPage = 1;
+            await LoadFromProviderAsync();
+        }
+        else
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task OnExternalFiltersChanged(IEnumerable<ActiveFilter> filters)
     {
         _externalFilters = filters.ToList();
-        StateHasChanged();
-        await Task.CompletedTask;
+        if (DataProvider is not null)
+        {
+            _currentPage = 1;
+            await LoadFromProviderAsync();
+        }
+        else
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task ApplyViewAsync(DataTableView view)
     {
         _activeViewId = view.Id;
-        
+
         // Update visible columns
         if (view.VisibleColumns?.Count > 0)
         {
             _visibleColumns = new HashSet<string>(view.VisibleColumns);
         }
-        
+
         // Update filters
         _externalFilters = view.Filters?.Where(f => !string.IsNullOrEmpty(f.Value)).Select(f => new ActiveFilter(
             f.FieldName,
@@ -366,7 +541,20 @@
             f.Value,
             f.Value
         )).ToList() ?? [];
-        
+
+        // Apply grouping
+        _activeGroupFields.Clear();
+        if (view.GroupByColumns?.Count > 0)
+        {
+            _activeGroupFields.AddRange(view.GroupByColumns);
+            _expandedGroups.Clear();
+            RefreshGroupedData();
+        }
+        else
+        {
+            _groupedData = null;
+        }
+
         StateHasChanged();
         await Task.CompletedTask;
     }
@@ -400,5 +588,245 @@
         "greaterthan" => FilterOperator.GreaterThan,
         "lessthan" => FilterOperator.LessThan,
         _ => FilterOperator.Contains
+    };
+
+    // ── Grouping ─────────────────────────────────────────────────
+
+    private void ToggleGroupPicker()
+    {
+        _groupPickerOpen = !_groupPickerOpen;
+    }
+
+    private void ToggleGroupField(string fieldName, bool enabled)
+    {
+        if (enabled && !_activeGroupFields.Contains(fieldName))
+        {
+            _activeGroupFields.Add(fieldName);
+        }
+        else if (!enabled)
+        {
+            _activeGroupFields.Remove(fieldName);
+        }
+
+        _groupPickerOpen = false;
+        _expandedGroups.Clear();
+        RefreshGroupedData();
+        _ = OnGroupingChanged.InvokeAsync(_activeGroupFields.ToList());
+        StateHasChanged();
+    }
+
+    private void RefreshGroupedData()
+    {
+        if (_activeGroupFields.Count == 0 || GroupableFields is null)
+        {
+            _groupedData = null;
+            return;
+        }
+
+        var items = FilteredItems ?? [];
+
+        var levels = _activeGroupFields.Select(fieldName =>
+        {
+            var def = GroupableFields.FirstOrDefault(f => f.FieldName == fieldName);
+            return def is not null
+                ? new GroupingLevel<TItem>(
+                    fieldName,
+                    def.FieldAccessor,
+                    def.DisplayFormatter)
+                : null;
+        }).Where(l => l is not null).Cast<GroupingLevel<TItem>>().ToList();
+
+        _groupedData = DataGroupingService.GroupItems(items, levels);
+    }
+
+    private void ToggleGroupExpansion(string groupKey)
+    {
+        if (!_expandedGroups.Remove(groupKey))
+            _expandedGroups.Add(groupKey);
+        StateHasChanged();
+    }
+
+    private bool IsGroupExpanded(DataGroup<TItem> group)
+    {
+        var key = $"{group.FieldName}:{group.Key}";
+        return GroupsCollapsedByDefault ? _expandedGroups.Contains(key) : !_expandedGroups.Contains(key);
+    }
+
+    private string GetGroupKey(DataGroup<TItem> group) => $"{group.FieldName}:{group.Key}";
+
+    private int MvlColSpan => _visibleColumns.Count;
+
+    private string GetMvlScrollContainerClass() =>
+        IsVirtualized ? "tm-mvl-virtual-scroll" : "";
+
+    private string GetMvlScrollContainerStyle() =>
+        IsVirtualized ? $"height: {VirtualScrollHeight ?? "600px"}; overflow-y: auto;" : "";
+
+    // ── Render fragments ──────────────────────────────────────────
+
+    private RenderFragment RenderTableGroupRows(IReadOnlyList<DataGroup<TItem>> groups, int level) => __builder =>
+    {
+        foreach (var group in groups)
+        {
+            var groupKey = GetGroupKey(group);
+            var expanded = IsGroupExpanded(group);
+
+            <tr class="tm-mvl-group-row tm-mvl-group-level-@level">
+                <td colspan="@MvlColSpan">
+                    <button type="button" class="tm-mvl-group-toggle" @onclick="() => ToggleGroupExpansion(groupKey)">
+                        @(expanded ? "▼" : "►")
+                    </button>
+                    <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
+                    <span class="tm-mvl-group-count">(@group.Count)</span>
+                </td>
+            </tr>
+
+            if (expanded)
+            {
+                if (group.SubGroups is { Count: > 0 })
+                {
+                    @RenderTableGroupRows(group.SubGroups, level + 1)
+                }
+                else
+                {
+                    foreach (var item in group.Items)
+                    {
+                        @RenderTableDataRow(item)
+                    }
+                }
+            }
+        }
+    };
+
+    private RenderFragment RenderTableDataRow(TItem item) => __builder =>
+    {
+        <tr class="tm-mvl-row" @onclick="() => OnItemClick.InvokeAsync(item)">
+            @if (TableRowTemplate is not null)
+            {
+                @TableRowTemplate(item)
+            }
+            else
+            {
+                if (_visibleColumns.Contains("Title")) { <td>@GetTitle(item)</td> }
+                if (_visibleColumns.Contains("SubTitle")) { <td>@GetSubTitle(item)</td> }
+                if (_visibleColumns.Contains("Status"))
+                {
+                    <td>
+                        @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
+                        {
+                            <span class="tm-mvl-status" style="@(GetStatusColor(item) is { } c ? $"background:{c}" : "")">
+                                @GetStatusLabel(item)
+                            </span>
+                        }
+                    </td>
+                }
+                if (_visibleColumns.Contains("Date")) { <td>@GetDate(item)?.ToString("d")</td> }
+            }
+        </tr>
+    };
+
+    private RenderFragment RenderGroupSections(IReadOnlyList<DataGroup<TItem>> groups, int level, string viewType) => __builder =>
+    {
+        foreach (var group in groups)
+        {
+            var groupKey = GetGroupKey(group);
+            var expanded = IsGroupExpanded(group);
+
+            <div class="tm-mvl-group-section tm-mvl-group-level-@level">
+                <div class="tm-mvl-group-header">
+                    <button type="button" class="tm-mvl-group-toggle" @onclick="() => ToggleGroupExpansion(groupKey)">
+                        @(expanded ? "▼" : "►")
+                    </button>
+                    <span class="tm-mvl-group-label">@(group.DisplayValue ?? group.Key)</span>
+                    <span class="tm-mvl-group-count">(@group.Count)</span>
+                </div>
+
+                @if (expanded)
+                {
+                    if (group.SubGroups is { Count: > 0 })
+                    {
+                        @RenderGroupSections(group.SubGroups, level + 1, viewType)
+                    }
+                    else if (viewType == "card")
+                    {
+                        <div class="tm-mvl-card-grid">
+                            @foreach (var item in group.Items)
+                            {
+                                @RenderCardItem(item)
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="tm-mvl-list">
+                            @foreach (var item in group.Items)
+                            {
+                                @RenderListItem(item)
+                            }
+                        </ul>
+                    }
+                }
+            </div>
+        }
+    };
+
+    private RenderFragment RenderCardItem(TItem item) => __builder =>
+    {
+        <div class="tm-mvl-card" @onclick="() => OnItemClick.InvokeAsync(item)">
+            @if (CardTemplate is not null)
+            {
+                @CardTemplate(item)
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
+                {
+                    <img class="tm-mvl-card-avatar" src="@GetAvatarUrl(item)" alt="" />
+                }
+                <div class="tm-mvl-card-body">
+                    <div class="tm-mvl-card-title">@GetTitle(item)</div>
+                    @if (!string.IsNullOrEmpty(GetSubTitle(item)))
+                    {
+                        <div class="tm-mvl-card-subtitle">@GetSubTitle(item)</div>
+                    }
+                    @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
+                    {
+                        <span class="tm-mvl-status" style="@(GetStatusColor(item) is { } c ? $"background:{c}" : "")">
+                            @GetStatusLabel(item)
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    };
+
+    private RenderFragment RenderListItem(TItem item) => __builder =>
+    {
+        <li class="tm-mvl-list-item" @onclick="() => OnItemClick.InvokeAsync(item)">
+            @if (ListItemTemplate is not null)
+            {
+                @ListItemTemplate(item)
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(GetAvatarUrl(item)))
+                {
+                    <img class="tm-mvl-list-avatar" src="@GetAvatarUrl(item)" alt="" />
+                }
+                <div class="tm-mvl-list-content">
+                    <span class="tm-mvl-list-title">@GetTitle(item)</span>
+                    @if (!string.IsNullOrEmpty(GetSubTitle(item)))
+                    {
+                        <span class="tm-mvl-list-subtitle">@GetSubTitle(item)</span>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
+                {
+                    <span class="tm-mvl-status" style="@(GetStatusColor(item) is { } c ? $"background:{c}" : "")">
+                        @GetStatusLabel(item)
+                    </span>
+                }
+            }
+        </li>
     };
 }

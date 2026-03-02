@@ -1,5 +1,6 @@
 using Tempo.Blazor.Demo.Api.Data;
 using Tempo.Blazor.Demo.Api.Endpoints;
+using Tempo.Blazor.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddSingleton<MockAttachmentStore>();
 builder.Services.AddSingleton<MockImageStore>();
 builder.Services.AddSingleton<MockViewStore>();
 builder.Services.AddSingleton<MockDropdownStore>();
+builder.Services.AddSingleton<MockScheduleStore>();
 
 var app = builder.Build();
 
@@ -31,6 +33,8 @@ app.MapAttachmentEndpoints();
 app.MapImageEndpoints();
 app.MapViewEndpoints();
 app.MapDropdownEndpoints();
+app.MapScheduleEndpoints();
+app.MapImportExportEndpoints();
 
 app.Run();
 

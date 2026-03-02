@@ -35,7 +35,8 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">With Views</span>
     </div>
     
-    <TmMultiViewList Items="_teamMembers"
+    <TmMultiViewList TItem="TeamMember"
+                     Items="_teamMembers"
                      ViewContext="team-members"
                      ViewProvider="_viewProvider"
                      ViewFilterDefinitions="_filterDefs"
@@ -47,7 +48,7 @@
                      ShowSearch="true"
                      ShowViewSwitcher="true"
                      EmptyTitle="No team members found"
-                     OnItemClick="OnItemClick" />
+                     OnItemClick="OnTeamMemberClick" />
 </section>
 
 <!-- Simple Multi View List (without views) -->
@@ -57,12 +58,13 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full">Simple</span>
     </div>
     
-    <TmMultiViewList Items="_projects"
+    <TmMultiViewList TItem="Project"
+                     Items="_projects"
                      ViewContext="demo-projects"
                      ShowSearch="true"
                      ShowViewSwitcher="true"
                      EmptyTitle="No projects found"
-                     OnItemClick="OnItemClick" />
+                     OnItemClick="OnProjectClick" />
 </section>
 
 @code {
@@ -110,7 +112,7 @@
     ];
 
     // Sample data - Team Members
-    private List<IMultiViewListItem> _teamMembers = 
+    private List<TeamMember> _teamMembers =
     [
         new TeamMember 
         { 
@@ -187,7 +189,7 @@
     ];
 
     // Sample data - Projects
-    private List<IMultiViewListItem> _projects = 
+    private List<Project> _projects =
     [
         new Project 
         { 
@@ -228,7 +230,12 @@
         _viewProvider = ViewProvider;
     }
 
-    private void OnItemClick(IMultiViewListItem item)
+    private void OnTeamMemberClick(TeamMember item)
+    {
+        Console.WriteLine($"Clicked: {item.Title}");
+    }
+
+    private void OnProjectClick(Project item)
     {
         Console.WriteLine($"Clicked: {item.Title}");
     }

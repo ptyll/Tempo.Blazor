@@ -404,4 +404,29 @@
   <data name="TmScheduler_Prev" xml:space="preserve"><value>Předchozí</value></data>
   <data name="TmScheduler_Next" xml:space="preserve"><value>Další</value></data>
 
+  <!-- DataTable Grouping -->
+  <data name="TmDataTable_GroupDropPlaceholder" xml:space="preserve"><value>Přetáhněte záhlaví sloupce pro seskupení</value></data>
+  <data name="TmDataTable_ExpandAll" xml:space="preserve"><value>Rozbalit vše</value></data>
+  <data name="TmDataTable_CollapseAll" xml:space="preserve"><value>Sbalit vše</value></data>
+  <data name="TmDataTable_GroupCount" xml:space="preserve"><value>{0} položek</value></data>
+  <data name="TmDataTable_GroupSum" xml:space="preserve"><value>Součet</value></data>
+  <data name="TmDataTable_GroupAvg" xml:space="preserve"><value>Průměr</value></data>
+  <data name="TmDataTable_GroupMin" xml:space="preserve"><value>Min</value></data>
+  <data name="TmDataTable_GroupMax" xml:space="preserve"><value>Max</value></data>
+
+  <!-- MultiViewList Grouping -->
+  <data name="TmMvl_GroupBy" xml:space="preserve"><value>Seskupit podle</value></data>
+  <data name="TmMvl_GroupNone" xml:space="preserve"><value>Bez seskupení</value></data>
+  <data name="TmMvl_TableView" xml:space="preserve"><value>Zobrazení tabulkou</value></data>
+  <data name="TmMvl_CardView" xml:space="preserve"><value>Zobrazení kartami</value></data>
+  <data name="TmMvl_ListView" xml:space="preserve"><value>Zobrazení seznamem</value></data>
+  <data name="TmMvl_ColTitle" xml:space="preserve"><value>Název</value></data>
+  <data name="TmMvl_ColSubTitle" xml:space="preserve"><value>Podnázev</value></data>
+  <data name="TmMvl_ColStatus" xml:space="preserve"><value>Stav</value></data>
+  <data name="TmMvl_ColDate" xml:space="preserve"><value>Datum</value></data>
+
+  <!-- View Manager Grouping -->
+  <data name="TmViewManager_Grouping" xml:space="preserve"><value>Seskupování</value></data>
+  <data name="TmViewManager_GroupByColumns" xml:space="preserve"><value>Seskupit podle sloupců</value></data>
+
 </root>

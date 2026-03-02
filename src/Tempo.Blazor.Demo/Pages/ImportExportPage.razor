@@ -1,0 +1,449 @@
+@page "/import-export"
+@using Tempo.Blazor.Components.ImportExport
+@using Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Models
+@inject ToastService Toast
+@inject HttpClient Http
+
+<PageTitle>Import & Export – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Import & Export</h1>
+    <p class="text-slate-600 dark:text-slate-400">Components for importing and exporting data with preview, wizard, and format selection.</p>
+</div>
+
+<!-- Export Options -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Export Options</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Select entity types and export format</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Export</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <TmExportOptions 
+                Title="Export Data"
+                EntityTypes="_exportEntities"
+                Formats="_exportFormats"
+                OnExport="HandleExport" />
+            
+            <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Export Log</h3>
+                @if (_exportLog.Any())
+                {
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        @foreach (var log in _exportLog)
+                        {
+                            <div class="p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
+                                <span class="text-slate-500">@log.Timestamp.ToString("HH:mm:ss")</span>
+                                <div class="mt-1">
+                                    <span class="font-medium">Format:</span> @log.Request.Format.ToUpper()
+                                </div>
+                                <div>
+                                    <span class="font-medium">Entities:</span> @string.Join(", ", log.Request.SelectedEntityTypes)
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-sm text-slate-500 italic">No exports yet. Select options and click Export.</p>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Import Preview -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Import Preview</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Preview data before importing</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Import</span>
+    </div>
+    
+    <div class="showcase-card">
+        <TmImportPreview 
+            Title="Preview Import Data"
+            Description="Review the data below before confirming the import. 3 new records will be added."
+            OnConfirm="HandleImportConfirm"
+            OnCancel="HandleImportCancel"
+            IsLoading="_importLoading">
+            <ChildContent>
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Name</th>
+                            <th class="px-4 py-2 text-left">Email</th>
+                            <th class="px-4 py-2 text-left">Department</th>
+                            <th class="px-4 py-2 text-left">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                        @foreach (var item in _previewData)
+                        {
+                            <tr>
+                                <td class="px-4 py-2">@item.Name</td>
+                                <td class="px-4 py-2">@item.Email</td>
+                                <td class="px-4 py-2"><TmBadge Variant="GetDepartmentBadge(item.Department)">@item.Department</TmBadge></td>
+                                <td class="px-4 py-2">
+                                    <span class="flex items-center gap-1">
+                                        <span class="w-2 h-2 rounded-full @GetStatusColor(item.Status)"></span>
+                                        @item.Status
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </ChildContent>
+        </TmImportPreview>
+    </div>
+</section>
+
+<!-- Import Wizard -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Import Wizard</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Multi-step import process with validation</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Wizard</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="mb-4 flex items-center justify-between">
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+                Current Step: <strong>@(_wizardStep + 1) of 4</strong>
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ResetWizard">
+                Reset Wizard
+            </TmButton>
+        </div>
+        
+        <TmImportWizard 
+            @bind-ActiveStep="_wizardStep"
+            OnComplete="HandleWizardComplete"
+            OnCancel="HandleWizardCancel">
+            
+            <TmImportWizardStep Title="Upload" Description="Select file" Icon="upload">
+                <div class="space-y-4">
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center">
+                        <TmIcon Name="upload-cloud" class="w-12 h-12 mx-auto text-slate-400 mb-3" />
+                        <p class="text-slate-600 dark:text-slate-400 mb-2">Drag and drop your file here</p>
+                        <p class="text-sm text-slate-500">or</p>
+                        <TmButton Variant="ButtonVariant.Secondary" Class="mt-2">Browse Files</TmButton>
+                    </div>
+                    <div class="text-sm text-slate-500">
+                        <p>Supported formats: CSV, XLSX, JSON</p>
+                        <p>Maximum file size: 10MB</p>
+                    </div>
+                </div>
+            </TmImportWizardStep>
+            
+            <TmImportWizardStep Title="Configure" Description="Map columns" Icon="settings">
+                <div class="space-y-4">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Map the columns from your file to the corresponding fields.
+                    </p>
+                    <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 dark:bg-slate-800">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500">File Column</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500">Maps To</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <tr>
+                                    <td class="px-4 py-2">Column A</td>
+                                    <td class="px-4 py-2">
+                                        <select class="tm-select text-sm">
+                                            <option>First Name</option>
+                                            <option>Last Name</option>
+                                            <option>Email</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">Column B</td>
+                                    <td class="px-4 py-2">
+                                        <select class="tm-select text-sm">
+                                            <option>Last Name</option>
+                                            <option>First Name</option>
+                                            <option>Email</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2">Column C</td>
+                                    <td class="px-4 py-2">
+                                        <select class="tm-select text-sm">
+                                            <option>Email</option>
+                                            <option>First Name</option>
+                                            <option>Last Name</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </TmImportWizardStep>
+            
+            <TmImportWizardStep Title="Validate" Description="Check data" Icon="check-circle">
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <TmIcon Name="check-circle" class="text-green-600 dark:text-green-400" />
+                        <div>
+                            <p class="font-medium text-green-800 dark:text-green-200">Validation Complete</p>
+                            <p class="text-sm text-green-600 dark:text-green-400">50 rows ready to import</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">50</p>
+                            <p class="text-sm text-slate-500">Valid</p>
+                        </div>
+                        <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
+                            <p class="text-2xl font-bold text-yellow-700 dark:text-yellow-300">3</p>
+                            <p class="text-sm text-yellow-600 dark:text-yellow-400">Warnings</p>
+                        </div>
+                        <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                            <p class="text-2xl font-bold text-red-700 dark:text-red-300">0</p>
+                            <p class="text-sm text-red-600 dark:text-red-400">Errors</p>
+                        </div>
+                    </div>
+                </div>
+            </TmImportWizardStep>
+            
+            <TmImportWizardStep Title="Import" Description="Complete" Icon="download">
+                <div class="text-center py-8">
+                    <TmIcon Name="download" class="w-16 h-16 mx-auto text-primary-500 mb-4" />
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Ready to Import</h3>
+                    <p class="text-slate-600 dark:text-slate-400 mb-6">
+                        Click Complete to import 50 records into the system.
+                    </p>
+                    <div class="text-sm text-slate-500">
+                        <p>This action cannot be undone.</p>
+                    </div>
+                </div>
+            </TmImportWizardStep>
+        </TmImportWizard>
+    </div>
+</section>
+
+<!-- Combined Import/Export Demo -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Complete Workflow</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Full import/export workflow demonstration</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full">Demo</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-4">
+            <TmButton Variant="ButtonVariant.Primary" OnClick="() => _showImportWizard = true">
+                <TmIcon Name="upload" class="mr-2" />
+                Start Import Wizard
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" OnClick="ShowExportDialog">
+                <TmIcon Name="download" class="mr-2" />
+                Export Data
+            </TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Full Import Wizard Modal -->
+<TmModal Show="_showImportWizard"
+         Title="Import Data"
+         Size="ModalSize.Large"
+         OnClose="() => _showImportWizard = false"
+         ShowDefaultFooterButtons="false">
+    <TmImportWizard 
+        @bind-ActiveStep="_modalWizardStep"
+        OnComplete="HandleModalWizardComplete"
+        OnCancel="() => _showImportWizard = false">
+        
+        <TmImportWizardStep Title="Select Source" Icon="database">
+            <div class="space-y-4">
+                <p class="text-sm text-slate-600 dark:text-slate-400">Choose the source of your data:</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <button class="p-4 border-2 border-primary-500 rounded-lg text-left bg-primary-50 dark:bg-primary-900/20">
+                        <TmIcon Name="file-text" class="mb-2 text-primary-600" />
+                        <p class="font-medium">CSV File</p>
+                        <p class="text-xs text-slate-500">Import from CSV</p>
+                    </button>
+                    <button class="p-4 border border-slate-200 dark:border-slate-700 rounded-lg text-left hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <TmIcon Name="file-spreadsheet" class="mb-2" />
+                        <p class="font-medium">Excel File</p>
+                        <p class="text-xs text-slate-500">Import from XLSX</p>
+                    </button>
+                </div>
+            </div>
+        </TmImportWizardStep>
+        
+        <TmImportWizardStep Title="Upload" Icon="upload">
+            <TmFileDropZone OnFilesDropped="HandleFilesDropped" />
+        </TmImportWizardStep>
+        
+        <TmImportWizardStep Title="Review" Icon="eye">
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Preview of data to be imported:</p>
+            <table class="w-full text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Name</th>
+                            <th class="px-4 py-2 text-left">Email</th>
+                            <th class="px-4 py-2 text-left">Department</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                        @foreach (var item in _previewData.Take(5))
+                        {
+                            <tr>
+                                <td class="px-4 py-2">@item.Name</td>
+                                <td class="px-4 py-2">@item.Email</td>
+                                <td class="px-4 py-2">@item.Department</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+        </TmImportWizardStep>
+        
+        <TmImportWizardStep Title="Complete" Icon="check">
+            <div class="text-center py-8">
+                <TmIcon Name="check-circle" class="w-16 h-16 mx-auto text-green-500 mb-4" />
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Import Successful!</h3>
+                <p class="text-slate-600 dark:text-slate-400">3 records have been imported.</p>
+            </div>
+        </TmImportWizardStep>
+    </TmImportWizard>
+</TmModal>
+
+@code {
+    // Export Options
+    private List<TmExportEntity> _exportEntities = new()
+    {
+        new("users", "Users"),
+        new("orders", "Orders"),
+        new("products", "Products"),
+        new("customers", "Customers"),
+    };
+
+    private List<TmExportFormat> _exportFormats = new()
+    {
+        new("csv", "CSV (.csv)"),
+        new("xlsx", "Excel (.xlsx)"),
+        new("json", "JSON (.json)"),
+        new("pdf", "PDF (.pdf)"),
+    };
+
+    private List<ExportLogEntry> _exportLog = new();
+
+    private async Task HandleExport(TmExportRequest request)
+    {
+        _exportLog.Insert(0, new ExportLogEntry { Timestamp = DateTime.Now, Request = request });
+        Toast.ShowSuccess($"Export started: {request.Format.ToUpper()} with {request.SelectedEntityTypes.Count} entity types");
+        await Task.CompletedTask;
+    }
+
+    // Import Preview
+    private bool _importLoading = false;
+
+    private List<PreviewRecord> _previewData = new()
+    {
+        new("Alice Johnson", "alice.j@example.com", "Engineering", "Active"),
+        new("Bob Smith", "bob.smith@example.com", "Sales", "Active"),
+        new("Carol White", "carol.w@example.com", "Marketing", "Pending"),
+    };
+
+    private async Task HandleImportConfirm()
+    {
+        _importLoading = true;
+        await Task.Delay(1500); // Simulate import
+        _importLoading = false;
+        Toast.ShowSuccess("Import completed successfully!");
+    }
+
+    private void HandleImportCancel()
+    {
+        Toast.ShowInfo("Import cancelled");
+    }
+
+    // Import Wizard
+    private int _wizardStep = 0;
+    private int _modalWizardStep = 0;
+    private bool _showImportWizard = false;
+
+    private void ResetWizard()
+    {
+        _wizardStep = 0;
+    }
+
+    private async Task HandleWizardComplete()
+    {
+        Toast.ShowSuccess("Wizard completed! Data imported.");
+        await Task.CompletedTask;
+    }
+
+    private async Task HandleWizardCancel()
+    {
+        _wizardStep = 0;
+        Toast.ShowInfo("Wizard cancelled");
+        await Task.CompletedTask;
+    }
+
+    private void ShowExportDialog()
+    {
+        Toast.ShowInfo("Export dialog would open here");
+    }
+
+    private async Task HandleModalWizardComplete()
+    {
+        _showImportWizard = false;
+        _modalWizardStep = 0;
+        Toast.ShowSuccess("Import wizard completed!");
+        await Task.CompletedTask;
+    }
+
+    private void HandleFilesDropped(List<IBrowserFile> files)
+    {
+        Toast.ShowInfo($"Dropped {files.Count} file(s)");
+    }
+
+    // Helpers
+    private BadgeVariant GetDepartmentBadge(string dept) => dept switch
+    {
+        "Engineering" => BadgeVariant.Primary,
+        "Sales" => BadgeVariant.Success,
+        "Marketing" => BadgeVariant.Warning,
+        _ => BadgeVariant.Default,
+    };
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Active" => "bg-green-500",
+        "Pending" => "bg-yellow-500",
+        "Inactive" => "bg-red-500",
+        _ => "bg-slate-500",
+    };
+
+    private record ExportLogEntry
+    {
+        public DateTime Timestamp { get; set; }
+        public TmExportRequest Request { get; set; } = default!;
+    }
+
+    private record PreviewRecord(string Name, string Email, string Department, string Status);
+}

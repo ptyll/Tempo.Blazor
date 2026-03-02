@@ -35,6 +35,9 @@ public partial class TmViewManager : ComponentBase
     /// <summary>Filter definitions for the filter builder.</summary>
     [Parameter] public List<FilterDefinition> FilterDefinitions { get; set; } = [];
 
+    /// <summary>Available columns for grouping selection in the view modal.</summary>
+    [Parameter] public List<ViewColumnInfo> AvailableGroupableColumns { get; set; } = [];
+
     /// <summary>Whether the user can create tenant-wide views.</summary>
     [Parameter] public bool CanCreateTenantViews { get; set; } = true;
 
@@ -55,6 +58,7 @@ public partial class TmViewManager : ComponentBase
     private string _viewName = "";
     private ViewScope _viewScope = ViewScope.Personal;
     private List<string> _selectedColumns = [];
+    private List<string> _selectedGroupColumns = [];
     private List<ActiveFilter> _viewFilters = [];
 
     protected override async Task OnInitializedAsync()
@@ -128,6 +132,7 @@ public partial class TmViewManager : ComponentBase
         _viewName = "";
         _viewScope = ViewScope.Personal;
         _selectedColumns = AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
+        _selectedGroupColumns = [];
         // Use current filters if available
         _viewFilters = GetCurrentFilters?.Invoke() ?? [];
         _showModal = true;
@@ -140,6 +145,7 @@ public partial class TmViewManager : ComponentBase
         _viewName = view.Name;
         _viewScope = view.Scope;
         _selectedColumns = view.VisibleColumns?.ToList() ?? [];
+        _selectedGroupColumns = view.GroupByColumns?.ToList() ?? [];
         _viewFilters = view.Filters?.Select(f => new ActiveFilter(
             f.FieldName,
             f.FieldName,
@@ -170,6 +176,19 @@ public partial class TmViewManager : ComponentBase
         }
     }
 
+    private void ToggleGroupColumn(string columnKey, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!_selectedGroupColumns.Contains(columnKey))
+                _selectedGroupColumns.Add(columnKey);
+        }
+        else
+        {
+            _selectedGroupColumns.Remove(columnKey);
+        }
+    }
+
     private async Task SaveViewAsync()
     {
         if (string.IsNullOrWhiteSpace(_viewName)) return;
@@ -188,6 +207,7 @@ public partial class TmViewManager : ComponentBase
                 Operator = f.Operator.ToString(),
                 Value = f.Value?.ToString() ?? ""
             }).ToList(),
+            GroupByColumns = _selectedGroupColumns.ToList(),
             SortColumn = _editingView?.SortColumn,
             SortDirection = _editingView?.SortDirection ?? "asc",
             PageSize = _editingView?.PageSize ?? 10,
@@ -228,6 +248,7 @@ public partial class TmViewManager : ComponentBase
         _viewName = $"{current.Name} (Copy)";
         _viewScope = ViewScope.Personal;
         _selectedColumns = current.VisibleColumns?.ToList() ?? AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
+        _selectedGroupColumns = current.GroupByColumns?.ToList() ?? [];
         _viewFilters = current.Filters?.Select(f => new ActiveFilter(
             f.FieldName,
             f.FieldName,

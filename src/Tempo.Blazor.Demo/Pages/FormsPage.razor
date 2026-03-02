@@ -1,6 +1,8 @@
 @page "/forms"
 @using Tempo.Blazor.Demo.Shared
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Forms
+@inject ToastService Toast
 <PageTitle>Form Inputs – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -307,9 +309,179 @@
     </div>
 </section>
 
+<!-- Inline Edit -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Inline Edit</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Click to edit values directly in place</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full">Interactive</span>
+    </div>
+    
+    <div class="showcase-card space-y-6">
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Basic Inline Edit</h3>
+            <p class="text-sm text-slate-500 mb-2">Click the text below to edit:</p>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded">
+                <TmInlineEdit Value="@_inlineValue1" OnSave="OnInlineSave1" Placeholder="Click to add text..." />
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">With Validation</h3>
+            <p class="text-sm text-slate-500 mb-2">Must be at least 3 characters:</p>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded">
+                <TmInlineEdit Value="@_inlineValue2" 
+                              OnSave="OnInlineSave2"
+                              Validate="ValidateInline"
+                              Placeholder="Enter at least 3 chars..." />
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Disabled State</h3>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded">
+                <TmInlineEdit Value="Cannot edit this" Disabled="true" />
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Table-like Usage</h3>
+            <div class="border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Field</th>
+                            <th class="px-4 py-2 text-left">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-t border-slate-200 dark:border-slate-700">
+                            <td class="px-4 py-2 text-slate-600 dark:text-slate-400">Name</td>
+                            <td class="px-4 py-2">
+                                <TmInlineEdit Value="@_tableName" OnSave="v => _tableName = v" />
+                            </td>
+                        </tr>
+                        <tr class="border-t border-slate-200 dark:border-slate-700">
+                            <td class="px-4 py-2 text-slate-600 dark:text-slate-400">Email</td>
+                            <td class="px-4 py-2">
+                                <TmInlineEdit Value="@_tableEmail" OnSave="v => _tableEmail = v" />
+                            </td>
+                        </tr>
+                        <tr class="border-t border-slate-200 dark:border-slate-700">
+                            <td class="px-4 py-2 text-slate-600 dark:text-slate-400">Department</td>
+                            <td class="px-4 py-2">
+                                <TmInlineEdit Value="@_tableDept" OnSave="v => _tableDept = v" />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Form Validation Message -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Form Validation Message</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Field-level validation messages for EditForm</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">Validation</span>
+    </div>
+    
+    <div class="showcase-card">
+        <EditForm Model="_validationMessageModel" OnValidSubmit="HandleValidationSubmit">
+            <DataAnnotationsValidator />
+            
+            <div class="space-y-4 max-w-md">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        Username <span class="text-red-500">*</span>
+                    </label>
+                    <InputText @bind-Value="_validationMessageModel.Username" class="tm-input w-full" placeholder="Enter username" />
+                    <TmFormValidationMessage For="@(() => _validationMessageModel.Username)" class="mt-1" />
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        Email <span class="text-red-500">*</span>
+                    </label>
+                    <InputText @bind-Value="_validationMessageModel.Email" class="tm-input w-full" placeholder="user@example.com" />
+                    <TmFormValidationMessage For="@(() => _validationMessageModel.Email)" class="mt-1" />
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        Age <span class="text-red-500">*</span>
+                    </label>
+                    <InputNumber @bind-Value="_validationMessageModel.Age" class="tm-input w-full" />
+                    <TmFormValidationMessage For="@(() => _validationMessageModel.Age)" class="mt-1" />
+                </div>
+                
+                <div class="pt-2">
+                    <TmButton Type="ButtonType.Submit" Variant="ButtonVariant.Primary">Validate</TmButton>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</section>
+
 @code {
     // Expression Editor
     private string _exprValue = "Dear {{sender.name}}, your message ";
+    
+    // Inline Edit
+    private string _inlineValue1 = "Click me to edit this text";
+    private string _inlineValue2 = "Valid text";
+    private string _tableName = "John Doe";
+    private string _tableEmail = "john@example.com";
+    private string _tableDept = "Engineering";
+    
+    private string? ValidateInline(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 3)
+            return "Must be at least 3 characters";
+        return null;
+    }
+
+    private void OnInlineSave1(string value)
+    {
+        _inlineValue1 = value;
+        Toast.ShowSuccess("Saved: " + value);
+    }
+
+    private void OnInlineSave2(string value)
+    {
+        _inlineValue2 = value;
+        Toast.ShowSuccess("Saved: " + value);
+    }
+    
+    // Form Validation Message
+    private ValidationMessageModel _validationMessageModel = new();
+    
+    private void HandleValidationSubmit()
+    {
+        Toast.ShowSuccess("Form is valid!");
+    }
+    
+    public class ValidationMessageModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Username is required")]
+        [System.ComponentModel.DataAnnotations.MinLength(3, ErrorMessage = "Username must be at least 3 characters")]
+        public string Username { get; set; } = "";
+        
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Email is required")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Please enter a valid email address")]
+        public string Email { get; set; } = "";
+        
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Age is required")]
+        [System.ComponentModel.DataAnnotations.Range(18, 120, ErrorMessage = "Age must be between 18 and 120")]
+        public int Age { get; set; }
+    }
+    
     private static readonly IReadOnlyList<ExpressionVariable> _exprVars =
     [
         new() { Name = "sender.name", Description = "Full name of the sender", Type = "string" },

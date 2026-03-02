@@ -55,6 +55,15 @@
     /// <summary>Display order (lower index = further left). Columns with same order preserve declaration order.</summary>
     [Parameter] public int Order { get; set; }
 
+    /// <summary>Whether this column can be used for row grouping.</summary>
+    [Parameter] public bool Groupable { get; set; }
+
+    /// <summary>Custom display formatter for group header when grouped by this column.</summary>
+    [Parameter] public Func<object?, string>? GroupDisplayFormatter { get; set; }
+
+    /// <summary>Aggregation types to show in group row for this column.</summary>
+    [Parameter] public IReadOnlyList<AggregateType>? GroupAggregates { get; set; }
+
     /// <summary>Computed key: PropertyName ?? Title.</summary>
     public string Key => PropertyName ?? Title;
 

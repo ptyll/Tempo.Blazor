@@ -1,0 +1,231 @@
+@page "/scheduler"
+@using Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@inject ToastService Toast
+@inject HttpClient Http
+
+<PageTitle>Scheduler – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Scheduler</h1>
+    <p class="text-slate-600 dark:text-slate-400">Full-featured calendar component with multiple views, drag & drop, and event management.</p>
+</div>
+
+<!-- Basic Scheduler -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Month View</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Default month view with event display</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Calendar</span>
+    </div>
+    
+    <div class="showcase-card">
+        <TmScheduler @bind-View="_monthView"
+                     @bind-CurrentDate="_currentDate"
+                     Events="_sampleEvents"
+                     OnEventClick="HandleEventClick"
+                     OnSlotClick="HandleSlotClick" />
+    </div>
+</section>
+
+<!-- Week View -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Week View</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Time-based week view with hourly slots</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Time Grid</span>
+    </div>
+    
+    <div class="showcase-card" style="height: 600px;">
+        <TmScheduler View="TmScheduleViewType.Week"
+                     @bind-CurrentDate="_weekDate"
+                     Events="_weekEvents"
+                     SlotDuration="30"
+                     OnEventClick="HandleEventClick"
+                     OnSlotClick="HandleSlotClick" />
+    </div>
+</section>
+
+<!-- Day View -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Day View</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Single day detailed view</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Detailed</span>
+    </div>
+    
+    <div class="showcase-card" style="height: 600px;">
+        <TmScheduler View="TmScheduleViewType.Day"
+                     @bind-CurrentDate="_dayDate"
+                     Events="_dayEvents"
+                     SlotDuration="15"
+                     OnEventClick="HandleEventClick"
+                     OnSlotClick="HandleSlotClick" />
+    </div>
+</section>
+
+<!-- Agenda View -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Agenda View</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">List view of upcoming events</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">List</span>
+    </div>
+    
+    <div class="showcase-card">
+        <TmScheduler View="TmScheduleViewType.Agenda"
+                     @bind-CurrentDate="_agendaDate"
+                     Events="_agendaEvents"
+                     OnEventClick="HandleEventClick" />
+    </div>
+</section>
+
+<!-- Timeline View -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Timeline View</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Horizontal timeline with resources</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">Resources</span>
+    </div>
+    
+    <div class="showcase-card" style="height: 500px;">
+        <TmScheduler View="TmScheduleViewType.Timeline"
+                     @bind-CurrentDate="_timelineDate"
+                     Events="_timelineEvents"
+                     Resources="_resources"
+                     SlotDuration="60"
+                     OnEventClick="HandleEventClick"
+                     OnSlotClick="HandleSlotClick" />
+    </div>
+</section>
+
+<!-- Interactive Demo -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Interactive Demo</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Click on events or empty slots</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full">Interactive</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+                <strong>Last Action:</strong> @_lastAction
+            </p>
+        </div>
+        
+        <TmScheduler @bind-View="_interactiveView"
+                     @bind-CurrentDate="_interactiveDate"
+                     Events="_interactiveEvents"
+                     OnEventClick="HandleEventClick"
+                     OnSlotClick="HandleSlotClick"
+                     OnEventChanged="HandleEventChanged" />
+    </div>
+</section>
+
+@code {
+    private TmScheduleViewType _monthView = TmScheduleViewType.Month;
+    private TmScheduleViewType _interactiveView = TmScheduleViewType.Month;
+    private DateTime _currentDate = DateTime.Today;
+    private DateTime _weekDate = DateTime.Today;
+    private DateTime _dayDate = DateTime.Today;
+    private DateTime _agendaDate = DateTime.Today;
+    private DateTime _timelineDate = DateTime.Today;
+    private DateTime _interactiveDate = DateTime.Today;
+    private string _lastAction = "None yet - try clicking on an event or slot!";
+
+    private List<TmScheduleResource> _resources = new()
+    {
+        new() { Id = "room-a", Name = "Conference Room A", Color = "#3b82f6" },
+        new() { Id = "room-b", Name = "Conference Room B", Color = "#10b981" },
+        new() { Id = "room-c", Name = "Meeting Room C", Color = "#f59e0b" },
+        new() { Id = "room-d", Name = "Board Room", Color = "#8b5cf6" },
+    };
+
+    private List<TmScheduleEvent> _sampleEvents = new()
+    {
+        new() { Id = "1", Title = "Team Standup", Start = DateTime.Today.AddDays(-2).AddHours(9), End = DateTime.Today.AddDays(-2).AddHours(9.5), Color = "#3b82f6" },
+        new() { Id = "2", Title = "Product Review", Start = DateTime.Today.AddDays(-1).AddHours(14), End = DateTime.Today.AddDays(-1).AddHours(15), Color = "#10b981" },
+        new() { Id = "3", Title = "Client Meeting", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#f59e0b" },
+        new() { Id = "4", Title = "Code Review", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
+        new() { Id = "5", Title = "Sprint Planning", Start = DateTime.Today.AddDays(2).AddHours(9), End = DateTime.Today.AddDays(2).AddHours(11), Color = "#ef4444" },
+        new() { Id = "6", Title = "Design Workshop", Start = DateTime.Today.AddDays(3).AddHours(13), End = DateTime.Today.AddDays(3).AddHours(16), Color = "#ec4899" },
+    };
+
+    private List<TmScheduleEvent> _weekEvents = new()
+    {
+        new() { Id = "w1", Title = "Morning Standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5), Color = "#3b82f6" },
+        new() { Id = "w2", Title = "Sprint Review", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#10b981" },
+        new() { Id = "w3", Title = "Lunch Break", Start = DateTime.Today.AddHours(12), End = DateTime.Today.AddHours(13), Color = "#f59e0b" },
+        new() { Id = "w4", Title = "Dev Meeting", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
+        new() { Id = "w5", Title = "Code Review", Start = DateTime.Today.AddHours(15.5), End = DateTime.Today.AddHours(16.5), Color = "#ef4444" },
+    };
+
+    private List<TmScheduleEvent> _dayEvents = new()
+    {
+        new() { Id = "d1", Title = "Daily Standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5), Color = "#3b82f6" },
+        new() { Id = "d2", Title = "Focus Time", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(12), Color = "#10b981" },
+        new() { Id = "d3", Title = "Lunch", Start = DateTime.Today.AddHours(12), End = DateTime.Today.AddHours(13), Color = "#f59e0b" },
+        new() { Id = "d4", Title = "1:1 with Manager", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(14.5), Color = "#8b5cf6" },
+        new() { Id = "d5", Title = "Team Sync", Start = DateTime.Today.AddHours(15), End = DateTime.Today.AddHours(16), Color = "#ef4444" },
+        new() { Id = "d6", Title = "Documentation", Start = DateTime.Today.AddHours(16), End = DateTime.Today.AddHours(17), Color = "#ec4899" },
+    };
+
+    private List<TmScheduleEvent> _agendaEvents = new()
+    {
+        new() { Id = "a1", Title = "Project Kickoff", Start = DateTime.Today.AddDays(1).AddHours(10), End = DateTime.Today.AddDays(1).AddHours(12), Color = "#3b82f6" },
+        new() { Id = "a2", Title = "Design Review", Start = DateTime.Today.AddDays(2).AddHours(14), End = DateTime.Today.AddDays(2).AddHours(15), Color = "#10b981" },
+        new() { Id = "a3", Title = "Stakeholder Update", Start = DateTime.Today.AddDays(3).AddHours(9), End = DateTime.Today.AddDays(3).AddHours(10), Color = "#f59e0b" },
+        new() { Id = "a4", Title = "Release Planning", Start = DateTime.Today.AddDays(5).AddHours(13), End = DateTime.Today.AddDays(5).AddHours(15), Color = "#8b5cf6" },
+        new() { Id = "a5", Title = "Retrospective", Start = DateTime.Today.AddDays(7).AddHours(15), End = DateTime.Today.AddDays(7).AddHours(16), Color = "#ef4444" },
+    };
+
+    private List<TmScheduleEvent> _timelineEvents = new()
+    {
+        new() { Id = "t1", Title = "Meeting A", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(10), Color = "#3b82f6", ResourceId = "room-a" },
+        new() { Id = "t2", Title = "Meeting B", Start = DateTime.Today.AddHours(10.5), End = DateTime.Today.AddHours(11.5), Color = "#10b981", ResourceId = "room-b" },
+        new() { Id = "t3", Title = "Workshop", Start = DateTime.Today.AddHours(13), End = DateTime.Today.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
+        new() { Id = "t4", Title = "Demo", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6", ResourceId = "room-c" },
+        new() { Id = "t5", Title = "Training", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(12), Color = "#ef4444", ResourceId = "room-d" },
+    };
+
+    private List<TmScheduleEvent> _interactiveEvents = new()
+    {
+        new() { Id = "i1", Title = "Clickable Event 1", Start = DateTime.Today.AddDays(-1).AddHours(10), End = DateTime.Today.AddDays(-1).AddHours(11), Color = "#3b82f6" },
+        new() { Id = "i2", Title = "Draggable Event", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(10), Color = "#10b981" },
+        new() { Id = "i3", Title = "Another Event", Start = DateTime.Today.AddDays(2).AddHours(14), End = DateTime.Today.AddDays(2).AddHours(15), Color = "#f59e0b" },
+    };
+
+    private void HandleEventClick(TmScheduleEvent evt)
+    {
+        _lastAction = $"Clicked event: '{evt.Title}' at {evt.Start:g}";
+        Toast.ShowInfo($"Event: {evt.Title}");
+    }
+
+    private void HandleSlotClick((DateTime Start, DateTime End) slot)
+    {
+        _lastAction = $"Clicked slot: {slot.Start:g} - {slot.End:g}";
+        Toast.ShowInfo($"Slot: {slot.Start:g} - {slot.End:g}");
+    }
+
+    private void HandleEventChanged(TmScheduleEvent evt)
+    {
+        _lastAction = $"Event moved: '{evt.Title}' to {evt.Start:g}";
+        Toast.ShowSuccess($"Event '{evt.Title}' moved to {evt.Start:g}");
+    }
+}

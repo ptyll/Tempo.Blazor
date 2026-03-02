@@ -651,3 +651,177 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Grouping Drop Zone ─────────────────────────────────────── */
+
+.tm-data-table-group-zone {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+  min-height: 2.5rem;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 2px dashed var(--tm-border-color, #d1d5db);
+  border-radius: var(--tm-radius, 0.375rem);
+  background: var(--tm-surface-secondary, #f9fafb);
+  margin-bottom: var(--tm-space-3);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.tm-data-table-group-zone--dragover {
+  border-color: var(--tm-primary, #3b82f6);
+  background: color-mix(in srgb, var(--tm-primary, #3b82f6) 5%, transparent);
+}
+
+.tm-data-table-group-placeholder {
+  color: var(--tm-text-tertiary, #9ca3af);
+  font-size: var(--tm-font-size-sm, 0.875rem);
+  font-style: italic;
+}
+
+.tm-data-table-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border-radius: var(--tm-radius, 0.375rem);
+  background: var(--tm-primary, #3b82f6);
+  color: white;
+  font-size: var(--tm-font-size-sm, 0.875rem);
+  cursor: grab;
+  user-select: none;
+}
+
+.tm-data-table-group-chip:active {
+  cursor: grabbing;
+}
+
+.tm-data-table-group-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tm-data-table-group-chip-remove:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.tm-data-table-group-actions {
+  display: flex;
+  gap: var(--tm-space-2);
+  margin-left: auto;
+}
+
+.tm-data-table-group-expand-all,
+.tm-data-table-group-collapse-all {
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border: 1px solid var(--tm-border-color, #d1d5db);
+  border-radius: var(--tm-radius, 0.375rem);
+  background: var(--tm-surface, white);
+  color: var(--tm-text-secondary, #6b7280);
+  font-size: var(--tm-font-size-xs, 0.75rem);
+  cursor: pointer;
+}
+
+.tm-data-table-group-expand-all:hover,
+.tm-data-table-group-collapse-all:hover {
+  background: var(--tm-surface-secondary, #f9fafb);
+}
+
+/* ── Group Rows ─────────────────────────────────────────────── */
+
+.tm-data-table-group-row {
+  background: var(--tm-surface-secondary, #f9fafb);
+  font-weight: 600;
+}
+
+.tm-data-table-group-row td {
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+}
+
+.tm-data-table-group-level-1 td {
+  padding-left: calc(var(--tm-space-3) + 1.5rem);
+}
+
+.tm-data-table-group-level-2 td {
+  padding-left: calc(var(--tm-space-3) + 3rem);
+}
+
+.tm-data-table-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-radius, 0.375rem);
+  background: transparent;
+  color: var(--tm-text-secondary, #6b7280);
+  cursor: pointer;
+  margin-right: var(--tm-space-1);
+  font-size: 0.75rem;
+}
+
+.tm-data-table-group-toggle:hover {
+  background: var(--tm-surface-tertiary, #e5e7eb);
+}
+
+.tm-data-table-group-label {
+  margin-right: var(--tm-space-2);
+}
+
+.tm-data-table-group-count {
+  color: var(--tm-text-tertiary, #9ca3af);
+  font-weight: 400;
+  font-size: var(--tm-font-size-sm, 0.875rem);
+}
+
+.tm-data-table-group-aggregates {
+  display: inline-flex;
+  gap: var(--tm-space-3);
+  margin-left: var(--tm-space-4);
+  font-weight: 400;
+  font-size: var(--tm-font-size-sm, 0.875rem);
+  color: var(--tm-text-secondary, #6b7280);
+}
+
+/* ── Draggable Column Headers ───────────────────────────────── */
+
+.tm-col-groupable {
+  cursor: grab;
+}
+
+.tm-col-groupable:active {
+  cursor: grabbing;
+}
+
+/* ── Virtual Scroll ─────────────────────────────────────────── */
+
+.tm-data-table-virtual-scroll {
+  overflow-y: auto;
+}
+
+/* ── View Manager Grouping Section ──────────────────────────── */
+
+.tm-view-group-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--tm-space-1);
+  max-height: 10rem;
+  overflow-y: auto;
+  padding: var(--tm-space-2);
+  border: 1px solid var(--tm-border-color, #d1d5db);
+  border-radius: var(--tm-radius, 0.375rem);
+}

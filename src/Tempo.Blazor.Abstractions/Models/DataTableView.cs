@@ -80,6 +80,9 @@ public sealed class DataTableView
     
     /// <summary>Tenant ID this view belongs to.</summary>
     public string? TenantId { get; set; }
+
+    /// <summary>Column keys to group by, in order of nesting.</summary>
+    public IList<string> GroupByColumns { get; set; } = new List<string>();
 }
 
 /// <summary>

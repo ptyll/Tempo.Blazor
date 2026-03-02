@@ -4,10 +4,12 @@
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Forms
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Interfaces
 @inject ToastService Toast
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Layout Components – Tempo.Blazor</PageTitle>
 
@@ -235,10 +237,124 @@
     </div>
 </section>
 
+<!-- TmSection Demo -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Section</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Collapsible content sections with header actions</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Layout</span>
+    </div>
+    
+    <div class="showcase-card space-y-4">
+        <TmSection Title="Basic Section" Icon="info">
+            <p class="text-slate-600 dark:text-slate-400 text-sm">
+                This is a basic section with a title and icon. Sections help organize content into logical groups.
+            </p>
+        </TmSection>
+        
+        <TmSection Title="Collapsible Section" Icon="folder" Collapsible="true" @bind-Collapsed="_sectionCollapsed">
+            <p class="text-slate-600 dark:text-slate-400 text-sm">
+                This section can be collapsed by clicking the header. The collapsed state is two-way bound.
+            </p>
+            <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded">
+                <p class="text-xs text-slate-500">State: @(_sectionCollapsed ? "Collapsed" : "Expanded")</p>
+            </div>
+        </TmSection>
+        
+        <TmSection Title="With Header Actions" Icon="settings" Collapsible="true">
+            <HeaderActions>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="edit" OnClick="OnEditClick" />
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="trash-2" OnClick="OnDeleteClick" />
+            </HeaderActions>
+            <ChildContent>
+                <p class="text-slate-600 dark:text-slate-400 text-sm">
+                    Sections can include action buttons in the header for quick access to common operations.
+                </p>
+            </ChildContent>
+        </TmSection>
+        
+        <TmSection Title="Nested Sections" Icon="layers">
+            <div class="space-y-3">
+                <TmSection Title="Inner Section 1" Collapsible="true" Class="border border-slate-200 dark:border-slate-700 rounded">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">Nested content here...</p>
+                </TmSection>
+                <TmSection Title="Inner Section 2" Collapsible="true" Class="border border-slate-200 dark:border-slate-700 rounded">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">More nested content...</p>
+                </TmSection>
+            </div>
+        </TmSection>
+    </div>
+</section>
+
+<!-- Keyboard Shortcuts Help Demo -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Keyboard Shortcuts Help</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Overlay displaying available keyboard shortcuts</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full">Accessibility</span>
+    </div>
+    
+    <div class="showcase-card">
+        <div class="flex items-center gap-4">
+            <TmButton Variant="ButtonVariant.Primary" OnClick="() => _shortcutsVisible = true">
+                <TmIcon Name="keyboard" class="mr-2" />
+                Show Keyboard Shortcuts
+            </TmButton>
+            <span class="text-sm text-slate-500">or press <kbd class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600 font-mono text-xs">?</kbd></span>
+        </div>
+        
+        <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Demo Shortcuts Available:</p>
+            <div class="flex flex-wrap gap-2">
+                <TmBadge Variant="BadgeVariant.Default">Ctrl+S (Save)</TmBadge>
+                <TmBadge Variant="BadgeVariant.Default">Ctrl+K (Command)</TmBadge>
+                <TmBadge Variant="BadgeVariant.Default">Ctrl+F (Find)</TmBadge>
+                <TmBadge Variant="BadgeVariant.Default">Esc (Close)</TmBadge>
+            </div>
+        </div>
+    </div>
+    
+    <TmKeyboardShortcutsHelp 
+        IsVisible="_shortcutsVisible"
+        OnClose="() => _shortcutsVisible = false"
+        Categories="_shortcutCategories" />
+</section>
+
 @code {
     private bool _sidebarCollapsed = false;
     private bool _commandPaletteOpen = false;
     private string? _lastCommand;
+    private bool _sectionCollapsed = false;
+    private bool _shortcutsVisible = false;
+
+    private List<TmShortcutCategory> _shortcutCategories = new()
+    {
+        new("Navigation", new[]
+        {
+            new TmKeyboardShortcut("Ctrl+K", "Open Command Palette"),
+            new TmKeyboardShortcut("Ctrl+S", "Save current form"),
+            new TmKeyboardShortcut("Ctrl+F", "Find in page"),
+            new TmKeyboardShortcut("?", "Show keyboard shortcuts help"),
+        }),
+        new("Editor", new[]
+        {
+            new TmKeyboardShortcut("Ctrl+Z", "Undo"),
+            new TmKeyboardShortcut("Ctrl+Y", "Redo"),
+            new TmKeyboardShortcut("Ctrl+B", "Bold"),
+            new TmKeyboardShortcut("Ctrl+I", "Italic"),
+        }),
+        new("General", new[]
+        {
+            new TmKeyboardShortcut("Esc", "Close dialog / Cancel"),
+            new TmKeyboardShortcut("Enter", "Confirm / Submit"),
+            new TmKeyboardShortcut("Tab", "Navigate to next field"),
+            new TmKeyboardShortcut("Shift+Tab", "Navigate to previous field"),
+        }),
+    };
     
     private List<ISidebarNavItem> _sidebarItems = new()
     {
@@ -320,6 +436,9 @@
         _clickedBreadcrumb = item.Label;
         Toast.ShowInfo($"Breadcrumb clicked: {item.Label}");
     }
+
+    private void OnEditClick() => Toast.ShowInfo("Edit clicked");
+    private void OnDeleteClick() => Toast.ShowWarning("Delete clicked");
 
     // Simple implementation of ICommandPaletteAction
     private class CommandPaletteAction : ICommandPaletteAction

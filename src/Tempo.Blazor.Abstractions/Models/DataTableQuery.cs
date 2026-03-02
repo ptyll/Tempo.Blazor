@@ -22,6 +22,9 @@ public class DataTableQuery
 
     /// <summary>Global search text applied across all searchable columns.</summary>
     public string? SearchText { get; init; }
+
+    /// <summary>Columns to group by on the server side.</summary>
+    public IReadOnlyList<string> GroupByColumns { get; init; } = [];
 }
 
 /// <summary>Represents a single column filter predicate.</summary>

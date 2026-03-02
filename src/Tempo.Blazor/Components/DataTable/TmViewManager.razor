@@ -174,6 +174,25 @@
                     </div>
                 </div>
 
+                @* Grouping Columns *@
+                @if (AvailableGroupableColumns?.Count > 0)
+                {
+                    <div class="tm-form-group tm-mb-4">
+                        <label class="tm-form-label">@(Loc["TmViewManager_Grouping"] ?? "Group By")</label>
+                        <div class="tm-view-group-columns">
+                            @foreach (var col in AvailableGroupableColumns)
+                            {
+                                <label class="tm-view-column-item">
+                                    <input type="checkbox"
+                                           checked="@_selectedGroupColumns.Contains(col.Key)"
+                                           @onchange="e => ToggleGroupColumn(col.Key, (bool)e.Value!)" />
+                                    <span>@col.Title</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+
                 @* Filter Builder *@
                 @if (FilterDefinitions?.Any() == true)
                 {
