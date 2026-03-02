@@ -1,0 +1,91 @@
+@namespace Tempo.Blazor.Components.ImportExport
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Models
+
+<div class="tm-export-options @Class">
+    <h3 class="tm-export-options-title">@DisplayTitle</h3>
+
+    <div class="tm-export-options-section">
+        <div class="tm-export-options-entities">
+            @if (EntityTypes is not null)
+            {
+                @foreach (var entity in EntityTypes)
+                {
+                    var entityValue = entity.Value;
+                    <TmCheckbox Label="@entity.Label"
+                                Value="@(_selectedEntities.Contains(entityValue))"
+                                ValueChanged="@(v => ToggleEntity(entityValue, v))" />
+                }
+            }
+        </div>
+    </div>
+
+    <div class="tm-export-options-format">
+        @if (Formats is not null)
+        {
+            <select class="tm-select" @onchange="HandleFormatChange">
+                @foreach (var format in Formats)
+                {
+                    <option value="@format.Value" selected="@(_selectedFormat == format.Value)">@format.Label</option>
+                }
+            </select>
+        }
+    </div>
+
+    <div class="tm-export-options-actions">
+        <TmButton Variant="ButtonVariant.Primary"
+                  Disabled="@(_selectedEntities.Count == 0)"
+                  OnClick="@HandleExport">@DisplayExportText</TmButton>
+    </div>
+</div>
+
+@code {
+    /// <summary>Available export formats.</summary>
+    [Parameter] public IEnumerable<TmExportFormat>? Formats { get; set; }
+
+    /// <summary>Available entity types for export.</summary>
+    [Parameter] public IEnumerable<TmExportEntity>? EntityTypes { get; set; }
+
+    /// <summary>Fires when the user clicks Export with selected options.</summary>
+    [Parameter] public EventCallback<TmExportRequest> OnExport { get; set; }
+
+    /// <summary>Optional title. Falls back to localized default.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private readonly HashSet<string> _selectedEntities = new();
+    private string _selectedFormat = "";
+
+    private string DisplayTitle => Title ?? Loc["TmExportOptions_Title"];
+    private string DisplayExportText => Loc["TmExportOptions_Export"];
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(_selectedFormat) && Formats is not null)
+        {
+            _selectedFormat = Formats.FirstOrDefault()?.Value ?? "";
+        }
+    }
+
+    private void ToggleEntity(string value, bool selected)
+    {
+        if (selected)
+            _selectedEntities.Add(value);
+        else
+            _selectedEntities.Remove(value);
+    }
+
+    private void HandleFormatChange(ChangeEventArgs e)
+    {
+        _selectedFormat = e.Value?.ToString() ?? "";
+    }
+
+    private async Task HandleExport()
+    {
+        var request = new TmExportRequest(_selectedFormat, _selectedEntities.ToList().AsReadOnly());
+        await OnExport.InvokeAsync(request);
+    }
+}

@@ -1,0 +1,55 @@
+/* ═══════════════ TmChangeDiff ═══════════════ */
+.tm-change-diff {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2, 0.5rem);
+}
+
+.tm-change-diff-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3, 0.75rem);
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+}
+
+.tm-change-diff-property {
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-text-primary, #0f172a);
+    min-width: 8rem;
+    flex-shrink: 0;
+}
+
+.tm-change-diff-values {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    flex: 1;
+    min-width: 0;
+}
+
+.tm-change-diff-old {
+    color: var(--tm-color-danger, #ef4444);
+    text-decoration: line-through;
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-change-diff-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--tm-text-tertiary, #94a3b8);
+    flex-shrink: 0;
+}
+
+.tm-change-diff-new {
+    color: var(--tm-color-success, #22c55e);
+    font-weight: var(--tm-font-weight-medium, 500);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

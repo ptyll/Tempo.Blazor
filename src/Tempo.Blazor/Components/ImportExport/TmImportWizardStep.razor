@@ -1,0 +1,36 @@
+@namespace Tempo.Blazor.Components.ImportExport
+@implements IDisposable
+
+@if (IsActive)
+{
+    @ChildContent
+}
+
+@code {
+    /// <summary>Parent wizard reference.</summary>
+    [CascadingParameter] private TmImportWizard? Parent { get; set; }
+
+    /// <summary>Step title displayed in the step indicator.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+
+    /// <summary>Optional description for the step indicator.</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Optional icon name.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Step body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    internal bool IsActive => Parent?.IsStepActive(this) ?? false;
+
+    protected override void OnInitialized()
+    {
+        Parent?.RegisterStep(this);
+    }
+
+    public void Dispose()
+    {
+        Parent?.UnregisterStep(this);
+    }
+}

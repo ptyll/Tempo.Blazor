@@ -1,0 +1,57 @@
+@namespace Tempo.Blazor.Components.ImportExport
+@using Tempo.Blazor.Components.Buttons
+
+<div class="tm-import-preview @Class">
+    @if (!string.IsNullOrEmpty(Title) || !string.IsNullOrEmpty(Description))
+    {
+        <div class="tm-import-preview-header">
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <h3 class="tm-import-preview-title">@Title</h3>
+            }
+            @if (!string.IsNullOrEmpty(Description))
+            {
+                <p class="tm-import-preview-description">@Description</p>
+            }
+        </div>
+    }
+    <div class="tm-import-preview-content">
+        @ChildContent
+    </div>
+    <div class="tm-import-preview-actions">
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="@OnCancel">@DisplayCancelText</TmButton>
+        <TmButton Variant="ButtonVariant.Primary" OnClick="@OnConfirm" IsLoading="@IsLoading">@DisplayConfirmText</TmButton>
+    </div>
+</div>
+
+@code {
+    /// <summary>Title displayed in the header.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Description displayed below the title.</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Content to preview (e.g. a data table).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Fires when the user confirms the import.</summary>
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    /// <summary>Fires when the user cancels.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>Custom confirm button text. Falls back to localized default.</summary>
+    [Parameter] public string? ConfirmText { get; set; }
+
+    /// <summary>Custom cancel button text. Falls back to localized default.</summary>
+    [Parameter] public string? CancelText { get; set; }
+
+    /// <summary>Shows loading state on confirm button.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string DisplayConfirmText => ConfirmText ?? Loc["TmImportPreview_Confirm"];
+    private string DisplayCancelText => CancelText ?? Loc["TmImportPreview_Cancel"];
+}

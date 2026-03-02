@@ -1,0 +1,30 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Models
+
+<div class="tm-change-diff @Class">
+    @if (Changes is not null)
+    {
+        @foreach (var change in Changes)
+        {
+            <div class="tm-change-diff-row">
+                <span class="tm-change-diff-property">@change.Property</span>
+                <div class="tm-change-diff-values">
+                    <span class="tm-change-diff-old">@(change.OldValue ?? "—")</span>
+                    <span class="tm-change-diff-arrow" aria-hidden="true">
+                        <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Xs" />
+                    </span>
+                    <span class="tm-change-diff-new">@(change.NewValue ?? "—")</span>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>List of property changes to display.</summary>
+    [Parameter] public IEnumerable<TmChangeInfo>? Changes { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,0 +1,73 @@
+/* ═══════════════ TmSection ═══════════════ */
+.tm-section {
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-lg, 0.5rem);
+    background: var(--tm-bg-surface, #fff);
+    overflow: hidden;
+}
+
+.tm-section + .tm-section {
+    margin-top: var(--tm-space-4, 1rem);
+}
+
+/* Header */
+.tm-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3, 0.75rem);
+    padding: var(--tm-space-4, 1rem) var(--tm-space-5, 1.25rem);
+    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+    user-select: none;
+}
+
+.tm-section--collapsed .tm-section-header {
+    border-bottom: none;
+}
+
+.tm-section-header-icon {
+    display: flex;
+    align-items: center;
+    color: var(--tm-color-primary, #3b82f6);
+}
+
+.tm-section-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-primary, #0f172a);
+    flex: 1;
+}
+
+.tm-section-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    margin-left: auto;
+}
+
+/* Collapsible */
+.tm-section--collapsible .tm-section-header {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.tm-section--collapsible .tm-section-header:hover {
+    background: var(--tm-bg-hover, #f1f5f9);
+}
+
+.tm-section-chevron {
+    display: flex;
+    align-items: center;
+    color: var(--tm-text-tertiary, #94a3b8);
+    transition: transform 0.2s ease;
+}
+
+.tm-section--collapsed .tm-section-chevron {
+    transform: rotate(-90deg);
+}
+
+/* Content */
+.tm-section-content {
+    padding: var(--tm-space-5, 1.25rem);
+}

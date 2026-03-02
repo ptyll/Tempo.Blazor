@@ -1,0 +1,42 @@
+/* ═══════════════ TmImportPreview ═══════════════ */
+.tm-import-preview {
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-bg-surface, #fff);
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-lg, 0.5rem);
+    overflow: hidden;
+}
+
+.tm-import-preview-header {
+    padding: var(--tm-space-5, 1.25rem) var(--tm-space-6, 1.5rem);
+    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
+}
+
+.tm-import-preview-title {
+    margin: 0;
+    font-size: var(--tm-font-size-lg, 1.125rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-import-preview-description {
+    margin: var(--tm-space-1, 0.25rem) 0 0;
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-secondary, #475569);
+}
+
+.tm-import-preview-content {
+    padding: var(--tm-space-5, 1.25rem) var(--tm-space-6, 1.5rem);
+    overflow-x: auto;
+}
+
+.tm-import-preview-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-3, 0.75rem);
+    padding: var(--tm-space-4, 1rem) var(--tm-space-6, 1.5rem);
+    border-top: 1px solid var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+}

@@ -1,0 +1,35 @@
+/* ═══════════════ TmImportWizard ═══════════════ */
+.tm-import-wizard {
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-bg-surface, #fff);
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-lg, 0.5rem);
+    overflow: hidden;
+}
+
+.tm-import-wizard-header {
+    padding: var(--tm-space-5, 1.25rem) var(--tm-space-6, 1.5rem);
+    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
+}
+
+.tm-import-wizard-content {
+    padding: var(--tm-space-6, 1.5rem);
+    flex: 1;
+    min-height: 12rem;
+}
+
+.tm-import-wizard-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--tm-space-4, 1rem) var(--tm-space-6, 1.5rem);
+    border-top: 1px solid var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+}
+
+.tm-import-wizard-actions-right {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3, 0.75rem);
+}

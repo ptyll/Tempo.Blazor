@@ -1,0 +1,134 @@
+@namespace Tempo.Blazor.Components.ImportExport
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Workflow
+@using Tempo.Blazor.Interfaces
+
+<div class="tm-import-wizard @Class">
+    @if (ShowStepIndicator && _steps.Count > 0)
+    {
+        <div class="tm-import-wizard-header">
+            <TmStepper Steps="@GetStepItems()" ActiveStep="@ActiveStep" AllowStepClick="false" />
+        </div>
+    }
+
+    <div class="tm-import-wizard-content">
+        <CascadingValue Value="this" IsFixed="true">
+            @ChildContent
+        </CascadingValue>
+    </div>
+
+    <div class="tm-import-wizard-actions">
+        <span data-testid="wizard-cancel">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="@OnCancel">@DisplayCancelText</TmButton>
+        </span>
+        <div class="tm-import-wizard-actions-right">
+            @if (ActiveStep > 0)
+            {
+                <span data-testid="wizard-back">
+                    <TmButton Variant="ButtonVariant.Secondary" OnClick="@GoBack">@DisplayBackText</TmButton>
+                </span>
+            }
+            @if (IsLastStep)
+            {
+                <span data-testid="wizard-complete">
+                    <TmButton Variant="ButtonVariant.Primary" OnClick="@OnComplete">@DisplayCompleteText</TmButton>
+                </span>
+            }
+            else
+            {
+                <span data-testid="wizard-next">
+                    <TmButton Variant="ButtonVariant.Primary" OnClick="@GoNext">@DisplayNextText</TmButton>
+                </span>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly List<TmImportWizardStep> _steps = [];
+
+    /// <summary>Wizard step components.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Zero-based index of the active step.</summary>
+    [Parameter] public int ActiveStep { get; set; }
+
+    /// <summary>Fires when the active step changes.</summary>
+    [Parameter] public EventCallback<int> ActiveStepChanged { get; set; }
+
+    /// <summary>Fires when the wizard completes.</summary>
+    [Parameter] public EventCallback OnComplete { get; set; }
+
+    /// <summary>Fires when the wizard is cancelled.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>Custom text for Complete button.</summary>
+    [Parameter] public string? CompleteText { get; set; }
+
+    /// <summary>Custom text for Next button.</summary>
+    [Parameter] public string? NextText { get; set; }
+
+    /// <summary>Custom text for Back button.</summary>
+    [Parameter] public string? BackText { get; set; }
+
+    /// <summary>Custom text for Cancel button.</summary>
+    [Parameter] public string? CancelText { get; set; }
+
+    /// <summary>Whether to show the step indicator. Defaults to true.</summary>
+    [Parameter] public bool ShowStepIndicator { get; set; } = true;
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private bool IsLastStep => _steps.Count > 0 && ActiveStep >= _steps.Count - 1;
+
+    private string DisplayCompleteText => CompleteText ?? Loc["TmImportWizard_Complete"];
+    private string DisplayNextText => NextText ?? Loc["TmImportWizard_Next"];
+    private string DisplayBackText => BackText ?? Loc["TmImportWizard_Back"];
+    private string DisplayCancelText => CancelText ?? Loc["TmImportWizard_Cancel"];
+
+    internal bool IsStepActive(TmImportWizardStep step)
+    {
+        var index = _steps.IndexOf(step);
+        return index == ActiveStep;
+    }
+
+    internal void RegisterStep(TmImportWizardStep step)
+    {
+        if (!_steps.Contains(step))
+        {
+            _steps.Add(step);
+            StateHasChanged();
+        }
+    }
+
+    internal void UnregisterStep(TmImportWizardStep step)
+    {
+        _steps.Remove(step);
+    }
+
+    private IEnumerable<IStepItem> GetStepItems() =>
+        _steps.Select((s, i) => new WizardStepItem(
+            Id: $"wizard-step-{i}",
+            Label: s.Title,
+            Description: s.Description,
+            Icon: s.Icon));
+
+    private async Task GoNext()
+    {
+        if (ActiveStep < _steps.Count - 1)
+        {
+            await ActiveStepChanged.InvokeAsync(ActiveStep + 1);
+        }
+    }
+
+    private async Task GoBack()
+    {
+        if (ActiveStep > 0)
+        {
+            await ActiveStepChanged.InvokeAsync(ActiveStep - 1);
+        }
+    }
+
+    private sealed record WizardStepItem(string Id, string Label, string? Description, string? Icon) : IStepItem;
+}

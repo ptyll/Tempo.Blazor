@@ -1,0 +1,70 @@
+/* ═══════════════ TmInlineEdit ═══════════════ */
+.tm-inline-edit {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--tm-space-1, 0.25rem);
+    min-width: 4rem;
+}
+
+.tm-inline-edit-display {
+    display: inline-block;
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+    line-height: 1.5;
+    color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-inline-edit-display:hover {
+    border-color: var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-hover, #f1f5f9);
+}
+
+.tm-inline-edit-display:focus-visible {
+    outline: 2px solid var(--tm-color-primary, #3b82f6);
+    outline-offset: 1px;
+}
+
+.tm-inline-edit-display--placeholder {
+    color: var(--tm-text-tertiary, #94a3b8);
+    font-style: italic;
+}
+
+/* Edit mode */
+.tm-inline-edit-input {
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border: 1px solid var(--tm-color-primary, #3b82f6);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    outline: none;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: 1.5;
+    color: var(--tm-text-primary, #0f172a);
+    background: var(--tm-bg-surface, #fff);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    width: 100%;
+}
+
+.tm-inline-edit-input--error {
+    border-color: var(--tm-color-danger, #ef4444);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.tm-inline-edit-error {
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    color: var(--tm-color-danger, #ef4444);
+    line-height: 1.4;
+}
+
+/* Disabled */
+.tm-inline-edit--disabled .tm-inline-edit-display {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.tm-inline-edit--disabled .tm-inline-edit-display:hover {
+    border-color: transparent;
+    background: transparent;
+}

@@ -1,0 +1,74 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Models
+
+@if (IsVisible)
+{
+    <div class="tm-keyboard-shortcuts-overlay @Class" @onclick="OnClose">
+        <div class="tm-keyboard-shortcuts-modal"
+             role="dialog"
+             aria-modal="true"
+             tabindex="-1"
+             @onclick:stopPropagation
+             @onkeyup="HandleKeyUp">
+            <div class="tm-keyboard-shortcuts-header">
+                <h2 class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
+                <button type="button" class="tm-keyboard-shortcuts-close" @onclick="OnClose" aria-label="@Loc["Tm_Close"]">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                </button>
+            </div>
+            <div class="tm-keyboard-shortcuts-content">
+                @if (Categories is not null)
+                {
+                    @foreach (var category in Categories)
+                    {
+                        <div class="tm-keyboard-shortcuts-category">
+                            <h3 class="tm-keyboard-shortcuts-category-title">@category.Title</h3>
+                            <div class="tm-keyboard-shortcuts-list">
+                                @foreach (var shortcut in category.Shortcuts)
+                                {
+                                    <div class="tm-keyboard-shortcuts-item">
+                                        <span class="tm-keyboard-shortcuts-key">
+                                            @foreach (var part in shortcut.Keys.Split('+'))
+                                            {
+                                                <kbd>@part.Trim()</kbd>
+                                            }
+                                        </span>
+                                        <span class="tm-keyboard-shortcuts-description">@shortcut.Description</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Shortcut categories to display.</summary>
+    [Parameter] public IEnumerable<TmShortcutCategory>? Categories { get; set; }
+
+    /// <summary>Whether the overlay is visible.</summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>Fires when the overlay should close.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Optional title. Falls back to localized default.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private string DisplayTitle => Title ?? Loc["TmKeyboardShortcutsHelp_Title"];
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

@@ -1,0 +1,64 @@
+@namespace Tempo.Blazor.Components.Forms
+@using Tempo.Blazor.Components.Icons
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Linq.Expressions
+@implements IDisposable
+
+@if (_messages.Any())
+{
+    <div class="tm-form-validation-message @Class" role="alert">
+        @foreach (var message in _messages)
+        {
+            <div class="tm-form-validation-message-item">
+                <span class="tm-form-validation-message-icon">
+                    <TmIcon Name="@IconNames.AlertCircle" Size="IconSize.Xs" />
+                </span>
+                <span class="tm-form-validation-message-text">@message</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Cascading EditContext from the parent EditForm.</summary>
+    [CascadingParameter] private EditContext? EditContext { get; set; }
+
+    /// <summary>Expression identifying the field to display validation messages for.</summary>
+    [Parameter, EditorRequired] public Expression<Func<object>>? For { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private FieldIdentifier _fieldIdentifier;
+    private IEnumerable<string> _messages = Enumerable.Empty<string>();
+
+    protected override void OnParametersSet()
+    {
+        if (For is not null)
+        {
+            _fieldIdentifier = FieldIdentifier.Create(For);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged += HandleValidationStateChanged;
+        }
+    }
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        _messages = EditContext?.GetValidationMessages(_fieldIdentifier) ?? Enumerable.Empty<string>();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (EditContext is not null)
+        {
+            EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+        }
+    }
+}

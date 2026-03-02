@@ -1,0 +1,78 @@
+@namespace Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Icons
+
+<div class="tm-section @(Collapsible ? "tm-section--collapsible" : "") @(Collapsed ? "tm-section--collapsed" : "") @Class">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <div class="tm-section-header"
+             @onclick="HandleHeaderClick"
+             role="@(Collapsible ? "button" : null)"
+             aria-expanded="@(Collapsible ? (!Collapsed).ToString().ToLower() : null)"
+             tabindex="@(Collapsible ? 0 : -1)">
+            @if (!string.IsNullOrEmpty(Icon))
+            {
+                <span class="tm-section-header-icon">
+                    <TmIcon Name="@Icon" Size="IconSize.Sm" />
+                </span>
+            }
+            <h4 class="tm-section-title">@Title</h4>
+            @if (HeaderActions is not null)
+            {
+                <div class="tm-section-actions" @onclick:stopPropagation>
+                    @HeaderActions
+                </div>
+            }
+            @if (Collapsible)
+            {
+                <span class="tm-section-chevron">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>
+            }
+        </div>
+    }
+    @if (!Collapsed)
+    {
+        <div class="tm-section-content">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Optional section title.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Optional icon name displayed before the title.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Section body content.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional actions rendered in the header (e.g. buttons).</summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>When true, the section can be collapsed/expanded by clicking the header.</summary>
+    [Parameter] public bool Collapsible { get; set; }
+
+    /// <summary>Whether the section is currently collapsed. Use with CollapsedChanged for two-way binding.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    /// <summary>Callback when collapsed state changes.</summary>
+    [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private async Task HandleHeaderClick()
+    {
+        if (!Collapsible) return;
+        await CollapsedChanged.InvokeAsync(!Collapsed);
+    }
+}

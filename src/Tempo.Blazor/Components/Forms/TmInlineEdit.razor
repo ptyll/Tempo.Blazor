@@ -1,0 +1,98 @@
+@namespace Tempo.Blazor.Components.Forms
+
+<div class="tm-inline-edit @(Disabled ? "tm-inline-edit--disabled" : "") @Class">
+    @if (_isEditing)
+    {
+        <input type="text"
+               class="tm-inline-edit-input @(_error is not null ? "tm-inline-edit-input--error" : "")"
+               value="@_editValue"
+               @oninput="HandleInput"
+               @onkeyup="HandleKeyUp"
+               @ref="_inputElement" />
+        @if (_error is not null)
+        {
+            <span class="tm-inline-edit-error">@_error</span>
+        }
+    }
+    else
+    {
+        var isEmpty = string.IsNullOrEmpty(Value);
+        <span class="tm-inline-edit-display @(isEmpty ? "tm-inline-edit-display--placeholder" : "")"
+              @onclick="EnterEditMode"
+              role="button"
+              tabindex="@(Disabled ? -1 : 0)">
+            @(isEmpty ? DisplayPlaceholder : Value)
+        </span>
+    }
+</div>
+
+@code {
+    /// <summary>Current display value.</summary>
+    [Parameter] public string Value { get; set; } = "";
+
+    /// <summary>Fires when the user saves the edited value.</summary>
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+
+    /// <summary>Placeholder text when value is empty.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Optional validation function. Returns error message or null.</summary>
+    [Parameter] public Func<string, string?>? Validate { get; set; }
+
+    /// <summary>When true, editing is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private bool _isEditing;
+    private string _editValue = "";
+    private string? _error;
+    private ElementReference _inputElement;
+
+    private string DisplayPlaceholder => Placeholder ?? Loc["TmInlineEdit_Placeholder"];
+
+    private void EnterEditMode()
+    {
+        if (Disabled) return;
+        _isEditing = true;
+        _editValue = Value;
+        _error = null;
+    }
+
+    private void HandleInput(ChangeEventArgs e)
+    {
+        _editValue = e.Value?.ToString() ?? "";
+        _error = null;
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Save();
+        }
+        else if (e.Key == "Escape")
+        {
+            Cancel();
+        }
+    }
+
+    private async Task Save()
+    {
+        if (Validate is not null)
+        {
+            _error = Validate(_editValue);
+            if (_error is not null) return;
+        }
+
+        _isEditing = false;
+        await OnSave.InvokeAsync(_editValue);
+    }
+
+    private void Cancel()
+    {
+        _isEditing = false;
+        _error = null;
+    }
+}

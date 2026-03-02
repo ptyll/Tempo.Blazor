@@ -1,0 +1,43 @@
+/* ═══════════════ TmExportOptions ═══════════════ */
+.tm-export-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-5, 1.25rem);
+    background: var(--tm-bg-surface, #fff);
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-lg, 0.5rem);
+    padding: var(--tm-space-6, 1.5rem);
+}
+
+.tm-export-options-title {
+    margin: 0;
+    font-size: var(--tm-font-size-lg, 1.125rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-export-options-section-title {
+    margin: 0 0 var(--tm-space-3, 0.75rem);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-text-secondary, #475569);
+}
+
+.tm-export-options-entities {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3, 0.75rem);
+}
+
+.tm-export-options-format {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2, 0.5rem);
+}
+
+.tm-export-options-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: var(--tm-space-3, 0.75rem);
+    border-top: 1px solid var(--tm-border-color, #e2e8f0);
+}

@@ -1,0 +1,114 @@
+/* ═══════════════ TmKeyboardShortcutsHelp ═══════════════ */
+.tm-keyboard-shortcuts-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: var(--tm-z-modal, 1000);
+    animation: tm-fade-in 0.15s ease;
+}
+
+.tm-keyboard-shortcuts-modal {
+    background: var(--tm-bg-surface, #fff);
+    border-radius: var(--tm-radius-xl, 0.75rem);
+    box-shadow: var(--tm-shadow-xl, 0 20px 25px -5px rgba(0,0,0,.1));
+    width: min(32rem, 90vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tm-keyboard-shortcuts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--tm-space-5, 1.25rem) var(--tm-space-6, 1.5rem);
+    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
+}
+
+.tm-keyboard-shortcuts-title {
+    margin: 0;
+    font-size: var(--tm-font-size-lg, 1.125rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-keyboard-shortcuts-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: none;
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    cursor: pointer;
+    color: var(--tm-text-tertiary, #94a3b8);
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tm-keyboard-shortcuts-close:hover {
+    background: var(--tm-bg-hover, #f1f5f9);
+    color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-keyboard-shortcuts-content {
+    padding: var(--tm-space-5, 1.25rem) var(--tm-space-6, 1.5rem);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-5, 1.25rem);
+}
+
+.tm-keyboard-shortcuts-category-title {
+    margin: 0 0 var(--tm-space-3, 0.75rem);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-secondary, #475569);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tm-keyboard-shortcuts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2, 0.5rem);
+}
+
+.tm-keyboard-shortcuts-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--tm-space-2, 0.5rem) 0;
+}
+
+.tm-keyboard-shortcuts-key {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1, 0.25rem);
+}
+
+.tm-keyboard-shortcuts-key kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.5rem;
+    padding: 0 var(--tm-space-2, 0.5rem);
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    font-family: inherit;
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-text-primary, #0f172a);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.tm-keyboard-shortcuts-description {
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-secondary, #475569);
+}
