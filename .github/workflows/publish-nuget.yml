@@ -1,0 +1,130 @@
+name: Publish NuGet Packages to GitHub Packages
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      version_suffix:
+        description: 'Version suffix (např. beta1, preview2). Ponechej prázdné pro release.'
+        required: false
+        default: ''
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  # GitHub Packages NuGet source
+  NUGET_SOURCE: 'https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+  publish:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    # Publikujeme jen při push na main/master, tagu, nebo ručním spuštění
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Nastavíme verzi podle tagu nebo inputu
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
+            # Z tagu v1.2.3 uděláme verzi 1.2.3
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "Using version from tag: $VERSION"
+          elif [ -n "${{ github.event.inputs.version_suffix }}" ]; then
+            # Suffix pro prerelease verze (např. 1.0.0-beta1)
+            echo "VERSION=1.0.0-${{ github.event.inputs.version_suffix }}" >> $GITHUB_OUTPUT
+            echo "Using version with suffix: 1.0.0-${{ github.event.inputs.version_suffix }}"
+          else
+            # Pro main/master použijeme timestamp jako prerelease
+            TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+            echo "VERSION=1.0.0-ci-$TIMESTAMP" >> $GITHUB_OUTPUT
+            echo "Using CI version: 1.0.0-ci-$TIMESTAMP"
+          fi
+
+      - name: Build packages
+        run: |
+          dotnet pack src/Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj \
+            --configuration Release \
+            --no-restore \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            --output ./packages
+
+          dotnet pack src/Tempo.Blazor/Tempo.Blazor.csproj \
+            --configuration Release \
+            --no-restore \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            --output ./packages
+
+          dotnet pack src/Tempo.Blazor.FluentValidation/Tempo.Blazor.FluentValidation.csproj \
+            --configuration Release \
+            --no-restore \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            --output ./packages
+
+      - name: List packages
+        run: ls -la ./packages
+
+      # Přidáme GitHub Packages jako NuGet source s PAT tokenem
+      - name: Add GitHub Packages source
+        run: |
+          dotnet nuget add source "${{ env.NUGET_SOURCE }}" \
+            --name "github" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
+            --store-password-in-clear-text
+
+      # Publikujeme balíčky
+      - name: Push packages to GitHub Packages
+        run: |
+          for pkg in ./packages/*.nupkg; do
+            echo "Publishing $pkg..."
+            dotnet nuget push "$pkg" \
+              --source "github" \
+              --api-key "${{ secrets.GITHUB_TOKEN }}" \
+              --skip-duplicate
+          done
+
+      - name: Upload packages as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ./packages/*.nupkg
