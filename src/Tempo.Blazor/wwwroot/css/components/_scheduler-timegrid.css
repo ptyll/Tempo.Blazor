@@ -1,0 +1,294 @@
+/* ═══════════════ TmSchedulerTimeGrid ═══════════════ */
+.tm-scheduler-timegrid {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    overflow: hidden;
+}
+
+/* ── Header ── */
+.tm-scheduler-timegrid-header {
+    display: flex;
+    border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+}
+
+.tm-scheduler-timegrid-time-gutter-header {
+    flex-shrink: 0;
+    width: 4rem;
+    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+}
+
+.tm-scheduler-timegrid-col-header {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-1, 0.25rem);
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timegrid-col-header:last-child {
+    border-right: none;
+}
+
+.tm-scheduler-timegrid-col-header-weekday {
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-tertiary, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tm-scheduler-timegrid-col-header-date {
+    font-size: var(--tm-font-size-lg, 1.125rem);
+    font-weight: var(--tm-font-weight-bold, 700);
+    color: var(--tm-text-primary, #0f172a);
+}
+
+/* ── Resource grouping ── */
+.tm-scheduler-timegrid-col-header-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timegrid-col-header-group:last-child {
+    border-right: none;
+}
+
+.tm-scheduler-timegrid-resource-labels {
+    display: flex;
+    border-top: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timegrid-resource-label {
+    flex: 1;
+    text-align: center;
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-text-secondary, #64748b);
+    padding: var(--tm-space-1, 0.25rem);
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+    border-bottom: 3px solid var(--tm-color-primary, #3b82f6);
+}
+
+.tm-scheduler-timegrid-resource-label:last-child {
+    border-right: none;
+}
+
+.tm-scheduler-timegrid-resource-col {
+    flex: 1;
+    position: relative;
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timegrid-resource-col:last-child {
+    border-right: none;
+}
+
+/* ── AllDay row ── */
+.tm-scheduler-timegrid-allday {
+    display: flex;
+    min-height: 2rem;
+    border-bottom: 2px solid var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+}
+
+.tm-scheduler-timegrid-allday-col {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: var(--tm-space-1, 0.25rem);
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timegrid-allday-col:last-child {
+    border-right: none;
+}
+
+.tm-scheduler-timegrid-allday-event {
+    background: var(--event-color, var(--tm-color-primary, #3b82f6));
+    color: #fff;
+    font-size: 0.6875rem;
+    padding: 1px var(--tm-space-2, 0.5rem);
+    border-radius: var(--tm-radius-xs, 0.125rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.tm-scheduler-timegrid-allday-event:hover {
+    filter: brightness(0.9);
+}
+
+/* ── Time gutter ── */
+.tm-scheduler-timegrid-time-gutter {
+    flex-shrink: 0;
+    width: 4rem;
+    position: relative;
+    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+}
+
+.tm-scheduler-timegrid-time-label {
+    position: absolute;
+    right: var(--tm-space-2, 0.5rem);
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    color: var(--tm-text-tertiary, #94a3b8);
+    transform: translateY(-50%);
+    white-space: nowrap;
+}
+
+.tm-scheduler-timegrid-allday .tm-scheduler-timegrid-time-gutter {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: var(--tm-space-2, 0.5rem);
+}
+
+.tm-scheduler-timegrid-allday .tm-scheduler-timegrid-time-label {
+    position: static;
+    transform: none;
+}
+
+/* ── Body ── */
+.tm-scheduler-timegrid-body {
+    display: flex;
+    position: relative;
+    /* 24 hours * 3rem per hour = 72rem */
+    height: 72rem;
+    overflow-y: auto;
+}
+
+/* ── Column ── */
+.tm-scheduler-timegrid-col {
+    flex: 1;
+    position: relative;
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timegrid-col:last-child {
+    border-right: none;
+}
+
+/* ── Slot ── */
+.tm-scheduler-timegrid-slot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-bottom: 1px solid var(--tm-border-color-light, #f1f5f9);
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.tm-scheduler-timegrid-slot:hover {
+    background: var(--tm-bg-hover, rgba(241, 245, 249, 0.5));
+}
+
+/* ── Event ── */
+.tm-scheduler-timegrid-event {
+    position: absolute;
+    border-radius: var(--tm-radius-xs, 0.125rem);
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 1;
+    border-left: 3px solid var(--event-color, var(--tm-color-primary, #3b82f6));
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary, #3b82f6)) 15%, white);
+    transition: box-shadow 0.1s ease;
+}
+
+.tm-scheduler-timegrid-event:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    z-index: 2;
+}
+
+.tm-scheduler-timegrid-event-time {
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    color: var(--tm-text-secondary, #64748b);
+    white-space: nowrap;
+}
+
+.tm-scheduler-timegrid-event-title {
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-text-primary, #0f172a);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Current time indicator ── */
+.tm-scheduler-timegrid-now {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--tm-color-danger, #ef4444);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.tm-scheduler-timegrid-now::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--tm-color-danger, #ef4444);
+}
+
+/* ── Drag & Drop ── */
+.tm-scheduler-timegrid-event[draggable="true"] {
+    cursor: grab;
+}
+
+.tm-scheduler-timegrid-event[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.tm-scheduler-timegrid-event--dragging {
+    opacity: 0.5;
+}
+
+.tm-scheduler-timegrid-slot--drop-target {
+    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 10%, transparent);
+}
+
+/* ── Resize handle ── */
+.tm-scheduler-event-resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: ns-resize;
+    background: transparent;
+    transition: background-color 0.1s ease;
+}
+
+.tm-scheduler-event-resize-handle:hover {
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary, #3b82f6)) 30%, transparent);
+}
+
+.tm-scheduler-event-resize-handle::after {
+    content: "";
+    display: block;
+    width: 1.5rem;
+    height: 2px;
+    background: var(--event-color, var(--tm-color-primary, #3b82f6));
+    border-radius: 1px;
+    margin: 2px auto 0;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.tm-scheduler-event-resize-handle:hover::after {
+    opacity: 1;
+}

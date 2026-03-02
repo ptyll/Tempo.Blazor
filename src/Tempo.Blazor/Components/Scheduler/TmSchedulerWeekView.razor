@@ -1,0 +1,68 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+
+<div class="tm-scheduler-week">
+    <TmSchedulerTimeGrid Dates="@_dates"
+                         Events="@Events"
+                         Resources="@Resources"
+                         SlotDuration="@SlotDuration"
+                         ReadOnly="@ReadOnly"
+                         OnSlotClick="@OnSlotClick"
+                         OnEventClick="@OnEventClick"
+                         OnEventChanged="@OnEventChanged"
+                         EventTemplate="@EventTemplate" />
+</div>
+
+@code {
+    private List<DateOnly> _dates = [];
+
+    /// <summary>Currently displayed date (any day in the target week).</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>First day of week (0=Sunday, 1=Monday, ...).</summary>
+    [Parameter] public int FirstDayOfWeek { get; set; } = 1;
+
+    /// <summary>Events to display.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Duration of each time slot in minutes.</summary>
+    [Parameter] public int SlotDuration { get; set; } = 30;
+
+    /// <summary>Fires when a time slot is clicked.</summary>
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>Whether events are read-only.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Fires when an event is moved or resized.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Resources for grouping columns.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
+
+    /// <summary>Optional custom event template.</summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _dates = GetWeekDates();
+    }
+
+    private List<DateOnly> GetWeekDates()
+    {
+        var current = DateOnly.FromDateTime(CurrentDate);
+        var firstDay = (DayOfWeek)FirstDayOfWeek;
+
+        // Find start of week
+        var diff = ((int)current.DayOfWeek - (int)firstDay + 7) % 7;
+        var weekStart = current.AddDays(-diff);
+
+        var result = new List<DateOnly>(7);
+        for (var i = 0; i < 7; i++)
+            result.Add(weekStart.AddDays(i));
+        return result;
+    }
+}

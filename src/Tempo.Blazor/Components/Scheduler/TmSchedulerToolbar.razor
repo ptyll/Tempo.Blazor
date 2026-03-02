@@ -1,0 +1,94 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+@using System.Globalization
+
+<div class="tm-scheduler-toolbar">
+    <div class="tm-scheduler-toolbar-nav">
+        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="scheduler-prev"
+                aria-label="@Loc["TmScheduler_Prev"]" @onclick="OnPrev">&#8249;</button>
+        <button type="button" class="tm-scheduler-toolbar-nav-btn tm-scheduler-toolbar-today-btn"
+                data-testid="scheduler-today" @onclick="OnToday">@Loc["TmScheduler_Today"]</button>
+        <button type="button" class="tm-scheduler-toolbar-nav-btn" data-testid="scheduler-next"
+                aria-label="@Loc["TmScheduler_Next"]" @onclick="OnNext">&#8250;</button>
+    </div>
+
+    <h2 class="tm-scheduler-toolbar-title">@DisplayTitle</h2>
+
+    <div class="tm-scheduler-toolbar-views">
+        @foreach (var view in _availableViews)
+        {
+            var v = view;
+            <button type="button"
+                    class="tm-scheduler-toolbar-view-btn @(v == View ? "tm-scheduler-toolbar-view-btn--active" : "")"
+                    data-view="@v"
+                    @onclick="@(() => OnViewChange.InvokeAsync(v))">@GetViewLabel(v)</button>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly TmScheduleViewType[] _availableViews =
+        [TmScheduleViewType.Day, TmScheduleViewType.Week, TmScheduleViewType.Month, TmScheduleViewType.Agenda, TmScheduleViewType.Timeline];
+
+    /// <summary>Current view type.</summary>
+    [Parameter] public TmScheduleViewType View { get; set; }
+
+    /// <summary>Currently displayed date.</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>Fires when the user clicks a view button.</summary>
+    [Parameter] public EventCallback<TmScheduleViewType> OnViewChange { get; set; }
+
+    /// <summary>Fires when the user clicks Previous.</summary>
+    [Parameter] public EventCallback OnPrev { get; set; }
+
+    /// <summary>Fires when the user clicks Next.</summary>
+    [Parameter] public EventCallback OnNext { get; set; }
+
+    /// <summary>Fires when the user clicks Today.</summary>
+    [Parameter] public EventCallback OnToday { get; set; }
+
+    private string DisplayTitle
+    {
+        get
+        {
+            var culture = CultureInfo.CurrentUICulture;
+            return View switch
+            {
+                TmScheduleViewType.Day => CurrentDate.ToString("dddd, d. MMMM yyyy", culture),
+                TmScheduleViewType.Week => GetWeekTitle(culture),
+                TmScheduleViewType.Month => $"{culture.DateTimeFormat.GetMonthName(CurrentDate.Month)} {CurrentDate.Year}",
+                TmScheduleViewType.Agenda => $"{culture.DateTimeFormat.GetMonthName(CurrentDate.Month)} {CurrentDate.Year}",
+                TmScheduleViewType.Timeline => GetWeekTitle(culture),
+                _ => CurrentDate.ToString("MMMM yyyy", culture)
+            };
+        }
+    }
+
+    private string GetWeekTitle(CultureInfo culture)
+    {
+        var weekStart = GetWeekStart(CurrentDate);
+        var weekEnd = weekStart.AddDays(6);
+        if (weekStart.Month == weekEnd.Month)
+            return $"{weekStart.Day}–{weekEnd.Day}. {culture.DateTimeFormat.GetMonthName(weekStart.Month)} {weekStart.Year}";
+        if (weekStart.Year == weekEnd.Year)
+            return $"{weekStart.Day}. {culture.DateTimeFormat.GetAbbreviatedMonthName(weekStart.Month)} – {weekEnd.Day}. {culture.DateTimeFormat.GetAbbreviatedMonthName(weekEnd.Month)} {weekEnd.Year}";
+        return $"{weekStart:d} – {weekEnd:d}";
+    }
+
+    private static DateTime GetWeekStart(DateTime date)
+    {
+        var offset = ((int)date.DayOfWeek + 6) % 7;
+        return date.AddDays(-offset).Date;
+    }
+
+    private string GetViewLabel(TmScheduleViewType view) => view switch
+    {
+        TmScheduleViewType.Day => Loc["TmScheduler_Day"],
+        TmScheduleViewType.Week => Loc["TmScheduler_Week"],
+        TmScheduleViewType.Month => Loc["TmScheduler_Month"],
+        TmScheduleViewType.Agenda => Loc["TmScheduler_Agenda"],
+        TmScheduleViewType.Timeline => Loc["TmScheduler_Timeline"],
+        _ => view.ToString()
+    };
+}

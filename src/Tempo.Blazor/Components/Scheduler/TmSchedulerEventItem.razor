@@ -1,0 +1,37 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+
+@if (EventTemplate is not null)
+{
+    @EventTemplate(Event)
+}
+else
+{
+    <div class="tm-scheduler-event @Event.CssClass"
+         @onclick="@(() => OnClick.InvokeAsync(Event))">
+        <span class="tm-scheduler-event-dot"
+              style="@(Event.Color is not null ? $"background-color: {Event.Color};" : "")"></span>
+        <span class="tm-scheduler-event-time">
+            @if (Event.AllDay)
+            {
+                @Loc["TmScheduler_AllDay"]
+            }
+            else
+            {
+                @Event.Start.ToString("HH:mm")
+            }
+        </span>
+        <span class="tm-scheduler-event-title">@Event.Title</span>
+    </div>
+}
+
+@code {
+    /// <summary>The event to render.</summary>
+    [Parameter, EditorRequired] public TmScheduleEvent Event { get; set; } = default!;
+
+    /// <summary>Fires when the event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnClick { get; set; }
+
+    /// <summary>Optional custom template for rendering.</summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+}

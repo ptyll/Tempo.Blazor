@@ -1,0 +1,370 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+@using System.Globalization
+
+<div class="tm-scheduler-timegrid">
+    @* Header row *@
+    <div class="tm-scheduler-timegrid-header">
+        <div class="tm-scheduler-timegrid-time-gutter-header"></div>
+        @foreach (var date in Dates)
+        {
+            var d = date;
+            var culture = CultureInfo.CurrentUICulture;
+
+            @if (_hasResources)
+            {
+                <div class="tm-scheduler-timegrid-col-header-group">
+                    <div class="tm-scheduler-timegrid-col-header">
+                        <span class="tm-scheduler-timegrid-col-header-weekday">@d.ToString("ddd", culture)</span>
+                        <span class="tm-scheduler-timegrid-col-header-date">@d.Day</span>
+                    </div>
+                    <div class="tm-scheduler-timegrid-resource-labels">
+                        @foreach (var r in Resources!)
+                        {
+                            <div class="tm-scheduler-timegrid-resource-label"
+                                 style="@(r.Color is not null ? $"border-bottom-color: {r.Color};" : "")">
+                                @r.Name
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="tm-scheduler-timegrid-col-header">
+                    <span class="tm-scheduler-timegrid-col-header-weekday">@d.ToString("ddd", culture)</span>
+                    <span class="tm-scheduler-timegrid-col-header-date">@d.Day</span>
+                </div>
+            }
+        }
+    </div>
+
+    @* AllDay row *@
+    <div class="tm-scheduler-timegrid-allday">
+        <div class="tm-scheduler-timegrid-time-gutter">
+            <span class="tm-scheduler-timegrid-time-label">@Loc["TmScheduler_AllDay"]</span>
+        </div>
+        @foreach (var date in Dates)
+        {
+            var d = date;
+            var allDayEvents = GetAllDayEventsForDate(d);
+            <div class="tm-scheduler-timegrid-allday-col">
+                @foreach (var evt in allDayEvents)
+                {
+                    var e = evt;
+                    <div class="tm-scheduler-timegrid-allday-event"
+                         style="@(e.Color is not null ? $"--event-color: {e.Color};" : "")"
+                         @onclick="@(() => OnEventClick.InvokeAsync(e))"
+                         @onclick:stopPropagation="true">
+                        @e.Title
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* Time grid body *@
+    <div class="tm-scheduler-timegrid-body">
+        <div class="tm-scheduler-timegrid-time-gutter">
+            @for (var hour = 0; hour < 24; hour++)
+            {
+                var h = hour;
+                <div class="tm-scheduler-timegrid-time-label" style="top: @GetHourTopPercent(h)%;">
+                    @h.ToString("D2"):00
+                </div>
+            }
+        </div>
+        @foreach (var date in Dates)
+        {
+            var d = date;
+
+            @if (_hasResources)
+            {
+                @foreach (var resource in Resources!)
+                {
+                    var r = resource;
+                    var resEvents = GetTimedEventsForDateAndResource(d, r.Id);
+                    var positioned = LayoutOverlappingEvents(resEvents);
+
+                    <div class="tm-scheduler-timegrid-resource-col" data-resource="@r.Id">
+                        @RenderSlots(d)
+                        @RenderPositionedEvents(d, positioned)
+                    </div>
+                }
+            }
+            else
+            {
+                var dayEvents = GetTimedEventsForDate(d);
+                var positioned = LayoutOverlappingEvents(dayEvents);
+
+                <div class="tm-scheduler-timegrid-col">
+                    @RenderSlots(d)
+                    @RenderPositionedEvents(d, positioned)
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private int _slotsPerDay;
+    private bool _hasResources;
+    private Dictionary<DateOnly, List<TmScheduleEvent>> _timedMap = new();
+    private Dictionary<DateOnly, List<TmScheduleEvent>> _allDayMap = new();
+    private TmScheduleEvent? _draggedEvent;
+
+    /// <summary>Dates to display as columns.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<DateOnly> Dates { get; set; } = [];
+
+    /// <summary>Events to display.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Resources for grouping columns.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
+
+    /// <summary>Duration of each time slot in minutes.</summary>
+    [Parameter] public int SlotDuration { get; set; } = 30;
+
+    /// <summary>Whether events are read-only (no drag/resize).</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Fires when a time slot is clicked.</summary>
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>Fires when an event is moved or resized.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Optional custom event template.</summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _slotsPerDay = 24 * 60 / Math.Max(1, SlotDuration);
+        _hasResources = Resources is { Count: > 0 };
+        BuildEventMaps();
+    }
+
+    private RenderFragment RenderSlots(DateOnly d) => builder =>
+    {
+        for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
+        {
+            var si = slotIndex;
+            var slotStart = d.ToDateTime(TimeOnly.MinValue).AddMinutes(si * SlotDuration);
+            var slotEnd = slotStart.AddMinutes(SlotDuration);
+
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "tm-scheduler-timegrid-slot");
+            builder.AddAttribute(2, "style", $"top: {F(GetMinuteTopPercent(si * SlotDuration))}%; height: {F(GetSlotHeightPercent())}%;");
+            builder.AddAttribute(3, "ondragover", "event.preventDefault()");
+            builder.AddAttribute(4, "ondrop", EventCallback.Factory.Create(this, () => HandleSlotDrop(slotStart, slotEnd)));
+            builder.AddAttribute(5, "onclick", EventCallback.Factory.Create(this, () => OnSlotClick.InvokeAsync((slotStart, slotEnd))));
+            builder.CloseElement();
+        }
+    };
+
+    private RenderFragment RenderPositionedEvents(DateOnly d, List<PositionedEvent> positioned) => builder =>
+    {
+        foreach (var pe in positioned)
+        {
+            var e = pe.Event;
+            var topPct = GetMinuteTopPercent(GetEventStartMinutes(e, d));
+            var heightPct = GetEventHeightPercent(e, d);
+            var widthPct = 100.0 / pe.TotalLanes;
+            var leftPct = widthPct * pe.Lane;
+
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", $"tm-scheduler-timegrid-event {e.CssClass}");
+            builder.AddAttribute(2, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%; --event-color: {e.Color ?? "var(--tm-color-primary, #3b82f6)"};");
+            builder.AddAttribute(3, "title", e.Title);
+            builder.AddAttribute(4, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
+            builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
+            builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
+            builder.AddEventStopPropagationAttribute(7, "onclick", true);
+
+            // Time
+            builder.OpenElement(8, "span");
+            builder.AddAttribute(9, "class", "tm-scheduler-timegrid-event-time");
+            builder.AddContent(10, $"{e.Start:HH:mm} – {e.End:HH:mm}");
+            builder.CloseElement();
+
+            // Title
+            builder.OpenElement(11, "span");
+            builder.AddAttribute(12, "class", "tm-scheduler-timegrid-event-title");
+            builder.AddContent(13, e.Title);
+            builder.CloseElement();
+
+            // Resize handle
+            if (!ReadOnly && !e.IsReadOnly)
+            {
+                builder.OpenElement(14, "div");
+                builder.AddAttribute(15, "class", "tm-scheduler-event-resize-handle");
+                builder.AddAttribute(16, "onmousedown", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandleResizeStart(e, args)));
+                builder.AddEventStopPropagationAttribute(17, "onmousedown", true);
+                builder.CloseElement();
+            }
+
+            builder.CloseElement();
+        }
+    };
+
+    private void BuildEventMaps()
+    {
+        _timedMap.Clear();
+        _allDayMap.Clear();
+        if (Events is null) return;
+
+        foreach (var evt in Events)
+        {
+            if (evt.AllDay)
+            {
+                var startDate = DateOnly.FromDateTime(evt.Start);
+                var endDate = DateOnly.FromDateTime(evt.End.AddDays(-1));
+                if (endDate < startDate) endDate = startDate;
+
+                for (var d = startDate; d <= endDate; d = d.AddDays(1))
+                {
+                    if (!_allDayMap.TryGetValue(d, out var list))
+                    {
+                        list = [];
+                        _allDayMap[d] = list;
+                    }
+                    list.Add(evt);
+                }
+            }
+            else
+            {
+                var date = DateOnly.FromDateTime(evt.Start);
+                if (!_timedMap.TryGetValue(date, out var list))
+                {
+                    list = [];
+                    _timedMap[date] = list;
+                }
+                list.Add(evt);
+            }
+        }
+    }
+
+    private List<TmScheduleEvent> GetTimedEventsForDate(DateOnly date)
+        => _timedMap.TryGetValue(date, out var list) ? list : [];
+
+    private List<TmScheduleEvent> GetTimedEventsForDateAndResource(DateOnly date, string resourceId)
+    {
+        if (!_timedMap.TryGetValue(date, out var list)) return [];
+        return list.Where(e => string.Equals(e.ResourceId, resourceId, StringComparison.Ordinal)).ToList();
+    }
+
+    private List<TmScheduleEvent> GetAllDayEventsForDate(DateOnly date)
+        => _allDayMap.TryGetValue(date, out var list) ? list : [];
+
+    private static double GetHourTopPercent(int hour) => hour / 24.0 * 100;
+    private static double GetMinuteTopPercent(int minutes) => minutes / (24.0 * 60) * 100;
+    private double GetSlotHeightPercent() => SlotDuration / (24.0 * 60) * 100;
+
+    private static int GetEventStartMinutes(TmScheduleEvent evt, DateOnly date)
+    {
+        var dayStart = date.ToDateTime(TimeOnly.MinValue);
+        var minutes = (int)(evt.Start - dayStart).TotalMinutes;
+        return Math.Max(0, Math.Min(minutes, 24 * 60));
+    }
+
+    private static double GetEventHeightPercent(TmScheduleEvent evt, DateOnly date)
+    {
+        var startMin = GetEventStartMinutes(evt, date);
+        var endMin = (int)(evt.End - date.ToDateTime(TimeOnly.MinValue)).TotalMinutes;
+        endMin = Math.Max(startMin + 1, Math.Min(endMin, 24 * 60));
+        return (endMin - startMin) / (24.0 * 60) * 100;
+    }
+
+    private static string F(double value) => value.ToString("F4", CultureInfo.InvariantCulture);
+
+    // ── Overlap layout algorithm ──
+
+    private record PositionedEvent(TmScheduleEvent Event, int Lane, int TotalLanes);
+
+    private static List<PositionedEvent> LayoutOverlappingEvents(List<TmScheduleEvent> events)
+    {
+        if (events.Count == 0) return [];
+
+        var sorted = events.OrderBy(e => e.Start).ThenBy(e => e.End).ToList();
+        var result = new List<PositionedEvent>();
+
+        var groups = new List<List<TmScheduleEvent>>();
+        var currentGroup = new List<TmScheduleEvent> { sorted[0] };
+        var groupEnd = sorted[0].End;
+
+        for (var i = 1; i < sorted.Count; i++)
+        {
+            if (sorted[i].Start < groupEnd)
+            {
+                currentGroup.Add(sorted[i]);
+                if (sorted[i].End > groupEnd) groupEnd = sorted[i].End;
+            }
+            else
+            {
+                groups.Add(currentGroup);
+                currentGroup = [sorted[i]];
+                groupEnd = sorted[i].End;
+            }
+        }
+        groups.Add(currentGroup);
+
+        foreach (var group in groups)
+        {
+            var lanes = new List<DateTime>();
+
+            foreach (var evt in group)
+            {
+                var lane = -1;
+                for (var l = 0; l < lanes.Count; l++)
+                {
+                    if (evt.Start >= lanes[l])
+                    {
+                        lane = l;
+                        break;
+                    }
+                }
+
+                if (lane == -1)
+                {
+                    lane = lanes.Count;
+                    lanes.Add(DateTime.MinValue);
+                }
+
+                lanes[lane] = evt.End;
+                result.Add(new PositionedEvent(evt, lane, 0));
+            }
+
+            var totalLanes = lanes.Count;
+            for (var i = result.Count - group.Count; i < result.Count; i++)
+            {
+                result[i] = result[i] with { TotalLanes = totalLanes };
+            }
+        }
+
+        return result;
+    }
+
+    // ── Drag & Drop ──
+
+    private void HandleDragStart(TmScheduleEvent evt) => _draggedEvent = evt;
+
+    private async Task HandleSlotDrop(DateTime slotStart, DateTime slotEnd)
+    {
+        if (_draggedEvent is null || ReadOnly) return;
+
+        var duration = _draggedEvent.End - _draggedEvent.Start;
+        _draggedEvent.Start = slotStart;
+        _draggedEvent.End = slotStart + duration;
+
+        await OnEventChanged.InvokeAsync(_draggedEvent);
+        _draggedEvent = null;
+    }
+
+    private void HandleResizeStart(TmScheduleEvent evt, MouseEventArgs args)
+    {
+        // Resize tracking requires JS interop for mousemove/mouseup on document.
+    }
+}

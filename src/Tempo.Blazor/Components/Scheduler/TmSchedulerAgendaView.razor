@@ -1,0 +1,105 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+@using System.Globalization
+
+<div class="tm-scheduler-agenda">
+    @if (_groupedEvents.Count == 0)
+    {
+        <div class="tm-scheduler-agenda-empty">
+            <p>@Loc["TmScheduler_NoEvents"]</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var group in _groupedEvents)
+        {
+            var culture = CultureInfo.CurrentUICulture;
+            <div class="tm-scheduler-agenda-group">
+                <div class="tm-scheduler-agenda-date">
+                    <span class="tm-scheduler-agenda-date-day">@group.Key.ToString("dd", culture)</span>
+                    <span class="tm-scheduler-agenda-date-weekday">@group.Key.ToString("dddd", culture)</span>
+                    <span class="tm-scheduler-agenda-date-month">@group.Key.ToString("MMMM yyyy", culture)</span>
+                </div>
+                <div class="tm-scheduler-agenda-events">
+                    @foreach (var evt in group.Value)
+                    {
+                        var e = evt;
+                        <div class="tm-scheduler-agenda-event @e.CssClass"
+                             @onclick="@(() => OnEventClick.InvokeAsync(e))">
+                            <span class="tm-scheduler-agenda-event-dot"
+                                  style="@(e.Color is not null ? $"background-color: {e.Color};" : "")"></span>
+                            <span class="tm-scheduler-agenda-event-time">
+                                @if (e.AllDay)
+                                {
+                                    @Loc["TmScheduler_AllDay"]
+                                }
+                                else
+                                {
+                                    @e.Start.ToString("HH:mm")@(" – ")@e.End.ToString("HH:mm")
+                                }
+                            </span>
+                            <span class="tm-scheduler-agenda-event-title">@e.Title</span>
+                            @if (!string.IsNullOrEmpty(e.Description))
+                            {
+                                <span class="tm-scheduler-agenda-event-desc">@e.Description</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<KeyValuePair<DateOnly, List<TmScheduleEvent>>> _groupedEvents = [];
+
+    /// <summary>Currently displayed start date.</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>Number of days to show in agenda.</summary>
+    [Parameter] public int AgendaDays { get; set; } = 30;
+
+    /// <summary>Events to display.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        BuildGroupedEvents();
+    }
+
+    private void BuildGroupedEvents()
+    {
+        _groupedEvents.Clear();
+        if (Events is null || Events.Count == 0) return;
+
+        var rangeStart = CurrentDate.Date;
+        var rangeEnd = rangeStart.AddDays(AgendaDays);
+
+        var eventsInRange = Events
+            .Where(e => e.Start < rangeEnd && e.End > rangeStart)
+            .OrderBy(e => e.Start)
+            .ToList();
+
+        var grouped = new SortedDictionary<DateOnly, List<TmScheduleEvent>>();
+
+        foreach (var evt in eventsInRange)
+        {
+            var date = DateOnly.FromDateTime(evt.Start);
+            if (date < DateOnly.FromDateTime(rangeStart))
+                date = DateOnly.FromDateTime(rangeStart);
+
+            if (!grouped.TryGetValue(date, out var list))
+            {
+                list = [];
+                grouped[date] = list;
+            }
+            list.Add(evt);
+        }
+
+        _groupedEvents = grouped.ToList();
+    }
+}

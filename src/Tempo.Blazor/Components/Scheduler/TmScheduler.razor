@@ -1,0 +1,222 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+
+<div class="tm-scheduler @Class">
+    <TmSchedulerToolbar View="@View"
+                        CurrentDate="@CurrentDate"
+                        OnViewChange="@HandleViewChange"
+                        OnPrev="@NavigatePrev"
+                        OnNext="@NavigateNext"
+                        OnToday="@NavigateToday" />
+
+    <div class="tm-scheduler-body">
+        @switch (View)
+        {
+            case TmScheduleViewType.Month:
+                <TmSchedulerMonthView CurrentDate="@CurrentDate"
+                                      Events="@_loadedEvents"
+                                      MaxVisibleEvents="3"
+                                      ReadOnly="@ReadOnly"
+                                      OnSlotClick="@OnSlotClick"
+                                      OnEventClick="@OnEventClick"
+                                      OnEventChanged="@OnEventChanged" />
+                break;
+
+            case TmScheduleViewType.Day:
+                <TmSchedulerDayView CurrentDate="@CurrentDate"
+                                    Events="@_loadedEvents"
+                                    Resources="@Resources"
+                                    SlotDuration="@SlotDuration"
+                                    ReadOnly="@ReadOnly"
+                                    OnSlotClick="@OnSlotClick"
+                                    OnEventClick="@OnEventClick"
+                                    OnEventChanged="@OnEventChanged"
+                                    EventTemplate="@EventTemplate" />
+                break;
+
+            case TmScheduleViewType.Week:
+                <TmSchedulerWeekView CurrentDate="@CurrentDate"
+                                     Events="@_loadedEvents"
+                                     Resources="@Resources"
+                                     FirstDayOfWeek="@FirstDayOfWeek"
+                                     SlotDuration="@SlotDuration"
+                                     ReadOnly="@ReadOnly"
+                                     OnSlotClick="@OnSlotClick"
+                                     OnEventClick="@OnEventClick"
+                                     OnEventChanged="@OnEventChanged"
+                                     EventTemplate="@EventTemplate" />
+                break;
+
+            case TmScheduleViewType.Agenda:
+                <TmSchedulerAgendaView CurrentDate="@CurrentDate"
+                                       Events="@_loadedEvents"
+                                       OnEventClick="@OnEventClick" />
+                break;
+
+            case TmScheduleViewType.Timeline:
+                <TmSchedulerTimelineView CurrentDate="@CurrentDate"
+                                         Events="@_loadedEvents"
+                                         Resources="@Resources"
+                                         SlotDuration="@SlotDuration"
+                                         ReadOnly="@ReadOnly"
+                                         OnSlotClick="@OnSlotClick"
+                                         OnEventClick="@OnEventClick"
+                                         OnEventChanged="@OnEventChanged" />
+                break;
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<TmScheduleEvent> _loadedEvents = [];
+
+    /// <summary>Client-side event list. Alternative to DataProvider.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Server-side data provider. Takes priority over Events if both are set.</summary>
+    [Parameter] public IScheduleDataProvider? DataProvider { get; set; }
+
+    /// <summary>Active view type.</summary>
+    [Parameter] public TmScheduleViewType View { get; set; } = TmScheduleViewType.Month;
+
+    /// <summary>Fires when the view type changes.</summary>
+    [Parameter] public EventCallback<TmScheduleViewType> ViewChanged { get; set; }
+
+    /// <summary>Currently displayed date (determines visible range).</summary>
+    [Parameter] public DateTime CurrentDate { get; set; } = DateTime.Today;
+
+    /// <summary>Fires when navigation changes the date.</summary>
+    [Parameter] public EventCallback<DateTime> CurrentDateChanged { get; set; }
+
+    /// <summary>Currently selected date.</summary>
+    [Parameter] public DateTime? SelectedDate { get; set; }
+
+    /// <summary>Fires when a date is selected.</summary>
+    [Parameter] public EventCallback<DateTime?> SelectedDateChanged { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>Fires when an empty time slot is clicked.</summary>
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
+
+    /// <summary>Fires after an event is moved or resized via drag & drop.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Resources for grouping (timeline/resource views).</summary>
+    [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
+
+    /// <summary>First day of week (0=Sun, 1=Mon). Default: 1 (Monday).</summary>
+    [Parameter] public int FirstDayOfWeek { get; set; } = 1;
+
+    /// <summary>Work day start time.</summary>
+    [Parameter] public TimeOnly WorkDayStart { get; set; } = new(8, 0);
+
+    /// <summary>Work day end time.</summary>
+    [Parameter] public TimeOnly WorkDayEnd { get; set; } = new(17, 0);
+
+    /// <summary>Slot duration in minutes for day/week views.</summary>
+    [Parameter] public int SlotDuration { get; set; } = 30;
+
+    /// <summary>Whether events are read-only (no drag/resize).</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Custom event template.</summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadEventsAsync();
+    }
+
+    private async Task LoadEventsAsync()
+    {
+        var (rangeStart, rangeEnd) = GetVisibleRange();
+
+        if (DataProvider is not null)
+        {
+            _loadedEvents = await DataProvider.GetEventsAsync(new TmScheduleQuery(rangeStart, rangeEnd));
+        }
+        else if (Events is not null)
+        {
+            _loadedEvents = Events
+                .Where(e => e.Start < rangeEnd && e.End > rangeStart)
+                .ToList();
+        }
+        else
+        {
+            _loadedEvents = [];
+        }
+    }
+
+    private (DateTime Start, DateTime End) GetVisibleRange()
+    {
+        return View switch
+        {
+            TmScheduleViewType.Day => (CurrentDate.Date, CurrentDate.Date.AddDays(1)),
+            TmScheduleViewType.Week => GetWeekRange(),
+            TmScheduleViewType.Month => GetMonthRange(),
+            TmScheduleViewType.Agenda => (CurrentDate.Date, CurrentDate.Date.AddDays(30)),
+            TmScheduleViewType.Timeline => GetWeekRange(),
+            _ => (CurrentDate.Date, CurrentDate.Date.AddDays(1))
+        };
+    }
+
+    private (DateTime, DateTime) GetWeekRange()
+    {
+        var offset = ((int)CurrentDate.DayOfWeek + 6) % 7;
+        var weekStart = CurrentDate.Date.AddDays(-offset);
+        return (weekStart, weekStart.AddDays(7));
+    }
+
+    private (DateTime, DateTime) GetMonthRange()
+    {
+        var first = new DateTime(CurrentDate.Year, CurrentDate.Month, 1);
+        var last = first.AddMonths(1);
+        // Include adjacent month days visible in the grid
+        var gridStart = first.AddDays(-((int)first.DayOfWeek + 6) % 7);
+        return (gridStart, last.AddDays(7));
+    }
+
+    private async Task HandleViewChange(TmScheduleViewType newView)
+    {
+        await ViewChanged.InvokeAsync(newView);
+    }
+
+    private async Task NavigatePrev()
+    {
+        var newDate = View switch
+        {
+            TmScheduleViewType.Day => CurrentDate.AddDays(-1),
+            TmScheduleViewType.Week => CurrentDate.AddDays(-7),
+            TmScheduleViewType.Month => CurrentDate.AddMonths(-1),
+            TmScheduleViewType.Agenda => CurrentDate.AddMonths(-1),
+            TmScheduleViewType.Timeline => CurrentDate.AddDays(-7),
+            _ => CurrentDate.AddMonths(-1)
+        };
+        await CurrentDateChanged.InvokeAsync(newDate);
+    }
+
+    private async Task NavigateNext()
+    {
+        var newDate = View switch
+        {
+            TmScheduleViewType.Day => CurrentDate.AddDays(1),
+            TmScheduleViewType.Week => CurrentDate.AddDays(7),
+            TmScheduleViewType.Month => CurrentDate.AddMonths(1),
+            TmScheduleViewType.Agenda => CurrentDate.AddMonths(1),
+            TmScheduleViewType.Timeline => CurrentDate.AddDays(7),
+            _ => CurrentDate.AddMonths(1)
+        };
+        await CurrentDateChanged.InvokeAsync(newDate);
+    }
+
+    private async Task NavigateToday()
+    {
+        await CurrentDateChanged.InvokeAsync(DateTime.Today);
+    }
+}

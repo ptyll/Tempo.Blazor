@@ -134,3 +134,12 @@
 @import "components/_import-preview.css";
 @import "components/_export-options.css";
 @import "components/_import-wizard.css";
+
+/* 17. Scheduler */
+@import "components/_scheduler.css";
+@import "components/_scheduler-month.css";
+@import "components/_scheduler-agenda.css";
+@import "components/_scheduler-timegrid.css";
+@import "components/_scheduler-day.css";
+@import "components/_scheduler-week.css";
+@import "components/_scheduler-timeline.css";

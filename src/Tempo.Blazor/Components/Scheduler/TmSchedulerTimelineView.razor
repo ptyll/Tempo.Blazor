@@ -1,0 +1,134 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+@using System.Globalization
+
+<div class="tm-scheduler-timeline">
+    @* Header: time columns *@
+    <div class="tm-scheduler-timeline-header">
+        <div class="tm-scheduler-timeline-resource-header"></div>
+        @for (var hour = 0; hour < 24; hour++)
+        {
+            var h = hour;
+            <div class="tm-scheduler-timeline-time-header">@h.ToString("D2"):00</div>
+        }
+    </div>
+
+    @* Resource rows *@
+    @foreach (var resource in _resources)
+    {
+        var r = resource;
+        var rowEvents = GetEventsForResource(r.Id);
+
+        <div class="tm-scheduler-timeline-row" data-resource="@r.Id">
+            <div class="tm-scheduler-timeline-resource-label"
+                 style="@(r.Color is not null ? $"border-left-color: {r.Color};" : "")">
+                @r.Name
+            </div>
+            <div class="tm-scheduler-timeline-row-body">
+                @* Slots *@
+                @for (var slotIndex = 0; slotIndex < _slotsPerDay; slotIndex++)
+                {
+                    var si = slotIndex;
+                    var slotStart = CurrentDate.Date.AddMinutes(si * SlotDuration);
+                    var slotEnd = slotStart.AddMinutes(SlotDuration);
+                    <div class="tm-scheduler-timeline-slot"
+                         style="left: @F(GetMinuteLeftPercent(si * SlotDuration))%; width: @F(GetSlotWidthPercent())%;"
+                         @onclick="@(() => OnSlotClick.InvokeAsync((slotStart, slotEnd)))"></div>
+                }
+
+                @* Events *@
+                @foreach (var evt in rowEvents)
+                {
+                    var e = evt;
+                    var leftPct = GetMinuteLeftPercent(GetEventStartMinutes(e));
+                    var widthPct = GetEventWidthPercent(e);
+
+                    <div class="tm-scheduler-timeline-event @e.CssClass"
+                         style="left: @F(leftPct)%; width: @F(widthPct)%; --event-color: @(e.Color ?? r.Color ?? "var(--tm-color-primary, #3b82f6)");"
+                         title="@e.Title"
+                         @onclick="@(() => OnEventClick.InvokeAsync(e))"
+                         @onclick:stopPropagation="true">
+                        <span class="tm-scheduler-timeline-event-title">@e.Title</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int _slotsPerDay;
+    private List<TmScheduleResource> _resources = [];
+    private Dictionary<string, List<TmScheduleEvent>> _resourceEventMap = new();
+
+    /// <summary>Currently displayed date.</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>Resources to display as rows.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
+
+    /// <summary>Events to display.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Duration of each time slot in minutes.</summary>
+    [Parameter] public int SlotDuration { get; set; } = 30;
+
+    /// <summary>Fires when a time slot is clicked.</summary>
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>Whether events are read-only.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Fires when an event changes.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _slotsPerDay = 24 * 60 / Math.Max(1, SlotDuration);
+        _resources = Resources?.ToList() ?? [new TmScheduleResource { Id = "_default", Name = "" }];
+        BuildResourceEventMap();
+    }
+
+    private void BuildResourceEventMap()
+    {
+        _resourceEventMap.Clear();
+        if (Events is null) return;
+
+        foreach (var evt in Events)
+        {
+            var resourceId = evt.ResourceId ?? "_default";
+            if (!_resourceEventMap.TryGetValue(resourceId, out var list))
+            {
+                list = [];
+                _resourceEventMap[resourceId] = list;
+            }
+            list.Add(evt);
+        }
+    }
+
+    private List<TmScheduleEvent> GetEventsForResource(string resourceId)
+        => _resourceEventMap.TryGetValue(resourceId, out var list) ? list : [];
+
+    private static double GetMinuteLeftPercent(int minutes) => minutes / (24.0 * 60) * 100;
+    private double GetSlotWidthPercent() => SlotDuration / (24.0 * 60) * 100;
+
+    private int GetEventStartMinutes(TmScheduleEvent evt)
+    {
+        var dayStart = CurrentDate.Date;
+        var minutes = (int)(evt.Start - dayStart).TotalMinutes;
+        return Math.Max(0, Math.Min(minutes, 24 * 60));
+    }
+
+    private double GetEventWidthPercent(TmScheduleEvent evt)
+    {
+        var startMin = GetEventStartMinutes(evt);
+        var endMin = (int)(evt.End - CurrentDate.Date).TotalMinutes;
+        endMin = Math.Max(startMin + 1, Math.Min(endMin, 24 * 60));
+        return (endMin - startMin) / (24.0 * 60) * 100;
+    }
+
+    private static string F(double value) => value.ToString("F4", CultureInfo.InvariantCulture);
+}

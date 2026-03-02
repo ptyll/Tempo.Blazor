@@ -1,0 +1,114 @@
+/* ═══════════════ TmSchedulerTimelineView ═══════════════ */
+.tm-scheduler-timeline {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-sm, 0.25rem);
+    overflow-x: auto;
+}
+
+/* ── Header ── */
+.tm-scheduler-timeline-header {
+    display: flex;
+    border-bottom: 2px solid var(--tm-border-color, #e2e8f0);
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.tm-scheduler-timeline-resource-header {
+    flex-shrink: 0;
+    width: 8rem;
+    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+}
+
+.tm-scheduler-timeline-time-header {
+    flex: 1;
+    min-width: 3rem;
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-1, 0.25rem);
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-text-tertiary, #94a3b8);
+    text-align: center;
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timeline-time-header:last-child {
+    border-right: none;
+}
+
+/* ── Resource row ── */
+.tm-scheduler-timeline-row {
+    display: flex;
+    min-height: 3rem;
+    border-bottom: 1px solid var(--tm-border-color-light, #f1f5f9);
+}
+
+.tm-scheduler-timeline-row:last-child {
+    border-bottom: none;
+}
+
+.tm-scheduler-timeline-resource-label {
+    flex-shrink: 0;
+    width: 8rem;
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-text-primary, #0f172a);
+    border-right: 1px solid var(--tm-border-color, #e2e8f0);
+    border-left: 3px solid var(--tm-color-primary, #3b82f6);
+    display: flex;
+    align-items: center;
+    background: var(--tm-bg-surface-secondary, #f8fafc);
+}
+
+/* ── Row body (horizontal timeline) ── */
+.tm-scheduler-timeline-row-body {
+    flex: 1;
+    position: relative;
+    min-height: 3rem;
+}
+
+/* ── Slot ── */
+.tm-scheduler-timeline-slot {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    cursor: pointer;
+    border-right: 1px solid var(--tm-border-color-light, #f1f5f9);
+    transition: background-color 0.1s ease;
+}
+
+.tm-scheduler-timeline-slot:hover {
+    background: var(--tm-bg-hover, rgba(241, 245, 249, 0.5));
+}
+
+/* ── Event ── */
+.tm-scheduler-timeline-event {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    border-radius: var(--tm-radius-xs, 0.125rem);
+    padding: 0 var(--tm-space-2, 0.5rem);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 1;
+    background: var(--event-color, var(--tm-color-primary, #3b82f6));
+    color: #fff;
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    transition: filter 0.1s ease;
+}
+
+.tm-scheduler-timeline-event:hover {
+    filter: brightness(0.9);
+    z-index: 2;
+}
+
+.tm-scheduler-timeline-event-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -1,0 +1,144 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+@using Tempo.Blazor.Components.Pickers
+@using System.Globalization
+
+<div class="tm-scheduler-month">
+    <div class="tm-scheduler-month-grid">
+        @foreach (var header in _dayHeaders)
+        {
+            <div class="tm-scheduler-month-day-header">@header</div>
+        }
+        @foreach (var day in _days)
+        {
+            var d = day;
+            var isOther = d.Month != CurrentDate.Month;
+            var isToday = d == DateOnly.FromDateTime(DateTime.Today);
+            var css = "tm-scheduler-month-day"
+                + (isOther ? " tm-scheduler-month-day--other" : "")
+                + (isToday ? " tm-scheduler-month-day--today" : "");
+
+            <div class="@css"
+                 @onclick="@(() => HandleDayClick(d))"
+                 @ondragover:preventDefault="true"
+                 @ondrop="@(() => HandleDrop(d))">
+                <span class="tm-scheduler-month-day-number">@d.Day</span>
+                @if (!isOther)
+                {
+                    var dayEvents = GetEventsForDate(d);
+                    var visible = dayEvents.Take(MaxVisibleEvents).ToList();
+                    var remaining = dayEvents.Count - visible.Count;
+
+                    @foreach (var evt in visible)
+                    {
+                        var e = evt;
+                        <div class="tm-scheduler-month-event @(e.AllDay ? "tm-scheduler-month-event--allday" : "") @e.CssClass"
+                             style="@(e.Color is not null ? $"--event-color: {e.Color};" : "")"
+                             title="@e.Title"
+                             draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
+                             @ondragstart="@(() => HandleDragStart(e))"
+                             @onclick="@(() => HandleEventClick(e))"
+                             @onclick:stopPropagation="true">
+                            @if (!e.AllDay)
+                            {
+                                <span class="tm-scheduler-month-event-time">@e.Start.ToString("HH:mm")</span>
+                            }
+                            <span class="tm-scheduler-month-event-title">@e.Title</span>
+                        </div>
+                    }
+
+                    @if (remaining > 0)
+                    {
+                        <div class="tm-scheduler-month-more">@string.Format(Loc["TmScheduler_More"], remaining)</div>
+                    }
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<DateOnly> _days = [];
+    private IReadOnlyList<string> _dayHeaders = [];
+    private Dictionary<DateOnly, List<TmScheduleEvent>> _eventMap = new();
+    private TmScheduleEvent? _draggedEvent;
+
+    /// <summary>Currently displayed date (determines which month to show).</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>Events to display.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Max events visible per day cell before showing "+N more".</summary>
+    [Parameter] public int MaxVisibleEvents { get; set; } = 3;
+
+    /// <summary>Whether drag/drop is disabled.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Fires when a day cell is clicked.</summary>
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>Fires when an event is moved via drag & drop.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        _days = DateTimeHelpers.GetCalendarDays(CurrentDate.Year, CurrentDate.Month);
+        _dayHeaders = DateTimeHelpers.GetDayHeaders(culture);
+        BuildEventMap();
+    }
+
+    private void BuildEventMap()
+    {
+        _eventMap.Clear();
+        if (Events is null) return;
+
+        foreach (var evt in Events)
+        {
+            var startDate = DateOnly.FromDateTime(evt.Start);
+            var endDate = DateOnly.FromDateTime(evt.AllDay ? evt.End.AddDays(-1) : evt.End);
+            if (endDate < startDate) endDate = startDate;
+
+            for (var d = startDate; d <= endDate; d = d.AddDays(1))
+            {
+                if (!_eventMap.TryGetValue(d, out var list))
+                {
+                    list = [];
+                    _eventMap[d] = list;
+                }
+                list.Add(evt);
+            }
+        }
+    }
+
+    private List<TmScheduleEvent> GetEventsForDate(DateOnly date)
+        => _eventMap.TryGetValue(date, out var list) ? list : [];
+
+    private Task HandleDayClick(DateOnly date)
+    {
+        var start = date.ToDateTime(TimeOnly.MinValue);
+        var end = date.ToDateTime(new TimeOnly(23, 59, 59));
+        return OnSlotClick.InvokeAsync((start, end));
+    }
+
+    private Task HandleEventClick(TmScheduleEvent evt) => OnEventClick.InvokeAsync(evt);
+
+    private void HandleDragStart(TmScheduleEvent evt) => _draggedEvent = evt;
+
+    private async Task HandleDrop(DateOnly targetDate)
+    {
+        if (_draggedEvent is null || ReadOnly) return;
+
+        var duration = _draggedEvent.End - _draggedEvent.Start;
+        var newStart = targetDate.ToDateTime(TimeOnly.FromDateTime(_draggedEvent.Start));
+        _draggedEvent.Start = newStart;
+        _draggedEvent.End = newStart + duration;
+
+        await OnEventChanged.InvokeAsync(_draggedEvent);
+        _draggedEvent = null;
+    }
+}

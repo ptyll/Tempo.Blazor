@@ -1,0 +1,50 @@
+@namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Models
+
+<div class="tm-scheduler-day">
+    <TmSchedulerTimeGrid Dates="@_dates"
+                         Events="@Events"
+                         Resources="@Resources"
+                         SlotDuration="@SlotDuration"
+                         ReadOnly="@ReadOnly"
+                         OnSlotClick="@OnSlotClick"
+                         OnEventClick="@OnEventClick"
+                         OnEventChanged="@OnEventChanged"
+                         EventTemplate="@EventTemplate" />
+</div>
+
+@code {
+    private List<DateOnly> _dates = [];
+
+    /// <summary>Currently displayed date.</summary>
+    [Parameter] public DateTime CurrentDate { get; set; }
+
+    /// <summary>Events to display.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleEvent>? Events { get; set; }
+
+    /// <summary>Duration of each time slot in minutes.</summary>
+    [Parameter] public int SlotDuration { get; set; } = 30;
+
+    /// <summary>Fires when a time slot is clicked.</summary>
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnSlotClick { get; set; }
+
+    /// <summary>Fires when an event is clicked.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventClick { get; set; }
+
+    /// <summary>Whether events are read-only.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Fires when an event is moved or resized.</summary>
+    [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Resources for grouping columns.</summary>
+    [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }
+
+    /// <summary>Optional custom event template.</summary>
+    [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        _dates = [DateOnly.FromDateTime(CurrentDate)];
+    }
+}

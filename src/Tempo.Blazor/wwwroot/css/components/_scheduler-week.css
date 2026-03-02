@@ -1,0 +1,4 @@
+/* ═══════════════ TmSchedulerWeekView ═══════════════ */
+.tm-scheduler-week {
+    padding: var(--tm-space-2, 0.5rem);
+}
