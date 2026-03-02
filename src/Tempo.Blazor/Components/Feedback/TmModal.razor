@@ -5,7 +5,7 @@
 @if (Show)
 {
     <div class="tm-modal-overlay @GetOverlayClasses()"
-         @onclick="OnClose"
+         @onclick="HandleOverlayClick"
          @ref="_overlayElement">
         
         <div class="tm-modal-container @GetContainerClasses()" @onclick:stopPropagation>
@@ -148,6 +148,14 @@
     
     
     
+    private async Task HandleOverlayClick()
+    {
+        if (CloseOnOverlayClick)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
     private void HandleKeyUp(KeyboardEventArgs e)
     {
         if (CloseOnEscape && e.Key == "Escape")
