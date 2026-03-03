@@ -8,6 +8,7 @@
             <button class="tm-activity-tab @ActiveClass(ActivityTab.Timeline)"
                     type="button"
                     role="tab"
+                    id="tm-activity-tab-timeline"
                     aria-selected="@(_activeTab == ActivityTab.Timeline)"
                     @onclick="() => _activeTab = ActivityTab.Timeline">
                 @Loc["TmActivityLog_TimelineTab"]
@@ -18,6 +19,7 @@
             <button class="tm-activity-tab @ActiveClass(ActivityTab.Comments)"
                     type="button"
                     role="tab"
+                    id="tm-activity-tab-comments"
                     aria-selected="@(_activeTab == ActivityTab.Comments)"
                     @onclick="() => _activeTab = ActivityTab.Comments">
                 @Loc["TmActivityLog_CommentsTab"]
@@ -32,6 +34,7 @@
             <button class="tm-activity-tab @ActiveClass(ActivityTab.Attachments)"
                     type="button"
                     role="tab"
+                    id="tm-activity-tab-attachments"
                     aria-selected="@(_activeTab == ActivityTab.Attachments)"
                     @onclick="() => _activeTab = ActivityTab.Attachments">
                 @Loc["TmActivityLog_AttachmentsTab"]
@@ -43,7 +46,7 @@
         }
     </div>
 
-    <div class="tm-activity-content" role="tabpanel">
+    <div class="tm-activity-content" role="tabpanel" aria-labelledby="@GetActiveTabId()">
         @switch (_activeTab)
         {
             case ActivityTab.Timeline:
@@ -103,4 +106,12 @@
 
     private string ActiveClass(ActivityTab tab) =>
         _activeTab == tab ? "tm-activity-tab-active" : string.Empty;
+
+    private string GetActiveTabId() => _activeTab switch
+    {
+        ActivityTab.Timeline => "tm-activity-tab-timeline",
+        ActivityTab.Comments => "tm-activity-tab-comments",
+        ActivityTab.Attachments => "tm-activity-tab-attachments",
+        _ => "tm-activity-tab-timeline"
+    };
 }

@@ -3,12 +3,12 @@
 
 <div class="tm-calendar" role="grid">
     <div class="tm-cal-nav" role="row">
-        <button class="tm-cal-nav-btn"
+        <button class="tm-cal-nav-btn tm-cal-prev"
                 type="button"
                 aria-label="@Loc["TmDatePicker_PreviousMonth"]"
                 @onclick="PrevMonth">&#8249;</button>
         <span class="tm-cal-title" aria-live="polite">@_monthName @DisplayYear</span>
-        <button class="tm-cal-nav-btn"
+        <button class="tm-cal-nav-btn tm-cal-next"
                 type="button"
                 aria-label="@Loc["TmDatePicker_NextMonth"]"
                 @onclick="NextMonth">&#8250;</button>

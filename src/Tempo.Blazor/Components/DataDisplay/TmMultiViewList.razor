@@ -108,10 +108,10 @@
                 <table class="tm-mvl-table">
                     <thead>
                         <tr>
-                            @if (_visibleColumns.Contains("Title")) { <th>@Loc["TmMvl_ColTitle"]</th> }
-                            @if (_visibleColumns.Contains("SubTitle")) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
-                            @if (_visibleColumns.Contains("Status")) { <th>@Loc["TmMvl_ColStatus"]</th> }
-                            @if (_visibleColumns.Contains("Date")) { <th>@Loc["TmMvl_ColDate"]</th> }
+                            @if (_visibleColumns.Contains(ColumnKeys.Title)) { <th>@Loc["TmMvl_ColTitle"]</th> }
+                            @if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <th>@Loc["TmMvl_ColSubTitle"]</th> }
+                            @if (_visibleColumns.Contains(ColumnKeys.Status)) { <th>@Loc["TmMvl_ColStatus"]</th> }
+                            @if (_visibleColumns.Contains(ColumnKeys.Date)) { <th>@Loc["TmMvl_ColDate"]</th> }
                         </tr>
                     </thead>
                     <tbody>
@@ -334,12 +334,22 @@
     /// <summary>Current tenant ID for tenant view scoping.</summary>
     [Parameter] public string? CurrentTenantId { get; set; }
 
+    // ── Column key constants ─────────────────────────────────────
+    private static class ColumnKeys
+    {
+        public const string Title = "Title";
+        public const string SubTitle = "SubTitle";
+        public const string Status = "Status";
+        public const string Date = "Date";
+        public const string Avatar = "Avatar";
+    }
+
     // ── State ─────────────────────────────────────────────────────
     private ListViewMode _viewMode = ListViewMode.Table;
     private string _searchText = string.Empty;
     private List<ActiveFilter> _externalFilters = [];
     private string? _activeViewId;
-    private HashSet<string> _visibleColumns = ["Title", "SubTitle", "Status", "Date"];
+    private HashSet<string> _visibleColumns = [ColumnKeys.Title, ColumnKeys.SubTitle, ColumnKeys.Status, ColumnKeys.Date];
 
     // ── Server-side state ─────────────────────────────────────────
     private List<TItem> _serverItems = [];
@@ -503,10 +513,6 @@
             _currentPage = 1;
             await LoadFromProviderAsync();
         }
-        else
-        {
-            StateHasChanged();
-        }
     }
 
     private async Task OnExternalFiltersChanged(IEnumerable<ActiveFilter> filters)
@@ -517,13 +523,9 @@
             _currentPage = 1;
             await LoadFromProviderAsync();
         }
-        else
-        {
-            StateHasChanged();
-        }
     }
 
-    private async Task ApplyViewAsync(DataTableView view)
+    private Task ApplyViewAsync(DataTableView view)
     {
         _activeViewId = view.Id;
 
@@ -555,13 +557,12 @@
             _groupedData = null;
         }
 
-        StateHasChanged();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     private DataTableView GetCurrentView() => new()
     {
-        Name = "Current",
+        Name = Loc["TmMvl_CurrentViewName"],
         VisibleColumns = _visibleColumns.ToList(),
         Filters = _externalFilters.Select(f => new FilterConfig
         {
@@ -573,22 +574,14 @@
 
     private List<ViewColumnInfo> GetAvailableColumns() =>
     [
-        new ViewColumnInfo { Key = "Title", Title = "Title", Visible = _visibleColumns.Contains("Title") },
-        new ViewColumnInfo { Key = "SubTitle", Title = "Sub Title", Visible = _visibleColumns.Contains("SubTitle") },
-        new ViewColumnInfo { Key = "Status", Title = "Status", Visible = _visibleColumns.Contains("Status") },
-        new ViewColumnInfo { Key = "Date", Title = "Date", Visible = _visibleColumns.Contains("Date") },
-        new ViewColumnInfo { Key = "Avatar", Title = "Avatar", Visible = _visibleColumns.Contains("Avatar") }
+        new ViewColumnInfo { Key = ColumnKeys.Title, Title = Loc["TmMvl_ColTitle"], Visible = _visibleColumns.Contains(ColumnKeys.Title) },
+        new ViewColumnInfo { Key = ColumnKeys.SubTitle, Title = Loc["TmMvl_ColSubTitle"], Visible = _visibleColumns.Contains(ColumnKeys.SubTitle) },
+        new ViewColumnInfo { Key = ColumnKeys.Status, Title = Loc["TmMvl_ColStatus"], Visible = _visibleColumns.Contains(ColumnKeys.Status) },
+        new ViewColumnInfo { Key = ColumnKeys.Date, Title = Loc["TmMvl_ColDate"], Visible = _visibleColumns.Contains(ColumnKeys.Date) },
+        new ViewColumnInfo { Key = ColumnKeys.Avatar, Title = Loc["TmMvl_ColAvatar"], Visible = _visibleColumns.Contains(ColumnKeys.Avatar) }
     ];
 
-    private static FilterOperator ParseFilterOperator(string? op) => op?.ToLowerInvariant() switch
-    {
-        "contains" => FilterOperator.Contains,
-        "equals" => FilterOperator.Equals,
-        "notequals" => FilterOperator.NotEquals,
-        "greaterthan" => FilterOperator.GreaterThan,
-        "lessthan" => FilterOperator.LessThan,
-        _ => FilterOperator.Contains
-    };
+    private static FilterOperator ParseFilterOperator(string? op) => Helpers.FilterOperatorParser.Parse(op);
 
     // ── Grouping ─────────────────────────────────────────────────
 
@@ -612,7 +605,6 @@
         _expandedGroups.Clear();
         RefreshGroupedData();
         _ = OnGroupingChanged.InvokeAsync(_activeGroupFields.ToList());
-        StateHasChanged();
     }
 
     private void RefreshGroupedData()
@@ -643,7 +635,6 @@
     {
         if (!_expandedGroups.Remove(groupKey))
             _expandedGroups.Add(groupKey);
-        StateHasChanged();
     }
 
     private bool IsGroupExpanded(DataGroup<TItem> group)
@@ -698,18 +689,25 @@
         }
     };
 
+    private Task HandleItemKeyDownAsync(KeyboardEventArgs e, TItem item)
+    {
+        if (e.Key is "Enter" or " ")
+            return OnItemClick.InvokeAsync(item);
+        return Task.CompletedTask;
+    }
+
     private RenderFragment RenderTableDataRow(TItem item) => __builder =>
     {
-        <tr class="tm-mvl-row" @onclick="() => OnItemClick.InvokeAsync(item)">
+        <tr class="tm-mvl-row" tabindex="0" @onclick="() => OnItemClick.InvokeAsync(item)" @onkeydown="e => HandleItemKeyDownAsync(e, item)">
             @if (TableRowTemplate is not null)
             {
                 @TableRowTemplate(item)
             }
             else
             {
-                if (_visibleColumns.Contains("Title")) { <td>@GetTitle(item)</td> }
-                if (_visibleColumns.Contains("SubTitle")) { <td>@GetSubTitle(item)</td> }
-                if (_visibleColumns.Contains("Status"))
+                if (_visibleColumns.Contains(ColumnKeys.Title)) { <td>@GetTitle(item)</td> }
+                if (_visibleColumns.Contains(ColumnKeys.SubTitle)) { <td>@GetSubTitle(item)</td> }
+                if (_visibleColumns.Contains(ColumnKeys.Status))
                 {
                     <td>
                         @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
@@ -720,7 +718,7 @@
                         }
                     </td>
                 }
-                if (_visibleColumns.Contains("Date")) { <td>@GetDate(item)?.ToString("d")</td> }
+                if (_visibleColumns.Contains(ColumnKeys.Date)) { <td>@GetDate(item)?.ToString("d")</td> }
             }
         </tr>
     };
@@ -772,7 +770,7 @@
 
     private RenderFragment RenderCardItem(TItem item) => __builder =>
     {
-        <div class="tm-mvl-card" @onclick="() => OnItemClick.InvokeAsync(item)">
+        <div class="tm-mvl-card" role="button" tabindex="0" @onclick="() => OnItemClick.InvokeAsync(item)" @onkeydown="e => HandleItemKeyDownAsync(e, item)">
             @if (CardTemplate is not null)
             {
                 @CardTemplate(item)
@@ -802,7 +800,7 @@
 
     private RenderFragment RenderListItem(TItem item) => __builder =>
     {
-        <li class="tm-mvl-list-item" @onclick="() => OnItemClick.InvokeAsync(item)">
+        <li class="tm-mvl-list-item" tabindex="0" @onclick="() => OnItemClick.InvokeAsync(item)" @onkeydown="e => HandleItemKeyDownAsync(e, item)">
             @if (ListItemTemplate is not null)
             {
                 @ListItemTemplate(item)

@@ -109,7 +109,7 @@ public class TmViewManagerTests : LocalizationTestBase
         cut.Find("input[type=text]").Change("My View");
         
         // Save the view
-        cut.FindAll(".tm-view-modal-footer button")[1].Click(); // Second button is Save
+        cut.Find(".tm-view-modal-footer .tm-btn-primary").Click();
 
         await cut.InvokeAsync(() => { });
 
@@ -142,5 +142,124 @@ public class TmViewManagerTests : LocalizationTestBase
             Arg.Is<string>(ctx => ctx == TestViewContext),
             Arg.Is<string>(id => id == "v1" || id == "v2"),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ViewManager_TenantOption_HiddenWhenCanCreateTenantViewsFalse()
+    {
+        var provider = BuildProvider();
+        var cut = RenderComponent<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId)
+            .Add(c => c.CanCreateTenantViews, false)
+            .Add(c => c.AvailableColumns,
+                new List<ViewColumnInfo> { new() { Key = "col1", Title = "Column 1", Visible = true } }));
+
+        await cut.InvokeAsync(() => { });
+
+        // Open the dropdown panel
+        cut.Find(".tm-view-manager-toggle").Click();
+
+        // Click the "Create New View" button inside the panel to open the modal
+        cut.Find(".tm-btn-primary").Click();
+
+        // The modal should now be open; verify there is NO radio input with value="Tenant"
+        var tenantRadios = cut.FindAll("input[type=radio][value=Tenant]");
+        tenantRadios.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ViewManager_TenantOption_ShownWhenCanCreateTenantViewsTrue()
+    {
+        var provider = BuildProvider();
+        var cut = RenderComponent<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId)
+            .Add(c => c.CanCreateTenantViews, true)
+            .Add(c => c.AvailableColumns,
+                new List<ViewColumnInfo> { new() { Key = "col1", Title = "Column 1", Visible = true } }));
+
+        await cut.InvokeAsync(() => { });
+
+        // Open the dropdown panel
+        cut.Find(".tm-view-manager-toggle").Click();
+
+        // Click the "Create New View" button inside the panel to open the modal
+        cut.Find(".tm-btn-primary").Click();
+
+        // The modal should now be open; verify the Tenant radio input IS present
+        var tenantRadios = cut.FindAll("input[type=radio][value=Tenant]");
+        tenantRadios.Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ViewManager_SaveView_WhenProviderThrows_ShowsError()
+    {
+        var provider = BuildProvider();
+
+        // Override SaveViewAsync to throw an exception
+        provider.SaveViewAsync(
+                Arg.Any<string>(), Arg.Any<DataTableView>(),
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<DataTableView>(_ => throw new InvalidOperationException("Save failed"));
+
+        var cut = RenderComponent<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId)
+            .Add(c => c.AvailableColumns,
+                new List<ViewColumnInfo> { new() { Key = "col1", Title = "Column 1", Visible = true } }));
+
+        await cut.InvokeAsync(() => { });
+
+        // Open dropdown panel
+        cut.Find(".tm-view-manager-toggle").Click();
+
+        // Click "Create New View" button inside the panel
+        cut.Find(".tm-btn-primary").Click();
+
+        // Fill in the view name
+        cut.Find("input[type=text]").Change("Failing View");
+
+        // Click the Save button
+        cut.Find(".tm-view-modal-footer .tm-btn-primary").Click();
+        await cut.InvokeAsync(() => { });
+
+        // The error message element should be visible.
+        // Re-open dropdown to see the error rendered in the panel.
+        cut.Find(".tm-view-manager-toggle").Click();
+        var errorElements = cut.FindAll(".tm-view-error");
+        errorElements.Count.Should().BeGreaterThanOrEqualTo(1);
+    }
+
+    [Fact]
+    public async Task ViewManager_DeleteView_WhenProviderThrows_ShowsError()
+    {
+        var provider = BuildProvider();
+
+        // Override DeleteViewAsync to throw an exception
+        provider.DeleteViewAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(_ => throw new InvalidOperationException("Delete failed"));
+
+        var cut = RenderComponent<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId));
+
+        await cut.InvokeAsync(() => { });
+
+        // Open dropdown panel
+        cut.Find(".tm-view-manager-toggle").Click();
+
+        // Click the delete button on the first view
+        cut.FindAll(".tm-view-delete-btn")[0].Click();
+        await cut.InvokeAsync(() => { });
+
+        // The error element should now be visible in the panel
+        var errorElements = cut.FindAll(".tm-view-error");
+        errorElements.Count.Should().BeGreaterThanOrEqualTo(1);
     }
 }

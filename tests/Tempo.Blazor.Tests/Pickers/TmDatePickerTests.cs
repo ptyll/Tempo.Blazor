@@ -80,7 +80,7 @@ public class TmDatePickerTests : LocalizationTestBase
         cut.Find(".tm-date-picker-trigger").Click();
 
         var titleBefore = cut.Find(".tm-cal-title").TextContent;
-        cut.Find("[aria-label='Previous month']").Click();
+        cut.Find(".tm-cal-prev").Click();
         var titleAfter = cut.Find(".tm-cal-title").TextContent;
 
         titleAfter.Should().NotBe(titleBefore);
@@ -93,7 +93,7 @@ public class TmDatePickerTests : LocalizationTestBase
         cut.Find(".tm-date-picker-trigger").Click();
 
         var titleBefore = cut.Find(".tm-cal-title").TextContent;
-        cut.Find("[aria-label='Next month']").Click();
+        cut.Find(".tm-cal-next").Click();
         var titleAfter = cut.Find(".tm-cal-title").TextContent;
 
         titleAfter.Should().NotBe(titleBefore);

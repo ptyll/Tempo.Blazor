@@ -60,6 +60,7 @@ public partial class TmViewManager : ComponentBase
     private List<string> _selectedColumns = [];
     private List<string> _selectedGroupColumns = [];
     private List<ActiveFilter> _viewFilters = [];
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -72,11 +73,9 @@ public partial class TmViewManager : ComponentBase
         {
             _views = (await Provider.GetViewsAsync(ViewContext, CurrentTenantId, CurrentUserId)).ToList();
             _defaultView = await Provider.GetDefaultViewAsync(ViewContext, CurrentTenantId, CurrentUserId);
-            Console.WriteLine($"[TmViewManager] Loaded {_views.Count} views ({_views.Count(v => v.Scope == ViewScope.Personal)} personal, {_views.Count(v => v.Scope == ViewScope.Tenant)} tenant)");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.Error.WriteLine($"[TmViewManager] Failed to load views: {ex.Message}");
             _views = [];
         }
     }
@@ -105,9 +104,9 @@ public partial class TmViewManager : ComponentBase
         {
             await OnViewApplied.InvokeAsync(view);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.Error.WriteLine($"[TmViewManager] Failed to apply view: {ex.Message}");
+            // Silently ignore apply failures
         }
     }
 
@@ -119,11 +118,19 @@ public partial class TmViewManager : ComponentBase
 
         if (!canDelete) return;
 
-        if (view.Id != null)
+        try
         {
-            await Provider.DeleteViewAsync(ViewContext, view.Id);
+            _errorMessage = null;
+            if (view.Id != null)
+            {
+                await Provider.DeleteViewAsync(ViewContext, view.Id);
+            }
+            await LoadViewsAsync();
         }
-        await LoadViewsAsync();
+        catch
+        {
+            _errorMessage = Loc["TmViewManager_DeleteError"];
+        }
     }
 
     private void OpenCreateModal()
@@ -194,6 +201,19 @@ public partial class TmViewManager : ComponentBase
         if (string.IsNullOrWhiteSpace(_viewName)) return;
         if (!_selectedColumns.Any()) return;
 
+        try
+        {
+            _errorMessage = null;
+            await SaveViewCoreAsync();
+        }
+        catch
+        {
+            _errorMessage = Loc["TmViewManager_SaveError"];
+        }
+    }
+
+    private async Task SaveViewCoreAsync()
+    {
         var view = new DataTableView
         {
             Id = _editingView?.Id ?? Guid.NewGuid().ToString(),
@@ -236,7 +256,6 @@ public partial class TmViewManager : ComponentBase
         await LoadViewsAsync();
         StateHasChanged();
         CloseModal();
-        Console.WriteLine($"[TmViewManager] View saved: {view.Name} (ID: {view.Id}, Scope: {view.Scope})");
     }
 
     private async Task CreateViewFromCurrentAsync()
@@ -275,23 +294,7 @@ public partial class TmViewManager : ComponentBase
 
     private bool CanDeleteView(DataTableView view) => CanEditView(view);
 
-    private static FilterOperator ParseOperator(string? op) => op?.ToLowerInvariant() switch
-    {
-        "contains" => FilterOperator.Contains,
-        "notcontains" => FilterOperator.NotContains,
-        "equals" => FilterOperator.Equals,
-        "notequals" => FilterOperator.NotEquals,
-        "greaterthan" => FilterOperator.GreaterThan,
-        "lessthan" => FilterOperator.LessThan,
-        "greaterorequal" => FilterOperator.GreaterOrEqual,
-        "lessorequal" => FilterOperator.LessOrEqual,
-        "between" => FilterOperator.Between,
-        "isempty" => FilterOperator.IsEmpty,
-        "isnotempty" => FilterOperator.IsNotEmpty,
-        "in" => FilterOperator.In,
-        "notin" => FilterOperator.NotIn,
-        _ => FilterOperator.Equals
-    };
+    private static FilterOperator ParseOperator(string? op) => Helpers.FilterOperatorParser.Parse(op);
 }
 
 /// <summary>Information about an available column.</summary>

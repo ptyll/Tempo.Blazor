@@ -41,7 +41,7 @@ public class TmCalendarViewTests : LocalizationTestBase
         var cut = RenderComponent<TmCalendarView>();
 
         var title = cut.Find(".tm-cal-title").TextContent;
-        cut.FindAll(".tm-cal-nav-btn")[0].Click();
+        cut.Find(".tm-cal-prev").Click();
 
         var newTitle = cut.Find(".tm-cal-title").TextContent;
         newTitle.Should().NotBe(title);
@@ -53,7 +53,7 @@ public class TmCalendarViewTests : LocalizationTestBase
         var cut = RenderComponent<TmCalendarView>();
 
         var title = cut.Find(".tm-cal-title").TextContent;
-        cut.FindAll(".tm-cal-nav-btn")[1].Click();
+        cut.Find(".tm-cal-next").Click();
 
         var newTitle = cut.Find(".tm-cal-title").TextContent;
         newTitle.Should().NotBe(title);

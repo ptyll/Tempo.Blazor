@@ -11,6 +11,7 @@
     <div class="tm-drawer @PositionClass"
          role="dialog"
          aria-modal="true"
+         aria-labelledby="@(!string.IsNullOrEmpty(Title) ? "tm-drawer-title" : null)"
          @onkeydown="HandleKeyDown">
 
         <div class="tm-drawer__panel" style="width: @Width;">
@@ -22,7 +23,7 @@
                 }
                 else if (!string.IsNullOrEmpty(Title))
                 {
-                    <h2 class="tm-drawer__title">@Title</h2>
+                    <h2 id="tm-drawer-title" class="tm-drawer__title">@Title</h2>
                 }
 
                 @if (ShowCloseButton)

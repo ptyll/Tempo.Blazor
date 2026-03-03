@@ -130,6 +130,7 @@
     [Parameter] public string? Class { get; set; }
 
     private List<ActiveFilter>   _filters          = [];
+    private IReadOnlyList<ActiveFilter> _lastActiveFilters = [];
     private bool                 _showFieldPicker;
     private FilterDefinition?    _selectedDefinition;
     private ActiveFilter?        _editingFilter;
@@ -139,8 +140,11 @@
 
     protected override void OnParametersSet()
     {
-        if (!_filters.Any() && ActiveFilters.Any())
+        if (!ReferenceEquals(_lastActiveFilters, ActiveFilters))
+        {
             _filters = [.. ActiveFilters];
+            _lastActiveFilters = ActiveFilters;
+        }
     }
 
     private void OpenFieldPicker()

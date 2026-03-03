@@ -4,14 +4,14 @@ using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Tests.Localization;
 
-namespace Tempo.Blazor.Tests.Components.DataTable;
+namespace Tempo.Blazor.Tests.DataTable;
 
-internal record Person(string Name, int Age, string Role);
+internal record BasicPerson(string Name, int Age, string Role);
 
-/// <summary>TDD tests for TmDataTable&lt;TItem&gt;.</summary>
-public class TmDataTableTests : LocalizationTestBase
+/// <summary>Basic rendering and interaction tests for TmDataTable.</summary>
+public class TmDataTableBasicTests : LocalizationTestBase
 {
-    private static List<Person> People =>
+    private static List<BasicPerson> People =>
     [
         new("Alice", 30, "Admin"),
         new("Bob",   25, "User"),
@@ -21,7 +21,7 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_Renders_Table_Element()
     {
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People));
 
         cut.Find("table").Should().NotBeNull();
@@ -30,7 +30,7 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_Has_Base_CssClass()
     {
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People));
 
         cut.Find("table").ClassList.Should().Contain("tm-data-table");
@@ -39,7 +39,7 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_Renders_Row_Per_Item()
     {
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People));
 
         // 3 data rows in tbody
@@ -49,7 +49,7 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_Loading_Shows_Spinner()
     {
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People)
             .Add(c => c.IsLoading, true));
 
@@ -59,8 +59,8 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_Empty_Items_Shows_EmptyState()
     {
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
-            .Add(c => c.Items, new List<Person>())
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
+            .Add(c => c.Items, new List<BasicPerson>())
             .Add(c => c.EmptyTitle, "No data found"));
 
         cut.FindAll(".tm-empty-state").Should().NotBeEmpty();
@@ -69,13 +69,13 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_Renders_Column_Headers()
     {
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People)
             .AddChildContent(b =>
             {
-                b.OpenComponent<TmDataTableColumn<Person>>(0);
+                b.OpenComponent<TmDataTableColumn<BasicPerson>>(0);
                 b.AddAttribute(1, "Title", "Name");
-                b.AddAttribute(2, "Field", (Func<Person, object>)(x => x.Name));
+                b.AddAttribute(2, "Field", (Func<BasicPerson, object>)(x => x.Name));
                 b.CloseComponent();
             }));
 
@@ -85,10 +85,10 @@ public class TmDataTableTests : LocalizationTestBase
     [Fact]
     public void TmDataTable_RowClick_Fires_OnRowClick()
     {
-        Person? clicked = null;
-        var cut = RenderComponent<TmDataTable<Person>>(p => p
+        BasicPerson? clicked = null;
+        var cut = RenderComponent<TmDataTable<BasicPerson>>(p => p
             .Add(c => c.Items, People)
-            .Add(c => c.OnRowClick, EventCallback.Factory.Create<Person>(this, p => clicked = p)));
+            .Add(c => c.OnRowClick, EventCallback.Factory.Create<BasicPerson>(this, p => clicked = p)));
 
         cut.FindAll("tbody tr").First().Click();
 

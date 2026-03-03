@@ -309,7 +309,7 @@
   <data name="TmActivityAttachments_Download" xml:space="preserve"><value>Stáhnout</value></data>
 
   <!-- ═══════════════ TmActivityLog ═══════════════ -->
-  <data name="TmActivityLog_TimelineTab" xml:space="preserve"><value>Timeline</value></data>
+  <data name="TmActivityLog_TimelineTab" xml:space="preserve"><value>Časová osa</value></data>
   <data name="TmActivityLog_CommentsTab" xml:space="preserve"><value>Komentáře</value></data>
   <data name="TmActivityLog_AttachmentsTab" xml:space="preserve"><value>Přílohy</value></data>
 
@@ -424,9 +424,21 @@
   <data name="TmMvl_ColSubTitle" xml:space="preserve"><value>Podnázev</value></data>
   <data name="TmMvl_ColStatus" xml:space="preserve"><value>Stav</value></data>
   <data name="TmMvl_ColDate" xml:space="preserve"><value>Datum</value></data>
+  <data name="TmMvl_ColAvatar" xml:space="preserve"><value>Avatar</value></data>
 
   <!-- View Manager Grouping -->
   <data name="TmViewManager_Grouping" xml:space="preserve"><value>Seskupování</value></data>
   <data name="TmViewManager_GroupByColumns" xml:space="preserve"><value>Seskupit podle sloupců</value></data>
+  <data name="TmViewManager_SaveError" xml:space="preserve"><value>Nepodařilo se uložit pohled</value></data>
+  <data name="TmViewManager_DeleteError" xml:space="preserve"><value>Nepodařilo se smazat pohled</value></data>
+
+  <!-- MultiViewList -->
+  <data name="TmMvl_CurrentViewName" xml:space="preserve"><value>Aktuální</value></data>
+
+  <!-- TmFilterBuilder (missing operators) -->
+  <data name="TmFilter_GreaterOrEqual" xml:space="preserve"><value>větší nebo rovno</value></data>
+  <data name="TmFilter_LessOrEqual" xml:space="preserve"><value>menší nebo rovno</value></data>
+  <data name="TmFilter_In" xml:space="preserve"><value>je v</value></data>
+  <data name="TmFilter_NotIn" xml:space="preserve"><value>není v</value></data>
 
 </root>

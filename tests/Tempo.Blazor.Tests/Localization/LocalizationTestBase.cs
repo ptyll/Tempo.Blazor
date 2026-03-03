@@ -298,6 +298,9 @@ public abstract class LocalizationTestBase : TestContext
         // TmViewManager Grouping
         ["TmViewManager_Grouping"] = "Grouping",
         ["TmViewManager_GroupByColumns"] = "Group by columns",
+
+        // TmInlineEdit
+        ["TmInlineEdit_Placeholder"] = "Click to edit",
     });
 
     private static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -568,6 +571,9 @@ public abstract class LocalizationTestBase : TestContext
         // TmViewManager Grouping
         ["TmViewManager_Grouping"] = "Seskupování",
         ["TmViewManager_GroupByColumns"] = "Seskupit podle sloupců",
+
+        // TmInlineEdit
+        ["TmInlineEdit_Placeholder"] = "Klikněte pro úpravu",
     });
 }
 

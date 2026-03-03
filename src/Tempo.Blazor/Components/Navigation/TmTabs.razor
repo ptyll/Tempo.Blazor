@@ -12,6 +12,7 @@
 
             <button type="button"
                     role="tab"
+                    id="@($"tab-{panel.Id}")"
                     class="@tabClass"
                     aria-selected="@(isActive ? "true" : "false")"
                     aria-disabled="@(panel.Disabled ? "true" : null)"

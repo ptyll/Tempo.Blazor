@@ -448,9 +448,21 @@
   <data name="TmMvl_ColSubTitle" xml:space="preserve"><value>Subtitle</value></data>
   <data name="TmMvl_ColStatus" xml:space="preserve"><value>Status</value></data>
   <data name="TmMvl_ColDate" xml:space="preserve"><value>Date</value></data>
+  <data name="TmMvl_ColAvatar" xml:space="preserve"><value>Avatar</value></data>
 
   <!-- View Manager Grouping -->
   <data name="TmViewManager_Grouping" xml:space="preserve"><value>Group By</value></data>
   <data name="TmViewManager_GroupByColumns" xml:space="preserve"><value>Group by columns</value></data>
+  <data name="TmViewManager_SaveError" xml:space="preserve"><value>Failed to save view</value></data>
+  <data name="TmViewManager_DeleteError" xml:space="preserve"><value>Failed to delete view</value></data>
+
+  <!-- MultiViewList -->
+  <data name="TmMvl_CurrentViewName" xml:space="preserve"><value>Current</value></data>
+
+  <!-- TmFilterBuilder (missing operators) -->
+  <data name="TmFilter_GreaterOrEqual" xml:space="preserve"><value>greater or equal</value></data>
+  <data name="TmFilter_LessOrEqual" xml:space="preserve"><value>less or equal</value></data>
+  <data name="TmFilter_In" xml:space="preserve"><value>in</value></data>
+  <data name="TmFilter_NotIn" xml:space="preserve"><value>not in</value></data>
 
 </root>

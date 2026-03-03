@@ -141,16 +141,11 @@ public class TmDashboardTests : LocalizationTestBase
 
         // Act - Render and enter edit mode
         var cut = RenderComponent<TmDashboard>();
-        
-        // Find and click edit button
-        var editButton = cut.FindAll("button").FirstOrDefault(b => b.GetAttribute("title")?.Contains("Edit") == true);
-        if (editButton != null)
-        {
-            editButton.Click();
-        }
+        cut.Find("button[title='Edit Dashboard']").Click();
 
-        // Assert - Should have name input in edit mode
-        cut.FindAll(".tm-dashboard-toolbar").Count.Should().BeGreaterThan(0);
+        // Assert - Should show edit mode badge and save/cancel buttons
+        cut.FindAll(".tm-dashboard-edit-badge").Should().NotBeEmpty();
+        cut.FindAll(".tm-dashboard--edit").Should().NotBeEmpty();
     }
 
     #endregion
@@ -158,22 +153,19 @@ public class TmDashboardTests : LocalizationTestBase
     #region 3. Set Default Dashboard
 
     [Fact]
-    public void Dashboard_SetDefault_ProviderMethodExists()
+    public void Dashboard_Renders_WithEmptyProvider()
     {
         // Arrange
         var provider = CreateMockProvider();
         var registry = CreateMockRegistry();
         SetupServices(provider, registry);
 
-        // Act - Create component
+        // Act
         var cut = RenderComponent<TmDashboard>();
 
-        // Assert - Provider should have SetDefaultDashboardAsync method that can be called
-        provider.SetDefaultDashboardAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-                .Returns(Task.CompletedTask);
-        
-        // Verify the method exists and can be called
-        provider.Received(0).SetDefaultDashboardAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        // Assert - Dashboard renders successfully with empty provider
+        cut.FindAll(".tm-dashboard").Should().NotBeEmpty();
+        cut.FindAll(".tm-dashboard-toolbar").Should().NotBeEmpty();
     }
 
     #endregion
@@ -205,21 +197,11 @@ public class TmDashboardTests : LocalizationTestBase
 
         // Act - Enter edit mode
         var cut = RenderComponent<TmDashboard>();
-        var editButton = cut.FindAll("button").FirstOrDefault(b => 
-            b.TextContent.Contains("Edit") || b.GetAttribute("title")?.Contains("Edit") == true);
-        
-        if (editButton != null)
-        {
-            editButton.Click();
-        }
+        cut.Find("button[title='Edit Dashboard']").Click();
 
-        // Assert - Should show cancel/save buttons in edit mode
-        var buttons = cut.FindAll("button");
-        var hasActionButtons = buttons.Any(b => 
-            b.TextContent.Contains("Cancel") || 
-            b.TextContent.Contains("Save") ||
-            b.TextContent.Contains("Add"));
-        hasActionButtons.Should().BeTrue();
+        // Assert - Should show cancel button in edit mode
+        var cancelButtons = cut.FindAll("button").Where(b => b.TextContent.Contains("Cancel")).ToList();
+        cancelButtons.Should().NotBeEmpty("edit mode should show a Cancel button");
     }
 
     #endregion
