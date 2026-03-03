@@ -111,6 +111,19 @@
   <data name="TmFilterableDropdown_ClearSelection" xml:space="preserve"><value>Clear selection</value></data>
   <data name="TmFilterableDropdown_Placeholder" xml:space="preserve"><value>Select an option...</value></data>
 
+  <!-- ═══════════════ TmMultiSelect ═══════════════ -->
+  <data name="TmMultiSelect_Placeholder" xml:space="preserve"><value>Select...</value></data>
+  <data name="TmMultiSelect_Search" xml:space="preserve"><value>Search...</value></data>
+  <data name="TmMultiSelect_NoResults" xml:space="preserve"><value>No results found</value></data>
+  <data name="TmMultiSelect_Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="TmMultiSelect_Error" xml:space="preserve"><value>Failed to load options</value></data>
+  <data name="TmMultiSelect_Retry" xml:space="preserve"><value>Retry</value></data>
+  <data name="TmMultiSelect_SelectAll" xml:space="preserve"><value>Select all</value></data>
+  <data name="TmMultiSelect_DeselectAll" xml:space="preserve"><value>Deselect all</value></data>
+  <data name="TmMultiSelect_ClearAll" xml:space="preserve"><value>Clear selection</value></data>
+  <data name="TmMultiSelect_SelectedCount" xml:space="preserve"><value>{0} selected</value></data>
+  <data name="TmMultiSelect_RemoveItem" xml:space="preserve"><value>Remove {0}</value></data>
+
   <!-- ═══════════════ TmFileDropZone ═══════════════ -->
   <data name="TmFileDropZone_DragDrop" xml:space="preserve"><value>Drag and drop files here</value></data>
   <data name="TmFileDropZone_Or" xml:space="preserve"><value>or</value></data>

@@ -1,0 +1,250 @@
+@namespace Tempo.Blazor.Components.Inputs
+@using Microsoft.AspNetCore.Components.Web
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@typeparam TItem
+@typeparam TValue
+
+<div class="tm-input-wrapper @Class">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+    }
+
+    <div class="tm-multiselect @GetTriggerCss()"
+         role="combobox"
+         id="@Id"
+         tabindex="0"
+         aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
+         aria-haspopup="listbox"
+         aria-owns="@(Id + "-listbox")"
+         @onclick="ToggleDropdownAsync"
+         @onkeydown="HandleTriggerKeyDownAsync">
+
+        <div class="tm-multiselect__selections">
+            @if (Mode == MultiSelectMode.Chip)
+            {
+                @foreach (var item in SelectedItems)
+                {
+                    var itemVal = ValueField(item);
+                    <span class="tm-multiselect__chip" @key="GetItemId(item)">
+                        @if (ValueTemplate is not null)
+                        {
+                            @ValueTemplate(item)
+                        }
+                        else
+                        {
+                            @DisplayField(item)
+                        }
+                        @if (!Disabled)
+                        {
+                            <button type="button"
+                                    class="tm-multiselect__chip-remove"
+                                    tabindex="-1"
+                                    aria-label="@Loc["TmMultiSelect_RemoveItem", DisplayField(item)]"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => RemoveItemAsync(itemVal)">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        }
+                    </span>
+                }
+            }
+            else if (Mode == MultiSelectMode.Delimiter)
+            {
+                @if (SelectedItems.Count > 0)
+                {
+                    <span class="tm-multiselect__delimiter-text">
+                        @string.Join(Delimiter, SelectedItems.Select(DisplayField))
+                    </span>
+                }
+            }
+            else if (Mode == MultiSelectMode.CheckBox)
+            {
+                @if (Values.Count > 0)
+                {
+                    <span class="tm-multiselect__count">
+                        @Loc["TmMultiSelect_SelectedCount", Values.Count]
+                    </span>
+                }
+            }
+
+            @if (Values.Count == 0)
+            {
+                <span class="tm-multiselect__placeholder">
+                    @(Placeholder ?? Loc["TmMultiSelect_Placeholder"])
+                </span>
+            }
+        </div>
+
+        <div class="tm-multiselect__actions">
+            @if (ShowClearButton && Values.Count > 0 && !Disabled)
+            {
+                <button type="button"
+                        class="tm-multiselect__clear"
+                        aria-label="@Loc["TmMultiSelect_ClearAll"]"
+                        @onclick:stopPropagation="true"
+                        @onclick="ClearAllAsync">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            }
+            <span class="tm-multiselect__arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </span>
+        </div>
+    </div>
+
+    @if (_isOpen)
+    {
+        <div class="tm-multiselect__popup"
+             id="@(Id + "-listbox")"
+             role="listbox"
+             aria-multiselectable="true"
+             @onkeydown="HandleKeyDownAsync">
+
+            @if (HeaderTemplate is not null)
+            {
+                <div class="tm-multiselect__header">@HeaderTemplate</div>
+            }
+
+            @if (AllowFiltering)
+            {
+                <div class="tm-multiselect__filter">
+                    <input type="text"
+                           class="tm-multiselect__filter-input"
+                           placeholder="@(FilterPlaceholder ?? Loc["TmMultiSelect_Search"])"
+                           value="@_filterText"
+                           @ref="_filterInputRef"
+                           @oninput="HandleFilterInputAsync"
+                           @onclick:stopPropagation="true"
+                           aria-label="@Loc["TmMultiSelect_Search"]" />
+                </div>
+            }
+
+            @if (ShowSelectAll)
+            {
+                var visibleCount = GetVisibleItems().Count();
+                var allSelected = visibleCount > 0 && Values.Count >= visibleCount;
+                <div class="tm-multiselect__select-all">
+                    <button type="button" class="tm-multiselect__select-all-btn"
+                            @onclick:stopPropagation="true"
+                            @onclick="@(allSelected ? DeselectAllAsync : SelectAllAsync)">
+                        @(allSelected ? Loc["TmMultiSelect_DeselectAll"] : Loc["TmMultiSelect_SelectAll"])
+                    </button>
+                </div>
+            }
+
+            <div class="tm-multiselect__options">
+                @if (_isLoading)
+                {
+                    <div class="tm-multiselect__loading">
+                        <span>@(LoadingMessage ?? Loc["TmMultiSelect_Loading"])</span>
+                    </div>
+                }
+                else if (_hasError)
+                {
+                    <div class="tm-multiselect__error">
+                        <span>@(ErrorMessage ?? Loc["TmMultiSelect_Error"])</span>
+                        <button type="button" @onclick="LoadFromProviderAsync">
+                            @Loc["TmMultiSelect_Retry"]
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    var visibleItems = GetVisibleItems().ToList();
+                    @if (visibleItems.Count == 0)
+                    {
+                        @if (NoRecordsTemplate is not null)
+                        {
+                            @NoRecordsTemplate
+                        }
+                        else
+                        {
+                            <div class="tm-multiselect__empty">
+                                @(EmptyMessage ?? Loc["TmMultiSelect_NoResults"])
+                            </div>
+                        }
+                    }
+                    else if (GroupField is not null)
+                    {
+                        @foreach (var group in visibleItems.GroupBy(GroupField))
+                        {
+                            <div class="tm-multiselect__group">
+                                <div class="tm-multiselect__group-header">@(group.Key ?? "")</div>
+                                @foreach (var item in group)
+                                {
+                                    var idx = visibleItems.IndexOf(item);
+                                    @RenderOption(item, idx)
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        @for (int i = 0; i < visibleItems.Count; i++)
+                        {
+                            @RenderOption(visibleItems[i], i)
+                        }
+                    }
+                }
+            </div>
+
+            @if (FooterTemplate is not null)
+            {
+                <div class="tm-multiselect__footer">@FooterTemplate</div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="tm-input-error-message">@Error</div>
+    }
+    @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(Error))
+    {
+        <div class="tm-input-help-text">@HelpText</div>
+    }
+</div>
+
+@{
+    RenderFragment RenderOption(TItem item, int idx) =>
+        @<div class="tm-multiselect__option @(IsSelected(item) ? "tm-multiselect__option--selected" : "") @(idx == _focusedIndex ? "tm-multiselect__option--focused" : "") @(IsMaxReached && !IsSelected(item) ? "tm-multiselect__option--disabled" : "")"
+             role="option"
+             aria-selected="@IsSelected(item).ToString().ToLowerInvariant()"
+             @key="GetItemId(item)"
+             @onclick:stopPropagation="true"
+             @onclick="() => ToggleItemAsync(item)">
+            @if (ShowCheckBox || Mode == MultiSelectMode.CheckBox)
+            {
+                <span class="tm-multiselect__option-checkbox @(IsSelected(item) ? "tm-multiselect__option-checkbox--checked" : "")">
+                    @if (IsSelected(item))
+                    {
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    }
+                </span>
+            }
+            @if (ItemTemplate is not null)
+            {
+                @ItemTemplate(item)
+            }
+            else
+            {
+                <span class="tm-multiselect__option-text">@DisplayField(item)</span>
+            }
+        </div>;
+}

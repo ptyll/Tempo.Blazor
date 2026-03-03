@@ -1,0 +1,327 @@
+/* ═══════════════════════════════════════════════════════
+   TmMultiSelect — Multi-value selection component
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base trigger ────────────────────────────────────── */
+.tm-multiselect {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 2.375rem;
+    padding: var(--tm-space-1) var(--tm-space-3) var(--tm-space-1) var(--tm-space-2);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
+    gap: var(--tm-space-1);
+}
+.tm-multiselect:hover { border-color: var(--tm-color-primary); }
+.tm-multiselect:focus,
+.tm-multiselect:focus-within {
+    outline: none;
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-focus);
+}
+
+/* ── States ──────────────────────────────────────────── */
+.tm-multiselect--open { border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+.tm-multiselect--error { border-color: var(--tm-color-danger) !important; }
+.tm-multiselect--disabled {
+    background-color: var(--tm-color-gray-50, #f9fafb);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ── Selections area ─────────────────────────────────── */
+.tm-multiselect__selections {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* ── Placeholder ─────────────────────────────────────── */
+.tm-multiselect__placeholder {
+    color: var(--tm-text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Chip ────────────────────────────────────────────── */
+.tm-multiselect__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: 0.125rem 0.375rem 0.125rem 0.5rem;
+    background: var(--tm-color-primary-100);
+    color: var(--tm-color-primary-700);
+    border-radius: 9999px;
+    font-size: var(--tm-font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 10rem;
+    line-height: 1.4;
+}
+.tm-multiselect__chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: opacity var(--tm-transition-fast), background-color var(--tm-transition-fast);
+    flex-shrink: 0;
+}
+.tm-multiselect__chip-remove:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Delimiter text ──────────────────────────────────── */
+.tm-multiselect__delimiter-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Count badge (CheckBox mode) ─────────────────────── */
+.tm-multiselect__count {
+    font-weight: 500;
+    color: var(--tm-color-primary-700);
+}
+
+/* ── Action area (clear + arrow) ─────────────────────── */
+.tm-multiselect__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.tm-multiselect__clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--tm-text-tertiary);
+    padding: var(--tm-space-1);
+    border-radius: 50%;
+    transition: color var(--tm-transition-fast), background-color var(--tm-transition-fast);
+}
+.tm-multiselect__clear:hover {
+    color: var(--tm-color-danger);
+    background: var(--tm-color-danger-subtle, rgba(239, 68, 68, 0.1));
+}
+.tm-multiselect__arrow {
+    display: flex;
+    align-items: center;
+    color: var(--tm-text-secondary);
+    transition: transform var(--tm-transition-fast);
+}
+.tm-multiselect--open .tm-multiselect__arrow { transform: rotate(180deg); }
+
+/* ── Popup ───────────────────────────────────────────── */
+.tm-multiselect__popup {
+    position: absolute;
+    top: calc(100% + var(--tm-space-1));
+    left: 0;
+    right: 0;
+    z-index: var(--tm-z-dropdown, 1000);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Filter input ────────────────────────────────────── */
+.tm-multiselect__filter {
+    padding: var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+.tm-multiselect__filter-input {
+    width: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    font-size: var(--tm-font-size-sm);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+.tm-multiselect__filter-input:focus {
+    outline: none;
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-focus);
+}
+
+/* ── Select All ──────────────────────────────────────── */
+.tm-multiselect__select-all {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+.tm-multiselect__select-all-btn {
+    width: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: var(--tm-font-size-xs);
+    font-weight: 500;
+    color: var(--tm-color-primary);
+    text-align: left;
+    border-radius: var(--tm-radius-sm);
+    transition: background var(--tm-transition-fast);
+}
+.tm-multiselect__select-all-btn:hover { background: var(--tm-color-primary-subtle); }
+
+/* ── Options container ───────────────────────────────── */
+.tm-multiselect__options {
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+/* ── Header / Footer ─────────────────────────────────── */
+.tm-multiselect__header,
+.tm-multiselect__footer {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    font-size: var(--tm-font-size-xs);
+}
+.tm-multiselect__header { border-bottom: 1px solid var(--tm-border-color); }
+.tm-multiselect__footer { border-top: 1px solid var(--tm-border-color); }
+
+/* ── Individual option ───────────────────────────────── */
+.tm-multiselect__option {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    cursor: pointer;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-primary);
+    transition: background var(--tm-transition-fast);
+}
+.tm-multiselect__option:hover { background: var(--tm-bg-muted); }
+.tm-multiselect__option--selected {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+.tm-multiselect__option--focused {
+    background: var(--tm-bg-muted);
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+.tm-multiselect__option--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.tm-multiselect__option-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Checkbox in option ──────────────────────────────── */
+.tm-multiselect__option-checkbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    flex-shrink: 0;
+    transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+.tm-multiselect__option-checkbox--checked {
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: white;
+}
+
+/* ── Group header ────────────────────────────────────── */
+.tm-multiselect__group-header {
+    padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 600;
+    color: var(--tm-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ── Loading / Empty / Error ─────────────────────────── */
+.tm-multiselect__loading,
+.tm-multiselect__empty {
+    padding: var(--tm-space-3);
+    text-align: center;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+}
+.tm-multiselect__error {
+    padding: var(--tm-space-3);
+    text-align: center;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-danger);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+.tm-multiselect__error button {
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: none;
+    cursor: pointer;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+.tm-multiselect__error button:hover {
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Dark mode
+   ═══════════════════════════════════════════════════════ */
+[data-theme="dark"] .tm-multiselect__chip,
+.tm-dark .tm-multiselect__chip {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--tm-color-primary-300);
+}
+[data-theme="dark"] .tm-multiselect__chip-remove:hover,
+.tm-dark .tm-multiselect__chip-remove:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+[data-theme="dark"] .tm-multiselect__option--selected,
+.tm-dark .tm-multiselect__option--selected {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--tm-color-primary-300);
+}
+[data-theme="dark"] .tm-multiselect__option-checkbox--checked,
+.tm-dark .tm-multiselect__option-checkbox--checked {
+    background: var(--tm-color-primary-400);
+    border-color: var(--tm-color-primary-400);
+}
+[data-theme="dark"] .tm-multiselect--disabled,
+.tm-dark .tm-multiselect--disabled {
+    background-color: var(--tm-color-gray-800, #1f2937);
+}

@@ -43,6 +43,7 @@
 @import "components/_number-input.css";
 @import "components/_copy-button.css";
 @import "components/_entity-picker.css";
+@import "components/_multiselect.css";
 @import "components/_dynamic-form.css";
 @import "components/_expression-editor.css";
 @import "components/_form-validation-message.css";

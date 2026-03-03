@@ -111,6 +111,19 @@
   <data name="TmFilterableDropdown_ClearSelection" xml:space="preserve"><value>Zrušit výběr</value></data>
   <data name="TmFilterableDropdown_Placeholder" xml:space="preserve"><value>Vyberte možnost...</value></data>
 
+  <!-- ═══════════════ TmMultiSelect ═══════════════ -->
+  <data name="TmMultiSelect_Placeholder" xml:space="preserve"><value>Vyberte...</value></data>
+  <data name="TmMultiSelect_Search" xml:space="preserve"><value>Hledat...</value></data>
+  <data name="TmMultiSelect_NoResults" xml:space="preserve"><value>Nebyly nalezeny žádné výsledky</value></data>
+  <data name="TmMultiSelect_Loading" xml:space="preserve"><value>Načítání...</value></data>
+  <data name="TmMultiSelect_Error" xml:space="preserve"><value>Nepodařilo se načíst možnosti</value></data>
+  <data name="TmMultiSelect_Retry" xml:space="preserve"><value>Zkusit znovu</value></data>
+  <data name="TmMultiSelect_SelectAll" xml:space="preserve"><value>Vybrat vše</value></data>
+  <data name="TmMultiSelect_DeselectAll" xml:space="preserve"><value>Zrušit výběr</value></data>
+  <data name="TmMultiSelect_ClearAll" xml:space="preserve"><value>Vymazat výběr</value></data>
+  <data name="TmMultiSelect_SelectedCount" xml:space="preserve"><value>{0} vybráno</value></data>
+  <data name="TmMultiSelect_RemoveItem" xml:space="preserve"><value>Odebrat {0}</value></data>
+
   <!-- ═══════════════ TmFileDropZone ═══════════════ -->
   <data name="TmFileDropZone_DragDrop" xml:space="preserve"><value>Přetáhněte soubory sem</value></data>
   <data name="TmFileDropZone_Or" xml:space="preserve"><value>nebo</value></data>
