@@ -300,7 +300,8 @@
     [Parameter] public bool ShowTitle { get; set; } = true;
     [Parameter] public bool AllowEdit { get; set; } = true;
     [Parameter] public EventCallback<DashboardConfig> OnDashboardChanged { get; set; }
-    
+    [Parameter] public RenderFragment<WidgetInstance>? WidgetTemplate { get; set; }
+
     [Inject] public IDashboardProvider? DashboardProvider { get; set; }
     [Inject] public IWidgetRegistry? WidgetRegistry { get; set; }
     [Inject] public IJSRuntime JS { get; set; } = default!;
@@ -599,6 +600,11 @@
     
     private RenderFragment RenderWidgetContent(WidgetInstance widget)
     {
+        if (WidgetTemplate is not null)
+        {
+            return WidgetTemplate(widget);
+        }
+
         return builder =>
         {
             builder.AddContent(0, $"Widget: {GetWidgetName(widget)}");

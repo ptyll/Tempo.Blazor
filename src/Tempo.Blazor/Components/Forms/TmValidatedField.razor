@@ -16,7 +16,7 @@
         </label>
     }
     
-    <TmTextInput 
+    <TmTextInput
         Id="@Id"
         Value="@Value"
         ValueChanged="@ValueChanged"
@@ -24,7 +24,19 @@
         Type="@Type"
         Error="@ErrorMessage"
         ShowValidationIcons="true"
-        IsValid="@IsValid" />
+        IsValid="@IsValid"
+        LeftIcon="@LeftIcon"
+        RightIcon="@RightIcon"
+        Disabled="@Disabled"
+        ReadOnly="@ReadOnly"
+        TabIndex="@TabIndex"
+        AutoFocus="@AutoFocus"
+        Class="@Class"
+        OnKeyDown="@OnKeyDown"
+        OnKeyUp="@OnKeyUp"
+        OnKeyPress="@OnKeyPress"
+        OnFocus="@OnFocus"
+        OnBlur="@OnBlur" />
     
     @if (!string.IsNullOrEmpty(HelpText) && string.IsNullOrEmpty(ErrorMessage))
     {
@@ -41,10 +53,22 @@
     [Parameter] public bool Required { get; set; }
     [Parameter] public string? HelpText { get; set; }
     [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
-    
+    [Parameter] public string? LeftIcon { get; set; }
+    [Parameter] public string? RightIcon { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public int TabIndex { get; set; }
+    [Parameter] public bool AutoFocus { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyUp { get; set; }
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyPress { get; set; }
+    [Parameter] public EventCallback<FocusEventArgs> OnFocus { get; set; }
+    [Parameter] public EventCallback<FocusEventArgs> OnBlur { get; set; }
+
     [Parameter] public string Value { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
-    
+
     // This is automatically set by @bind-Value
     [Parameter] public Expression<Func<string>>? ValueExpression { get; set; }
     
