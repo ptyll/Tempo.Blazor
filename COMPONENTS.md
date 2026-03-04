@@ -58,6 +58,15 @@ Univerzální tlačítko s variantami, velikostmi a ikonami.
 | `ChildContent` | `RenderFragment?` | `null` | Obsah tlačítka |
 | `Class` | `string?` | `null` | Další CSS třídy |
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-btn` | Root třída tlačítka |
+| `tm-btn-primary` / `tm-btn-secondary` / `tm-btn-ghost` / `tm-btn-danger` / `tm-btn-outline` / `tm-btn-link` / `tm-btn-default` | Varianta |
+| `tm-btn-xs` / `tm-btn-sm` / `tm-btn-md` / `tm-btn-lg` | Velikost |
+| `tm-btn-block` | Celá šířka |
+
 #### Příklady
 
 ```razor
@@ -105,6 +114,16 @@ Univerzální tlačítko s variantami, velikostmi a ikonami.
 
 Tlačítko s rozbalovací nabídkou akcí.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-split-button` | Root |
+| `tm-split-button--primary` / `--secondary` / `--danger` | Varianta |
+| `tm-split-button--xs` / `--sm` / `--lg` | Velikost |
+| `tm-split-button--disabled` | Zakázáno |
+| `tm-split-button__primary` / `__toggle` / `__dropdown` | Části |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -137,6 +156,13 @@ Tlačítko s rozbalovací nabídkou akcí.
 
 Tlačítko pro kopírování textu do schránky.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-copy-button` | Root |
+| `tm-copy-button--copied` | Stav po zkopírování |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -158,6 +184,22 @@ Tlačítko pro kopírování textu do schránky.
 ### TmTextInput
 
 Jednořádkový textový vstup s podporou ikon, validace a pomocného textu.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-input-wrapper` | Root obal |
+| `tm-input-container` | Kontejner inputu s ikonami |
+| `tm-input` | Samotný `<input>` element |
+| `tm-input-label` | Label |
+| `tm-input-left-icon` / `tm-input-right-icon` | Ikony |
+| `tm-input-help-text` | Pomocný text |
+| `tm-input-error-message` | Chybová zpráva |
+| `tm-input-disabled` / `tm-input-readonly` | Stavy |
+| `tm-input-error` / `tm-input-valid` | Validační stavy |
+| `tm-input-with-left-icon` / `tm-input-with-validation-icon` | Modifikátory layoutu |
+| `tm-input-validation-icon` / `tm-input-validation-success` / `tm-input-validation-error` | Validační ikony |
 
 #### Parametry
 
@@ -234,6 +276,16 @@ Jednořádkový textový vstup s podporou ikon, validace a pomocného textu.
 
 Víceřádkové textové pole.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-input-wrapper` | Root obal |
+| `tm-textarea` | Samotný `<textarea>` element |
+| `tm-input-label` | Label |
+| `tm-input-error-message` | Chybová zpráva |
+| `tm-input-disabled` / `tm-input-error` | Stavy |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -270,6 +322,17 @@ Víceřádkové textové pole.
 ### TmNumberInput
 
 Číselný vstup s tlačítky +/- a podporou min/max.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-input-wrapper` | Root obal |
+| `tm-number-input` | Kontejner |
+| `tm-number-input__input` | Input element |
+| `tm-number-input__increment` / `__decrement` | +/- tlačítka |
+| `tm-number-input__prefix` / `__suffix` | Prefix/suffix |
+| `tm-number-input--disabled` / `--error` | Stavy |
 
 #### Parametry
 
@@ -317,6 +380,15 @@ Víceřádkové textové pole.
 
 Vyhledávací vstup s debounce.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-input-wrapper` | Root obal |
+| `tm-input-container` / `tm-input` | Input |
+| `tm-input-left-icon` / `tm-search-clear` | Ikony |
+| `tm-input-disabled` / `tm-input-search` | Stavy |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -338,6 +410,15 @@ Vyhledávací vstup s debounce.
 ### TmEntityPicker\<TItem, TValue\>
 
 Picker pro výběr entity s asynchronním vyhledáváním.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-entity-picker` | Root |
+| `tm-entity-picker--disabled` | Zakázáno |
+| `tm-entity-picker__input-wrapper` / `__input` / `__search-icon` | Input |
+| `tm-entity-picker__dropdown` / `__option` / `__no-results` / `__loading` | Dropdown |
 
 #### Parametry
 
@@ -387,6 +468,16 @@ Picker pro výběr entity s asynchronním vyhledáváním.
 
 Editor výrazů s proměnnými (pro dynamické šablony, podmínky apod.).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-expression-editor` | Root |
+| `tm-expression-editor--error` | Chybový stav |
+| `tm-expression-editor__label` / `__body` / `__textarea` / `__error` | Části |
+| `tm-expression-editor__panel` / `__panel-title` | Panel proměnných |
+| `tm-expression-editor__var` / `__var-name` / `__var-type` / `__var-desc` | Proměnná |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -417,6 +508,15 @@ Editor výrazů s proměnnými (pro dynamické šablony, podmínky apod.).
 
 Vizuální indikátor síly hesla.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-password-strength` | Root |
+| `tm-password-strength-bar` / `-fill` | Progress bar |
+| `tm-password-strength-info` / `-text` / `-hint` | Text |
+| `tm-strength-0` až `tm-strength-5` | Úrovně síly |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -438,6 +538,17 @@ Vizuální indikátor síly hesla.
 ### TmSelect\<TValue\>
 
 Rozbalovací výběr z možností.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-select-wrapper` | Root obal |
+| `tm-select-container` | Kontejner |
+| `tm-select` | `<select>` element |
+| `tm-select-arrow` | Šipka |
+| `tm-select-label` / `tm-select-help-text` / `tm-select-error-message` | Texty |
+| `tm-select-disabled` / `tm-select-error` | Stavy |
 
 #### Parametry
 
@@ -498,6 +609,24 @@ Rozbalovací výběr z možností.
 ### TmMultiSelect\<TItem, TValue\>
 
 Pokročilý výběr více položek s vyhledáváním, chipsy, groupingem a server-side daty.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-multiselect` | Root |
+| `tm-multiselect--disabled` / `--error` / `--open` | Stavy |
+| `tm-multiselect__selections` / `__chip` / `__chip-remove` / `__count` | Vybrané položky |
+| `tm-multiselect__delimiter-text` / `__placeholder` | Text |
+| `tm-multiselect__clear` / `__arrow` | Ovládání |
+| `tm-multiselect__popup` / `__header` / `__filter` / `__filter-input` | Popup/filtr |
+| `tm-multiselect__options` / `__option` | Seznam možností |
+| `tm-multiselect__option--selected` / `--focused` / `--disabled` | Stav položky |
+| `tm-multiselect__option-checkbox` / `--checked` | Checkbox mód |
+| `tm-multiselect__group` / `__group-header` | Grouping |
+| `tm-multiselect__select-all` / `__select-all-btn` | Vybrat vše |
+| `tm-multiselect__empty` / `__loading` / `__error` | Stavy obsahu |
+| `tm-multiselect__footer` / `__actions` | Patička |
 
 #### Parametry
 
@@ -638,6 +767,14 @@ Pokročilý výběr více položek s vyhledáváním, chipsy, groupingem a serve
 
 Rozbalovací menu s položkami.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-dropdown-wrapper` | Root |
+| `tm-dropdown-trigger` | Trigger element |
+| `tm-dropdown-menu` | Rozbalovací menu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -665,6 +802,14 @@ Rozbalovací menu s položkami.
 
 Položka v TmDropdown.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-dropdown-item` | Root |
+| `tm-dropdown-item-danger` | Nebezpečná akce |
+| `tm-dropdown-sep` | Oddělovač |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -676,6 +821,16 @@ Položka v TmDropdown.
 ### TmFilterableDropdown\<TItem, TValue\>
 
 Dropdown s vyhledáváním a server-side daty.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-filterable-dropdown` | Root |
+| `tm-filterable-dropdown-trigger` / `-value` / `-placeholder` / `-clear` | Trigger |
+| `tm-filterable-dropdown-menu` / `-filter` / `-filter-input` | Menu/filtr |
+| `tm-filterable-dropdown-item` / `-item-selected` | Položky |
+| `tm-filterable-dropdown-empty` / `-loading` / `-error` | Stavy |
 
 #### Parametry
 
@@ -731,6 +886,16 @@ Dropdown s vyhledáváním a server-side daty.
 
 Zaškrtávací políčko.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-checkbox-wrapper` | Root |
+| `tm-checkbox-label` / `tm-checkbox-input` / `tm-checkbox-custom` | Části |
+| `tm-checkbox-check` / `tm-checkbox-indeterminate` | Ikony stavu |
+| `tm-checkbox-text` / `tm-checkbox-help` | Texty |
+| `tm-checkbox-disabled` | Zakázáno |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -769,6 +934,15 @@ Zaškrtávací políčko.
 
 Přepínací spínač (switch).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-toggle-wrapper` | Root |
+| `tm-toggle-label` / `tm-toggle-input` / `tm-toggle-track` / `tm-toggle-slider` | Části |
+| `tm-toggle-label-text` | Text |
+| `tm-toggle-checked` / `tm-toggle-disabled` | Stavy |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -789,6 +963,15 @@ Přepínací spínač (switch).
 ### TmRadioGroup\<T\>
 
 Skupina přepínacích tlačítek (radio buttons).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-radio-group` | Root |
+| `tm-radio-group-horizontal` / `tm-radio-group-vertical` | Layout |
+| `tm-radio-group-label` / `tm-radio-group-options` | Části |
+| `tm-radio-group-help` / `tm-radio-group-error` / `tm-radio-group-error-msg` | Texty |
 
 #### Parametry
 
@@ -854,6 +1037,14 @@ Skupina přepínacích tlačítek (radio buttons).
 
 Jednotlivý radio button (interní, používá se v TmRadioGroup).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-radio-option` | Root |
+| `tm-radio-custom` / `tm-radio-input` / `tm-radio-text` | Části |
+| `tm-radio-checked` / `tm-radio-disabled` | Stavy |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -872,6 +1063,17 @@ Jednotlivý radio button (interní, používá se v TmRadioGroup).
 ### TmBadge
 
 Štítek/odznáček pro zobrazení statusu nebo počtu.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-badge` | Root |
+| `tm-badge-primary` / `-success` / `-danger` / `-warning` / `-info` / `-default` | Varianta |
+| `tm-badge-sm` / `tm-badge-md` | Velikost |
+| `tm-badge-filled` / `tm-badge-outlined` / `tm-badge-subtle` | Styl |
+| `tm-badge-pill` | Zaoblený tvar |
+| `tm-badge-dot` | Tečka |
 
 #### Parametry
 
@@ -915,6 +1117,16 @@ Jednotlivý radio button (interní, používá se v TmRadioGroup).
 ### TmCard
 
 Karta pro seskupení obsahu.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-card` | Root |
+| `tm-card-default` / `tm-card-elevated` / `tm-card-outlined` | Varianta |
+| `tm-card-header` / `tm-card-header-icon` / `tm-card-header-title` | Hlavička |
+| `tm-card-content` | Obsah |
+| `tm-card-footer` | Patička |
 
 #### Parametry
 
@@ -967,6 +1179,17 @@ Karta pro seskupení obsahu.
 
 Akordeon pro sbalitelné sekce.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-accordion` | Root |
+| `tm-accordion-item` | Položka |
+| `tm-accordion-item--expanded` / `--disabled` | Stavy |
+| `tm-accordion-item__header` / `__header-text` | Hlavička |
+| `tm-accordion-item__icon` / `__title` / `__subtitle` / `__chevron` | Části hlavičky |
+| `tm-accordion-item__body` | Obsah |
+
 #### Parametry TmAccordion
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1014,6 +1237,16 @@ Akordeon pro sbalitelné sekce.
 
 Chip/tag element s variantami.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-chip` | Root |
+| `tm-chip--filled` / `--outlined` / `--soft` | Varianta |
+| `tm-chip--sm` / `--md` | Velikost |
+| `tm-chip--selected` / `--clickable` | Stavy |
+| `tm-chip__icon` / `__label` / `__remove` | Části |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1042,6 +1275,12 @@ Chip/tag element s variantami.
 
 Kontejner pro skupinu chipů.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-chip-group` | Root |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1064,6 +1303,14 @@ Kontejner pro skupinu chipů.
 
 Zobrazení změn (staré/nové hodnoty).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-change-diff` | Root |
+| `tm-change-diff-row` / `-property` / `-values` | Řádek |
+| `tm-change-diff-old` / `-arrow` / `-new` | Stará/nová hodnota |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1085,6 +1332,13 @@ Zobrazení změn (staré/nové hodnoty).
 ### TmEmptyState
 
 Prázdný stav se zprávou a volitelnou akcí.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-empty-state` | Root |
+| `tm-empty-state-icon` / `-title` / `-description` | Části |
 
 #### Parametry
 
@@ -1114,6 +1368,13 @@ Prázdný stav se zprávou a volitelnou akcí.
 
 Karta se statistikou (KPI).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-stat-card` | Root |
+| `tm-stat-value` / `tm-stat-label` / `tm-stat-subvalue` | Části |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1139,6 +1400,16 @@ Karta se statistikou (KPI).
 ### TmKanbanBoard\<TItem\>
 
 Kanban board s drag & drop.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-kanban` | Root |
+| `tm-kanban__column` / `__header` / `__header-color` / `__header-title` | Sloupec |
+| `tm-kanban__count` / `__wip-limit` | Počítadla |
+| `tm-kanban__cards` / `__card` / `__empty` | Karty |
+| `tm-kanban__column--over-limit` | Překročení WIP limitu |
 
 #### Parametry
 
@@ -1182,6 +1453,21 @@ Kanban board s drag & drop.
 ### TmMultiViewList\<TItem\>
 
 Seznam s přepínáním zobrazení (tabulka/karty/seznam) a filtry.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-multi-view-list` | Root |
+| `tm-mvl-toolbar` / `-toolbar-left` / `-toolbar-right` | Toolbar |
+| `tm-mvl-switcher` / `tm-mvl-switch-table` / `-card` / `-list` / `--active` | Přepínač režimů |
+| `tm-mvl-table` / `tm-mvl-row` | Režim tabulky |
+| `tm-mvl-card-grid` / `tm-mvl-card` / `-card-avatar` / `-card-body` / `-card-title` | Režim karet |
+| `tm-mvl-list` / `tm-mvl-list-item` / `-list-avatar` / `-list-content` / `-list-title` | Režim seznamu |
+| `tm-mvl-status` | Status badge |
+| `tm-mvl-group-section` / `-group-header` / `-group-toggle` / `-group-label` / `-group-count` | Grouping |
+| `tm-mvl-external-filters` | Externí filtry |
+| `tm-mvl-virtual-scroll` | Virtualizace |
 
 #### Parametry
 
@@ -1238,6 +1524,16 @@ Seznam s přepínáním zobrazení (tabulka/karty/seznam) a filtry.
 ### TmAlert
 
 Notifikační zpráva s různými úrovněmi závažnosti.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-alert` | Root |
+| `tm-alert--info` / `--success` / `--warning` / `--error` | Severity |
+| `tm-alert--filled` / `--outlined` / `--soft` | Varianta |
+| `tm-alert__icon` / `__body` / `__title` / `__description` | Části |
+| `tm-alert__actions` / `__dismiss` | Akce |
 
 #### Parametry
 
@@ -1297,6 +1593,20 @@ Notifikační zpráva s různými úrovněmi závažnosti.
 ### TmModal
 
 Modální okno.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-modal` | Root (overlay) |
+| `tm-modal--sm` / `--md` / `--lg` / `--xl` / `--fullscreen` | Velikost |
+| `tm-modal--top` / `--bottom` / `--center` | Pozice |
+| `tm-modal--animated` / `--visible` | Stavy |
+| `tm-modal-overlay` / `tm-modal-container` | Obal |
+| `tm-modal-header` / `tm-modal-header-content` / `tm-modal-header-icon` | Hlavička |
+| `tm-modal-title` / `tm-modal-subtitle` / `tm-modal-close` | Části hlavičky |
+| `tm-modal-body` | Tělo |
+| `tm-modal-footer` / `tm-modal-btn-ok` / `tm-modal-btn-cancel` | Patička |
 
 #### Parametry
 
@@ -1375,6 +1685,16 @@ Modální okno.
 ### TmDialog
 
 Zjednodušený dialog (alert, confirm, prompt).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-dialog` | Root (uvnitř modal-container) |
+| `tm-dialog--info` / `--success` / `--warning` / `--error` / `--dangerous` | Varianta |
+| `tm-dialog-content` / `-icon` / `-title` / `-message` | Obsah |
+| `tm-dialog-input` / `-input-wrapper` | Prompt vstup |
+| `tm-dialog-footer` / `-btn-ok` / `-btn-cancel` | Patička |
 
 #### Parametry
 
@@ -1455,6 +1775,14 @@ Zjednodušený dialog (alert, confirm, prompt).
 
 Tooltip při najetí myší.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-tooltip` | Root |
+| `tm-tooltip--top` / `--bottom` / `--left` / `--right` | Pozice |
+| `tm-tooltip__trigger` / `__content` | Části |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1486,6 +1814,14 @@ Tooltip při najetí myší.
 
 Indikátor načítání.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-spinner` | Root |
+| `tm-spinner-xs` / `-sm` / `-md` / `-lg` | Velikost |
+| `tm-spinner-current` / `-primary` / `-white` | Barva |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1508,6 +1844,16 @@ Indikátor načítání.
 ### TmPopover
 
 Vyskakovací panel s libovolným obsahem.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-popover` | Root |
+| `tm-popover--top` / `--bottom` / `--left` / `--right` | Pozice |
+| `tm-popover__trigger` | Trigger element |
+| `tm-popover__body` / `__body--open` | Tělo |
+| `tm-popover__arrow` | Šipka |
 
 #### Parametry
 
@@ -1553,6 +1899,17 @@ Vyskakovací panel s libovolným obsahem.
 
 Kontejner pro toast notifikace (umístěte jednou v layoutu).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-toast-container` | Root |
+| `tm-toast-container--top-left` / `--top-right` / `--bottom-left` / `--bottom-right` | Pozice |
+| `tm-toast` | Jednotlivý toast |
+| `tm-toast--info` / `--success` / `--warning` / `--error` | Severity |
+| `tm-toast-body` / `-icon` / `-content` / `-title` / `-message` | Části |
+| `tm-toast-dismiss` / `tm-toast-progress` / `tm-toast-progress-bar` | Ovládání |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1579,6 +1936,27 @@ Kontejner pro toast notifikace (umístěte jednou v layoutu).
 
 Ikona zvonečku s počtem notifikací a rozbalovacím seznamem.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-notification-bell` | Kořenový kontejner |
+| `tm-notification-bell-button` | Tlačítko zvonečku |
+| `tm-notification-badge` | Badge s počtem nepřečtených |
+| `tm-notification-dropdown` | Rozbalovací panel |
+| `tm-notification-header` | Hlavička panelu |
+| `tm-notification-title` | Nadpis v hlavičce |
+| `tm-notification-mark-all-read` | Tlačítko „označit vše jako přečtené" |
+| `tm-notification-list` | Seznam notifikací |
+| `tm-notification-item` | Položka notifikace |
+| `tm-notification-unread` | Modifikátor — nepřečtená notifikace |
+| `tm-notification-item-content` | Obsah položky |
+| `tm-notification-item-title` | Nadpis položky |
+| `tm-notification-item-message` | Text zprávy |
+| `tm-notification-item-time` | Čas notifikace |
+| `tm-notification-unread-dot` | Tečka u nepřečtené |
+| `tm-notification-empty` | Prázdný stav |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1602,6 +1980,27 @@ Ikona zvonečku s počtem notifikací a rozbalovacím seznamem.
 ### TmProgressBar
 
 Progress bar s variantami a segmenty.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-progress-bar` | Kořenový kontejner |
+| `tm-progress-bar--sm` | Malá velikost |
+| `tm-progress-bar--md` | Střední velikost |
+| `tm-progress-bar--lg` | Velká velikost |
+| `tm-progress-bar--striped` | Pruhovaný styl |
+| `tm-progress-bar--animated` | Animovaný styl |
+| `tm-progress-bar--indeterminate` | Neurčitý stav |
+| `tm-progress-bar--success` | Varianta success |
+| `tm-progress-bar--warning` | Varianta warning |
+| `tm-progress-bar--error` | Varianta error |
+| `tm-progress-bar--gradient` | Varianta gradient |
+| `tm-progress-bar__track` | Pozadí (track) |
+| `tm-progress-bar__fill` | Vyplněná část |
+| `tm-progress-bar__fill--indeterminate` | Animace neurčitého stavu |
+| `tm-progress-bar__segment` | Segment (u vícenásobného) |
+| `tm-progress-bar__label` | Textový label s procentem |
 
 #### Parametry
 
@@ -1640,6 +2039,15 @@ Progress bar s variantami a segmenty.
 
 Placeholder načítání (skeleton loader).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-skeleton` | Základní skeleton třída |
+| `tm-skeleton-circle` | Kruhový tvar |
+| `tm-skeleton-rect` | Obdélníkový tvar |
+| `tm-skeleton-text` | Textový řádek |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1669,6 +2077,23 @@ Placeholder načítání (skeleton loader).
 ### TmTabs + TmTabPanel
 
 Záložky s obsahem.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-tabs` | Kořenový kontejner |
+| `tm-tabs--line` | Varianta s čárou |
+| `tm-tabs--pill` | Pill varianta |
+| `tm-tabs--enclosed` | Enclosed varianta |
+| `tm-tabs__header` | Hlavička se záložkami |
+| `tm-tab` | Jednotlivá záložka |
+| `tm-tab--active` | Aktivní záložka |
+| `tm-tab--disabled` | Zakázaná záložka |
+| `tm-tab__icon` | Ikona záložky |
+| `tm-tab__label` | Text záložky |
+| `tm-tab__badge` | Badge v záložce |
+| `tm-tabs__panel` | Panel s obsahem záložky |
 
 #### Parametry TmTabs
 
@@ -1728,6 +2153,20 @@ Záložky s obsahem.
 
 Kontextové menu (pravé kliknutí).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-context-menu-wrapper` | Obalovací kontejner |
+| `tm-context-menu__trigger` | Trigger element |
+| `tm-context-menu` | Samotné menu |
+| `tm-context-menu__divider` | Oddělovač |
+| `tm-context-menu__item` | Položka menu |
+| `tm-context-menu__item--danger` | Nebezpečná položka (červená) |
+| `tm-context-menu__item--disabled` | Zakázaná položka |
+| `tm-context-menu__item-icon` | Ikona položky |
+| `tm-context-menu__item-label` | Text položky |
+
 #### Parametry TmContextMenu
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1770,6 +2209,23 @@ Kontextové menu (pravé kliknutí).
 
 SVG ikona z vestavěné knihovny.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-icon` | Základní třída ikony |
+| `tm-icon-xs` | Extra malá velikost |
+| `tm-icon-sm` | Malá velikost |
+| `tm-icon-md` | Střední velikost |
+| `tm-icon-lg` | Velká velikost |
+| `tm-icon-xl` | Extra velká velikost |
+| `tm-icon-primary` | Primární barva |
+| `tm-icon-danger` | Červená barva |
+| `tm-icon-success` | Zelená barva |
+| `tm-icon-warning` | Žlutá barva |
+| `tm-icon-muted` | Tlumená barva |
+| `tm-icon-current` | Barva z rodičovského elementu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1791,6 +2247,23 @@ SVG ikona z vestavěné knihovny.
 ### TmAvatar
 
 Avatar uživatele (obrázek nebo iniciály).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-avatar` | Základní třída avataru |
+| `tm-avatar-xs` | Extra malá velikost |
+| `tm-avatar-sm` | Malá velikost |
+| `tm-avatar-md` | Střední velikost |
+| `tm-avatar-lg` | Velká velikost |
+| `tm-avatar-xl` | Extra velká velikost |
+| `tm-avatar-2xl` | Dvojnásobně velká velikost |
+| `tm-avatar-circle` | Kulatý tvar |
+| `tm-avatar-square` | Čtvercový tvar |
+| `tm-avatar-image` | Obrázek uvnitř avataru |
+| `tm-avatar-fallback` | Fallback s iniciálami |
+| `tm-avatar-{color}` | Dynamická barva pozadí (gray, blue, green, red, purple) |
 
 #### Parametry
 
@@ -1829,6 +2302,14 @@ Avatar uživatele (obrázek nebo iniciály).
 
 Skupina avatarů s limitem a počítadlem.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-avatar-group` | Kořenový kontejner skupiny |
+| `tm-avatar-group-xs` … `tm-avatar-group-2xl` | Velikostní varianty skupiny |
+| `tm-avatar-overflow` | Přetečený avatar (+N) |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1856,6 +2337,21 @@ Skupina avatarů s limitem a počítadlem.
 ### TmDatePicker
 
 Výběr data s kalendářem.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-date-picker` | Kořenový kontejner |
+| `tm-picker-label` | Popisek |
+| `tm-date-picker-input-row` | Řádek s inputem |
+| `tm-date-picker-trigger` | Trigger tlačítko |
+| `tm-picker-placeholder` | Placeholder text |
+| `tm-date-picker-icon` | Ikona kalendáře |
+| `tm-picker-clear` | Tlačítko pro vymazání |
+| `tm-date-picker-popup` | Vyskakovací kalendář |
+| `tm-date-picker-footer` | Patička kalendáře |
+| `tm-date-today-btn` | Tlačítko „Dnes" |
 
 #### Parametry
 
@@ -1901,6 +2397,23 @@ Výběr data s kalendářem.
 
 Výběr rozsahu dat s presety.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-date-range-picker` | Kořenový kontejner |
+| `tm-picker-label` | Popisek |
+| `tm-date-range-input-row` | Řádek s inputem |
+| `tm-date-range-trigger` | Trigger tlačítko |
+| `tm-picker-placeholder` | Placeholder text |
+| `tm-date-picker-icon` | Ikona kalendáře |
+| `tm-picker-clear` | Tlačítko pro vymazání |
+| `tm-date-range-popup` | Vyskakovací panel |
+| `tm-date-range-presets` | Předvolby rozsahů |
+| `tm-date-range-preset-btn` | Tlačítko předvolby |
+| `tm-date-range-calendars` | Kontejner kalendářů |
+| `tm-date-range-footer` | Patička |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1937,6 +2450,20 @@ Výběr rozsahu dat s presety.
 
 Výběr data a času.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-datetime-picker` | Kořenový kontejner |
+| `tm-datetime-picker--invalid` | Nevalidní stav |
+| `tm-picker-label` | Popisek |
+| `tm-datetime-picker-body` | Tělo komponenty |
+| `tm-datetime-date-section` | Sekce s datem |
+| `tm-date-picker-input-row` | Řádek s inputem data |
+| `tm-date-picker-trigger` | Trigger tlačítko |
+| `tm-date-picker-popup` | Vyskakovací kalendář |
+| `tm-datetime-time-section` | Sekce s časem |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1968,6 +2495,22 @@ Výběr data a času.
 
 Výběr rozsahu datum + čas.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-datetime-range-picker` | Kořenový kontejner |
+| `tm-datetime-range--invalid` | Nevalidní stav |
+| `tm-picker-label` | Popisek |
+| `tm-datetime-range-body` | Tělo komponenty |
+| `tm-datetime-range-section` | Sekce s datem a časem |
+| `tm-datetime-range-start` | Sekce „Od" |
+| `tm-datetime-range-label` | Label sekce |
+| `tm-datetime-range-sep` | Oddělovač |
+| `tm-datetime-range-end` | Sekce „Do" |
+| `tm-picker-clear` | Tlačítko pro vymazání |
+| `tm-field-error` | Chybová zpráva |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -1992,6 +2535,17 @@ Výběr rozsahu datum + čas.
 ### TmTimePicker
 
 Výběr času s dropdownem.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-time-picker` | Kořenový kontejner |
+| `tm-time-picker--invalid` | Nevalidní stav |
+| `tm-picker-label` | Popisek |
+| `tm-time-picker-body` | Tělo komponenty |
+| `tm-picker-clear` | Tlačítko pro vymazání |
+| `tm-picker-placeholder` | Placeholder text |
 
 #### Parametry
 
@@ -2022,6 +2576,18 @@ Výběr času s dropdownem.
 
 Nízkoúrovňový vstup pro čas (hodiny:minuty:sekundy).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-time-input` | Kořenový kontejner |
+| `tm-time-input--disabled` | Zakázaný stav |
+| `tm-time-seg` | Segment času |
+| `tm-time-seg--hours` | Segment hodin |
+| `tm-time-seg--minutes` | Segment minut |
+| `tm-time-seg--seconds` | Segment sekund |
+| `tm-time-sep` | Oddělovač (dvojtečka) |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2042,6 +2608,23 @@ Nízkoúrovňový vstup pro čas (hodiny:minuty:sekundy).
 ### TmTimeRangePicker
 
 Výběr časového rozsahu.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-time-range-picker` | Kořenový kontejner |
+| `tm-time-range--invalid` | Nevalidní stav |
+| `tm-picker-label` | Popisek |
+| `tm-time-range-body` | Tělo komponenty |
+| `tm-time-range-section` | Sekce rozsahu |
+| `tm-time-range-from` | Sekce „Od" |
+| `tm-time-range-label` | Label sekce |
+| `tm-time-range-sep` | Oddělovač |
+| `tm-time-range-to` | Sekce „Do" |
+| `tm-time-range-swap-btn` | Tlačítko pro prohození |
+| `tm-field-error` | Chybová zpráva |
+| `tm-time-range-duration` | Zobrazení trvání |
 
 #### Parametry
 
@@ -2066,6 +2649,28 @@ Výběr časového rozsahu.
 ### TmCalendarView
 
 Měsíční kalendářní pohled s událostmi.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-calendar-view` | Kořenový kontejner |
+| `tm-calendar` | Kalendář |
+| `tm-cal-nav` | Navigace (měsíc/rok) |
+| `tm-cal-nav-btn` | Navigační tlačítko |
+| `tm-cal-prev` | Předchozí měsíc |
+| `tm-cal-next` | Následující měsíc |
+| `tm-cal-title` | Nadpis měsíce/roku |
+| `tm-cal-grid` | Mřížka dnů |
+| `tm-cal-header-cell` | Hlavička dne v týdnu |
+| `tm-calendar-view__day-cell` | Buňka dne |
+| `tm-cal-day` | Den |
+| `tm-cal-day--other-month` | Den z jiného měsíce |
+| `tm-cal-day--today` | Dnešní den |
+| `tm-cal-day--selected` | Vybraný den |
+| `tm-cal-day--disabled` | Zakázaný den |
+| `tm-calendar-view__highlighted` | Zvýrazněný den |
+| `tm-calendar-view__event` | Událost v kalendáři |
 
 #### Parametry
 
@@ -2097,6 +2702,18 @@ Měsíční kalendářní pohled s událostmi.
 
 Obalový komponent formulářového pole s label, chybou a helpem.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-form-field` | Kořenový kontejner |
+| `tm-form-field--error` | Stav s chybou |
+| `tm-form-field-label` | Popisek pole |
+| `tm-form-field-required` | Hvězdička u povinného pole |
+| `tm-form-field-control` | Obal pro vstupní element |
+| `tm-form-field-help` | Nápověda pod polem |
+| `tm-form-field-error` | Chybová zpráva |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2124,6 +2741,15 @@ Obalový komponent formulářového pole s label, chybou a helpem.
 ### TmValidatedField
 
 Textový vstup s automatickou integrací do EditContext pro validaci. Podporuje stejné parametry jako TmTextInput — parametry `Error`, `IsValid` a `ShowValidationIcons` se řídí automaticky z EditContext.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-validated-field` | Kořenový kontejner |
+| `tm-input-label` | Popisek pole |
+| `tm-input-label-required` | Hvězdička u povinného pole |
+| `tm-input-help-text` | Nápověda pod polem |
 
 #### Parametry
 
@@ -2190,6 +2816,17 @@ Textový vstup s automatickou integrací do EditContext pro validaci. Podporuje 
 
 Souhrn všech validačních chyb formuláře.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-validation-summary` | Kořenový kontejner |
+| `tm-validation-summary-header` | Hlavička |
+| `tm-validation-summary-icon` | Ikona varování |
+| `tm-validation-summary-title` | Nadpis |
+| `tm-validation-summary-body` | Tělo |
+| `tm-validation-summary-list` | Seznam chyb |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2217,6 +2854,15 @@ Souhrn všech validačních chyb formuláře.
 
 Validační zpráva pro konkrétní pole.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-form-validation-message` | Kořenový kontejner |
+| `tm-form-validation-message-item` | Položka zprávy |
+| `tm-form-validation-message-icon` | Ikona |
+| `tm-form-validation-message-text` | Text zprávy |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2234,6 +2880,18 @@ Validační zpráva pro konkrétní pole.
 ### TmInlineEdit
 
 Inline editace textu (kliknutím se aktivuje editační režim).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-inline-edit` | Kořenový kontejner |
+| `tm-inline-edit--disabled` | Zakázaný stav |
+| `tm-inline-edit-input` | Editační input |
+| `tm-inline-edit-input--error` | Input s chybou |
+| `tm-inline-edit-error` | Chybová zpráva |
+| `tm-inline-edit-display` | Zobrazovací režim |
+| `tm-inline-edit-display--placeholder` | Placeholder v zobrazovacím režimu |
 
 #### Parametry
 
@@ -2265,6 +2923,18 @@ Inline editace textu (kliknutím se aktivuje editační režim).
 
 Sekce formuláře s nadpisem a možností sbalení.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-form-section` | Kořenový kontejner |
+| `tm-form-section-header` | Hlavička sekce |
+| `tm-form-section-header--collapsible` | Hlavička sbalitelné sekce |
+| `tm-form-section-title` | Nadpis sekce |
+| `tm-form-section-toggle` | Tlačítko pro sbalení/rozbalení |
+| `tm-form-section-desc` | Popis sekce |
+| `tm-form-section-body` | Tělo sekce |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2295,6 +2965,13 @@ Sekce formuláře s nadpisem a možností sbalení.
 
 Řádek formuláře s automatickým rozvržením sloupců.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-form-row` | Kořenový kontejner |
+| `tm-form-row--cols-{N}` | Počet sloupců (dynamicky, např. `tm-form-row--cols-2`) |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2321,6 +2998,23 @@ Sekce formuláře s nadpisem a možností sbalení.
 ### TmDynamicFormRenderer
 
 Dynamický renderer formuláře z definic polí (metadata-driven).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-dynamic-form` | Kořenový kontejner |
+| `tm-dynamic-form--2col` | Dvousloupcový layout |
+| `tm-dynamic-form--3col` | Třísloupcový layout |
+| `tm-dynamic-form__field` | Formulářové pole |
+| `tm-input-label` | Popisek pole |
+| `tm-dynamic-form__required` | Hvězdička u povinného pole |
+| `tm-dynamic-form__input` | Textový input |
+| `tm-dynamic-form__textarea` | Textarea |
+| `tm-dynamic-form__checkbox-label` | Label checkboxu |
+| `tm-dynamic-form__checkbox` | Checkbox |
+| `tm-dynamic-form__select` | Select |
+| `tm-dynamic-form__help` | Nápověda |
 
 #### Parametry
 
@@ -2362,6 +3056,42 @@ Dynamický renderer formuláře z definic polí (metadata-driven).
 ### TmDataTable\<TItem\>
 
 Kompletní datová tabulka s řazením, filtrováním, stránkováním, groupingem a virtualizací.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-data-table-wrapper` | Kořenový obal |
+| `tm-data-table` | Element `<table>` |
+| `tm-data-table-toolbar` | Toolbar nad tabulkou |
+| `tm-data-table-toolbar-left` | Levá strana toolbaru |
+| `tm-data-table-toolbar-right` | Pravá strana toolbaru |
+| `tm-data-table-external-filters` | Oblast externích filtrů |
+| `tm-data-table-selection-bar` | Lišta výběru řádků |
+| `tm-data-table-group-zone` | Zóna pro přetahování sloupců (grouping) |
+| `tm-data-table-group-zone--dragover` | Stav přetahování nad zónou |
+| `tm-data-table-group-placeholder` | Placeholder v zóně |
+| `tm-data-table-group-chip` | Chip seskupeného sloupce |
+| `tm-data-table-group-chip-remove` | Odebrání chipu |
+| `tm-data-table-group-actions` | Akce groupingu |
+| `tm-data-table-group-expand-all` | Rozbalit vše |
+| `tm-data-table-group-collapse-all` | Sbalit vše |
+| `tm-col-check` | Sloupcový checkbox |
+| `tm-col-sortable` | Seřaditelný sloupec |
+| `tm-col-groupable` | Seskupitelný sloupec |
+| `tm-col-sorted-asc` | Řazení vzestupně |
+| `tm-col-sorted-desc` | Řazení sestupně |
+| `tm-sort-icon` | Ikona řazení |
+| `tm-filter-row` | Řádek filtrů |
+| `tm-col-filter` | Filtr sloupce |
+| `tm-col-filter-input` | Input filtru |
+| `tm-col-filter-input-wrap` | Obal inputu filtru |
+| `tm-col-filter-select` | Select filtru |
+| `tm-col-filter-clear` | Vymazání filtru |
+| `tm-row-selected` | Vybraný řádek |
+| `tm-pagination-container` | Kontejner stránkování |
+
+> **TmDataTableColumn** je bezhlavový deskriptorový komponent — nerendruje žádné vlastní HTML/CSS.
 
 #### Klíčové parametry
 
@@ -2451,6 +3181,23 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 
 Stránkování (samostatná komponenta).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-pagination` | Kořenový kontejner |
+| `tm-pagination-info` | Info o záznamu (např. „1–10 z 50") |
+| `tm-pagination-controls` | Ovládací prvky |
+| `tm-pagination-btn` | Tlačítko stránkování |
+| `tm-pagination-prev` | Předchozí stránka |
+| `tm-pagination-next` | Následující stránka |
+| `tm-pagination-ellipsis` | Tři tečky |
+| `tm-page-btn` | Tlačítko čísla stránky |
+| `tm-page-btn-active` | Aktivní stránka |
+| `tm-pagination-size` | Kontejner velikosti stránky |
+| `tm-pagination-size-label` | Label velikosti |
+| `tm-pagination-page-size` | Select velikosti stránky |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2476,6 +3223,18 @@ Stránkování (samostatná komponenta).
 
 Výběr viditelných sloupců tabulky.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-column-picker` | Kořenový kontejner |
+| `tm-column-picker-toggle` | Tlačítko otevření panelu |
+| `tm-column-picker-panel` | Panel se sloupci |
+| `tm-column-picker-items` | Seznam sloupců |
+| `tm-column-picker-item` | Položka sloupce |
+| `tm-column-picker-footer` | Patička panelu |
+| `tm-column-picker-reset` | Tlačítko resetu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2495,6 +3254,31 @@ Výběr viditelných sloupců tabulky.
 ### TmViewManager
 
 Správa uložených pohledů (filtry, řazení, sloupce).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-view-manager` | Kořenový kontejner |
+| `tm-view-manager-toggle` | Tlačítko otevření panelu |
+| `tm-view-manager-panel` | Panel s pohledy |
+| `tm-view-section` | Sekce pohledů |
+| `tm-view-section-header` | Hlavička sekce |
+| `tm-view-list` | Seznam pohledů |
+| `tm-view-item` | Položka pohledu |
+| `tm-view-item--active` | Aktivní pohled |
+| `tm-view-item-name` | Název pohledu |
+| `tm-view-item-badge` | Badge pohledu |
+| `tm-view-edit-btn` | Tlačítko editace |
+| `tm-view-delete-btn` | Tlačítko smazání |
+| `tm-view-manager-footer` | Patička panelu |
+| `tm-view-modal-overlay` | Overlay modálu |
+| `tm-view-modal` | Modální okno |
+| `tm-view-modal-header` | Hlavička modálu |
+| `tm-view-modal-body` | Tělo modálu |
+| `tm-view-modal-footer` | Patička modálu |
+| `tm-view-columns-list` | Seznam sloupců v modálu |
+| `tm-view-column-item` | Položka sloupce |
 
 #### Parametry
 
@@ -2526,6 +3310,24 @@ Správa uložených pohledů (filtry, řazení, sloupce).
 ### TmFilterBuilder
 
 Vizuální builder filtrů s aktivními filter chipy.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-filter-builder` | Kořenový kontejner |
+| `tm-filter-chips` | Kontejner aktivních chipů |
+| `tm-filter-clear-all` | Tlačítko „vymazat vše" |
+| `tm-filter-builder-add` | Tlačítko přidání filtru |
+| `tm-filter-field-picker` | Výběr pole |
+| `tm-filter-field-option` | Položka pole |
+| `tm-filter-cancel` | Tlačítko zrušení |
+| `tm-filter-editor` | Editor filtru |
+| `tm-filter-editor-field` | Pole editoru |
+| `tm-filter-operator-select` | Select operátoru |
+| `tm-filter-select` | Select pole |
+| `tm-filter-value-input` | Input hodnoty |
+| `tm-filter-apply` | Tlačítko aplikace |
 
 #### Parametry
 
@@ -2572,6 +3374,16 @@ Vizuální builder filtrů s aktivními filter chipy.
 
 Chip zobrazující aktivní filtr s možností editace a odebrání.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-filter-chip` | Kořenový kontejner |
+| `tm-filter-chip-label` | Label chipu |
+| `tm-filter-chip-field` | Název pole |
+| `tm-filter-chip-value` | Hodnota filtru |
+| `tm-filter-chip-remove` | Tlačítko odebrání |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2582,6 +3394,17 @@ Chip zobrazující aktivní filtr s možností editace a odebrání.
 ### TmBulkActionBar
 
 Panel hromadných akcí pro vybrané řádky.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-bulk-action-bar` | Kořenový kontejner |
+| `tm-bulk-action-bar__info` | Informační sekce |
+| `tm-bulk-action-bar__count` | Počet vybraných |
+| `tm-bulk-action-bar__text` | Text „vybráno" |
+| `tm-bulk-action-bar__actions` | Kontejner akcí |
+| `tm-bulk-action-bar__clear` | Tlačítko zrušení výběru |
 
 #### Parametry
 
@@ -2612,6 +3435,21 @@ Panel hromadných akcí pro vybrané řádky.
 ### TmDrawer
 
 Vysouvací panel (drawer).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-drawer__overlay` | Overlay pozadí |
+| `tm-drawer` | Kontejner draweru |
+| `tm-drawer--left` | Otevření zleva |
+| `tm-drawer--right` | Otevření zprava |
+| `tm-drawer__panel` | Panel draweru |
+| `tm-drawer__header` | Hlavička |
+| `tm-drawer__title` | Nadpis |
+| `tm-drawer__close` | Tlačítko zavření |
+| `tm-drawer__body` | Tělo obsahu |
+| `tm-drawer__footer` | Patička |
 
 #### Parametry
 
@@ -2657,6 +3495,26 @@ Vysouvací panel (drawer).
 
 Boční navigace s vnořenými položkami a sbalením.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-sidebar` | Kořenový kontejner |
+| `tm-sidebar-collapsed` | Sbalený stav |
+| `tm-sidebar-expanded` | Rozbalený stav |
+| `tm-sidebar-header` | Hlavička |
+| `tm-sidebar-toggle` | Tlačítko sbalení/rozbalení |
+| `tm-sidebar-nav` | Navigace |
+| `tm-sidebar-nav-list` | Seznam položek |
+| `tm-sidebar-nav-item` | Položka navigace |
+| `tm-sidebar-nav-item-active` | Aktivní položka |
+| `tm-sidebar-nav-link` | Odkaz položky |
+| `tm-sidebar-nav-label` | Label položky |
+| `tm-sidebar-badge` | Badge |
+| `tm-sidebar-nav-children` | Vnořené položky |
+| `tm-sidebar-nav-link-child` | Odkaz vnořené položky |
+| `tm-sidebar-footer` | Patička |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2696,6 +3554,24 @@ OnToggle="v => _sidebarCollapsed = v">
 
 Horní lišta aplikace.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-topbar` | Kořenový kontejner |
+| `tm-topbar-brand` | Oblast brandu/loga |
+| `tm-topbar-brand-title` | Název aplikace |
+| `tm-topbar-center` | Střední sekce |
+| `tm-topbar-actions` | Akce vpravo |
+| `tm-topbar-search-trigger` | Trigger hledání |
+| `tm-topbar-search-hint` | Nápověda hledání |
+| `tm-topbar-user` | Uživatelská sekce |
+| `tm-topbar-user-button` | Tlačítko uživatele |
+| `tm-topbar-user-name` | Jméno uživatele |
+| `tm-topbar-user-menu` | Menu uživatele |
+| `tm-topbar-user-menu-item` | Položka menu |
+| `tm-topbar-user-menu-logout` | Odhlášení |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2726,6 +3602,18 @@ Horní lišta aplikace.
 
 Drobečková navigace.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-breadcrumbs` | Kořenový kontejner |
+| `tm-breadcrumb-list` | Seznam drobečků |
+| `tm-breadcrumb-item` | Položka drobečku |
+| `tm-breadcrumb-current` | Aktuální stránka |
+| `tm-breadcrumb-link` | Odkaz drobečku |
+| `tm-breadcrumb-text` | Text drobečku |
+| `tm-breadcrumb-separator` | Oddělovač |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2749,6 +3637,21 @@ Drobečková navigace.
 
 Command palette (Ctrl+K) pro rychlý přístup k akcím.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-command-palette-overlay` | Overlay pozadí |
+| `tm-command-palette` | Kontejner palette |
+| `tm-command-palette-header` | Hlavička s inputem |
+| `tm-command-palette-input` | Input hledání |
+| `tm-command-palette-close` | Tlačítko zavření |
+| `tm-command-palette-list` | Seznam příkazů |
+| `tm-command-palette-item` | Položka příkazu |
+| `tm-command-palette-title` | Nadpis položky |
+| `tm-command-palette-description` | Popis položky |
+| `tm-command-palette-shortcut` | Klávesová zkratka |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2771,6 +3674,20 @@ Command palette (Ctrl+K) pro rychlý přístup k akcím.
 ### TmSection
 
 Sekce stránky s nadpisem, ikonou a možností sbalení.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-section` | Kořenový kontejner |
+| `tm-section--collapsible` | Sbalitelná sekce |
+| `tm-section--collapsed` | Sbalený stav |
+| `tm-section-header` | Hlavička |
+| `tm-section-header-icon` | Ikona v hlavičce |
+| `tm-section-title` | Nadpis |
+| `tm-section-actions` | Akce v hlavičce |
+| `tm-section-chevron` | Šipka sbalení/rozbalení |
+| `tm-section-content` | Obsah sekce |
 
 #### Parametry
 
@@ -2806,6 +3723,23 @@ Sekce stránky s nadpisem, ikonou a možností sbalení.
 ### TmKeyboardShortcutsHelp
 
 Dialog s přehledem klávesových zkratek.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-keyboard-shortcuts-overlay` | Overlay pozadí |
+| `tm-keyboard-shortcuts-modal` | Modální okno |
+| `tm-keyboard-shortcuts-header` | Hlavička |
+| `tm-keyboard-shortcuts-title` | Nadpis |
+| `tm-keyboard-shortcuts-close` | Tlačítko zavření |
+| `tm-keyboard-shortcuts-content` | Obsah |
+| `tm-keyboard-shortcuts-category` | Kategorie zkratek |
+| `tm-keyboard-shortcuts-category-title` | Nadpis kategorie |
+| `tm-keyboard-shortcuts-list` | Seznam zkratek |
+| `tm-keyboard-shortcuts-item` | Položka zkratky |
+| `tm-keyboard-shortcuts-key` | Klávesa |
+| `tm-keyboard-shortcuts-description` | Popis zkratky |
 
 #### Parametry
 
@@ -2844,6 +3778,29 @@ Dialog s přehledem klávesových zkratek.
 
 Drag & drop zóna pro nahrávání souborů.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-file-drop-zone` | Kořenový kontejner |
+| `tm-file-drop-zone--disabled` | Zakázaný stav |
+| `tm-file-drop-zone__area` | Oblast pro přetažení |
+| `tm-file-drop-zone__area--drag-over` | Stav přetahování |
+| `tm-file-drop-zone__content` | Obsah zóny |
+| `tm-file-drop-zone__icon` | Ikona |
+| `tm-file-drop-zone__hint` | Nápověda |
+| `tm-file-drop-zone__or` | Text „nebo" |
+| `tm-file-drop-zone__browse` | Tlačítko procházení |
+| `tm-file-drop-zone__input` | Skrytý file input |
+| `tm-file-drop-zone__file-list` | Seznam nahraných souborů |
+| `tm-file-drop-zone__file-item` | Položka souboru |
+| `tm-file-drop-zone__file-info` | Info o souboru |
+| `tm-file-drop-zone__file-icon` | Ikona souboru |
+| `tm-file-drop-zone__file-details` | Detaily souboru |
+| `tm-file-drop-zone__file-name` | Název souboru |
+| `tm-file-drop-zone__file-size` | Velikost souboru |
+| `tm-file-drop-zone__file-remove` | Tlačítko odebrání |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2872,6 +3829,22 @@ Drag & drop zóna pro nahrávání souborů.
 
 Správa příloh entity (nahrávání, seznam, mazání).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-attachment-manager` | Kořenový kontejner |
+| `tm-attachment-list` | Seznam příloh |
+| `tm-attachment-item` | Položka přílohy |
+| `tm-attachment-icon` | Ikona přílohy |
+| `tm-attachment-info` | Info o příloze |
+| `tm-attachment-name` | Název přílohy |
+| `tm-attachment-meta` | Metadata (velikost, datum) |
+| `tm-attachment-actions` | Akce |
+| `tm-attachment-download` | Tlačítko stažení |
+| `tm-attachment-delete` | Tlačítko smazání |
+| `tm-attachment-upload-progress` | Progress nahrávání |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2897,6 +3870,16 @@ Správa příloh entity (nahrávání, seznam, mazání).
 
 Galerie obrázků s lightboxem.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-image-gallery` | Kořenový kontejner |
+| `tm-gallery-grid` | Mřížka obrázků |
+| `tm-gallery-item` | Položka obrázku |
+| `tm-gallery-item-img` | Obrázek |
+| `tm-gallery-item-title` | Popisek obrázku |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2919,6 +3902,23 @@ Galerie obrázků s lightboxem.
 ### TmLightbox
 
 Lightbox pro zobrazení obrázku s navigací.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-lightbox` | Kořenový kontejner |
+| `tm-lightbox-backdrop` | Pozadí |
+| `tm-lightbox-content` | Obsah |
+| `tm-lightbox-close` | Tlačítko zavření |
+| `tm-lightbox-prev` | Předchozí obrázek |
+| `tm-lightbox-image-wrap` | Obal obrázku |
+| `tm-lightbox-loading` | Stav načítání |
+| `tm-lightbox-img` | Obrázek |
+| `tm-lightbox-next` | Následující obrázek |
+| `tm-lightbox-footer` | Patička |
+| `tm-lightbox-counter` | Počítadlo |
+| `tm-lightbox-delete` | Tlačítko smazání |
 
 #### Parametry
 
@@ -2956,6 +3956,17 @@ Lightbox pro zobrazení obrázku s navigací.
 
 Dialog pro výběr formátu a rozsahu exportu.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-export-options` | Kořenový kontejner |
+| `tm-export-options-title` | Nadpis |
+| `tm-export-options-section` | Sekce |
+| `tm-export-options-entities` | Výběr entit |
+| `tm-export-options-format` | Výběr formátu |
+| `tm-export-options-actions` | Akční tlačítka |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -2978,6 +3989,16 @@ Dialog pro výběr formátu a rozsahu exportu.
 ### TmImportWizard + TmImportWizardStep
 
 Průvodce importem dat s kroky.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-import-wizard` | Kořenový kontejner |
+| `tm-import-wizard-header` | Hlavička s kroky |
+| `tm-import-wizard-content` | Obsah aktuálního kroku |
+| `tm-import-wizard-actions` | Akční tlačítka |
+| `tm-import-wizard-actions-right` | Pravá strana akcí |
 
 #### Parametry TmImportWizard
 
@@ -3025,6 +4046,17 @@ Průvodce importem dat s kroky.
 
 Náhled importu s potvrzením.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-import-preview` | Kořenový kontejner |
+| `tm-import-preview-header` | Hlavička |
+| `tm-import-preview-title` | Nadpis |
+| `tm-import-preview-description` | Popis |
+| `tm-import-preview-content` | Obsah náhledu |
+| `tm-import-preview-actions` | Akční tlačítka |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3046,6 +4078,26 @@ Náhled importu s potvrzením.
 ### TmChart
 
 SVG graf s různými typy.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-chart` | Kořenový kontejner |
+| `tm-chart--animated` | Animovaný graf |
+| `tm-chart__empty` | Prázdný stav |
+| `tm-chart__legend` | Legenda |
+| `tm-chart__legend-item` | Položka legendy |
+| `tm-chart__legend-color` | Barva v legendě |
+| `tm-chart__legend-label` | Label legendy |
+| `tm-chart__grid-line` | Čára mřížky |
+| `tm-chart__axis-label` | Popisek osy |
+| `tm-chart__value` | Hodnota |
+| `tm-chart__label` | Label datového bodu |
+| `tm-chart__line` | Čára (line chart) |
+| `tm-chart__point` | Bod (line chart) |
+| `tm-chart__bar` | Sloupec (bar chart) |
+| `tm-chart__slice` | Výseč (pie chart) |
 
 #### Parametry
 
@@ -3108,6 +4160,20 @@ SVG graf s různými typy.
 
 Picker pro výběr/vytváření tagů.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-tag-picker` | Kořenový kontejner |
+| `tm-tag-chip` | Chip vybraného tagu |
+| `tm-tag-chip-remove` | Tlačítko odebrání tagu |
+| `tm-tag-picker-trigger` | Trigger pro otevření dropdownu |
+| `tm-tag-picker-dropdown` | Dropdown se seznamem |
+| `tm-tag-picker-search` | Input hledání |
+| `tm-tag-option` | Položka tagu v dropdownu |
+| `tm-tag-dot` | Barevná tečka tagu |
+| `tm-tag-create-option` | Možnost vytvoření nového tagu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3132,6 +4198,20 @@ Picker pro výběr/vytváření tagů.
 
 Vertikální časová osa.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-timeline` | Kořenový kontejner |
+| `tm-timeline-empty` | Prázdný stav |
+| `tm-timeline-entry` | Položka na časové ose |
+| `tm-timeline-entry-internal` | Interní záznam |
+| `tm-timeline-header` | Hlavička záznamu |
+| `tm-timeline-author` | Autor |
+| `tm-timeline-timestamp` | Časové razítko |
+| `tm-timeline-internal-badge` | Badge interního záznamu |
+| `tm-timeline-content` | Obsah záznamu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3153,6 +4233,16 @@ Vertikální časová osa.
 
 Panel nástrojů s tlačítky.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-toolbar` | Kořenový kontejner |
+| `tm-toolbar--sticky` | Přilepený nahoře |
+| `tm-toolbar-start` | Levá strana |
+| `tm-toolbar-title` | Nadpis |
+| `tm-toolbar-actions` | Akce vpravo |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3167,6 +4257,14 @@ Panel nástrojů s tlačítky.
 
 Tlačítko v toolbaru.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-toolbar-btn` | Základní třída tlačítka |
+| `tm-toolbar-btn-text` | Text tlačítka |
+| `tm-toolbar-btn--{variant}` | Varianta (dynamicky: `ghost`, `primary`, `secondary`, `danger`) |
+
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Text` | `string?` | `null` | Text |
@@ -3180,6 +4278,12 @@ Tlačítko v toolbaru.
 ### TmToolbarDivider
 
 Oddělovač v toolbaru (bez parametrů).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-toolbar-divider` | Oddělovací čára |
 
 #### Příklady
 
@@ -3205,6 +4309,15 @@ Oddělovač v toolbaru (bez parametrů).
 
 Stromové zobrazení s vnořenými uzly.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-tree-view` | Kořenový kontejner |
+| `tm-tree-node` | Uzel stromu |
+| `tm-tree-expand` | Tlačítko rozbalení/sbalení |
+| `tm-tree-node-label` | Label uzlu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3228,6 +4341,13 @@ Stromové zobrazení s vnořenými uzly.
 ### TmScheduler
 
 Plánovač/kalendář s denním, týdenním, měsíčním, agenda a timeline pohledem.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-scheduler` | Kořenový kontejner |
+| `tm-scheduler-body` | Tělo scheduleru |
 
 #### Parametry
 
@@ -3295,6 +4415,49 @@ Plánovač/kalendář s denním, týdenním, měsíčním, agenda a timeline poh
 
 Konfigurovatelný dashboard s widgety (drag & drop, resize).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-dashboard` | Kořenový kontejner |
+| `tm-dashboard--edit` | Editační režim |
+| `tm-dashboard-toolbar` | Toolbar |
+| `tm-dashboard-toolbar-left` | Levá strana toolbaru |
+| `tm-dashboard-toolbar-right` | Pravá strana toolbaru |
+| `tm-dashboard-title` | Název dashboardu |
+| `tm-dashboard-title-wrapper` | Obal názvu |
+| `tm-dashboard-name-edit` | Editace názvu |
+| `tm-dashboard-name-input` | Input názvu |
+| `tm-dashboard-edit-badge` | Badge editačního režimu |
+| `tm-dashboard-views` | Pohledy |
+| `tm-dashboard-menu` | Menu pohledů |
+| `tm-dashboard-menu-header` | Hlavička menu |
+| `tm-dashboard-menu-item` | Položka menu |
+| `tm-dashboard-menu-item--active` | Aktivní položka |
+| `tm-dashboard-menu-badge` | Badge položky |
+| `tm-dashboard-menu-action` | Akce položky |
+| `tm-dashboard-grid-container` | Kontejner mřížky |
+| `tm-dashboard-grid` | Mřížka widgetů |
+| `tm-dashboard-grid-bg` | Pozadí mřížky |
+| `tm-dashboard-grid-col` | Sloupec mřížky |
+| `tm-widget` | Widget |
+| `tm-widget--collapsed` | Sbalený widget |
+| `tm-widget--minimized` | Minimalizovaný widget |
+| `tm-widget--dragging` | Přetahovaný widget |
+| `tm-widget-header` | Hlavička widgetu |
+| `tm-widget-header-left` | Levá strana hlavičky |
+| `tm-widget-drag-handle` | Úchyt pro přetahování |
+| `tm-widget-title` | Název widgetu |
+| `tm-widget-header-actions` | Akce widgetu |
+| `tm-widget-btn` | Tlačítko widgetu |
+| `tm-widget-btn--danger` | Nebezpečné tlačítko |
+| `tm-widget-content` | Obsah widgetu |
+| `tm-widget-resize-handle` | Úchyt pro změnu velikosti |
+| `tm-widget-resize-se/sw/ne/nw/e/w/s/n` | Směrové úchyty resize |
+| `tm-widget-drop-preview` | Náhled přetažení |
+| `tm-dashboard-empty` | Prázdný stav |
+| `tm-dashboard-empty-icon` | Ikona prázdného stavu |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3340,6 +4503,33 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize).
 
 Krokovací komponenta (wizard).
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-stepper` | Kořenový kontejner |
+| `tm-stepper--vertical` | Vertikální orientace |
+| `tm-stepper--horizontal` | Horizontální orientace |
+| `tm-stepper--small` | Malá velikost |
+| `tm-stepper--medium` | Střední velikost |
+| `tm-stepper--large` | Velká velikost |
+| `tm-stepper-item` | Položka kroku |
+| `tm-stepper-item--last` | Poslední krok |
+| `tm-stepper-connector` | Konektor mezi kroky |
+| `tm-stepper-connector-line` | Čára konektoru |
+| `tm-stepper-connector-line--completed` | Dokončená čára |
+| `tm-stepper-connector-line--pending` | Čekající čára |
+| `tm-stepper-step` | Krok |
+| `tm-stepper-step--completed` | Dokončený krok |
+| `tm-stepper-step--active` | Aktivní krok |
+| `tm-stepper-step--pending` | Čekající krok |
+| `tm-stepper-step--clickable` | Klikatelný krok |
+| `tm-stepper-indicator` | Indikátor kroku |
+| `tm-stepper-number` | Číslo kroku |
+| `tm-stepper-content` | Obsah kroku |
+| `tm-stepper-label` | Label kroku |
+| `tm-stepper-description` | Popis kroku |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3377,6 +4567,28 @@ ActiveStep="2" Orientation="StepperOrientation.Vertical" Size="StepperSize.Small
 
 Vizuální editor workflow stavového automatu.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-wf-designer` | Kořenový kontejner |
+| `tm-wf-canvas` | Canvas pro kreslení |
+| `tm-wf-canvas--readonly` | Režim pouze ke čtení |
+| `tm-wf-state` | Stav workflow |
+| `tm-wf-state--initial` | Počáteční stav |
+| `tm-wf-state--intermediate` | Mezistavový stav |
+| `tm-wf-state--final` | Koncový stav |
+| `tm-wf-state--selected` | Vybraný stav |
+| `tm-wf-state__label` | Label stavu |
+| `tm-wf-port` | Port pro přechody |
+| `tm-wf-transition` | Přechod |
+| `tm-wf-transition--selected` | Vybraný přechod |
+| `tm-wf-transition__label` | Label přechodu |
+| `tm-wf-context-menu` | Kontextové menu |
+| `tm-wf-context-menu__item` | Položka kontextového menu |
+| `tm-wf-context-menu__divider` | Oddělovač |
+| `tm-wf-context-menu__item--danger` | Nebezpečná položka |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3406,6 +4618,26 @@ Vizuální editor workflow stavového automatu.
 
 Panel vlastností vybraného stavu/přechodu.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-wf-properties` | Kořenový kontejner |
+| `tm-wf-properties__header` | Hlavička |
+| `tm-wf-properties__body` | Tělo panelu |
+| `tm-wf-properties__field` | Pole |
+| `tm-wf-properties__label` | Label pole |
+| `tm-wf-properties__input` | Input pole |
+| `tm-wf-type-group` | Skupina typů |
+| `tm-wf-type-option` | Volba typu |
+| `tm-wf-color-swatches` | Paleta barev |
+| `tm-wf-color-swatch` | Vzorek barvy |
+| `tm-wf-color-swatch--selected` | Vybraná barva |
+| `tm-wf-properties__from-to` | Sekce od-do |
+| `tm-wf-properties__arrow` | Šipka |
+| `tm-wf-properties__footer` | Patička |
+| `tm-wf-properties__save` | Tlačítko uložení |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3421,6 +4653,25 @@ Panel vlastností vybraného stavu/přechodu.
 
 Toolbox pro workflow designer.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-wf-toolbox` | Kořenový kontejner |
+| `tm-wf-toolbox__title` | Nadpis |
+| `tm-wf-toolbox__section` | Sekce |
+| `tm-wf-toolbox__section-title` | Nadpis sekce |
+| `tm-wf-toolbox__btn` | Tlačítko |
+| `tm-wf-toolbox__btn-icon` | Ikona tlačítka |
+| `tm-wf-toolbox__btn-icon--initial` | Ikona počátečního stavu |
+| `tm-wf-toolbox__btn-icon--intermediate` | Ikona mezistavového stavu |
+| `tm-wf-toolbox__btn-icon--final` | Ikona koncového stavu |
+| `tm-wf-toolbox__divider` | Oddělovač |
+| `tm-wf-toolbox__btn--danger` | Nebezpečné tlačítko |
+| `tm-wf-zoom-controls` | Ovládání zoomu |
+| `tm-wf-zoom-btn` | Tlačítko zoomu |
+| `tm-wf-zoom-level` | Zobrazení úrovně zoomu |
+
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `OnAddState` | `EventCallback` | — | Přidat stav |
@@ -3433,6 +4684,15 @@ Toolbox pro workflow designer.
 ### TmWorkflowMinimap
 
 Minimapa workflow.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-wf-minimap` | Kořenový kontejner |
+| `tm-wf-minimap__transition` | Přechod v minimapě |
+| `tm-wf-minimap__state` | Stav v minimapě |
+| `tm-wf-minimap__viewport` | Viewport obdélník |
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
@@ -3450,6 +4710,17 @@ Minimapa workflow.
 ### TmActivityLog
 
 Kompletní panel aktivity entity (timeline + komentáře + přílohy).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-activity-log` | Kořenový kontejner |
+| `tm-activity-tabs` | Záložky aktivity |
+| `tm-activity-tab` | Záložka |
+| `tm-activity-tab-active` | Aktivní záložka |
+| `tm-tab-badge` | Badge v záložce |
+| `tm-activity-content` | Obsah záložky |
 
 #### Parametry
 
@@ -3482,6 +4753,30 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 
 Komentáře s přidáváním, editací a mazáním.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-comments` | Kořenový kontejner |
+| `tm-comments-empty` | Prázdný stav |
+| `tm-comment-list` | Seznam komentářů |
+| `tm-comment-item` | Položka komentáře |
+| `tm-comment-avatar` | Avatar autora |
+| `tm-comment-body` | Tělo komentáře |
+| `tm-comment-meta` | Metadata |
+| `tm-comment-author` | Autor |
+| `tm-comment-time` | Čas |
+| `tm-comment-edited` | Indikátor editace |
+| `tm-comment-content` | Obsah komentáře |
+| `tm-comment-actions` | Akce |
+| `tm-comment-edit-btn` | Tlačítko editace |
+| `tm-comment-delete-btn` | Tlačítko smazání |
+| `tm-comment-editor` | Editor komentáře |
+| `tm-comment-editor-actions` | Akce editoru |
+| `tm-comment-submit-btn` | Tlačítko odeslání |
+| `tm-comment-cancel-btn` | Tlačítko zrušení |
+| `tm-comments-add-btn` | Tlačítko přidání komentáře |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3495,6 +4790,38 @@ Komentáře s přidáváním, editací a mazáním.
 ### TmActivityAttachments
 
 Přílohy entity s nahráváním.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-attachments` | Kořenový kontejner |
+| `tm-attach-error` | Chybová zpráva |
+| `tm-attach-progress` | Progress nahrávání |
+| `tm-attach-progress-bar` | Progress bar |
+| `tm-attach-progress-label` | Label progressu |
+| `tm-attach-empty` | Prázdný stav |
+| `tm-attach-list` | Seznam příloh |
+| `tm-attach-item` | Položka přílohy |
+| `tm-attach-icon` | Ikona přílohy |
+| `tm-attach-icon-image` | Ikona obrázku |
+| `tm-attach-icon-video` | Ikona videa |
+| `tm-attach-icon-pdf` | Ikona PDF |
+| `tm-attach-icon-word` | Ikona Word |
+| `tm-attach-icon-excel` | Ikona Excel |
+| `tm-attach-icon-archive` | Ikona archivu |
+| `tm-attach-icon-file` | Ikona obecného souboru |
+| `tm-attach-info` | Info o příloze |
+| `tm-attach-name` | Název |
+| `tm-attach-size` | Velikost |
+| `tm-attach-uploader` | Nahrávající uživatel |
+| `tm-attach-actions` | Akce |
+| `tm-attach-download-link` | Odkaz ke stažení |
+| `tm-attach-delete-btn` | Tlačítko smazání |
+| `tm-attach-upload-zone` | Zóna pro nahrávání |
+| `tm-attach-upload-label` | Label nahrávání |
+| `tm-attach-browse-link` | Odkaz pro procházení |
+| `tm-attach-file-input` | File input |
 
 #### Parametry
 
@@ -3511,6 +4838,24 @@ Přílohy entity s nahráváním.
 
 Timeline záznamů aktivity.
 
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-timeline` | Kořenový kontejner |
+| `tm-timeline-loading` | Stav načítání |
+| `tm-timeline-empty` | Prázdný stav |
+| `tm-timeline-list` | Seznam záznamů |
+| `tm-timeline-item` | Položka záznamu |
+| `tm-timeline-{entryType}` | Dynamická třída dle typu (comment, status-change, …) |
+| `tm-timeline-connector` | Konektor mezi záznamy |
+| `tm-timeline-avatar` | Avatar |
+| `tm-timeline-body` | Tělo záznamu |
+| `tm-timeline-meta` | Metadata |
+| `tm-timeline-author` | Autor |
+| `tm-timeline-time` | Čas |
+| `tm-timeline-content` | Obsah |
+
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
@@ -3520,6 +4865,20 @@ Timeline záznamů aktivity.
 ### TmRichEditorFull
 
 Plnohodnotný rich text editor (WYSIWYG).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-rich-editor-full` | Kořenový kontejner |
+| `tm-rte-disabled` | Zakázaný stav |
+| `tm-rte-editor-content-wrapper` | Obal obsahu |
+| `tm-rte-editor-content` | Editovatelný obsah |
+| `tm-rte-placeholder` | Placeholder |
+| `tm-rte-footer` | Patička |
+| `tm-rte-word-count` | Počet slov |
+| `tm-rte-char-count` | Počet znaků |
+| `tm-rte-char-count-over` | Překročený limit znaků |
 
 #### Parametry
 
@@ -3553,6 +4912,20 @@ Plnohodnotný rich text editor (WYSIWYG).
 ### TmRichEditorSimple
 
 Jednoduchý rich text editor (pro komentáře).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-rich-editor-simple` | Kořenový kontejner |
+| `tm-rte-focused` | Stav fokusu |
+| `tm-rte-disabled` | Zakázaný stav |
+| `tm-rte-editor-content-wrapper` | Obal obsahu |
+| `tm-rte-editor-content` | Editovatelný obsah |
+| `tm-rte-placeholder` | Placeholder |
+| `tm-rte-footer` | Patička |
+| `tm-rte-char-count` | Počet znaků |
+| `tm-rte-char-count-over` | Překročený limit znaků |
 
 #### Parametry
 
