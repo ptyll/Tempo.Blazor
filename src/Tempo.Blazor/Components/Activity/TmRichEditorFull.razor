@@ -373,7 +373,9 @@
         }
         catch { /* JS not available in tests / SSR */ }
 
-        await InvokeAsync(StateHasChanged);
+        // Note: StateHasChanged is intentionally not called here
+        // to avoid re-rendering that would lose editor focus.
+        // The UI state (active formats) is already updated above.
     }
 
     private async Task HandleEmojiSelected(string emoji)

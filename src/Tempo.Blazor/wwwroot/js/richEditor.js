@@ -454,11 +454,16 @@ window.tmRichEditor = {
      * Restore focus to the last active editor
      */
     _restoreFocus: function () {
-        const editors = document.querySelectorAll('[contenteditable="true"]');
-        for (let editor of editors) {
-            if (document.activeElement === editor) return;
+        const activeElement = document.activeElement;
+        const isContentEditable = activeElement && activeElement.contentEditable === 'true';
+        
+        // Only restore focus if no editor is currently focused
+        if (!isContentEditable) {
+            const editors = document.querySelectorAll('[contenteditable="true"]');
+            if (editors.length > 0) {
+                editors[0].focus();
+            }
         }
-        // If no editor is focused, don't force focus (let user decide)
     },
 
     /**
