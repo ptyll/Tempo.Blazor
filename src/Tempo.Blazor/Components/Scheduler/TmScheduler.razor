@@ -20,7 +20,9 @@
                                       ReadOnly="@ReadOnly"
                                       OnSlotClick="@OnSlotClick"
                                       OnEventClick="@OnEventClick"
-                                      OnEventChanged="@OnEventChanged" />
+                                      OnEventChanged="@OnEventChanged"
+                                      OnSlotContextMenu="@OnSlotContextMenu"
+                                      OnEventContextMenu="@OnEventContextMenu" />
                 break;
 
             case TmScheduleViewType.Day:
@@ -32,6 +34,8 @@
                                     OnSlotClick="@OnSlotClick"
                                     OnEventClick="@OnEventClick"
                                     OnEventChanged="@OnEventChanged"
+                                    OnSlotContextMenu="@OnSlotContextMenu"
+                                    OnEventContextMenu="@OnEventContextMenu"
                                     EventTemplate="@EventTemplate" />
                 break;
 
@@ -45,6 +49,8 @@
                                      OnSlotClick="@OnSlotClick"
                                      OnEventClick="@OnEventClick"
                                      OnEventChanged="@OnEventChanged"
+                                     OnSlotContextMenu="@OnSlotContextMenu"
+                                     OnEventContextMenu="@OnEventContextMenu"
                                      EventTemplate="@EventTemplate" />
                 break;
 
@@ -62,7 +68,9 @@
                                          ReadOnly="@ReadOnly"
                                          OnSlotClick="@OnSlotClick"
                                          OnEventClick="@OnEventClick"
-                                         OnEventChanged="@OnEventChanged" />
+                                         OnEventChanged="@OnEventChanged"
+                                         OnSlotContextMenu="@OnSlotContextMenu"
+                                         OnEventContextMenu="@OnEventContextMenu" />
                 break;
         }
     </div>
@@ -103,6 +111,12 @@
 
     /// <summary>Fires after an event is moved or resized via drag & drop.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires when right-clicking on an empty time slot.</summary>
+    [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
+
+    /// <summary>Fires when right-clicking on an event.</summary>
+    [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
 
     /// <summary>Resources for grouping (timeline/resource views).</summary>
     [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }

@@ -137,6 +137,12 @@
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
 
+    /// <summary>Fires when right-clicking on a time slot.</summary>
+    [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
+
+    /// <summary>Fires when right-clicking on an event.</summary>
+    [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
+
     /// <summary>Optional custom event template.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
 
@@ -161,6 +167,8 @@
             builder.AddAttribute(3, "ondragover", "event.preventDefault()");
             builder.AddAttribute(4, "ondrop", EventCallback.Factory.Create(this, () => HandleSlotDrop(slotStart, slotEnd)));
             builder.AddAttribute(5, "onclick", EventCallback.Factory.Create(this, () => OnSlotClick.InvokeAsync((slotStart, slotEnd))));
+            builder.AddAttribute(6, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, e => HandleSlotContextMenu(e, slotStart, slotEnd)));
+            builder.AddEventPreventDefaultAttribute(7, "oncontextmenu", true);
             builder.CloseElement();
         }
     };
@@ -183,6 +191,8 @@
             builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
             builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
             builder.AddEventStopPropagationAttribute(7, "onclick", true);
+            builder.AddAttribute(8, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, evt => HandleEventContextMenu(evt, e)));
+            builder.AddEventStopPropagationAttribute(9, "oncontextmenu", true);
 
             // Time
             builder.OpenElement(8, "span");
@@ -366,5 +376,34 @@
     private void HandleResizeStart(TmScheduleEvent evt, MouseEventArgs args)
     {
         // Resize tracking requires JS interop for mousemove/mouseup on document.
+    }
+
+    // ── Context Menu ──
+
+    private async Task HandleSlotContextMenu(MouseEventArgs e, DateTime slotStart, DateTime slotEnd)
+    {
+        if (OnSlotContextMenu.HasDelegate)
+        {
+            await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
+            {
+                Start = slotStart,
+                End = slotEnd,
+                ClientX = e.ClientX,
+                ClientY = e.ClientY
+            });
+        }
+    }
+
+    private async Task HandleEventContextMenu(MouseEventArgs e, TmScheduleEvent evt)
+    {
+        if (OnEventContextMenu.HasDelegate)
+        {
+            await OnEventContextMenu.InvokeAsync(new SchedulerEventContext
+            {
+                Event = evt,
+                ClientX = e.ClientX,
+                ClientY = e.ClientY
+            });
+        }
     }
 }

@@ -10,6 +10,8 @@
                          OnSlotClick="@OnSlotClick"
                          OnEventClick="@OnEventClick"
                          OnEventChanged="@OnEventChanged"
+                         OnSlotContextMenu="@OnSlotContextMenu"
+                         OnEventContextMenu="@OnEventContextMenu"
                          EventTemplate="@EventTemplate" />
 </div>
 
@@ -39,6 +41,12 @@
 
     /// <summary>Fires when an event is moved or resized.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires when right-clicking on a time slot.</summary>
+    [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
+
+    /// <summary>Fires when right-clicking on an event.</summary>
+    [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
 
     /// <summary>Resources for grouping columns.</summary>
     [Parameter] public IReadOnlyList<TmScheduleResource>? Resources { get; set; }

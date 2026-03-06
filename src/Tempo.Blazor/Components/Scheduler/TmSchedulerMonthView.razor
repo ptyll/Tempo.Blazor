@@ -21,7 +21,9 @@
             <div class="@css"
                  @onclick="@(() => HandleDayClick(d))"
                  @ondragover:preventDefault="true"
-                 @ondrop="@(() => HandleDrop(d))">
+                 @ondrop="@(() => HandleDrop(d))"
+                 @oncontextmenu="@(e => HandleDayContextMenu(e, d))"
+                 @oncontextmenu:preventDefault="true">
                 <span class="tm-scheduler-month-day-number">@d.Day</span>
                 @if (!isOther)
                 {
@@ -38,7 +40,9 @@
                              draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
                              @ondragstart="@(() => HandleDragStart(e))"
                              @onclick="@(() => HandleEventClick(e))"
-                             @onclick:stopPropagation="true">
+                             @onclick:stopPropagation="true"
+                             @oncontextmenu="@(e => HandleEventContextMenu(e, evt))"
+                             @oncontextmenu:stopPropagation="true">
                             @if (!e.AllDay)
                             {
                                 <span class="tm-scheduler-month-event-time">@e.Start.ToString("HH:mm")</span>
@@ -83,6 +87,12 @@
 
     /// <summary>Fires when an event is moved via drag & drop.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires when right-clicking on an empty day slot.</summary>
+    [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
+
+    /// <summary>Fires when right-clicking on an event.</summary>
+    [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -140,5 +150,32 @@
 
         await OnEventChanged.InvokeAsync(_draggedEvent);
         _draggedEvent = null;
+    }
+
+    private async Task HandleDayContextMenu(MouseEventArgs e, DateOnly date)
+    {
+        if (OnSlotContextMenu.HasDelegate)
+        {
+            await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
+            {
+                Start = date.ToDateTime(TimeOnly.MinValue),
+                End = date.ToDateTime(new TimeOnly(23, 59, 59)),
+                ClientX = e.ClientX,
+                ClientY = e.ClientY
+            });
+        }
+    }
+
+    private async Task HandleEventContextMenu(MouseEventArgs e, TmScheduleEvent evt)
+    {
+        if (OnEventContextMenu.HasDelegate)
+        {
+            await OnEventContextMenu.InvokeAsync(new SchedulerEventContext
+            {
+                Event = evt,
+                ClientX = e.ClientX,
+                ClientY = e.ClientY
+            });
+        }
     }
 }

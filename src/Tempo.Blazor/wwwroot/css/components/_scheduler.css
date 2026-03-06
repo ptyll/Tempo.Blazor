@@ -105,3 +105,73 @@
     background: var(--tm-color-primary-dark, #2563eb);
     color: #fff;
 }
+
+/* ── Context Menu ──────────────────────────────── */
+.tm-scheduler-context-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 160px;
+    background: var(--tm-bg-surface, #ffffff);
+    border: 1px solid var(--tm-border-color, #e2e8f0);
+    border-radius: var(--tm-radius-md, 0.375rem);
+    box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+    padding: var(--tm-space-1, 0.25rem) 0;
+}
+
+.tm-scheduler-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2, 0.5rem);
+    width: 100%;
+    padding: var(--tm-space-2, 0.5rem) var(--tm-space-3, 0.75rem);
+    border: none;
+    background: transparent;
+    color: var(--tm-text-primary, #1e293b);
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.tm-scheduler-context-menu-item:hover {
+    background: var(--tm-bg-hover, #f1f5f9);
+}
+
+.tm-scheduler-context-menu-item--danger {
+    color: var(--tm-color-danger, #ef4444);
+}
+
+.tm-scheduler-context-menu-item--danger:hover {
+    background: color-mix(in srgb, var(--tm-color-danger, #ef4444) 10%, transparent);
+}
+
+.tm-scheduler-context-menu-divider {
+    height: 1px;
+    margin: var(--tm-space-1, 0.25rem) 0;
+    background: var(--tm-border-color, #e2e8f0);
+}
+
+.tm-scheduler-context-menu-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    color: var(--tm-text-tertiary, #94a3b8);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .tm-scheduler-context-menu {
+    background: var(--tm-bg-surface-dark, #1e293b);
+    border-color: var(--tm-border-color-dark, #334155);
+}
+
+[data-theme="dark"] .tm-scheduler-context-menu-item {
+    color: var(--tm-text-primary-dark, #f1f5f9);
+}
+
+[data-theme="dark"] .tm-scheduler-context-menu-item:hover {
+    background: var(--tm-bg-hover-dark, #334155);
+}
+
+[data-theme="dark"] .tm-scheduler-context-menu-divider {
+    background: var(--tm-border-color-dark, #334155);
+}

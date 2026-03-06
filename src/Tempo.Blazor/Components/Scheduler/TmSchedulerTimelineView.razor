@@ -33,7 +33,9 @@
                     var slotEnd = slotStart.AddMinutes(SlotDuration);
                     <div class="tm-scheduler-timeline-slot"
                          style="left: @F(GetMinuteLeftPercent(si * SlotDuration))%; width: @F(GetSlotWidthPercent())%;"
-                         @onclick="@(() => OnSlotClick.InvokeAsync((slotStart, slotEnd)))"></div>
+                         @onclick="@(() => OnSlotClick.InvokeAsync((slotStart, slotEnd)))"
+                         @oncontextmenu="@(e => HandleSlotContextMenu(e, slotStart, slotEnd, r.Id))"
+                         @oncontextmenu:preventDefault="true"></div>
                 }
 
                 @* Events *@
@@ -47,7 +49,9 @@
                          style="left: @F(leftPct)%; width: @F(widthPct)%; --event-color: @(e.Color ?? r.Color ?? "var(--tm-color-primary, #3b82f6)");"
                          title="@e.Title"
                          @onclick="@(() => OnEventClick.InvokeAsync(e))"
-                         @onclick:stopPropagation="true">
+                         @onclick:stopPropagation="true"
+                         @oncontextmenu="@(e => HandleEventContextMenu(e, evt))"
+                         @oncontextmenu:stopPropagation="true">
                         <span class="tm-scheduler-timeline-event-title">@e.Title</span>
                     </div>
                 }
@@ -84,6 +88,12 @@
 
     /// <summary>Fires when an event changes.</summary>
     [Parameter] public EventCallback<TmScheduleEvent> OnEventChanged { get; set; }
+
+    /// <summary>Fires when right-clicking on a time slot.</summary>
+    [Parameter] public EventCallback<SchedulerSlotContext> OnSlotContextMenu { get; set; }
+
+    /// <summary>Fires when right-clicking on an event.</summary>
+    [Parameter] public EventCallback<SchedulerEventContext> OnEventContextMenu { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -131,4 +141,32 @@
     }
 
     private static string F(double value) => value.ToString("F4", CultureInfo.InvariantCulture);
+
+    private async Task HandleSlotContextMenu(MouseEventArgs e, DateTime slotStart, DateTime slotEnd, string resourceId)
+    {
+        if (OnSlotContextMenu.HasDelegate)
+        {
+            await OnSlotContextMenu.InvokeAsync(new SchedulerSlotContext
+            {
+                Start = slotStart,
+                End = slotEnd,
+                ResourceId = resourceId,
+                ClientX = e.ClientX,
+                ClientY = e.ClientY
+            });
+        }
+    }
+
+    private async Task HandleEventContextMenu(MouseEventArgs e, TmScheduleEvent evt)
+    {
+        if (OnEventContextMenu.HasDelegate)
+        {
+            await OnEventContextMenu.InvokeAsync(new SchedulerEventContext
+            {
+                Event = evt,
+                ClientX = e.ClientX,
+                ClientY = e.ClientY
+            });
+        }
+    }
 }
