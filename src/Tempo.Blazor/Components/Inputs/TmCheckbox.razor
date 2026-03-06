@@ -1,5 +1,4 @@
 @namespace Tempo.Blazor.Components.Inputs
-@using Microsoft.AspNetCore.Components.Web
 
 <div class="tm-checkbox-wrapper @(Disabled ? "tm-checkbox-disabled" : "")">
     <label class="tm-checkbox-label">
@@ -7,8 +6,7 @@
                checked="@Value"
                disabled="@Disabled"
                class="tm-checkbox-input"
-               @onchange="HandleChangeAsync"
-               @onkeydown="HandleKeyDownAsync" />
+               @onchange="HandleChangeAsync" />
         <span class="tm-checkbox-custom">
             @if (Value)
             {
@@ -60,11 +58,5 @@
         if (Disabled) return;
         var newValue = e.Value is bool b && b;
         await ValueChanged.InvokeAsync(newValue);
-    }
-
-    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
-    {
-        if (e.Key == " " && !Disabled)
-            await ValueChanged.InvokeAsync(!Value);
     }
 }
