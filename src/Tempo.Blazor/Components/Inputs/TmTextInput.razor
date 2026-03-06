@@ -22,7 +22,9 @@
                required="@Required"
                tabindex="@TabIndex"
                autofocus="@AutoFocus"
+               autocomplete="@AutoComplete"
                class="@InputCssClass"
+               @attributes="AdditionalAttributes"
                @oninput="HandleInputAsync"
                @onchange="HandleChangeAsync"
                @onkeydown="HandleKeyDownAsync"
@@ -119,6 +121,12 @@
 
     /// <summary>Additional CSS class(es) to apply to the input element.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>HTML autocomplete attribute. Common values: "on", "off", "name", "email", "tel", "address", "username", "new-password", "current-password", etc.</summary>
+    [Parameter] public string? AutoComplete { get; set; }
+
+    /// <summary>Additional attributes to be applied to the input element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>Fires when a key is pressed down.</summary>
     [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }

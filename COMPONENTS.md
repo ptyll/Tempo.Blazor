@@ -223,6 +223,8 @@ Jednořádkový textový vstup s podporou ikon, validace a pomocného textu.
 | `ShowValidationIcons` | `bool` | `false` | Zobrazit ikony validace (✓/✗) |
 | `IsValid` | `bool?` | `null` | Stav validace: `true` = zelená, `false` = červená, `null` = neutrální |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off`, `email`, `name`, `username`, `new-password`, `current-password`, ... |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy (např. `autocorrect`, `spellcheck`, `inputmode`) |
 | `OnKeyDown` | `EventCallback<KeyboardEventArgs>` | — | Stisk klávesy |
 | `OnKeyUp` | `EventCallback<KeyboardEventArgs>` | — | Uvolnění klávesy |
 | `OnKeyPress` | `EventCallback<KeyboardEventArgs>` | — | Stisk znaku |
@@ -270,6 +272,23 @@ Jednořádkový textový vstup s podporou ikon, validace a pomocného textu.
 
 @* Autofocus *@
 <TmTextInput @bind-Value="_first" Label="První pole" AutoFocus="true" />
+
+@* S AutoComplete (automatické doplňování) *@
+<TmTextInput @bind-Value="_email" Label="Email" Type="email" AutoComplete="email" />
+<TmTextInput @bind-Value="_password" Label="Heslo" Type="password" AutoComplete="new-password" />
+<TmTextInput @bind-Value="_username" Label="Uživatelské jméno" AutoComplete="username" />
+<TmTextInput @bind-Value="_firstName" Label="Jméno" AutoComplete="given-name" />
+<TmTextInput @bind-Value="_lastName" Label="Příjmení" AutoComplete="family-name" />
+<TmTextInput @bind-Value="_phone" Label="Telefon" Type="tel" AutoComplete="tel" />
+
+@* S AdditionalAttributes (další HTML atributy) *@
+<TmTextInput @bind-Value="_search" Label="Hledat"
+    AdditionalAttributes="@(new() { ["autocorrect"] = "off", ["spellcheck"] = "false" })" />
+
+@* Kombinace AutoComplete a AdditionalAttributes *@
+<TmTextInput @bind-Value="_username" Label="Uživatelské jméno"
+    AutoComplete="username"
+    AdditionalAttributes="@(new() { ["autocorrect"] = "off", ["autocapitalize"] = "none" })" />
 ```
 
 ### TmTextArea
@@ -300,6 +319,8 @@ Víceřádkové textové pole.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `TabIndex` | `int` | `0` | Tab pořadí |
 | `Id` | `string` | auto | HTML id |
+| `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off` |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -351,6 +372,8 @@ Víceřádkové textové pole.
 | `ShowButtons` | `bool` | `true` | Zobrazit +/- tlačítka |
 | `Prefix` | `string?` | `null` | Prefix (např. "$") |
 | `Suffix` | `string?` | `null` | Suffix (např. "Kč") |
+| `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off` |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -398,6 +421,8 @@ Vyhledávací vstup s debounce.
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `DebounceMs` | `int` | `300` | Zpoždění v ms |
+| `AutoComplete` | `string?` | `"off"` | HTML autocomplete atribut (výchozí `off` pro search) |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2776,6 +2801,8 @@ Textový vstup s automatickou integrací do EditContext pro validaci. Podporuje 
 | `Value` | `string` | `""` | Aktuální hodnota |
 | `ValueChanged` | `EventCallback<string>` | — | Událost změny |
 | `ValueExpression` | `Expression<Func<string>>?` | `null` | Výraz pro identifikaci pole (automaticky z @bind) |
+| `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off`, `email`, `name`, `username`, `new-password`, ... |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy předané do vnitřního inputu |
 
 > **Automaticky z EditContext** (nelze nastavit ručně): `Error`, `IsValid`, `ShowValidationIcons`
 
@@ -2810,6 +2837,27 @@ Textový vstup s automatickou integrací do EditContext pro validaci. Podporuje 
 @* S custom třídou *@
 <TmValidatedField Label="Poznámka" @bind-Value="_model.Note"
     Class="my-custom-input" HelpText="Nepovinné pole" />
+
+@* S AutoComplete (doporučeno pro formuláře) *@
+<EditForm Model="_model">
+    <FluentValidationValidator />
+    
+    <TmValidatedField Label="Jméno" @bind-Value="_model.FirstName"
+        AutoComplete="given-name" Required="true" />
+    <TmValidatedField Label="Příjmení" @bind-Value="_model.LastName"
+        AutoComplete="family-name" Required="true" />
+    <TmValidatedField Label="Email" @bind-Value="_model.Email" Type="email"
+        AutoComplete="email" Required="true" />
+    <TmValidatedField Label="Telefon" @bind-Value="_model.Phone" Type="tel"
+        AutoComplete="tel" />
+    <TmValidatedField Label="Heslo" @bind-Value="_model.Password" Type="password"
+        AutoComplete="new-password" Required="true" />
+</EditForm>
+
+@* S AdditionalAttributes *@
+<TmValidatedField Label="Uživatelské jméno" @bind-Value="_model.Username"
+    AutoComplete="username"
+    AdditionalAttributes="@(new() { ["autocorrect"] = "off", ["autocapitalize"] = "none" })" />
 ```
 
 ### TmValidationSummary

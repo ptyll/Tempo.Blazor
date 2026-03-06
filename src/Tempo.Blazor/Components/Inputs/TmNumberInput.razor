@@ -31,7 +31,9 @@
                min="@Min"
                max="@Max"
                step="@Step"
+               autocomplete="@AutoComplete"
                class="tm-number-input__input"
+               @attributes="AdditionalAttributes"
                @onchange="HandleChange" />
 
         @if (!string.IsNullOrEmpty(Suffix))
@@ -102,6 +104,12 @@
 
     /// <summary>Suffix text (e.g. "days").</summary>
     [Parameter] public string? Suffix { get; set; }
+
+    /// <summary>HTML autocomplete attribute. Common values: "on", "off".</summary>
+    [Parameter] public string? AutoComplete { get; set; }
+
+    /// <summary>Additional attributes to be applied to the input element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool HasError => !string.IsNullOrEmpty(Error);
     private bool IsAtMin => Min.HasValue && Value.HasValue && Value.Value <= Min.Value;

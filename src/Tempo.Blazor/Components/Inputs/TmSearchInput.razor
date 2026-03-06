@@ -10,7 +10,9 @@
                value="@Value"
                placeholder="@(Placeholder ?? Loc["TmSearchInput_Placeholder"])"
                disabled="@Disabled"
+               autocomplete="@AutoComplete"
                class="@InputCssClass tm-input-with-right-icon"
+               @attributes="AdditionalAttributes"
                @oninput="HandleInputAsync"
                @onchange="HandleChangeAsync" />
         @if (!string.IsNullOrEmpty(Value))
@@ -40,6 +42,12 @@
 
     /// <summary>Debounce delay in milliseconds (0 = no debounce).</summary>
     [Parameter] public int DebounceMs { get; set; } = 0;
+
+    /// <summary>HTML autocomplete attribute. Defaults to "off" for search inputs. Common values: "on", "off".</summary>
+    [Parameter] public string? AutoComplete { get; set; } = "off";
+
+    /// <summary>Additional attributes to be applied to the input element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string InputCssClass =>
         $"tm-input tm-input-search tm-input-with-left-icon{(Disabled ? " tm-input-disabled" : "")}";

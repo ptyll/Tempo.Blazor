@@ -11,7 +11,9 @@
               maxlength="@MaxLength"
               disabled="@Disabled"
               tabindex="@TabIndex"
+              autocomplete="@AutoComplete"
               class="@InputCssClass"
+              @attributes="AdditionalAttributes"
               @onchange="HandleChangeAsync">@Value</textarea>
     @if (!string.IsNullOrEmpty(Error))
     {
@@ -49,6 +51,12 @@
 
     /// <summary>HTML id attribute.</summary>
     [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
+
+    /// <summary>HTML autocomplete attribute. Common values: "on", "off".</summary>
+    [Parameter] public string? AutoComplete { get; set; }
+
+    /// <summary>Additional attributes to be applied to the textarea element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string InputCssClass =>
         $"tm-input tm-textarea{(string.IsNullOrEmpty(Error) ? "" : " tm-input-error")}{(Disabled ? " tm-input-disabled" : "")}";
