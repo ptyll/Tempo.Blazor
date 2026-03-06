@@ -195,24 +195,24 @@
             builder.AddEventStopPropagationAttribute(9, "oncontextmenu", true);
 
             // Time
-            builder.OpenElement(8, "span");
-            builder.AddAttribute(9, "class", "tm-scheduler-timegrid-event-time");
-            builder.AddContent(10, $"{e.Start:HH:mm} – {e.End:HH:mm}");
+            builder.OpenElement(10, "span");
+            builder.AddAttribute(11, "class", "tm-scheduler-timegrid-event-time");
+            builder.AddContent(12, $"{e.Start:HH:mm} – {e.End:HH:mm}");
             builder.CloseElement();
 
             // Title
-            builder.OpenElement(11, "span");
-            builder.AddAttribute(12, "class", "tm-scheduler-timegrid-event-title");
-            builder.AddContent(13, e.Title);
+            builder.OpenElement(13, "span");
+            builder.AddAttribute(14, "class", "tm-scheduler-timegrid-event-title");
+            builder.AddContent(15, e.Title);
             builder.CloseElement();
 
             // Resize handle
             if (!ReadOnly && !e.IsReadOnly)
             {
-                builder.OpenElement(14, "div");
-                builder.AddAttribute(15, "class", "tm-scheduler-event-resize-handle");
-                builder.AddAttribute(16, "onmousedown", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandleResizeStart(e, args)));
-                builder.AddEventStopPropagationAttribute(17, "onmousedown", true);
+                builder.OpenElement(16, "div");
+                builder.AddAttribute(17, "class", "tm-scheduler-event-resize-handle");
+                builder.AddAttribute(18, "onmousedown", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandleResizeStart(e, args)));
+                builder.AddEventStopPropagationAttribute(19, "onmousedown", true);
                 builder.CloseElement();
             }
 
