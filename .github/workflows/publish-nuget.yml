@@ -72,12 +72,16 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
             echo "Using version from tag: $VERSION"
-          elif [ -n "${{ github.event.inputs.version_suffix }}" ]; then
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${{ github.event.inputs.version_suffix }}" ]; then
+            # Ruční spuštění bez suffixu = release verze
+            echo "VERSION=1.0.0" >> $GITHUB_OUTPUT
+            echo "Using release version: 1.0.0"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version_suffix }}" ]; then
             # Suffix pro prerelease verze (např. 1.0.0-beta1)
             echo "VERSION=1.0.0-${{ github.event.inputs.version_suffix }}" >> $GITHUB_OUTPUT
             echo "Using version with suffix: 1.0.0-${{ github.event.inputs.version_suffix }}"
           else
-            # Pro main/master použijeme timestamp jako prerelease
+            # Pro main/master push použijeme timestamp jako prerelease
             TIMESTAMP=$(date +'%Y%m%d%H%M%S')
             echo "VERSION=1.0.0-ci-$TIMESTAMP" >> $GITHUB_OUTPUT
             echo "Using CI version: 1.0.0-ci-$TIMESTAMP"
