@@ -1107,6 +1107,7 @@ Jednotlivý radio button (interní, používá se v TmRadioGroup).
 | `Variant` | `BadgeVariant` | `Default` | Barva: `Default`, `Primary`, `Success`, `Danger`, `Warning`, `Info` |
 | `Size` | `BadgeSize` | `Md` | Velikost: `Sm`, `Md` |
 | `BadgeStyle` | `BadgeStyle` | `Filled` | Styl: `Filled`, `Outline`, `Subtle` |
+| `Class` | `string?` | `null` | Další CSS třídy |
 | `Icon` | `string?` | `null` | Ikona |
 | `Pill` | `bool` | `false` | Zaoblený tvar |
 | `Dot` | `bool` | `false` | Malá tečka před textem |
@@ -4513,7 +4514,17 @@ Timeline pohled (`SchedulerView.Timeline`) podporuje pokročilé interakce:
 
 ### TmDashboard
 
-Konfigurovatelný dashboard s widgety (drag & drop, resize).
+Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více dashboardů, jejich vytváření, mazání a nastavování výchozího.
+
+#### Funkce
+
+- **Více dashboardů** — Přepínání mezi více dashboardy přes dropdown menu
+- **Vytváření dashboardů** — Dialog pro vytvoření nového dashboardu
+- **Mazání dashboardů** — Mazání s potvrzovacím dialogem (nelze smazat výchozí dashboard)
+- **Výchozí dashboard** — Nastavení výchozího dashboardu pro uživatele
+- **Editace názvu** — Přejmenování dashboardu v editačním režimu
+- **Drag & Drop** — Přesun widgetů myší
+- **Resize** — Změna velikosti widgetů
 
 #### CSS třídy
 
@@ -4534,8 +4545,9 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize).
 | `tm-dashboard-menu-header` | Hlavička menu |
 | `tm-dashboard-menu-item` | Položka menu |
 | `tm-dashboard-menu-item--active` | Aktivní položka |
-| `tm-dashboard-menu-badge` | Badge položky |
-| `tm-dashboard-menu-action` | Akce položky |
+| `tm-dashboard-menu-badge` | Badge položky (★ výchozí) |
+| `tm-dashboard-menu-action` | Akce položky (hvězdička, koš) |
+| `tm-dashboard-menu-divider` | Oddělovač v menu |
 | `tm-dashboard-grid-container` | Kontejner mřížky |
 | `tm-dashboard-grid` | Mřížka widgetů |
 | `tm-dashboard-grid-bg` | Pozadí mřížky |
@@ -4569,6 +4581,27 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize).
 | `AllowEdit` | `bool` | `true` | Povolit úpravy |
 | `OnDashboardChanged` | `EventCallback<DashboardLayout>` | — | Změna layoutu |
 | `WidgetTemplate` | `RenderFragment<WidgetInstance>?` | `null` | Šablona widgetu |
+
+#### Lokalizační klíče
+
+| Klíč | Výchozí text | Popis |
+|------|--------------|-------|
+| `TmDashboard_CreateNewDashboard` | "Create New Dashboard" | Tlačítko vytvoření |
+| `TmDashboard_DashboardName` | "Dashboard Name" | Label pro název |
+| `TmDashboard_DeleteDashboard` | "Delete Dashboard" | Titulek dialogu mazání |
+| `TmDashboard_DeleteDashboardConfirm` | "Are you sure..." | Potvrzení mazání ({0} = název) |
+| `TmDashboard_MyDashboards` | "My Dashboards" | Hlavička menu |
+| `TmDashboard_SetAsDefault` | "Set as default" | Tooltip hvězdičky |
+| `TmDashboard_Delete` | "Delete dashboard" | Tooltip koše |
+| `TmDashboard_EditMode` | "Edit Mode" | Badge v toolbaru |
+| `TmDashboard_AddWidget` | "Add Widget" | Tlačítko přidání widgetu |
+| `TmDashboard_SaveChanges` | "Save Changes" | Tlačítko uložení |
+| `TmDashboard_CancelEdit` | "Cancel" | Tlačítko zrušení |
+| `TmDashboard_Dashboards` | "Dashboards" | Dropdown menu |
+| `TmDashboard_Edit` | "Edit" | Tlačítko editace |
+| `TmDashboard_NoWidgets` | "No widgets yet" | Prázdný stav |
+| `TmDashboard_AddWidgets` | "Add Widgets" | Tlačítko přidání |
+| `TmDashboard_DefaultDashboard` | "Default dashboard" | Tooltip hvězdičky |
 
 #### Příklady
 

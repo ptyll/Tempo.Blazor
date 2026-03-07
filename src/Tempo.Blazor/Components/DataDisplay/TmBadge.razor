@@ -44,6 +44,9 @@
     /// <summary>Badge content.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>Additional CSS class(es) to apply to the badge.</summary>
+    [Parameter] public string? Class { get; set; }
+
     private string CssClass
     {
         get
@@ -64,7 +67,8 @@
                 BadgeStyle.Subtle  => "tm-badge-subtle",
                 _                  => "tm-badge-filled"
             };
-            return $"tm-badge {variantClass} {sizeClass} {styleClass}{(Pill ? " tm-badge-pill" : "")}";
+            var customClass = string.IsNullOrEmpty(Class) ? "" : $" {Class}";
+            return $"tm-badge {variantClass} {sizeClass} {styleClass}{(Pill ? " tm-badge-pill" : "")}{customClass}";
         }
     }
 }
