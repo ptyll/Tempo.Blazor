@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Components.Forms
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Icons
@@ -50,7 +51,7 @@
             }
             @if (_isEditMode)
             {
-                <span class="tm-dashboard-edit-badge">Edit Mode</span>
+                <span class="tm-dashboard-edit-badge">@Loc["TmDashboard_EditMode"]</span>
             }
         </div>
         
@@ -59,15 +60,15 @@
             {
                 <button type="button" class="tm-btn tm-btn-primary" @onclick="OpenWidgetSelector">
                     <TmIcon Name="plus" Size="IconSize.Sm" />
-                    <span>Add Widget</span>
+                    <span>@Loc["TmDashboard_AddWidget"]</span>
                 </button>
                 <button type="button" class="tm-btn tm-btn-secondary" @onclick="SaveLayout">
                     <TmIcon Name="save" Size="IconSize.Sm" />
-                    <span>Save Changes</span>
+                    <span>@Loc["TmDashboard_SaveChanges"]</span>
                 </button>
                 <button type="button" class="tm-btn tm-btn-ghost" @onclick="CancelEdit">
                     <TmIcon Name="x" Size="IconSize.Sm" />
-                    <span>Cancel</span>
+                    <span>@Loc["TmDashboard_CancelEdit"]</span>
                 </button>
             }
             else
@@ -75,18 +76,18 @@
                 @if (DashboardProvider is not null)
                 {
                     <div class="tm-dashboard-views">
-                        <button type="button" class="tm-btn tm-btn-ghost" 
+                        <button type="button" class="tm-btn tm-btn-ghost"
                                 @onclick="ToggleDashboardMenu"
-                                title="Switch Dashboard">
+                                title="@Loc["TmDashboard_Dashboards"]">
                             <TmIcon Name="layout" Size="IconSize.Sm" />
-                            <span>Dashboards</span>
+                            <span>@Loc["TmDashboard_Dashboards"]</span>
                             <TmIcon Name="chevron-down" Size="IconSize.Sm" />
                         </button>
                         @if (_showDashboardMenu)
                         {
                             <div class="tm-dashboard-menu">
                                 <div class="tm-dashboard-menu-header">
-                                    <span>My Dashboards</span>
+                                    <span>@Loc["TmDashboard_MyDashboards"]</span>
                                 </div>
                                 @foreach (var dash in _availableDashboards)
                                 {
@@ -97,7 +98,7 @@
                                         <div class="tm-dashboard-menu-actions">
                                             @if (dash.IsDefault)
                                             {
-                                                <span class="tm-dashboard-menu-badge" title="Default dashboard">★</span>
+                                                <span class="tm-dashboard-menu-badge" title="@Loc["TmDashboard_DefaultDashboard"]">★</span>
                                             }
                                             else
                                             {
@@ -107,7 +108,7 @@
                                                             class="tm-dashboard-menu-action"
                                                             @onclick:stopPropagation
                                                             @onclick="() => SetAsDefault(dash.Id)"
-                                                            title="Set as default">
+                                                            title="@Loc["TmDashboard_SetAsDefault"]">
                                                         <TmIcon Name="star" Size="IconSize.Sm" />
                                                     </button>
                                                 }
@@ -115,7 +116,7 @@
                                                         class="tm-dashboard-menu-action tm-dashboard-menu-action--danger"
                                                         @onclick:stopPropagation
                                                         @onclick="() => DeleteDashboard(dash.Id)"
-                                                        title="Delete dashboard">
+                                                        title="@Loc["TmDashboard_Delete"]">
                                                     <TmIcon Name="trash" Size="IconSize.Sm" />
                                                 </button>
                                             }
@@ -128,7 +129,7 @@
                                         @onclick:preventDefault
                                         @onclick="async () => await CreateNewDashboard()">
                                     <TmIcon Name="plus" Size="IconSize.Sm" />
-                                    <span>Create New Dashboard</span>
+                                    <span>@Loc["TmDashboard_CreateNewDashboard"]</span>
                                 </button>
                             </div>
                             <div class="tm-overlay" @onclick="() => _showDashboardMenu = false"></div>
@@ -136,11 +137,11 @@
                     </div>
                 }
                 
-                <button type="button" class="tm-btn tm-btn-secondary" 
+                <button type="button" class="tm-btn tm-btn-secondary"
                         @onclick="() => EnterEditMode()"
-                        title="Edit Dashboard">
+                        title="@Loc["TmDashboard_Edit"]">
                     <TmIcon Name="edit" Size="IconSize.Sm" />
-                    <span>Edit</span>
+                    <span>@Loc["TmDashboard_Edit"]</span>
                 </button>
             }
         </div>
@@ -259,13 +260,13 @@
             <div class="tm-dashboard-empty-icon">
                 <TmIcon Name="layout" Size="IconSize.Xl" />
             </div>
-            <h3>No widgets yet</h3>
-            <p>Add widgets to customize your dashboard</p>
+            <h3>@Loc["TmDashboard_NoWidgets"]</h3>
+            <p>@Loc["TmDashboard_AddWidgets"]</p>
             @if (!_isEditMode)
             {
                 <button type="button" class="tm-btn tm-btn-primary" @onclick="() => EnterEditMode()">
                     <TmIcon Name="plus" Size="IconSize.Sm" />
-                    <span>Add Widgets</span>
+                    <span>@Loc["TmDashboard_AddWidgets"]</span>
                 </button>
             }
         </div>
@@ -284,31 +285,31 @@
 
 @* ── New Dashboard Name Modal ────────────────────────────────── *@
 <TmModal Show="_showNewDashboardDialog"
-         Title="Create New Dashboard"
+         Title="@Loc["TmDashboard_CreateNewDashboard"]"
          OnClose="CancelNewDashboard"
          ShowFooter="true"
          ShowDefaultFooterButtons="false">
     <ChildContent>
-        <TmFormField Label="Dashboard Name">
+        <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
             <TmTextInput @bind-Value="_newDashboardName"
-                         Placeholder="Enter dashboard name..." />
+                         Placeholder="@Loc["TmDashboard_DashboardName"]" />
         </TmFormField>
     </ChildContent>
     <Footer>
-        <TmButton Variant="ButtonVariant.Ghost" OnClick="CancelNewDashboard">Cancel</TmButton>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="CancelNewDashboard">@Loc["Tm_Cancel"]</TmButton>
         <TmButton Variant="ButtonVariant.Primary"
                   OnClick="ConfirmCreateDashboard"
-                  Disabled="string.IsNullOrWhiteSpace(_newDashboardName)">Create</TmButton>
+                  Disabled="string.IsNullOrWhiteSpace(_newDashboardName)">@Loc["Tm_Create"]</TmButton>
     </Footer>
 </TmModal>
 
 @* ── Delete Dashboard Confirmation Dialog ───────────────────── *@
 <TmDialog Type="DialogType.Confirm"
           Show="_showDeleteDialog"
-          Title="Delete Dashboard"
-          Message="@($"Are you sure you want to delete '{_dashboardToDeleteName}'? This action cannot be undone.")"
+          Title="@Loc["TmDashboard_DeleteDashboard"]"
+          Message="@string.Format(Loc["TmDashboard_DeleteDashboardConfirm"], _dashboardToDeleteName)"
           OnResult="HandleDeleteDialogResult"
-          OkButtonText="Delete"
+          OkButtonText="@Loc["Tm_Delete"]"
           IsDangerous="true" />
 
 @code {

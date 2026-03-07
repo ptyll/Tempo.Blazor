@@ -454,4 +454,23 @@
   <data name="TmFilter_In" xml:space="preserve"><value>je v</value></data>
   <data name="TmFilter_NotIn" xml:space="preserve"><value>není v</value></data>
 
+  <!-- ═══════════════ TmDashboard ═══════════════ -->
+  <data name="TmDashboard_CreateNewDashboard" xml:space="preserve"><value>Vytvořit nový dashboard</value></data>
+  <data name="TmDashboard_DashboardName" xml:space="preserve"><value>Název dashboardu</value></data>
+  <data name="TmDashboard_DeleteDashboard" xml:space="preserve"><value>Smazat dashboard</value></data>
+  <data name="TmDashboard_DeleteDashboardConfirm" xml:space="preserve"><value>Opravdu chcete smazat '{0}'? Tato akce je nevratná.</value></data>
+  <data name="TmDashboard_MyDashboards" xml:space="preserve"><value>Moje dashboady</value></data>
+  <data name="TmDashboard_SetAsDefault" xml:space="preserve"><value>Nastavit jako výchozí</value></data>
+  <data name="TmDashboard_Delete" xml:space="preserve"><value>Smazat dashboard</value></data>
+  <data name="TmDashboard_EditMode" xml:space="preserve"><value>Editační mód</value></data>
+  <data name="TmDashboard_AddWidget" xml:space="preserve"><value>Přidat widget</value></data>
+  <data name="TmDashboard_SaveChanges" xml:space="preserve"><value>Uložit změny</value></data>
+  <data name="TmDashboard_CancelEdit" xml:space="preserve"><value>Zrušit</value></data>
+  <data name="TmDashboard_Dashboards" xml:space="preserve"><value>Dashboardy</value></data>
+  <data name="TmDashboard_Edit" xml:space="preserve"><value>Upravit</value></data>
+  <data name="TmDashboard_NoWidgets" xml:space="preserve"><value>Zatím žádné widgety</value></data>
+  <data name="TmDashboard_AddWidgets" xml:space="preserve"><value>Přidat widgety</value></data>
+  <data name="TmDashboard_DefaultDashboard" xml:space="preserve"><value>Výchozí dashboard</value></data>
+  <data name="TmDashboard_RenameDashboard" xml:space="preserve"><value>Přejmenovat dashboard</value></data>
+
 </root>

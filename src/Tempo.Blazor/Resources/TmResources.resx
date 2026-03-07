@@ -478,4 +478,23 @@
   <data name="TmFilter_In" xml:space="preserve"><value>in</value></data>
   <data name="TmFilter_NotIn" xml:space="preserve"><value>not in</value></data>
 
+  <!-- ═══════════════ TmDashboard ═══════════════ -->
+  <data name="TmDashboard_CreateNewDashboard" xml:space="preserve"><value>Create New Dashboard</value></data>
+  <data name="TmDashboard_DashboardName" xml:space="preserve"><value>Dashboard Name</value></data>
+  <data name="TmDashboard_DeleteDashboard" xml:space="preserve"><value>Delete Dashboard</value></data>
+  <data name="TmDashboard_DeleteDashboardConfirm" xml:space="preserve"><value>Are you sure you want to delete '{0}'? This action cannot be undone.</value></data>
+  <data name="TmDashboard_MyDashboards" xml:space="preserve"><value>My Dashboards</value></data>
+  <data name="TmDashboard_SetAsDefault" xml:space="preserve"><value>Set as default</value></data>
+  <data name="TmDashboard_Delete" xml:space="preserve"><value>Delete dashboard</value></data>
+  <data name="TmDashboard_EditMode" xml:space="preserve"><value>Edit Mode</value></data>
+  <data name="TmDashboard_AddWidget" xml:space="preserve"><value>Add Widget</value></data>
+  <data name="TmDashboard_SaveChanges" xml:space="preserve"><value>Save Changes</value></data>
+  <data name="TmDashboard_CancelEdit" xml:space="preserve"><value>Cancel</value></data>
+  <data name="TmDashboard_Dashboards" xml:space="preserve"><value>Dashboards</value></data>
+  <data name="TmDashboard_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="TmDashboard_NoWidgets" xml:space="preserve"><value>No widgets yet</value></data>
+  <data name="TmDashboard_AddWidgets" xml:space="preserve"><value>Add Widgets</value></data>
+  <data name="TmDashboard_DefaultDashboard" xml:space="preserve"><value>Default dashboard</value></data>
+  <data name="TmDashboard_RenameDashboard" xml:space="preserve"><value>Rename dashboard</value></data>
+
 </root>
