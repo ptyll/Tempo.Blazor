@@ -94,20 +94,32 @@
                                          @onclick="() => LoadDashboard(dash.Id)">
                                         <TmIcon Name="layout" Size="IconSize.Sm" />
                                         <span>@dash.Name</span>
-                                        @if (dash.IsDefault)
-                                        {
-                                            <span class="tm-dashboard-menu-badge" title="Default dashboard">★</span>
-                                        }
-                                        @if (!dash.IsDefault && _currentDashboard?.Id == dash.Id)
-                                        {
-                                            <button type="button" 
-                                                    class="tm-dashboard-menu-action" 
-                                                    @onclick:stopPropagation
-                                                    @onclick="() => SetAsDefault(dash.Id)"
-                                                    title="Set as default">
-                                                <TmIcon Name="star" Size="IconSize.Sm" />
-                                            </button>
-                                        }
+                                        <div class="tm-dashboard-menu-actions">
+                                            @if (dash.IsDefault)
+                                            {
+                                                <span class="tm-dashboard-menu-badge" title="Default dashboard">★</span>
+                                            }
+                                            else
+                                            {
+                                                @if (_currentDashboard?.Id == dash.Id)
+                                                {
+                                                    <button type="button"
+                                                            class="tm-dashboard-menu-action"
+                                                            @onclick:stopPropagation
+                                                            @onclick="() => SetAsDefault(dash.Id)"
+                                                            title="Set as default">
+                                                        <TmIcon Name="star" Size="IconSize.Sm" />
+                                                    </button>
+                                                }
+                                                <button type="button"
+                                                        class="tm-dashboard-menu-action tm-dashboard-menu-action--danger"
+                                                        @onclick:stopPropagation
+                                                        @onclick="() => DeleteDashboard(dash.Id)"
+                                                        title="Delete dashboard">
+                                                    <TmIcon Name="trash" Size="IconSize.Sm" />
+                                                </button>
+                                            }
+                                        </div>
                                     </div>
                                 }
                                 <div class="tm-dashboard-menu-divider"></div>
@@ -290,6 +302,15 @@
     </Footer>
 </TmModal>
 
+@* ── Delete Dashboard Confirmation Dialog ───────────────────── *@
+<TmDialog Type="DialogType.Confirm"
+          Show="_showDeleteDialog"
+          Title="Delete Dashboard"
+          Message="@($"Are you sure you want to delete '{_dashboardToDeleteName}'? This action cannot be undone.")"
+          OnResult="HandleDeleteDialogResult"
+          OkButtonText="Delete"
+          IsDangerous="true" />
+
 @code {
     [Parameter] public string? DashboardId { get; set; }
     [Parameter] public string? UserId { get; set; }
@@ -323,6 +344,11 @@
     // New dashboard dialog
     private bool _showNewDashboardDialog;
     private string _newDashboardName = "";
+    
+    // Delete dashboard dialog
+    private bool _showDeleteDialog;
+    private string? _dashboardToDeleteId;
+    private string? _dashboardToDeleteName;
     
     protected override async Task OnInitializedAsync()
     {
@@ -663,6 +689,57 @@
         
         await DashboardProvider.SetDefaultDashboardAsync(dashboardId, UserId);
         await LoadDashboardsList();
+        StateHasChanged();
+    }
+    
+    private void DeleteDashboard(string dashboardId)
+    {
+        // Don't allow deleting the default dashboard
+        var dashboard = _availableDashboards.FirstOrDefault(d => d.Id == dashboardId);
+        if (dashboard?.IsDefault == true)
+        {
+            return;
+        }
+        
+        _dashboardToDeleteId = dashboardId;
+        _dashboardToDeleteName = dashboard?.Name;
+        _showDeleteDialog = true;
+        StateHasChanged();
+    }
+    
+    private async Task HandleDeleteDialogResult(bool? result)
+    {
+        if (result == true)
+        {
+            await ConfirmDeleteDashboard();
+        }
+        else
+        {
+            CancelDeleteDashboard();
+        }
+    }
+    
+    private async Task ConfirmDeleteDashboard()
+    {
+        if (DashboardProvider is null || string.IsNullOrEmpty(_dashboardToDeleteId)) return;
+        
+        await DashboardProvider.DeleteDashboardAsync(_dashboardToDeleteId);
+        
+        // If we deleted the current dashboard, load the default one
+        if (_currentDashboard?.Id == _dashboardToDeleteId)
+        {
+            await LoadDefaultDashboard();
+        }
+        
+        await LoadDashboardsList();
+        CancelDeleteDashboard();
+    }
+    
+    private void CancelDeleteDashboard()
+    {
+        _showDeleteDialog = false;
+        _dashboardToDeleteId = null;
+        _dashboardToDeleteName = null;
         StateHasChanged();
     }
     

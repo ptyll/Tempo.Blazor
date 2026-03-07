@@ -116,8 +116,13 @@ public class InMemoryDashboardProvider : IDashboardProvider
     {
         var user = userId ?? "anonymous";
 
-        // Clear previous default for this user
-        foreach (var dash in _dashboards.Values.Where(d => d.CreatedBy == user))
+        // Get all dashboards visible to this user (including system dashboards)
+        var userDashboards = _dashboards.Values
+            .Where(d => d.CreatedBy == user || d.CreatedBy == "system")
+            .ToList();
+
+        // Clear previous default for this user's visible dashboards
+        foreach (var dash in userDashboards)
         {
             dash.IsDefault = false;
         }

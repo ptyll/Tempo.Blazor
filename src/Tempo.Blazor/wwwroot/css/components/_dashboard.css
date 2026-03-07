@@ -824,6 +824,12 @@
   color: var(--tm-color-primary-text);
 }
 
+.tm-dashboard-menu-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+}
+
 .tm-dashboard-menu-action {
   display: flex;
   align-items: center;
@@ -847,6 +853,11 @@
 .tm-dashboard-menu-action:hover {
   background: var(--tm-color-warning-subtle);
   color: var(--tm-color-warning);
+}
+
+.tm-dashboard-menu-action--danger:hover {
+  background: var(--tm-color-danger-subtle);
+  color: var(--tm-color-danger);
 }
 
 .tm-dashboard-menu-badge {
