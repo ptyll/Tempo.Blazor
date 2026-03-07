@@ -76,19 +76,20 @@
             const containerSize = isTimeline ? containerRect.width : containerRect.height;
             const startPos = isTimeline ? e.clientX : e.clientY;
 
-            // For timeline left resize, we need the original left position
+            // For timeline left resize or timegrid top resize, we need the original position
             const originalLeft = isTimeline ? eventRect.left - containerRect.left : 0;
+            const originalTop = !isTimeline ? eventRect.top - containerRect.top : 0;
 
             // Start resize tracking
-            this._startResizeTracking(eventElement, container, startPos, slotMinutes, originalDraggable, 
-                originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft);
+            this._startResizeTracking(eventElement, container, startPos, slotMinutes, originalDraggable,
+                originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop);
         },
 
         /**
          * Track resize movement
          */
-        _startResizeTracking: function (eventElement, container, startPos, slotMinutes, originalDraggable, 
-            originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft) {
+        _startResizeTracking: function (eventElement, container, startPos, slotMinutes, originalDraggable,
+            originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop) {
             const self = this;
             let currentDelta = 0;
             let isResizing = true;
@@ -125,18 +126,30 @@
                             }
                         }
                     } else {
-                        // TimeGrid resize (always bottom/right resize)
-                        const newSize = originalSize + deltaPos;
-                        
-                        if (newSize > 10) { // Minimum size
-                            eventElement.style.height = newSize + 'px';
+                        // TimeGrid resize (vertical)
+                        if (resizeEdge === 'top') {
+                            // Top resize: adjust top position and height
+                            const newTop = originalTop + deltaPos;
+                            const newHeight = originalSize - deltaPos;
+
+                            if (newHeight > 10) { // Minimum height
+                                eventElement.style.top = newTop + 'px';
+                                eventElement.style.height = newHeight + 'px';
+                            }
+                        } else {
+                            // Bottom resize: adjust height only
+                            const newHeight = originalSize + deltaPos;
+
+                            if (newHeight > 10) { // Minimum height
+                                eventElement.style.height = newHeight + 'px';
+                            }
                         }
                     }
 
                     // Store current delta for later
-                    // For left resize: invert delta because dragging right reduces width from left
-                    // For right resize: use delta directly
-                    eventElement.dataset.resizeDeltaMinutes = resizeEdge === 'left' ? -currentDelta : currentDelta;
+                    // deltaMinutes is negative when dragging left, positive when dragging right
+                    // This works for both edges: left edge drag-left = earlier start, right edge drag-right = later end
+                    eventElement.dataset.resizeDeltaMinutes = currentDelta;
                     eventElement.dataset.resizeEdge = resizeEdge;
                 }
             }
@@ -164,6 +177,9 @@
                     }
                 } else {
                     eventElement.style.height = '';
+                    if (resizeEdge === 'top') {
+                        eventElement.style.top = '';
+                    }
                 }
 
                 // Clean up data attributes
@@ -188,18 +204,10 @@
             // Call the appropriate static .NET method based on scheduler type
             if (window.DotNet) {
                 const methodName = isTimeline ? 'NotifyTimelineResizeComplete' : 'NotifyResizeComplete';
-                // Pass the resize edge as additional parameter for timeline
-                if (isTimeline) {
-                    window.DotNet.invokeMethodAsync('Tempo.Blazor', methodName, '', eventId, deltaMinutes, resizeEdge)
-                        .catch(function (err) {
-                            console.warn('Scheduler: Failed to notify Blazor about resize', err);
-                        });
-                } else {
-                    window.DotNet.invokeMethodAsync('Tempo.Blazor', methodName, '', eventId, deltaMinutes)
-                        .catch(function (err) {
-                            console.warn('Scheduler: Failed to notify Blazor about resize', err);
-                        });
-                }
+                window.DotNet.invokeMethodAsync('Tempo.Blazor', methodName, '', eventId, deltaMinutes, resizeEdge)
+                    .catch(function (err) {
+                        console.warn('Scheduler: Failed to notify Blazor about resize', err);
+                    });
             }
         },
 

@@ -261,34 +261,40 @@
     background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 10%, transparent);
 }
 
-/* ── Resize handle ── */
-.tm-scheduler-event-resize-handle {
+/* ── Resize handles ── */
+.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle {
     position: absolute;
-    bottom: 0;
     left: 0;
     right: 0;
     height: 6px;
     cursor: ns-resize;
     background: transparent;
     transition: background-color 0.1s ease;
+    z-index: 3;
 }
 
-.tm-scheduler-event-resize-handle:hover {
-    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary, #3b82f6)) 30%, transparent);
+.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
-.tm-scheduler-event-resize-handle::after {
-    content: "";
-    display: block;
-    width: 1.5rem;
-    height: 2px;
-    background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    border-radius: 1px;
-    margin: 2px auto 0;
-    opacity: 0;
-    transition: opacity 0.1s ease;
+/* Top resize handle (start time) */
+.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--top {
+    top: 0;
+    border-top: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 2px 2px 0 0;
 }
 
-.tm-scheduler-event-resize-handle:hover::after {
-    opacity: 1;
+.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--top:hover {
+    border-top-color: #fff;
+}
+
+/* Bottom resize handle (end time) */
+.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--bottom {
+    bottom: 0;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 0 0 2px 2px;
+}
+
+.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--bottom:hover {
+    border-bottom-color: #fff;
 }
