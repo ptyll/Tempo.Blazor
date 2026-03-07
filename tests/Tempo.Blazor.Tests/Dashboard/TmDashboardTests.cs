@@ -141,7 +141,7 @@ public class TmDashboardTests : LocalizationTestBase
 
         // Act - Render and enter edit mode
         var cut = RenderComponent<TmDashboard>();
-        cut.Find("button[title='Edit Dashboard']").Click();
+        cut.Find("button[title='Edit']").Click();
 
         // Assert - Should show edit mode badge and save/cancel buttons
         cut.FindAll(".tm-dashboard-edit-badge").Should().NotBeEmpty();
@@ -197,7 +197,7 @@ public class TmDashboardTests : LocalizationTestBase
 
         // Act - Enter edit mode
         var cut = RenderComponent<TmDashboard>();
-        cut.Find("button[title='Edit Dashboard']").Click();
+        cut.Find("button[title='Edit']").Click();
 
         // Assert - Should show cancel button in edit mode
         var cancelButtons = cut.FindAll("button").Where(b => b.TextContent.Contains("Cancel")).ToList();

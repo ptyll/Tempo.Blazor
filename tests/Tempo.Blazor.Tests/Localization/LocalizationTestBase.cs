@@ -301,6 +301,24 @@ public abstract class LocalizationTestBase : TestContext
 
         // TmInlineEdit
         ["TmInlineEdit_Placeholder"] = "Click to edit",
+
+        // TmDashboard
+        ["TmDashboard_Edit"]                  = "Edit",
+        ["TmDashboard_EditMode"]              = "Edit Mode",
+        ["TmDashboard_CancelEdit"]            = "Cancel",
+        ["TmDashboard_SaveChanges"]           = "Save Changes",
+        ["TmDashboard_AddWidget"]             = "Add Widget",
+        ["TmDashboard_AddWidgets"]            = "Add Widgets",
+        ["TmDashboard_Dashboards"]            = "Dashboards",
+        ["TmDashboard_MyDashboards"]          = "My Dashboards",
+        ["TmDashboard_CreateNewDashboard"]    = "Create New Dashboard",
+        ["TmDashboard_DashboardName"]         = "Dashboard Name",
+        ["TmDashboard_DefaultDashboard"]      = "Default",
+        ["TmDashboard_SetAsDefault"]          = "Set as Default",
+        ["TmDashboard_Delete"]                = "Delete",
+        ["TmDashboard_DeleteDashboard"]       = "Delete Dashboard",
+        ["TmDashboard_DeleteDashboardConfirm"]= "Are you sure you want to delete this dashboard?",
+        ["TmDashboard_NoWidgets"]             = "No widgets added yet",
     });
 
     private static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -574,6 +592,24 @@ public abstract class LocalizationTestBase : TestContext
 
         // TmInlineEdit
         ["TmInlineEdit_Placeholder"] = "Klikněte pro úpravu",
+
+        // TmDashboard
+        ["TmDashboard_Edit"]                  = "Upravit",
+        ["TmDashboard_EditMode"]              = "Režim úprav",
+        ["TmDashboard_CancelEdit"]            = "Zrušit",
+        ["TmDashboard_SaveChanges"]           = "Uložit změny",
+        ["TmDashboard_AddWidget"]             = "Přidat widget",
+        ["TmDashboard_AddWidgets"]            = "Přidat widgety",
+        ["TmDashboard_Dashboards"]            = "Dashboardy",
+        ["TmDashboard_MyDashboards"]          = "Moje dashboardy",
+        ["TmDashboard_CreateNewDashboard"]    = "Vytvořit nový dashboard",
+        ["TmDashboard_DashboardName"]         = "Název dashboardu",
+        ["TmDashboard_DefaultDashboard"]      = "Výchozí",
+        ["TmDashboard_SetAsDefault"]          = "Nastavit jako výchozí",
+        ["TmDashboard_Delete"]                = "Smazat",
+        ["TmDashboard_DeleteDashboard"]       = "Smazat dashboard",
+        ["TmDashboard_DeleteDashboardConfirm"]= "Opravdu chcete smazat tento dashboard?",
+        ["TmDashboard_NoWidgets"]             = "Zatím nebyly přidány žádné widgety",
     });
 }
 
