@@ -24,7 +24,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Calendar</span>
     </div>
     
-    <div class="showcase-card">
+    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
         <TmScheduler @bind-View="_monthView"
                      @bind-CurrentDate="_currentDate"
                      Events="_sampleEvents"
@@ -43,7 +43,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Time Grid</span>
     </div>
     
-    <div class="showcase-card" style="height: 600px;">
+    <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Week"
                      @bind-CurrentDate="_weekDate"
                      Events="_weekEvents"
@@ -63,7 +63,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Detailed</span>
     </div>
     
-    <div class="showcase-card" style="height: 600px;">
+    <div class="showcase-card" style="height: 600px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Day"
                      @bind-CurrentDate="_dayDate"
                      Events="_dayEvents"
@@ -83,7 +83,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">List</span>
     </div>
     
-    <div class="showcase-card">
+    <div class="showcase-card" style="min-height: 400px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Agenda"
                      @bind-CurrentDate="_agendaDate"
                      Events="_agendaEvents"
@@ -101,7 +101,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">Resources</span>
     </div>
     
-    <div class="showcase-card" style="height: 500px;">
+    <div class="showcase-card" style="height: 500px; position: relative; overflow: hidden;">
         <TmScheduler View="TmScheduleViewType.Timeline"
                      @bind-CurrentDate="_timelineDate"
                      Events="_timelineEvents"
@@ -122,7 +122,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full">Interactive</span>
     </div>
     
-    <div class="showcase-card">
+    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
         <div class="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
             <p class="text-sm text-slate-600 dark:text-slate-400">
                 <strong>Last Action:</strong> @_lastAction
@@ -263,11 +263,14 @@
         new() { Id = "t5", Title = "Training", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(12), Color = "#ef4444", ResourceId = "room-d" },
     };
 
+    // Events for Interactive Demo - always ensure there's an event today for resize/drag testing
     private List<TmScheduleEvent> _interactiveEvents = new()
     {
         new() { Id = "i1", Title = "Clickable Event 1", Start = DateTime.Today.AddDays(-1).AddHours(10), End = DateTime.Today.AddDays(-1).AddHours(11), Color = "#3b82f6" },
-        new() { Id = "i2", Title = "Draggable Event", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(10), Color = "#10b981" },
+        new() { Id = "i2", Title = "Draggable Event", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#10b981" },
         new() { Id = "i3", Title = "Another Event", Start = DateTime.Today.AddDays(2).AddHours(14), End = DateTime.Today.AddDays(2).AddHours(15), Color = "#f59e0b" },
+        // Event specifically for today to ensure Day view has content for testing
+        new() { Id = "i4", Title = "Resize Test Event", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" }
     };
 
     private void HandleEventClick(TmScheduleEvent evt)

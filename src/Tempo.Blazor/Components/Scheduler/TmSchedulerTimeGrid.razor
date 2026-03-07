@@ -1,8 +1,16 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
 @using System.Globalization
+@using System.Threading
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 
-<div class="tm-scheduler-timegrid">
+<!-- Event args class for resize completion from JavaScript -->
+<script suppress-error="BL9992">
+    // This will be used by the custom event
+</script>
+
+<div class="tm-scheduler-timegrid" @ref="_containerRef" data-slot-duration="@SlotDuration">
     @* Header row *@
     <div class="tm-scheduler-timegrid-header">
         <div class="tm-scheduler-timegrid-time-gutter-header"></div>
@@ -107,11 +115,17 @@
 </div>
 
 @code {
+    // Static registry for JS interop callbacks
+    private static readonly Dictionary<string, TmSchedulerTimeGrid> _instances = new();
+    private static int _instanceIdCounter = 0;
+    private string _instanceId = "";
+
     private int _slotsPerDay;
     private bool _hasResources;
     private Dictionary<DateOnly, List<TmScheduleEvent>> _timedMap = new();
     private Dictionary<DateOnly, List<TmScheduleEvent>> _allDayMap = new();
     private TmScheduleEvent? _draggedEvent;
+    private ElementReference _containerRef;
 
     /// <summary>Dates to display as columns.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<DateOnly> Dates { get; set; } = [];
@@ -145,6 +159,13 @@
 
     /// <summary>Optional custom event template.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Register this instance for JS interop callbacks
+        _instanceId = $"timegrid_{Interlocked.Increment(ref _instanceIdCounter)}";
+        _instances[_instanceId] = this;
+    }
 
     protected override void OnParametersSet()
     {
@@ -187,32 +208,34 @@
             builder.AddAttribute(1, "class", $"tm-scheduler-timegrid-event {e.CssClass}");
             builder.AddAttribute(2, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%; --event-color: {e.Color ?? "var(--tm-color-primary, #3b82f6)"};");
             builder.AddAttribute(3, "title", e.Title);
-            builder.AddAttribute(4, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
-            builder.AddAttribute(5, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
-            builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
-            builder.AddEventStopPropagationAttribute(7, "onclick", true);
-            builder.AddAttribute(8, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, evt => HandleEventContextMenu(evt, e)));
-            builder.AddEventStopPropagationAttribute(9, "oncontextmenu", true);
+            builder.AddAttribute(4, "data-event-id", e.Id); // For JS resize handling
+            builder.AddAttribute(5, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");
+            builder.AddAttribute(6, "ondragstart", EventCallback.Factory.Create(this, () => HandleDragStart(e)));
+            builder.AddAttribute(7, "onclick", EventCallback.Factory.Create(this, () => OnEventClick.InvokeAsync(e)));
+            builder.AddEventStopPropagationAttribute(8, "onclick", true);
+            builder.AddAttribute(9, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, evt => HandleEventContextMenu(evt, e)));
+            builder.AddEventStopPropagationAttribute(10, "oncontextmenu", true);
 
             // Time
-            builder.OpenElement(10, "span");
-            builder.AddAttribute(11, "class", "tm-scheduler-timegrid-event-time");
-            builder.AddContent(12, $"{e.Start:HH:mm} – {e.End:HH:mm}");
+            builder.OpenElement(11, "span");
+            builder.AddAttribute(13, "class", "tm-scheduler-timegrid-event-time");
+            builder.AddContent(14, $"{e.Start:HH:mm} – {e.End:HH:mm}");
             builder.CloseElement();
 
             // Title
-            builder.OpenElement(13, "span");
-            builder.AddAttribute(14, "class", "tm-scheduler-timegrid-event-title");
-            builder.AddContent(15, e.Title);
+            builder.OpenElement(15, "span");
+            builder.AddAttribute(16, "class", "tm-scheduler-timegrid-event-title");
+            builder.AddContent(17, e.Title);
             builder.CloseElement();
 
-            // Resize handle
+            // Resize handle - JS handles the mousedown automatically
             if (!ReadOnly && !e.IsReadOnly)
             {
-                builder.OpenElement(16, "div");
-                builder.AddAttribute(17, "class", "tm-scheduler-event-resize-handle");
-                builder.AddAttribute(18, "onmousedown", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandleResizeStart(e, args)));
-                builder.AddEventStopPropagationAttribute(19, "onmousedown", true);
+                builder.OpenElement(18, "div");
+                builder.AddAttribute(19, "class", "tm-scheduler-event-resize-handle");
+                builder.AddAttribute(20, "draggable", "false");
+                // Prevent drag from starting on the resize handle
+                builder.AddAttribute(21, "ondragstart", "event.preventDefault(); event.stopPropagation();");
                 builder.CloseElement();
             }
 
@@ -373,9 +396,57 @@
         _draggedEvent = null;
     }
 
-    private void HandleResizeStart(TmScheduleEvent evt, MouseEventArgs args)
+    /// <summary>
+    /// Handles the completion of a resize operation from JavaScript.
+    /// Called when user finishes dragging the resize handle.
+    /// </summary>
+    private async Task HandleResizeComplete(string eventId, int deltaMinutes)
     {
-        // Resize tracking requires JS interop for mousemove/mouseup on document.
+        if (ReadOnly || string.IsNullOrEmpty(eventId)) return;
+
+        // Find the event being resized
+        var evt = Events?.FirstOrDefault(e => e.Id == eventId);
+        if (evt is null || evt.IsReadOnly) return;
+
+        // Apply the delta to the event end time
+        evt.End = evt.End.AddMinutes(deltaMinutes);
+        
+        // Ensure minimum duration
+        if (evt.End <= evt.Start)
+        {
+            evt.End = evt.Start.AddMinutes(SlotDuration);
+        }
+
+        // Notify parent about the change
+        await OnEventChanged.InvokeAsync(evt);
+    }
+
+    public void Dispose()
+    {
+        // Unregister this instance
+        if (!string.IsNullOrEmpty(_instanceId))
+        {
+            _instances.Remove(_instanceId);
+        }
+    }
+
+    /// <summary>
+    /// Called by JavaScript when a resize operation is completed.
+    /// This is a static method that finds the event across all instances and handles the resize.
+    /// </summary>
+    [JSInvokable]
+    public static async Task NotifyResizeComplete(string instanceId, string eventId, int deltaMinutes)
+    {
+        // Find the instance that has this event
+        foreach (var instance in _instances.Values)
+        {
+            var evt = instance.Events?.FirstOrDefault(e => e.Id == eventId);
+            if (evt != null)
+            {
+                await instance.HandleResizeComplete(eventId, deltaMinutes);
+                return;
+            }
+        }
     }
 
     // ── Context Menu ──
