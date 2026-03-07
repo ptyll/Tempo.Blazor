@@ -14,36 +14,39 @@
     @* ── Toolbar ─────────────────────────────────────────────── *@
     <div class="tm-dashboard-toolbar">
         <div class="tm-dashboard-toolbar-left">
-            @if (ShowTitle)
+            @if (_isEditMode && _isEditingName)
             {
-                @if (_isEditMode && _isEditingName)
-                {
-                    <div class="tm-dashboard-name-edit">
-                        <TmTextInput @bind-Value="_editingName"
-                                     Placeholder="Dashboard name"
-                                     Class="tm-dashboard-name-input" />
-                        <button type="button" class="tm-btn tm-btn-primary tm-btn-sm" @onclick="SaveNameEdit">
-                            <TmIcon Name="check" Size="IconSize.Sm" />
-                        </button>
-                        <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" @onclick="CancelNameEdit">
-                            <TmIcon Name="x" Size="IconSize.Sm" />
-                        </button>
-                    </div>
-                }
-                else
-                {
-                    <div class="tm-dashboard-title-wrapper">
-                        <h2 class="tm-dashboard-title">@(_currentDashboard?.Name ?? "Dashboard")</h2>
-                        @if (_isEditMode)
-                        {
-                            <button type="button" class="tm-btn tm-btn-ghost tm-btn-icon tm-btn-sm" 
-                                    @onclick="StartNameEdit"
-                                    title="Rename dashboard">
-                                <TmIcon Name="edit" Size="IconSize.Sm" />
-                            </button>
-                        }
-                    </div>
-                }
+                @* Inline edit mode - always show name input *@
+                <div class="tm-dashboard-name-edit">
+                    <TmTextInput @bind-Value="_editingName"
+                                 Placeholder="Dashboard name"
+                                 Class="tm-dashboard-name-input" />
+                    <button type="button" class="tm-btn tm-btn-primary tm-btn-sm" @onclick="SaveNameEdit">
+                        <TmIcon Name="check" Size="IconSize.Sm" />
+                    </button>
+                    <button type="button" class="tm-btn tm-btn-ghost tm-btn-sm" @onclick="CancelNameEdit">
+                        <TmIcon Name="x" Size="IconSize.Sm" />
+                    </button>
+                </div>
+            }
+            else if (_isEditMode)
+            {
+                @* Edit mode - always show name with edit button *@
+                <div class="tm-dashboard-title-wrapper">
+                    <h2 class="tm-dashboard-title">@(_currentDashboard?.Name ?? "Dashboard")</h2>
+                    <button type="button" class="tm-btn tm-btn-ghost tm-btn-icon tm-btn-sm"
+                            @onclick="StartNameEdit"
+                            title="Rename dashboard">
+                        <TmIcon Name="edit" Size="IconSize.Sm" />
+                    </button>
+                </div>
+            }
+            else if (ShowTitle)
+            {
+                @* View mode - show name only if ShowTitle is true *@
+                <div class="tm-dashboard-title-wrapper">
+                    <h2 class="tm-dashboard-title">@(_currentDashboard?.Name ?? "Dashboard")</h2>
+                </div>
             }
             @if (_isEditMode)
             {
@@ -108,10 +111,13 @@
                                     </div>
                                 }
                                 <div class="tm-dashboard-menu-divider"></div>
-                                <div class="tm-dashboard-menu-item" @onclick="CreateNewDashboard">
+                                <button type="button"
+                                        class="tm-dashboard-menu-item tm-dashboard-menu-item--action"
+                                        @onclick:preventDefault
+                                        @onclick="async () => await CreateNewDashboard()">
                                     <TmIcon Name="plus" Size="IconSize.Sm" />
                                     <span>Create New Dashboard</span>
-                                </div>
+                                </button>
                             </div>
                             <div class="tm-overlay" @onclick="() => _showDashboardMenu = false"></div>
                         }
@@ -265,33 +271,24 @@
 }
 
 @* ── New Dashboard Name Modal ────────────────────────────────── *@
-@if (_showNewDashboardDialog)
-{
-    <div class="tm-modal-overlay" @onclick="CancelNewDashboard">
-        <div class="tm-modal" @onclick:stopPropagation>
-            <div class="tm-modal-header">
-                <h3>Create New Dashboard</h3>
-                <button type="button" class="tm-modal-close" @onclick="CancelNewDashboard">&times;</button>
-            </div>
-            <div class="tm-modal-body">
-                <div class="tm-form-group">
-                    <label class="tm-form-label">Dashboard Name</label>
-                    <TmTextInput @bind-Value="_newDashboardName"
-                                 Placeholder="Enter dashboard name..."
-                                 @onkeydown="HandleNewDashboardKeyDown" />
-                </div>
-            </div>
-            <div class="tm-modal-footer">
-                <button type="button" class="tm-btn tm-btn-ghost" @onclick="CancelNewDashboard">Cancel</button>
-                <button type="button" class="tm-btn tm-btn-primary" 
-                        @onclick="ConfirmCreateDashboard"
-                        disabled="@string.IsNullOrWhiteSpace(_newDashboardName)">
-                    Create
-                </button>
-            </div>
-        </div>
-    </div>
-}
+<TmModal Show="_showNewDashboardDialog"
+         Title="Create New Dashboard"
+         OnClose="CancelNewDashboard"
+         ShowFooter="true"
+         ShowDefaultFooterButtons="false">
+    <ChildContent>
+        <TmFormField Label="Dashboard Name">
+            <TmTextInput @bind-Value="_newDashboardName"
+                         Placeholder="Enter dashboard name..." />
+        </TmFormField>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="CancelNewDashboard">Cancel</TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  OnClick="ConfirmCreateDashboard"
+                  Disabled="string.IsNullOrWhiteSpace(_newDashboardName)">Create</TmButton>
+    </Footer>
+</TmModal>
 
 @code {
     [Parameter] public string? DashboardId { get; set; }
@@ -617,12 +614,12 @@
         StateHasChanged();
     }
     
-    private void CreateNewDashboard()
+    private async Task CreateNewDashboard()
     {
         _showDashboardMenu = false;
         _newDashboardName = "";
         _showNewDashboardDialog = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
     
     private void ConfirmCreateDashboard()
