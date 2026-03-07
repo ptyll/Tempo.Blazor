@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "")">
+<div class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             class="tm-split-button__primary"
             disabled="@Disabled"
@@ -53,6 +53,12 @@
 
     /// <summary>Dropdown menu items (e.g. TmDropdownItem or TmContextMenuItem).</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class(es) to apply to the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes to apply to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string VariantClass => $"tm-split-button--{Variant.ToString().ToLowerInvariant()}";
 

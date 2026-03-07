@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.DataTable
 
-<div class="tm-column-picker">
+<div class="tm-column-picker @Class @(Disabled ? "tm-column-picker-disabled" : "")" @attributes="AdditionalAttributes">
     <button class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
             type="button"
             @onclick="ToggleOpen">
@@ -38,6 +38,9 @@
     [Parameter] public IReadOnlyList<ColumnVisibilityItem> Columns { get; set; } = [];
     [Parameter] public EventCallback<string> OnToggleColumn { get; set; }
     [Parameter] public EventCallback OnReset { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _open;
 

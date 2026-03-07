@@ -8,11 +8,12 @@
         <div class="tm-drawer__overlay" @onclick="HandleOverlayClick"></div>
     }
 
-    <div class="tm-drawer @PositionClass"
+    <div class="tm-drawer @PositionClass @Class"
          role="dialog"
          aria-modal="true"
          aria-labelledby="@(!string.IsNullOrEmpty(Title) ? "tm-drawer-title" : null)"
-         @onkeydown="HandleKeyDown">
+         @onkeydown="HandleKeyDown"
+         @attributes="AdditionalAttributes">
 
         <div class="tm-drawer__panel" style="width: @Width;">
             <!-- Header -->
@@ -89,6 +90,12 @@
 
     /// <summary>Optional footer with action buttons.</summary>
     [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string PositionClass => Position switch
     {

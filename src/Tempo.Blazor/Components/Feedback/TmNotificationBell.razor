@@ -2,10 +2,11 @@
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-notification-bell">
+<div class="tm-notification-bell @Class" @attributes="AdditionalAttributes">
     <button type="button"
             class="tm-notification-bell-button"
             aria-label="@Loc["TmNotificationBell_AriaLabel"]"
+            disabled="@Disabled"
             @onclick="Toggle">
         <TmIcon Name="@IconNames.Bell" Size="IconSize.Sm" />
         @if (UnreadCount > 0)
@@ -69,6 +70,14 @@
 
     /// <summary>Fires when a notification item is clicked. Argument = item Id.</summary>
     [Parameter] public EventCallback<string> OnItemClick { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>When true the bell button is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
 

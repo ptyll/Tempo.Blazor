@@ -150,6 +150,9 @@ public partial class TmDataTable<TItem>
     /// <summary>Additional CSS class applied to the wrapper div.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>Additional HTML attributes to apply to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     // ── Computed helpers ──────────────────────────────────────────
 
     private bool IsAllSelected => _displayedItems.Count > 0 && _displayedItems.All(IsSelected);

@@ -68,6 +68,9 @@ public partial class TmMultiSelect<TItem, TValue>
     /// <summary>Disables the component.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>Additional attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     /// <summary>Marks the field as required.</summary>
     [Parameter] public bool Required { get; set; }
 

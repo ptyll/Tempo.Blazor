@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 
-<label class="tm-radio-option @(IsChecked ? "tm-radio-checked" : "") @(Disabled ? "tm-radio-disabled" : "")">
+<label class="tm-radio-option @(IsChecked ? "tm-radio-checked" : "") @(Disabled ? "tm-radio-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <input type="radio"
            name="@Name"
            checked="@IsChecked"
@@ -27,8 +27,14 @@
     /// <summary>Whether this radio is currently selected.</summary>
     [Parameter] public bool IsChecked { get; set; }
 
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
     /// <summary>Disables this radio option.</summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>Fires when this radio is selected.</summary>
     [Parameter] public EventCallback OnSelect { get; set; }

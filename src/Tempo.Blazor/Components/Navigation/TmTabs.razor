@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Navigation
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-tabs @VariantClass @Class">
+<div class="tm-tabs @VariantClass @Class" @attributes="AdditionalAttributes">
     <div class="tm-tabs__header" role="tablist" @onkeydown="HandleKeyDown">
         @foreach (var panel in _panels)
         {
@@ -70,6 +70,10 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string VariantClass => Variant switch
     {

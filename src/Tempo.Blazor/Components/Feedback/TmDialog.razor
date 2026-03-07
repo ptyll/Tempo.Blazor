@@ -5,7 +5,8 @@
 
 @if (Show)
 {
-    <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass()">
+    <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass() @Class"
+         @attributes="AdditionalAttributes">
         <div class="tm-modal-container tm-modal--center">
             <div class="tm-dialog @GetDialogClasses()"
                  role="dialog"
@@ -101,6 +102,9 @@
     
     [Parameter] public EventCallback<bool?> OnResult { get; set; }
     [Parameter] public EventCallback<string?> OnPromptResult { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
     
     private ElementReference _dialogElement;
     private string _titleId = Guid.NewGuid().ToString("N");

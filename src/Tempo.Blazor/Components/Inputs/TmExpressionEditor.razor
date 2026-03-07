@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 
-<div class="tm-expression-editor @(Error is not null ? "tm-expression-editor--error" : "") @Class">
+<div class="tm-expression-editor @(Error is not null ? "tm-expression-editor--error" : "") @Class" @attributes="AdditionalAttributes">
     @if (Label is not null)
     {
         <label class="tm-expression-editor__label">@Label</label>
@@ -64,6 +64,9 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private async Task HandleInput(ChangeEventArgs e)
     {

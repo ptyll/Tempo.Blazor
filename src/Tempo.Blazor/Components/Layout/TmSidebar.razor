@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Icons
 
-<aside class="tm-sidebar @(Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded") @(Class)">
+<aside class="tm-sidebar @(Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded") @(Class)" @attributes="AdditionalAttributes">
     <div class="tm-sidebar-header">
         @if (Header is not null)
         {
@@ -81,6 +81,9 @@
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private async Task HandleToggleAsync() => await OnToggle.InvokeAsync();
 }

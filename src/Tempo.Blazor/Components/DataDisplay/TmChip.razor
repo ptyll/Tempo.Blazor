@@ -1,9 +1,10 @@
 @namespace Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Components.Icons
 
-<span class="tm-chip @VariantCss @SizeCss @(Selected ? "tm-chip--selected" : "") @(Clickable ? "tm-chip--clickable" : "")"
+<span class="tm-chip @VariantCss @SizeCss @(Selected ? "tm-chip--selected" : "") @(Clickable ? "tm-chip--clickable" : "") @(Disabled ? "tm-chip-disabled" : "") @Class"
       style="@ColorStyle"
-      @onclick="HandleClick">
+      @onclick="HandleClick"
+      @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Icon))
     {
         <span class="tm-chip__icon">
@@ -53,6 +54,15 @@
     /// <summary>Whether the chip is selected.</summary>
     [Parameter] public bool Selected { get; set; }
 
+    /// <summary>Whether the chip is disabled.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes to apply to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     private string VariantCss => Variant switch
     {
         ChipVariant.Filled => "tm-chip--filled",
@@ -70,12 +80,14 @@
 
     private async Task HandleClick()
     {
+        if (Disabled) return;
         if (Clickable)
             await OnClick.InvokeAsync();
     }
 
     private async Task HandleRemove()
     {
+        if (Disabled) return;
         await OnRemove.InvokeAsync();
     }
 }

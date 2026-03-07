@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 
-<div class="tm-input-wrapper">
+<div class="tm-input-wrapper @Class">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label">@Label</label>
@@ -54,6 +54,9 @@
 
     /// <summary>HTML autocomplete attribute. Common values: "on", "off".</summary>
     [Parameter] public string? AutoComplete { get; set; }
+
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
 
     /// <summary>Additional attributes to be applied to the textarea element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }

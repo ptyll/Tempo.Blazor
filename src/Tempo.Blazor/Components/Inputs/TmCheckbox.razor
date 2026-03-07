@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 
-<div class="tm-checkbox-wrapper @(Disabled ? "tm-checkbox-disabled" : "")">
+<div class="tm-checkbox-wrapper @(Disabled ? "tm-checkbox-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <label class="tm-checkbox-label">
         <input type="checkbox"
                checked="@Value"
@@ -47,8 +47,14 @@
     /// <summary>Help text shown below the checkbox.</summary>
     [Parameter] public string? HelpText { get; set; }
 
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
     /// <summary>Disables the checkbox.</summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>Shows an indeterminate (dash) state when true and Value is false.</summary>
     [Parameter] public bool Indeterminate { get; set; }

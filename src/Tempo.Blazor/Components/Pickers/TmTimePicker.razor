@@ -2,7 +2,8 @@
 
 <div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "")"
      data-required="@(Required ? "true" : null)"
-     aria-disabled="@(IsOutOfRange ? "true" : null)">
+     aria-disabled="@(IsOutOfRange ? "true" : null)"
+     @attributes="AdditionalAttributes">
 
     @if (!string.IsNullOrEmpty(Label))
     {
@@ -47,6 +48,7 @@
     [Parameter] public bool       Required     { get; set; }
     [Parameter] public string?    Label        { get; set; }
     [Parameter] public string?    Class        { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool IsOutOfRange =>
         Value.HasValue &&

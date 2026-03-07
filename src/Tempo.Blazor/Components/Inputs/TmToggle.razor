@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Inputs
 @using Microsoft.AspNetCore.Components.Web
 
-<div class="tm-toggle-wrapper @(Value ? "tm-toggle-checked" : "") @(Disabled ? "tm-toggle-disabled" : "")">
+<div class="tm-toggle-wrapper @(Value ? "tm-toggle-checked" : "") @(Disabled ? "tm-toggle-disabled" : "") @Class" @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
         <span class="tm-toggle-label-text">@Label</span>
@@ -31,8 +31,14 @@
     /// <summary>Label text shown beside the toggle.</summary>
     [Parameter] public string? Label { get; set; }
 
+    /// <summary>Additional CSS class(es).</summary>
+    [Parameter] public string? Class { get; set; }
+
     /// <summary>Disables the toggle.</summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private async Task HandleChangeAsync(ChangeEventArgs e)
     {

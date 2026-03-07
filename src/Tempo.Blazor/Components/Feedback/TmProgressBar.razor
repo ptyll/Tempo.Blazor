@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Feedback
 
 <div class="tm-progress-bar @SizeClass @VariantClass @(Striped ? "tm-progress-bar--striped" : "") @(Animated ? "tm-progress-bar--animated" : "") @(Indeterminate ? "tm-progress-bar--indeterminate" : "") @Class"
+     @attributes="AdditionalAttributes"
      role="progressbar"
      aria-valuenow="@(Indeterminate ? null : Percentage)"
      aria-valuemin="0"
@@ -74,6 +75,8 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private double Percentage => Max > 0 ? Math.Clamp(Value / Max * 100, 0, 100) : 0;
 

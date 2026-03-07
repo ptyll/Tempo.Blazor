@@ -9,7 +9,8 @@
         aria-label="@AriaLabel"
         @onclick="HandleClickAsync"
         @onkeydown="HandleKeyDownAsync"
-        @onkeydown:preventDefault>
+        @onkeydown:preventDefault
+        @attributes="AdditionalAttributes">
 
     @if (IsLoading)
     {
@@ -81,6 +82,9 @@
 
     /// <summary>Additional CSS class(es) to apply to the button.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes to apply to the button element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string HtmlType => Type switch
     {

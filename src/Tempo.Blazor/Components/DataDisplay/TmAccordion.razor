@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.DataDisplay
 
-<div class="tm-accordion @Class">
+<div class="tm-accordion @Class" @attributes="AdditionalAttributes">
     <CascadingValue Value="this" IsFixed="true">
         @ChildContent
     </CascadingValue>
@@ -17,6 +17,9 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes to apply to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     internal void RegisterItem(TmAccordionItem item)
     {

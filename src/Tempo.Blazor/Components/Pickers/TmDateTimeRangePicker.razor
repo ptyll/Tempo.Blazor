@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Models
 
-<div class="tm-datetime-range-picker @Class @(IsInvalid ? "tm-datetime-range--invalid" : "")">
+<div class="tm-datetime-range-picker @Class @(IsInvalid ? "tm-datetime-range--invalid" : "")" @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label class="tm-picker-label">@Label</label>
@@ -61,6 +61,7 @@
     [Parameter] public bool    Disabled     { get; set; }
     [Parameter] public string? Label        { get; set; }
     [Parameter] public string? Class        { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool IsInvalid =>
         Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;

@@ -4,7 +4,7 @@
 
 @if (Items is { Count: > 0 })
 {
-    <nav class="tm-breadcrumbs" aria-label="Breadcrumb">
+    <nav class="tm-breadcrumbs @Class" aria-label="Breadcrumb" @attributes="AdditionalAttributes">
         <ol class="tm-breadcrumb-list">
             @for (int i = 0; i < Items.Count; i++)
             {
@@ -65,4 +65,10 @@
 
     /// <summary>Optional callback when a breadcrumb item is clicked. When set, renders items as buttons instead of links.</summary>
     [Parameter] public EventCallback<IBreadcrumbItem> OnItemClick { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 }

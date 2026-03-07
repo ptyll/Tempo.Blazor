@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Feedback
 
-<div class="tm-tooltip tm-tooltip--@PositionCss @Class">
+<div class="tm-tooltip tm-tooltip--@PositionCss @Class" @attributes="AdditionalAttributes">
     <div class="tm-tooltip__trigger" aria-describedby="@_tooltipId">
         @ChildContent
     </div>
@@ -32,6 +32,8 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string PositionCss => Position switch
     {

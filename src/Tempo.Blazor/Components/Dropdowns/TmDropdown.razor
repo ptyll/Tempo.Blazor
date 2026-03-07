@@ -2,7 +2,7 @@
 @using Tempo.Blazor.Components.Icons
 @using Microsoft.AspNetCore.Components.Web
 
-<div class="tm-dropdown-wrapper" @onkeydown="HandleKeyDownAsync">
+<div class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @onkeydown="HandleKeyDownAsync" @attributes="AdditionalAttributes">
     <button type="button"
             class="tm-dropdown-trigger"
             aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
@@ -39,13 +39,28 @@
     /// <summary>Menu content — typically TmDropdownItem elements.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Disables the dropdown.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional HTML attributes.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     private bool _isOpen;
 
-    private void Toggle() => _isOpen = !_isOpen;
+    private void Toggle()
+    {
+        if (Disabled) return;
+        _isOpen = !_isOpen;
+    }
 
     /// <summary>Called by TmDropdownItem when an item is selected.</summary>
     public async Task SelectItemAsync(string value)
     {
+        if (Disabled) return;
         await OnSelect.InvokeAsync(value);
         _isOpen = false;
     }

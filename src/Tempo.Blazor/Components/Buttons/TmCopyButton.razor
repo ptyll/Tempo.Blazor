@@ -3,8 +3,10 @@
 
 <button type="button"
         class="tm-copy-button @(_copied ? "tm-copy-button--copied" : "") @Class"
+        disabled="@Disabled"
         aria-label="@(_copied ? "Copied" : "Copy to clipboard")"
-        @onclick="HandleCopy">
+        @onclick="HandleCopy"
+        @attributes="AdditionalAttributes">
     @if (_copied)
     {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -29,8 +31,16 @@
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>Disables the button.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional HTML attributes to apply to the button element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     private async Task HandleCopy()
     {
+        if (Disabled) return;
+
         try
         {
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", Text);

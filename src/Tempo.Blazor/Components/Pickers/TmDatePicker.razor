@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Pickers
 
-<div class="tm-date-picker @Class" @onkeydown="OnKeyDown">
+<div class="tm-date-picker @Class" @onkeydown="OnKeyDown" @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label class="tm-picker-label">@Label</label>
@@ -68,6 +68,7 @@
     [Parameter] public bool       Required     { get; set; }
     [Parameter] public string?    Label        { get; set; }
     [Parameter] public string?    Class        { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
     private int  _displayYear  = DateTime.Today.Year;

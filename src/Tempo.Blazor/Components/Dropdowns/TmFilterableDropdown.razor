@@ -5,7 +5,7 @@
 @typeparam TItem
 @typeparam TValue
 
-<div class="tm-filterable-dropdown">
+<div class="tm-filterable-dropdown @(Disabled ? "tm-filterable-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <div class="tm-filterable-dropdown-trigger"
          role="combobox"
          tabindex="0"
@@ -126,6 +126,16 @@
     /// <summary>Custom item rendering template.</summary>
     [Parameter] public RenderFragment<TItem>? ItemTemplate { get; set; }
 
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Disables the dropdown.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional HTML attributes.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
     private bool _isOpen;
     private bool _isLoading;
     private bool _hasError;
@@ -135,6 +145,7 @@
 
     private async Task ToggleAsync()
     {
+        if (Disabled) return;
         _isOpen = !_isOpen;
         if (_isOpen && DataProvider is not null)
             await LoadFromProviderAsync();
@@ -167,6 +178,7 @@
 
     private async Task SelectItemAsync(TItem item)
     {
+        if (Disabled) return;
         Value = item;
         await ValueChanged.InvokeAsync(item);
         _isOpen = false;

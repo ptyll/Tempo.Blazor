@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Feedback
 
-<svg class="tm-spinner @SizeClass @ColorClass"
+<svg class="tm-spinner @SizeClass @ColorClass @Class"
+     @attributes="AdditionalAttributes"
      viewBox="0 0 24 24"
      fill="none"
      stroke="currentColor"
@@ -18,6 +19,11 @@
 
     /// <summary>Color variant of the spinner. Defaults to Current.</summary>
     [Parameter] public SpinnerColor Color { get; set; } = SpinnerColor.Current;
+
+    /// <summary>Additional CSS class.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string SizeClass => Size switch
     {

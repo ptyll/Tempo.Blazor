@@ -5,7 +5,7 @@
 @typeparam TItem
 @typeparam TValue
 
-<div class="tm-input-wrapper @Class">
+<div class="tm-input-wrapper @Class" @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
