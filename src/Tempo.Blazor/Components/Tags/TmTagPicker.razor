@@ -1,24 +1,30 @@
 @namespace Tempo.Blazor.Components.Tags
 @using Tempo.Blazor.Interfaces
 
-<div class="tm-tag-picker">
+<div class="tm-tag-picker @(Disabled ? "tm-tag-picker-disabled" : "") @Class" @attributes="AdditionalAttributes">
     @* Selected tag chips *@
     @foreach (var tag in SelectedTagSet)
     {
         var t = tag;
         <span class="tm-tag-chip" style="background-color: @t.Color">
             @t.Name
-            <button class="tm-tag-chip-remove" type="button"
-                    @onclick:stopPropagation="true"
-                    @onclick="() => RemoveTagAsync(t)">×</button>
+            @if (!Disabled)
+            {
+                <button class="tm-tag-chip-remove" type="button"
+                        @onclick:stopPropagation="true"
+                        @onclick="() => RemoveTagAsync(t)">×</button>
+            }
         </span>
     }
 
     @* Open dropdown trigger *@
-    <button class="tm-tag-picker-trigger" type="button" @onclick="ToggleOpen">+</button>
+    @if (!Disabled)
+    {
+        <button class="tm-tag-picker-trigger" type="button" @onclick="ToggleOpen">+</button>
+    }
 
     @* Dropdown *@
-    @if (_isOpen)
+    @if (_isOpen && !Disabled)
     {
         <div class="tm-tag-picker-dropdown">
             @if (AllowCreate)
@@ -63,6 +69,16 @@
 
     /// <summary>When true, shows an option to create a new tag inline.</summary>
     [Parameter] public bool AllowCreate { get; set; }
+
+    /// <summary>Disables the tag picker.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private IEnumerable<ITag> SelectedTagSet => SelectedTags ?? Enumerable.Empty<ITag>();
 
