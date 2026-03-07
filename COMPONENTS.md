@@ -4410,6 +4410,8 @@ Plánovač/kalendář s denním, týdenním, měsíčním, agenda a timeline poh
 | `OnEventClick` | `EventCallback<IScheduleEvent>` | — | Klik na událost |
 | `OnSlotClick` | `EventCallback<SchedulerSlotClickEventArgs>` | — | Klik na slot |
 | `OnEventChanged` | `EventCallback<ScheduleEventChangeArgs>` | — | Drag & drop změna |
+| `OnSlotContextMenu` | `EventCallback<SchedulerSlotContext>` | — | Kontextové menu na slotu |
+| `OnEventContextMenu` | `EventCallback<SchedulerEventContext>` | — | Kontextové menu na události |
 | `Resources` | `IEnumerable<IScheduleResource>?` | `null` | Zdroje (místnosti, osoby) |
 | `FirstDayOfWeek` | `DayOfWeek` | `Monday` | První den týdne |
 | `WorkDayStart` | `TimeSpan` | `08:00` | Začátek pracovního dne |
@@ -4453,6 +4455,56 @@ Plánovač/kalendář s denním, týdenním, měsíčním, agenda a timeline poh
 @* Agenda pohled *@
 <TmScheduler Events="_events" View="SchedulerView.Agenda"
     @bind-CurrentDate="_date" OnEventClick="OpenDetail" ReadOnly="true" />
+```
+
+#### Funkce Timeline pohledu
+
+Timeline pohled (`SchedulerView.Timeline`) podporuje pokročilé interakce:
+
+**Drag & Drop**
+- Události lze přetahovat mezi zdroji (resources) a časovými sloty
+- Použijte `OnEventChanged` callback pro zpracování změn
+- `draggable` atribut je automaticky nastaven podle `ReadOnly` a `IsReadOnly` události
+
+**Resize (změna velikosti)**
+- Každá událost má dva resize handly:
+  - **Levý handle** - mění začátek události (start čas)
+  - **Pravý handle** - mění konec události (end čas)
+- Handly se zobrazí při najetí myší na událost
+- Minimální délka události je 1 slot (`SlotDuration`)
+
+**Kontextové menu**
+- `OnSlotContextMenu` - pravé tlačítko na volný slot
+- `OnEventContextMenu` - pravé tlačítko na událost
+- Obsahuje souřadnice myši pro zobrazení menu
+
+```razor
+<TmScheduler View="SchedulerView.Timeline"
+    Events="_events"
+    Resources="_resources"
+    OnEventChanged="HandleEventChanged"
+    OnSlotContextMenu="HandleSlotContextMenu"
+    OnEventContextMenu="HandleEventContextMenu" />
+
+@code {
+    private void HandleEventChanged(ScheduleEventChangeArgs args)
+    {
+        // Zpracování drag & drop nebo resize
+        var evt = args.Event;
+        evt.Start = args.NewStart;
+        evt.End = args.NewEnd;
+        evt.ResourceId = args.NewResourceId;
+    }
+
+    private void HandleSlotContextMenu(SchedulerSlotContext context)
+    {
+        // Zobrazení kontextového menu na slotu
+        var x = context.MouseX;
+        var y = context.MouseY;
+        var slotStart = context.SlotStart;
+        var resourceId = context.ResourceId;
+    }
+}
 ```
 
 ---
@@ -5480,6 +5532,99 @@ editContext.AddFluentValidation(serviceProvider);
 
 ### IconColor
 `Current` | `Primary` | `Danger` | `Success` | `Warning` | `Muted`
+
+---
+
+## Design Token System
+
+Tempo.Blazor používá CSS Custom Properties (CSS variables) pro konzistentní design napříč všemi komponentami.
+
+### Základní struktura
+
+```css
+:root {
+  /* Colors */
+  --tm-color-primary: #3b82f6;
+  --tm-color-success: #22c55e;
+  --tm-color-warning: #f59e0b;
+  --tm-color-danger: #ef4444;
+  
+  /* Spacing */
+  --tm-space-1: 0.25rem;
+  --tm-space-2: 0.5rem;
+  --tm-space-3: 0.75rem;
+  --tm-space-4: 1rem;
+  
+  /* Typography */
+  --tm-font-sans: 'Inter', system-ui, sans-serif;
+  --tm-font-size-sm: 0.875rem;
+  --tm-font-size-md: 1rem;
+  
+  /* Border Radius */
+  --tm-radius-sm: 0.25rem;
+  --tm-radius-md: 0.375rem;
+  
+  /* Shadows */
+  --tm-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tm-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+```
+
+### Barevné tokeny
+
+| Token | Popis | Výchozí |
+|-------|-------|---------|
+| `--tm-color-primary` | Primární barva | `#3b82f6` |
+| `--tm-color-success` | Úspěch | `#22c55e` |
+| `--tm-color-warning` | Varování | `#f59e0b` |
+| `--tm-color-danger` | Nebezpečí | `#ef4444` |
+| `--tm-bg-surface` | Pozadí komponenty | `#ffffff` |
+| `--tm-bg-surface-secondary` | Sekundární pozadí | `#f8fafc` |
+| `--tm-border-color` | Barva ohraničení | `#e2e8f0` |
+| `--tm-text-primary` | Primární text | `#0f172a` |
+| `--tm-text-secondary` | Sekundární text | `#475569` |
+
+### Spacing tokeny
+
+| Token | Hodnota |
+|-------|---------|
+| `--tm-space-1` | 0.25rem (4px) |
+| `--tm-space-2` | 0.5rem (8px) |
+| `--tm-space-3` | 0.75rem (12px) |
+| `--tm-space-4` | 1rem (16px) |
+| `--tm-space-5` | 1.25rem (20px) |
+| `--tm-space-6` | 1.5rem (24px) |
+| `--tm-space-8` | 2rem (32px) |
+| `--tm-space-10` | 2.5rem (40px) |
+
+### Přizpůsobení v aplikaci
+
+```css
+/* V index.html nebo app.css */
+:root {
+  --tm-color-primary: #your-brand-color;
+  --tm-font-sans: 'Your Font', sans-serif;
+  --tm-radius-md: 8px;
+}
+```
+
+### Dark mode
+
+Tempo.Blazor podporuje automatický dark mode pomocí `data-theme` atributu:
+
+```html
+<html data-theme="dark">
+```
+
+Nebo dynamicky přes `ThemeService`:
+
+```razor
+@inject ThemeService ThemeService
+
+<button @onclick="ThemeService.Toggle">Toggle Theme</button>
+```
+
+Dark mode tokeny jsou definovány v `tokens-dark.css` a automaticky se aplikují při `data-theme="dark"`.
 
 ### AvatarSize
 `Xs` | `Sm` | `Md` | `Lg` | `Xl` | `Xxl`

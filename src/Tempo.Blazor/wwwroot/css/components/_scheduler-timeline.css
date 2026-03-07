@@ -93,8 +93,8 @@
     padding: 0 var(--tm-space-2, 0.5rem);
     display: flex;
     align-items: center;
-    overflow: hidden;
     cursor: pointer;
+    overflow: visible;
     z-index: 1;
     background: var(--event-color, var(--tm-color-primary, #3b82f6));
     color: #fff;
@@ -111,4 +111,63 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Resize handles ── */
+.tm-scheduler-event-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    display: flex;
+    align-items: center;
+    background: transparent;
+    transition: background-color 0.1s ease;
+    z-index: 3;
+}
+
+.tm-scheduler-event-resize-handle::after {
+    content: "";
+    display: block;
+    width: 2px;
+    height: 1rem;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 1px;
+    opacity: 1;
+    transition: opacity 0.1s ease, background 0.1s ease;
+}
+
+.tm-scheduler-event-resize-handle:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.tm-scheduler-event-resize-handle:hover::after {
+    background: #fff;
+}
+
+/* Left resize handle (start time) */
+.tm-scheduler-event-resize-handle--left {
+    left: 0;
+    cursor: w-resize;
+    justify-content: flex-start;
+    padding-left: 2px;
+}
+
+/* Right resize handle (end time) */
+.tm-scheduler-event-resize-handle--right {
+    right: 0;
+    cursor: e-resize;
+    justify-content: flex-end;
+    padding-right: 2px;
+}
+
+/* Drop target highlighting */
+.tm-scheduler-timeline-row-body--drop-target {
+    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 10%, transparent);
+}
+
+.tm-scheduler-timeline-slot--drop-target {
+    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 20%, transparent);
 }

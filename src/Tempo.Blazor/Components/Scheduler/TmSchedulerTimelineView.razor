@@ -1,8 +1,10 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
 @using System.Globalization
+@using System.Threading
+@implements IDisposable
 
-<div class="tm-scheduler-timeline">
+<div class="tm-scheduler-timeline" data-slot-duration="@SlotDuration">
     @* Header: time columns *@
     <div class="tm-scheduler-timeline-header">
         <div class="tm-scheduler-timeline-resource-header"></div>
@@ -31,11 +33,13 @@
                     var si = slotIndex;
                     var slotStart = CurrentDate.Date.AddMinutes(si * SlotDuration);
                     var slotEnd = slotStart.AddMinutes(SlotDuration);
-                    <div class="tm-scheduler-timeline-slot"
-                         style="left: @F(GetMinuteLeftPercent(si * SlotDuration))%; width: @F(GetSlotWidthPercent())%;"
-                         @onclick="@(() => OnSlotClick.InvokeAsync((slotStart, slotEnd)))"
-                         @oncontextmenu="@(e => HandleSlotContextMenu(e, slotStart, slotEnd, r.Id))"
-                         @oncontextmenu:preventDefault="true"></div>
+                     <div class="tm-scheduler-timeline-slot"
+                          style="left: @F(GetMinuteLeftPercent(si * SlotDuration))%; width: @F(GetSlotWidthPercent())%;"
+                          @ondrop="@(() => HandleSlotDrop(slotStart, slotEnd, r.Id))"
+                          @ondragover:preventDefault="true"
+                          @onclick="@(() => OnSlotClick.InvokeAsync((slotStart, slotEnd)))"
+                          @oncontextmenu="@(e => HandleSlotContextMenu(e, slotStart, slotEnd, r.Id))"
+                          @oncontextmenu:preventDefault="true"></div>
                 }
 
                 @* Events *@
@@ -48,11 +52,25 @@
                     <div class="tm-scheduler-timeline-event @e.CssClass"
                          style="left: @F(leftPct)%; width: @F(widthPct)%; --event-color: @(e.Color ?? r.Color ?? "var(--tm-color-primary, #3b82f6)");"
                          title="@e.Title"
+                         data-event-id="@e.Id"
+                         draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"
+                         @ondragstart="@(() => HandleDragStart(e, r.Id))"
                          @onclick="@(() => OnEventClick.InvokeAsync(e))"
                          @onclick:stopPropagation="true"
                          @oncontextmenu="@(e => HandleEventContextMenu(e, evt))"
                          @oncontextmenu:stopPropagation="true">
                         <span class="tm-scheduler-timeline-event-title">@e.Title</span>
+                        @if (!ReadOnly && !e.IsReadOnly)
+                        {
+                            <div class="tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--left"
+                                 draggable="false"
+                                 data-resize-edge="left"
+                                 ondragstart="event.preventDefault(); event.stopPropagation();"></div>
+                            <div class="tm-scheduler-event-resize-handle tm-scheduler-event-resize-handle--right"
+                                 draggable="false"
+                                 data-resize-edge="right"
+                                 ondragstart="event.preventDefault(); event.stopPropagation();"></div>
+                        }
                     </div>
                 }
             </div>
@@ -61,9 +79,16 @@
 </div>
 
 @code {
+    // Static registry for JS interop callbacks
+    private static readonly Dictionary<string, TmSchedulerTimelineView> _instances = new();
+    private static int _instanceIdCounter = 0;
+    private string _instanceId = "";
+
     private int _slotsPerDay;
     private List<TmScheduleResource> _resources = [];
     private Dictionary<string, List<TmScheduleEvent>> _resourceEventMap = new();
+    private TmScheduleEvent? _draggedEvent;
+    private string? _draggedEventOriginalResourceId;
 
     /// <summary>Currently displayed date.</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
@@ -167,6 +192,110 @@
                 ClientX = e.ClientX,
                 ClientY = e.ClientY
             });
+        }
+    }
+
+    // ── Drag & Drop ──
+
+    protected override void OnInitialized()
+    {
+        // Register this instance for JS interop callbacks
+        _instanceId = $"timeline_{Interlocked.Increment(ref _instanceIdCounter)}";
+        _instances[_instanceId] = this;
+    }
+
+    private void HandleDragStart(TmScheduleEvent evt, string resourceId)
+    {
+        if (ReadOnly || evt.IsReadOnly) return;
+        _draggedEvent = evt;
+        _draggedEventOriginalResourceId = resourceId;
+    }
+
+    private async Task HandleSlotDrop(DateTime slotStart, DateTime slotEnd, string targetResourceId)
+    {
+        if (_draggedEvent is null || ReadOnly) return;
+
+        var duration = _draggedEvent.End - _draggedEvent.Start;
+        _draggedEvent.Start = slotStart;
+        _draggedEvent.End = slotStart + duration;
+
+        // Update resource if changed
+        if (_draggedEventOriginalResourceId != targetResourceId)
+        {
+            _draggedEvent.ResourceId = targetResourceId;
+        }
+
+        await OnEventChanged.InvokeAsync(_draggedEvent);
+        _draggedEvent = null;
+        _draggedEventOriginalResourceId = null;
+    }
+
+    // ── Resize ──
+
+    /// <summary>
+    /// Handles the completion of a resize operation from JavaScript.
+    /// </summary>
+    private async Task HandleResizeComplete(string eventId, int deltaMinutes, string resizeEdge = "right")
+    {
+        if (ReadOnly || string.IsNullOrEmpty(eventId)) return;
+
+        // Find the event being resized
+        var evt = Events?.FirstOrDefault(e => e.Id == eventId);
+        if (evt is null || evt.IsReadOnly) return;
+
+        if (resizeEdge == "left")
+        {
+            // Left resize: change start time
+            var newStart = evt.Start.AddMinutes(deltaMinutes);
+            
+            // Ensure minimum duration (don't let start go past end)
+            if (newStart >= evt.End.AddMinutes(-SlotDuration))
+            {
+                newStart = evt.End.AddMinutes(-SlotDuration);
+            }
+            
+            evt.Start = newStart;
+        }
+        else
+        {
+            // Right resize: change end time (default)
+            evt.End = evt.End.AddMinutes(deltaMinutes);
+
+            // Ensure minimum duration
+            if (evt.End <= evt.Start.AddMinutes(SlotDuration))
+            {
+                evt.End = evt.Start.AddMinutes(SlotDuration);
+            }
+        }
+
+        // Notify parent about the change
+        await OnEventChanged.InvokeAsync(evt);
+    }
+
+    /// <summary>
+    /// Called by JavaScript when a resize operation is completed.
+    /// </summary>
+    [JSInvokable]
+    public static async Task NotifyTimelineResizeComplete(string instanceId, string eventId, int deltaMinutes, string resizeEdge = "right")
+    {
+        // Find the instance that has this event
+        foreach (var instance in _instances.Values)
+        {
+            var evt = instance.Events?.FirstOrDefault(e => e.Id == eventId);
+            if (evt != null)
+            {
+                await instance.HandleResizeComplete(eventId, deltaMinutes, resizeEdge);
+                return;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        // Unregister this instance
+        if (!string.IsNullOrEmpty(_instanceId))
+        {
+            _instances.Remove(_instanceId);
         }
     }
 }
