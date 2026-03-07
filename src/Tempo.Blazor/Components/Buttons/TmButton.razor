@@ -14,13 +14,24 @@
     @if (IsLoading)
     {
         <TmSpinner Size="SpinnerSize.Sm" />
+        @if (!string.IsNullOrEmpty(LoadingText))
+        {
+            <span>@LoadingText</span>
+        }
+        else
+        {
+            @ChildContent
+        }
     }
-    else if (!string.IsNullOrEmpty(Icon) && !IconRight)
+    else
     {
-        <TmIcon Name="@Icon" Size="IconSize.Sm" />
-    }
+        @if (!string.IsNullOrEmpty(Icon) && !IconRight)
+        {
+            <TmIcon Name="@Icon" Size="IconSize.Sm" />
+        }
 
-    @ChildContent
+        @ChildContent
+    }
 
     @if (!IsLoading && !string.IsNullOrEmpty(Icon) && IconRight)
     {
@@ -46,6 +57,9 @@
 
     /// <summary>Shows a loading spinner and disables the button.</summary>
     [Parameter] public bool IsLoading { get; set; }
+
+    /// <summary>Text displayed instead of child content when IsLoading is true.</summary>
+    [Parameter] public string? LoadingText { get; set; }
 
     /// <summary>Disables the button.</summary>
     [Parameter] public bool Disabled { get; set; }

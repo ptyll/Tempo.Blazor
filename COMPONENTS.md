@@ -50,6 +50,7 @@ Univerzální tlačítko s variantami, velikostmi a ikonami.
 | `Icon` | `string?` | `null` | Název ikony (z `IconNames`) |
 | `IconRight` | `bool` | `false` | Ikona vpravo od textu |
 | `IsLoading` | `bool` | `false` | Zobrazí spinner a zakáže tlačítko |
+| `LoadingText` | `string?` | `null` | Text zobrazený místo obsahu při `IsLoading=true` |
 | `Disabled` | `bool` | `false` | Zakáže tlačítko |
 | `Block` | `bool` | `false` | Roztáhne na celou šířku |
 | `TabIndex` | `int` | `0` | Tab pořadí |
@@ -93,6 +94,9 @@ Univerzální tlačítko s variantami, velikostmi a ikonami.
 
 @* Loading stav *@
 <TmButton IsLoading="_isSaving" OnClick="Save">Uložit</TmButton>
+
+@* Loading stav s vlastním textem *@
+<TmButton IsLoading="_isSaving" LoadingText="Ukládám..." OnClick="Save">Uložit</TmButton>
 
 @* Zakázané *@
 <TmButton Disabled="true">Nelze kliknout</TmButton>

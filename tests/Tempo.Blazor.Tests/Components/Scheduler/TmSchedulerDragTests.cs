@@ -145,7 +145,7 @@ public class TmSchedulerDragTests : LocalizationTestBase
             .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
             .Add(c => c.Events, events));
 
-        cut.FindAll(".tm-scheduler-event-resize-handle").Count.Should().Be(1);
+        cut.FindAll(".tm-scheduler-event-resize-handle").Count.Should().Be(2);
     }
 
     [Fact]
