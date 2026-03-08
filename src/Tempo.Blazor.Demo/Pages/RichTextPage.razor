@@ -104,14 +104,14 @@
     </div>
 </section>
 
-<!-- Editor with Tokens -->
+<!-- Editor with Tokens (Grouped by Category) -->
 <section class="demo-section">
     <div class="flex items-center justify-between mb-4">
         <div>
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Token / Variable Support</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Insert dynamic tokens using the <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">@("{{")</kbd> trigger or the <strong>{x}</strong> toolbar button</p>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tokens with Category Grouping</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Tokens with <code>Category</code> are automatically grouped into sections with sticky headers</p>
         </div>
-        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Tokens</span>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Grouped</span>
     </div>
 
     <div class="showcase-card">
@@ -160,6 +160,39 @@
                 <code class="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 rounded text-xs font-mono">@_tokenCreateRequested</code>
             </div>
         }
+
+        <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                API returns tokens with <code class="text-amber-600 dark:text-amber-400">Category</code> (Uživatel, Systém, Dokument, Organizace) — dropdown groups them into sections with sticky headers.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Editor with Tokens (Flat / No Categories) -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Tokens without Categories (Flat List)</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">When tokens have no <code>Category</code>, the dropdown displays a simple flat list</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full">Flat</span>
+    </div>
+
+    <div class="showcase-card">
+        <TmRichEditorSimple
+            @ref="_flatTokenEditor"
+            @bind-Value="_flatTokenValue"
+            Placeholder="Type {{ to see a flat token list..."
+            MaxLength="500"
+            SupportsTokens="true"
+            TokenProvider="_flatTokenProvider" />
+
+        <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                This provider returns tokens without <code class="text-amber-600 dark:text-amber-400">Category</code> — dropdown shows a flat list with no section headers.
+            </p>
+        </div>
     </div>
 </section>
 
@@ -273,9 +306,11 @@
     private TmRichEditorSimple? _simpleEditor;
     private TmRichEditorFull? _fullEditor;
     private TmRichEditorFull? _tokenEditor;
+    private TmRichEditorSimple? _flatTokenEditor;
     private string _simpleValue = string.Empty;
     private string _fullValue = string.Empty;
     private string _tokenValue = string.Empty;
+    private string _flatTokenValue = string.Empty;
     private string _simpleSubmitted = string.Empty;
     private string _htmlPreview = string.Empty;
     private string _contentPreview = string.Empty;
@@ -285,12 +320,14 @@
 
     private ApiMentionProvider? _mentionProvider;
     private ApiTokenProvider? _tokenProvider;
+    private FlatTokenProvider? _flatTokenProvider;
 
     protected override void OnInitialized()
     {
         var http = HttpFactory.CreateClient("DemoApi");
         _mentionProvider = new ApiMentionProvider(http);
         _tokenProvider = new ApiTokenProvider(http);
+        _flatTokenProvider = new FlatTokenProvider();
     }
 
     private async Task OnSimpleSubmit()
@@ -476,5 +513,37 @@
         public string UserName => _user.UserName;
         public string DisplayName => _user.DisplayName;
         public string? AvatarUrl => _user.AvatarUrl;
+    }
+
+    /// <summary>
+    /// In-memory token provider without categories (flat list demo).
+    /// </summary>
+    private class FlatTokenProvider : ITokenDataProvider
+    {
+        private static readonly FlatToken[] _tokens =
+        [
+            new("today", "Dnešní datum", "Aktuální datum ve formátu dd.MM.yyyy"),
+            new("now", "Aktuální čas", "Čas ve formátu HH:mm:ss"),
+            new("fullname", "Celé jméno", "Jméno a příjmení přihlášeného uživatele"),
+            new("email", "E-mail", "E-mailová adresa uživatele"),
+            new("company", "Firma", "Název společnosti"),
+        ];
+
+        public bool SupportsCreation => false;
+
+        public Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken cancellationToken = default)
+        {
+            IEnumerable<IToken> result = string.IsNullOrWhiteSpace(query)
+                ? _tokens
+                : _tokens.Where(t =>
+                    t.Key.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    t.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(result);
+        }
+
+        private record FlatToken(string Key, string DisplayName, string? Description) : IToken
+        {
+            public string? Category => null;
+        }
     }
 }

@@ -5293,16 +5293,19 @@ Jednoduchý rich text editor (pro komentáře).
 
 Dropdown komponenta pro výběr tokenu/proměnné. Používá se interně v TmRichEditorFull a TmRichEditorSimple.
 
+**Automatické grupování podle Category:** Pokud alespoň jeden token má vyplněnou vlastnost `Category`, tokeny se automaticky seskupí do sekcí se sticky section headers. Pokud žádný token nemá `Category`, zobrazí se flat list s category badge u každého tokenu (zpětná kompatibilita).
+
 #### CSS třídy
 
 | Třída | Popis |
 |-------|-------|
 | `tm-rte-token-dropdown` | Kořenový dropdown kontejner |
+| `tm-rte-token-section-header` | Hlavička sekce kategorie (uppercase, sticky, muted bg) |
 | `tm-rte-token-item` | Položka tokenu |
 | `tm-rte-token-highlighted` | Zvýrazněná položka |
 | `tm-rte-token-key` | Klíč tokenu (monospace) |
 | `tm-rte-token-description` | Popis tokenu |
-| `tm-rte-token-category` | Badge kategorie |
+| `tm-rte-token-category` | Badge kategorie (pouze v flat režimu bez grupování) |
 | `tm-rte-token-empty` | Prázdný stav |
 | `tm-rte-token-separator` | Oddělovač |
 | `tm-rte-token-create` | Položka "Vytvořit nový" |

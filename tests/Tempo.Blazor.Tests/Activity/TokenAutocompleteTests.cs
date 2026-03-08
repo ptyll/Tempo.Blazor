@@ -85,15 +85,63 @@ public class TokenAutocompleteTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TokenAutocomplete_DisplaysCategory()
+    public void TokenAutocomplete_WithCategories_ShowsSectionHeaders()
     {
         var tokens = CreateTestTokens();
         var cut = RenderComponent<TokenAutocomplete>(p => p
             .Add(c => c.IsVisible, true)
             .Add(c => c.Tokens, tokens));
 
-        var catElements = cut.FindAll(".tm-rte-token-category");
-        catElements.Should().NotBeEmpty();
+        var headers = cut.FindAll(".tm-rte-token-section-header");
+        headers.Should().HaveCount(2); // "User" and "System"
+        headers[0].TextContent.Should().Be("User");
+        headers[1].TextContent.Should().Be("System");
+    }
+
+    [Fact]
+    public void TokenAutocomplete_WithCategories_HidesCategoryBadge()
+    {
+        var tokens = CreateTestTokens();
+        var cut = RenderComponent<TokenAutocomplete>(p => p
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.Tokens, tokens));
+
+        cut.FindAll(".tm-rte-token-category").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TokenAutocomplete_NoCategoryTokens_ShowsBadgeInstead()
+    {
+        var tokens = new List<TokenItem>
+        {
+            new TokenItem { Key = "a", DisplayName = "A" },
+            new TokenItem { Key = "b", DisplayName = "B" },
+        };
+        var cut = RenderComponent<TokenAutocomplete>(p => p
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.Tokens, tokens));
+
+        cut.FindAll(".tm-rte-token-section-header").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TokenAutocomplete_NoCategoryTokens_ShowsCategoryBadge()
+    {
+        var tokens = new List<TokenItem>
+        {
+            new TokenItem { Key = "a", DisplayName = "A", Category = "Cat1" },
+            new TokenItem { Key = "b", DisplayName = "B" },
+        };
+        // When at least one token has category, grouped mode is active → no badges
+        var cut = RenderComponent<TokenAutocomplete>(p => p
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.Tokens, new List<TokenItem>
+            {
+                new TokenItem { Key = "a", DisplayName = "A" },
+            }));
+
+        // No categories at all → flat mode with badge slots (but no badge since Category is null)
+        cut.FindAll(".tm-rte-token-section-header").Should().BeEmpty();
     }
 
     [Fact]

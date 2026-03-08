@@ -5,25 +5,57 @@
     <div class="tm-rte-token-dropdown">
         @if (FilteredTokens.Any())
         {
-            @foreach (var (token, index) in FilteredTokens.Select((t, i) => (t, i)))
+            @if (HasCategories)
             {
-                <div class="tm-rte-token-item @(index == HighlightedIndex ? "tm-rte-token-highlighted" : "")"
-                     @onclick="() => SelectToken(token)"
-                     @onclick:stopPropagation
-                     @onmouseenter="() => OnMouseEnter(index)"
-                     @onmousedown:preventDefault>
-                    <div class="tm-rte-token-info">
-                        <div class="tm-rte-token-key">{{@token.Key}}</div>
-                        @if (!string.IsNullOrEmpty(token.Description))
+                int flatIndex = 0;
+                @foreach (var group in GroupedTokens)
+                {
+                    @if (!string.IsNullOrEmpty(group.Key))
+                    {
+                        <div class="tm-rte-token-section-header">@group.Key</div>
+                    }
+                    @foreach (var token in group)
+                    {
+                        var idx = flatIndex;
+                        <div class="tm-rte-token-item @(idx == HighlightedIndex ? "tm-rte-token-highlighted" : "")"
+                             @onclick="() => SelectToken(token)"
+                             @onclick:stopPropagation
+                             @onmouseenter="() => OnMouseEnter(idx)"
+                             @onmousedown:preventDefault>
+                            <div class="tm-rte-token-info">
+                                <div class="tm-rte-token-key">{{@token.Key}}</div>
+                                @if (!string.IsNullOrEmpty(token.Description))
+                                {
+                                    <div class="tm-rte-token-description">@token.Description</div>
+                                }
+                            </div>
+                        </div>
+                        flatIndex++;
+                    }
+                }
+            }
+            else
+            {
+                @foreach (var (token, index) in FilteredTokens.Select((t, i) => (t, i)))
+                {
+                    <div class="tm-rte-token-item @(index == HighlightedIndex ? "tm-rte-token-highlighted" : "")"
+                         @onclick="() => SelectToken(token)"
+                         @onclick:stopPropagation
+                         @onmouseenter="() => OnMouseEnter(index)"
+                         @onmousedown:preventDefault>
+                        <div class="tm-rte-token-info">
+                            <div class="tm-rte-token-key">{{@token.Key}}</div>
+                            @if (!string.IsNullOrEmpty(token.Description))
+                            {
+                                <div class="tm-rte-token-description">@token.Description</div>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(token.Category))
                         {
-                            <div class="tm-rte-token-description">@token.Description</div>
+                            <span class="tm-rte-token-category">@token.Category</span>
                         }
                     </div>
-                    @if (!string.IsNullOrEmpty(token.Category))
-                    {
-                        <span class="tm-rte-token-category">@token.Category</span>
-                    }
-                </div>
+                }
             }
         }
         else
@@ -94,6 +126,11 @@
                 t.Key.Contains(Query, StringComparison.OrdinalIgnoreCase) ||
                 t.DisplayName.Contains(Query, StringComparison.OrdinalIgnoreCase) ||
                 (t.Description != null && t.Description.Contains(Query, StringComparison.OrdinalIgnoreCase)));
+
+    private bool HasCategories => FilteredTokens.Any(t => !string.IsNullOrEmpty(t.Category));
+
+    private IEnumerable<IGrouping<string, TokenItem>> GroupedTokens =>
+        FilteredTokens.GroupBy(t => t.Category ?? "");
 
     private int TotalItemCount => FilteredTokens.Count() + (SupportsCreation ? 1 : 0);
 

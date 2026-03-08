@@ -70,6 +70,22 @@
   white-space: nowrap;
 }
 
+/* Section header for category grouping */
+.tm-rte-token-section-header {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--tm-border-color);
+  background: var(--tm-bg-muted);
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .tm-rte-token-empty {
   padding: var(--tm-space-4);
   text-align: center;
