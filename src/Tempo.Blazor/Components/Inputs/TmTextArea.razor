@@ -14,7 +14,8 @@
               autocomplete="@AutoComplete"
               class="@InputCssClass"
               @attributes="AdditionalAttributes"
-              @onchange="HandleChangeAsync">@Value</textarea>
+              @onchange="@(Immediate ? null : HandleChangeAsync)"
+              @oninput="@(Immediate ? HandleChangeAsync : null)">@Value</textarea>
     @if (!string.IsNullOrEmpty(Error))
     {
         <div data-testid="error-message" class="tm-input-error-message">@Error</div>
@@ -54,6 +55,9 @@
 
     /// <summary>HTML autocomplete attribute. Common values: "on", "off".</summary>
     [Parameter] public string? AutoComplete { get; set; }
+
+    /// <summary>When true, fires ValueChanged on every keystroke instead of on blur.</summary>
+    [Parameter] public bool Immediate { get; set; }
 
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }

@@ -328,6 +328,7 @@ Víceřádkové textové pole.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `TabIndex` | `int` | `0` | Tab pořadí |
 | `Id` | `string` | auto | HTML id |
+| `Immediate` | `bool` | `false` | Když `true`, vyvolá `ValueChanged` při každém stisku klávesy místo při blur |
 | `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off` |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 | `Class` | `string?` | `null` | Další CSS třídy |
@@ -348,6 +349,10 @@ Víceřádkové textové pole.
 @* S chybou *@
 <TmTextArea @bind-Value="_comment" Label="Komentář"
     Error="@(_comment.Length == 0 ? "Komentář je povinný" : null)" />
+
+@* Okamžitá aktualizace při psaní (Immediate) *@
+<TmTextArea @bind-Value="_search" Label="Hledat" Immediate="true"
+    Placeholder="Výsledky se filtrují při psaní..." />
 ```
 
 ### TmNumberInput
