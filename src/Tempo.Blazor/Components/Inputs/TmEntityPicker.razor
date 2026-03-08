@@ -158,10 +158,29 @@
         await ValueChanged.InvokeAsync(ValueSelector(item));
     }
 
-    private void HandleFocus()
+    private async Task HandleFocus()
     {
         if (_results.Any())
+        {
             _showDropdown = true;
+        }
+        else if (_searchText.Length >= MinSearchLength)
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                var results = await SearchProvider(_searchText);
+                _results = results.ToList();
+                _showDropdown = true;
+            }
+            finally
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
     }
 
     private void HandleBlur()
