@@ -501,7 +501,7 @@ window.tmRichEditor = {
     },
 
     /**
-     * Insert a token chip into the editor
+     * Insert a token chip into the editor (without trigger deletion, e.g. from toolbar button)
      * @param {string} key - The token key (e.g. "user.email")
      * @param {string} displayName - The display name (e.g. "User Email")
      */
@@ -514,11 +514,73 @@ window.tmRichEditor = {
     },
 
     /**
+     * Find the {{ trigger in the editor, delete it along with query text, and insert a token chip.
+     * Combined into one operation to avoid selection/focus loss between JS interop calls.
+     * @param {HTMLElement} element - The editor element
+     * @param {string} key - The token key
+     * @param {string} displayName - The display name
+     */
+    replaceTokenTrigger: function (element, key, displayName) {
+        if (!element) return;
+        element.focus();
+
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return;
+
+        const range = selection.getRangeAt(0);
+        let textNode = range.startContainer;
+        let offset = range.startOffset;
+
+        // If cursor is not in a text node, try to find one
+        if (textNode.nodeType !== Node.TEXT_NODE) {
+            // Walk backwards through child nodes to find the text node with {{
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+            let lastTextNode = null;
+            while (walker.nextNode()) {
+                const content = walker.currentNode.textContent || '';
+                if (content.includes('{{')) {
+                    lastTextNode = walker.currentNode;
+                }
+            }
+            if (lastTextNode) {
+                textNode = lastTextNode;
+                offset = textNode.textContent.length;
+            } else {
+                return;
+            }
+        }
+
+        const textContent = textNode.textContent || '';
+        const textBeforeCursor = textContent.substring(0, offset);
+
+        // Find the last {{ before cursor
+        const lastTriggerIndex = textBeforeCursor.lastIndexOf('{{');
+        if (lastTriggerIndex >= 0) {
+            // Delete the {{ and any query text after it
+            const deleteRange = document.createRange();
+            deleteRange.setStart(textNode, lastTriggerIndex);
+            deleteRange.setEnd(textNode, offset);
+            deleteRange.deleteContents();
+
+            // Place cursor at deletion point and insert token
+            const insertRange = document.createRange();
+            insertRange.setStart(textNode, lastTriggerIndex);
+            insertRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(insertRange);
+
+            const tokenHtml = `<span class="tm-token" data-token-key="${this._escapeHtml(key)}" contenteditable="false">{{${this._escapeHtml(displayName)}}}</span>&nbsp;`;
+            document.execCommand('insertHTML', false, tokenHtml);
+        }
+    },
+
+    /**
      * Delete the token trigger text ({{ and any typed query) before cursor
      * @param {HTMLElement} element - The editor element
      */
     deleteTokenTrigger: function (element) {
-        this._ensureFocus();
+        if (!element) return;
+        element.focus();
 
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
@@ -564,6 +626,8 @@ window.tmRichEditor = {
         const fragment = preCursorRange.cloneContents();
         const tempDiv = document.createElement('div');
         tempDiv.appendChild(fragment);
+        // Remove existing token chips so their {{DisplayName}} text doesn't trigger false matches
+        tempDiv.querySelectorAll('.tm-token').forEach(el => el.remove());
         let textBeforeCursor = tempDiv.textContent || '';
 
         if (textBeforeCursor.length > 100) {

@@ -104,6 +104,65 @@
     </div>
 </section>
 
+<!-- Editor with Tokens -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Token / Variable Support</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Insert dynamic tokens using the <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-xs font-mono">@("{{")</kbd> trigger or the <strong>{x}</strong> toolbar button</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Tokens</span>
+    </div>
+
+    <div class="showcase-card">
+        <TmRichEditorFull
+            @ref="_tokenEditor"
+            @bind-Value="_tokenValue"
+            Placeholder="Type {{ to insert a token, or use the {x} button in toolbar..."
+            Height="300px"
+            MaxLength="2000"
+            ShowWordCount="true"
+            SupportsMentions="true"
+            MentionProvider="_mentionProvider"
+            SupportsTokens="true"
+            TokenProvider="_tokenProvider"
+            OnTokenInserted="OnTokenInserted"
+            OnTokenCreateRequested="OnTokenCreateRequested" />
+
+        <div class="mt-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="ShowTokenHtml">Show HTML</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="ClearTokenEditor">Clear</TmButton>
+            </div>
+            <span class="text-xs text-slate-500 dark:text-slate-400">Type <kbd class="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 font-mono">@("{{")</kbd> to search tokens</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_tokenHtmlPreview))
+        {
+            <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">HTML Output:</p>
+                <pre class="p-3 bg-slate-100 dark:bg-slate-900 rounded-lg text-xs overflow-x-auto text-slate-800 dark:text-slate-200"><code>@_tokenHtmlPreview</code></pre>
+            </div>
+        }
+
+        @if (_lastInsertedToken is not null)
+        {
+            <div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center space-x-2">
+                <span class="text-amber-600 dark:text-amber-400 text-sm font-medium">Last inserted:</span>
+                <code class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 rounded text-xs font-mono">@_lastInsertedToken</code>
+            </div>
+        }
+
+        @if (_tokenCreateRequested is not null)
+        {
+            <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center space-x-2">
+                <span class="text-green-600 dark:text-green-400 text-sm font-medium">Create requested:</span>
+                <code class="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 rounded text-xs font-mono">@_tokenCreateRequested</code>
+            </div>
+        }
+    </div>
+</section>
+
 <!-- Editor Features -->
 <section class="demo-section">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Available Features</h2>
@@ -123,6 +182,7 @@
                 <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Task/Check Lists</li>
                 <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Emoji Picker</li>
                 <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> @@Mentions (@@username)</li>
+                <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> @("{{")Tokens (@("{{")variable@("}")@("}"))</li>
                 <li class="flex items-center"><span class="text-green-500 mr-2">✓</span> Character Count</li>
             </ul>
         </div>
@@ -212,17 +272,25 @@
 @code {
     private TmRichEditorSimple? _simpleEditor;
     private TmRichEditorFull? _fullEditor;
+    private TmRichEditorFull? _tokenEditor;
     private string _simpleValue = string.Empty;
     private string _fullValue = string.Empty;
+    private string _tokenValue = string.Empty;
     private string _simpleSubmitted = string.Empty;
     private string _htmlPreview = string.Empty;
     private string _contentPreview = string.Empty;
-    
+    private string _tokenHtmlPreview = string.Empty;
+    private string? _lastInsertedToken;
+    private string? _tokenCreateRequested;
+
     private ApiMentionProvider? _mentionProvider;
+    private ApiTokenProvider? _tokenProvider;
 
     protected override void OnInitialized()
     {
-        _mentionProvider = new ApiMentionProvider(HttpFactory.CreateClient("DemoApi"));
+        var http = HttpFactory.CreateClient("DemoApi");
+        _mentionProvider = new ApiMentionProvider(http);
+        _tokenProvider = new ApiTokenProvider(http);
     }
 
     private async Task OnSimpleSubmit()
@@ -275,6 +343,90 @@
         }
         _htmlPreview = string.Empty;
         _contentPreview = string.Empty;
+    }
+
+    private async Task ShowTokenHtml()
+    {
+        if (_tokenEditor != null)
+        {
+            _tokenValue = _tokenEditor.GetHtml();
+        }
+        _tokenHtmlPreview = _tokenValue;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearTokenEditor()
+    {
+        if (_tokenEditor != null)
+        {
+            await _tokenEditor.Clear();
+        }
+        _tokenHtmlPreview = string.Empty;
+        _lastInsertedToken = null;
+        _tokenCreateRequested = null;
+    }
+
+    private void OnTokenInserted(IToken token)
+    {
+        _lastInsertedToken = $"{token.Key} ({token.DisplayName})";
+        StateHasChanged();
+    }
+
+    private void OnTokenCreateRequested(string? query)
+    {
+        _tokenCreateRequested = query ?? "(empty)";
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// API-based token provider for the demo.
+    /// </summary>
+    private class ApiTokenProvider : ITokenDataProvider
+    {
+        private readonly HttpClient _http;
+
+        public ApiTokenProvider(HttpClient http)
+        {
+            _http = http;
+        }
+
+        public bool SupportsCreation => true;
+
+        public async Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var response = await _http.GetFromJsonAsync<List<TokenDto>>(
+                    $"api/tokens/search?q={Uri.EscapeDataString(query)}&limit=10",
+                    cancellationToken);
+
+                if (response == null) return Array.Empty<IToken>();
+
+                return response.Select(t => new TokenAdapter(t)).ToList();
+            }
+            catch
+            {
+                return Array.Empty<IToken>();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adapter to convert TokenDto to IToken.
+    /// </summary>
+    private class TokenAdapter : IToken
+    {
+        private readonly TokenDto _token;
+
+        public TokenAdapter(TokenDto token)
+        {
+            _token = token;
+        }
+
+        public string Key => _token.Key;
+        public string DisplayName => _token.DisplayName;
+        public string? Description => _token.Description;
+        public string? Category => _token.Category;
     }
 
     /// <summary>

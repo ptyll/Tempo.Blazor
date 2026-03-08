@@ -249,7 +249,7 @@
     private int _tokenHighlightedIndex;
     private List<TokenItem> _availableTokens = new();
     private bool _isLoadingTokens;
-    private bool _lastKeyWasOpenBrace;
+    private bool _tokenOpenedViaTrigger;
 
     private bool IsOverLimit => MaxLength > 0 && _charCount > MaxLength;
 
@@ -325,6 +325,19 @@
             if (_showTokenDropdown && SupportsTokens)
             {
                 await UpdateTokenQueryAsync();
+            }
+            // Detect {{ token trigger from actual content (works with any input method)
+            else if (SupportsTokens && !_showTokenDropdown)
+            {
+                var query = await JS.InvokeAsync<string?>("tmRichEditor.getTextBeforeCursorForToken", _editorRef, TokenTrigger);
+                if (query != null)
+                {
+                    _tokenQuery = query;
+                    _showTokenDropdown = true;
+                    _tokenOpenedViaTrigger = true;
+                    _tokenHighlightedIndex = 0;
+                    await LoadTokensAsync();
+                }
             }
 
             await InvokeAsync(StateHasChanged);
@@ -505,7 +518,6 @@
                     return;
                 case "Escape":
                     _showTokenDropdown = false;
-                    _lastKeyWasOpenBrace = false;
                     return;
             }
 
@@ -534,26 +546,9 @@
                     break;
             }
         }
-        // Detect {{ token trigger
-        else if (e.Key == "{" && SupportsTokens)
-        {
-            if (_lastKeyWasOpenBrace)
-            {
-                _lastKeyWasOpenBrace = false;
-                _tokenQuery = "";
-                _showTokenDropdown = true;
-                _tokenHighlightedIndex = 0;
-                await LoadTokensAsync();
-            }
-            else
-            {
-                _lastKeyWasOpenBrace = true;
-            }
-        }
         // Check for @ mention trigger
         else if (e.Key == "@" && SupportsMentions)
         {
-            _lastKeyWasOpenBrace = false;
             _mentionQuery = "";
             _showMentionDropdown = true;
             _highlightedMentionIndex = 0;
@@ -562,13 +557,8 @@
         // Ctrl+F for find
         else if (e.Key == "f" && (e.CtrlKey || e.MetaKey))
         {
-            _lastKeyWasOpenBrace = false;
             _showFindReplaceDialog = true;
             await InvokeAsync(StateHasChanged);
-        }
-        else
-        {
-            _lastKeyWasOpenBrace = false;
         }
     }
 
@@ -810,11 +800,19 @@
 
     private async Task OnTokenSelected(TokenItem token)
     {
+        var viaTrigger = _tokenOpenedViaTrigger;
         _showTokenDropdown = false;
+        _tokenOpenedViaTrigger = false;
         try
         {
-            await JS.InvokeVoidAsync("tmRichEditor.deleteTokenTrigger", _editorRef);
-            await JS.InvokeVoidAsync("tmRichEditor.insertToken", token.Key, token.DisplayName);
+            if (viaTrigger)
+            {
+                await JS.InvokeVoidAsync("tmRichEditor.replaceTokenTrigger", _editorRef, token.Key, token.DisplayName);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("tmRichEditor.insertToken", token.Key, token.DisplayName);
+            }
             await HandleInput();
         }
         catch { /* JS not available in tests / SSR */ }
@@ -849,6 +847,7 @@
         if (_availableTokens.Count > 0 || TokenProvider?.SupportsCreation == true)
         {
             _showTokenDropdown = !_showTokenDropdown;
+            _tokenOpenedViaTrigger = false;
             _tokenHighlightedIndex = 0;
             await InvokeAsync(StateHasChanged);
         }
