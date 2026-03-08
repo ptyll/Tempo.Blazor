@@ -501,6 +501,88 @@ window.tmRichEditor = {
     },
 
     /**
+     * Insert a token chip into the editor
+     * @param {string} key - The token key (e.g. "user.email")
+     * @param {string} displayName - The display name (e.g. "User Email")
+     */
+    insertToken: function (key, displayName) {
+        this._ensureFocus();
+
+        const tokenHtml = `<span class="tm-token" data-token-key="${this._escapeHtml(key)}" contenteditable="false">{{${this._escapeHtml(displayName)}}}</span>&nbsp;`;
+        document.execCommand('insertHTML', false, tokenHtml);
+        this._restoreFocus();
+    },
+
+    /**
+     * Delete the token trigger text ({{ and any typed query) before cursor
+     * @param {HTMLElement} element - The editor element
+     */
+    deleteTokenTrigger: function (element) {
+        this._ensureFocus();
+
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const textNode = range.startContainer;
+            const offset = range.startOffset;
+
+            const textContent = textNode.textContent || '';
+            const textBeforeCursor = textContent.substring(0, offset);
+
+            // Find the last {{ before cursor
+            const lastTriggerIndex = textBeforeCursor.lastIndexOf('{{');
+            if (lastTriggerIndex >= 0) {
+                const deleteRange = document.createRange();
+                deleteRange.setStart(textNode, lastTriggerIndex);
+                deleteRange.setEnd(textNode, offset);
+                deleteRange.deleteContents();
+            }
+        }
+    },
+
+    /**
+     * Get text typed after the {{ token trigger
+     * @param {HTMLElement} element - The editor element
+     * @param {string} trigger - The trigger string (default "{{")
+     * @returns {string|null} The text after trigger, or null if no trigger found
+     */
+    getTextBeforeCursorForToken: function (element, trigger) {
+        if (!element) return null;
+        trigger = trigger || '{{';
+
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return null;
+
+        const range = selection.getRangeAt(0);
+        const cursorNode = range.startContainer;
+        const cursorOffset = range.startOffset;
+
+        const preCursorRange = document.createRange();
+        preCursorRange.setStart(element, 0);
+        preCursorRange.setEnd(cursorNode, cursorOffset);
+
+        const fragment = preCursorRange.cloneContents();
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(fragment);
+        let textBeforeCursor = tempDiv.textContent || '';
+
+        if (textBeforeCursor.length > 100) {
+            textBeforeCursor = textBeforeCursor.substring(textBeforeCursor.length - 100);
+        }
+
+        const lastTriggerIndex = textBeforeCursor.lastIndexOf(trigger);
+        if (lastTriggerIndex < 0) return null;
+
+        const textAfterTrigger = textBeforeCursor.substring(lastTriggerIndex + trigger.length);
+
+        if (textAfterTrigger.includes(' ') || textAfterTrigger.includes('\n')) {
+            return null;
+        }
+
+        return textAfterTrigger;
+    },
+
+    /**
      * Initialize keyboard shortcuts on an editor element
      * @param {HTMLElement} element - The editor element
      */

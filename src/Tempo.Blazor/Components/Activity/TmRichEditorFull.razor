@@ -7,12 +7,14 @@
      style="@GetHeightStyle()"
      @attributes="AdditionalAttributes">
     
-    <EditorToolbar 
+    <EditorToolbar
         Mode="ToolbarMode.Full"
         IsDisabled="@IsDisabled"
         OnFormat="@HandleFormat"
         OnEmojiSelected="@HandleEmojiSelected"
-        ActiveFormats="@_activeFormats" />
+        ActiveFormats="@_activeFormats"
+        SupportsTokens="@SupportsTokens"
+        OnTokenButtonClicked="@HandleTokenButtonClicked" />
     
     <div class="tm-rte-editor-content-wrapper">
         <div class="tm-rte-editor-content"
@@ -100,13 +102,27 @@
     @* Mention Dropdown *@
     @if (_showMentionDropdown && SupportsMentions)
     {
-        <MentionAutocomplete 
+        <MentionAutocomplete
             IsVisible="true"
             Users="@_mentionUsers"
             Query="@_mentionQuery"
             HighlightedIndex="@_highlightedMentionIndex"
             OnUserSelected="@OnMentionSelected"
             OnHighlightedIndexChanged="@OnMentionIndexChanged" />
+    }
+
+    @* Token Dropdown *@
+    @if (_showTokenDropdown && SupportsTokens)
+    {
+        <TokenAutocomplete
+            IsVisible="true"
+            Tokens="@_availableTokens"
+            Query="@_tokenQuery"
+            HighlightedIndex="@_tokenHighlightedIndex"
+            SupportsCreation="@(TokenProvider?.SupportsCreation ?? false)"
+            OnTokenSelected="@OnTokenSelected"
+            OnCreateRequested="@OnTokenCreateFromDropdown"
+            OnHighlightedIndexChanged="@OnTokenIndexChanged" />
     }
 </div>
 
@@ -172,6 +188,31 @@
     [Parameter] public bool SupportsBlockquotes { get; set; } = true;
 
     /// <summary>
+    /// Whether tokens/variables are supported.
+    /// </summary>
+    [Parameter] public bool SupportsTokens { get; set; }
+
+    /// <summary>
+    /// Data provider for token search.
+    /// </summary>
+    [Parameter] public ITokenDataProvider? TokenProvider { get; set; }
+
+    /// <summary>
+    /// Trigger string that activates the token dropdown (default: "{{").
+    /// </summary>
+    [Parameter] public string TokenTrigger { get; set; } = "{{";
+
+    /// <summary>
+    /// Callback when the user requests to create a new token. Parameter is the pre-filled name from query.
+    /// </summary>
+    [Parameter] public EventCallback<string?> OnTokenCreateRequested { get; set; }
+
+    /// <summary>
+    /// Callback when a token is inserted into the editor.
+    /// </summary>
+    [Parameter] public EventCallback<IToken> OnTokenInserted { get; set; }
+
+    /// <summary>
     /// Whether the editor is disabled.
     /// </summary>
     [Parameter] public bool IsDisabled { get; set; }
@@ -203,6 +244,12 @@
     private string _selectedText = string.Empty;
     private DotNetObjectReference<TmRichEditorFull>? _dotNetRef;
     private bool _isInitialized = false;
+    private bool _showTokenDropdown;
+    private string _tokenQuery = string.Empty;
+    private int _tokenHighlightedIndex;
+    private List<TokenItem> _availableTokens = new();
+    private bool _isLoadingTokens;
+    private bool _lastKeyWasOpenBrace;
 
     private bool IsOverLimit => MaxLength > 0 && _charCount > MaxLength;
 
@@ -273,6 +320,13 @@
             Value = html ?? string.Empty;
             UpdateCounts(Value);
             await ValueChanged.InvokeAsync(Value);
+
+            // Update token query if dropdown is open
+            if (_showTokenDropdown && SupportsTokens)
+            {
+                await UpdateTokenQueryAsync();
+            }
+
             await InvokeAsync(StateHasChanged);
         }
         catch { /* JS not available in tests / SSR */ }
@@ -435,8 +489,34 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        // Handle token dropdown navigation
+        if (_showTokenDropdown)
+        {
+            switch (e.Key)
+            {
+                case "ArrowUp":
+                    await MoveTokenHighlightUp();
+                    return;
+                case "ArrowDown":
+                    await MoveTokenHighlightDown();
+                    return;
+                case "Enter":
+                    await SelectHighlightedToken();
+                    return;
+                case "Escape":
+                    _showTokenDropdown = false;
+                    _lastKeyWasOpenBrace = false;
+                    return;
+            }
+
+            // Continue typing updates query
+            if (e.Key.Length == 1 && !e.CtrlKey && !e.MetaKey)
+            {
+                // Query will be updated via HandleInput -> UpdateTokenQueryAsync
+            }
+        }
         // Handle mention navigation
-        if (_showMentionDropdown)
+        else if (_showMentionDropdown)
         {
             switch (e.Key)
             {
@@ -454,9 +534,26 @@
                     break;
             }
         }
+        // Detect {{ token trigger
+        else if (e.Key == "{" && SupportsTokens)
+        {
+            if (_lastKeyWasOpenBrace)
+            {
+                _lastKeyWasOpenBrace = false;
+                _tokenQuery = "";
+                _showTokenDropdown = true;
+                _tokenHighlightedIndex = 0;
+                await LoadTokensAsync();
+            }
+            else
+            {
+                _lastKeyWasOpenBrace = true;
+            }
+        }
         // Check for @ mention trigger
         else if (e.Key == "@" && SupportsMentions)
         {
+            _lastKeyWasOpenBrace = false;
             _mentionQuery = "";
             _showMentionDropdown = true;
             _highlightedMentionIndex = 0;
@@ -465,8 +562,13 @@
         // Ctrl+F for find
         else if (e.Key == "f" && (e.CtrlKey || e.MetaKey))
         {
+            _lastKeyWasOpenBrace = false;
             _showFindReplaceDialog = true;
             await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            _lastKeyWasOpenBrace = false;
         }
     }
 
@@ -634,6 +736,158 @@
         _showFindReplaceDialog = false;
     }
 
+    // ── Token/Variable system ──
+
+    private async Task LoadTokensAsync()
+    {
+        if (TokenProvider == null) return;
+
+        _isLoadingTokens = true;
+        var tokens = await TokenProvider.SearchTokensAsync(_tokenQuery);
+        _availableTokens = tokens.Select(t => new TokenItem
+        {
+            Key = t.Key,
+            DisplayName = t.DisplayName,
+            Description = t.Description,
+            Category = t.Category
+        }).ToList();
+        _isLoadingTokens = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UpdateTokenQueryAsync()
+    {
+        try
+        {
+            var query = await JS.InvokeAsync<string?>("tmRichEditor.getTextBeforeCursorForToken", _editorRef, TokenTrigger);
+            if (query == null)
+            {
+                _showTokenDropdown = false;
+            }
+            else if (query != _tokenQuery)
+            {
+                _tokenQuery = query;
+                _tokenHighlightedIndex = 0;
+                await LoadTokensAsync();
+            }
+        }
+        catch { /* JS not available */ }
+    }
+
+    private async Task MoveTokenHighlightUp()
+    {
+        if (_tokenHighlightedIndex > 0)
+        {
+            _tokenHighlightedIndex--;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task MoveTokenHighlightDown()
+    {
+        var maxIndex = _availableTokens.Count - 1 + (TokenProvider?.SupportsCreation == true ? 1 : 0);
+        if (_tokenHighlightedIndex < maxIndex)
+        {
+            _tokenHighlightedIndex++;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SelectHighlightedToken()
+    {
+        // Check if "Create new" is highlighted
+        if (TokenProvider?.SupportsCreation == true && _tokenHighlightedIndex == _availableTokens.Count)
+        {
+            await OnTokenCreateFromDropdown(string.IsNullOrWhiteSpace(_tokenQuery) ? null : _tokenQuery);
+            return;
+        }
+
+        if (_tokenHighlightedIndex >= 0 && _tokenHighlightedIndex < _availableTokens.Count)
+        {
+            await OnTokenSelected(_availableTokens[_tokenHighlightedIndex]);
+        }
+    }
+
+    private async Task OnTokenSelected(TokenItem token)
+    {
+        _showTokenDropdown = false;
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.deleteTokenTrigger", _editorRef);
+            await JS.InvokeVoidAsync("tmRichEditor.insertToken", token.Key, token.DisplayName);
+            await HandleInput();
+        }
+        catch { /* JS not available in tests / SSR */ }
+
+        await OnTokenInserted.InvokeAsync(CreateTokenFromItem(token));
+    }
+
+    private async Task OnTokenCreateFromDropdown(string? query)
+    {
+        _showTokenDropdown = false;
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.deleteTokenTrigger", _editorRef);
+        }
+        catch { /* JS not available */ }
+        await OnTokenCreateRequested.InvokeAsync(query);
+    }
+
+    private void OnTokenIndexChanged(int index)
+    {
+        _tokenHighlightedIndex = index;
+    }
+
+    private async Task HandleTokenButtonClicked()
+    {
+        if (_availableTokens.Count == 0 && TokenProvider != null)
+        {
+            _tokenQuery = "";
+            await LoadTokensAsync();
+        }
+
+        if (_availableTokens.Count > 0 || TokenProvider?.SupportsCreation == true)
+        {
+            _showTokenDropdown = !_showTokenDropdown;
+            _tokenHighlightedIndex = 0;
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            await OnTokenCreateRequested.InvokeAsync(null);
+        }
+    }
+
+    /// <summary>
+    /// Programmatically inserts a token chip into the editor.
+    /// Call this from parent component after a token is created via dialog.
+    /// </summary>
+    public async Task InsertTokenAsync(string key, string? displayName = null)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("tmRichEditor.insertToken", key, displayName ?? key);
+            await HandleInput();
+        }
+        catch { /* JS not available in tests / SSR */ }
+    }
+
+    private static TokenProxy CreateTokenFromItem(TokenItem item) => new()
+    {
+        Key = item.Key,
+        DisplayName = item.DisplayName,
+        Description = item.Description,
+        Category = item.Category
+    };
+
+    private class TokenProxy : Tempo.Blazor.Interfaces.IToken
+    {
+        public string Key { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? Category { get; set; }
+    }
+
     private async Task OnMentionSelected(MentionUser user)
     {
         _showMentionDropdown = false;
@@ -718,5 +972,34 @@
             AvatarUrl = user.AvatarUrl
         };
         await OnMentionSelected(mentionUser);
+    }
+
+    public async Task TriggerTokenSearchForTest(string query)
+    {
+        if (TokenProvider == null) return;
+        _tokenQuery = query;
+        var tokens = await TokenProvider.SearchTokensAsync(query);
+        _availableTokens = tokens.Select(t => new TokenItem
+        {
+            Key = t.Key,
+            DisplayName = t.DisplayName,
+            Description = t.Description,
+            Category = t.Category
+        }).ToList();
+        _showTokenDropdown = true;
+        _tokenHighlightedIndex = 0;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task InsertTokenChipForTest(IToken token)
+    {
+        var tokenItem = new TokenItem
+        {
+            Key = token.Key,
+            DisplayName = token.DisplayName,
+            Description = token.Description,
+            Category = token.Category
+        };
+        await OnTokenSelected(tokenItem);
     }
 }

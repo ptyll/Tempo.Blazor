@@ -253,6 +253,10 @@
   <data name="TmRichEditor_FindReplaceDialog_ReplacePlaceholder" xml:space="preserve"><value>Nahradit za...</value></data>
   <data name="TmRichEditor_FindReplaceDialog_ReplaceAll" xml:space="preserve"><value>Nahradit vše</value></data>
   <data name="TmRichEditor_FindReplaceDialog_Replaced" xml:space="preserve"><value>{0} výskyt(ů) nahrazeno</value></data>
+  <data name="TmRichEditor_Token" xml:space="preserve"><value>Vložit proměnnou</value></data>
+  <data name="TmRichEditor_TokenEmpty" xml:space="preserve"><value>Žádné proměnné nenalezeny</value></data>
+  <data name="TmRichEditor_TokenCreateNew" xml:space="preserve"><value>Vytvořit novou proměnnou...</value></data>
+  <data name="TmRichEditor_TokenSearch" xml:space="preserve"><value>Hledat proměnné...</value></data>
 
   <!-- ═══════════════ TmFilterBuilder ═══════════════ -->
   <data name="TmFilter_AddCondition" xml:space="preserve"><value>Přidat podmínku</value></data>

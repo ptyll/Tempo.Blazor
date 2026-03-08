@@ -253,6 +253,10 @@
   <data name="TmRichEditor_FindReplaceDialog_ReplacePlaceholder" xml:space="preserve"><value>Replace with...</value></data>
   <data name="TmRichEditor_FindReplaceDialog_ReplaceAll" xml:space="preserve"><value>Replace All</value></data>
   <data name="TmRichEditor_FindReplaceDialog_Replaced" xml:space="preserve"><value>{0} occurrence(s) replaced</value></data>
+  <data name="TmRichEditor_Token" xml:space="preserve"><value>Insert variable</value></data>
+  <data name="TmRichEditor_TokenEmpty" xml:space="preserve"><value>No variables found</value></data>
+  <data name="TmRichEditor_TokenCreateNew" xml:space="preserve"><value>Create new variable...</value></data>
+  <data name="TmRichEditor_TokenSearch" xml:space="preserve"><value>Search variables...</value></data>
 
   <!-- ═══════════════ TmFilterBuilder ═══════════════ -->
   <data name="TmFilter_AddCondition" xml:space="preserve"><value>Add condition</value></data>

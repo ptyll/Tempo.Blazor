@@ -29,7 +29,7 @@ Kompletní přehled všech komponent knihovny Tempo.Blazor, jejich parametrů, p
 21. [Scheduler](#scheduler) — TmScheduler
 22. [Dashboard](#dashboard) — TmDashboard
 23. [Workflow](#workflow) — TmStepper, TmWorkflowDesignerCanvas, TmWorkflowPropertiesPanel, TmWorkflowToolbox, TmWorkflowMinimap
-24. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple
+24. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple, TokenAutocomplete
 25. [Validace formulářů - kompletní příklady](#validace-formulářů---kompletní-příklady)
 
 ---
@@ -58,6 +58,7 @@ Univerzální tlačítko s variantami, velikostmi a ikonami.
 | `OnClick` | `EventCallback` | — | Handler kliknutí |
 | `ChildContent` | `RenderFragment?` | `null` | Obsah tlačítka |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### CSS třídy
 
@@ -139,6 +140,8 @@ Tlačítko s rozbalovací nabídkou akcí.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `IsLoading` | `bool` | `false` | Loading stav |
 | `ChildContent` | `RenderFragment` | — | Položky dropdown menu |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -173,6 +176,8 @@ Tlačítko pro kopírování textu do schránky.
 |----------|-----|---------|-------|
 | `Text` | `string` | **povinný** | Text ke kopírování |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže tlačítko |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -325,6 +330,7 @@ Víceřádkové textové pole.
 | `Id` | `string` | auto | HTML id |
 | `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off` |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+| `Class` | `string?` | `null` | Další CSS třídy |
 
 #### Příklady
 
@@ -378,6 +384,7 @@ Víceřádkové textové pole.
 | `Suffix` | `string?` | `null` | Suffix (např. "Kč") |
 | `AutoComplete` | `string?` | `null` | HTML autocomplete atribut: `on`, `off` |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+| `Class` | `string?` | `null` | Další CSS třídy |
 
 #### Příklady
 
@@ -427,6 +434,7 @@ Vyhledávací vstup s debounce.
 | `DebounceMs` | `int` | `300` | Zpoždění v ms |
 | `AutoComplete` | `string?` | `"off"` | HTML autocomplete atribut (výchozí `off` pro search) |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+| `Class` | `string?` | `null` | Další CSS třídy |
 
 #### Příklady
 
@@ -464,6 +472,8 @@ Picker pro výběr entity s asynchronním vyhledáváním.
 | `Debounce` | `int` | `300` | Debounce v ms |
 | `Error` | `string?` | `null` | Chybová zpráva |
 | `Disabled` | `bool` | `false` | Zakázáno |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -519,6 +529,7 @@ Editor výrazů s proměnnými (pro dynamické šablony, podmínky apod.).
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Error` | `string?` | `null` | Chybová zpráva |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -552,6 +563,7 @@ Vizuální indikátor síly hesla.
 |----------|-----|---------|-------|
 | `Password` | `string` | `""` | Heslo k vyhodnocení |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -593,6 +605,8 @@ Rozbalovací výběr z možností.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Options` | `IReadOnlyList<SelectOption<TValue>>?` | `null` | Seznam možností |
 | `ChildContent` | `RenderFragment?` | `null` | Ruční `<option>` elementy |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -697,6 +711,7 @@ Pokročilý výběr více položek s vyhledáváním, chipsy, groupingem a serve
 | `OnOpen` | `EventCallback` | — | Otevření dropdownu |
 | `OnClose` | `EventCallback` | — | Zavření dropdownu |
 | `OnFiltering` | `EventCallback<string>` | — | Změna filtrovacího textu |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -812,6 +827,9 @@ Rozbalovací menu s položkami.
 | `Icon` | `string?` | `null` | Ikona trigger tlačítka |
 | `OnSelect` | `EventCallback<string>` | — | Událost výběru (hodnota TmDropdownItem) |
 | `ChildContent` | `RenderFragment` | — | TmDropdownItem děti |
+| `Disabled` | `bool` | `false` | Zakáže dropdown |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -846,6 +864,9 @@ Položka v TmDropdown.
 | `Value` | `string?` | `null` | Hodnota položky |
 | `Icon` | `string?` | `null` | Ikona |
 | `ChildContent` | `RenderFragment` | — | Text položky |
+| `Disabled` | `bool` | `false` | Zakáže položku |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmFilterableDropdown\<TItem, TValue\>
 
@@ -878,6 +899,9 @@ Dropdown s vyhledáváním a server-side daty.
 | `ErrorMessage` | `string?` | `null` | Chybová zpráva |
 | `ShowClearButton` | `bool` | `true` | Zobrazit tlačítko vymazání |
 | `ItemTemplate` | `RenderFragment<TItem>?` | `null` | Custom šablona položky |
+| `Disabled` | `bool` | `false` | Zakáže dropdown |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -935,6 +959,8 @@ Zaškrtávací políčko.
 | `HelpText` | `string?` | `null` | Pomocný text |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Indeterminate` | `bool` | `false` | Neurčitý stav (pomlčka) |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -980,6 +1006,8 @@ Přepínací spínač (switch).
 | `ValueChanged` | `EventCallback<bool>` | — | Událost změny |
 | `Label` | `string?` | `null` | Popisek |
 | `Disabled` | `bool` | `false` | Zakázáno |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1084,6 +1112,8 @@ Jednotlivý radio button (interní, používá se v TmRadioGroup).
 | `IsChecked` | `bool` | `false` | Zaškrtnutý stav |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `OnSelect` | `EventCallback<object?>` | — | Událost výběru |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ---
 
@@ -1116,6 +1146,7 @@ Jednotlivý radio button (interní, používá se v TmRadioGroup).
 | `Pill` | `bool` | `false` | Zaoblený tvar |
 | `Dot` | `bool` | `false` | Malá tečka před textem |
 | `ChildContent` | `RenderFragment?` | `null` | Obsah |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1227,6 +1258,7 @@ Akordeon pro sbalitelné sekce.
 | `Multiple` | `bool` | `false` | Povolit více otevřených sekcí |
 | `ChildContent` | `RenderFragment?` | `null` | TmAccordionItem děti |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Parametry TmAccordionItem
 
@@ -1235,6 +1267,8 @@ Akordeon pro sbalitelné sekce.
 | `Id` | `string` | **povinný** | Unikátní ID |
 | `Title` | `string` | **povinný** | Nadpis |
 | `ChildContent` | `RenderFragment` | — | Obsah |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1291,6 +1325,9 @@ Chip/tag element s variantami.
 | `Clickable` | `bool` | `false` | Klikatelný |
 | `OnClick` | `EventCallback` | — | Událost kliknutí |
 | `Selected` | `bool` | `false` | Vybraný stav |
+| `Disabled` | `bool` | `false` | Zakáže chip |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1317,6 +1354,8 @@ Kontejner pro skupinu chipů.
 |----------|-----|---------|-------|
 | `ChildContent` | `RenderFragment` | — | TmChip děti |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže skupinu chipů |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1347,6 +1386,7 @@ Zobrazení změn (staré/nové hodnoty).
 |----------|-----|---------|-------|
 | `Changes` | `IEnumerable<TmChangeInfo>` | `[]` | Seznam změn |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1379,6 +1419,8 @@ Prázdný stav se zprávou a volitelnou akcí.
 | `Icon` | `string?` | `null` | Ikona |
 | `ActionText` | `string?` | `null` | Text akčního tlačítka |
 | `OnAction` | `EventCallback` | — | Událost kliknutí na akci |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1414,6 +1456,8 @@ Karta se statistikou (KPI).
 | `Value` | `string?` | `null` | Hlavní hodnota |
 | `SubValue` | `string?` | `null` | Vedlejší hodnota (trend) |
 | `SubValueColor` | `string?` | `null` | Barva trendu |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1454,6 +1498,8 @@ Kanban board s drag & drop.
 | `ColumnHeaderTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Custom hlavička sloupce |
 | `EmptyColumnTemplate` | `RenderFragment<KanbanColumn>?` | `null` | Prázdný sloupec |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže drag & drop |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1526,6 +1572,7 @@ Seznam s přepínáním zobrazení (tabulka/karty/seznam) a filtry.
 | `EmptyTitle` | `string?` | `null` | Prázdný stav |
 | `ScrollMode` | `DataTableScrollMode` | `Pagination` | Scrollovací režim |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1578,6 +1625,7 @@ Notifikační zpráva s různými úrovněmi závažnosti.
 | `Icon` | `string?` | `null` | Vlastní ikona |
 | `Actions` | `RenderFragment?` | `null` | Akční tlačítka |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1665,6 +1713,8 @@ Modální okno.
 | `OnClose` | `EventCallback` | — | Událost zavření |
 | `OnOk` | `EventCallback` | — | Událost OK |
 | `OnOpen` | `EventCallback` | — | Událost otevření |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1744,6 +1794,8 @@ Zjednodušený dialog (alert, confirm, prompt).
 | `FooterContent` | `RenderFragment?` | `null` | Custom patička |
 | `OnResult` | `EventCallback<bool?>` | — | Výsledek Alert/Confirm |
 | `OnPromptResult` | `EventCallback<string?>` | — | Výsledek Prompt |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1823,6 +1875,7 @@ Tooltip při najetí myší.
 | `MaxWidth` | `string` | `"200px"` | Max. šířka |
 | `ChildContent` | `RenderFragment?` | `null` | Trigger element |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1858,6 +1911,8 @@ Indikátor načítání.
 |----------|-----|---------|-------|
 | `Size` | `SpinnerSize` | `Sm` | Velikost: `Xs`, `Sm`, `Md`, `Lg` |
 | `Color` | `SpinnerColor` | `Current` | Barva: `Current`, `Primary`, `White` |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1897,6 +1952,7 @@ Vyskakovací panel s libovolným obsahem.
 | `ShowArrow` | `bool` | `true` | Zobrazit šipku |
 | `CloseOnClickOutside` | `bool` | `true` | Zavřít klikem mimo |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -1996,6 +2052,9 @@ Ikona zvonečku s počtem notifikací a rozbalovacím seznamem.
 | `OnMarkAllRead` | `EventCallback` | — | Označit vše jako přečtené |
 | `MaxVisible` | `int` | `10` | Max. viditelných |
 | `OnNotificationClick` | `EventCallback<INotificationItem>` | — | Klik na notifikaci |
+| `Disabled` | `bool` | `false` | Zakáže zvoneček |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2047,6 +2106,7 @@ Progress bar s variantami a segmenty.
 | `Indeterminate` | `bool` | `false` | Neurčitý stav |
 | `Segments` | `List<ProgressSegment>?` | `null` | Segmenty pro vícenásobný progress |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2085,6 +2145,8 @@ Placeholder načítání (skeleton loader).
 | `Variant` | `SkeletonVariant` | `Text` | Tvar: `Text`, `Circle`, `Rect` |
 | `Width` | `string?` | `null` | Šířka |
 | `Height` | `string?` | `null` | Výška |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2134,6 +2196,7 @@ Záložky s obsahem.
 | `Variant` | `TabVariant` | `Line` | Styl: `Line`, `Pill`, `Enclosed` |
 | `ChildContent` | `RenderFragment?` | `null` | TmTabPanel děti |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Parametry TmTabPanel
 
@@ -2145,6 +2208,8 @@ Záložky s obsahem.
 | `Badge` | `string?` | `null` | Badge text |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `ChildContent` | `RenderFragment` | — | Obsah záložky |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2203,6 +2268,8 @@ Kontextové menu (pravé kliknutí).
 |----------|-----|---------|-------|
 | `Trigger` | `RenderFragment` | — | Element, na kterém se otevírá |
 | `ChildContent` | `RenderFragment` | — | TmContextMenuItem děti |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Parametry TmContextMenuItem
 
@@ -2214,6 +2281,8 @@ Kontextové menu (pravé kliknutí).
 | `IsDivider` | `bool` | `false` | Oddělovač |
 | `IsDangerous` | `bool` | `false` | Nebezpečná akce (červená) |
 | `OnClick` | `EventCallback` | — | Událost kliknutí |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2264,6 +2333,7 @@ SVG ikona z vestavěné knihovny.
 | `Size` | `IconSize` | `Md` | Velikost: `Xs`, `Sm`, `Md`, `Lg`, `Xl` |
 | `Color` | `IconColor` | `Current` | Barva: `Current`, `Primary`, `Danger`, `Success`, `Warning`, `Muted` |
 | `StrokeWidth` | `double` | `2` | Tloušťka čáry |
+| `Class` | `string?` | `null` | Další CSS třídy |
 
 #### Příklady
 
@@ -2305,6 +2375,8 @@ Avatar uživatele (obrázek nebo iniciály).
 | `Size` | `AvatarSize` | `Md` | Velikost: `Xs`, `Sm`, `Md`, `Lg`, `Xl`, `Xxl` |
 | `Shape` | `AvatarShape` | `Circle` | Tvar: `Circle`, `Square` |
 | `Color` | `AvatarColor` | `Gray` | Barva pozadí |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2348,6 +2420,8 @@ Skupina avatarů s limitem a počítadlem.
 | `TotalCount` | `int` | `0` | Celkový počet (pro "+N") |
 | `Size` | `AvatarSize` | `Md` | Velikost avatarů |
 | `ChildContent` | `RenderFragment` | — | TmAvatar děti |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2397,6 +2471,7 @@ Výběr data s kalendářem.
 | `Required` | `bool` | `false` | Povinné |
 | `Label` | `string?` | `null` | Popisek |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2459,6 +2534,7 @@ Výběr rozsahu dat s presety.
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `Label` | `string?` | `null` | Popisek |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2510,6 +2586,7 @@ Výběr data a času.
 | `HideClear` | `bool` | `false` | Skrýt vymazání |
 | `Label` | `string?` | `null` | Popisek |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2554,6 +2631,7 @@ Výběr rozsahu datum + čas.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Label` | `string?` | `null` | Popisek |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2591,6 +2669,7 @@ Výběr času s dropdownem.
 | `Required` | `bool` | `false` | Povinné |
 | `Label` | `string?` | `null` | Popisek |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2668,6 +2747,7 @@ Výběr časového rozsahu.
 | `Label` | `string?` | `null` | Popisek |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2755,6 +2835,8 @@ Obalový komponent formulářového pole s label, chybou a helpem.
 | `ChildContent` | `RenderFragment?` | `null` | Vstupní prvek |
 | `For` | `string?` | `null` | Hodnota for atributu labelu |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže pole |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2889,6 +2971,7 @@ Souhrn všech validačních chyb formuláře.
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `ManualMode` | `bool` | `false` | Ruční řízení viditelnosti |
 | `Show` | `bool` | `false` | Viditelnost (jen v ManualMode) |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2922,6 +3005,7 @@ Validační zpráva pro konkrétní pole.
 |----------|-----|---------|-------|
 | `For` | `Expression<Func<object>>` | **povinný** | Výraz identifikující pole |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2956,6 +3040,7 @@ Inline editace textu (kliknutím se aktivuje editační režim).
 | `Validate` | `Func<string, string?>?` | `null` | Validační funkce (vrací chybu nebo null) |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -2998,6 +3083,7 @@ Sekce formuláře s nadpisem a možností sbalení.
 | `Collapsible` | `bool` | `false` | Lze sbalit |
 | `CollapsedByDefault` | `bool` | `false` | Ve výchozím stavu sbaleno |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3032,6 +3118,7 @@ Sekce formuláře s nadpisem a možností sbalení.
 | `ChildContent` | `RenderFragment` | — | Pole v řádku |
 | `Columns` | `int` | `2` | Počet sloupců |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3078,6 +3165,9 @@ Dynamický renderer formuláře z definic polí (metadata-driven).
 | `ReadOnly` | `bool` | `false` | Pouze ke čtení |
 | `Columns` | `int` | `1` | Počet sloupců |
 | `OnFieldChanged` | `EventCallback<(string FieldKey, object? Value)>` | — | Změna konkrétního pole |
+| `Disabled` | `bool` | `false` | Zakáže formulář |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3165,6 +3255,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `OnRowClick` | `EventCallback<TItem>` | — | Klik na řádek |
 | `OnSelectionChanged` | `EventCallback<IReadOnlyList<TItem>>` | — | Změna výběru |
 | `ViewContext` | `string` | **povinný** | Unikátní ID pro ukládání view |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### TmDataTableColumn\<TItem\>
 
@@ -3262,6 +3353,9 @@ Stránkování (samostatná komponenta).
 | `PageSizeOptions` | `int[]` | `[5,10,25,50,100]` | Možnosti velikosti |
 | `OnPageChange` | `EventCallback<int>` | — | Změna stránky |
 | `OnPageSizeChange` | `EventCallback<int>` | — | Změna velikosti |
+| `Disabled` | `bool` | `false` | Zakáže stránkování |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3295,6 +3389,9 @@ Výběr viditelných sloupců tabulky.
 | `Columns` | `IReadOnlyList<ColumnVisibilityItem>` | `[]` | Seznam sloupců |
 | `OnToggleColumn` | `EventCallback<string>` | — | Přepnout viditelnost |
 | `OnReset` | `EventCallback` | — | Obnovit výchozí |
+| `Disabled` | `bool` | `false` | Zakáže picker |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3348,6 +3445,9 @@ Správa uložených pohledů (filtry, řazení, sloupce).
 | `CanCreateTenantViews` | `bool` | `false` | Sdílené pohledy |
 | `CurrentUserId` | `string?` | `null` | Aktuální uživatel |
 | `CurrentTenantId` | `string?` | `null` | Aktuální tenant |
+| `Disabled` | `bool` | `false` | Zakáže správce pohledů |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3391,6 +3491,8 @@ Vizuální builder filtrů s aktivními filter chipy.
 | `OnFiltersChanged` | `EventCallback<IReadOnlyList<ActiveFilter>>` | — | Změna filtrů |
 | `ShowClearAll` | `bool` | `true` | Zobrazit "Smazat vše" |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže builder filtrů |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3443,6 +3545,9 @@ Chip zobrazující aktivní filtr s možností editace a odebrání.
 |----------|-----|---------|-------|
 | `OnRemove` | `EventCallback<ActiveFilter>` | — | Odebrání filtru |
 | `OnEdit` | `EventCallback<ActiveFilter>` | — | Editace filtru |
+| `Disabled` | `bool` | `false` | Zakáže chip |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmBulkActionBar
 
@@ -3467,6 +3572,8 @@ Panel hromadných akcí pro vybrané řádky.
 | `OnClearSelection` | `EventCallback` | — | Zrušit výběr |
 | `ChildContent` | `RenderFragment` | — | Akční tlačítka |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže akce |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3520,6 +3627,8 @@ Vysouvací panel (drawer).
 | `HeaderContent` | `RenderFragment?` | `null` | Custom hlavička |
 | `ChildContent` | `RenderFragment` | — | Obsah |
 | `FooterContent` | `RenderFragment?` | `null` | Patička |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3578,6 +3687,7 @@ Boční navigace s vnořenými položkami a sbalením.
 | `Header` | `RenderFragment?` | `null` | Hlavička |
 | `Footer` | `RenderFragment?` | `null` | Patička |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3636,6 +3746,8 @@ Horní lišta aplikace.
 | `User` | `IUserInfo?` | `null` | Info o uživateli |
 | `OnCommandPalette` | `EventCallback` | — | Otevřít command palette |
 | `OnLogout` | `EventCallback` | — | Odhlášení |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3674,6 +3786,8 @@ Drobečková navigace.
 | `Items` | `IReadOnlyList<BreadcrumbItem>` | `[]` | Položky |
 | `Separator` | `string` | `"/"` | Oddělovač |
 | `OnItemClick` | `EventCallback<BreadcrumbItem>` | — | Klik na položku |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3712,6 +3826,8 @@ Command palette (Ctrl+K) pro rychlý přístup k akcím.
 | `IsOpen` | `bool` | `false` | Otevřeno |
 | `IsOpenChanged` | `EventCallback<bool>` | — | Změna stavu |
 | `Actions` | `IEnumerable<ICommandPaletteAction>` | `[]` | Dostupné akce |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3864,6 +3980,8 @@ Drag & drop zóna pro nahrávání souborů.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `ChildContent` | `RenderFragment?` | `null` | Obsah zóny |
 | `MaxFileCount` | `int` | `10` | Max. počet souborů |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3907,6 +4025,7 @@ Správa příloh entity (nahrávání, seznam, mazání).
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `OnDeleted` | `EventCallback<string>` | — | Smazání přílohy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3944,6 +4063,8 @@ Galerie obrázků s lightboxem.
 | `OnImageClick` | `EventCallback<GalleryImage>` | — | Klik na obrázek |
 | `UrlResolver` | `Func<string, string>?` | `null` | Resolver URL |
 | `CanDelete` | `bool` | `false` | Povolit mazání |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -3989,6 +4110,8 @@ Lightbox pro zobrazení obrázku s navigací.
 | `OnPrev` | `EventCallback` | — | Předchozí |
 | `OnNext` | `EventCallback` | — | Další |
 | `OnDelete` | `EventCallback` | — | Smazat |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4029,6 +4152,8 @@ Dialog pro výběr formátu a rozsahu exportu.
 | `OnExport` | `EventCallback<ExportRequest>` | — | Spuštění exportu |
 | `Title` | `string?` | `null` | Nadpis |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže export |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4068,6 +4193,7 @@ Průvodce importem dat s kroky.
 | `CancelText` | `string` | `"Cancel"` | Text Zrušit |
 | `ShowStepIndicator` | `bool` | `true` | Zobrazit indikátor kroků |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Parametry TmImportWizardStep
 
@@ -4123,6 +4249,7 @@ Náhled importu s potvrzením.
 | `CancelText` | `string` | `"Cancel"` | Text zrušení |
 | `IsLoading` | `bool` | `false` | Načítání |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ---
 
@@ -4166,6 +4293,7 @@ SVG graf s různými typy.
 | `Animated` | `bool` | `true` | Animace |
 | `OnSegmentClick` | `EventCallback<ChartSegmentClickEventArgs>` | — | Klik na segment |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4218,6 +4346,7 @@ Picker pro výběr/vytváření tagů.
 | Třída | Popis |
 |-------|-------|
 | `tm-tag-picker` | Kořenový kontejner |
+| `tm-tag-picker-disabled` | Disabled stav |
 | `tm-tag-chip` | Chip vybraného tagu |
 | `tm-tag-chip-remove` | Tlačítko odebrání tagu |
 | `tm-tag-picker-trigger` | Trigger pro otevření dropdownu |
@@ -4235,12 +4364,18 @@ Picker pro výběr/vytváření tagů.
 | `SelectedTags` | `IEnumerable<string>` | `[]` | Vybrané tagy |
 | `OnTagsChanged` | `EventCallback<IEnumerable<string>>` | — | Změna výběru |
 | `AllowCreate` | `bool` | `false` | Povolit vytvoření nových tagů |
+| `Disabled` | `bool` | `false` | Zakáže picker (skryje tlačítka odebrání a trigger) |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
 ```razor
 <TmTagPicker AllTags="_allTags" SelectedTags="_selectedTags"
     OnTagsChanged="HandleTagsChanged" AllowCreate="true" />
+
+@* Disabled stav *@
+<TmTagPicker AllTags="_allTags" SelectedTags="_selectedTags" Disabled="true" />
 ```
 
 ---
@@ -4271,6 +4406,8 @@ Vertikální časová osa.
 |----------|-----|---------|-------|
 | `Entries` | `IEnumerable<ITimelineEntry>` | `[]` | Záznamy |
 | `ShowInternal` | `bool` | `false` | Zobrazit interní záznamy |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4305,6 +4442,7 @@ Panel nástrojů s tlačítky.
 | `Actions` | `RenderFragment?` | `null` | Akce vpravo |
 | `Sticky` | `bool` | `false` | Přilepený nahoře |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmToolbarButton
 
@@ -4327,6 +4465,7 @@ Tlačítko v toolbaru.
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Variant` | `ButtonVariant` | `Ghost` | Varianta |
 | `Class` | `string?` | `null` | CSS |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmToolbarDivider
 
@@ -4378,6 +4517,9 @@ Stromové zobrazení s vnořenými uzly.
 | `Nodes` | `IEnumerable<TreeNode<TKey>>` | `[]` | Kořenové uzly |
 | `OnNodeSelect` | `EventCallback<TreeNode<TKey>>` | — | Výběr uzlu |
 | `OnNodeExpand` | `EventCallback<TreeNode<TKey>>` | — | Rozbalení uzlu |
+| `Disabled` | `bool` | `false` | Zakáže interakce |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4425,6 +4567,8 @@ Plánovač/kalendář s denním, týdenním, měsíčním, agenda a timeline poh
 | `ReadOnly` | `bool` | `false` | Pouze ke čtení |
 | `EventTemplate` | `RenderFragment<IScheduleEvent>?` | `null` | Custom šablona události |
 | `Class` | `string?` | `null` | Další CSS třídy |
+| `Disabled` | `bool` | `false` | Zakáže interakce |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4585,6 +4729,7 @@ Konfigurovatelný dashboard s widgety (drag & drop, resize). Podporuje více das
 | `AllowEdit` | `bool` | `true` | Povolit úpravy |
 | `OnDashboardChanged` | `EventCallback<DashboardLayout>` | — | Změna layoutu |
 | `WidgetTemplate` | `RenderFragment<WidgetInstance>?` | `null` | Šablona widgetu |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Lokalizační klíče
 
@@ -4681,6 +4826,8 @@ Krokovací komponenta (wizard).
 | `ShowDescriptions` | `bool` | `true` | Popisy kroků |
 | `AllowStepClick` | `bool` | `false` | Klikání na kroky |
 | `ActiveIcon` | `string?` | `null` | Ikona aktivního kroku |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4740,6 +4887,7 @@ Vizuální editor workflow stavového automatu.
 | `SelectedTransitionId` | `string?` | `null` | Vybraný přechod |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `OnZoomLevelChanged` | `EventCallback<double>` | — | Změna zoomu |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4873,6 +5021,8 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 | `ShowAttachments` | `bool` | `true` | Zobrazit přílohy |
 | `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání komentáře |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 #### Příklady
 
@@ -4923,6 +5073,9 @@ Komentáře s přidáváním, editací a mazáním.
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |
 | `ShowAddButton` | `bool` | `true` | Zobrazit přidávání |
+| `Disabled` | `bool` | `false` | Zakáže přidávání komentářů |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmActivityAttachments
 
@@ -4970,6 +5123,9 @@ Přílohy entity s nahráváním.
 | `AllowUpload` | `bool` | `true` | Povolit nahrávání |
 | `MaxFileSizeBytes` | `long` | — | Max. velikost |
 | `AcceptedFileTypes` | `string?` | `null` | Povolené typy |
+| `Disabled` | `bool` | `false` | Zakáže nahrávání |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmActivityTimeline
 
@@ -4998,6 +5154,8 @@ Timeline záznamů aktivity.
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Entries` | `IEnumerable<ITimelineEntry>` | `[]` | Záznamy |
+| `Class` | `string?` | `null` | Další CSS třídy |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
 ### TmRichEditorFull
 
@@ -5028,7 +5186,12 @@ Plnohodnotný rich text editor (WYSIWYG).
 | `MaxLength` | `int?` | `null` | Max. znaků |
 | `ShowWordCount` | `bool` | `false` | Počítadlo slov |
 | `SupportsMentions` | `bool` | `false` | @zmínky |
-| `MentionProvider` | `Func<string, Task<IEnumerable<MentionUser>>>?` | `null` | Provider zmínek |
+| `MentionProvider` | `IMentionDataProvider?` | `null` | Provider zmínek |
+| `SupportsTokens` | `bool` | `false` | Podpora tokenů/proměnných (trigger `{{`) |
+| `TokenProvider` | `ITokenDataProvider?` | `null` | Provider tokenů |
+| `TokenTrigger` | `string` | `"{{"` | Trigger string pro tokeny |
+| `OnTokenCreateRequested` | `EventCallback<string?>` | — | Vytvoření nového tokenu |
+| `OnTokenInserted` | `EventCallback<IToken>` | — | Token vložen do editoru |
 | `SupportsImages` | `bool` | `false` | Obrázky |
 | `SupportsTables` | `bool` | `false` | Tabulky |
 | `SupportsCodeBlocks` | `bool` | `false` | Bloky kódu |
@@ -5036,14 +5199,47 @@ Plnohodnotný rich text editor (WYSIWYG).
 | `IsDisabled` | `bool` | `false` | Zakázáno |
 | `Class` | `string?` | `null` | Další CSS třídy |
 
+#### Veřejné metody
+
+| Metoda | Popis |
+|--------|-------|
+| `InsertTokenAsync(string key, string? displayName)` | Programově vloží token chip do editoru |
+| `Clear()` | Vymaže obsah editoru |
+| `GetHtml()` | Vrátí aktuální HTML obsah |
+
 #### Příklady
 
 ```razor
 <TmRichEditorFull @bind-Value="_content" Height="400px"
     SupportsMentions="true" MentionProvider="SearchUsers"
+    SupportsTokens="true" TokenProvider="_tokenProvider"
+    OnTokenCreateRequested="HandleCreateToken"
     SupportsImages="true" SupportsTables="true"
     SupportsCodeBlocks="true" ShowWordCount="true"
     Placeholder="Napište článek..." />
+```
+
+#### Token systém — použití
+
+Token systém umožňuje vkládání proměnných/placeholderů do editoru:
+
+1. **Trigger `{{`** — uživatel napíše `{{` a zobrazí se dropdown s dostupnými tokeny
+2. **Toolbar tlačítko `{x}`** — kliknutí na tlačítko v toolbaru zobrazí dropdown
+3. **Filtrování** — pokračující psaní po `{{` filtruje výsledky
+4. **Vytvoření nového** — volba "Vytvořit nový..." na konci dropdownu (pokud `SupportsCreation = true`)
+5. **Výsledný HTML** — `<span class="tm-token" data-token-key="user.email" contenteditable="false">{{User Email}}</span>`
+
+```csharp
+// Implementace ITokenDataProvider
+public class AppTokenProvider : ITokenDataProvider
+{
+    public bool SupportsCreation => true;
+
+    public Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken ct = default)
+    {
+        // Vrátit tokeny z DB nebo konfigurace
+    }
+}
 ```
 
 ### TmRichEditorSimple
@@ -5073,9 +5269,14 @@ Jednoduchý rich text editor (pro komentáře).
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `MaxLength` | `int?` | `null` | Max. znaků |
 | `SupportsMentions` | `bool` | `false` | @zmínky |
-| `MentionProvider` | `Func<string, Task<IEnumerable<MentionUser>>>?` | `null` | Provider |
+| `MentionProvider` | `IMentionDataProvider?` | `null` | Provider zmínek |
+| `SupportsTokens` | `bool` | `false` | Podpora tokenů/proměnných |
+| `TokenProvider` | `ITokenDataProvider?` | `null` | Provider tokenů |
+| `TokenTrigger` | `string` | `"{{"` | Trigger string pro tokeny |
+| `OnTokenCreateRequested` | `EventCallback<string?>` | — | Vytvoření nového tokenu |
+| `OnTokenInserted` | `EventCallback<IToken>` | — | Token vložen do editoru |
 | `IsDisabled` | `bool` | `false` | Zakázáno |
-| `OnSubmit` | `EventCallback` | — | Odeslání (Enter) |
+| `OnSubmit` | `EventCallback` | — | Odeslání (Ctrl+Enter) |
 | `Class` | `string?` | `null` | Další CSS třídy |
 
 #### Příklady
@@ -5084,7 +5285,52 @@ Jednoduchý rich text editor (pro komentáře).
 <TmRichEditorSimple @bind-Value="_comment"
     Placeholder="Napište komentář..."
     SupportsMentions="true" MentionProvider="SearchUsers"
+    SupportsTokens="true" TokenProvider="_tokenProvider"
     OnSubmit="SubmitComment" />
+```
+
+### TokenAutocomplete (interní)
+
+Dropdown komponenta pro výběr tokenu/proměnné. Používá se interně v TmRichEditorFull a TmRichEditorSimple.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-rte-token-dropdown` | Kořenový dropdown kontejner |
+| `tm-rte-token-item` | Položka tokenu |
+| `tm-rte-token-highlighted` | Zvýrazněná položka |
+| `tm-rte-token-key` | Klíč tokenu (monospace) |
+| `tm-rte-token-description` | Popis tokenu |
+| `tm-rte-token-category` | Badge kategorie |
+| `tm-rte-token-empty` | Prázdný stav |
+| `tm-rte-token-separator` | Oddělovač |
+| `tm-rte-token-create` | Položka "Vytvořit nový" |
+| `tm-rte-token-create-icon` | Ikona + u vytvoření |
+| `tm-token` | Token chip v editoru (amber/warning barvy) |
+
+### Abstrakce (Tempo.Blazor.Abstractions)
+
+#### IToken
+
+```csharp
+public interface IToken
+{
+    string Key { get; }
+    string DisplayName { get; }
+    string? Description { get; }
+    string? Category { get; }
+}
+```
+
+#### ITokenDataProvider
+
+```csharp
+public interface ITokenDataProvider
+{
+    Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken ct = default);
+    bool SupportsCreation { get; }
+}
 ```
 
 ---

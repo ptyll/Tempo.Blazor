@@ -156,6 +156,29 @@
   color: var(--tm-color-primary-300);
 }
 
+/* Token/Variable chip styles */
+.tm-rich-editor-simple .tm-rte-editor-content .tm-token {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: var(--tm-color-warning-100, #fef3c7);
+  color: var(--tm-color-warning-700, #b45309);
+  border-radius: var(--tm-radius-sm);
+  font-family: var(--tm-font-mono, monospace);
+  font-size: 0.85em;
+  font-weight: var(--tm-font-weight-medium);
+  user-select: all;
+  cursor: default;
+  vertical-align: baseline;
+  border: 1px solid var(--tm-color-warning-200, #fde68a);
+}
+
+.dark .tm-rich-editor-simple .tm-rte-editor-content .tm-token {
+  background: var(--tm-color-warning-900, #78350f);
+  color: var(--tm-color-warning-300, #fcd34d);
+  border-color: var(--tm-color-warning-800, #92400e);
+}
+
 /* Nested lists indentation */
 .tm-rich-editor-simple .tm-rte-editor-content ul ul,
 .tm-rich-editor-simple .tm-rte-editor-content ol ol,

@@ -119,6 +119,7 @@
 @import "components/_video-dialog.css";
 @import "components/_findreplace-dialog.css";
 @import "components/_mention-autocomplete.css";
+@import "components/_token-autocomplete.css";
 
 /* 14. Charts */
 @import "components/_chart.css";

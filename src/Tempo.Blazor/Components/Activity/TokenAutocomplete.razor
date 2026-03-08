@@ -1,0 +1,166 @@
+@namespace Tempo.Blazor.Components.Activity
+
+@if (IsVisible)
+{
+    <div class="tm-rte-token-dropdown">
+        @if (FilteredTokens.Any())
+        {
+            @foreach (var (token, index) in FilteredTokens.Select((t, i) => (t, i)))
+            {
+                <div class="tm-rte-token-item @(index == HighlightedIndex ? "tm-rte-token-highlighted" : "")"
+                     @onclick="() => SelectToken(token)"
+                     @onclick:stopPropagation
+                     @onmouseenter="() => OnMouseEnter(index)"
+                     @onmousedown:preventDefault>
+                    <div class="tm-rte-token-info">
+                        <div class="tm-rte-token-key">{{@token.Key}}</div>
+                        @if (!string.IsNullOrEmpty(token.Description))
+                        {
+                            <div class="tm-rte-token-description">@token.Description</div>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(token.Category))
+                    {
+                        <span class="tm-rte-token-category">@token.Category</span>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="tm-rte-token-empty">@Loc["TmRichEditor_TokenEmpty"]</div>
+        }
+
+        @if (SupportsCreation)
+        {
+            <div class="tm-rte-token-separator"></div>
+            <div class="tm-rte-token-create @(IsCreateHighlighted ? "tm-rte-token-highlighted" : "")"
+                 @onclick="HandleCreateClicked"
+                 @onclick:stopPropagation
+                 @onmouseenter="() => OnMouseEnterCreate()"
+                 @onmousedown:preventDefault>
+                <span class="tm-rte-token-create-icon">+</span>
+                <span>@Loc["TmRichEditor_TokenCreateNew"]</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Whether the autocomplete dropdown is visible.
+    /// </summary>
+    [Parameter] public bool IsVisible { get; set; }
+
+    /// <summary>
+    /// The list of tokens to display.
+    /// </summary>
+    [Parameter] public IEnumerable<TokenItem> Tokens { get; set; } = Array.Empty<TokenItem>();
+
+    /// <summary>
+    /// The search query to filter tokens.
+    /// </summary>
+    [Parameter] public string Query { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The currently highlighted index.
+    /// </summary>
+    [Parameter] public int HighlightedIndex { get; set; }
+
+    /// <summary>
+    /// Callback when a token is selected.
+    /// </summary>
+    [Parameter] public EventCallback<TokenItem> OnTokenSelected { get; set; }
+
+    /// <summary>
+    /// Callback when "Create new" is requested. Parameter is the current query text.
+    /// </summary>
+    [Parameter] public EventCallback<string?> OnCreateRequested { get; set; }
+
+    /// <summary>
+    /// Whether the provider supports creating new tokens.
+    /// </summary>
+    [Parameter] public bool SupportsCreation { get; set; }
+
+    /// <summary>
+    /// Callback when the highlighted index changes.
+    /// </summary>
+    [Parameter] public EventCallback<int> OnHighlightedIndexChanged { get; set; }
+
+    private IEnumerable<TokenItem> FilteredTokens =>
+        string.IsNullOrWhiteSpace(Query)
+            ? Tokens
+            : Tokens.Where(t =>
+                t.Key.Contains(Query, StringComparison.OrdinalIgnoreCase) ||
+                t.DisplayName.Contains(Query, StringComparison.OrdinalIgnoreCase) ||
+                (t.Description != null && t.Description.Contains(Query, StringComparison.OrdinalIgnoreCase)));
+
+    private int TotalItemCount => FilteredTokens.Count() + (SupportsCreation ? 1 : 0);
+
+    private bool IsCreateHighlighted => SupportsCreation && HighlightedIndex == FilteredTokens.Count();
+
+    /// <summary>
+    /// Moves the highlight up.
+    /// </summary>
+    public async Task MoveHighlightUp()
+    {
+        if (HighlightedIndex > 0)
+        {
+            HighlightedIndex--;
+            await OnHighlightedIndexChanged.InvokeAsync(HighlightedIndex);
+        }
+    }
+
+    /// <summary>
+    /// Moves the highlight down.
+    /// </summary>
+    public async Task MoveHighlightDown()
+    {
+        var maxIndex = TotalItemCount - 1;
+        if (HighlightedIndex < maxIndex)
+        {
+            HighlightedIndex++;
+            await OnHighlightedIndexChanged.InvokeAsync(HighlightedIndex);
+        }
+    }
+
+    /// <summary>
+    /// Selects the highlighted item (token or create).
+    /// </summary>
+    public async Task SelectHighlighted()
+    {
+        if (IsCreateHighlighted)
+        {
+            await HandleCreateClicked();
+            return;
+        }
+
+        var token = FilteredTokens.ElementAtOrDefault(HighlightedIndex);
+        if (token != null)
+        {
+            await SelectToken(token);
+        }
+    }
+
+    private async Task SelectToken(TokenItem token)
+    {
+        await OnTokenSelected.InvokeAsync(token);
+    }
+
+    private async Task HandleCreateClicked()
+    {
+        await OnCreateRequested.InvokeAsync(string.IsNullOrWhiteSpace(Query) ? null : Query);
+    }
+
+    private async Task OnMouseEnter(int index)
+    {
+        HighlightedIndex = index;
+        await OnHighlightedIndexChanged.InvokeAsync(index);
+    }
+
+    private async Task OnMouseEnterCreate()
+    {
+        HighlightedIndex = FilteredTokens.Count();
+        await OnHighlightedIndexChanged.InvokeAsync(HighlightedIndex);
+    }
+}

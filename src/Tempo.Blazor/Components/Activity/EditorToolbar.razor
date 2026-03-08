@@ -349,6 +349,20 @@
         </button>
     }
 
+    @* Token/Variable Button - Conditional *@
+    @if (SupportsTokens)
+    {
+        <button class="tm-rte-btn tm-rte-btn-token"
+                type="button"
+                title="@Loc["TmRichEditor_Token"]"
+                aria-label="@Loc["TmRichEditor_Token"]"
+                disabled="@IsDisabled"
+                @onclick="@(() => OnTokenButtonClicked.InvokeAsync())">
+            {x}
+        </button>
+        <span class="tm-rte-toolbar-separator" aria-hidden="true"></span>
+    }
+
     @* Emoji Picker - Available in both modes *@
     <div class="tm-rte-emoji-wrapper">
         <button class="tm-rte-btn tm-rte-emoji-btn"
@@ -400,6 +414,16 @@
     /// List of currently active formats.
     /// </summary>
     [Parameter] public List<string> ActiveFormats { get; set; } = new();
+
+    /// <summary>
+    /// Whether token/variable insertion is supported.
+    /// </summary>
+    [Parameter] public bool SupportsTokens { get; set; }
+
+    /// <summary>
+    /// Callback when the token button is clicked.
+    /// </summary>
+    [Parameter] public EventCallback OnTokenButtonClicked { get; set; }
 
     private bool _showColorPicker;
     private bool _showHighlightPicker;

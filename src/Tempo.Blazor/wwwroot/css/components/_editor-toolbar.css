@@ -199,3 +199,17 @@
   height: 28px;
   font-size: var(--tm-font-size-xs);
 }
+
+/* Token/Variable button */
+.tm-rte-toolbar .tm-rte-btn.tm-rte-btn-token {
+  font-family: var(--tm-font-mono, monospace);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-bold);
+  color: var(--tm-color-warning-600, #d97706);
+  letter-spacing: -0.5px;
+}
+
+.tm-rte-toolbar .tm-rte-btn.tm-rte-btn-token:hover:not(:disabled) {
+  color: var(--tm-color-warning-700, #b45309);
+  border-color: var(--tm-color-warning-500, #f59e0b);
+}
