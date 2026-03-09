@@ -46,4 +46,80 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <!-- ═══ CSS Bundling: merge all @imports into a single file ═══ -->
+
+  <ItemGroup>
+    <CssBundleInputs Include="wwwroot\css\**\*.css" Exclude="wwwroot\css\tempo-blazor.bundled.css" />
+  </ItemGroup>
+
+  <UsingTask TaskName="BundleCss" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <InputFile ParameterType="System.String" Required="true" />
+      <OutputFile ParameterType="System.String" Required="true" />
+      <Minify ParameterType="System.Boolean" Required="false" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+try
+{
+    var content = File.ReadAllText(InputFile, System.Text.Encoding.UTF8);
+    var baseDir = Path.GetDirectoryName(InputFile);
+    var importRegex = new Regex(@"@import\s+[""']([^""']+)[""']\s*;");
+
+    content = importRegex.Replace(content, match =>
+    {
+        var relativePath = match.Groups[1].Value;
+        var fullPath = Path.GetFullPath(Path.Combine(baseDir, relativePath));
+        if (File.Exists(fullPath))
+        {
+            var imported = File.ReadAllText(fullPath, System.Text.Encoding.UTF8);
+            return "/* === " + relativePath + " === */\n" + imported;
+        }
+        Log.LogWarning("CSS import not found: " + fullPath);
+        return match.Value;
+    });
+
+    if (Minify)
+    {
+        // Remove CSS comments (but not inside content: "..." strings)
+        content = Regex.Replace(content, @"/\*[\s\S]*?\*/", "");
+        // Collapse runs of whitespace to single space
+        content = Regex.Replace(content, @"\s+", " ");
+        // Remove space around structural characters
+        content = Regex.Replace(content, @"\s*([{};:,>~+])\s*", "$1");
+        // Restore newline after } for minimal readability
+        content = content.Replace("}", "}\n");
+        content = content.Trim();
+    }
+
+    Directory.CreateDirectory(Path.GetDirectoryName(OutputFile));
+    File.WriteAllText(OutputFile, content, System.Text.Encoding.UTF8);
+    Log.LogMessage(Microsoft.Build.Framework.MessageImportance.High,
+        "CSS bundle created: " + OutputFile + " (" + content.Length + " bytes)");
+}
+catch (Exception ex)
+{
+    Log.LogError("BundleCss failed: " + ex.Message);
+}
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="BundleCssFiles"
+          BeforeTargets="ResolveProjectStaticWebAssets"
+          Inputs="wwwroot\css\tempo-blazor.css;@(CssBundleInputs)"
+          Outputs="wwwroot\css\tempo-blazor.bundled.css">
+    <BundleCss
+      InputFile="$(MSBuildProjectDirectory)\wwwroot\css\tempo-blazor.css"
+      OutputFile="$(MSBuildProjectDirectory)\wwwroot\css\tempo-blazor.bundled.css"
+      Minify="true" />
+  </Target>
+
+  <Target Name="CleanBundledCss" BeforeTargets="Clean">
+    <Delete Files="wwwroot\css\tempo-blazor.bundled.css" />
+  </Target>
+
 </Project>
