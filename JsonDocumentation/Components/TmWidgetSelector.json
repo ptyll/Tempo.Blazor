@@ -1,0 +1,37 @@
+{
+  "itemName": "TmWidgetSelector",
+  "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Dashboard"
+  ],
+  "cssClasses": [
+    "tm-widget-selector-overlay",
+    "tm-widget-selector-modal",
+    "tm-widget-selector-header",
+    "tm-widget-selector-close",
+    "tm-widget-selector-search",
+    "tm-widget-selector-content",
+    "tm-widget-selector-sidebar",
+    "tm-widget-selector-categories",
+    "tm-widget-selector-category",
+    "tm-widget-selector-category--active",
+    "tm-widget-selector-count",
+    "tm-widget-selector-widgets",
+    "tm-widget-selector-grid",
+    "tm-widget-card",
+    "tm-widget-card--disabled",
+    "tm-widget-card-icon",
+    "tm-widget-card-info",
+    "tm-widget-card-meta",
+    "tm-widget-card-add",
+    "tm-widget-selector-empty",
+    "tm-widget-selector-footer",
+    "tm-widget-selector-hint"
+  ],
+  "examples": [
+    {
+      "title": "Widget selector in a dashboard",
+      "code": "<TmWidgetSelector WidgetRegistry=\"WidgetRegistry\"\n                  ExistingWidgets=\"@existingWidgetIds\"\n                  OnSelect=\"OnWidgetSelected\"\n                  OnClose=\"() => showSelector = false\" />"
+    }
+  ]
+}

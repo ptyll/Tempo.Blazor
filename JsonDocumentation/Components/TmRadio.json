@@ -1,0 +1,21 @@
+{
+  "itemName": "TmRadio",
+  "description": "Individual radio button option, typically used inside TmRadioGroup. Supports label, checked state, disabled state, and a select callback.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-radio-option",
+    "tm-radio-checked",
+    "tm-radio-disabled",
+    "tm-radio-input",
+    "tm-radio-custom",
+    "tm-radio-text"
+  ],
+  "examples": [
+    {
+      "title": "Standalone radio",
+      "code": "<TmRadio Name=\"color\" Value=\"@(\"red\")\" Label=\"Red\" IsChecked=\"@(selectedColor == \"red\")\" OnSelect=\"@(() => selectedColor = \"red\")\" />"
+    }
+  ]
+}

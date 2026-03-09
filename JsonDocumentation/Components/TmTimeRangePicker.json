@@ -1,0 +1,31 @@
+{
+  "itemName": "TmTimeRangePicker",
+  "description": "Time range picker with from/to time inputs, optional swap button, duration display, and validation for invalid ranges where end is before start.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "cssClasses": [
+    "tm-time-range-picker",
+    "tm-time-range-body",
+    "tm-time-range-section",
+    "tm-time-range-from",
+    "tm-time-range-to",
+    "tm-time-range-label",
+    "tm-time-range-sep",
+    "tm-time-range-swap-btn",
+    "tm-time-range--invalid",
+    "tm-time-range-duration",
+    "tm-picker-label",
+    "tm-field-error"
+  ],
+  "examples": [
+    {
+      "title": "Basic time range picker",
+      "code": "<TmTimeRangePicker @bind-Value=\"timeRange\" Label=\"Working hours\" />"
+    },
+    {
+      "title": "Time range with swap, duration, and seconds",
+      "code": "<TmTimeRangePicker @bind-Value=\"timeRange\"\n                   Label=\"Shift\"\n                   ShowSwapButton=\"true\"\n                   ShowDuration=\"true\"\n                   ShowSeconds=\"true\" />"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "itemName": "TmImportWizard",
+  "description": "Multi-step import wizard with a step indicator (via TmStepper), back/next/cancel/complete navigation buttons, and customizable button text. Steps are defined as child TmImportWizardStep components.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.ImportExport"
+  ],
+  "cssClasses": [
+    "tm-import-wizard",
+    "tm-import-wizard-header",
+    "tm-import-wizard-content",
+    "tm-import-wizard-actions",
+    "tm-import-wizard-actions-right"
+  ],
+  "examples": [
+    {
+      "title": "Three-step import wizard",
+      "code": "<TmImportWizard @bind-ActiveStep=\"step\" OnComplete=\"@HandleComplete\" OnCancel=\"@HandleCancel\">\n    <TmImportWizardStep Title=\"Upload\" Icon=\"upload\">\n        <p>Upload your CSV file.</p>\n    </TmImportWizardStep>\n    <TmImportWizardStep Title=\"Map Columns\" Icon=\"columns\">\n        <p>Map file columns to fields.</p>\n    </TmImportWizardStep>\n    <TmImportWizardStep Title=\"Review\" Icon=\"check\">\n        <p>Review and confirm import.</p>\n    </TmImportWizardStep>\n</TmImportWizard>"
+    }
+  ]
+}

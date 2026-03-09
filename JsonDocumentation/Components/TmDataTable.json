@@ -1,0 +1,48 @@
+{
+  "itemName": "TmDataTable",
+  "description": "Full-featured data grid with declarative column definitions, client-side and server-side data modes, sorting, inline column filters, global search, row selection with bulk actions, column visibility picker, drag-to-group with multi-level grouping, pagination, virtualized scrolling, external filter builder, and saved view management.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [
+    "tm-data-table-wrapper",
+    "tm-data-table-toolbar",
+    "tm-data-table-toolbar-left",
+    "tm-data-table-toolbar-right",
+    "tm-data-table-selection-bar",
+    "tm-data-table-scroll",
+    "tm-data-table-virtual-scroll",
+    "tm-data-table",
+    "tm-col-sortable",
+    "tm-col-sorted-asc",
+    "tm-col-sorted-desc",
+    "tm-sort-icon",
+    "tm-sort-asc",
+    "tm-sort-desc",
+    "tm-sort-none",
+    "tm-col-check",
+    "tm-filter-row",
+    "tm-row-selected",
+    "tm-text-center",
+    "tm-text-right",
+    "tm-data-table-group-zone",
+    "tm-data-table-group-zone--dragover",
+    "tm-data-table-group-chip",
+    "tm-data-table-group-row",
+    "tm-data-table-group-toggle",
+    "tm-data-table-group-label",
+    "tm-data-table-group-count",
+    "tm-col-groupable",
+    "tm-data-table-external-filters"
+  ],
+  "examples": [
+    {
+      "title": "Basic data table with columns",
+      "code": "<TmDataTable TItem=\"Employee\" Items=\"@employees\" ViewContext=\"employees\">\n    <TmDataTableColumn Title=\"Name\" Field=\"e => e.Name\" Sortable=\"true\" Filterable=\"true\" />\n    <TmDataTableColumn Title=\"Department\" Field=\"e => e.Department\" Sortable=\"true\" Groupable=\"true\" />\n    <TmDataTableColumn Title=\"Salary\" Field=\"e => e.Salary\" Sortable=\"true\" Align=\"ColumnAlign.Right\" Width=\"120px\" />\n    <TmDataTableColumn Title=\"Actions\" Hideable=\"false\">\n        <CellTemplate Context=\"emp\">\n            <button @onclick=\"() => Edit(emp)\">Edit</button>\n        </CellTemplate>\n    </TmDataTableColumn>\n</TmDataTable>"
+    },
+    {
+      "title": "Server-side data table with selection and views",
+      "code": "<TmDataTable TItem=\"OrderDto\"\n             DataProvider=\"@orderProvider\"\n             ViewContext=\"orders\"\n             ViewProvider=\"@viewProvider\"\n             Selectable=\"true\"\n             ShowGrouping=\"true\"\n             OnRowClick=\"HandleRowClick\"\n             OnSelectionChanged=\"HandleSelectionChanged\">\n    <SelectionActions>\n        <TmButton OnClick=\"DeleteSelected\">Delete</TmButton>\n    </SelectionActions>\n    <TmDataTableColumn Title=\"Order #\" Field=\"o => o.OrderNumber\" Sortable=\"true\" />\n    <TmDataTableColumn Title=\"Status\" Field=\"o => o.Status\" Filterable=\"true\" FilterType=\"FilterType.Select\" FilterOptions=\"@statusOptions\" />\n</TmDataTable>"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "itemName": "TmChart",
+  "description": "Pure SVG chart component supporting Bar, Line, Pie, Donut, and HorizontalBar chart types with optional legend, grid, value labels, animation, and click events on segments.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Charts"
+  ],
+  "cssClasses": [
+    "tm-chart",
+    "tm-chart--animated",
+    "tm-chart__empty",
+    "tm-chart__grid-line",
+    "tm-chart__axis-label",
+    "tm-chart__bar",
+    "tm-chart__line",
+    "tm-chart__point",
+    "tm-chart__slice",
+    "tm-chart__label",
+    "tm-chart__value",
+    "tm-chart__legend",
+    "tm-chart__legend-item",
+    "tm-chart__legend-color",
+    "tm-chart__legend-label"
+  ],
+  "examples": [
+    {
+      "title": "Basic bar chart",
+      "code": "<TmChart Type=\"ChartType.Bar\"\n         Data=\"@(new ChartData { Labels = new[] { \"Jan\", \"Feb\", \"Mar\" }, Datasets = new[] { new ChartDataset { Label = \"Sales\", Values = new[] { 100.0, 200.0, 150.0 }, Color = \"#3b82f6\" } } })\"\n         Height=\"300px\"\n         ShowLegend=\"true\"\n         ShowGrid=\"true\" />"
+    },
+    {
+      "title": "Donut chart with click handler",
+      "code": "<TmChart Type=\"ChartType.Donut\"\n         Data=\"@chartData\"\n         ShowValues=\"true\"\n         OnSegmentClick=\"HandleSegmentClick\" />"
+    },
+    {
+      "title": "Line chart without animation",
+      "code": "<TmChart Type=\"ChartType.Line\"\n         Data=\"@lineData\"\n         Animated=\"false\"\n         Width=\"100%\"\n         Height=\"400px\" />"
+    }
+  ]
+}

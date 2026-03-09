@@ -1,0 +1,25 @@
+{
+  "itemName": "TmAccordionItem",
+  "description": "Individual expandable panel within a TmAccordion, with a clickable header showing title, optional subtitle, icon, and chevron indicator. Supports keyboard navigation and disabled state.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-accordion-item",
+    "tm-accordion-item--expanded",
+    "tm-accordion-item--disabled",
+    "tm-accordion-item__header",
+    "tm-accordion-item__header-text",
+    "tm-accordion-item__title",
+    "tm-accordion-item__subtitle",
+    "tm-accordion-item__icon",
+    "tm-accordion-item__chevron",
+    "tm-accordion-item__body"
+  ],
+  "examples": [
+    {
+      "title": "Accordion item with icon and subtitle",
+      "code": "<TmAccordionItem Title=\"Account Settings\"\n                 Subtitle=\"Manage your account preferences\"\n                 Icon=\"settings\"\n                 IsExpanded=\"false\">\n    <p>Account settings content here.</p>\n</TmAccordionItem>"
+    }
+  ]
+}

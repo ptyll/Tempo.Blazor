@@ -1,0 +1,24 @@
+{
+  "itemName": "TmImageGallery",
+  "description": "Responsive image gallery grid with integrated lightbox viewer, loading state, empty state, and optional image deletion via a data provider.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Gallery"
+  ],
+  "cssClasses": [
+    "tm-image-gallery",
+    "tm-gallery-grid",
+    "tm-gallery-item",
+    "tm-gallery-item-img",
+    "tm-gallery-item-title"
+  ],
+  "examples": [
+    {
+      "title": "Basic gallery",
+      "code": "<TmImageGallery Images=\"@images\" />"
+    },
+    {
+      "title": "Gallery with loading state and delete support",
+      "code": "<TmImageGallery Images=\"@images\" IsLoading=\"@isLoading\" CanDelete=\"true\" DataProvider=\"@galleryProvider\" OnImageClick=\"@HandleImageClick\" EmptyTitle=\"No photos yet\" />"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "itemName": "TmSidebar",
+  "description": "Collapsible sidebar navigation with icon-only collapsed state, nested child items, badge counts, and optional header/footer slots.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Interfaces"
+  ],
+  "cssClasses": [
+    "tm-sidebar",
+    "tm-sidebar-collapsed",
+    "tm-sidebar-expanded",
+    "tm-sidebar-header",
+    "tm-sidebar-toggle",
+    "tm-sidebar-nav",
+    "tm-sidebar-nav-list",
+    "tm-sidebar-nav-item",
+    "tm-sidebar-nav-item-active",
+    "tm-sidebar-nav-link",
+    "tm-sidebar-nav-link-child",
+    "tm-sidebar-nav-label",
+    "tm-sidebar-nav-children",
+    "tm-sidebar-badge",
+    "tm-sidebar-footer"
+  ],
+  "examples": [
+    {
+      "title": "Basic sidebar with navigation items",
+      "code": "<TmSidebar Items=\"navItems\" Collapsed=\"sidebarCollapsed\" OnToggle=\"() => sidebarCollapsed = !sidebarCollapsed\">\n    <Header>\n        <img src=\"logo.svg\" alt=\"Logo\" />\n    </Header>\n</TmSidebar>"
+    }
+  ]
+}

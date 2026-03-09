@@ -1,0 +1,44 @@
+{
+  "itemName": "TmActivityAttachments",
+  "description": "File attachment manager that lists uploaded files with type-specific icons, file sizes, and uploader names. Supports chunked file upload with progress bar, download via IFileAttachmentProvider, deletion, duplicate detection, and configurable max file size and accepted types.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-attachments",
+    "tm-attach-empty",
+    "tm-attach-error",
+    "tm-attach-progress",
+    "tm-attach-progress-bar",
+    "tm-attach-progress-label",
+    "tm-attach-list",
+    "tm-attach-item",
+    "tm-attach-icon",
+    "tm-attach-icon-image",
+    "tm-attach-icon-video",
+    "tm-attach-icon-pdf",
+    "tm-attach-icon-word",
+    "tm-attach-icon-excel",
+    "tm-attach-icon-archive",
+    "tm-attach-icon-file",
+    "tm-attach-info",
+    "tm-attach-name",
+    "tm-attach-size",
+    "tm-attach-uploader",
+    "tm-attach-actions",
+    "tm-attach-upload-zone",
+    "tm-attach-upload-label",
+    "tm-attach-browse-link",
+    "tm-attach-file-input"
+  ],
+  "examples": [
+    {
+      "title": "Attachment list with upload",
+      "code": "<TmActivityAttachments EntityId=\"@entityId\"\n                        Provider=\"@attachmentProvider\"\n                        Attachments=\"@attachments\"\n                        AllowUpload=\"true\"\n                        MaxFileSizeBytes=\"52428800\"\n                        AcceptedFileTypes=\".pdf,.docx,.xlsx,.jpg,.png\" />"
+    },
+    {
+      "title": "Read-only attachment list",
+      "code": "<TmActivityAttachments Attachments=\"@attachments\" AllowUpload=\"false\" />"
+    }
+  ]
+}

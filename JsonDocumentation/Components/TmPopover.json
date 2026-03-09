@@ -1,0 +1,28 @@
+{
+  "itemName": "TmPopover",
+  "description": "Rich content popup anchored to a trigger element with configurable position (Top, Bottom, Left, Right), optional arrow, and controlled/uncontrolled open state. Closes on Escape key.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-popover",
+    "tm-popover--top",
+    "tm-popover--bottom",
+    "tm-popover--left",
+    "tm-popover--right",
+    "tm-popover__trigger",
+    "tm-popover__body",
+    "tm-popover__body--open",
+    "tm-popover__arrow"
+  ],
+  "examples": [
+    {
+      "title": "Basic popover",
+      "code": "<TmPopover Position=\"PopoverPosition.Bottom\">\n    <TriggerContent>\n        <TmButton>Show details</TmButton>\n    </TriggerContent>\n    <ChildContent>\n        <p>Additional information displayed in a popover.</p>\n    </ChildContent>\n</TmPopover>"
+    },
+    {
+      "title": "Controlled popover without arrow",
+      "code": "<TmPopover Position=\"PopoverPosition.Right\" ShowArrow=\"false\"\n    IsOpen=\"@isPopoverOpen\" IsOpenChanged=\"val => isPopoverOpen = val\">\n    <TriggerContent><span>Hover target</span></TriggerContent>\n    <ChildContent><p>Popover content</p></ChildContent>\n</TmPopover>"
+    }
+  ]
+}

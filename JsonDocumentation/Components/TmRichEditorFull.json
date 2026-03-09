@@ -1,0 +1,40 @@
+{
+  "itemName": "TmRichEditorFull",
+  "description": "Full-featured rich text editor with a comprehensive toolbar supporting headings (H1-H4), text formatting (bold, italic, underline, strikethrough, subscript, superscript), lists (ordered, unordered, task), indentation, links, images, tables, videos, code blocks, blockquotes, horizontal rules, text/highlight colors, emojis, find & replace, @mentions, and {{token}} variable insertion. Provides word count and character limit tracking.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-rich-editor-full",
+    "tm-rte-disabled",
+    "tm-rte-editor-content-wrapper",
+    "tm-rte-editor-content",
+    "tm-rte-placeholder",
+    "tm-rte-footer",
+    "tm-rte-word-count",
+    "tm-rte-char-count",
+    "tm-rte-char-count-over",
+    "tm-rte-toolbar",
+    "tm-rte-toolbar-full",
+    "tm-rte-btn",
+    "tm-rte-toolbar-separator",
+    "tm-rte-color-picker",
+    "tm-rte-emoji-picker",
+    "tm-mention",
+    "tm-token"
+  ],
+  "examples": [
+    {
+      "title": "Basic rich editor with two-way binding",
+      "code": "<TmRichEditorFull @bind-Value=\"_htmlContent\" Placeholder=\"Write something...\" Height=\"400px\" />"
+    },
+    {
+      "title": "Editor with mentions and tokens",
+      "code": "<TmRichEditorFull @bind-Value=\"_content\"\n                  SupportsMentions=\"true\"\n                  MentionProvider=\"@mentionProvider\"\n                  SupportsTokens=\"true\"\n                  TokenProvider=\"@tokenProvider\"\n                  OnTokenCreateRequested=\"HandleCreateToken\"\n                  OnTokenInserted=\"HandleTokenInserted\"\n                  MaxLength=\"5000\"\n                  ShowWordCount=\"true\" />"
+    },
+    {
+      "title": "Disabled editor",
+      "code": "<TmRichEditorFull Value=\"@readOnlyContent\" IsDisabled=\"true\" />"
+    }
+  ]
+}

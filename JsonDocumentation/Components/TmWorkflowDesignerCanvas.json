@@ -1,0 +1,37 @@
+{
+  "itemName": "TmWorkflowDesignerCanvas",
+  "description": "Interactive SVG canvas for designing state-machine workflows. Renders states as shaped nodes (pill for initial, double-border for final, rounded rect for intermediate) connected by curved transition arrows. Supports drag-to-move nodes, drag-from-port to create transitions, zoom/pan via JS interop, context menus, grid snapping, and read-only mode.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "cssClasses": [
+    "tm-wf-designer",
+    "tm-wf-canvas",
+    "tm-wf-canvas--readonly",
+    "tm-wf-state",
+    "tm-wf-state--initial",
+    "tm-wf-state--intermediate",
+    "tm-wf-state--final",
+    "tm-wf-state--selected",
+    "tm-wf-state__label",
+    "tm-wf-port",
+    "tm-wf-transition",
+    "tm-wf-transition--selected",
+    "tm-wf-transition__label",
+    "tm-wf-temp-line",
+    "tm-wf-context-menu",
+    "tm-wf-context-menu__item",
+    "tm-wf-context-menu__item--danger",
+    "tm-wf-context-menu__divider"
+  ],
+  "examples": [
+    {
+      "title": "Editable workflow designer",
+      "code": "<TmWorkflowDesignerCanvas Definition=\"@_workflow\" DefinitionChanged=\"@(def => _workflow = def)\" OnStateSelected=\"@(s => _selectedState = s)\" OnTransitionSelected=\"@(t => _selectedTransition = t)\" SelectedStateId=\"@_selectedState?.Id\" SelectedTransitionId=\"@_selectedTransition?.Id\" />"
+    },
+    {
+      "title": "Read-only workflow viewer without grid",
+      "code": "<TmWorkflowDesignerCanvas Definition=\"@_workflow\" ReadOnly=\"true\" ShowGrid=\"false\" />"
+    }
+  ]
+}

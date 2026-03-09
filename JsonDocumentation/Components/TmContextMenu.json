@@ -1,0 +1,18 @@
+{
+  "itemName": "TmContextMenu",
+  "description": "Dropdown context menu triggered by a custom element. Contains TmContextMenuItem children and closes on Escape key press.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "cssClasses": [
+    "tm-context-menu-wrapper",
+    "tm-context-menu__trigger",
+    "tm-context-menu"
+  ],
+  "examples": [
+    {
+      "title": "Context menu with actions",
+      "code": "<TmContextMenu>\n    <Trigger>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">...</TmButton>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" Icon=\"edit\" OnClick=\"EditItem\" />\n        <TmContextMenuItem Label=\"Duplicate\" Icon=\"copy\" OnClick=\"DuplicateItem\" />\n        <TmContextMenuItem IsDivider=\"true\" />\n        <TmContextMenuItem Label=\"Delete\" Icon=\"trash-2\" IsDangerous=\"true\" OnClick=\"DeleteItem\" />\n    </ChildContent>\n</TmContextMenu>"
+    }
+  ]
+}

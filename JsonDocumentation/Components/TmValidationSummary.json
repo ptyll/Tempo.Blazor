@@ -1,0 +1,25 @@
+{
+  "itemName": "TmValidationSummary",
+  "description": "Displays a summary of validation errors from a cascading EditContext. Supports automatic visibility based on error state or manual mode with explicit Show control.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-validation-summary",
+    "tm-validation-summary-header",
+    "tm-validation-summary-icon",
+    "tm-validation-summary-title",
+    "tm-validation-summary-body",
+    "tm-validation-summary-list"
+  ],
+  "examples": [
+    {
+      "title": "Auto validation summary inside EditForm",
+      "code": "<EditForm Model=\"@model\" OnValidSubmit=\"HandleSubmit\">\n    <DataAnnotationsValidator />\n    <TmValidationSummary />\n    <!-- form fields -->\n</EditForm>"
+    },
+    {
+      "title": "Manual mode with custom title",
+      "code": "<TmValidationSummary ManualMode=\"true\" Show=\"@hasErrors\" Title=\"Please fix the following errors:\" />"
+    }
+  ]
+}

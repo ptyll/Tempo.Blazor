@@ -1,0 +1,28 @@
+{
+  "itemName": "TmCheckbox",
+  "description": "Checkbox input with label, help text, indeterminate state, and disabled support. Renders a custom styled checkbox with animated check/dash marks.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-checkbox-wrapper",
+    "tm-checkbox-label",
+    "tm-checkbox-input",
+    "tm-checkbox-custom",
+    "tm-checkbox-check",
+    "tm-checkbox-indeterminate",
+    "tm-checkbox-text",
+    "tm-checkbox-help",
+    "tm-checkbox-disabled"
+  ],
+  "examples": [
+    {
+      "title": "Basic checkbox",
+      "code": "<TmCheckbox @bind-Value=\"agreeToTerms\" Label=\"I agree to the terms and conditions\" />"
+    },
+    {
+      "title": "Checkbox with help text and indeterminate state",
+      "code": "<TmCheckbox @bind-Value=\"selectAll\" Label=\"Select all items\" HelpText=\"This will select all visible rows\" Indeterminate=\"@isSomeSelected\" />"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "itemName": "TmViewManager",
+  "description": "Saved view management panel for TmDataTable and TmMultiViewList, supporting personal and tenant-scoped views with create, edit, delete, and apply operations. Includes a modal for configuring view name, scope, visible columns, grouping, and filters via IDataTableViewProvider.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [
+    "tm-view-manager",
+    "tm-view-manager-toggle",
+    "tm-view-manager-panel",
+    "tm-view-section",
+    "tm-view-section-header",
+    "tm-view-list",
+    "tm-view-item",
+    "tm-view-item--active",
+    "tm-view-item-name",
+    "tm-view-item-badge",
+    "tm-view-edit-btn",
+    "tm-view-delete-btn",
+    "tm-view-manager-footer",
+    "tm-view-modal-overlay",
+    "tm-view-modal",
+    "tm-view-modal-header",
+    "tm-view-modal-close",
+    "tm-view-modal-body",
+    "tm-view-modal-footer",
+    "tm-view-columns-list",
+    "tm-view-column-item",
+    "tm-view-group-columns",
+    "tm-view-error"
+  ],
+  "examples": [
+    {
+      "title": "View manager integrated with data table",
+      "code": "<TmViewManager Provider=\"@viewProvider\"\n               ViewContext=\"employees\"\n               OnViewApplied=\"ApplyView\"\n               GetCurrentView=\"GetCurrentTableView\"\n               AvailableColumns=\"@availableColumns\"\n               FilterDefinitions=\"@filterDefs\"\n               CanCreateTenantViews=\"true\"\n               CurrentUserId=\"@userId\"\n               CurrentTenantId=\"@tenantId\" />"
+    }
+  ]
+}

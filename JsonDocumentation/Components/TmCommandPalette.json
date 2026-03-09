@@ -1,0 +1,26 @@
+{
+  "itemName": "TmCommandPalette",
+  "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, and keyboard shortcut hints. Supports two-way binding on open state.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Interfaces"
+  ],
+  "cssClasses": [
+    "tm-command-palette-backdrop",
+    "tm-command-palette",
+    "tm-command-palette-header",
+    "tm-command-palette-input",
+    "tm-command-palette-close",
+    "tm-command-palette-list",
+    "tm-command-palette-item",
+    "tm-command-palette-title",
+    "tm-command-palette-description",
+    "tm-command-palette-shortcut"
+  ],
+  "examples": [
+    {
+      "title": "Basic command palette",
+      "code": "<TmCommandPalette @bind-IsOpen=\"paletteOpen\" Actions=\"commandActions\" />"
+    }
+  ]
+}

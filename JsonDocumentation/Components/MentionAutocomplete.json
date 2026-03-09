@@ -1,0 +1,24 @@
+{
+  "itemName": "MentionAutocomplete",
+  "description": "Internal dropdown component for @mention user selection in rich text editors. Displays user avatars, display names, and usernames. Supports keyboard navigation (arrow keys, Enter), mouse hover highlighting, and query-based filtering.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-rte-mention-dropdown",
+    "tm-rte-mention-user",
+    "tm-rte-mention-highlighted",
+    "tm-rte-mention-avatar",
+    "tm-rte-mention-avatar-placeholder",
+    "tm-rte-mention-user-info",
+    "tm-rte-mention-display-name",
+    "tm-rte-mention-username",
+    "tm-rte-mention-empty"
+  ],
+  "examples": [
+    {
+      "title": "Used internally by rich editors",
+      "code": "<MentionAutocomplete IsVisible=\"true\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "itemName": "TmSchedulerTimelineView",
+  "description": "Horizontal timeline view with resource rows and 24-hour time slots. Supports drag-and-drop event moving across resources and bidirectional resize handles via JS interop.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-timeline",
+    "tm-scheduler-timeline-header",
+    "tm-scheduler-timeline-resource-header",
+    "tm-scheduler-timeline-time-header",
+    "tm-scheduler-timeline-row",
+    "tm-scheduler-timeline-resource-label",
+    "tm-scheduler-timeline-row-body",
+    "tm-scheduler-timeline-slot",
+    "tm-scheduler-timeline-event",
+    "tm-scheduler-timeline-event-title",
+    "tm-scheduler-event-resize-handle",
+    "tm-scheduler-event-resize-handle--left",
+    "tm-scheduler-event-resize-handle--right"
+  ],
+  "examples": [
+    {
+      "title": "Timeline with resources",
+      "code": "<TmSchedulerTimelineView CurrentDate=\"DateTime.Today\" Events=\"@_events\" Resources=\"@_employees\" SlotDuration=\"60\" OnSlotClick=\"@HandleSlotClick\" OnEventClick=\"@HandleEventClick\" OnEventChanged=\"@HandleEventChanged\" />"
+    }
+  ]
+}

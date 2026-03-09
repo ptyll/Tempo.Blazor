@@ -1,0 +1,17 @@
+{
+  "itemName": "TmChipGroup",
+  "description": "Flex-wrap container for grouping multiple TmChip components with consistent spacing and an optional disabled state.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-chip-group",
+    "tm-chip-group-disabled"
+  ],
+  "examples": [
+    {
+      "title": "Group of chips",
+      "code": "<TmChipGroup>\n    <TmChip Label=\"React\" Removable=\"true\" OnRemove=\"() => Remove(\"React\")\" />\n    <TmChip Label=\"Blazor\" Removable=\"true\" OnRemove=\"() => Remove(\"Blazor\")\" />\n    <TmChip Label=\"Vue\" Removable=\"true\" OnRemove=\"() => Remove(\"Vue\")\" />\n</TmChipGroup>"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "itemName": "TmNumberInput",
+  "description": "Numeric input with increment/decrement buttons, min/max constraints, step control, prefix/suffix text (e.g. currency symbols, units), and error/help text.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-input-wrapper",
+    "tm-number-input",
+    "tm-number-input--disabled",
+    "tm-number-input--error",
+    "tm-number-input__input",
+    "tm-number-input__increment",
+    "tm-number-input__decrement",
+    "tm-number-input__prefix",
+    "tm-number-input__suffix",
+    "tm-input-error-message",
+    "tm-input-help-text"
+  ],
+  "examples": [
+    {
+      "title": "Basic number input",
+      "code": "<TmNumberInput @bind-Value=\"quantity\" Label=\"Quantity\" Min=\"1\" Max=\"100\" />"
+    },
+    {
+      "title": "Number input with prefix and suffix",
+      "code": "<TmNumberInput @bind-Value=\"price\" Label=\"Price\" Prefix=\"$\" Suffix=\"USD\" Step=\"5\" Min=\"0\" Max=\"10000\" />"
+    },
+    {
+      "title": "Number input without buttons",
+      "code": "<TmNumberInput @bind-Value=\"age\" Label=\"Age\" ShowButtons=\"false\" Placeholder=\"Enter age\" />"
+    }
+  ]
+}

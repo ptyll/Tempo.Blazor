@@ -1,0 +1,43 @@
+{
+  "itemName": "TmProgressBar",
+  "description": "Progress bar with value/max tracking, size and color variants, striped/animated modes, indeterminate loading animation, multi-segment support, and an optional percentage label.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-progress-bar",
+    "tm-progress-bar--sm",
+    "tm-progress-bar--md",
+    "tm-progress-bar--lg",
+    "tm-progress-bar--success",
+    "tm-progress-bar--warning",
+    "tm-progress-bar--error",
+    "tm-progress-bar--gradient",
+    "tm-progress-bar--striped",
+    "tm-progress-bar--animated",
+    "tm-progress-bar--indeterminate",
+    "tm-progress-bar__track",
+    "tm-progress-bar__fill",
+    "tm-progress-bar__fill--indeterminate",
+    "tm-progress-bar__segment",
+    "tm-progress-bar__label"
+  ],
+  "examples": [
+    {
+      "title": "Basic progress bar with label",
+      "code": "<TmProgressBar Value=\"65\" ShowLabel=\"true\" />"
+    },
+    {
+      "title": "Animated striped success bar",
+      "code": "<TmProgressBar Value=\"80\" Variant=\"ProgressBarVariant.Success\"\n    Striped=\"true\" Animated=\"true\" Size=\"ProgressBarSize.Lg\" />"
+    },
+    {
+      "title": "Indeterminate loading",
+      "code": "<TmProgressBar Indeterminate=\"true\" />"
+    },
+    {
+      "title": "Multi-segment bar",
+      "code": "<TmProgressBar Segments=\"@(new List<ProgressSegment>\n{\n    new() { Value = 30, Color = \"#22c55e\", Label = \"Done\" },\n    new() { Value = 20, Color = \"#f59e0b\", Label = \"In Progress\" },\n    new() { Value = 10, Color = \"#ef4444\", Label = \"Blocked\" }\n})\" />"
+    }
+  ]
+}

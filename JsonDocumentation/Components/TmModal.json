@@ -1,0 +1,46 @@
+{
+  "itemName": "TmModal",
+  "description": "Versatile modal dialog with header (title, subtitle, icon), scrollable body, and configurable footer with OK/Cancel buttons. Supports multiple sizes, positions, overlay click dismiss, and escape key handling.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-modal-overlay",
+    "tm-modal--visible",
+    "tm-modal--animated",
+    "tm-modal-container",
+    "tm-modal--center",
+    "tm-modal--top",
+    "tm-modal--bottom",
+    "tm-modal",
+    "tm-modal--sm",
+    "tm-modal--md",
+    "tm-modal--lg",
+    "tm-modal--xl",
+    "tm-modal--fullscreen",
+    "tm-modal-header",
+    "tm-modal-header-icon",
+    "tm-modal-header-content",
+    "tm-modal-title",
+    "tm-modal-subtitle",
+    "tm-modal-close",
+    "tm-modal-body",
+    "tm-modal-footer",
+    "tm-modal-btn-cancel",
+    "tm-modal-btn-ok"
+  ],
+  "examples": [
+    {
+      "title": "Basic modal with title and body",
+      "code": "<TmModal Show=\"@isOpen\" Title=\"Confirm Action\" OnClose=\"() => isOpen = false\">\n    <p>Are you sure you want to proceed?</p>\n</TmModal>"
+    },
+    {
+      "title": "Modal with default footer buttons",
+      "code": "<TmModal Show=\"@isOpen\" Title=\"Edit Record\" Subtitle=\"Modify the fields below\"\n    Size=\"ModalSize.Large\" ShowDefaultFooterButtons=\"true\"\n    OkButtonText=\"Save\" CancelButtonText=\"Discard\"\n    OnOk=\"HandleSave\" OnClose=\"() => isOpen = false\">\n    <p>Form content here</p>\n</TmModal>"
+    },
+    {
+      "title": "Modal with custom footer",
+      "code": "<TmModal Show=\"@isOpen\" Title=\"Custom Footer\" OnClose=\"() => isOpen = false\">\n    <p>Body content</p>\n    <Footer>\n        <TmButton Variant=\"ButtonVariant.Danger\" OnClick=\"HandleDelete\">Delete</TmButton>\n        <TmButton Variant=\"ButtonVariant.Ghost\" OnClick=\"() => isOpen = false\">Cancel</TmButton>\n    </Footer>\n</TmModal>"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "itemName": "TmDataTableColumn",
+  "description": "Headless column descriptor for TmDataTable that defines header title, field accessor, sorting, filtering, grouping, visibility, alignment, width, custom cell/header templates, and group aggregation.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [],
+  "examples": [
+    {
+      "title": "Sortable and filterable column",
+      "code": "<TmDataTableColumn Title=\"Name\"\n                   PropertyName=\"FullName\"\n                   Field=\"e => e.FullName\"\n                   Sortable=\"true\"\n                   Filterable=\"true\"\n                   Groupable=\"true\"\n                   Width=\"200px\" />"
+    },
+    {
+      "title": "Column with custom cell template",
+      "code": "<TmDataTableColumn Title=\"Status\" Field=\"e => e.Status\" Filterable=\"true\" FilterType=\"FilterType.Select\" FilterOptions=\"@statusOptions\">\n    <CellTemplate Context=\"item\">\n        <TmBadge Variant=\"GetStatusVariant(item.Status)\">@item.Status</TmBadge>\n    </CellTemplate>\n</TmDataTableColumn>"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "itemName": "TmSchedulerWeekView",
+  "description": "Seven-day time grid view with configurable first day of week, slot duration, resource grouping, and drag-and-drop. Delegates rendering to TmSchedulerTimeGrid.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-week"
+  ],
+  "examples": [
+    {
+      "title": "Week view with 15-minute slots",
+      "code": "<TmSchedulerWeekView CurrentDate=\"DateTime.Today\" Events=\"@_events\" FirstDayOfWeek=\"1\" SlotDuration=\"15\" OnSlotClick=\"@HandleSlotClick\" OnEventClick=\"@HandleEventClick\" />"
+    }
+  ]
+}

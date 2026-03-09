@@ -1,0 +1,36 @@
+{
+  "itemName": "TmIcon",
+  "description": "SVG icon component with 60+ built-in icons (Feather-style), five size variants (Xs–Xl), six color variants, and support for custom icons via IconRegistry.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Icons"
+  ],
+  "cssClasses": [
+    "tm-icon",
+    "tm-icon-xs",
+    "tm-icon-sm",
+    "tm-icon-md",
+    "tm-icon-lg",
+    "tm-icon-xl",
+    "tm-icon-current",
+    "tm-icon-primary",
+    "tm-icon-danger",
+    "tm-icon-success",
+    "tm-icon-warning",
+    "tm-icon-muted",
+    "tm-icon-unknown"
+  ],
+  "examples": [
+    {
+      "title": "Basic icon",
+      "code": "<TmIcon Name=\"@IconNames.Check\" />"
+    },
+    {
+      "title": "Large danger icon",
+      "code": "<TmIcon Name=\"@IconNames.AlertTriangle\" Size=\"IconSize.Lg\" Color=\"IconColor.Danger\" />"
+    },
+    {
+      "title": "Custom stroke width",
+      "code": "<TmIcon Name=\"@IconNames.Heart\" Size=\"IconSize.Xl\" StrokeWidth=\"1.5\" />"
+    }
+  ]
+}

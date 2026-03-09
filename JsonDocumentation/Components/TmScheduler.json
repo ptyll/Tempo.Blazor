@@ -1,0 +1,37 @@
+{
+  "itemName": "TmScheduler",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler",
+    "tm-scheduler-body",
+    "tm-scheduler-toolbar",
+    "tm-scheduler-toolbar-nav",
+    "tm-scheduler-toolbar-nav-btn",
+    "tm-scheduler-toolbar-today-btn",
+    "tm-scheduler-toolbar-title",
+    "tm-scheduler-toolbar-views",
+    "tm-scheduler-toolbar-view-btn",
+    "tm-scheduler-toolbar-view-btn--active",
+    "tm-scheduler-context-menu",
+    "tm-scheduler-context-menu-item",
+    "tm-scheduler-context-menu-item--danger",
+    "tm-scheduler-context-menu-divider"
+  ],
+  "examples": [
+    {
+      "title": "Basic month view with static events",
+      "code": "<TmScheduler Events=\"@_events\" View=\"TmScheduleViewType.Month\" CurrentDate=\"DateTime.Today\" CurrentDateChanged=\"@(d => _currentDate = d)\" OnEventClick=\"@HandleEventClick\" />"
+    },
+    {
+      "title": "Week view with server-side data provider and resources",
+      "code": "<TmScheduler DataProvider=\"@_dataProvider\" View=\"TmScheduleViewType.Week\" Resources=\"@_resources\" SlotDuration=\"30\" FirstDayOfWeek=\"1\" OnSlotClick=\"@HandleNewEvent\" OnEventChanged=\"@HandleEventMoved\" />"
+    },
+    {
+      "title": "Read-only agenda view",
+      "code": "<TmScheduler Events=\"@_events\" View=\"TmScheduleViewType.Agenda\" ReadOnly=\"true\" />"
+    }
+  ]
+}

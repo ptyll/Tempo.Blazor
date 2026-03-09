@@ -1,0 +1,26 @@
+{
+  "itemName": "TmTooltip",
+  "description": "Lightweight CSS-only tooltip that appears on hover/focus with configurable position, delay, and max width. Wraps any child content as the trigger.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-tooltip",
+    "tm-tooltip--top",
+    "tm-tooltip--bottom",
+    "tm-tooltip--left",
+    "tm-tooltip--right",
+    "tm-tooltip__trigger",
+    "tm-tooltip__content"
+  ],
+  "examples": [
+    {
+      "title": "Tooltip on a button",
+      "code": "<TmTooltip Text=\"Save your changes\" Position=\"TooltipPosition.Top\">\n    <TmButton>Save</TmButton>\n</TmTooltip>"
+    },
+    {
+      "title": "Right-positioned tooltip with custom width",
+      "code": "<TmTooltip Text=\"This is a longer description text\" Position=\"TooltipPosition.Right\" MaxWidth=\"300px\">\n    <span>Hover me</span>\n</TmTooltip>"
+    }
+  ]
+}

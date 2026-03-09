@@ -1,0 +1,26 @@
+{
+  "itemName": "TmTextArea",
+  "description": "Multi-line textarea input with label, placeholder, error message, configurable rows, max length, and optional immediate (per-keystroke) value updates.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-input-wrapper",
+    "tm-input-label",
+    "tm-input",
+    "tm-textarea",
+    "tm-input-error",
+    "tm-input-disabled",
+    "tm-input-error-message"
+  ],
+  "examples": [
+    {
+      "title": "Basic textarea",
+      "code": "<TmTextArea @bind-Value=\"description\" Label=\"Description\" Placeholder=\"Enter a description...\" Rows=\"5\" />"
+    },
+    {
+      "title": "Textarea with max length and immediate mode",
+      "code": "<TmTextArea @bind-Value=\"notes\" Label=\"Notes\" MaxLength=\"500\" Immediate=\"true\" Error=\"@notesError\" />"
+    }
+  ]
+}

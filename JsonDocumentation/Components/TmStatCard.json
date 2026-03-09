@@ -1,0 +1,23 @@
+{
+  "itemName": "TmStatCard",
+  "description": "Compact statistic display card showing a primary metric value, label, and optional secondary trend value with configurable color.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-stat-card",
+    "tm-stat-value",
+    "tm-stat-label",
+    "tm-stat-subvalue"
+  ],
+  "examples": [
+    {
+      "title": "Stat card with trend",
+      "code": "<TmStatCard Title=\"Total Revenue\"\n            Value=\"$45,231\"\n            SubValue=\"+12.5% from last month\"\n            SubValueColor=\"text-green-600\" />"
+    },
+    {
+      "title": "Simple stat card",
+      "code": "<TmStatCard Label=\"Active Users\" Value=\"1,234\" />"
+    }
+  ]
+}

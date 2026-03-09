@@ -1,0 +1,33 @@
+{
+  "itemName": "TmTagPicker",
+  "description": "Tag selection component displaying selected tags as colored chips with a dropdown for adding more. Supports inline search, tag creation, and disabled state.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Tags"
+  ],
+  "cssClasses": [
+    "tm-tag-picker",
+    "tm-tag-picker-disabled",
+    "tm-tag-chip",
+    "tm-tag-chip-remove",
+    "tm-tag-picker-trigger",
+    "tm-tag-picker-dropdown",
+    "tm-tag-picker-search",
+    "tm-tag-option",
+    "tm-tag-dot",
+    "tm-tag-create-option"
+  ],
+  "examples": [
+    {
+      "title": "Basic tag picker",
+      "code": "<TmTagPicker AllTags=\"@_allTags\" SelectedTags=\"@_selectedTags\" OnTagsChanged=\"@(tags => _selectedTags = tags.ToList())\" />"
+    },
+    {
+      "title": "Tag picker with inline creation",
+      "code": "<TmTagPicker AllTags=\"@_allTags\" SelectedTags=\"@_selectedTags\" OnTagsChanged=\"@HandleTagsChanged\" AllowCreate=\"true\" />"
+    },
+    {
+      "title": "Disabled tag picker",
+      "code": "<TmTagPicker AllTags=\"@_allTags\" SelectedTags=\"@_selectedTags\" Disabled=\"true\" />"
+    }
+  ]
+}

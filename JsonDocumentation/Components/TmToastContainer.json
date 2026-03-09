@@ -1,0 +1,37 @@
+{
+  "itemName": "TmToastContainer",
+  "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports four screen positions and auto-dismiss with animated progress bars.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-toast-container",
+    "tm-toast-container--top-right",
+    "tm-toast-container--top-left",
+    "tm-toast-container--bottom-right",
+    "tm-toast-container--bottom-left",
+    "tm-toast",
+    "tm-toast--success",
+    "tm-toast--error",
+    "tm-toast--warning",
+    "tm-toast--info",
+    "tm-toast-body",
+    "tm-toast-icon",
+    "tm-toast-content",
+    "tm-toast-title",
+    "tm-toast-message",
+    "tm-toast-dismiss",
+    "tm-toast-progress",
+    "tm-toast-progress-bar"
+  ],
+  "examples": [
+    {
+      "title": "Place toast container in MainLayout",
+      "code": "<TmToastContainer Position=\"ToastPosition.TopRight\" MaxVisible=\"5\" />"
+    },
+    {
+      "title": "Bottom-left position with limit",
+      "code": "<TmToastContainer Position=\"ToastPosition.BottomLeft\" MaxVisible=\"3\" />"
+    }
+  ]
+}

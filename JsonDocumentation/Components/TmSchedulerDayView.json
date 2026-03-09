@@ -1,0 +1,16 @@
+{
+  "itemName": "TmSchedulerDayView",
+  "description": "Single-day time grid view with configurable slot duration, resource grouping, drag-and-drop, and resize support. Delegates rendering to TmSchedulerTimeGrid.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-day"
+  ],
+  "examples": [
+    {
+      "title": "Day view with resource columns",
+      "code": "<TmSchedulerDayView CurrentDate=\"DateTime.Today\" Events=\"@_events\" Resources=\"@_rooms\" SlotDuration=\"30\" OnSlotClick=\"@HandleSlotClick\" OnEventClick=\"@HandleEventClick\" />"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "itemName": "TmSchedulerEventItem",
+  "description": "Renders a single scheduler event with a color dot, time label, and title. Supports a custom RenderFragment template for fully customized event rendering.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-event",
+    "tm-scheduler-event-dot",
+    "tm-scheduler-event-time",
+    "tm-scheduler-event-title"
+  ],
+  "examples": [
+    {
+      "title": "Default event rendering",
+      "code": "<TmSchedulerEventItem Event=\"@myEvent\" OnClick=\"@HandleClick\" />"
+    },
+    {
+      "title": "Custom event template",
+      "code": "<TmSchedulerEventItem Event=\"@myEvent\" OnClick=\"@HandleClick\">\n    <EventTemplate Context=\"evt\">\n        <div class=\"custom-event\">@evt.Title (@evt.Start.ToString(\"HH:mm\"))</div>\n    </EventTemplate>\n</TmSchedulerEventItem>"
+    }
+  ]
+}

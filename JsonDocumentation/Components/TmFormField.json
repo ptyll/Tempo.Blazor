@@ -1,0 +1,27 @@
+{
+  "itemName": "TmFormField",
+  "description": "Generic form field wrapper providing a label (with optional required marker), help text, error message display, and a slot for any form control. Applies error styling when an error message is set.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-form-field",
+    "tm-form-field--error",
+    "tm-form-field-disabled",
+    "tm-form-field-label",
+    "tm-form-field-required",
+    "tm-form-field-control",
+    "tm-form-field-help",
+    "tm-form-field-error"
+  ],
+  "examples": [
+    {
+      "title": "Form field with label and help text",
+      "code": "<TmFormField Label=\"Username\" Required=\"true\" HelpText=\"Must be at least 3 characters.\" For=\"username\">\n    <input id=\"username\" type=\"text\" @bind=\"model.Username\" />\n</TmFormField>"
+    },
+    {
+      "title": "Form field with error message",
+      "code": "<TmFormField Label=\"Email\" Required=\"true\" ErrorMessage=\"@emailError\">\n    <input type=\"email\" @bind=\"model.Email\" />\n</TmFormField>"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "itemName": "TmActivityTimeline",
+  "description": "Displays a chronological timeline of activity entries (comments, status changes, assignments, attachments) with author avatars, relative timestamps, and color-coded connector dots per entry type. Entries are sorted newest-first.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-timeline",
+    "tm-timeline-list",
+    "tm-timeline-item",
+    "tm-timeline-connector",
+    "tm-timeline-avatar",
+    "tm-timeline-body",
+    "tm-timeline-meta",
+    "tm-timeline-author",
+    "tm-timeline-time",
+    "tm-timeline-content",
+    "tm-timeline-loading",
+    "tm-timeline-empty",
+    "tm-timeline-comment",
+    "tm-timeline-status_change",
+    "tm-timeline-assignment",
+    "tm-timeline-attachment"
+  ],
+  "examples": [
+    {
+      "title": "Basic timeline",
+      "code": "<TmActivityTimeline Entries=\"@timelineEntries\" />"
+    },
+    {
+      "title": "With ref for programmatic refresh",
+      "code": "<TmActivityTimeline @ref=\"_timelineRef\" Entries=\"@entries\" />\n\n@code {\n    private TmActivityTimeline? _timelineRef;\n    async Task Refresh() => await _timelineRef!.RefreshAsync();\n}"
+    }
+  ]
+}

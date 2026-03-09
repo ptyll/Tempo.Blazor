@@ -1,0 +1,26 @@
+{
+  "itemName": "TmFormSection",
+  "description": "Collapsible form section with a title header, optional description, and a body area for grouping related form fields.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-form-section",
+    "tm-form-section-header",
+    "tm-form-section-header--collapsible",
+    "tm-form-section-title",
+    "tm-form-section-desc",
+    "tm-form-section-toggle",
+    "tm-form-section-body"
+  ],
+  "examples": [
+    {
+      "title": "Basic form section",
+      "code": "<TmFormSection Title=\"Personal Information\" Description=\"Enter your basic details.\">\n    <TmFormField Label=\"Name\"><input type=\"text\" /></TmFormField>\n    <TmFormField Label=\"Email\"><input type=\"email\" /></TmFormField>\n</TmFormSection>"
+    },
+    {
+      "title": "Collapsible section, collapsed by default",
+      "code": "<TmFormSection Title=\"Advanced Settings\" Collapsible=\"true\" CollapsedByDefault=\"true\">\n    <TmFormField Label=\"API Key\"><input type=\"text\" /></TmFormField>\n</TmFormSection>"
+    }
+  ]
+}

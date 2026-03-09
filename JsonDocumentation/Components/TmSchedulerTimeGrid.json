@@ -1,0 +1,40 @@
+{
+  "itemName": "TmSchedulerTimeGrid",
+  "description": "Reusable vertical time grid used internally by day and week views. Renders date columns with hour slots, all-day event row, overlapping event layout, drag-and-drop, and resize handles with JS interop.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-timegrid",
+    "tm-scheduler-timegrid-header",
+    "tm-scheduler-timegrid-time-gutter-header",
+    "tm-scheduler-timegrid-col-header",
+    "tm-scheduler-timegrid-col-header-weekday",
+    "tm-scheduler-timegrid-col-header-date",
+    "tm-scheduler-timegrid-col-header-group",
+    "tm-scheduler-timegrid-resource-labels",
+    "tm-scheduler-timegrid-resource-label",
+    "tm-scheduler-timegrid-resource-col",
+    "tm-scheduler-timegrid-allday",
+    "tm-scheduler-timegrid-allday-col",
+    "tm-scheduler-timegrid-allday-event",
+    "tm-scheduler-timegrid-time-gutter",
+    "tm-scheduler-timegrid-time-label",
+    "tm-scheduler-timegrid-body",
+    "tm-scheduler-timegrid-col",
+    "tm-scheduler-timegrid-slot",
+    "tm-scheduler-timegrid-event",
+    "tm-scheduler-timegrid-event-time",
+    "tm-scheduler-timegrid-event-title",
+    "tm-scheduler-timegrid-now",
+    "tm-scheduler-event-resize-handle",
+    "tm-scheduler-event-resize-handle--top",
+    "tm-scheduler-event-resize-handle--bottom"
+  ],
+  "examples": [
+    {
+      "title": "Time grid for a single day",
+      "code": "<TmSchedulerTimeGrid Dates=\"@(new List<DateOnly> { DateOnly.FromDateTime(DateTime.Today) })\" Events=\"@_events\" SlotDuration=\"30\" OnSlotClick=\"@HandleSlotClick\" OnEventClick=\"@HandleEventClick\" />"
+    }
+  ]
+}

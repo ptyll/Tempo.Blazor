@@ -1,0 +1,31 @@
+{
+  "itemName": "TmLightbox",
+  "description": "Full-screen image lightbox overlay with keyboard navigation (arrow keys, Escape), previous/next controls, counter display, and optional delete button.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Gallery"
+  ],
+  "cssClasses": [
+    "tm-lightbox",
+    "tm-lightbox-backdrop",
+    "tm-lightbox-content",
+    "tm-lightbox-close",
+    "tm-lightbox-prev",
+    "tm-lightbox-next",
+    "tm-lightbox-img",
+    "tm-lightbox-image-wrap",
+    "tm-lightbox-footer",
+    "tm-lightbox-counter",
+    "tm-lightbox-delete",
+    "tm-lightbox-loading"
+  ],
+  "examples": [
+    {
+      "title": "Standalone lightbox",
+      "code": "<TmLightbox IsOpen=\"@showLightbox\" ImageUrl=\"@currentUrl\" ImageAlt=\"Photo\" IsFirst=\"@isFirst\" IsLast=\"@isLast\" CurrentIndex=\"@index\" TotalCount=\"@total\" OnClose=\"@CloseLightbox\" OnPrev=\"@GoToPrev\" OnNext=\"@GoToNext\" />"
+    },
+    {
+      "title": "Lightbox with delete",
+      "code": "<TmLightbox IsOpen=\"true\" ImageUrl=\"/img/photo.jpg\" ImageAlt=\"Vacation\" IsFirst=\"false\" IsLast=\"false\" CurrentIndex=\"2\" TotalCount=\"10\" CanDelete=\"true\" OnClose=\"@Close\" OnPrev=\"@Prev\" OnNext=\"@Next\" OnDelete=\"@Delete\" />"
+    }
+  ]
+}

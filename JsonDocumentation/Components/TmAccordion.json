@@ -1,0 +1,16 @@
+{
+  "itemName": "TmAccordion",
+  "description": "Expandable content panel container that manages child TmAccordionItem components, supporting single or multiple simultaneous expansion.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-accordion"
+  ],
+  "examples": [
+    {
+      "title": "Accordion with multiple items",
+      "code": "<TmAccordion Multiple=\"false\">\n    <TmAccordionItem Title=\"Section 1\" IsExpanded=\"true\">\n        <p>Content for section 1</p>\n    </TmAccordionItem>\n    <TmAccordionItem Title=\"Section 2\" Subtitle=\"Optional subtitle\" Icon=\"settings\">\n        <p>Content for section 2</p>\n    </TmAccordionItem>\n    <TmAccordionItem Title=\"Disabled Section\" Disabled=\"true\">\n        <p>This section cannot be toggled</p>\n    </TmAccordionItem>\n</TmAccordion>"
+    }
+  ]
+}

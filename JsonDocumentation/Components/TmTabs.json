@@ -1,0 +1,31 @@
+{
+  "itemName": "TmTabs",
+  "description": "Tab strip component with Line, Pill, and Enclosed visual variants. Supports icons, badges, disabled tabs, and keyboard arrow-key navigation. Use with TmTabPanel children.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "cssClasses": [
+    "tm-tabs",
+    "tm-tabs--line",
+    "tm-tabs--pill",
+    "tm-tabs--enclosed",
+    "tm-tabs__header",
+    "tm-tabs__panel",
+    "tm-tab",
+    "tm-tab--active",
+    "tm-tab--disabled",
+    "tm-tab__icon",
+    "tm-tab__label",
+    "tm-tab__badge"
+  ],
+  "examples": [
+    {
+      "title": "Basic line tabs",
+      "code": "<TmTabs @bind-ActiveTabId=\"activeTab\">\n    <TmTabPanel Id=\"general\" Title=\"General\">\n        <p>General settings content</p>\n    </TmTabPanel>\n    <TmTabPanel Id=\"advanced\" Title=\"Advanced\" Icon=\"settings\">\n        <p>Advanced settings content</p>\n    </TmTabPanel>\n</TmTabs>"
+    },
+    {
+      "title": "Pill variant with badge and disabled tab",
+      "code": "<TmTabs @bind-ActiveTabId=\"activeTab\" Variant=\"TabVariant.Pill\">\n    <TmTabPanel Id=\"inbox\" Title=\"Inbox\" Badge=\"5\">\n        <p>Inbox content</p>\n    </TmTabPanel>\n    <TmTabPanel Id=\"drafts\" Title=\"Drafts\" Disabled=\"true\">\n        <p>Drafts content</p>\n    </TmTabPanel>\n</TmTabs>"
+    }
+  ]
+}

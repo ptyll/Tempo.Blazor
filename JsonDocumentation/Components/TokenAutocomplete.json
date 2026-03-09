@@ -1,0 +1,27 @@
+{
+  "itemName": "TokenAutocomplete",
+  "description": "Internal dropdown component for {{token}} variable selection in rich text editors. Displays token keys, descriptions, and optional category grouping with sticky section headers. Supports keyboard navigation, query-based filtering, and an optional \"Create new token\" action at the bottom.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-rte-token-dropdown",
+    "tm-rte-token-item",
+    "tm-rte-token-highlighted",
+    "tm-rte-token-info",
+    "tm-rte-token-key",
+    "tm-rte-token-description",
+    "tm-rte-token-category",
+    "tm-rte-token-section-header",
+    "tm-rte-token-empty",
+    "tm-rte-token-separator",
+    "tm-rte-token-create",
+    "tm-rte-token-create-icon"
+  ],
+  "examples": [
+    {
+      "title": "Used internally by rich editors",
+      "code": "<TokenAutocomplete IsVisible=\"true\" Tokens=\"@tokens\" Query=\"@query\" HighlightedIndex=\"0\" SupportsCreation=\"true\" OnTokenSelected=\"HandleSelected\" OnCreateRequested=\"HandleCreate\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "itemName": "TmRichEditorSimple",
+  "description": "Lightweight rich text editor with a simplified toolbar offering basic formatting (bold, italic, underline), lists (ordered, unordered, task), links, emojis, @mentions, and {{token}} variable insertion. Supports Ctrl+Enter submit, character limit, and focus styling. Ideal for comments and inline editing.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-rich-editor-simple",
+    "tm-rte-focused",
+    "tm-rte-disabled",
+    "tm-rte-editor-content-wrapper",
+    "tm-rte-editor-content",
+    "tm-rte-placeholder",
+    "tm-rte-footer",
+    "tm-rte-char-count",
+    "tm-rte-char-count-over",
+    "tm-rte-toolbar",
+    "tm-rte-toolbar-simple"
+  ],
+  "examples": [
+    {
+      "title": "Simple editor for comments",
+      "code": "<TmRichEditorSimple @bind-Value=\"_comment\" Placeholder=\"Add a comment...\" OnSubmit=\"HandleSubmit\" />"
+    },
+    {
+      "title": "With mentions and character limit",
+      "code": "<TmRichEditorSimple @bind-Value=\"_reply\"\n                    SupportsMentions=\"true\"\n                    MentionProvider=\"@mentionProvider\"\n                    MaxLength=\"500\" />"
+    },
+    {
+      "title": "With token support",
+      "code": "<TmRichEditorSimple @bind-Value=\"_template\"\n                    SupportsTokens=\"true\"\n                    TokenProvider=\"@tokenProvider\"\n                    TokenTrigger=\"{{\"\n                    OnTokenInserted=\"HandleTokenInserted\" />"
+    }
+  ]
+}

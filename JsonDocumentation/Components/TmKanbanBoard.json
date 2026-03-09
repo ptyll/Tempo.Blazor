@@ -1,0 +1,27 @@
+{
+  "itemName": "TmKanbanBoard",
+  "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, custom card templates, and events for card moves and clicks.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-kanban",
+    "tm-kanban-disabled",
+    "tm-kanban__column",
+    "tm-kanban__column--over-limit",
+    "tm-kanban__header",
+    "tm-kanban__header-color",
+    "tm-kanban__header-title",
+    "tm-kanban__count",
+    "tm-kanban__wip-limit",
+    "tm-kanban__cards",
+    "tm-kanban__card",
+    "tm-kanban__empty"
+  ],
+  "examples": [
+    {
+      "title": "Kanban board with task cards",
+      "code": "<TmKanbanBoard TItem=\"TaskItem\"\n               Items=\"@tasks\"\n               Columns=\"@columns\"\n               ColumnSelector=\"t => t.Status\"\n               OnItemMoved=\"HandleTaskMoved\"\n               OnCardClick=\"HandleCardClick\">\n    <CardTemplate Context=\"task\">\n        <div>\n            <strong>@task.Title</strong>\n            <p>@task.Assignee</p>\n        </div>\n    </CardTemplate>\n</TmKanbanBoard>"
+    }
+  ]
+}

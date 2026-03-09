@@ -1,0 +1,19 @@
+{
+  "itemName": "TmFormValidationMessage",
+  "description": "Displays field-level validation error messages from a cascading EditContext for a specific field expression, with an error icon for each message.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-form-validation-message",
+    "tm-form-validation-message-item",
+    "tm-form-validation-message-icon",
+    "tm-form-validation-message-text"
+  ],
+  "examples": [
+    {
+      "title": "Field validation message",
+      "code": "<EditForm Model=\"@model\">\n    <DataAnnotationsValidator />\n    <input @bind=\"model.Email\" />\n    <TmFormValidationMessage For=\"@(() => model.Email)\" />\n</EditForm>"
+    }
+  ]
+}

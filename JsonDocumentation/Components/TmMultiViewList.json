@@ -1,0 +1,43 @@
+{
+  "itemName": "TmMultiViewList",
+  "description": "Generic multi-view list supporting Table, Card, and List display modes with a built-in view switcher, search, grouping, pagination, virtualization, external filter builder, and optional view persistence via IDataTableViewProvider.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-multi-view-list",
+    "tm-mvl-toolbar",
+    "tm-mvl-toolbar-left",
+    "tm-mvl-toolbar-right",
+    "tm-mvl-switcher",
+    "tm-mvl-switch-table",
+    "tm-mvl-switch-card",
+    "tm-mvl-switch-list",
+    "tm-mvl-switch--active",
+    "tm-mvl-table",
+    "tm-mvl-row",
+    "tm-mvl-card-grid",
+    "tm-mvl-card",
+    "tm-mvl-card-title",
+    "tm-mvl-card-subtitle",
+    "tm-mvl-list",
+    "tm-mvl-list-item",
+    "tm-mvl-status",
+    "tm-mvl-group-picker",
+    "tm-mvl-group-section",
+    "tm-mvl-group-header",
+    "tm-mvl-group-row",
+    "tm-mvl-external-filters",
+    "tm-mvl-virtual-scroll"
+  ],
+  "examples": [
+    {
+      "title": "Multi-view list with field mappings",
+      "code": "<TmMultiViewList TItem=\"ProjectDto\"\n                 Items=\"@projects\"\n                 ViewContext=\"projects\"\n                 TitleField=\"p => p.Name\"\n                 SubTitleField=\"p => p.Description\"\n                 StatusLabelField=\"p => p.Status\"\n                 StatusColorField=\"p => p.StatusColor\"\n                 DateField=\"p => p.CreatedAt\"\n                 OnItemClick=\"HandleProjectClick\"\n                 ShowViewSwitcher=\"true\"\n                 ShowSearch=\"true\"\n                 ViewMode=\"ListViewMode.Card\" />"
+    },
+    {
+      "title": "Multi-view list with custom templates and server-side data",
+      "code": "<TmMultiViewList TItem=\"UserDto\"\n                 DataProvider=\"@userDataProvider\"\n                 ViewContext=\"users\"\n                 ViewProvider=\"@viewProvider\"\n                 ShowExternalFilterBuilder=\"true\">\n    <CardTemplate Context=\"user\">\n        <div class=\"custom-user-card\">\n            <img src=\"@user.AvatarUrl\" />\n            <span>@user.FullName</span>\n        </div>\n    </CardTemplate>\n</TmMultiViewList>"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "itemName": "TmAvatarGroup",
+  "description": "Renders a horizontal stack of overlapping avatars with an optional overflow indicator showing the count of hidden items (e.g., \"+3\"). Pass TmAvatar elements as child content.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Avatars"
+  ],
+  "cssClasses": [
+    "tm-avatar-group",
+    "tm-avatar-group-xs",
+    "tm-avatar-group-sm",
+    "tm-avatar-group-md",
+    "tm-avatar-group-lg",
+    "tm-avatar-group-xl",
+    "tm-avatar-group-2xl",
+    "tm-avatar-overflow"
+  ],
+  "examples": [
+    {
+      "title": "Avatar group with overflow",
+      "code": "<TmAvatarGroup Max=\"3\" TotalCount=\"7\" Size=\"AvatarSize.Sm\">\n    <TmAvatar Src=\"/img/user1.jpg\" Name=\"Alice\" Size=\"AvatarSize.Sm\" />\n    <TmAvatar Src=\"/img/user2.jpg\" Name=\"Bob\" Size=\"AvatarSize.Sm\" />\n    <TmAvatar Name=\"Charlie\" Size=\"AvatarSize.Sm\" />\n</TmAvatarGroup>"
+    }
+  ]
+}

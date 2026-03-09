@@ -1,0 +1,27 @@
+{
+  "itemName": "TmBreadcrumbs",
+  "description": "Breadcrumb navigation trail with customizable separator, icon support, and optional click callback. Items render as links or buttons depending on configuration.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Interfaces"
+  ],
+  "cssClasses": [
+    "tm-breadcrumbs",
+    "tm-breadcrumb-list",
+    "tm-breadcrumb-item",
+    "tm-breadcrumb-current",
+    "tm-breadcrumb-link",
+    "tm-breadcrumb-text",
+    "tm-breadcrumb-separator"
+  ],
+  "examples": [
+    {
+      "title": "Basic breadcrumbs with links",
+      "code": "<TmBreadcrumbs Items=\"@breadcrumbs\" Separator=\">\" />"
+    },
+    {
+      "title": "Breadcrumbs with click handler",
+      "code": "<TmBreadcrumbs Items=\"@breadcrumbs\" OnItemClick=\"NavigateTo\" />"
+    }
+  ]
+}

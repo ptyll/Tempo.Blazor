@@ -1,0 +1,31 @@
+{
+  "itemName": "TmDateRangePicker",
+  "description": "Date range picker with dual side-by-side calendars, range preset buttons (Today, Last Week, Last Month, etc.), hover highlighting, and a two-click start/end selection flow.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers",
+    "@using Tempo.Blazor.Models"
+  ],
+  "cssClasses": [
+    "tm-date-range-picker",
+    "tm-date-range-input-row",
+    "tm-date-range-trigger",
+    "tm-date-range-popup",
+    "tm-date-range-calendars",
+    "tm-date-range-footer",
+    "tm-date-range-presets",
+    "tm-date-range-preset-btn",
+    "tm-picker-label",
+    "tm-picker-clear",
+    "tm-picker-placeholder"
+  ],
+  "examples": [
+    {
+      "title": "Basic date range picker",
+      "code": "<TmDateRangePicker @bind-Value=\"dateRange\" Label=\"Report period\" />"
+    },
+    {
+      "title": "Date range picker with custom presets",
+      "code": "<TmDateRangePicker @bind-Value=\"dateRange\"\n                   Label=\"Filter dates\"\n                   Presets=\"@customPresets\"\n                   MinDate=\"@(new DateOnly(2025, 1, 1))\"\n                   DateFormat=\"yyyy-MM-dd\" />"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "itemName": "TmStepper",
+  "description": "Step-by-step wizard navigation showing progress through a sequence of steps. Supports horizontal and vertical orientations, small/medium/large sizes, connector lines, check icons for completed steps, and click-to-navigate.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "cssClasses": [
+    "tm-stepper",
+    "tm-stepper--horizontal",
+    "tm-stepper--vertical",
+    "tm-stepper--small",
+    "tm-stepper--medium",
+    "tm-stepper--large",
+    "tm-stepper-item",
+    "tm-stepper-item--last",
+    "tm-stepper-step",
+    "tm-stepper-step--completed",
+    "tm-stepper-step--active",
+    "tm-stepper-step--pending",
+    "tm-stepper-step--clickable",
+    "tm-stepper-indicator",
+    "tm-stepper-number",
+    "tm-stepper-content",
+    "tm-stepper-label",
+    "tm-stepper-description",
+    "tm-stepper-connector",
+    "tm-stepper-connector-line",
+    "tm-stepper-connector-line--completed",
+    "tm-stepper-connector-line--pending"
+  ],
+  "examples": [
+    {
+      "title": "Horizontal stepper",
+      "code": "<TmStepper Steps=\"@_steps\" ActiveStep=\"1\" OnStepClick=\"@(i => _activeStep = i)\" />"
+    },
+    {
+      "title": "Vertical stepper without descriptions",
+      "code": "<TmStepper Steps=\"@_steps\" ActiveStep=\"@_activeStep\" Orientation=\"StepperOrientation.Vertical\" ShowDescriptions=\"false\" />"
+    },
+    {
+      "title": "Small non-clickable stepper",
+      "code": "<TmStepper Steps=\"@_steps\" ActiveStep=\"2\" Size=\"StepperSize.Small\" AllowStepClick=\"false\" />"
+    }
+  ]
+}

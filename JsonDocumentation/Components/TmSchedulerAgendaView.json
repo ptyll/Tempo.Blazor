@@ -1,0 +1,28 @@
+{
+  "itemName": "TmSchedulerAgendaView",
+  "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays up to 30 days of upcoming events.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-agenda",
+    "tm-scheduler-agenda-group",
+    "tm-scheduler-agenda-date",
+    "tm-scheduler-agenda-date-day",
+    "tm-scheduler-agenda-date-weekday",
+    "tm-scheduler-agenda-date-month",
+    "tm-scheduler-agenda-events",
+    "tm-scheduler-agenda-event",
+    "tm-scheduler-agenda-event-dot",
+    "tm-scheduler-agenda-event-time",
+    "tm-scheduler-agenda-event-title",
+    "tm-scheduler-agenda-event-desc",
+    "tm-scheduler-agenda-empty"
+  ],
+  "examples": [
+    {
+      "title": "Agenda view with click handler",
+      "code": "<TmSchedulerAgendaView CurrentDate=\"DateTime.Today\" Events=\"@_events\" AgendaDays=\"14\" OnEventClick=\"@HandleEventClick\" />"
+    }
+  ]
+}

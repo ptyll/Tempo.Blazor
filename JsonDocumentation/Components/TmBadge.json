@@ -1,0 +1,37 @@
+{
+  "itemName": "TmBadge",
+  "description": "Inline label element with color variants (Default, Primary, Success, Danger, Warning, Info), style options (Filled, Outline, Subtle), sizes (Sm, Md), optional pill shape, status dot, and icon.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-badge",
+    "tm-badge-default",
+    "tm-badge-primary",
+    "tm-badge-success",
+    "tm-badge-danger",
+    "tm-badge-warning",
+    "tm-badge-info",
+    "tm-badge-sm",
+    "tm-badge-md",
+    "tm-badge-filled",
+    "tm-badge-outline",
+    "tm-badge-subtle",
+    "tm-badge-pill",
+    "tm-badge-dot"
+  ],
+  "examples": [
+    {
+      "title": "Primary badge",
+      "code": "<TmBadge Variant=\"BadgeVariant.Primary\">New</TmBadge>"
+    },
+    {
+      "title": "Success badge with dot and pill shape",
+      "code": "<TmBadge Variant=\"BadgeVariant.Success\" Dot=\"true\" Pill=\"true\" BadgeStyle=\"BadgeStyle.Subtle\">Active</TmBadge>"
+    },
+    {
+      "title": "Outlined danger badge with icon",
+      "code": "<TmBadge Variant=\"BadgeVariant.Danger\" BadgeStyle=\"BadgeStyle.Outline\" Icon=\"alert-circle\" Size=\"BadgeSize.Sm\">Critical</TmBadge>"
+    }
+  ]
+}

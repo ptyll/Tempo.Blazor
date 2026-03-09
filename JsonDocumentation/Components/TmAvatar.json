@@ -1,0 +1,34 @@
+{
+  "itemName": "TmAvatar",
+  "description": "Displays a user avatar as an image or initials fallback derived from the Name property. Supports six sizes (Xs, Sm, Md, Lg, Xl, Xxl), two shapes (Circle, Square), and multiple background colors for the initials variant.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Avatars"
+  ],
+  "cssClasses": [
+    "tm-avatar",
+    "tm-avatar-xs",
+    "tm-avatar-sm",
+    "tm-avatar-md",
+    "tm-avatar-lg",
+    "tm-avatar-xl",
+    "tm-avatar-2xl",
+    "tm-avatar-circle",
+    "tm-avatar-square",
+    "tm-avatar-image",
+    "tm-avatar-fallback"
+  ],
+  "examples": [
+    {
+      "title": "Avatar with image",
+      "code": "<TmAvatar Src=\"/images/john.jpg\" Alt=\"John Doe\" Size=\"AvatarSize.Md\" />"
+    },
+    {
+      "title": "Initials fallback",
+      "code": "<TmAvatar Name=\"Jane Smith\" Size=\"AvatarSize.Lg\" Color=\"AvatarColor.Blue\" />"
+    },
+    {
+      "title": "Square small avatar",
+      "code": "<TmAvatar Name=\"Admin\" Size=\"AvatarSize.Sm\" Shape=\"AvatarShape.Square\" />"
+    }
+  ]
+}

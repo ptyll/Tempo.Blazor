@@ -1,0 +1,16 @@
+{
+  "itemName": "TmToolbarDivider",
+  "description": "Vertical separator line for visually grouping items within a TmToolbar.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Toolbar"
+  ],
+  "cssClasses": [
+    "tm-toolbar-divider"
+  ],
+  "examples": [
+    {
+      "title": "Divider between toolbar groups",
+      "code": "<TmToolbar>\n    <TmToolbarButton Icon=\"bold\" />\n    <TmToolbarButton Icon=\"italic\" />\n    <TmToolbarDivider />\n    <TmToolbarButton Icon=\"list\" />\n</TmToolbar>"
+    }
+  ]
+}

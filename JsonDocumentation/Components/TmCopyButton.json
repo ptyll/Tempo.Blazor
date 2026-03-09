@@ -1,0 +1,21 @@
+{
+  "itemName": "TmCopyButton",
+  "description": "Icon button that copies specified text to the clipboard. Shows a checkmark icon for 2 seconds after successful copy. Uses the browser Clipboard API via JS interop.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Buttons"
+  ],
+  "cssClasses": [
+    "tm-copy-button",
+    "tm-copy-button--copied"
+  ],
+  "examples": [
+    {
+      "title": "Copy an API key",
+      "code": "<TmCopyButton Text=\"sk-abc123xyz\" />"
+    },
+    {
+      "title": "Copy button with custom class",
+      "code": "<TmCopyButton Text=\"@generatedCode\" Class=\"my-custom-class\" />"
+    }
+  ]
+}

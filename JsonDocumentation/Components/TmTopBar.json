@@ -1,0 +1,34 @@
+{
+  "itemName": "TmTopBar",
+  "description": "Application top bar with brand area, center content slot, action buttons, command palette trigger, and user avatar menu with sign-out support.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Interfaces"
+  ],
+  "cssClasses": [
+    "tm-topbar",
+    "tm-topbar-brand",
+    "tm-topbar-brand-title",
+    "tm-topbar-center",
+    "tm-topbar-actions",
+    "tm-topbar-search-trigger",
+    "tm-topbar-search-hint",
+    "tm-topbar-user",
+    "tm-topbar-user-button",
+    "tm-topbar-user-name",
+    "tm-topbar-user-menu",
+    "tm-topbar-user-menu-item",
+    "tm-topbar-user-menu-logout",
+    "tm-topbar-icon-btn"
+  ],
+  "examples": [
+    {
+      "title": "Top bar with brand, user, and command palette",
+      "code": "<TmTopBar BrandTitle=\"My App\"\n          User=\"currentUser\"\n          OnCommandPalette=\"OpenCommandPalette\"\n          OnLogout=\"HandleLogout\" />"
+    },
+    {
+      "title": "Top bar with custom center content",
+      "code": "<TmTopBar BrandTitle=\"Admin\">\n    <CenterContent>\n        <TmBreadcrumbs Items=\"breadcrumbs\" />\n    </CenterContent>\n    <ActionsContent>\n        <TmNotificationBell Notifications=\"notifications\" />\n    </ActionsContent>\n</TmTopBar>"
+    }
+  ]
+}

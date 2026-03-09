@@ -1,0 +1,24 @@
+{
+  "itemName": "TmFormRow",
+  "description": "Grid-based form row that arranges child content into 1 to 4 equal-width columns.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-form-row",
+    "tm-form-row--cols-1",
+    "tm-form-row--cols-2",
+    "tm-form-row--cols-3",
+    "tm-form-row--cols-4"
+  ],
+  "examples": [
+    {
+      "title": "Two-column form row",
+      "code": "<TmFormRow Columns=\"2\">\n    <TmFormField Label=\"First Name\"><input type=\"text\" /></TmFormField>\n    <TmFormField Label=\"Last Name\"><input type=\"text\" /></TmFormField>\n</TmFormRow>"
+    },
+    {
+      "title": "Three-column layout",
+      "code": "<TmFormRow Columns=\"3\">\n    <TmFormField Label=\"City\"><input type=\"text\" /></TmFormField>\n    <TmFormField Label=\"State\"><input type=\"text\" /></TmFormField>\n    <TmFormField Label=\"ZIP\"><input type=\"text\" /></TmFormField>\n</TmFormRow>"
+    }
+  ]
+}

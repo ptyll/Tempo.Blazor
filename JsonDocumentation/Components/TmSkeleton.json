@@ -1,0 +1,27 @@
+{
+  "itemName": "TmSkeleton",
+  "description": "Animated placeholder skeleton for loading states. Supports text, circle, and rectangle shape variants with configurable width and height.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-skeleton",
+    "tm-skeleton-text",
+    "tm-skeleton-circle",
+    "tm-skeleton-rect"
+  ],
+  "examples": [
+    {
+      "title": "Text skeleton",
+      "code": "<TmSkeleton Variant=\"SkeletonVariant.Text\" Width=\"200px\" />"
+    },
+    {
+      "title": "Circle avatar skeleton",
+      "code": "<TmSkeleton Variant=\"SkeletonVariant.Circle\" Width=\"40px\" Height=\"40px\" />"
+    },
+    {
+      "title": "Rectangle card skeleton",
+      "code": "<TmSkeleton Variant=\"SkeletonVariant.Rect\" Width=\"100%\" Height=\"120px\" />"
+    }
+  ]
+}

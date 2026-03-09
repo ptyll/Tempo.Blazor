@@ -1,0 +1,24 @@
+{
+  "itemName": "TmToolbar",
+  "description": "Horizontal toolbar with a start section (title + child content) and an actions section. Supports sticky positioning to remain visible during scrolling.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Toolbar"
+  ],
+  "cssClasses": [
+    "tm-toolbar",
+    "tm-toolbar--sticky",
+    "tm-toolbar-start",
+    "tm-toolbar-actions",
+    "tm-toolbar-title"
+  ],
+  "examples": [
+    {
+      "title": "Toolbar with title and action buttons",
+      "code": "<TmToolbar Title=\"Orders\">\n    <Actions>\n        <TmToolbarButton Text=\"Export\" Icon=\"download\" OnClick=\"@HandleExport\" />\n        <TmToolbarButton Text=\"New\" Icon=\"plus\" Variant=\"ButtonVariant.Primary\" OnClick=\"@HandleNew\" />\n    </Actions>\n</TmToolbar>"
+    },
+    {
+      "title": "Sticky toolbar",
+      "code": "<TmToolbar Title=\"Dashboard\" Sticky=\"true\">\n    <TmToolbarButton Icon=\"refresh\" Tooltip=\"Refresh\" OnClick=\"@Refresh\" />\n</TmToolbar>"
+    }
+  ]
+}

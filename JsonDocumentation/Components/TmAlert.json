@@ -1,0 +1,37 @@
+{
+  "itemName": "TmAlert",
+  "description": "Inline alert banner with severity levels (Info, Success, Warning, Error) and visual variants (Soft, Filled, Outlined). Supports title, description, actions slot, custom icon, and dismissable behavior.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-alert",
+    "tm-alert--info",
+    "tm-alert--success",
+    "tm-alert--warning",
+    "tm-alert--error",
+    "tm-alert--soft",
+    "tm-alert--filled",
+    "tm-alert--outlined",
+    "tm-alert__icon",
+    "tm-alert__body",
+    "tm-alert__title",
+    "tm-alert__description",
+    "tm-alert__actions",
+    "tm-alert__dismiss"
+  ],
+  "examples": [
+    {
+      "title": "Info alert with title",
+      "code": "<TmAlert Severity=\"AlertSeverity.Info\" Title=\"Heads up\">\n    This is an informational message.\n</TmAlert>"
+    },
+    {
+      "title": "Dismissable error alert",
+      "code": "<TmAlert Severity=\"AlertSeverity.Error\" Variant=\"AlertVariant.Filled\"\n    Title=\"Error\" Dismissable=\"true\" OnDismiss=\"HandleDismiss\">\n    Something went wrong. Please try again.\n</TmAlert>"
+    },
+    {
+      "title": "Warning alert with actions",
+      "code": "<TmAlert Severity=\"AlertSeverity.Warning\" Variant=\"AlertVariant.Outlined\" Title=\"Expiring soon\">\n    Your subscription expires in 3 days.\n    <Actions>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">Renew now</TmButton>\n    </Actions>\n</TmAlert>"
+    }
+  ]
+}

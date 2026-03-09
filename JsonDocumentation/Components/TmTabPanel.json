@@ -1,0 +1,14 @@
+{
+  "itemName": "TmTabPanel",
+  "description": "Individual tab definition used inside TmTabs. Declares tab header properties (title, icon, badge, disabled) and the content rendered when the tab is active.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "cssClasses": [],
+  "examples": [
+    {
+      "title": "Tab panel with icon and badge",
+      "code": "<TmTabPanel Id=\"notifications\" Title=\"Notifications\" Icon=\"bell\" Badge=\"3\">\n    <p>Notification list here</p>\n</TmTabPanel>"
+    }
+  ]
+}

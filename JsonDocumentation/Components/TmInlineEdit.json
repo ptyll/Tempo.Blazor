@@ -1,0 +1,26 @@
+{
+  "itemName": "TmInlineEdit",
+  "description": "Click-to-edit inline text component. Displays a read-only value that switches to an input on click. Supports Enter to save, Escape to cancel, optional validation, and placeholder text.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-inline-edit",
+    "tm-inline-edit--disabled",
+    "tm-inline-edit-display",
+    "tm-inline-edit-display--placeholder",
+    "tm-inline-edit-input",
+    "tm-inline-edit-input--error",
+    "tm-inline-edit-error"
+  ],
+  "examples": [
+    {
+      "title": "Basic inline edit",
+      "code": "<TmInlineEdit Value=\"@projectName\" OnSave=\"name => projectName = name\"\n    Placeholder=\"Click to enter name\" />"
+    },
+    {
+      "title": "Inline edit with validation",
+      "code": "<TmInlineEdit Value=\"@title\" OnSave=\"HandleSave\"\n    Validate=\"@(val => val.Length < 3 ? \"Must be at least 3 characters\" : null)\" />"
+    }
+  ]
+}

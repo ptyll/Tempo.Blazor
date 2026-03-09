@@ -1,0 +1,28 @@
+{
+  "itemName": "TmSearchInput",
+  "description": "Search-specific text input with a built-in search icon, clear button, optional debounce delay, and localized placeholder fallback.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-input-wrapper",
+    "tm-input-container",
+    "tm-input",
+    "tm-input-search",
+    "tm-input-with-left-icon",
+    "tm-input-with-right-icon",
+    "tm-input-left-icon",
+    "tm-input-disabled",
+    "tm-search-clear"
+  ],
+  "examples": [
+    {
+      "title": "Basic search input",
+      "code": "<TmSearchInput @bind-Value=\"searchQuery\" Placeholder=\"Search users...\" />"
+    },
+    {
+      "title": "Debounced search",
+      "code": "<TmSearchInput @bind-Value=\"filter\" DebounceMs=\"300\" Placeholder=\"Filter records...\" />"
+    }
+  ]
+}

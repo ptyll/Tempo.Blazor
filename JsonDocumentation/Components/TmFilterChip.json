@@ -1,0 +1,20 @@
+{
+  "itemName": "TmFilterChip",
+  "description": "Compact pill displaying an active filter with field label and value. Supports remove and edit click callbacks.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Filters"
+  ],
+  "cssClasses": [
+    "tm-filter-chip",
+    "tm-filter-chip-label",
+    "tm-filter-chip-field",
+    "tm-filter-chip-value",
+    "tm-filter-chip-remove"
+  ],
+  "examples": [
+    {
+      "title": "Filter chip with remove callback",
+      "code": "<TmFilterChip Filter=\"@activeFilter\" OnRemove=\"HandleRemove\" OnEdit=\"HandleEdit\" />"
+    }
+  ]
+}

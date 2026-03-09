@@ -1,0 +1,28 @@
+{
+  "itemName": "TmPagination",
+  "description": "Page navigation control with previous/next buttons, numbered page links with ellipsis for large ranges, optional page-size selector dropdown, and item count display.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [
+    "tm-pagination",
+    "tm-pagination-disabled",
+    "tm-pagination-info",
+    "tm-pagination-controls",
+    "tm-pagination-btn",
+    "tm-pagination-prev",
+    "tm-pagination-next",
+    "tm-page-btn",
+    "tm-page-btn-active",
+    "tm-pagination-ellipsis",
+    "tm-pagination-size",
+    "tm-pagination-size-label",
+    "tm-pagination-page-size"
+  ],
+  "examples": [
+    {
+      "title": "Standalone pagination",
+      "code": "<TmPagination CurrentPage=\"@currentPage\"\n              TotalPages=\"@totalPages\"\n              TotalCount=\"@totalCount\"\n              PageSize=\"25\"\n              PageSizeOptions=\"@(new[] { 10, 25, 50, 100 })\"\n              OnPageChange=\"page => currentPage = page\"\n              OnPageSizeChange=\"HandlePageSizeChange\" />"
+    }
+  ]
+}

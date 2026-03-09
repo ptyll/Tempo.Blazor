@@ -1,0 +1,26 @@
+{
+  "itemName": "TmRadioGroup",
+  "description": "Generic radio button group that renders a set of RadioOption items with label, help text, error message, and horizontal or vertical layout.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-radio-group",
+    "tm-radio-group-label",
+    "tm-radio-group-help",
+    "tm-radio-group-options",
+    "tm-radio-group-error",
+    "tm-radio-group-horizontal",
+    "tm-radio-group-vertical"
+  ],
+  "examples": [
+    {
+      "title": "Vertical radio group",
+      "code": "<TmRadioGroup T=\"string\" @bind-Value=\"selectedPlan\" Label=\"Subscription Plan\" Options=\"@planOptions\" />"
+    },
+    {
+      "title": "Horizontal radio group with error",
+      "code": "<TmRadioGroup T=\"int\" @bind-Value=\"priority\" Label=\"Priority\" Layout=\"RadioLayout.Horizontal\" Options=\"@priorityOptions\" Error=\"@priorityError\" />"
+    }
+  ]
+}

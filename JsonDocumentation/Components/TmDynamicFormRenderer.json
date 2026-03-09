@@ -1,0 +1,30 @@
+{
+  "itemName": "TmDynamicFormRenderer",
+  "description": "Renders a form dynamically from a list of DynamicFieldDefinition objects. Supports text, textarea, number, date, datetime, time, checkbox, and select field types with configurable columns, read-only mode, and two-way value binding.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-dynamic-form",
+    "tm-dynamic-form--2col",
+    "tm-dynamic-form--3col",
+    "tm-dynamic-form__field",
+    "tm-dynamic-form__input",
+    "tm-dynamic-form__textarea",
+    "tm-dynamic-form__select",
+    "tm-dynamic-form__checkbox",
+    "tm-dynamic-form__checkbox-label",
+    "tm-dynamic-form__required",
+    "tm-dynamic-form__help"
+  ],
+  "examples": [
+    {
+      "title": "Two-column dynamic form",
+      "code": "<TmDynamicFormRenderer Fields=\"@fields\" @bind-Values=\"formValues\" Columns=\"2\"\n    OnFieldChanged=\"HandleFieldChanged\" />"
+    },
+    {
+      "title": "Read-only dynamic form",
+      "code": "<TmDynamicFormRenderer Fields=\"@fields\" Values=\"@formValues\" ReadOnly=\"true\" />"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "itemName": "TmSpinner",
+  "description": "Animated SVG loading spinner with configurable size (Xs, Sm, Md, Lg) and color (Current, Primary, White) variants.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-spinner",
+    "tm-spinner-xs",
+    "tm-spinner-sm",
+    "tm-spinner-md",
+    "tm-spinner-lg",
+    "tm-spinner-current",
+    "tm-spinner-primary",
+    "tm-spinner-white"
+  ],
+  "examples": [
+    {
+      "title": "Small primary spinner",
+      "code": "<TmSpinner Size=\"SpinnerSize.Sm\" Color=\"SpinnerColor.Primary\" />"
+    },
+    {
+      "title": "Large spinner inheriting current color",
+      "code": "<TmSpinner Size=\"SpinnerSize.Lg\" />"
+    }
+  ]
+}

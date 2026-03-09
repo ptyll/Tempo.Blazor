@@ -1,0 +1,25 @@
+{
+  "itemName": "TmContextMenuItem",
+  "description": "Individual menu item for TmContextMenu. Supports icons, disabled state, danger styling, and divider mode. Automatically closes parent menu on click.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "cssClasses": [
+    "tm-context-menu__item",
+    "tm-context-menu__item--danger",
+    "tm-context-menu__item--disabled",
+    "tm-context-menu__item-icon",
+    "tm-context-menu__item-label",
+    "tm-context-menu__divider"
+  ],
+  "examples": [
+    {
+      "title": "Standard menu item",
+      "code": "<TmContextMenuItem Label=\"Rename\" Icon=\"edit-2\" OnClick=\"HandleRename\" />"
+    },
+    {
+      "title": "Danger item and divider",
+      "code": "<TmContextMenuItem IsDivider=\"true\" />\n<TmContextMenuItem Label=\"Delete\" Icon=\"trash-2\" IsDangerous=\"true\" OnClick=\"HandleDelete\" />"
+    }
+  ]
+}

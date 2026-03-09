@@ -1,0 +1,24 @@
+{
+  "itemName": "TmDateTimePicker",
+  "description": "Combined date and time picker with a calendar popup for the date portion and inline time input. Supports min/max DateTime constraints that cascade between date and time parts.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "cssClasses": [
+    "tm-datetime-picker",
+    "tm-datetime-picker-body",
+    "tm-datetime-picker--invalid",
+    "tm-datetime-date-section",
+    "tm-datetime-time-section"
+  ],
+  "examples": [
+    {
+      "title": "Basic datetime picker",
+      "code": "<TmDateTimePicker @bind-Value=\"selectedDateTime\" Label=\"Event start\" />"
+    },
+    {
+      "title": "Datetime picker with constraints and seconds",
+      "code": "<TmDateTimePicker @bind-Value=\"selectedDateTime\"\n                  Label=\"Deadline\"\n                  ShowSeconds=\"true\"\n                  MinValue=\"DateTime.Now\"\n                  DateFormat=\"dd/MM/yyyy\" />"
+    }
+  ]
+}

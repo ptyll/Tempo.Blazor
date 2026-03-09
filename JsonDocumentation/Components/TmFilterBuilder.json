@@ -1,0 +1,32 @@
+{
+  "itemName": "TmFilterBuilder",
+  "description": "Interactive filter builder UI that lets users add, edit, and remove filters using field definitions. Renders active filters as TmFilterChip components with a field picker, operator selector, and value input. Supports text, number, date, boolean, select, and multi-select field types.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Filters"
+  ],
+  "cssClasses": [
+    "tm-filter-builder",
+    "tm-filter-chips",
+    "tm-filter-builder-add",
+    "tm-filter-field-picker",
+    "tm-filter-field-option",
+    "tm-filter-editor",
+    "tm-filter-editor-field",
+    "tm-filter-operator-select",
+    "tm-filter-value-input",
+    "tm-filter-select",
+    "tm-filter-apply",
+    "tm-filter-cancel",
+    "tm-filter-clear-all"
+  ],
+  "examples": [
+    {
+      "title": "Filter builder with field definitions",
+      "code": "<TmFilterBuilder FilterDefinitions=\"@filterDefs\" ActiveFilters=\"@activeFilters\"\n    OnFiltersChanged=\"HandleFiltersChanged\" ShowClearAll=\"true\" />"
+    },
+    {
+      "title": "Filter definitions setup",
+      "code": "@code {\n    private List<FilterDefinition> filterDefs = new()\n    {\n        new() { FieldName = \"name\", FieldLabel = \"Name\", FieldType = FilterFieldType.Text },\n        new() { FieldName = \"status\", FieldLabel = \"Status\", FieldType = FilterFieldType.Select,\n            Options = new[] { new FilterOption(\"active\", \"Active\"), new FilterOption(\"inactive\", \"Inactive\") } },\n        new() { FieldName = \"created\", FieldLabel = \"Created\", FieldType = FilterFieldType.Date }\n    };\n}"
+    }
+  ]
+}

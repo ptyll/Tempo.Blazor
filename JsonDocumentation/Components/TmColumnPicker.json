@@ -1,0 +1,23 @@
+{
+  "itemName": "TmColumnPicker",
+  "description": "Dropdown panel for toggling column visibility in a TmDataTable, with checkboxes for each hideable column and a reset button to restore defaults.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [
+    "tm-column-picker",
+    "tm-column-picker-disabled",
+    "tm-column-picker-toggle",
+    "tm-column-picker-panel",
+    "tm-column-picker-items",
+    "tm-column-picker-item",
+    "tm-column-picker-footer",
+    "tm-column-picker-reset"
+  ],
+  "examples": [
+    {
+      "title": "Column picker with toggle and reset",
+      "code": "<TmColumnPicker Columns=\"@columnVisibilityItems\"\n                OnToggleColumn=\"key => ToggleColumn(key)\"\n                OnReset=\"ResetColumns\" />"
+    }
+  ]
+}

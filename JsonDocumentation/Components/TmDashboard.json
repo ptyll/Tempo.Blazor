@@ -1,0 +1,51 @@
+{
+  "itemName": "TmDashboard",
+  "description": "Configurable dashboard with a CSS grid layout, drag-and-drop widget positioning, resize handles, edit mode, widget selector modal, multiple saved dashboards via IDashboardProvider, and JS interop for grid interactions.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Dashboard"
+  ],
+  "cssClasses": [
+    "tm-dashboard",
+    "tm-dashboard--edit",
+    "tm-dashboard-toolbar",
+    "tm-dashboard-toolbar-left",
+    "tm-dashboard-toolbar-right",
+    "tm-dashboard-title",
+    "tm-dashboard-edit-badge",
+    "tm-dashboard-grid-container",
+    "tm-dashboard-grid",
+    "tm-dashboard-grid-bg",
+    "tm-dashboard-grid-col",
+    "tm-dashboard-views",
+    "tm-dashboard-menu",
+    "tm-dashboard-menu-item",
+    "tm-dashboard-menu-item--active",
+    "tm-dashboard-menu-divider",
+    "tm-dashboard-empty",
+    "tm-widget",
+    "tm-widget--dragging",
+    "tm-widget--collapsed",
+    "tm-widget--minimized",
+    "tm-widget-header",
+    "tm-widget-header-left",
+    "tm-widget-drag-handle",
+    "tm-widget-title",
+    "tm-widget-header-actions",
+    "tm-widget-btn",
+    "tm-widget-btn--danger",
+    "tm-widget-content",
+    "tm-widget-resize-handle",
+    "tm-widget-resize-se",
+    "tm-widget-drop-preview"
+  ],
+  "examples": [
+    {
+      "title": "Basic dashboard with provider",
+      "code": "<TmDashboard DashboardId=\"@dashId\"\n             UserId=\"@userId\"\n             ShowTitle=\"true\"\n             AllowEdit=\"true\"\n             OnDashboardChanged=\"HandleDashboardChanged\">\n    <WidgetTemplate Context=\"widget\">\n        @switch (widget.WidgetId)\n        {\n            case \"sales-chart\":\n                <SalesChartWidget />\n                break;\n            case \"recent-orders\":\n                <RecentOrdersWidget />\n                break;\n        }\n    </WidgetTemplate>\n</TmDashboard>"
+    },
+    {
+      "title": "Read-only dashboard",
+      "code": "<TmDashboard DashboardId=\"overview\"\n             AllowEdit=\"false\"\n             ShowTitle=\"true\" />"
+    }
+  ]
+}

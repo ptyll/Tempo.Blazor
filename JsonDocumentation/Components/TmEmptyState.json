@@ -1,0 +1,23 @@
+{
+  "itemName": "TmEmptyState",
+  "description": "Centered placeholder shown when a list or section has no content, with optional icon, title, description, and call-to-action button.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-empty-state",
+    "tm-empty-state-icon",
+    "tm-empty-state-title",
+    "tm-empty-state-description"
+  ],
+  "examples": [
+    {
+      "title": "Empty state with action",
+      "code": "<TmEmptyState Title=\"No results found\"\n              Description=\"Try adjusting your filters or search terms.\"\n              Icon=\"search\"\n              ActionText=\"Clear Filters\"\n              OnAction=\"ClearFilters\" />"
+    },
+    {
+      "title": "Simple empty state",
+      "code": "<TmEmptyState Title=\"No items yet\" />"
+    }
+  ]
+}

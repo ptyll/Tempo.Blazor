@@ -1,0 +1,27 @@
+{
+  "itemName": "TmToggle",
+  "description": "On/off toggle switch with label, disabled state, keyboard accessibility (Space key), and ARIA switch role.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-toggle-wrapper",
+    "tm-toggle-label",
+    "tm-toggle-input",
+    "tm-toggle-track",
+    "tm-toggle-slider",
+    "tm-toggle-checked",
+    "tm-toggle-disabled",
+    "tm-toggle-label-text"
+  ],
+  "examples": [
+    {
+      "title": "Basic toggle",
+      "code": "<TmToggle @bind-Value=\"isEnabled\" Label=\"Enable notifications\" />"
+    },
+    {
+      "title": "Disabled toggle",
+      "code": "<TmToggle @bind-Value=\"darkMode\" Label=\"Dark mode\" Disabled=\"true\" />"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "itemName": "TmDialog",
+  "description": "Centered alert, confirm, or prompt dialog with severity-based icon and color variants. Prompt mode includes a text input. Supports a custom content mode with FooterContent.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "cssClasses": [
+    "tm-dialog",
+    "tm-dialog--alert",
+    "tm-dialog--confirm",
+    "tm-dialog--prompt",
+    "tm-dialog--custom",
+    "tm-dialog--info",
+    "tm-dialog--success",
+    "tm-dialog--warning",
+    "tm-dialog--error",
+    "tm-dialog--dangerous",
+    "tm-dialog-icon",
+    "tm-dialog-content",
+    "tm-dialog-title",
+    "tm-dialog-message",
+    "tm-dialog-input-wrapper",
+    "tm-dialog-input",
+    "tm-dialog-footer",
+    "tm-dialog-btn-ok",
+    "tm-dialog-btn-cancel"
+  ],
+  "examples": [
+    {
+      "title": "Alert dialog",
+      "code": "<TmDialog Show=\"@showAlert\" Type=\"DialogType.Alert\" Variant=\"DialogVariant.Success\"\n    Title=\"Success\" Message=\"Record saved successfully.\"\n    OnResult=\"result => showAlert = false\" />"
+    },
+    {
+      "title": "Confirm dialog with danger variant",
+      "code": "<TmDialog Show=\"@showConfirm\" Type=\"DialogType.Confirm\" IsDangerous=\"true\"\n    Title=\"Delete Item?\" Message=\"This action cannot be undone.\"\n    OkButtonText=\"Delete\" CancelButtonText=\"Cancel\"\n    OnResult=\"HandleConfirmResult\" />"
+    },
+    {
+      "title": "Prompt dialog",
+      "code": "<TmDialog Show=\"@showPrompt\" Type=\"DialogType.Prompt\"\n    Title=\"Rename\" Message=\"Enter a new name:\"\n    PromptPlaceholder=\"New name\" DefaultValue=\"@currentName\"\n    OnPromptResult=\"HandlePromptResult\" />"
+    }
+  ]
+}

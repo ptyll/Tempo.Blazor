@@ -1,0 +1,35 @@
+{
+  "itemName": "TmCalendarGrid",
+  "description": "Reusable calendar month grid with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker and TmDateRangePicker.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "cssClasses": [
+    "tm-calendar",
+    "tm-cal-nav",
+    "tm-cal-nav-btn",
+    "tm-cal-prev",
+    "tm-cal-next",
+    "tm-cal-title",
+    "tm-cal-grid",
+    "tm-cal-header-cell",
+    "tm-cal-day",
+    "tm-cal-day--other-month",
+    "tm-cal-day--today",
+    "tm-cal-day--selected",
+    "tm-cal-day--range-start",
+    "tm-cal-day--range-end",
+    "tm-cal-day--in-range",
+    "tm-cal-day--disabled"
+  ],
+  "examples": [
+    {
+      "title": "Standalone calendar grid",
+      "code": "<TmCalendarGrid DisplayYear=\"2026\" DisplayMonth=\"3\"\n                SelectedDate=\"@selectedDate\"\n                OnDateSelected=\"HandleDateSelected\"\n                OnNavigate=\"HandleNavigate\" />"
+    },
+    {
+      "title": "Calendar grid with range selection",
+      "code": "<TmCalendarGrid DisplayYear=\"2026\" DisplayMonth=\"3\"\n                RangeStart=\"@rangeStart\" RangeEnd=\"@rangeEnd\"\n                MinDate=\"@(new DateOnly(2026, 1, 1))\"\n                OnDateSelected=\"HandleDateSelected\"\n                OnNavigate=\"HandleNavigate\" />"
+    }
+  ]
+}

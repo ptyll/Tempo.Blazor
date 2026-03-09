@@ -1,0 +1,28 @@
+{
+  "itemName": "TmKeyboardShortcutsHelp",
+  "description": "Modal overlay displaying categorized keyboard shortcuts with key combinations rendered as <kbd> elements. Closes on Escape or overlay click.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Models"
+  ],
+  "cssClasses": [
+    "tm-keyboard-shortcuts-overlay",
+    "tm-keyboard-shortcuts-modal",
+    "tm-keyboard-shortcuts-header",
+    "tm-keyboard-shortcuts-title",
+    "tm-keyboard-shortcuts-close",
+    "tm-keyboard-shortcuts-content",
+    "tm-keyboard-shortcuts-category",
+    "tm-keyboard-shortcuts-category-title",
+    "tm-keyboard-shortcuts-list",
+    "tm-keyboard-shortcuts-item",
+    "tm-keyboard-shortcuts-key",
+    "tm-keyboard-shortcuts-description"
+  ],
+  "examples": [
+    {
+      "title": "Basic usage",
+      "code": "<TmKeyboardShortcutsHelp IsVisible=\"showShortcuts\"\n                         OnClose=\"() => showShortcuts = false\"\n                         Categories=\"shortcutCategories\" />"
+    }
+  ]
+}

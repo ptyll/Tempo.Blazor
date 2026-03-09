@@ -1,0 +1,22 @@
+{
+  "itemName": "TmDropdownItem",
+  "description": "Individual menu item for TmDropdown. Supports an optional icon, disabled state, and passes its Value to the parent dropdown on click.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Dropdowns"
+  ],
+  "cssClasses": [
+    "tm-dropdown-item",
+    "tm-dropdown-item-disabled",
+    "tm-dropdown-item-danger"
+  ],
+  "examples": [
+    {
+      "title": "Dropdown item with icon",
+      "code": "<TmDropdownItem Value=\"save\" Icon=\"save\">Save changes</TmDropdownItem>"
+    },
+    {
+      "title": "Disabled dropdown item",
+      "code": "<TmDropdownItem Value=\"archive\" Disabled=\"true\">Archive</TmDropdownItem>"
+    }
+  ]
+}

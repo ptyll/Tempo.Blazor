@@ -1,0 +1,29 @@
+{
+  "itemName": "TmDrawer",
+  "description": "Slide-in side panel (left or right) with overlay backdrop, header/body/footer slots, and configurable close behavior via Escape key and overlay click.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout"
+  ],
+  "cssClasses": [
+    "tm-drawer",
+    "tm-drawer--left",
+    "tm-drawer--right",
+    "tm-drawer__overlay",
+    "tm-drawer__panel",
+    "tm-drawer__header",
+    "tm-drawer__title",
+    "tm-drawer__close",
+    "tm-drawer__body",
+    "tm-drawer__footer"
+  ],
+  "examples": [
+    {
+      "title": "Basic right-side drawer",
+      "code": "<TmDrawer @bind-IsOpen=\"drawerOpen\" Title=\"Edit Item\" Width=\"500px\">\n    <p>Drawer body content here.</p>\n</TmDrawer>"
+    },
+    {
+      "title": "Left drawer with footer actions",
+      "code": "<TmDrawer @bind-IsOpen=\"drawerOpen\" Title=\"Filters\" Position=\"DrawerPosition.Left\">\n    <ChildContent>\n        <p>Filter controls here</p>\n    </ChildContent>\n    <FooterContent>\n        <TmButton OnClick=\"ApplyFilters\">Apply</TmButton>\n    </FooterContent>\n</TmDrawer>"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "itemName": "TmTextInput",
+  "description": "Text input field with label, placeholder, left/right icons, validation state icons (success/error), error message, help text, and full keyboard event support.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-input-wrapper",
+    "tm-input-label",
+    "tm-input-container",
+    "tm-input",
+    "tm-input-error",
+    "tm-input-valid",
+    "tm-input-disabled",
+    "tm-input-readonly",
+    "tm-input-with-left-icon",
+    "tm-input-with-validation-icon",
+    "tm-input-left-icon",
+    "tm-input-right-icon",
+    "tm-input-validation-icon",
+    "tm-input-validation-success",
+    "tm-input-validation-error",
+    "tm-input-error-message",
+    "tm-input-help-text"
+  ],
+  "examples": [
+    {
+      "title": "Basic text input",
+      "code": "<TmTextInput @bind-Value=\"name\" Label=\"Full Name\" Placeholder=\"Enter your name\" />"
+    },
+    {
+      "title": "Input with validation error",
+      "code": "<TmTextInput @bind-Value=\"email\" Label=\"Email\" Type=\"email\" Error=\"Please enter a valid email address\" LeftIcon=\"@IconNames.Mail\" />"
+    },
+    {
+      "title": "Input with validation icons",
+      "code": "<TmTextInput @bind-Value=\"username\" Label=\"Username\" ShowValidationIcons=\"true\" IsValid=\"@isUsernameValid\" HelpText=\"Must be at least 3 characters\" />"
+    }
+  ]
+}

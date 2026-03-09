@@ -1,0 +1,30 @@
+{
+  "itemName": "TmChip",
+  "description": "Small labelled element with Soft, Filled, and Outlined variants, optional icon, removable close button, clickable/selectable states, custom color via CSS variable, and two sizes.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-chip",
+    "tm-chip--soft",
+    "tm-chip--filled",
+    "tm-chip--outlined",
+    "tm-chip--sm",
+    "tm-chip--md",
+    "tm-chip--clickable",
+    "tm-chip--selected",
+    "tm-chip__icon",
+    "tm-chip__label",
+    "tm-chip__remove"
+  ],
+  "examples": [
+    {
+      "title": "Removable chip",
+      "code": "<TmChip Label=\"JavaScript\" Removable=\"true\" OnRemove=\"() => RemoveTag(\"JavaScript\")\" />"
+    },
+    {
+      "title": "Clickable chip with icon and custom color",
+      "code": "<TmChip Label=\"Priority: High\"\n        Icon=\"flag\"\n        Color=\"#ef4444\"\n        Variant=\"ChipVariant.Filled\"\n        Clickable=\"true\"\n        Selected=\"@isSelected\"\n        OnClick=\"ToggleSelection\" />"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "itemName": "TmSection",
+  "description": "Collapsible content section with optional title, icon, and header actions. Supports two-way binding on collapsed state.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout"
+  ],
+  "cssClasses": [
+    "tm-section",
+    "tm-section--collapsible",
+    "tm-section--collapsed",
+    "tm-section-header",
+    "tm-section-header-icon",
+    "tm-section-title",
+    "tm-section-actions",
+    "tm-section-chevron",
+    "tm-section-content"
+  ],
+  "examples": [
+    {
+      "title": "Basic section with title",
+      "code": "<TmSection Title=\"Details\">\n    <p>Section body content here.</p>\n</TmSection>"
+    },
+    {
+      "title": "Collapsible section with icon and header actions",
+      "code": "<TmSection Title=\"Settings\" Icon=\"settings\" Collapsible=\"true\" @bind-Collapsed=\"isCollapsed\">\n    <HeaderActions>\n        <TmButton Size=\"ButtonSize.Sm\" OnClick=\"Save\">Save</TmButton>\n    </HeaderActions>\n    <ChildContent>\n        <p>Collapsible content</p>\n    </ChildContent>\n</TmSection>"
+    }
+  ]
+}

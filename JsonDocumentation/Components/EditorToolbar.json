@@ -1,0 +1,32 @@
+{
+  "itemName": "EditorToolbar",
+  "description": "Internal helper component that renders the formatting toolbar for TmRichEditorFull and TmRichEditorSimple. Operates in two modes: Simple (basic formatting, lists, links, emojis) and Full (adds headings, strikethrough, subscript/superscript, indent/outdent, code, blockquote, horizontal rule, text/highlight colors, image, table, video, remove format). Not intended for direct use.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-rte-toolbar",
+    "tm-rte-toolbar-simple",
+    "tm-rte-toolbar-full",
+    "tm-rte-btn",
+    "tm-rte-btn-code",
+    "tm-rte-btn-token",
+    "tm-rte-toolbar-separator",
+    "tm-rte-color-wrapper",
+    "tm-rte-color-btn",
+    "tm-rte-highlight-btn",
+    "tm-rte-color-picker",
+    "tm-rte-color-option",
+    "tm-rte-emoji-wrapper",
+    "tm-rte-emoji-picker",
+    "tm-rte-emoji-option",
+    "tm-rte-emoji-btn",
+    "tm-rte-clear-format"
+  ],
+  "examples": [
+    {
+      "title": "Used internally by TmRichEditorFull",
+      "code": "<EditorToolbar Mode=\"ToolbarMode.Full\" IsDisabled=\"false\" OnFormat=\"HandleFormat\" OnEmojiSelected=\"HandleEmoji\" ActiveFormats=\"@activeFormats\" />"
+    }
+  ]
+}

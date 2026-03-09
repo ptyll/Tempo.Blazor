@@ -1,0 +1,23 @@
+{
+  "itemName": "TmDropdown",
+  "description": "Action dropdown menu triggered by a button, supporting icons and keyboard navigation. Items are rendered via TmDropdownItem children.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Dropdowns"
+  ],
+  "cssClasses": [
+    "tm-dropdown-wrapper",
+    "tm-dropdown-trigger",
+    "tm-dropdown-menu",
+    "tm-dropdown-disabled"
+  ],
+  "examples": [
+    {
+      "title": "Basic dropdown with items",
+      "code": "<TmDropdown Text=\"Actions\" OnSelect=\"HandleSelect\">\n    <TmDropdownItem Value=\"edit\" Icon=\"edit\">Edit</TmDropdownItem>\n    <TmDropdownItem Value=\"delete\" Icon=\"trash\">Delete</TmDropdownItem>\n</TmDropdown>"
+    },
+    {
+      "title": "Dropdown with leading icon",
+      "code": "<TmDropdown Text=\"Options\" Icon=\"settings\" OnSelect=\"HandleSelect\" Disabled=\"false\">\n    <TmDropdownItem Value=\"export\">Export</TmDropdownItem>\n    <TmDropdownItem Value=\"print\">Print</TmDropdownItem>\n</TmDropdown>"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "itemName": "TmBulkActionBar",
+  "description": "Floating toolbar that appears when items are selected, showing the selection count, custom action buttons via ChildContent, and a clear-selection button.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [
+    "tm-bulk-action-bar",
+    "tm-bulk-action-bar-disabled",
+    "tm-bulk-action-bar__info",
+    "tm-bulk-action-bar__count",
+    "tm-bulk-action-bar__text",
+    "tm-bulk-action-bar__actions",
+    "tm-bulk-action-bar__clear"
+  ],
+  "examples": [
+    {
+      "title": "Bulk action bar with actions",
+      "code": "<TmBulkActionBar SelectedCount=\"@selectedItems.Count\"\n                 OnClearSelection=\"ClearSelection\">\n    <TmButton Variant=\"ButtonVariant.Ghost\" OnClick=\"ExportSelected\">Export</TmButton>\n    <TmButton Variant=\"ButtonVariant.Danger\" OnClick=\"DeleteSelected\">Delete</TmButton>\n</TmBulkActionBar>"
+    }
+  ]
+}

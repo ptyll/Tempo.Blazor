@@ -1,0 +1,33 @@
+{
+  "itemName": "TmFilterableDropdown",
+  "description": "Generic searchable dropdown with client-side or server-side data loading, keyboard navigation, custom item templates, and a clear button. Supports two-way binding via Value/ValueChanged.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Dropdowns"
+  ],
+  "cssClasses": [
+    "tm-filterable-dropdown",
+    "tm-filterable-dropdown-trigger",
+    "tm-filterable-dropdown-menu",
+    "tm-filterable-dropdown-filter",
+    "tm-filterable-dropdown-filter-input",
+    "tm-filterable-dropdown-item",
+    "tm-filterable-dropdown-item-selected",
+    "tm-filterable-dropdown-placeholder",
+    "tm-filterable-dropdown-value",
+    "tm-filterable-dropdown-clear",
+    "tm-filterable-dropdown-loading",
+    "tm-filterable-dropdown-empty",
+    "tm-filterable-dropdown-error",
+    "tm-filterable-dropdown-disabled"
+  ],
+  "examples": [
+    {
+      "title": "Client-side filterable dropdown",
+      "code": "<TmFilterableDropdown TItem=\"string\" TValue=\"string\"\n    Items=\"@countries\"\n    @bind-Value=\"selectedCountry\"\n    Placeholder=\"Select country\"\n    ShowClearButton=\"true\" />"
+    },
+    {
+      "title": "Server-side data provider with custom template",
+      "code": "<TmFilterableDropdown TItem=\"UserDto\" TValue=\"int\"\n    DataProvider=\"@userProvider\"\n    @bind-Value=\"selectedUser\"\n    DisplayField=\"@(u => u.FullName)\"\n    IdField=\"@(u => u.Id)\">\n    <ItemTemplate>\n        <span>@context.FullName (@context.Email)</span>\n    </ItemTemplate>\n</TmFilterableDropdown>"
+    }
+  ]
+}

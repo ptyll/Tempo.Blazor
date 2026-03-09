@@ -1,0 +1,19 @@
+{
+  "itemName": "TmWorkflowMinimap",
+  "description": "Small overview minimap for the workflow designer showing all states as colored rectangles, transitions as lines, and a viewport rectangle indicating the current visible area. Clicking navigates the main canvas.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "cssClasses": [
+    "tm-wf-minimap",
+    "tm-wf-minimap__state",
+    "tm-wf-minimap__transition",
+    "tm-wf-minimap__viewport"
+  ],
+  "examples": [
+    {
+      "title": "Minimap synced with designer canvas",
+      "code": "<TmWorkflowMinimap Definition=\"@_workflow\" ViewBoxX=\"@_viewX\" ViewBoxY=\"@_viewY\" ViewBoxW=\"800\" ViewBoxH=\"500\" OnNavigate=\"@HandleMinimapNavigate\" />"
+    }
+  ]
+}

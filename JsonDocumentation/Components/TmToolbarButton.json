@@ -1,0 +1,28 @@
+{
+  "itemName": "TmToolbarButton",
+  "description": "Button designed for use inside TmToolbar. Supports icon-only, text-only, or icon+text layouts with ghost, primary, and danger variants.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Toolbar"
+  ],
+  "cssClasses": [
+    "tm-toolbar-btn",
+    "tm-toolbar-btn--ghost",
+    "tm-toolbar-btn--primary",
+    "tm-toolbar-btn--danger",
+    "tm-toolbar-btn-text"
+  ],
+  "examples": [
+    {
+      "title": "Icon-only button with tooltip",
+      "code": "<TmToolbarButton Icon=\"filter\" Tooltip=\"Filter\" OnClick=\"@ToggleFilter\" />"
+    },
+    {
+      "title": "Primary variant with text and icon",
+      "code": "<TmToolbarButton Text=\"Save\" Icon=\"check\" Variant=\"ButtonVariant.Primary\" OnClick=\"@HandleSave\" />"
+    },
+    {
+      "title": "Disabled danger button",
+      "code": "<TmToolbarButton Text=\"Delete\" Icon=\"trash\" Variant=\"ButtonVariant.Danger\" Disabled=\"true\" />"
+    }
+  ]
+}

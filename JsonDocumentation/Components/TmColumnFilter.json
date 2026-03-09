@@ -1,0 +1,24 @@
+{
+  "itemName": "TmColumnFilter",
+  "description": "Inline column filter control for TmDataTable that renders a text input, number/date input, boolean select, or custom select dropdown depending on FilterType configuration.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "cssClasses": [
+    "tm-col-filter",
+    "tm-col-filter-input-wrap",
+    "tm-col-filter-input",
+    "tm-col-filter-clear",
+    "tm-col-filter-select"
+  ],
+  "examples": [
+    {
+      "title": "Text filter",
+      "code": "<TmColumnFilter ColumnKey=\"name\"\n                FilterType=\"FilterType.Text\"\n                OnFilterChange=\"HandleFilterChange\" />"
+    },
+    {
+      "title": "Select filter with options",
+      "code": "<TmColumnFilter ColumnKey=\"status\"\n                FilterType=\"FilterType.Select\"\n                FilterOptions=\"@statusOptions\"\n                OnFilterChange=\"HandleFilterChange\" />"
+    }
+  ]
+}

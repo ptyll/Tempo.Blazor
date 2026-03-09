@@ -1,0 +1,25 @@
+{
+  "itemName": "TmActivityLog",
+  "description": "Tabbed activity panel that combines TmActivityTimeline, TmActivityComments, and TmActivityAttachments into a single component with switchable tabs. Each tab can be shown or hidden independently. Tab badges display item counts.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Activity"
+  ],
+  "cssClasses": [
+    "tm-activity-log",
+    "tm-activity-tabs",
+    "tm-activity-tab",
+    "tm-activity-tab-active",
+    "tm-tab-badge",
+    "tm-activity-content"
+  ],
+  "examples": [
+    {
+      "title": "Full activity log with all tabs",
+      "code": "<TmActivityLog EntityId=\"@entityId\"\n               TimelineEntries=\"@timelineEntries\"\n               Comments=\"@comments\"\n               Attachments=\"@attachments\"\n               AttachmentProvider=\"@attachmentProvider\"\n               OnCommentAdded=\"HandleCommentAdded\"\n               OnCommentDeleted=\"HandleCommentDeleted\" />"
+    },
+    {
+      "title": "Comments and attachments only",
+      "code": "<TmActivityLog EntityId=\"@entityId\"\n               ShowTimeline=\"false\"\n               Comments=\"@comments\"\n               Attachments=\"@attachments\"\n               OnCommentAdded=\"HandleCommentAdded\" />"
+    }
+  ]
+}

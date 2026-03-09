@@ -1,0 +1,32 @@
+{
+  "itemName": "TmSplitButton",
+  "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Buttons"
+  ],
+  "cssClasses": [
+    "tm-split-button",
+    "tm-split-button--primary",
+    "tm-split-button--secondary",
+    "tm-split-button--danger",
+    "tm-split-button--disabled",
+    "tm-split-button--xs",
+    "tm-split-button--sm",
+    "tm-split-button--lg",
+    "tm-split-button__primary",
+    "tm-split-button__toggle",
+    "tm-split-button__dropdown",
+    "tm-split-button__spinner",
+    "tm-split-button__text"
+  ],
+  "examples": [
+    {
+      "title": "Basic split button with dropdown items",
+      "code": "<TmSplitButton Text=\"Save\" OnClick=\"HandleSave\">\n    <button @onclick=\"SaveAsDraft\">Save as Draft</button>\n    <button @onclick=\"SaveAndPublish\">Save & Publish</button>\n</TmSplitButton>"
+    },
+    {
+      "title": "Danger variant with loading",
+      "code": "<TmSplitButton Text=\"Delete\" Variant=\"ButtonVariant.Danger\" IsLoading=\"_isDeleting\" OnClick=\"HandleDelete\">\n    <button @onclick=\"ArchiveInstead\">Archive Instead</button>\n</TmSplitButton>"
+    }
+  ]
+}

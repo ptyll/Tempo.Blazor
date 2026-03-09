@@ -1,0 +1,23 @@
+{
+  "itemName": "TmCalendarView",
+  "description": "Full-size calendar view displaying a month grid with event entries, highlighted dates, and click handlers for both dates and events. Suitable for scheduling UIs.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "cssClasses": [
+    "tm-calendar-view",
+    "tm-calendar-view__day-cell",
+    "tm-calendar-view__event",
+    "tm-calendar-view__highlighted"
+  ],
+  "examples": [
+    {
+      "title": "Calendar view with events",
+      "code": "<TmCalendarView SelectedDate=\"@selectedDate\"\n                Events=\"@calendarEvents\"\n                OnDateClick=\"HandleDateClick\"\n                OnEventClick=\"HandleEventClick\" />"
+    },
+    {
+      "title": "Calendar view with highlighted dates and constraints",
+      "code": "<TmCalendarView SelectedDate=\"@selectedDate\"\n                Events=\"@events\"\n                HighlightedDates=\"@importantDates\"\n                MinDate=\"@(new DateOnly(2026, 1, 1))\"\n                MaxDate=\"@(new DateOnly(2026, 12, 31))\"\n                OnDateClick=\"HandleDateClick\" />"
+    }
+  ]
+}

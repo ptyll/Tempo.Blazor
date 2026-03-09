@@ -1,0 +1,25 @@
+{
+  "itemName": "TmImportPreview",
+  "description": "Data import preview panel with title, description, content area for displaying imported data, and confirm/cancel action buttons with loading state.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.ImportExport"
+  ],
+  "cssClasses": [
+    "tm-import-preview",
+    "tm-import-preview-header",
+    "tm-import-preview-title",
+    "tm-import-preview-description",
+    "tm-import-preview-content",
+    "tm-import-preview-actions"
+  ],
+  "examples": [
+    {
+      "title": "Import preview with data table",
+      "code": "<TmImportPreview Title=\"Preview Import\" Description=\"Review the data below before confirming.\" OnConfirm=\"@HandleConfirm\" OnCancel=\"@HandleCancel\" IsLoading=\"@isImporting\">\n    <TmDataTable Items=\"@previewRows\" />\n</TmImportPreview>"
+    },
+    {
+      "title": "Import preview with custom button text",
+      "code": "<TmImportPreview Title=\"Import Users\" ConfirmText=\"Import All\" CancelText=\"Discard\" OnConfirm=\"@ImportUsers\" OnCancel=\"@Cancel\">\n    <p>@previewRows.Count rows will be imported.</p>\n</TmImportPreview>"
+    }
+  ]
+}

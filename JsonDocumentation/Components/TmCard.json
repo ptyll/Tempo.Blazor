@@ -1,0 +1,28 @@
+{
+  "itemName": "TmCard",
+  "description": "Container card with optional header (text + icon), body content via ChildContent, footer (string or RenderFragment), and three visual variants: Default, Elevated, and Outlined.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "cssClasses": [
+    "tm-card",
+    "tm-card-default",
+    "tm-card-elevated",
+    "tm-card-outlined",
+    "tm-card-header",
+    "tm-card-header-icon",
+    "tm-card-header-title",
+    "tm-card-content",
+    "tm-card-footer"
+  ],
+  "examples": [
+    {
+      "title": "Card with header and footer",
+      "code": "<TmCard Header=\"Monthly Revenue\" HeaderIcon=\"bar-chart\" Footer=\"Updated 5 min ago\">\n    <p>$24,500</p>\n</TmCard>"
+    },
+    {
+      "title": "Elevated card with custom footer",
+      "code": "<TmCard Variant=\"CardVariant.Elevated\" Header=\"Users\">\n    <ChildContent>\n        <p>Active users: 1,234</p>\n    </ChildContent>\n    <FooterContent>\n        <a href=\"/users\">View all users</a>\n    </FooterContent>\n</TmCard>"
+    }
+  ]
+}

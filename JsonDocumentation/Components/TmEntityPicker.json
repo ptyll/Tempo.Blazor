@@ -1,0 +1,28 @@
+{
+  "itemName": "TmEntityPicker",
+  "description": "Searchable entity lookup input that calls an async search provider after a configurable debounce, displays results in a dropdown, and binds to a typed value upon selection.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-entity-picker",
+    "tm-entity-picker--disabled",
+    "tm-entity-picker__input-wrapper",
+    "tm-entity-picker__search-icon",
+    "tm-entity-picker__input",
+    "tm-entity-picker__loading",
+    "tm-entity-picker__dropdown",
+    "tm-entity-picker__option",
+    "tm-entity-picker__no-results"
+  ],
+  "examples": [
+    {
+      "title": "Entity picker for users",
+      "code": "<TmEntityPicker TItem=\"UserDto\" TValue=\"Guid\" @bind-Value=\"selectedUserId\" SearchProvider=\"@SearchUsersAsync\" ValueSelector=\"@(u => u.Id)\" DisplaySelector=\"@(u => u.FullName)\" Label=\"Assigned To\" Placeholder=\"Search users...\" />"
+    },
+    {
+      "title": "Entity picker with custom debounce and min search length",
+      "code": "<TmEntityPicker TItem=\"CompanyDto\" TValue=\"int\" @bind-Value=\"companyId\" SearchProvider=\"@SearchCompaniesAsync\" ValueSelector=\"@(c => c.Id)\" DisplaySelector=\"@(c => c.Name)\" Label=\"Company\" MinSearchLength=\"3\" Debounce=\"500\" />"
+    }
+  ]
+}

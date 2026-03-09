@@ -1,0 +1,42 @@
+{
+  "itemName": "TmNotificationBell",
+  "description": "Notification bell icon button with unread badge count and a dropdown panel showing notification items with severity icons, timestamps, and mark-as-read actions.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Notifications",
+    "@using Tempo.Blazor.Interfaces"
+  ],
+  "cssClasses": [
+    "tm-notification-bell",
+    "tm-notification-bell-button",
+    "tm-notification-badge",
+    "tm-notification-dropdown",
+    "tm-notification-header",
+    "tm-notification-title",
+    "tm-notification-mark-all-read",
+    "tm-notification-list",
+    "tm-notification-item",
+    "tm-notification-unread",
+    "tm-notification-severity",
+    "tm-notification-severity--info",
+    "tm-notification-severity--success",
+    "tm-notification-severity--warning",
+    "tm-notification-severity--error",
+    "tm-notification-item-content",
+    "tm-notification-item-title",
+    "tm-notification-item-message",
+    "tm-notification-item-time",
+    "tm-notification-mark-read",
+    "tm-notification-unread-dot",
+    "tm-notification-empty"
+  ],
+  "examples": [
+    {
+      "title": "Basic notification bell",
+      "code": "<TmNotificationBell Notifications=\"notifications\"\n                    OnNotificationClick=\"HandleNotificationClick\"\n                    OnMarkAsRead=\"MarkAsRead\"\n                    OnMarkAllRead=\"MarkAllRead\" />"
+    },
+    {
+      "title": "Bell with limited visible items",
+      "code": "<TmNotificationBell Notifications=\"notifications\" MaxVisible=\"5\" />"
+    }
+  ]
+}

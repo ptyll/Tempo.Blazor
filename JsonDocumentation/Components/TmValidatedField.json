@@ -1,0 +1,23 @@
+{
+  "itemName": "TmValidatedField",
+  "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Forms"
+  ],
+  "cssClasses": [
+    "tm-validated-field",
+    "tm-input-label",
+    "tm-input-label-required",
+    "tm-input-help-text"
+  ],
+  "examples": [
+    {
+      "title": "Validated text field inside EditForm",
+      "code": "<EditForm Model=\"@model\">\n    <DataAnnotationsValidator />\n    <TmValidatedField Label=\"Email\" @bind-Value=\"model.Email\"\n        Placeholder=\"user@example.com\" Required=\"true\"\n        HelpText=\"We will never share your email.\" LeftIcon=\"mail\" />\n</EditForm>"
+    },
+    {
+      "title": "Password validated field",
+      "code": "<TmValidatedField Label=\"Password\" @bind-Value=\"model.Password\"\n    Type=\"password\" Required=\"true\" LeftIcon=\"lock\" />"
+    }
+  ]
+}

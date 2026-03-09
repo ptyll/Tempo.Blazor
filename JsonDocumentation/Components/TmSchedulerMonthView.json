@@ -1,0 +1,28 @@
+{
+  "itemName": "TmSchedulerMonthView",
+  "description": "Month calendar grid displaying events per day cell with drag-and-drop reordering, context menu support, and a '+N more' overflow indicator. Used internally by TmScheduler.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "cssClasses": [
+    "tm-scheduler-month",
+    "tm-scheduler-month-grid",
+    "tm-scheduler-month-day-header",
+    "tm-scheduler-month-day",
+    "tm-scheduler-month-day--other",
+    "tm-scheduler-month-day--today",
+    "tm-scheduler-month-day-number",
+    "tm-scheduler-month-event",
+    "tm-scheduler-month-event--allday",
+    "tm-scheduler-month-event-time",
+    "tm-scheduler-month-event-title",
+    "tm-scheduler-month-more",
+    "tm-scheduler-month-day--drop-target"
+  ],
+  "examples": [
+    {
+      "title": "Month view with events",
+      "code": "<TmSchedulerMonthView CurrentDate=\"DateTime.Today\" Events=\"@_events\" MaxVisibleEvents=\"3\" OnSlotClick=\"@HandleSlotClick\" OnEventClick=\"@HandleEventClick\" OnEventChanged=\"@HandleEventDrop\" />"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "itemName": "TmDateTimeRangePicker",
+  "description": "Full datetime range picker combining two TmDateTimePicker instances for start and end, with cross-constraint validation ensuring end is not before start.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers",
+    "@using Tempo.Blazor.Models"
+  ],
+  "cssClasses": [
+    "tm-datetime-range-picker",
+    "tm-datetime-range-body",
+    "tm-datetime-range-section",
+    "tm-datetime-range-start",
+    "tm-datetime-range-end",
+    "tm-datetime-range-label",
+    "tm-datetime-range-sep",
+    "tm-datetime-range--invalid",
+    "tm-picker-clear",
+    "tm-field-error"
+  ],
+  "examples": [
+    {
+      "title": "Basic datetime range picker",
+      "code": "<TmDateTimeRangePicker @bind-Value=\"dateTimeRange\" Label=\"Event period\" />"
+    },
+    {
+      "title": "Datetime range with constraints and seconds",
+      "code": "<TmDateTimeRangePicker @bind-Value=\"dateTimeRange\"\n                       Label=\"Booking window\"\n                       ShowSeconds=\"true\"\n                       MinValue=\"DateTime.Now\"\n                       MaxValue=\"@DateTime.Now.AddMonths(6)\" />"
+    }
+  ]
+}

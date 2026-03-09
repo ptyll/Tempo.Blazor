@@ -1,0 +1,29 @@
+{
+  "itemName": "TmWorkflowToolbox",
+  "description": "Side panel toolbox for the workflow designer providing buttons to add initial, intermediate, and final states, delete selected elements, and zoom in/out/fit-to-view controls.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "cssClasses": [
+    "tm-wf-toolbox",
+    "tm-wf-toolbox__title",
+    "tm-wf-toolbox__section",
+    "tm-wf-toolbox__section-title",
+    "tm-wf-toolbox__btn",
+    "tm-wf-toolbox__btn--danger",
+    "tm-wf-toolbox__btn-icon",
+    "tm-wf-toolbox__btn-icon--initial",
+    "tm-wf-toolbox__btn-icon--intermediate",
+    "tm-wf-toolbox__btn-icon--final",
+    "tm-wf-toolbox__divider",
+    "tm-wf-zoom-controls",
+    "tm-wf-zoom-btn",
+    "tm-wf-zoom-level"
+  ],
+  "examples": [
+    {
+      "title": "Toolbox alongside designer canvas",
+      "code": "<TmWorkflowToolbox OnAddState=\"@HandleAddState\" OnDeleteSelected=\"@HandleDelete\" HasSelection=\"@(_selectedState is not null)\" ZoomLevel=\"@_zoomLevel\" OnZoomChanged=\"@(z => _zoomLevel = z)\" OnFitToView=\"@HandleFitToView\" />"
+    }
+  ]
+}

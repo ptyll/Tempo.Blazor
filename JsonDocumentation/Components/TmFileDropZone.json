@@ -1,0 +1,41 @@
+{
+  "itemName": "TmFileDropZone",
+  "description": "Drag-and-drop file upload zone with built-in file browser, file list display with icons and sizes, removable items, and support for multiple files and accept filters.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Files"
+  ],
+  "cssClasses": [
+    "tm-file-drop-zone",
+    "tm-file-drop-zone--disabled",
+    "tm-file-drop-zone__area",
+    "tm-file-drop-zone__area--drag-over",
+    "tm-file-drop-zone__content",
+    "tm-file-drop-zone__icon",
+    "tm-file-drop-zone__hint",
+    "tm-file-drop-zone__or",
+    "tm-file-drop-zone__browse",
+    "tm-file-drop-zone__input",
+    "tm-file-drop-zone__file-list",
+    "tm-file-drop-zone__file-item",
+    "tm-file-drop-zone__file-info",
+    "tm-file-drop-zone__file-icon",
+    "tm-file-drop-zone__file-details",
+    "tm-file-drop-zone__file-name",
+    "tm-file-drop-zone__file-size",
+    "tm-file-drop-zone__file-remove"
+  ],
+  "examples": [
+    {
+      "title": "Single file upload",
+      "code": "<TmFileDropZone OnFilesSelected=\"HandleFiles\" Accept=\".pdf,.docx\" />"
+    },
+    {
+      "title": "Multiple image upload",
+      "code": "<TmFileDropZone Multiple=\"true\" Accept=\"image/*\" MaxFileCount=\"5\"\n    OnFilesSelected=\"HandleImages\" />"
+    },
+    {
+      "title": "Custom drop zone content",
+      "code": "<TmFileDropZone Multiple=\"true\" OnFilesSelected=\"HandleFiles\">\n    <p>Drop your CSV files here</p>\n</TmFileDropZone>"
+    }
+  ]
+}

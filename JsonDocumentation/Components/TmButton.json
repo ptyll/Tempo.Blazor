@@ -1,0 +1,48 @@
+{
+  "itemName": "TmButton",
+  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Buttons"
+  ],
+  "cssClasses": [
+    "tm-btn",
+    "tm-btn-primary",
+    "tm-btn-secondary",
+    "tm-btn-ghost",
+    "tm-btn-danger",
+    "tm-btn-outline",
+    "tm-btn-link",
+    "tm-btn-default",
+    "tm-btn-xs",
+    "tm-btn-sm",
+    "tm-btn-md",
+    "tm-btn-lg",
+    "tm-btn-block"
+  ],
+  "examples": [
+    {
+      "title": "Primary button",
+      "code": "<TmButton Variant=\"ButtonVariant.Primary\" OnClick=\"HandleSave\">Save</TmButton>"
+    },
+    {
+      "title": "Danger button with icon",
+      "code": "<TmButton Variant=\"ButtonVariant.Danger\" Icon=\"trash\">Delete</TmButton>"
+    },
+    {
+      "title": "Loading state",
+      "code": "<TmButton IsLoading=\"true\" LoadingText=\"Saving...\">Save</TmButton>"
+    },
+    {
+      "title": "Outline small button",
+      "code": "<TmButton Variant=\"ButtonVariant.Outline\" Size=\"ButtonSize.Sm\">Cancel</TmButton>"
+    },
+    {
+      "title": "Full-width submit button",
+      "code": "<TmButton Type=\"ButtonType.Submit\" Block=\"true\">Submit Form</TmButton>"
+    },
+    {
+      "title": "Icon on the right side",
+      "code": "<TmButton Icon=\"arrow-right\" IconRight=\"true\">Next</TmButton>"
+    }
+  ]
+}

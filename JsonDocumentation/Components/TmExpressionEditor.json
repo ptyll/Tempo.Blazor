@@ -1,0 +1,31 @@
+{
+  "itemName": "TmExpressionEditor",
+  "description": "Template expression editor with a textarea and a side panel of clickable variables that insert {{variableName}} tokens into the expression text.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "cssClasses": [
+    "tm-expression-editor",
+    "tm-expression-editor--error",
+    "tm-expression-editor__label",
+    "tm-expression-editor__body",
+    "tm-expression-editor__textarea",
+    "tm-expression-editor__panel",
+    "tm-expression-editor__panel-title",
+    "tm-expression-editor__var",
+    "tm-expression-editor__var-name",
+    "tm-expression-editor__var-desc",
+    "tm-expression-editor__var-type",
+    "tm-expression-editor__error"
+  ],
+  "examples": [
+    {
+      "title": "Expression editor with variables",
+      "code": "<TmExpressionEditor @bind-Value=\"template\" Label=\"Email Template\" Placeholder=\"Type your expression...\" Variables=\"@variables\" />"
+    },
+    {
+      "title": "Expression editor with error",
+      "code": "<TmExpressionEditor @bind-Value=\"formula\" Label=\"Calculation\" Variables=\"@calcVars\" Error=\"Invalid expression syntax\" />"
+    }
+  ]
+}

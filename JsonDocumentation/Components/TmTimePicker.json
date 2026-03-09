@@ -1,0 +1,25 @@
+{
+  "itemName": "TmTimePicker",
+  "description": "Time picker wrapping TmTimeInput with label, placeholder, clear button, and validation styling for out-of-range values.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "cssClasses": [
+    "tm-time-picker",
+    "tm-time-picker-body",
+    "tm-time-picker--invalid",
+    "tm-picker-label",
+    "tm-picker-clear",
+    "tm-picker-placeholder"
+  ],
+  "examples": [
+    {
+      "title": "Basic time picker",
+      "code": "<TmTimePicker @bind-Value=\"selectedTime\" Label=\"Meeting time\" />"
+    },
+    {
+      "title": "Time picker with seconds and constraints",
+      "code": "<TmTimePicker @bind-Value=\"selectedTime\"\n              Label=\"Alarm\"\n              ShowSeconds=\"true\"\n              MinTime=\"@(new TimeOnly(6, 0))\"\n              MaxTime=\"@(new TimeOnly(22, 0))\" />"
+    }
+  ]
+}

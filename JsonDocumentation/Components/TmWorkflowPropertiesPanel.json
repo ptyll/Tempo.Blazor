@@ -1,0 +1,34 @@
+{
+  "itemName": "TmWorkflowPropertiesPanel",
+  "description": "Side panel for editing properties of a selected workflow state or transition. Shows name/label input, state type radio buttons, color swatch picker, and from/to display for transitions. Supports read-only mode.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "cssClasses": [
+    "tm-wf-properties",
+    "tm-wf-properties__header",
+    "tm-wf-properties__body",
+    "tm-wf-properties__field",
+    "tm-wf-properties__label",
+    "tm-wf-properties__input",
+    "tm-wf-properties__footer",
+    "tm-wf-properties__save",
+    "tm-wf-properties__from-to",
+    "tm-wf-properties__arrow",
+    "tm-wf-color-swatches",
+    "tm-wf-color-swatch",
+    "tm-wf-color-swatch--selected",
+    "tm-wf-type-group",
+    "tm-wf-type-option"
+  ],
+  "examples": [
+    {
+      "title": "Properties panel for selected state",
+      "code": "<TmWorkflowPropertiesPanel SelectedState=\"@_selectedState\" States=\"@_workflow.States\" OnStateChanged=\"@HandleStateChanged\" />"
+    },
+    {
+      "title": "Read-only properties panel for transition",
+      "code": "<TmWorkflowPropertiesPanel SelectedTransition=\"@_selectedTransition\" States=\"@_workflow.States\" ReadOnly=\"true\" />"
+    }
+  ]
+}

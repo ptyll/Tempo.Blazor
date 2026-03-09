@@ -1,0 +1,56 @@
+{
+  "itemName": "TmMultiSelect",
+  "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs",
+    "@using Tempo.Blazor.Models"
+  ],
+  "cssClasses": [
+    "tm-multiselect",
+    "tm-multiselect--open",
+    "tm-multiselect--error",
+    "tm-multiselect--disabled",
+    "tm-multiselect__selections",
+    "tm-multiselect__chip",
+    "tm-multiselect__chip-remove",
+    "tm-multiselect__placeholder",
+    "tm-multiselect__delimiter-text",
+    "tm-multiselect__count",
+    "tm-multiselect__actions",
+    "tm-multiselect__clear",
+    "tm-multiselect__arrow",
+    "tm-multiselect__popup",
+    "tm-multiselect__filter",
+    "tm-multiselect__filter-input",
+    "tm-multiselect__select-all",
+    "tm-multiselect__select-all-btn",
+    "tm-multiselect__options",
+    "tm-multiselect__option",
+    "tm-multiselect__option--selected",
+    "tm-multiselect__option--focused",
+    "tm-multiselect__option--disabled",
+    "tm-multiselect__option-checkbox",
+    "tm-multiselect__option-checkbox--checked",
+    "tm-multiselect__option-text",
+    "tm-multiselect__group-header",
+    "tm-multiselect__header",
+    "tm-multiselect__footer",
+    "tm-multiselect__loading",
+    "tm-multiselect__empty",
+    "tm-multiselect__error"
+  ],
+  "examples": [
+    {
+      "title": "Basic multi-select with chips",
+      "code": "<TmMultiSelect TItem=\"TagDto\" TValue=\"int\" @bind-Values=\"selectedTagIds\" Items=\"@tags\" DisplayField=\"@(t => t.Name)\" ValueField=\"@(t => t.Id)\" Label=\"Tags\" Placeholder=\"Select tags...\" />"
+    },
+    {
+      "title": "Checkbox mode with select all",
+      "code": "<TmMultiSelect TItem=\"UserDto\" TValue=\"Guid\" @bind-Values=\"selectedUserIds\" Items=\"@users\" DisplayField=\"@(u => u.FullName)\" ValueField=\"@(u => u.Id)\" Mode=\"MultiSelectMode.CheckBox\" ShowSelectAll=\"true\" MaxSelectionCount=\"5\" Label=\"Assign Users\" />"
+    },
+    {
+      "title": "Server-side data provider with grouping",
+      "code": "<TmMultiSelect TItem=\"ProductDto\" TValue=\"int\" @bind-Values=\"productIds\" DataProvider=\"@productProvider\" DisplayField=\"@(p => p.Name)\" ValueField=\"@(p => p.Id)\" GroupField=\"@(p => p.Category)\" AllowFiltering=\"true\" Label=\"Products\" />"
+    }
+  ]
+}

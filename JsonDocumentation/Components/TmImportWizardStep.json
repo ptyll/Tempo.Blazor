@@ -1,0 +1,14 @@
+{
+  "itemName": "TmImportWizardStep",
+  "description": "Individual step definition for TmImportWizard. Only renders its content when the step is active. Provides title, description, and icon metadata for the step indicator.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.ImportExport"
+  ],
+  "cssClasses": [],
+  "examples": [
+    {
+      "title": "Wizard step with description",
+      "code": "<TmImportWizardStep Title=\"Configure\" Description=\"Set import options\" Icon=\"settings\">\n    <TmSelect TValue=\"string\" @bind-Value=\"delimiter\" Label=\"Delimiter\" Options=\"@delimiterOptions\" />\n</TmImportWizardStep>"
+    }
+  ]
+}
