@@ -23,7 +23,7 @@ public static class EditContextFluentValidationExtensions
     {
         var messageStore = new ValidationMessageStore(editContext);
 
-        editContext.OnValidationRequested += (sender, _) =>
+        editContext.OnValidationRequested += async (sender, _) =>
         {
             var ctx = (EditContext)sender!;
             var validator = ResolveValidator(ctx.Model.GetType(), serviceProvider);
@@ -31,7 +31,7 @@ public static class EditContextFluentValidationExtensions
 
             messageStore.Clear();
             var context = new ValidationContext<object>(ctx.Model);
-            var result = validator.Validate(context);
+            var result = await validator.ValidateAsync(context);
 
             foreach (var error in result.Errors)
             {
@@ -42,7 +42,7 @@ public static class EditContextFluentValidationExtensions
             ctx.NotifyValidationStateChanged();
         };
 
-        editContext.OnFieldChanged += (sender, args) =>
+        editContext.OnFieldChanged += async (sender, args) =>
         {
             var ctx = (EditContext)sender!;
             var validator = ResolveValidator(ctx.Model.GetType(), serviceProvider);
@@ -53,7 +53,7 @@ public static class EditContextFluentValidationExtensions
                 ctx.Model,
                 new PropertyChain(),
                 new MemberNameValidatorSelector(new[] { args.FieldIdentifier.FieldName }));
-            var result = validator.Validate(context);
+            var result = await validator.ValidateAsync(context);
 
             foreach (var error in result.Errors)
             {

@@ -31,17 +31,17 @@ public class FluentValidationValidator : ComponentBase, IDisposable
         CurrentEditContext.OnFieldChanged += OnFieldChanged;
     }
 
-    private void OnValidationRequested(object? sender, ValidationRequestedEventArgs e)
+    private async void OnValidationRequested(object? sender, ValidationRequestedEventArgs e)
     {
-        ValidateModel();
+        await ValidateModelAsync();
     }
 
-    private void OnFieldChanged(object? sender, FieldChangedEventArgs e)
+    private async void OnFieldChanged(object? sender, FieldChangedEventArgs e)
     {
-        ValidateField(e.FieldIdentifier);
+        await ValidateFieldAsync(e.FieldIdentifier);
     }
 
-    private void ValidateModel()
+    private async Task ValidateModelAsync()
     {
         if (CurrentEditContext is null) return;
 
@@ -51,7 +51,7 @@ public class FluentValidationValidator : ComponentBase, IDisposable
         _messageStore!.Clear();
 
         var context = new ValidationContext<object>(CurrentEditContext.Model);
-        var result = validator.Validate(context);
+        var result = await validator.ValidateAsync(context);
 
         foreach (var error in result.Errors)
         {
@@ -62,7 +62,7 @@ public class FluentValidationValidator : ComponentBase, IDisposable
         CurrentEditContext.NotifyValidationStateChanged();
     }
 
-    private void ValidateField(FieldIdentifier fieldIdentifier)
+    private async Task ValidateFieldAsync(FieldIdentifier fieldIdentifier)
     {
         if (CurrentEditContext is null) return;
 
@@ -75,7 +75,7 @@ public class FluentValidationValidator : ComponentBase, IDisposable
             CurrentEditContext.Model,
             new PropertyChain(),
             new MemberNameValidatorSelector(new[] { fieldIdentifier.FieldName }));
-        var result = validator.Validate(context);
+        var result = await validator.ValidateAsync(context);
 
         foreach (var error in result.Errors)
         {
