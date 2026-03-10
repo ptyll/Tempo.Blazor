@@ -1,4 +1,4 @@
-{
+﻿{
   "title": "Getting Started with Tempo.Blazor",
   "overview": "Tempo.Blazor is a comprehensive Blazor WebAssembly component library providing 100+ UI components for building modern web applications. It includes inputs, forms, data tables, pickers, charts, layout, navigation, feedback, workflow designer, scheduler, and more. All components use the Tm prefix (e.g., TmButton, TmDataTable).",
   "targetFramework": ".NET 10.0",
@@ -31,7 +31,7 @@
     },
     "indexHtml": {
       "description": "Add CSS and JS references to wwwroot/index.html",
-      "code": "<!DOCTYPE html>\n<html>\n<head>\n    <!-- Required: Tempo.Blazor CSS (includes all component styles + design tokens) -->\n    <link href=\"_content/Tempo.Blazor/css/tempo-blazor.css\" rel=\"stylesheet\" />\n</head>\n<body>\n    <div id=\"app\">Loading...</div>\n\n    <!-- Required only if using TmRichEditorFull or TmRichEditorSimple -->\n    <script src=\"_content/Tempo.Blazor/js/richEditor.js\"></script>\n\n    <!-- Required only if using TmDashboard -->\n    <script src=\"_content/Tempo.Blazor/js/dashboard.js\"></script>\n\n    <!-- Required only if using TmWorkflowDesignerCanvas -->\n    <script src=\"_content/Tempo.Blazor/js/workflow-designer.js\"></script>\n\n    <!-- Required only if using TmScheduler -->\n    <script src=\"_content/Tempo.Blazor/js/scheduler.js\"></script>\n\n    <script src=\"_framework/blazor.webassembly.js\"></script>\n</body>\n</html>"
+      "code": "<!DOCTYPE html>\n<html>\n<head>\n    <!-- Required: Tempo.Blazor CSS (includes all component styles + design tokens) -->\n    <link href=\"_content/Tempo.Blazor/css/tempo-blazor.bundled.css\" rel=\"stylesheet\" />\n</head>\n<body>\n    <div id=\"app\">Loading...</div>\n\n    <!-- Required only if using TmRichEditorFull or TmRichEditorSimple -->\n    <script src=\"_content/Tempo.Blazor/js/richEditor.js\"></script>\n\n    <!-- Required only if using TmDashboard -->\n    <script src=\"_content/Tempo.Blazor/js/dashboard.js\"></script>\n\n    <!-- Required only if using TmWorkflowDesignerCanvas -->\n    <script src=\"_content/Tempo.Blazor/js/workflow-designer.js\"></script>\n\n    <!-- Required only if using TmScheduler -->\n    <script src=\"_content/Tempo.Blazor/js/scheduler.js\"></script>\n\n    <script src=\"_framework/blazor.webassembly.js\"></script>\n</body>\n</html>"
     },
     "importsRazor": {
       "description": "Add component namespaces to _Imports.razor for convenient usage without per-file @using directives.",
@@ -39,8 +39,8 @@
     }
   },
   "cssFramework": {
-    "description": "Tempo.Blazor uses its own standalone CSS framework based on CSS custom properties (design tokens). No external CSS framework (like Bootstrap or Tailwind) is required. The library ships a single tempo-blazor.css file that includes all component styles, design tokens, base resets, and animations.",
-    "entryFile": "_content/Tempo.Blazor/css/tempo-blazor.css",
+    "description": "Tempo.Blazor uses its own standalone CSS framework based on CSS custom properties (design tokens). No external CSS framework (like Bootstrap or Tailwind) is required. The library ships a single tempo-blazor.bundled.css file that includes all component styles, design tokens, base resets, and animations.",
+    "entryFile": "_content/Tempo.Blazor/css/tempo-blazor.bundled.css",
     "architecture": "The CSS is organized as: tokens (design variables) → base resets → component styles. Each component uses BEM-like class naming with the tm- prefix (e.g., tm-btn, tm-data-table, tm-modal__header).",
     "darkMode": {
       "description": "Dark mode is supported via CSS custom property overrides. Activate by adding data-theme=\"dark\" attribute or .tm-dark class to a parent element (typically <html> or <body>).",

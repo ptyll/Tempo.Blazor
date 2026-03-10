@@ -1,9 +1,18 @@
 {
   "itemName": "TmNotificationBell",
-  "description": "Notification bell icon button with unread badge count and a dropdown panel showing notification items with severity icons, timestamps, and mark-as-read actions.",
+  "description": "Notification bell icon button with unread badge count and a dropdown panel showing notification items with severity icons, relative timestamps, and mark-as-read actions. Supports limiting visible items via MaxVisible parameter.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Notifications",
     "@using Tempo.Blazor.Interfaces"
+  ],
+  "parameters": [
+    { "name": "Notifications", "type": "IReadOnlyList<INotificationItem>", "description": "Notification items to display." },
+    { "name": "OnNotificationClick", "type": "EventCallback<INotificationItem>", "description": "Fires when a notification item is clicked." },
+    { "name": "OnMarkAsRead", "type": "EventCallback<string>", "description": "Fires when mark-as-read is clicked for a single notification. Argument is the item Id." },
+    { "name": "OnMarkAllRead", "type": "EventCallback", "description": "Fires when the Mark all as read button is clicked." },
+    { "name": "MaxVisible", "type": "int", "default": "10", "description": "Maximum number of notifications shown in the dropdown." },
+    { "name": "Class", "type": "string?", "description": "Additional CSS class." },
+    { "name": "Disabled", "type": "bool", "default": "false", "description": "When true the bell button is disabled." }
   ],
   "cssClasses": [
     "tm-notification-bell",
@@ -31,12 +40,20 @@
   ],
   "examples": [
     {
-      "title": "Basic notification bell",
+      "title": "Basic notification bell with all callbacks",
       "code": "<TmNotificationBell Notifications=\"notifications\"\n                    OnNotificationClick=\"HandleNotificationClick\"\n                    OnMarkAsRead=\"MarkAsRead\"\n                    OnMarkAllRead=\"MarkAllRead\" />"
     },
     {
       "title": "Bell with limited visible items",
       "code": "<TmNotificationBell Notifications=\"notifications\" MaxVisible=\"5\" />"
+    },
+    {
+      "title": "Disabled bell",
+      "code": "<TmNotificationBell Notifications=\"notifications\" Disabled=\"true\" />"
+    },
+    {
+      "title": "Full usage with @code block",
+      "code": "<TmNotificationBell Notifications=\"notifications\"\n                    OnNotificationClick=\"HandleClick\"\n                    OnMarkAsRead=\"HandleMarkAsRead\"\n                    OnMarkAllRead=\"HandleMarkAllRead\"\n                    MaxVisible=\"8\" />\n\n@code {\n    private List<INotificationItem> notifications = new();\n\n    private void HandleClick(INotificationItem item)\n    {\n        // Navigate or show detail\n    }\n\n    private void HandleMarkAsRead(string id)\n    {\n        var n = notifications.FirstOrDefault(x => x.Id == id);\n        if (n is not null) n.IsRead = true;\n    }\n\n    private void HandleMarkAllRead()\n    {\n        foreach (var n in notifications) n.IsRead = true;\n    }\n}"
     }
   ]
 }

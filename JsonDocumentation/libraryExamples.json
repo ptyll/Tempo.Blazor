@@ -32,9 +32,10 @@
     {
       "title": "CSS Design Tokens - Dark Mode Toggle",
       "category": "CSS Design Tokens",
-      "description": "Implement dark mode toggle using ThemeService and the built-in dark theme tokens.",
-      "code": "@inject ThemeService ThemeService\n\n<TmToggle @bind-Value=\"_isDark\" Label=\"Dark Mode\" />\n\n@code {\n    private bool _isDark;\n\n    protected override async Task OnInitializedAsync()\n    {\n        _isDark = await ThemeService.GetCurrentThemeAsync() == \"dark\";\n    }\n\n    private async Task ToggleDarkMode(bool value)\n    {\n        _isDark = value;\n        await ThemeService.SetThemeAsync(value ? \"dark\" : \"light\");\n    }\n}",
-      "setupNote": "The dark theme is defined in tokens-dark.css and activates when [data-theme=\"dark\"] is set on <html>. ThemeService manages this attribute via JS interop. Register: builder.Services.AddScoped<ThemeService>();"
+      "description": "Implement dark mode toggle using ThemeService and the built-in dark theme tokens. ThemeService is a simple in-memory service with IsDark, ThemeName, Toggle(), and an OnChanged event.",
+      "code": "@inject ThemeService ThemeService\n@implements IDisposable\n\n<div data-theme=\"@ThemeService.ThemeName\">\n    <TmToggle Value=\"@ThemeService.IsDark\" ValueChanged=\"_ => ThemeService.Toggle()\" Label=\"Dark Mode\" />\n</div>\n\n@code {\n    protected override void OnInitialized()\n    {\n        ThemeService.OnChanged += StateHasChanged;\n    }\n\n    public void Dispose()\n    {\n        ThemeService.OnChanged -= StateHasChanged;\n    }\n}",
+      "setupNote": "The dark theme is defined in tokens-dark.css and activates when [data-theme=\"dark\"] or .tm-dark class is set on a parent element. ThemeService has: IsDark (bool), ThemeName (\"dark\"/\"light\"), Toggle(), OnChanged (event). Register in Program.cs: builder.Services.AddScoped<ThemeService>(); For app-wide dark mode, set data-theme on <html> or your root layout element.",
+      "themeServiceApi": "public class ThemeService\n{\n    public bool IsDark { get; }\n    public string ThemeName { get; }  // \"dark\" or \"light\"\n    public event Action? OnChanged;\n    public void Toggle();  // switches IsDark and fires OnChanged\n}"
     },
     {
       "title": "CSS Design Tokens - Component-Scoped Overrides",

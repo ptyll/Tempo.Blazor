@@ -32,7 +32,7 @@
       },
       "indexHtml": {
         "description": "Add CSS and JS references to wwwroot/index.html",
-        "code": "<!DOCTYPE html>\n<html>\n<head>\n    <!-- Required: Tempo.Blazor CSS (includes all component styles + design tokens) -->\n    <link href=\"_content/Tempo.Blazor/css/tempo-blazor.css\" rel=\"stylesheet\" />\n</head>\n<body>\n    <div id=\"app\">Loading...</div>\n\n    <!-- Required only if using TmRichEditorFull or TmRichEditorSimple -->\n    <script src=\"_content/Tempo.Blazor/js/richEditor.js\"></script>\n\n    <!-- Required only if using TmDashboard -->\n    <script src=\"_content/Tempo.Blazor/js/dashboard.js\"></script>\n\n    <!-- Required only if using TmWorkflowDesignerCanvas -->\n    <script src=\"_content/Tempo.Blazor/js/workflow-designer.js\"></script>\n\n    <!-- Required only if using TmScheduler -->\n    <script src=\"_content/Tempo.Blazor/js/scheduler.js\"></script>\n\n    <script src=\"_framework/blazor.webassembly.js\"></script>\n</body>\n</html>"
+        "code": "<!DOCTYPE html>\n<html>\n<head>\n    <!-- Required: Tempo.Blazor CSS (includes all component styles + design tokens) -->\n    <link href=\"_content/Tempo.Blazor/css/tempo-blazor.bundled.css\" rel=\"stylesheet\" />\n</head>\n<body>\n    <div id=\"app\">Loading...</div>\n\n    <!-- Required only if using TmRichEditorFull or TmRichEditorSimple -->\n    <script src=\"_content/Tempo.Blazor/js/richEditor.js\"></script>\n\n    <!-- Required only if using TmDashboard -->\n    <script src=\"_content/Tempo.Blazor/js/dashboard.js\"></script>\n\n    <!-- Required only if using TmWorkflowDesignerCanvas -->\n    <script src=\"_content/Tempo.Blazor/js/workflow-designer.js\"></script>\n\n    <!-- Required only if using TmScheduler -->\n    <script src=\"_content/Tempo.Blazor/js/scheduler.js\"></script>\n\n    <script src=\"_framework/blazor.webassembly.js\"></script>\n</body>\n</html>"
       },
       "importsRazor": {
         "description": "Add component namespaces to _Imports.razor for convenient usage without per-file @using directives.",
@@ -40,8 +40,8 @@
       }
     },
     "cssFramework": {
-      "description": "Tempo.Blazor uses its own standalone CSS framework based on CSS custom properties (design tokens). No external CSS framework (like Bootstrap or Tailwind) is required. The library ships a single tempo-blazor.css file that includes all component styles, design tokens, base resets, and animations.",
-      "entryFile": "_content/Tempo.Blazor/css/tempo-blazor.css",
+      "description": "Tempo.Blazor uses its own standalone CSS framework based on CSS custom properties (design tokens). No external CSS framework (like Bootstrap or Tailwind) is required. The library ships a single tempo-blazor.bundled.css file that includes all component styles, design tokens, base resets, and animations.",
+      "entryFile": "_content/Tempo.Blazor/css/tempo-blazor.bundled.css",
       "architecture": "The CSS is organized as: tokens (design variables) → base resets → component styles. Each component uses BEM-like class naming with the tm- prefix (e.g., tm-btn, tm-data-table, tm-modal__header).",
       "darkMode": {
         "description": "Dark mode is supported via CSS custom property overrides. Activate by adding data-theme=\"dark\" attribute or .tm-dark class to a parent element (typically <html> or <body>).",
@@ -2307,10 +2307,49 @@
     },
     {
       "itemName": "TmNotificationBell",
-      "description": "Notification bell icon button with unread badge count and a dropdown panel showing notification items with severity icons, timestamps, and mark-as-read actions.",
+      "description": "Notification bell icon button with unread badge count and a dropdown panel showing notification items with severity icons, relative timestamps, and mark-as-read actions. Supports limiting visible items via MaxVisible parameter.",
       "requiredImports": [
         "@using Tempo.Blazor.Components.Notifications",
         "@using Tempo.Blazor.Interfaces"
+      ],
+      "parameters": [
+        {
+          "name": "Notifications",
+          "type": "IReadOnlyList<INotificationItem>",
+          "description": "Notification items to display."
+        },
+        {
+          "name": "OnNotificationClick",
+          "type": "EventCallback<INotificationItem>",
+          "description": "Fires when a notification item is clicked."
+        },
+        {
+          "name": "OnMarkAsRead",
+          "type": "EventCallback<string>",
+          "description": "Fires when mark-as-read is clicked for a single notification. Argument is the item Id."
+        },
+        {
+          "name": "OnMarkAllRead",
+          "type": "EventCallback",
+          "description": "Fires when the Mark all as read button is clicked."
+        },
+        {
+          "name": "MaxVisible",
+          "type": "int",
+          "default": "10",
+          "description": "Maximum number of notifications shown in the dropdown."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "description": "Additional CSS class."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "default": "false",
+          "description": "When true the bell button is disabled."
+        }
       ],
       "cssClasses": [
         "tm-notification-bell",
@@ -2338,12 +2377,20 @@
       ],
       "examples": [
         {
-          "title": "Basic notification bell",
+          "title": "Basic notification bell with all callbacks",
           "code": "<TmNotificationBell Notifications=\"notifications\"\n                    OnNotificationClick=\"HandleNotificationClick\"\n                    OnMarkAsRead=\"MarkAsRead\"\n                    OnMarkAllRead=\"MarkAllRead\" />"
         },
         {
           "title": "Bell with limited visible items",
           "code": "<TmNotificationBell Notifications=\"notifications\" MaxVisible=\"5\" />"
+        },
+        {
+          "title": "Disabled bell",
+          "code": "<TmNotificationBell Notifications=\"notifications\" Disabled=\"true\" />"
+        },
+        {
+          "title": "Full usage with @code block",
+          "code": "<TmNotificationBell Notifications=\"notifications\"\n                    OnNotificationClick=\"HandleClick\"\n                    OnMarkAsRead=\"HandleMarkAsRead\"\n                    OnMarkAllRead=\"HandleMarkAllRead\"\n                    MaxVisible=\"8\" />\n\n@code {\n    private List<INotificationItem> notifications = new();\n\n    private void HandleClick(INotificationItem item)\n    {\n        // Navigate or show detail\n    }\n\n    private void HandleMarkAsRead(string id)\n    {\n        var n = notifications.FirstOrDefault(x => x.Id == id);\n        if (n is not null) n.IsRead = true;\n    }\n\n    private void HandleMarkAllRead()\n    {\n        foreach (var n in notifications) n.IsRead = true;\n    }\n}"
         }
       ]
     },
@@ -3936,9 +3983,10 @@
     {
       "title": "CSS Design Tokens - Dark Mode Toggle",
       "category": "CSS Design Tokens",
-      "description": "Implement dark mode toggle using ThemeService and the built-in dark theme tokens.",
-      "code": "@inject ThemeService ThemeService\n\n<TmToggle @bind-Value=\"_isDark\" Label=\"Dark Mode\" />\n\n@code {\n    private bool _isDark;\n\n    protected override async Task OnInitializedAsync()\n    {\n        _isDark = await ThemeService.GetCurrentThemeAsync() == \"dark\";\n    }\n\n    private async Task ToggleDarkMode(bool value)\n    {\n        _isDark = value;\n        await ThemeService.SetThemeAsync(value ? \"dark\" : \"light\");\n    }\n}",
-      "setupNote": "The dark theme is defined in tokens-dark.css and activates when [data-theme=\"dark\"] is set on <html>. ThemeService manages this attribute via JS interop. Register: builder.Services.AddScoped<ThemeService>();"
+      "description": "Implement dark mode toggle using ThemeService and the built-in dark theme tokens. ThemeService is a simple in-memory service with IsDark, ThemeName, Toggle(), and an OnChanged event.",
+      "code": "@inject ThemeService ThemeService\n@implements IDisposable\n\n<div data-theme=\"@ThemeService.ThemeName\">\n    <TmToggle Value=\"@ThemeService.IsDark\" ValueChanged=\"_ => ThemeService.Toggle()\" Label=\"Dark Mode\" />\n</div>\n\n@code {\n    protected override void OnInitialized()\n    {\n        ThemeService.OnChanged += StateHasChanged;\n    }\n\n    public void Dispose()\n    {\n        ThemeService.OnChanged -= StateHasChanged;\n    }\n}",
+      "setupNote": "The dark theme is defined in tokens-dark.css and activates when [data-theme=\"dark\"] or .tm-dark class is set on a parent element. ThemeService has: IsDark (bool), ThemeName (\"dark\"/\"light\"), Toggle(), OnChanged (event). Register in Program.cs: builder.Services.AddScoped<ThemeService>(); For app-wide dark mode, set data-theme on <html> or your root layout element.",
+      "themeServiceApi": "public class ThemeService\n{\n    public bool IsDark { get; }\n    public string ThemeName { get; }  // \"dark\" or \"light\"\n    public event Action? OnChanged;\n    public void Toggle();  // switches IsDark and fires OnChanged\n}"
     },
     {
       "title": "CSS Design Tokens - Component-Scoped Overrides",
