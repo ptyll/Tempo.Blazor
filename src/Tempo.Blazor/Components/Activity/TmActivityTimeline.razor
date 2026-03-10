@@ -5,7 +5,7 @@
 @using Tempo.Blazor.Interfaces
 
 <div class="tm-timeline">
-    @if (_isLoading)
+    @if (IsLoading)
     {
         <div class="tm-timeline-loading">
             <TmSpinner Size="SpinnerSize.Sm" />
@@ -61,8 +61,10 @@
     /// <summary>Timeline entries to display. Sorted newest-first.</summary>
     [Parameter] public IEnumerable<ITimelineEntry> Entries { get; set; } = [];
 
+    /// <summary>Whether the timeline is loading data.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+
     private IReadOnlyList<ITimelineEntry> _sorted = [];
-    private bool _isLoading;
 
     protected override void OnParametersSet()
     {

@@ -192,7 +192,6 @@
   <data name="TmRichEditor_Underline" xml:space="preserve"><value>Podtržené (Ctrl+U)</value></data>
   <data name="TmRichEditor_Link" xml:space="preserve"><value>Vložit odkaz</value></data>
   <data name="TmRichEditor_BulletList" xml:space="preserve"><value>Odrážkový seznam</value></data>
-  <data name="TmRichEditor_OrderedList" xml:space="preserve"><value>Číslovaný seznam</value></data>
   <data name="TmRichEditor_LinkUrl" xml:space="preserve"><value>URL adresa</value></data>
   <data name="TmRichEditor_LinkUrlPlaceholder" xml:space="preserve"><value>https://...</value></data>
   <data name="TmRichEditor_LinkInvalid" xml:space="preserve"><value>Zadejte platnou URL adresu</value></data>
@@ -255,6 +254,7 @@
   <data name="TmRichEditor_FindReplaceDialog_Replaced" xml:space="preserve"><value>{0} výskyt(ů) nahrazeno</value></data>
   <data name="TmRichEditor_Token" xml:space="preserve"><value>Vložit proměnnou</value></data>
   <data name="TmRichEditor_TokenEmpty" xml:space="preserve"><value>Žádné proměnné nenalezeny</value></data>
+  <data name="TmRichEditor_TokenLoading" xml:space="preserve"><value>Načítání...</value></data>
   <data name="TmRichEditor_TokenCreateNew" xml:space="preserve"><value>Vytvořit novou proměnnou...</value></data>
   <data name="TmRichEditor_TokenSearch" xml:space="preserve"><value>Hledat proměnné...</value></data>
 

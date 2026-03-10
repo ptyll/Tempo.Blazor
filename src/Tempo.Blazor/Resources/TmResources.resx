@@ -192,7 +192,6 @@
   <data name="TmRichEditor_Underline" xml:space="preserve"><value>Underline (Ctrl+U)</value></data>
   <data name="TmRichEditor_Link" xml:space="preserve"><value>Insert link</value></data>
   <data name="TmRichEditor_BulletList" xml:space="preserve"><value>Bullet list</value></data>
-  <data name="TmRichEditor_OrderedList" xml:space="preserve"><value>Ordered list</value></data>
   <data name="TmRichEditor_LinkUrl" xml:space="preserve"><value>URL</value></data>
   <data name="TmRichEditor_LinkUrlPlaceholder" xml:space="preserve"><value>https://...</value></data>
   <data name="TmRichEditor_LinkInvalid" xml:space="preserve"><value>Please enter a valid URL</value></data>
@@ -255,6 +254,7 @@
   <data name="TmRichEditor_FindReplaceDialog_Replaced" xml:space="preserve"><value>{0} occurrence(s) replaced</value></data>
   <data name="TmRichEditor_Token" xml:space="preserve"><value>Insert variable</value></data>
   <data name="TmRichEditor_TokenEmpty" xml:space="preserve"><value>No variables found</value></data>
+  <data name="TmRichEditor_TokenLoading" xml:space="preserve"><value>Loading...</value></data>
   <data name="TmRichEditor_TokenCreateNew" xml:space="preserve"><value>Create new variable...</value></data>
   <data name="TmRichEditor_TokenSearch" xml:space="preserve"><value>Search variables...</value></data>
 

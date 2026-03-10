@@ -67,6 +67,7 @@
             Tokens="@_availableTokens"
             Query="@_tokenQuery"
             HighlightedIndex="@_tokenHighlightedIndex"
+            IsLoading="@_isLoadingTokens"
             SupportsCreation="@(TokenProvider?.SupportsCreation ?? false)"
             OnTokenSelected="@OnTokenSelected"
             OnCreateRequested="@OnTokenCreateFromDropdown"

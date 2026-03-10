@@ -3,7 +3,11 @@
 @if (IsVisible)
 {
     <div class="tm-rte-token-dropdown">
-        @if (FilteredTokens.Any())
+        @if (IsLoading)
+        {
+            <div class="tm-rte-token-loading">@Loc["TmRichEditor_TokenLoading"]</div>
+        }
+        else if (FilteredTokens.Any())
         {
             @if (HasCategories)
             {
@@ -108,6 +112,11 @@
     /// Callback when "Create new" is requested. Parameter is the current query text.
     /// </summary>
     [Parameter] public EventCallback<string?> OnCreateRequested { get; set; }
+
+    /// <summary>
+    /// Whether tokens are currently being loaded.
+    /// </summary>
+    [Parameter] public bool IsLoading { get; set; }
 
     /// <summary>
     /// Whether the provider supports creating new tokens.

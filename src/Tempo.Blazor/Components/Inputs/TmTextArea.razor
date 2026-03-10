@@ -14,8 +14,8 @@
               autocomplete="@AutoComplete"
               class="@InputCssClass"
               @attributes="AdditionalAttributes"
-              @onchange="@(Immediate ? null : HandleChangeAsync)"
-              @oninput="@(Immediate ? HandleChangeAsync : null)">@Value</textarea>
+              @onchange="HandleOnChange"
+              @oninput="HandleOnInput">@Value</textarea>
     @if (!string.IsNullOrEmpty(Error))
     {
         <div data-testid="error-message" class="tm-input-error-message">@Error</div>
@@ -68,6 +68,15 @@
     private string InputCssClass =>
         $"tm-input tm-textarea{(string.IsNullOrEmpty(Error) ? "" : " tm-input-error")}{(Disabled ? " tm-input-disabled" : "")}";
 
-    private async Task HandleChangeAsync(ChangeEventArgs e)
-        => await ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    private async Task HandleOnChange(ChangeEventArgs e)
+    {
+        if (!Immediate)
+            await ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+    private async Task HandleOnInput(ChangeEventArgs e)
+    {
+        if (Immediate)
+            await ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
 }

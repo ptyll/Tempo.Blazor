@@ -96,7 +96,13 @@
     }
 
     @* ── Content ─────────────────────────────────────────────── *@
-    @if (!HasItems)
+    @if (_isLoading)
+    {
+        <div class="tm-mvl-loading">
+            <TmSpinner Size="SpinnerSize.Md" />
+        </div>
+    }
+    else if (!HasItems)
     {
         <TmEmptyState Title="@(!string.IsNullOrEmpty(EmptyTitle) ? EmptyTitle : Loc["Tm_NoResults"])" />
     }
