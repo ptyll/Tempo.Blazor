@@ -1,6 +1,6 @@
 using Bunit;
 using FluentAssertions;
-using Tempo.Blazor.Components.Feedback;
+using Tempo.Blazor.Components.Notifications;
 using Tempo.Blazor.Interfaces;
 
 namespace Tempo.Blazor.Tests.Localization;
@@ -22,7 +22,7 @@ public class TmNotificationBellLocalizationTests : LocalizationTestBase
         UseCzechLocalization();
 
         var cut = RenderComponent<TmNotificationBell>(p => p
-            .Add(c => c.Items, UnreadItems(0)));
+            .Add(c => c.Notifications, UnreadItems(0)));
 
         cut.Find(".tm-notification-bell-button").GetAttribute("aria-label")
             .Should().Be("Oznámení");
@@ -32,7 +32,7 @@ public class TmNotificationBellLocalizationTests : LocalizationTestBase
     public void TmNotificationBell_AriaLabel_English_ShowsEnglishText()
     {
         var cut = RenderComponent<TmNotificationBell>(p => p
-            .Add(c => c.Items, UnreadItems(0)));
+            .Add(c => c.Notifications, UnreadItems(0)));
 
         cut.Find(".tm-notification-bell-button").GetAttribute("aria-label")
             .Should().Be("Notifications");
@@ -44,7 +44,7 @@ public class TmNotificationBellLocalizationTests : LocalizationTestBase
         UseCzechLocalization();
 
         var cut = RenderComponent<TmNotificationBell>(p => p
-            .Add(c => c.Items, UnreadItems(1)));
+            .Add(c => c.Notifications, UnreadItems(1)));
 
         cut.Find(".tm-notification-bell-button").Click();
 
@@ -58,7 +58,7 @@ public class TmNotificationBellLocalizationTests : LocalizationTestBase
         UseCzechLocalization();
 
         var cut = RenderComponent<TmNotificationBell>(p => p
-            .Add(c => c.Items, UnreadItems(2)));
+            .Add(c => c.Notifications, UnreadItems(2)));
 
         cut.Find(".tm-notification-bell-button").Click();
 
@@ -72,7 +72,7 @@ public class TmNotificationBellLocalizationTests : LocalizationTestBase
         UseCzechLocalization();
 
         var cut = RenderComponent<TmNotificationBell>(p => p
-            .Add(c => c.Items, UnreadItems(0)));
+            .Add(c => c.Notifications, UnreadItems(0)));
 
         cut.Find(".tm-notification-bell-button").Click();
 
@@ -84,7 +84,7 @@ public class TmNotificationBellLocalizationTests : LocalizationTestBase
     public void TmNotificationBell_NoNotifications_English_ShowsEnglishText()
     {
         var cut = RenderComponent<TmNotificationBell>(p => p
-            .Add(c => c.Items, UnreadItems(0)));
+            .Add(c => c.Notifications, UnreadItems(0)));
 
         cut.Find(".tm-notification-bell-button").Click();
 
