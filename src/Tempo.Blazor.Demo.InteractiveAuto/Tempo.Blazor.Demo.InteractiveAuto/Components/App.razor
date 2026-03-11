@@ -65,11 +65,11 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["Tempo.Blazor.Demo.InteractiveAuto.styles.css"]" />
     <ImportMap />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveAuto" />
 </head>
 
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased">
-    <Routes />
+    <Routes @rendermode="InteractiveAuto" />
     <ReconnectModal />
     <script src="_content/Tempo.Blazor/js/richEditor.js"></script>
     <script src="_content/Tempo.Blazor/js/dashboard.js"></script>
