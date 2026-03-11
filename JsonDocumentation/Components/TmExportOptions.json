@@ -1,9 +1,43 @@
 {
   "itemName": "TmExportOptions",
+  "kind": "Component",
+  "category": "Import / Export",
   "description": "Export configuration panel with entity type checkboxes, format selector dropdown, and an export action button that emits a TmExportRequest with the selected format and entities.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.ImportExport",
     "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Formats",
+      "type": "IEnumerable<TmExportFormat>?",
+      "isRequired": false,
+      "description": "Available export formats."
+    },
+    {
+      "name": "EntityTypes",
+      "type": "IEnumerable<TmExportEntity>?",
+      "isRequired": false,
+      "description": "Available entity types for export."
+    },
+    {
+      "name": "OnExport",
+      "type": "EventCallback<TmExportRequest>",
+      "isRequired": false,
+      "description": "Fires when the user clicks Export with selected options."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional title. Falls back to localized default."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-export-options",

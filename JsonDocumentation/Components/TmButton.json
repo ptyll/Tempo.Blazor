@@ -1,8 +1,94 @@
 {
   "itemName": "TmButton",
+  "kind": "Component",
+  "category": "Buttons",
   "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
+  ],
+  "parameters": [
+    {
+      "name": "Type",
+      "type": "ButtonType",
+      "isRequired": false,
+      "default": "Button",
+      "description": "HTML button type attribute. Defaults to Button."
+    },
+    {
+      "name": "Variant",
+      "type": "ButtonVariant",
+      "isRequired": false,
+      "default": "Primary",
+      "description": "Visual style variant. Defaults to Primary."
+    },
+    {
+      "name": "Size",
+      "type": "ButtonSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "Size variant. Defaults to Md."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Icon name (use IconNames constants). Shown left of content by default."
+    },
+    {
+      "name": "IconRight",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true the icon renders after the child content."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows a loading spinner and disables the button."
+    },
+    {
+      "name": "LoadingText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text displayed instead of child content when IsLoading is true."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the button."
+    },
+    {
+      "name": "Block",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Stretches the button to full width of its container."
+    },
+    {
+      "name": "TabIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Tab order index. Defaults to 0."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible label. Omitted from HTML when null."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fired when the button is clicked (and not disabled/loading)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) to apply to the button."
+    }
   ],
   "cssClasses": [
     "tm-btn",

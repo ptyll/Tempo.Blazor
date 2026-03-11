@@ -1,8 +1,45 @@
 {
   "itemName": "TmFilterBuilder",
+  "kind": "Component",
+  "category": "Filters",
   "description": "Interactive filter builder UI that lets users add, edit, and remove filters using field definitions. Renders active filters as TmFilterChip components with a field picker, operator selector, and value input. Supports text, number, date, boolean, select, and multi-select field types.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Filters"
+  ],
+  "parameters": [
+    {
+      "name": "FilterDefinitions",
+      "type": "IReadOnlyList<FilterDefinition>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Definitions of filterable fields."
+    },
+    {
+      "name": "ActiveFilters",
+      "type": "IReadOnlyList<ActiveFilter>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Currently applied filters (initial value)."
+    },
+    {
+      "name": "OnFiltersChanged",
+      "type": "EventCallback<IReadOnlyList<ActiveFilter>>",
+      "isRequired": false,
+      "description": "Fires whenever the filter list changes."
+    },
+    {
+      "name": "ShowClearAll",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show the \"Clear all\" button when filters are active."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-filter-builder",

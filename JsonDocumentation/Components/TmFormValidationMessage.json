@@ -1,8 +1,18 @@
 {
   "itemName": "TmFormValidationMessage",
+  "kind": "Component",
+  "category": "Forms",
   "description": "Displays field-level validation error messages from a cascading EditContext for a specific field expression, with an error icon for each message.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Forms"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-form-validation-message",

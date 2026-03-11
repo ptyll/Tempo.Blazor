@@ -1,8 +1,25 @@
 {
   "itemName": "TmFormRow",
+  "kind": "Component",
+  "category": "Forms",
   "description": "Grid-based form row that arranges child content into 1 to 4 equal-width columns.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Forms"
+  ],
+  "parameters": [
+    {
+      "name": "Columns",
+      "type": "int",
+      "isRequired": false,
+      "default": "2",
+      "description": "Number of equal-width columns (1–4)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-form-row",

@@ -1,8 +1,61 @@
 {
   "itemName": "TmExpressionEditor",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Template expression editor with a textarea and a side panel of clickable variables that insert {{variableName}} tokens into the expression text.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Current expression text."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the expression changes."
+    },
+    {
+      "name": "Variables",
+      "type": "IReadOnlyList<ExpressionVariable>?",
+      "isRequired": false,
+      "description": "Available variables for insertion."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Input placeholder text."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label above the editor."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disable the editor."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message to display."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-expression-editor",

@@ -1,8 +1,54 @@
 {
   "itemName": "TmImageGallery",
+  "kind": "Component",
+  "category": "Gallery",
   "description": "Responsive image gallery grid with integrated lightbox viewer, loading state, empty state, and optional image deletion via a data provider.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Gallery"
+  ],
+  "parameters": [
+    {
+      "name": "Images",
+      "type": "IEnumerable<IGalleryImage>?",
+      "isRequired": false,
+      "description": "Images to display in the gallery grid."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, shows a loading spinner instead of the grid."
+    },
+    {
+      "name": "EmptyTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Heading for the empty state when Images is empty."
+    },
+    {
+      "name": "OnImageClick",
+      "type": "EventCallback<IGalleryImage>",
+      "isRequired": false,
+      "description": "Fires when an image item is clicked (before lightbox opens)."
+    },
+    {
+      "name": "UrlResolver",
+      "type": "IImageUrlResolver?",
+      "isRequired": false,
+      "description": "Optional URL resolver for full-size images (ticket-based APIs, legacy)."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IImageGalleryDataProvider?",
+      "isRequired": false,
+      "description": "Data provider for secure ticket URLs and delete operations."
+    },
+    {
+      "name": "CanDelete",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, shows a delete button in the lightbox."
+    }
   ],
   "cssClasses": [
     "tm-image-gallery",

@@ -1,8 +1,62 @@
 {
   "itemName": "TmAlert",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Inline alert banner with severity levels (Info, Success, Warning, Error) and visual variants (Soft, Filled, Outlined). Supports title, description, actions slot, custom icon, and dismissable behavior.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Severity",
+      "type": "AlertSeverity",
+      "isRequired": false,
+      "default": "Info",
+      "description": "Severity level controlling color and default icon."
+    },
+    {
+      "name": "Variant",
+      "type": "AlertVariant",
+      "isRequired": false,
+      "default": "Soft",
+      "description": "Visual variant: Soft, Filled, or Outlined."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional title displayed above the description."
+    },
+    {
+      "name": "Dismissable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, a dismiss button is shown."
+    },
+    {
+      "name": "OnDismiss",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the dismiss button is clicked."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom icon name. When null, an icon is auto-selected based on severity."
+    },
+    {
+      "name": "Actions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional actions slot (e.g. buttons)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-alert",

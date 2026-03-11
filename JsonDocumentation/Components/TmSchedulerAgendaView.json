@@ -1,8 +1,37 @@
 {
   "itemName": "TmSchedulerAgendaView",
+  "kind": "Component",
+  "category": "Scheduler",
   "description": "Flat chronological list of events grouped by date, showing time ranges, titles, descriptions, and color-coded dots. Displays up to 30 days of upcoming events.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "CurrentDate",
+      "type": "DateTime",
+      "isRequired": true,
+      "description": "Currently displayed start date."
+    },
+    {
+      "name": "AgendaDays",
+      "type": "int",
+      "isRequired": false,
+      "default": "30",
+      "description": "Number of days to show in agenda."
+    },
+    {
+      "name": "Events",
+      "type": "IReadOnlyList<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Events to display."
+    },
+    {
+      "name": "OnEventClick",
+      "type": "EventCallback<TmScheduleEvent>",
+      "isRequired": false,
+      "description": "Fires when an event is clicked."
+    }
   ],
   "cssClasses": [
     "tm-scheduler-agenda",

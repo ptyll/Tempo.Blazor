@@ -1,8 +1,90 @@
 {
   "itemName": "TmDialog",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Centered alert, confirm, or prompt dialog with severity-based icon and color variants. Prompt mode includes a text input. Supports a custom content mode with FooterContent.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Type",
+      "type": "DialogType",
+      "isRequired": false,
+      "default": "Alert"
+    },
+    {
+      "name": "Variant",
+      "type": "DialogVariant",
+      "isRequired": false,
+      "default": "Info"
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "Message",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "DefaultValue",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "PromptPlaceholder",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"Enter value...\""
+    },
+    {
+      "name": "IsDangerous",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false"
+    },
+    {
+      "name": "OkButtonText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"OK\""
+    },
+    {
+      "name": "CancelButtonText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"Cancel\""
+    },
+    {
+      "name": "FooterContent",
+      "type": "RenderFragment?",
+      "isRequired": false
+    },
+    {
+      "name": "OnResult",
+      "type": "EventCallback<bool?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnPromptResult",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-dialog",

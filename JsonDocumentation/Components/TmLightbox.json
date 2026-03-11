@@ -1,8 +1,84 @@
 {
   "itemName": "TmLightbox",
+  "kind": "Component",
+  "category": "Gallery",
   "description": "Full-screen image lightbox overlay with keyboard navigation (arrow keys, Escape), previous/next controls, counter display, and optional delete button.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Gallery"
+  ],
+  "parameters": [
+    {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Controls lightbox visibility."
+    },
+    {
+      "name": "ImageUrl",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Full-size image URL to display."
+    },
+    {
+      "name": "ImageAlt",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Alt text for the displayed image."
+    },
+    {
+      "name": "IsFirst",
+      "type": "bool",
+      "isRequired": false,
+      "description": "True when the current image is the first in the sequence."
+    },
+    {
+      "name": "IsLast",
+      "type": "bool",
+      "isRequired": false,
+      "description": "True when the current image is the last in the sequence."
+    },
+    {
+      "name": "CurrentIndex",
+      "type": "int",
+      "isRequired": false,
+      "description": "0-based index of the currently displayed image."
+    },
+    {
+      "name": "TotalCount",
+      "type": "int",
+      "isRequired": false,
+      "description": "Total number of images in the gallery."
+    },
+    {
+      "name": "CanDelete",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, shows a delete button."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the lightbox should be closed."
+    },
+    {
+      "name": "OnPrev",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user navigates to the previous image."
+    },
+    {
+      "name": "OnNext",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user navigates to the next image."
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the delete button is clicked."
+    }
   ],
   "cssClasses": [
     "tm-lightbox",

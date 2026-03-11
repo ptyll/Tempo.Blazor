@@ -1,8 +1,24 @@
 {
   "itemName": "TmChipGroup",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Flex-wrap container for grouping multiple TmChip components with consistent spacing and an optional disabled state.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the chip group is disabled."
+    }
   ],
   "cssClasses": [
     "tm-chip-group",

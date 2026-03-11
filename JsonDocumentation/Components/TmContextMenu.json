@@ -1,8 +1,24 @@
 {
   "itemName": "TmContextMenu",
+  "kind": "Component",
+  "category": "Navigation",
   "description": "Dropdown context menu triggered by a custom element. Contains TmContextMenuItem children and closes on Escape key press.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "parameters": [
+    {
+      "name": "Trigger",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The trigger element that opens the menu."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-context-menu-wrapper",

@@ -1,8 +1,48 @@
 {
   "itemName": "TmKanbanBoard",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, custom card templates, and events for card moves and clicks.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "OnItemMoved",
+      "type": "EventCallback<KanbanMoveEvent<TItem>>",
+      "isRequired": false,
+      "description": "Fires when a card is dragged to a different column."
+    },
+    {
+      "name": "OnCardClick",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires when a card is clicked."
+    },
+    {
+      "name": "ColumnHeaderTemplate",
+      "type": "RenderFragment<KanbanColumn>?",
+      "isRequired": false,
+      "description": "Custom column header template."
+    },
+    {
+      "name": "EmptyColumnTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Template for empty columns."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the kanban board is disabled (prevents drag)."
+    }
   ],
   "cssClasses": [
     "tm-kanban",

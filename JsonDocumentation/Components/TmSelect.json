@@ -1,9 +1,74 @@
 {
   "itemName": "TmSelect",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Generic dropdown select component supporting typed options (string, int, Guid), label, placeholder, error/help text, and manual option rendering via ChildContent.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs",
     "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "TValue?",
+      "isRequired": false,
+      "description": "Selected value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TValue?>",
+      "isRequired": false,
+      "description": "Fires when the selection changes."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label shown above the select."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder option shown when no value is selected."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation error message."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Help text shown below the select when no error is present."
+    },
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "HTML id attribute."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the select."
+    },
+    {
+      "name": "Options",
+      "type": "IReadOnlyList<SelectOption<TValue>>?",
+      "isRequired": false,
+      "description": "Typed option list. When provided, &lt;option&gt; elements are generated automatically."
+    }
   ],
   "cssClasses": [
     "tm-select-wrapper",

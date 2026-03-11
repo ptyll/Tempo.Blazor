@@ -1,9 +1,70 @@
 {
   "itemName": "TmDateRangePicker",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Date range picker with dual side-by-side calendars, range preset buttons (Today, Last Week, Last Month, etc.), hover highlighting, and a two-click start/end selection flow.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers",
     "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "(DateOnly? Start, DateOnly? End)",
+      "isRequired": true
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<(DateOnly? Start, DateOnly? End)>",
+      "isRequired": false
+    },
+    {
+      "name": "MinDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "DateFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"dd.MM.yyyy\""
+    },
+    {
+      "name": "Presets",
+      "type": "IReadOnlyList<DateRangePreset>?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowPresets",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-date-range-picker",

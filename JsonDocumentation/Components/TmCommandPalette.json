@@ -1,9 +1,37 @@
 {
   "itemName": "TmCommandPalette",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Searchable command palette overlay (Cmd+K style) with filterable actions, descriptions, and keyboard shortcut hints. Supports two-way binding on open state.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
+  ],
+  "parameters": [
+    {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the command palette is visible."
+    },
+    {
+      "name": "IsOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when IsOpen should change (two-way binding)."
+    },
+    {
+      "name": "Actions",
+      "type": "IEnumerable<ICommandPaletteAction>?",
+      "isRequired": false,
+      "description": "Actions available in the palette."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-command-palette-backdrop",

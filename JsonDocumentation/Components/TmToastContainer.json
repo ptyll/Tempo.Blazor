@@ -1,8 +1,26 @@
 {
   "itemName": "TmToastContainer",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports four screen positions and auto-dismiss with animated progress bars.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Position",
+      "type": "ToastPosition",
+      "isRequired": false,
+      "default": "TopRight",
+      "description": "Position of the toast container on screen."
+    },
+    {
+      "name": "MaxVisible",
+      "type": "int",
+      "isRequired": false,
+      "default": "5",
+      "description": "Maximum number of toasts visible at once."
+    }
   ],
   "cssClasses": [
     "tm-toast-container",

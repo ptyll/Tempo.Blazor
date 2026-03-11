@@ -1,8 +1,87 @@
 {
   "itemName": "TmProgressBar",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Progress bar with value/max tracking, size and color variants, striped/animated modes, indeterminate loading animation, multi-segment support, and an optional percentage label.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "double",
+      "isRequired": false,
+      "description": "Current value (0 to Max)."
+    },
+    {
+      "name": "Max",
+      "type": "double",
+      "isRequired": false,
+      "default": "100",
+      "description": "Maximum value (default 100)."
+    },
+    {
+      "name": "Size",
+      "type": "ProgressBarSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "Size variant."
+    },
+    {
+      "name": "Color",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Override the fill color with a custom CSS color."
+    },
+    {
+      "name": "Variant",
+      "type": "ProgressBarVariant",
+      "isRequired": false,
+      "default": "Default",
+      "description": "Color variant preset."
+    },
+    {
+      "name": "ShowLabel",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show a percentage label."
+    },
+    {
+      "name": "LabelFormat",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Format string for the label. {0} is the percentage."
+    },
+    {
+      "name": "Striped",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show diagonal stripe pattern."
+    },
+    {
+      "name": "Animated",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Animate the stripe pattern."
+    },
+    {
+      "name": "Indeterminate",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show an indeterminate loading animation instead of a fixed value."
+    },
+    {
+      "name": "Segments",
+      "type": "List<ProgressSegment>?",
+      "isRequired": false,
+      "description": "Multi-segment bar with different colors."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-progress-bar",

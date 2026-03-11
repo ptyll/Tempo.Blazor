@@ -25,6 +25,25 @@ class Program
             }
         }
 
+        // Check for --enrich flag: update component JSONs with parameters/kind/category from source
+        if (args.Any(a => a == "--enrich"))
+        {
+            var srcDir = Path.Combine(baseDir, "..", "src", "Tempo.Blazor", "Components");
+            srcDir = Path.GetFullPath(srcDir);
+            var jsonDir = Path.Combine(baseDir, "Components");
+
+            if (!Directory.Exists(srcDir))
+            {
+                Console.Error.WriteLine($"Error: Source components directory not found: {srcDir}");
+                return 1;
+            }
+
+            Console.WriteLine($"Enriching JSON documentation from source: {srcDir}");
+            var count = ParameterEnricher.Run(srcDir, jsonDir);
+            Console.WriteLine($"\nEnriched {count} component files.");
+            return 0;
+        }
+
         var componentsDir = Path.Combine(baseDir, "Components");
         var gettingStartedFile = Path.Combine(baseDir, "gettingStarted.json");
         var libraryExamplesFile = Path.Combine(baseDir, "libraryExamples.json");

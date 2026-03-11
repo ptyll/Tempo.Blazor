@@ -1,5 +1,7 @@
 {
   "itemName": "TmToolbarDivider",
+  "kind": "Component",
+  "category": "Toolbar",
   "description": "Vertical separator line for visually grouping items within a TmToolbar.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Toolbar"

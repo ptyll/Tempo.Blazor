@@ -1,8 +1,39 @@
 {
   "itemName": "TmTooltip",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Lightweight CSS-only tooltip that appears on hover/focus with configurable position, delay, and max width. Wraps any child content as the trigger.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Position",
+      "type": "TooltipPosition",
+      "isRequired": false,
+      "default": "Top",
+      "description": "Position relative to trigger (default Top)."
+    },
+    {
+      "name": "Delay",
+      "type": "int",
+      "isRequired": false,
+      "default": "200",
+      "description": "Delay in ms before showing (CSS transition-delay)."
+    },
+    {
+      "name": "MaxWidth",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"200px\"",
+      "description": "Maximum width of the tooltip."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-tooltip",

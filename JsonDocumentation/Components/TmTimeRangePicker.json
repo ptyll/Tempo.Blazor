@@ -1,8 +1,52 @@
 {
   "itemName": "TmTimeRangePicker",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Time range picker with from/to time inputs, optional swap button, duration display, and validation for invalid ranges where end is before start.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "(TimeOnly? Start, TimeOnly? End)",
+      "isRequired": true
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<(TimeOnly? Start, TimeOnly? End)>",
+      "isRequired": false
+    },
+    {
+      "name": "ShowDuration",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ShowSwapButton",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ShowSeconds",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-time-range-picker",

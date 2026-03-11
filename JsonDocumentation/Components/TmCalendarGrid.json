@@ -1,8 +1,69 @@
 {
   "itemName": "TmCalendarGrid",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Reusable calendar month grid with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker and TmDateRangePicker.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "DisplayYear",
+      "type": "int",
+      "isRequired": false,
+      "default": "DateTime.Today.Year"
+    },
+    {
+      "name": "DisplayMonth",
+      "type": "int",
+      "isRequired": false,
+      "default": "DateTime.Today.Month"
+    },
+    {
+      "name": "SelectedDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "RangeStart",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "RangeEnd",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "HoverDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "MinDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "OnDateSelected",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDateHovered",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false
+    },
+    {
+      "name": "OnNavigate",
+      "type": "EventCallback<(int Year, int Month)>",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-calendar",

@@ -1,9 +1,43 @@
 {
   "itemName": "TmKeyboardShortcutsHelp",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Modal overlay displaying categorized keyboard shortcuts with key combinations rendered as <kbd> elements. Closes on Escape or overlay click.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Categories",
+      "type": "IEnumerable<TmShortcutCategory>?",
+      "isRequired": false,
+      "description": "Shortcut categories to display."
+    },
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the overlay is visible."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the overlay should close."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional title. Falls back to localized default."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-keyboard-shortcuts-overlay",

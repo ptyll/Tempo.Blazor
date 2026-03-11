@@ -1,8 +1,54 @@
 {
   "itemName": "TmFormField",
+  "kind": "Component",
+  "category": "Forms",
   "description": "Generic form field wrapper providing a label (with optional required marker), help text, error message display, and a slot for any form control. Applies error styling when an error message is set.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Forms"
+  ],
+  "parameters": [
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label text displayed above the field."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, a required asterisk is appended to the label."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Helper text shown below the field when there is no error."
+    },
+    {
+      "name": "ErrorMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation error message shown below the field in red."
+    },
+    {
+      "name": "For",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Value for the label's for attribute to associate it with a form control."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the field is disabled."
+    }
   ],
   "cssClasses": [
     "tm-form-field",

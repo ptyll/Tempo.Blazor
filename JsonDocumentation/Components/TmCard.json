@@ -1,8 +1,49 @@
 {
   "itemName": "TmCard",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Container card with optional header (text + icon), body content via ChildContent, footer (string or RenderFragment), and three visual variants: Default, Elevated, and Outlined.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Variant",
+      "type": "CardVariant",
+      "isRequired": false,
+      "default": "Default",
+      "description": "Visual style variant. Defaults to Default."
+    },
+    {
+      "name": "Header",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional header text."
+    },
+    {
+      "name": "HeaderIcon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon shown in the header."
+    },
+    {
+      "name": "Footer",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional footer text (plain string)."
+    },
+    {
+      "name": "FooterContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional footer RenderFragment. Takes precedence over Footer string."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    }
   ],
   "cssClasses": [
     "tm-card",

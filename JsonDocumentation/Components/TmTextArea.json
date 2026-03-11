@@ -1,8 +1,94 @@
 {
   "itemName": "TmTextArea",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Multi-line textarea input with label, placeholder, error message, configurable rows, max length, and optional immediate (per-keystroke) value updates.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Current text value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the value changes."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label shown above the textarea."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation error message."
+    },
+    {
+      "name": "Rows",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "Number of visible rows. Defaults to 3."
+    },
+    {
+      "name": "MaxLength",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum character count."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the textarea."
+    },
+    {
+      "name": "TabIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Tab index."
+    },
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "HTML id attribute."
+    },
+    {
+      "name": "AutoComplete",
+      "type": "string?",
+      "isRequired": false,
+      "description": "HTML autocomplete attribute. Common values: \"on\", \"off\"."
+    },
+    {
+      "name": "Immediate",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, fires ValueChanged on every keystroke instead of on blur."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-input-wrapper",

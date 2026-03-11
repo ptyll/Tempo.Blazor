@@ -1,8 +1,48 @@
 {
   "itemName": "TmWorkflowPropertiesPanel",
+  "kind": "Component",
+  "category": "Workflow",
   "description": "Side panel for editing properties of a selected workflow state or transition. Shows name/label input, state type radio buttons, color swatch picker, and from/to display for transitions. Supports read-only mode.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "parameters": [
+    {
+      "name": "SelectedState",
+      "type": "CanvasState?",
+      "isRequired": false,
+      "description": "The currently selected state to edit (null if none)."
+    },
+    {
+      "name": "SelectedTransition",
+      "type": "CanvasTransition?",
+      "isRequired": false,
+      "description": "The currently selected transition to edit (null if none)."
+    },
+    {
+      "name": "States",
+      "type": "IReadOnlyList<CanvasState>?",
+      "isRequired": false,
+      "description": "All states, used for displaying From/To names on transitions."
+    },
+    {
+      "name": "OnStateChanged",
+      "type": "EventCallback<CanvasState>",
+      "isRequired": false,
+      "description": "Fires when the user saves changes to a state."
+    },
+    {
+      "name": "OnTransitionChanged",
+      "type": "EventCallback<CanvasTransition>",
+      "isRequired": false,
+      "description": "Fires when the user saves changes to a transition."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the panel is read-only (inputs disabled, no save button)."
+    }
   ],
   "cssClasses": [
     "tm-wf-properties",

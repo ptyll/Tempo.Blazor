@@ -1,8 +1,160 @@
 {
   "itemName": "TmTextInput",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Text input field with label, placeholder, left/right icons, validation state icons (success/error), error message, help text, and full keyboard event support.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Current text value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the value changes."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label shown above the input."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation error message. Shows error styling when set."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Help text shown below the input when no error is present."
+    },
+    {
+      "name": "LeftIcon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Icon name for the leading icon slot."
+    },
+    {
+      "name": "RightIcon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Icon name for the trailing icon slot."
+    },
+    {
+      "name": "Type",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"text\"",
+      "description": "HTML input type. Defaults to \"text\"."
+    },
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "HTML id attribute. Defaults to a generated unique id."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the input."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Makes the input read-only."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the input as required."
+    },
+    {
+      "name": "TabIndex",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Tab index."
+    },
+    {
+      "name": "AutoFocus",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Auto-focuses the input on render."
+    },
+    {
+      "name": "ShowValidationIcons",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, shows validation icons (checkmark for valid, error for invalid)."
+    },
+    {
+      "name": "IsValid",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Validation state: true = valid (green), false = invalid (red), null = neutral."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) to apply to the input element."
+    },
+    {
+      "name": "AutoComplete",
+      "type": "string?",
+      "isRequired": false,
+      "description": "HTML autocomplete attribute. Common values: \"on\", \"off\", \"name\", \"email\", \"tel\", \"address\", \"username\", \"new-password\", \"current-password\", etc."
+    },
+    {
+      "name": "OnKeyDown",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false,
+      "description": "Fires when a key is pressed down."
+    },
+    {
+      "name": "OnKeyUp",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false,
+      "description": "Fires when a key is released."
+    },
+    {
+      "name": "OnKeyPress",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false,
+      "description": "Fires when a key is pressed."
+    },
+    {
+      "name": "OnFocus",
+      "type": "EventCallback<FocusEventArgs>",
+      "isRequired": false,
+      "description": "Fires when the input receives focus."
+    },
+    {
+      "name": "OnBlur",
+      "type": "EventCallback<FocusEventArgs>",
+      "isRequired": false,
+      "description": "Fires when the input loses focus."
+    }
   ],
   "cssClasses": [
     "tm-input-wrapper",

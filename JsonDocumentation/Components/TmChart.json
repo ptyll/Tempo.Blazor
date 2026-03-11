@@ -1,8 +1,63 @@
 {
   "itemName": "TmChart",
+  "kind": "Component",
+  "category": "Charts",
   "description": "Pure SVG chart component supporting Bar, Line, Pie, Donut, and HorizontalBar chart types with optional legend, grid, value labels, animation, and click events on segments.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Charts"
+  ],
+  "parameters": [
+    {
+      "name": "Width",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"100%\""
+    },
+    {
+      "name": "Width",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"100%\""
+    },
+    {
+      "name": "Height",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"300px\""
+    },
+    {
+      "name": "ShowLegend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowGrid",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowValues",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Animated",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnSegmentClick",
+      "type": "EventCallback<ChartSegment>",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-chart",

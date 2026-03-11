@@ -1,8 +1,142 @@
 {
   "itemName": "TmModal",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Versatile modal dialog with header (title, subtitle, icon), scrollable body, and configurable footer with OK/Cancel buttons. Supports multiple sizes, positions, overlay click dismiss, and escape key handling.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Footer",
+      "type": "RenderFragment?",
+      "isRequired": false
+    },
+    {
+      "name": "Size",
+      "type": "ModalSize",
+      "isRequired": false,
+      "default": "Medium"
+    },
+    {
+      "name": "Position",
+      "type": "ModalPosition",
+      "isRequired": false,
+      "default": "Center"
+    },
+    {
+      "name": "Animated",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowCloseButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowFooter",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowDefaultFooterButtons",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false"
+    },
+    {
+      "name": "ShowOkButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowCancelButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OkButtonText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"OK\""
+    },
+    {
+      "name": "CancelButtonText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"Cancel\""
+    },
+    {
+      "name": "OkButtonVariant",
+      "type": "ButtonVariant",
+      "isRequired": false,
+      "default": "Primary"
+    },
+    {
+      "name": "OkButtonDisabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false"
+    },
+    {
+      "name": "CloseOnOverlayClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnOk",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnOpen",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-modal-overlay",

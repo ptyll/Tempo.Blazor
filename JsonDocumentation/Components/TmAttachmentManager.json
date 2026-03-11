@@ -1,8 +1,42 @@
 {
   "itemName": "TmAttachmentManager",
+  "kind": "Component",
+  "category": "Files",
   "description": "Complete attachment management component that combines TmFileDropZone with a list of existing attachments loaded via IFileAttachmentProvider. Supports download, delete, and upload with progress indication.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Provider",
+      "type": "IFileAttachmentProvider?",
+      "isRequired": false,
+      "description": "Data provider for loading, downloading, deleting, and uploading attachments."
+    },
+    {
+      "name": "EntityId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Entity ID used to load and upload attachments."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, upload and delete controls are disabled."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "OnDeleted",
+      "type": "EventCallback<IFileAttachment>",
+      "isRequired": false,
+      "description": "Fires when an attachment is deleted."
+    }
   ],
   "cssClasses": [
     "tm-attachment-manager",

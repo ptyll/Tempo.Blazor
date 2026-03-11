@@ -1,8 +1,24 @@
 {
   "itemName": "TmChangeDiff",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Displays a list of property changes in a before/after diff format, showing old values with strikethrough and new values highlighted, connected by an arrow icon.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Changes",
+      "type": "IEnumerable<TmChangeInfo>?",
+      "isRequired": false,
+      "description": "List of property changes to display."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-change-diff",

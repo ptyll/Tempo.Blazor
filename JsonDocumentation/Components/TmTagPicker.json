@@ -1,8 +1,48 @@
 {
   "itemName": "TmTagPicker",
+  "kind": "Component",
+  "category": "Tags",
   "description": "Tag selection component displaying selected tags as colored chips with a dropdown for adding more. Supports inline search, tag creation, and disabled state.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Tags"
+  ],
+  "parameters": [
+    {
+      "name": "AllTags",
+      "type": "IEnumerable<ITag>?",
+      "isRequired": false,
+      "description": "All tags available for selection."
+    },
+    {
+      "name": "SelectedTags",
+      "type": "IEnumerable<ITag>?",
+      "isRequired": false,
+      "description": "Currently selected tags."
+    },
+    {
+      "name": "OnTagsChanged",
+      "type": "EventCallback<IEnumerable<ITag>>",
+      "isRequired": false,
+      "description": "Fires when the selection changes, passing the updated list."
+    },
+    {
+      "name": "AllowCreate",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, shows an option to create a new tag inline."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the tag picker."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-tag-picker",

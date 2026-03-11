@@ -1,8 +1,24 @@
 {
   "itemName": "TmTimeline",
+  "kind": "Component",
+  "category": "Timeline",
   "description": "Vertical activity timeline displaying entries with author avatars, timestamps with relative formatting, content, and an internal/external badge. Supports filtering internal entries.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Timeline"
+  ],
+  "parameters": [
+    {
+      "name": "Entries",
+      "type": "IEnumerable<ITimelineEntry>?",
+      "isRequired": false,
+      "description": "Timeline entries to display."
+    },
+    {
+      "name": "ShowInternal",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, internal entries are shown; otherwise they are hidden."
+    }
   ],
   "cssClasses": [
     "tm-timeline",

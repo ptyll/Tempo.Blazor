@@ -1,8 +1,73 @@
 {
   "itemName": "TmDateTimePicker",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Combined date and time picker with a calendar popup for the date portion and inline time input. Supports min/max DateTime constraints that cascade between date and time parts.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "DateTime?",
+      "isRequired": false
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<DateTime?>",
+      "isRequired": false
+    },
+    {
+      "name": "MinValue",
+      "type": "DateTime?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxValue",
+      "type": "DateTime?",
+      "isRequired": false
+    },
+    {
+      "name": "DateFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"dd.MM.yyyy\""
+    },
+    {
+      "name": "ShowSeconds",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "HideClear",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-datetime-picker",

@@ -1,8 +1,54 @@
 {
   "itemName": "TmCheckbox",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Checkbox input with label, help text, indeterminate state, and disabled support. Renders a custom styled checkbox with animated check/dash marks.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Checked state."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when checked state changes."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label text rendered next to the checkbox."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Help text shown below the checkbox."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the checkbox."
+    },
+    {
+      "name": "Indeterminate",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows an indeterminate (dash) state when true and Value is false."
+    }
   ],
   "cssClasses": [
     "tm-checkbox-wrapper",

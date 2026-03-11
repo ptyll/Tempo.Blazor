@@ -1,8 +1,84 @@
 {
   "itemName": "TmRichEditorSimple",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Lightweight rich text editor with a simplified toolbar offering basic formatting (bold, italic, underline), lists (ordered, unordered, task), links, emojis, @mentions, and {{token}} variable insertion. Supports Ctrl+Enter submit, character limit, and focus styling. Ideal for comments and inline editing.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxLength",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "SupportsMentions",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "MentionProvider",
+      "type": "IMentionDataProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "SupportsTokens",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "TokenProvider",
+      "type": "ITokenDataProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "TokenTrigger",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"{{\""
+    },
+    {
+      "name": "OnTokenCreateRequested",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTokenInserted",
+      "type": "EventCallback<IToken>",
+      "isRequired": false
+    },
+    {
+      "name": "IsDisabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnSubmit",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rich-editor-simple",

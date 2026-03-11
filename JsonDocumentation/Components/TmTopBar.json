@@ -1,9 +1,61 @@
 {
   "itemName": "TmTopBar",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Application top bar with brand area, center content slot, action buttons, command palette trigger, and user avatar menu with sign-out support.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
+  ],
+  "parameters": [
+    {
+      "name": "BrandTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Brand title text (simple string)."
+    },
+    {
+      "name": "BrandContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Custom brand content (logo, etc.)."
+    },
+    {
+      "name": "CenterContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Center slot content (e.g. breadcrumbs)."
+    },
+    {
+      "name": "ActionsContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Actions slot content (e.g. notification bell)."
+    },
+    {
+      "name": "User",
+      "type": "IUserInfo?",
+      "isRequired": false,
+      "description": "Currently logged-in user. When set, renders user avatar and menu."
+    },
+    {
+      "name": "OnCommandPalette",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the command palette trigger is clicked."
+    },
+    {
+      "name": "OnLogout",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks \"Sign out\"."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-topbar",

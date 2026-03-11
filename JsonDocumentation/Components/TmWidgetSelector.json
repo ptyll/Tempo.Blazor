@@ -1,8 +1,33 @@
 {
   "itemName": "TmWidgetSelector",
+  "kind": "Component",
+  "category": "Dashboard",
   "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dashboard"
+  ],
+  "parameters": [
+    {
+      "name": "WidgetRegistry",
+      "type": "IWidgetRegistry?",
+      "isRequired": false
+    },
+    {
+      "name": "ExistingWidgets",
+      "type": "List<string>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback<WidgetDefinition>",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-widget-selector-overlay",

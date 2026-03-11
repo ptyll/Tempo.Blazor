@@ -1,8 +1,104 @@
 {
   "itemName": "TmNumberInput",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Numeric input with increment/decrement buttons, min/max constraints, step control, prefix/suffix text (e.g. currency symbols, units), and error/help text.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Current numeric value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<int?>",
+      "isRequired": false,
+      "description": "Fires when value changes."
+    },
+    {
+      "name": "Min",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Minimum allowed value."
+    },
+    {
+      "name": "Max",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Maximum allowed value."
+    },
+    {
+      "name": "Step",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "Step increment/decrement (default 1)."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Field label."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Help text below the input."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disable the input."
+    },
+    {
+      "name": "ShowButtons",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show +/- buttons (default true)."
+    },
+    {
+      "name": "Prefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Prefix text (e.g. \"$\")."
+    },
+    {
+      "name": "Suffix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Suffix text (e.g. \"days\")."
+    },
+    {
+      "name": "AutoComplete",
+      "type": "string?",
+      "isRequired": false,
+      "description": "HTML autocomplete attribute. Common values: \"on\", \"off\"."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-input-wrapper",

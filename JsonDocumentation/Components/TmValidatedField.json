@@ -1,8 +1,125 @@
 {
   "itemName": "TmValidatedField",
+  "kind": "Component",
+  "category": "Forms",
   "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Forms"
+  ],
+  "parameters": [
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Type",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"text\""
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]"
+    },
+    {
+      "name": "LeftIcon",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "RightIcon",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "TabIndex",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "AutoFocus",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "AutoComplete",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "OnKeyDown",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "OnKeyUp",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "OnKeyPress",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocus",
+      "type": "EventCallback<FocusEventArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "OnBlur",
+      "type": "EventCallback<FocusEventArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "ValueExpression",
+      "type": "Expression<Func<string>>?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-validated-field",

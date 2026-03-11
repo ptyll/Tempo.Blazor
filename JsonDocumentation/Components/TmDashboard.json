@@ -1,8 +1,49 @@
 {
   "itemName": "TmDashboard",
+  "kind": "Component",
+  "category": "Dashboard",
   "description": "Configurable dashboard with a CSS grid layout, drag-and-drop widget positioning, resize handles, edit mode, widget selector modal, multiple saved dashboards via IDashboardProvider, and JS interop for grid interactions.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dashboard"
+  ],
+  "parameters": [
+    {
+      "name": "DashboardId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "UserId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "AllowEdit",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnDashboardChanged",
+      "type": "EventCallback<DashboardConfig>",
+      "isRequired": false
+    },
+    {
+      "name": "WidgetTemplate",
+      "type": "RenderFragment<WidgetInstance>?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-dashboard",

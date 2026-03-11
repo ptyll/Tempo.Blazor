@@ -1,8 +1,114 @@
 {
   "itemName": "TmRichEditorFull",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Full-featured rich text editor with a comprehensive toolbar supporting headings (H1-H4), text formatting (bold, italic, underline, strikethrough, subscript, superscript), lists (ordered, unordered, task), indentation, links, images, tables, videos, code blocks, blockquotes, horizontal rules, text/highlight colors, emojis, find & replace, @mentions, and {{token}} variable insertion. Provides word count and character limit tracking.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxLength",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "ShowWordCount",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "SupportsMentions",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "MentionProvider",
+      "type": "IMentionDataProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "SupportsImages",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "SupportsTables",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "SupportsCodeBlocks",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "SupportsBlockquotes",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "SupportsTokens",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "TokenProvider",
+      "type": "ITokenDataProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "TokenTrigger",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"{{\""
+    },
+    {
+      "name": "OnTokenCreateRequested",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTokenInserted",
+      "type": "EventCallback<IToken>",
+      "isRequired": false
+    },
+    {
+      "name": "IsDisabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rich-editor-full",

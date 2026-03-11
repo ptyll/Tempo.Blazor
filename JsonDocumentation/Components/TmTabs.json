@@ -1,8 +1,38 @@
 {
   "itemName": "TmTabs",
+  "kind": "Component",
+  "category": "Navigation",
   "description": "Tab strip component with Line, Pill, and Enclosed visual variants. Supports icons, badges, disabled tabs, and keyboard arrow-key navigation. Use with TmTabPanel children.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "parameters": [
+    {
+      "name": "ActiveTabId",
+      "type": "string",
+      "isRequired": false,
+      "default": "default!",
+      "description": "ID of the currently active tab."
+    },
+    {
+      "name": "ActiveTabIdChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the active tab changes."
+    },
+    {
+      "name": "Variant",
+      "type": "TabVariant",
+      "isRequired": false,
+      "default": "Line",
+      "description": "Visual variant of the tab strip."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-tabs",

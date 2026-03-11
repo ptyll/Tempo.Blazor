@@ -1,8 +1,30 @@
 {
   "itemName": "TmTreeView",
+  "kind": "Component",
+  "category": "Tree View",
   "description": "Generic hierarchical tree component rendering ITreeNode<TKey> items with expand/collapse toggles, click-to-select labels, lazy loading spinners, and recursive child rendering.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.TreeView"
+  ],
+  "parameters": [
+    {
+      "name": "Nodes",
+      "type": "IEnumerable<ITreeNode<TKey>>?",
+      "isRequired": false,
+      "description": "Root nodes of the tree."
+    },
+    {
+      "name": "OnNodeSelect",
+      "type": "EventCallback<ITreeNode<TKey>>",
+      "isRequired": false,
+      "description": "Fires when a tree node label is clicked."
+    },
+    {
+      "name": "OnNodeExpand",
+      "type": "EventCallback<ITreeNode<TKey>>",
+      "isRequired": false,
+      "description": "Fires when a tree node is expanded or collapsed."
+    }
   ],
   "cssClasses": [
     "tm-tree-view",

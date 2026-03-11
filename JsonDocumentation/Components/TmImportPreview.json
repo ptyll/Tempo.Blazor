@@ -1,8 +1,60 @@
 {
   "itemName": "TmImportPreview",
+  "kind": "Component",
+  "category": "Import / Export",
   "description": "Data import preview panel with title, description, content area for displaying imported data, and confirm/cancel action buttons with loading state.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.ImportExport"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title displayed in the header."
+    },
+    {
+      "name": "Description",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Description displayed below the title."
+    },
+    {
+      "name": "OnConfirm",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user confirms the import."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user cancels."
+    },
+    {
+      "name": "ConfirmText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom confirm button text. Falls back to localized default."
+    },
+    {
+      "name": "CancelText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom cancel button text. Falls back to localized default."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows loading state on confirm button."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-import-preview",

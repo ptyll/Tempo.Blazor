@@ -1,8 +1,24 @@
 {
   "itemName": "TmAccordion",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Expandable content panel container that manages child TmAccordionItem components, supporting single or multiple simultaneous expansion.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Multiple",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Allow multiple items open at once."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-accordion"

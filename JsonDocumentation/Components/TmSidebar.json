@@ -1,9 +1,50 @@
 {
   "itemName": "TmSidebar",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Collapsible sidebar navigation with icon-only collapsed state, nested child items, badge counts, and optional header/footer slots.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
+  ],
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<ISidebarNavItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Navigation items to display."
+    },
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the sidebar is in collapsed (icon-only) state."
+    },
+    {
+      "name": "OnToggle",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the toggle button is clicked."
+    },
+    {
+      "name": "Header",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional header content (e.g. logo)."
+    },
+    {
+      "name": "Footer",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional footer content (e.g. user info, version)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-sidebar",

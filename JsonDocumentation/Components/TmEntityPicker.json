@@ -1,8 +1,68 @@
 {
   "itemName": "TmEntityPicker",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Searchable entity lookup input that calls an async search provider after a configurable debounce, displays results in a dropdown, and binds to a typed value upon selection.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "TValue?",
+      "isRequired": false,
+      "description": "Current selected value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TValue?>",
+      "isRequired": false,
+      "description": "Fires when value changes."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Field label."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text."
+    },
+    {
+      "name": "MinSearchLength",
+      "type": "int",
+      "isRequired": false,
+      "default": "2",
+      "description": "Minimum characters before search triggers."
+    },
+    {
+      "name": "Debounce",
+      "type": "int",
+      "isRequired": false,
+      "default": "300",
+      "description": "Debounce delay in ms."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disable the input."
+    }
   ],
   "cssClasses": [
     "tm-entity-picker",

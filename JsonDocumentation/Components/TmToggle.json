@@ -1,8 +1,42 @@
 {
   "itemName": "TmToggle",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "On/off toggle switch with label, disabled state, keyboard accessibility (Space key), and ARIA switch role.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Toggle state (on/off)."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when the toggle state changes."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label text shown beside the toggle."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the toggle."
+    }
   ],
   "cssClasses": [
     "tm-toggle-wrapper",

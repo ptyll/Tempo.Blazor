@@ -1,8 +1,57 @@
 {
   "itemName": "TmSearchInput",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Search-specific text input with a built-in search icon, clear button, optional debounce delay, and localized placeholder fallback.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Current search text."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the search value changes."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text. When null, falls back to the localized default."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the search input."
+    },
+    {
+      "name": "DebounceMs",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Debounce delay in milliseconds (0 = no debounce)."
+    },
+    {
+      "name": "AutoComplete",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"off\"",
+      "description": "HTML autocomplete attribute. Defaults to \"off\" for search inputs. Common values: \"on\", \"off\"."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-input-wrapper",

@@ -1,8 +1,42 @@
 {
   "itemName": "TmAccordionItem",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Individual expandable panel within a TmAccordion, with a clickable header showing title, optional subtitle, icon, and chevron indicator. Supports keyboard navigation and disabled state.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional subtitle below the title."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name."
+    },
+    {
+      "name": "IsExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this item is expanded."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this item is disabled."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-accordion-item",

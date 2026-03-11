@@ -1,8 +1,51 @@
 {
   "itemName": "TmPopover",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Rich content popup anchored to a trigger element with configurable position (Top, Bottom, Left, Right), optional arrow, and controlled/uncontrolled open state. Closes on Escape key.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Position",
+      "type": "PopoverPosition",
+      "isRequired": false,
+      "default": "Bottom",
+      "description": "Position relative to trigger."
+    },
+    {
+      "name": "IsOpen",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Controlled open state."
+    },
+    {
+      "name": "IsOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when open state changes."
+    },
+    {
+      "name": "ShowArrow",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show arrow pointing to trigger."
+    },
+    {
+      "name": "CloseOnClickOutside",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Close when clicking outside."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-popover",

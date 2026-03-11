@@ -1,8 +1,43 @@
 {
   "itemName": "FindReplaceDialog",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Internal modal dialog providing find-and-replace functionality for the rich text editor. Supports single replace and replace-all operations with a result count indicator.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "CloseOnBackdropClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnFind",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnReplace",
+      "type": "EventCallback<(string Find, string Replace)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnReplaceAll",
+      "type": "EventCallback<(string Find, string Replace)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rte-findreplace-dialog",

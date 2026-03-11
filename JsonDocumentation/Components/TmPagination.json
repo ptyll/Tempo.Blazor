@@ -1,8 +1,61 @@
 {
   "itemName": "TmPagination",
+  "kind": "Component",
+  "category": "Data Table",
   "description": "Page navigation control with previous/next buttons, numbered page links with ellipsis for large ranges, optional page-size selector dropdown, and item count display.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "parameters": [
+    {
+      "name": "CurrentPage",
+      "type": "int",
+      "isRequired": false,
+      "default": "1"
+    },
+    {
+      "name": "TotalPages",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "TotalCount",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "PageSize",
+      "type": "int",
+      "isRequired": false,
+      "default": "25"
+    },
+    {
+      "name": "PageSizeOptions",
+      "type": "IReadOnlyList<int>?",
+      "isRequired": false
+    },
+    {
+      "name": "OnPageChange",
+      "type": "EventCallback<int>",
+      "isRequired": false
+    },
+    {
+      "name": "OnPageSizeChange",
+      "type": "EventCallback<int>",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the pagination is disabled."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-pagination",

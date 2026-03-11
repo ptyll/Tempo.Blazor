@@ -1,8 +1,103 @@
 {
   "itemName": "TmFilterableDropdown",
+  "kind": "Component",
+  "category": "Dropdowns",
   "description": "Generic searchable dropdown with client-side or server-side data loading, keyboard navigation, custom item templates, and a clear button. Supports two-way binding via Value/ValueChanged.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dropdowns"
+  ],
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IEnumerable<TItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Items to display (client-side filtering)."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IDropdownDataProvider<TItem>?",
+      "isRequired": false,
+      "description": "Server-side data provider. When set, Items is ignored."
+    },
+    {
+      "name": "Value",
+      "type": "TItem?",
+      "isRequired": false,
+      "description": "Currently selected item."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TItem?>",
+      "isRequired": false,
+      "description": "Fires when the selected item changes."
+    },
+    {
+      "name": "DisplayField",
+      "type": "Func<TItem, string>?",
+      "isRequired": false,
+      "description": "Field selector for display text."
+    },
+    {
+      "name": "IdField",
+      "type": "Func<TItem, object>?",
+      "isRequired": false,
+      "description": "Field selector for item key (used for @key)."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text when no item is selected. When null, falls back to the localized default."
+    },
+    {
+      "name": "FilterPlaceholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder for the filter input. When null, falls back to the localized default."
+    },
+    {
+      "name": "EmptyMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Message when no items match the filter. When null, falls back to the localized default."
+    },
+    {
+      "name": "LoadingMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Message shown while loading from DataProvider. When null, falls back to the localized default."
+    },
+    {
+      "name": "ErrorMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Message shown when DataProvider throws. When null, falls back to the localized default."
+    },
+    {
+      "name": "ShowClearButton",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows a clear button when a value is selected."
+    },
+    {
+      "name": "ItemTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Custom item rendering template."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the dropdown."
+    }
   ],
   "cssClasses": [
     "tm-filterable-dropdown",

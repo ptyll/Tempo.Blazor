@@ -1,8 +1,75 @@
 {
   "itemName": "TmRadioGroup",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Generic radio button group that renders a set of RadioOption items with label, help text, error message, and horizontal or vertical layout.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Name",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "Radio group name attribute (shared by all radio inputs)."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Group label shown above the options."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Help text shown below the label."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation error message."
+    },
+    {
+      "name": "Value",
+      "type": "T?",
+      "isRequired": false,
+      "description": "Currently selected value."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<T?>",
+      "isRequired": false,
+      "description": "Fires when the selection changes."
+    },
+    {
+      "name": "Options",
+      "type": "List<RadioOption<T>>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "List of options to render."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables all options."
+    },
+    {
+      "name": "Layout",
+      "type": "RadioLayout",
+      "isRequired": false,
+      "default": "Vertical",
+      "description": "Layout direction. Defaults to Vertical."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    }
   ],
   "cssClasses": [
     "tm-radio-group",

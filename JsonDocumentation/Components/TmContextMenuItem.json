@@ -1,8 +1,55 @@
 {
   "itemName": "TmContextMenuItem",
+  "kind": "Component",
+  "category": "Navigation",
   "description": "Individual menu item for TmContextMenu. Supports icons, disabled state, danger styling, and divider mode. Automatically closes parent menu on click.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
+  ],
+  "parameters": [
+    {
+      "name": "Label",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Menu item text."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the menu item."
+    },
+    {
+      "name": "IsDivider",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders as a horizontal divider line instead of a clickable item."
+    },
+    {
+      "name": "IsDangerous",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders in danger/red color."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the item is clicked."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the item."
+    }
   ],
   "cssClasses": [
     "tm-context-menu__item",

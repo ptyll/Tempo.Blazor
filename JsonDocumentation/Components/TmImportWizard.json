@@ -1,8 +1,73 @@
 {
   "itemName": "TmImportWizard",
+  "kind": "Component",
+  "category": "Import / Export",
   "description": "Multi-step import wizard with a step indicator (via TmStepper), back/next/cancel/complete navigation buttons, and customizable button text. Steps are defined as child TmImportWizardStep components.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.ImportExport"
+  ],
+  "parameters": [
+    {
+      "name": "ActiveStep",
+      "type": "int",
+      "isRequired": false,
+      "description": "Zero-based index of the active step."
+    },
+    {
+      "name": "ActiveStepChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Fires when the active step changes."
+    },
+    {
+      "name": "OnComplete",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the wizard completes."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the wizard is cancelled."
+    },
+    {
+      "name": "CompleteText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom text for Complete button."
+    },
+    {
+      "name": "NextText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom text for Next button."
+    },
+    {
+      "name": "BackText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom text for Back button."
+    },
+    {
+      "name": "CancelText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom text for Cancel button."
+    },
+    {
+      "name": "ShowStepIndicator",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether to show the step indicator. Defaults to true."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-import-wizard",

@@ -1,18 +1,57 @@
 {
   "itemName": "TmNotificationBell",
+  "kind": "Component",
+  "category": "Notifications",
   "description": "Notification bell icon button with unread badge count and a dropdown panel showing notification items with severity icons, relative timestamps, and mark-as-read actions. Supports limiting visible items via MaxVisible parameter.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Notifications",
     "@using Tempo.Blazor.Interfaces"
   ],
   "parameters": [
-    { "name": "Notifications", "type": "IReadOnlyList<INotificationItem>", "description": "Notification items to display." },
-    { "name": "OnNotificationClick", "type": "EventCallback<INotificationItem>", "description": "Fires when a notification item is clicked." },
-    { "name": "OnMarkAsRead", "type": "EventCallback<string>", "description": "Fires when mark-as-read is clicked for a single notification. Argument is the item Id." },
-    { "name": "OnMarkAllRead", "type": "EventCallback", "description": "Fires when the Mark all as read button is clicked." },
-    { "name": "MaxVisible", "type": "int", "default": "10", "description": "Maximum number of notifications shown in the dropdown." },
-    { "name": "Class", "type": "string?", "description": "Additional CSS class." },
-    { "name": "Disabled", "type": "bool", "default": "false", "description": "When true the bell button is disabled." }
+    {
+      "name": "Notifications",
+      "type": "IReadOnlyList<INotificationItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Notification items to display."
+    },
+    {
+      "name": "OnMarkAsRead",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when \"mark as read\" is clicked for a single notification. Argument = item Id."
+    },
+    {
+      "name": "OnMarkAllRead",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the \"Mark all as read\" button is clicked."
+    },
+    {
+      "name": "MaxVisible",
+      "type": "int",
+      "isRequired": false,
+      "default": "10",
+      "description": "Maximum number of notifications shown in the dropdown."
+    },
+    {
+      "name": "OnNotificationClick",
+      "type": "EventCallback<INotificationItem>",
+      "isRequired": false,
+      "description": "Fires when a notification item is clicked."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true the bell button is disabled."
+    }
   ],
   "cssClasses": [
     "tm-notification-bell",

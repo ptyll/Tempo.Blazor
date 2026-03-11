@@ -1,8 +1,63 @@
 {
   "itemName": "TmDatePicker",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Date picker with a trigger button, dropdown calendar popup, today shortcut, clear button, and min/max date constraints. Supports custom date format and label.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<DateOnly?>",
+      "isRequired": false
+    },
+    {
+      "name": "MinDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxDate",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "DateFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"dd.MM.yyyy\""
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-date-picker",

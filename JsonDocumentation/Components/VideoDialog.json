@@ -1,8 +1,33 @@
 {
   "itemName": "VideoDialog",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Internal modal dialog for embedding videos in the rich text editor. Accepts YouTube, Vimeo, or direct video URLs with an optional title field. URLs are validated before insertion.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "CloseOnBackdropClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnConfirm",
+      "type": "EventCallback<(string Url, string Title)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rte-video-dialog",

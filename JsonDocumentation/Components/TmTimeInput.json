@@ -1,8 +1,42 @@
 {
   "itemName": "TmTimeInput",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Low-level time input with separate numeric fields for hours, minutes, and optional seconds. Enforces min/max time constraints. Used internally by TmTimePicker and other picker components.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "TimeOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TimeOnly?>",
+      "isRequired": false
+    },
+    {
+      "name": "ShowSeconds",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "MinTime",
+      "type": "TimeOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxTime",
+      "type": "TimeOnly?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-time-input",

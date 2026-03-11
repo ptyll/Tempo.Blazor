@@ -1,8 +1,37 @@
 {
   "itemName": "TmDropdownItem",
+  "kind": "Component",
+  "category": "Dropdowns",
   "description": "Individual menu item for TmDropdown. Supports an optional icon, disabled state, and passes its Value to the parent dropdown on click.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dropdowns"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Value passed to TmDropdown.OnSelect when clicked."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional leading icon."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the item."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the dropdown item."
+    }
   ],
   "cssClasses": [
     "tm-dropdown-item",

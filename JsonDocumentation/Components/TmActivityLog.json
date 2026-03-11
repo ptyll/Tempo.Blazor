@@ -1,8 +1,68 @@
 {
   "itemName": "TmActivityLog",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Tabbed activity panel that combines TmActivityTimeline, TmActivityComments, and TmActivityAttachments into a single component with switchable tabs. Each tab can be shown or hidden independently. Tab badges display item counts.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "EntityId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "TimelineEntries",
+      "type": "IReadOnlyList<ITimelineEntry>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "Comments",
+      "type": "IReadOnlyList<ICommentEntry>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "Attachments",
+      "type": "IReadOnlyList<IFileAttachment>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "AttachmentProvider",
+      "type": "IFileAttachmentProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowTimeline",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowComments",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowAttachments",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnCommentAdded",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCommentDeleted",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-activity-log",

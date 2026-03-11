@@ -1,8 +1,48 @@
 {
   "itemName": "TmSchedulerToolbar",
+  "kind": "Component",
+  "category": "Scheduler",
   "description": "Navigation toolbar for the scheduler with previous/next/today buttons, a date title, and view switcher tabs (Day, Week, Month, Agenda, Timeline). Typically used internally by TmScheduler.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "View",
+      "type": "TmScheduleViewType",
+      "isRequired": true,
+      "description": "Current view type."
+    },
+    {
+      "name": "CurrentDate",
+      "type": "DateTime",
+      "isRequired": true,
+      "description": "Currently displayed date."
+    },
+    {
+      "name": "OnViewChange",
+      "type": "EventCallback<TmScheduleViewType>",
+      "isRequired": false,
+      "description": "Fires when the user clicks a view button."
+    },
+    {
+      "name": "OnPrev",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks Previous."
+    },
+    {
+      "name": "OnNext",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks Next."
+    },
+    {
+      "name": "OnToday",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks Today."
+    }
   ],
   "cssClasses": [
     "tm-scheduler-toolbar",

@@ -1,8 +1,24 @@
 {
   "itemName": "TmImportWizardStep",
+  "kind": "Component",
+  "category": "Import / Export",
   "description": "Individual step definition for TmImportWizard. Only renders its content when the step is active. Provides title, description, and icon metadata for the step indicator.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.ImportExport"
+  ],
+  "parameters": [
+    {
+      "name": "Description",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional description for the step indicator."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name."
+    }
   ],
   "cssClasses": [],
   "examples": [

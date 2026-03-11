@@ -1,8 +1,59 @@
 {
   "itemName": "TokenAutocomplete",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Internal dropdown component for {{token}} variable selection in rich text editors. Displays token keys, descriptions, and optional category grouping with sticky section headers. Supports keyboard navigation, query-based filtering, and an optional \"Create new token\" action at the bottom.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Tokens",
+      "type": "IEnumerable<TokenItem>",
+      "isRequired": false,
+      "default": "Empty<TokenItem>()"
+    },
+    {
+      "name": "Query",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty"
+    },
+    {
+      "name": "HighlightedIndex",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "OnTokenSelected",
+      "type": "EventCallback<TokenItem>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCreateRequested",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "SupportsCreation",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnHighlightedIndexChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rte-token-dropdown",

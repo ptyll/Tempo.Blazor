@@ -1,8 +1,55 @@
 {
   "itemName": "TmRadio",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Individual radio button option, typically used inside TmRadioGroup. Supports label, checked state, disabled state, and a select callback.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "object?",
+      "isRequired": false,
+      "description": "The value this radio represents — used by TmRadioGroup."
+    },
+    {
+      "name": "Name",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Radio group name."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label text."
+    },
+    {
+      "name": "IsChecked",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this radio is currently selected."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables this radio option."
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when this radio is selected."
+    }
   ],
   "cssClasses": [
     "tm-radio-option",

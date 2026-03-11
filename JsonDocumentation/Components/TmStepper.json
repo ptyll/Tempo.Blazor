@@ -1,8 +1,78 @@
 {
   "itemName": "TmStepper",
+  "kind": "Component",
+  "category": "Workflow",
   "description": "Step-by-step wizard navigation showing progress through a sequence of steps. Supports horizontal and vertical orientations, small/medium/large sizes, connector lines, check icons for completed steps, and click-to-navigate.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "parameters": [
+    {
+      "name": "Steps",
+      "type": "IEnumerable<IStepItem>?",
+      "isRequired": false,
+      "description": "Step definitions in order."
+    },
+    {
+      "name": "ActiveStep",
+      "type": "int",
+      "isRequired": false,
+      "description": "Zero-based index of the currently active step."
+    },
+    {
+      "name": "OnStepClick",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Fires when a step is clicked, passing its zero-based index."
+    },
+    {
+      "name": "Orientation",
+      "type": "StepperOrientation",
+      "isRequired": false,
+      "default": "Horizontal",
+      "description": "Layout orientation. Defaults to Horizontal."
+    },
+    {
+      "name": "Size",
+      "type": "StepperSize",
+      "isRequired": false,
+      "default": "Medium",
+      "description": "Size variant. Defaults to Medium."
+    },
+    {
+      "name": "ShowCheckIcon",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows checkmark icon for completed steps."
+    },
+    {
+      "name": "ShowConnectors",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows connector lines between steps."
+    },
+    {
+      "name": "ShowDescriptions",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows step descriptions."
+    },
+    {
+      "name": "AllowStepClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, allows clicking on completed and active steps."
+    },
+    {
+      "name": "ActiveIcon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name for the active step."
+    }
   ],
   "cssClasses": [
     "tm-stepper",

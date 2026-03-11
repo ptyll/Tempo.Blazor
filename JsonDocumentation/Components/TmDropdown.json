@@ -1,8 +1,43 @@
 {
   "itemName": "TmDropdown",
+  "kind": "Component",
+  "category": "Dropdowns",
   "description": "Action dropdown menu triggered by a button, supporting icons and keyboard navigation. Items are rendered via TmDropdownItem children.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dropdowns"
+  ],
+  "parameters": [
+    {
+      "name": "Text",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Trigger button label."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional leading icon on the trigger button."
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when a dropdown item is selected (value = item key)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the dropdown."
+    }
   ],
   "cssClasses": [
     "tm-dropdown-wrapper",

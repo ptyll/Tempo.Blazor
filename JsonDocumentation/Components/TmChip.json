@@ -1,8 +1,80 @@
 {
   "itemName": "TmChip",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Small labelled element with Soft, Filled, and Outlined variants, optional icon, removable close button, clickable/selectable states, custom color via CSS variable, and two sizes.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Color",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Custom CSS color."
+    },
+    {
+      "name": "Variant",
+      "type": "ChipVariant",
+      "isRequired": false,
+      "default": "Soft",
+      "description": "Visual variant."
+    },
+    {
+      "name": "Size",
+      "type": "ChipSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "Chip size."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name."
+    },
+    {
+      "name": "Removable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show remove button."
+    },
+    {
+      "name": "OnRemove",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when remove is clicked."
+    },
+    {
+      "name": "Clickable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Make the chip clickable."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when chip is clicked."
+    },
+    {
+      "name": "Selected",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the chip is selected."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the chip is disabled."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-chip",

@@ -1,8 +1,90 @@
 {
   "itemName": "TmDrawer",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Slide-in side panel (left or right) with overlay backdrop, header/body/footer slots, and configurable close behavior via Escape key and overlay click.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout"
+  ],
+  "parameters": [
+    {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the drawer is open."
+    },
+    {
+      "name": "IsOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when the drawer should open or close."
+    },
+    {
+      "name": "Position",
+      "type": "DrawerPosition",
+      "isRequired": false,
+      "default": "Right",
+      "description": "Side from which the drawer slides in."
+    },
+    {
+      "name": "Width",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"400px\"",
+      "description": "Width of the drawer panel."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title shown in the header."
+    },
+    {
+      "name": "ShowOverlay",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show a semi-transparent backdrop behind the drawer."
+    },
+    {
+      "name": "CloseOnOverlayClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Close the drawer when clicking the overlay."
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Close the drawer when pressing Escape."
+    },
+    {
+      "name": "ShowCloseButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show the X close button in the header."
+    },
+    {
+      "name": "HeaderContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Custom header content (replaces Title)."
+    },
+    {
+      "name": "FooterContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional footer with action buttons."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-drawer",

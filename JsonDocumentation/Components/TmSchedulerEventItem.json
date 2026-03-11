@@ -1,8 +1,24 @@
 {
   "itemName": "TmSchedulerEventItem",
+  "kind": "Component",
+  "category": "Scheduler",
   "description": "Renders a single scheduler event with a color dot, time label, and title. Supports a custom RenderFragment template for fully customized event rendering.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "OnClick",
+      "type": "EventCallback<TmScheduleEvent>",
+      "isRequired": false,
+      "description": "Fires when the event is clicked."
+    },
+    {
+      "name": "EventTemplate",
+      "type": "RenderFragment<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Optional custom template for rendering."
+    }
   ],
   "cssClasses": [
     "tm-scheduler-event",

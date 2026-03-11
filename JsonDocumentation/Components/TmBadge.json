@@ -1,8 +1,57 @@
 {
   "itemName": "TmBadge",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Inline label element with color variants (Default, Primary, Success, Danger, Warning, Info), style options (Filled, Outline, Subtle), sizes (Sm, Md), optional pill shape, status dot, and icon.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Variant",
+      "type": "BadgeVariant",
+      "isRequired": false,
+      "default": "Default",
+      "description": "Color variant. Defaults to Default."
+    },
+    {
+      "name": "Size",
+      "type": "BadgeSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "Size variant. Defaults to Md."
+    },
+    {
+      "name": "BadgeStyle",
+      "type": "BadgeStyle",
+      "isRequired": false,
+      "default": "Filled",
+      "description": "Fill style (Filled / Outline / Subtle). Defaults to Filled."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name shown before child content."
+    },
+    {
+      "name": "Pill",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders with fully rounded pill shape."
+    },
+    {
+      "name": "Dot",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders a small status dot before the content."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) to apply to the badge."
+    }
   ],
   "cssClasses": [
     "tm-badge",

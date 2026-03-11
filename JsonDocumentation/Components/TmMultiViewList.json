@@ -1,8 +1,241 @@
 {
   "itemName": "TmMultiViewList",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Generic multi-view list supporting Table, Card, and List display modes with a built-in view switcher, search, grouping, pagination, virtualization, external filter builder, and optional view persistence via IDataTableViewProvider.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<TItem>?",
+      "isRequired": false,
+      "description": "Items to display in the list (client-side mode)."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IDataTableDataProvider<TItem>?",
+      "isRequired": false,
+      "description": "Server-side data provider. When set, data is loaded via this provider."
+    },
+    {
+      "name": "ShowPagination",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows pagination bar when more than one page. Default: true."
+    },
+    {
+      "name": "DefaultPageSize",
+      "type": "int",
+      "isRequired": false,
+      "default": "25",
+      "description": "Default page size for pagination. Default: 25."
+    },
+    {
+      "name": "TitleField",
+      "type": "Func<TItem, string>?",
+      "isRequired": false,
+      "description": "Maps an item to its display title."
+    },
+    {
+      "name": "SubTitleField",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Maps an item to its secondary text."
+    },
+    {
+      "name": "AvatarUrlField",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Maps an item to its avatar/thumbnail URL."
+    },
+    {
+      "name": "StatusLabelField",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Maps an item to its status label text."
+    },
+    {
+      "name": "StatusColorField",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Maps an item to its status badge CSS color."
+    },
+    {
+      "name": "DateField",
+      "type": "Func<TItem, DateTimeOffset?>?",
+      "isRequired": false,
+      "description": "Maps an item to its date value."
+    },
+    {
+      "name": "IdField",
+      "type": "Func<TItem, string>?",
+      "isRequired": false,
+      "description": "Maps an item to its unique identifier."
+    },
+    {
+      "name": "CardTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Custom card template. When set, overrides default card rendering."
+    },
+    {
+      "name": "ListItemTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Custom list item template. When set, overrides default list rendering."
+    },
+    {
+      "name": "TableRowTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Custom table row template. When set, overrides default table row rendering."
+    },
+    {
+      "name": "GroupableFields",
+      "type": "IReadOnlyList<GroupFieldDefinition<TItem>>?",
+      "isRequired": false,
+      "description": "Fields available for grouping in the dropdown picker."
+    },
+    {
+      "name": "GroupsCollapsedByDefault",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether groups are collapsed by default."
+    },
+    {
+      "name": "OnGroupingChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Fires when grouping configuration changes."
+    },
+    {
+      "name": "ScrollMode",
+      "type": "DataTableScrollMode",
+      "isRequired": false,
+      "default": "Pagination",
+      "description": "Scroll mode: Pagination (default) or Virtualized."
+    },
+    {
+      "name": "VirtualScrollHeight",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Height of the virtual scroll container. Default: \"600px\"."
+    },
+    {
+      "name": "VirtualItemSize",
+      "type": "float",
+      "isRequired": false,
+      "default": "48f",
+      "description": "Estimated item height for table row virtualization."
+    },
+    {
+      "name": "VirtualCardHeight",
+      "type": "float",
+      "isRequired": false,
+      "default": "180f",
+      "description": "Estimated card height for card view virtualization."
+    },
+    {
+      "name": "VirtualListItemHeight",
+      "type": "float",
+      "isRequired": false,
+      "default": "56f",
+      "description": "Estimated list item height for list view virtualization."
+    },
+    {
+      "name": "ViewMode",
+      "type": "ListViewMode",
+      "isRequired": false,
+      "default": "Table",
+      "description": "Current display mode (Table/Card/List). Two-way bindable."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<ListViewMode>",
+      "isRequired": false,
+      "description": "Fires when the user switches the view mode."
+    },
+    {
+      "name": "OnItemClick",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires when an item row/card is clicked."
+    },
+    {
+      "name": "ShowViewSwitcher",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows the view-mode switcher buttons above the list."
+    },
+    {
+      "name": "ShowSearch",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows the global search input."
+    },
+    {
+      "name": "EmptyTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title for the empty state when Items is empty."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "ViewProvider",
+      "type": "IDataTableViewProvider?",
+      "isRequired": false,
+      "description": "Optional view persistence provider. When set, shows TmViewManager."
+    },
+    {
+      "name": "ViewFilterDefinitions",
+      "type": "List<FilterDefinition>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Filter definitions for the view manager filter builder."
+    },
+    {
+      "name": "ShowExternalFilterBuilder",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows FilterBuilder for external filtering."
+    },
+    {
+      "name": "ExternalFilterDefinitions",
+      "type": "List<FilterDefinition>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Filter definitions for the external filter builder."
+    },
+    {
+      "name": "ViewCanCreateTenantViews",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the user can create tenant-wide views."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user ID for personal view scoping."
+    },
+    {
+      "name": "CurrentTenantId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current tenant ID for tenant view scoping."
+    }
   ],
   "cssClasses": [
     "tm-multi-view-list",

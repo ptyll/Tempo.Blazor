@@ -1,8 +1,54 @@
 {
   "itemName": "TmSection",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Collapsible content section with optional title, icon, and header actions. Supports two-way binding on collapsed state.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional section title."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name displayed before the title."
+    },
+    {
+      "name": "HeaderActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional actions rendered in the header (e.g. buttons)."
+    },
+    {
+      "name": "Collapsible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the section can be collapsed/expanded by clicking the header."
+    },
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the section is currently collapsed. Use with CollapsedChanged for two-way binding."
+    },
+    {
+      "name": "CollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback when collapsed state changes."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    }
   ],
   "cssClasses": [
     "tm-section",

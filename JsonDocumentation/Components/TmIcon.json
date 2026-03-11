@@ -1,36 +1,32 @@
 {
   "itemName": "TmIcon",
+  "kind": "Component",
+  "category": "Icons",
   "description": "SVG icon component with 150+ built-in icons (Feather-style), five size variants (Xs–Xl), six color variants, and support for custom icons via IconRegistry.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Icons"
   ],
   "parameters": [
     {
-      "name": "Name",
-      "type": "string",
-      "required": true,
-      "description": "Icon name. Use IconNames constants (e.g. IconNames.Check) or a custom registered name."
-    },
-    {
       "name": "Size",
       "type": "IconSize",
-      "required": false,
+      "isRequired": false,
       "default": "Md",
-      "description": "Icon size: Xs (0.75rem), Sm (1rem), Md (1.25rem), Lg (1.5rem), Xl (2rem)."
+      "description": "Display size of the icon."
     },
     {
       "name": "Color",
       "type": "IconColor",
-      "required": false,
+      "isRequired": false,
       "default": "Current",
-      "description": "Icon color: Current (inherits), Primary, Danger, Success, Warning, Muted."
+      "description": "Color variant of the icon. Default inherits from parent (currentColor)."
     },
     {
       "name": "StrokeWidth",
       "type": "double",
-      "required": false,
+      "isRequired": false,
       "default": "2",
-      "description": "SVG stroke width."
+      "description": "SVG stroke-width. Default is 2."
     }
   ],
   "cssClasses": [
@@ -50,52 +46,179 @@
   ],
   "builtInIcons": {
     "actions": [
-      "check", "x", "plus", "minus", "edit", "trash", "save", "copy",
-      "paste", "send", "refresh", "download", "upload", "share", "print"
+      "check",
+      "x",
+      "plus",
+      "minus",
+      "edit",
+      "trash",
+      "save",
+      "copy",
+      "paste",
+      "send",
+      "refresh",
+      "download",
+      "upload",
+      "share",
+      "print"
     ],
     "navigation": [
-      "home", "menu", "chevron-left", "chevron-right", "chevron-up", "chevron-down",
-      "arrow-left", "arrow-right", "arrow-up", "arrow-down", "external-link",
-      "more-horizontal", "more-vertical"
+      "home",
+      "menu",
+      "chevron-left",
+      "chevron-right",
+      "chevron-up",
+      "chevron-down",
+      "arrow-left",
+      "arrow-right",
+      "arrow-up",
+      "arrow-down",
+      "external-link",
+      "more-horizontal",
+      "more-vertical"
     ],
     "usersAndAuth": [
-      "user", "users", "user-plus", "user-minus", "user-check",
-      "log-in", "log-out", "lock", "unlock", "key", "shield"
+      "user",
+      "users",
+      "user-plus",
+      "user-minus",
+      "user-check",
+      "log-in",
+      "log-out",
+      "lock",
+      "unlock",
+      "key",
+      "shield"
     ],
     "filesAndFolders": [
-      "file", "file-text", "file-plus", "folder", "folder-open", "folder-plus",
-      "clipboard", "check-square", "paperclip", "image", "film"
+      "file",
+      "file-text",
+      "file-plus",
+      "folder",
+      "folder-open",
+      "folder-plus",
+      "clipboard",
+      "check-square",
+      "paperclip",
+      "image",
+      "film"
     ],
     "uiElements": [
-      "search", "filter", "settings", "bell", "bell-off", "grid", "list",
-      "columns", "sidebar", "sliders", "toggle-left", "toggle-right",
-      "grip-vertical", "eye", "eye-off"
+      "search",
+      "filter",
+      "settings",
+      "bell",
+      "bell-off",
+      "grid",
+      "list",
+      "columns",
+      "sidebar",
+      "sliders",
+      "toggle-left",
+      "toggle-right",
+      "grip-vertical",
+      "eye",
+      "eye-off"
     ],
     "communication": [
-      "mail", "message", "message-square", "phone", "at-sign", "hash", "link", "link-2"
+      "mail",
+      "message",
+      "message-square",
+      "phone",
+      "at-sign",
+      "hash",
+      "link",
+      "link-2"
     ],
     "shapesAndIndicators": [
-      "circle", "square", "minus-circle", "plus-circle", "x-circle", "check-circle",
-      "alert-circle", "alert-triangle", "help-circle", "info", "stop"
+      "circle",
+      "square",
+      "minus-circle",
+      "plus-circle",
+      "x-circle",
+      "check-circle",
+      "alert-circle",
+      "alert-triangle",
+      "help-circle",
+      "info",
+      "stop"
     ],
     "mediaAndPlayback": [
-      "play", "pause", "stop-circle", "skip-back", "skip-forward", "volume-2", "volume-x"
+      "play",
+      "pause",
+      "stop-circle",
+      "skip-back",
+      "skip-forward",
+      "volume-2",
+      "volume-x"
     ],
     "dataAndAnalytics": [
-      "bar-chart-2", "pie-chart", "trending-up", "trending-down", "activity",
-      "database", "server", "cloud", "cloud-upload", "cloud-download"
+      "bar-chart-2",
+      "pie-chart",
+      "trending-up",
+      "trending-down",
+      "activity",
+      "database",
+      "server",
+      "cloud",
+      "cloud-upload",
+      "cloud-download"
     ],
     "gamification": [
-      "trophy", "star", "target", "zap", "award", "crown", "medal", "fire", "gem"
+      "trophy",
+      "star",
+      "target",
+      "zap",
+      "award",
+      "crown",
+      "medal",
+      "fire",
+      "gem"
     ],
     "misc": [
-      "bug", "code", "terminal", "globe", "map", "map-pin", "calendar", "clock",
-      "tag", "bookmark", "heart", "thumbs-up", "thumbs-down", "package", "box",
-      "layers", "layout", "monitor", "smartphone", "cpu", "hard-drive", "wifi",
-      "wifi-off", "battery", "power", "sun", "moon", "align-left", "align-center",
-      "align-right", "bold", "italic", "underline", "strikethrough", "type",
-      "maximize-2", "minimize-2", "rotate-cw", "rotate-ccw", "zoom-in", "zoom-out",
-      "scissors", "crop"
+      "bug",
+      "code",
+      "terminal",
+      "globe",
+      "map",
+      "map-pin",
+      "calendar",
+      "clock",
+      "tag",
+      "bookmark",
+      "heart",
+      "thumbs-up",
+      "thumbs-down",
+      "package",
+      "box",
+      "layers",
+      "layout",
+      "monitor",
+      "smartphone",
+      "cpu",
+      "hard-drive",
+      "wifi",
+      "wifi-off",
+      "battery",
+      "power",
+      "sun",
+      "moon",
+      "align-left",
+      "align-center",
+      "align-right",
+      "bold",
+      "italic",
+      "underline",
+      "strikethrough",
+      "type",
+      "maximize-2",
+      "minimize-2",
+      "rotate-cw",
+      "rotate-ccw",
+      "zoom-in",
+      "zoom-out",
+      "scissors",
+      "crop"
     ]
   },
   "iconNameAliases": {

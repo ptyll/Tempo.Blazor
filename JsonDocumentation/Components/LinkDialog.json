@@ -1,8 +1,38 @@
 {
   "itemName": "LinkDialog",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Internal modal dialog for inserting hyperlinks in the rich text editor. Provides URL and display text inputs with URL validation. Supports backdrop click to close and preselected text.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "PreselectedText",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "CloseOnBackdropClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnConfirm",
+      "type": "EventCallback<(string Url, string Text)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rte-link-dialog",

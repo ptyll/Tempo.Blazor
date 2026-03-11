@@ -1,8 +1,43 @@
 {
   "itemName": "TmValidationSummary",
+  "kind": "Component",
+  "category": "Forms",
   "description": "Displays a summary of validation errors from a cascading EditContext. Supports automatic visibility based on error state or manual mode with explicit Show control.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Forms"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title text displayed at the top of the error summary. Falls back to a localized default."
+    },
+    {
+      "name": "ShowErrorsList",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, individual error messages are listed below the title. Default: true."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "ManualMode",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, visibility is controlled by the Show parameter instead of automatic error detection."
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Controls visibility when ManualMode is true. Ignored in automatic mode."
+    }
   ],
   "cssClasses": [
     "tm-validation-summary",

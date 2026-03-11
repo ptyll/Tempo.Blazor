@@ -1,8 +1,70 @@
 {
   "itemName": "TmWorkflowDesignerCanvas",
+  "kind": "Component",
+  "category": "Workflow",
   "description": "Interactive SVG canvas for designing state-machine workflows. Renders states as shaped nodes (pill for initial, double-border for final, rounded rect for intermediate) connected by curved transition arrows. Supports drag-to-move nodes, drag-from-port to create transitions, zoom/pan via JS interop, context menus, grid snapping, and read-only mode.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Workflow"
+  ],
+  "parameters": [
+    {
+      "name": "DefinitionChanged",
+      "type": "EventCallback<WorkflowCanvasDefinition>",
+      "isRequired": false
+    },
+    {
+      "name": "DefinitionChanged",
+      "type": "EventCallback<WorkflowCanvasDefinition>",
+      "isRequired": false
+    },
+    {
+      "name": "ShowGrid",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "GridSize",
+      "type": "int",
+      "isRequired": false,
+      "default": "20"
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnStateSelected",
+      "type": "EventCallback<CanvasState?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTransitionSelected",
+      "type": "EventCallback<CanvasTransition?>",
+      "isRequired": false
+    },
+    {
+      "name": "SelectedStateId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "SelectedTransitionId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "OnZoomLevelChanged",
+      "type": "EventCallback<double>",
+      "isRequired": false,
+      "description": "Fires when zoom level changes (from mouse wheel or JS)."
+    }
   ],
   "cssClasses": [
     "tm-wf-designer",

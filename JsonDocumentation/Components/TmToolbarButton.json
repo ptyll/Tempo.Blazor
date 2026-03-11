@@ -1,8 +1,55 @@
 {
   "itemName": "TmToolbarButton",
+  "kind": "Component",
+  "category": "Toolbar",
   "description": "Button designed for use inside TmToolbar. Supports icon-only, text-only, or icon+text layouts with ghost, primary, and danger variants.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Toolbar"
+  ],
+  "parameters": [
+    {
+      "name": "Text",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Button label text. Omit for icon-only buttons."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Icon name from IconNames. Displayed before the text."
+    },
+    {
+      "name": "Tooltip",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Tooltip text shown as the native title attribute."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the button is clicked."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the button is disabled."
+    },
+    {
+      "name": "Variant",
+      "type": "ButtonVariant",
+      "isRequired": false,
+      "default": "Ghost",
+      "description": "Visual style variant."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the button element."
+    }
   ],
   "cssClasses": [
     "tm-toolbar-btn",

@@ -1,9 +1,231 @@
 {
   "itemName": "TmMultiSelect",
+  "kind": "Component",
+  "category": "Inputs",
   "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs",
     "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Values",
+      "type": "IReadOnlyList<TValue>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Currently selected values."
+    },
+    {
+      "name": "ValuesChanged",
+      "type": "EventCallback<IReadOnlyList<TValue>>",
+      "isRequired": false,
+      "description": "Fires when the selection changes."
+    },
+    {
+      "name": "Items",
+      "type": "IEnumerable<TItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Static list of items. Ignored when DataProvider is set."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IDropdownDataProvider<TItem>?",
+      "isRequired": false,
+      "description": "Server-side data provider. When set, Items is ignored."
+    },
+    {
+      "name": "IdField",
+      "type": "Func<TItem, string>?",
+      "isRequired": false,
+      "description": "Extracts a string key for @key and ExcludedIds. Defaults to ValueField.ToString()."
+    },
+    {
+      "name": "GroupField",
+      "type": "Func<TItem, string?>?",
+      "isRequired": false,
+      "description": "Extracts a group name for grouped display."
+    },
+    {
+      "name": "Mode",
+      "type": "MultiSelectMode",
+      "isRequired": false,
+      "default": "Chip",
+      "description": "Visual mode for selected items. Default: Chip."
+    },
+    {
+      "name": "Delimiter",
+      "type": "string",
+      "isRequired": false,
+      "default": "\", \"",
+      "description": "Delimiter string for Delimiter mode. Default: \", \"."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label shown above the component."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder text when no items are selected."
+    },
+    {
+      "name": "Error",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Validation error message."
+    },
+    {
+      "name": "HelpText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Help text shown below when no error is present."
+    },
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "HTML id attribute."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the component."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the field as required."
+    },
+    {
+      "name": "AllowFiltering",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Enables the search input in the dropdown. Default: true."
+    },
+    {
+      "name": "FilterPlaceholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder for the filter input."
+    },
+    {
+      "name": "Debounce",
+      "type": "int",
+      "isRequired": false,
+      "default": "300",
+      "description": "Debounce delay in ms for server-side filtering. Default: 300."
+    },
+    {
+      "name": "MaxSelectionCount",
+      "type": "int",
+      "isRequired": false,
+      "description": "Maximum selectable items. 0 = unlimited."
+    },
+    {
+      "name": "ShowSelectAll",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows Select All / Deselect All control."
+    },
+    {
+      "name": "HideSelectedItems",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Hides already-selected items from the dropdown."
+    },
+    {
+      "name": "ShowClearButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Shows a clear-all button. Default: true."
+    },
+    {
+      "name": "ShowCheckBox",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows checkboxes next to items."
+    },
+    {
+      "name": "ItemTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Custom template for each item in the dropdown."
+    },
+    {
+      "name": "ValueTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Custom template for each selected value chip."
+    },
+    {
+      "name": "NoRecordsTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Template shown when no items match."
+    },
+    {
+      "name": "HeaderTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Popup header content."
+    },
+    {
+      "name": "FooterTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Popup footer content."
+    },
+    {
+      "name": "LoadingMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Loading message."
+    },
+    {
+      "name": "EmptyMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Empty results message."
+    },
+    {
+      "name": "ErrorMessage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message."
+    },
+    {
+      "name": "OnOpen",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the dropdown opens."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the dropdown closes."
+    },
+    {
+      "name": "OnFiltering",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the filter text changes."
+    }
   ],
   "cssClasses": [
     "tm-multiselect",

@@ -1,8 +1,76 @@
 {
   "itemName": "TmViewManager",
+  "kind": "Component",
+  "category": "Data Table",
   "description": "Saved view management panel for TmDataTable and TmMultiViewList, supporting personal and tenant-scoped views with create, edit, delete, and apply operations. Includes a modal for configuring view name, scope, visible columns, grouping, and filters via IDataTableViewProvider.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "parameters": [
+    {
+      "name": "OnViewApplied",
+      "type": "EventCallback<DataTableView>",
+      "isRequired": false,
+      "description": "Callback when a view is applied."
+    },
+    {
+      "name": "GetCurrentView",
+      "type": "Func<DataTableView>?",
+      "isRequired": false,
+      "description": "Callback to get current view state."
+    },
+    {
+      "name": "GetCurrentFilters",
+      "type": "Func<List<ActiveFilter>>?",
+      "isRequired": false,
+      "description": "Callback to get current active filters."
+    },
+    {
+      "name": "OnCreateView",
+      "type": "EventCallback<DataTableView>",
+      "isRequired": false,
+      "description": "Callback when creating a new view."
+    },
+    {
+      "name": "AvailableColumns",
+      "type": "List<ViewColumnInfo>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Available columns for selection."
+    },
+    {
+      "name": "FilterDefinitions",
+      "type": "List<FilterDefinition>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Filter definitions for the filter builder."
+    },
+    {
+      "name": "AvailableGroupableColumns",
+      "type": "List<ViewColumnInfo>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Available columns for grouping selection in the view modal."
+    },
+    {
+      "name": "CanCreateTenantViews",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the user can create tenant-wide views."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user's identifier for personal views."
+    },
+    {
+      "name": "CurrentTenantId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current tenant identifier."
+    }
   ],
   "cssClasses": [
     "tm-view-manager",

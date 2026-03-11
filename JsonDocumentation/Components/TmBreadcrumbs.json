@@ -1,9 +1,38 @@
 {
   "itemName": "TmBreadcrumbs",
+  "kind": "Component",
+  "category": "Layout",
   "description": "Breadcrumb navigation trail with customizable separator, icon support, and optional click callback. Items render as links or buttons depending on configuration.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
+  ],
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<IBreadcrumbItem>?",
+      "isRequired": false,
+      "description": "Breadcrumb items to render. Accepts any IBreadcrumbItem implementation."
+    },
+    {
+      "name": "Separator",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"/\"",
+      "description": "Separator character between items. Defaults to \"/\"."
+    },
+    {
+      "name": "OnItemClick",
+      "type": "EventCallback<IBreadcrumbItem>",
+      "isRequired": false,
+      "description": "Optional callback when a breadcrumb item is clicked. When set, renders items as buttons instead of links."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-breadcrumbs",

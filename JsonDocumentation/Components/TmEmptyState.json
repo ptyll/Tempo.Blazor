@@ -1,8 +1,43 @@
 {
   "itemName": "TmEmptyState",
+  "kind": "Component",
+  "category": "Data Display",
   "description": "Centered placeholder shown when a list or section has no content, with optional icon, title, description, and call-to-action button.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Heading shown in the empty state."
+    },
+    {
+      "name": "Description",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional longer description text."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name (use IconNames constants)."
+    },
+    {
+      "name": "ActionText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Label for the call-to-action button. Button is rendered only when this is set and OnAction has a delegate."
+    },
+    {
+      "name": "OnAction",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the action button is clicked."
+    }
   ],
   "cssClasses": [
     "tm-empty-state",

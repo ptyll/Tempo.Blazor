@@ -1,8 +1,86 @@
 {
   "itemName": "TmSchedulerWeekView",
+  "kind": "Component",
+  "category": "Scheduler",
   "description": "Seven-day time grid view with configurable first day of week, slot duration, resource grouping, and drag-and-drop. Delegates rendering to TmSchedulerTimeGrid.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
+  ],
+  "parameters": [
+    {
+      "name": "CurrentDate",
+      "type": "DateTime",
+      "isRequired": true,
+      "description": "Currently displayed date (any day in the target week)."
+    },
+    {
+      "name": "FirstDayOfWeek",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "First day of week (0=Sunday, 1=Monday, ...)."
+    },
+    {
+      "name": "Events",
+      "type": "IReadOnlyList<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Events to display."
+    },
+    {
+      "name": "SlotDuration",
+      "type": "int",
+      "isRequired": false,
+      "default": "30",
+      "description": "Duration of each time slot in minutes."
+    },
+    {
+      "name": "OnSlotClick",
+      "type": "EventCallback<(DateTime Start, DateTime End)>",
+      "isRequired": false,
+      "description": "Fires when a time slot is clicked."
+    },
+    {
+      "name": "OnEventClick",
+      "type": "EventCallback<TmScheduleEvent>",
+      "isRequired": false,
+      "description": "Fires when an event is clicked."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether events are read-only."
+    },
+    {
+      "name": "OnEventChanged",
+      "type": "EventCallback<TmScheduleEvent>",
+      "isRequired": false,
+      "description": "Fires when an event is moved or resized."
+    },
+    {
+      "name": "OnSlotContextMenu",
+      "type": "EventCallback<SchedulerSlotContext>",
+      "isRequired": false,
+      "description": "Fires when right-clicking on a time slot."
+    },
+    {
+      "name": "OnEventContextMenu",
+      "type": "EventCallback<SchedulerEventContext>",
+      "isRequired": false,
+      "description": "Fires when right-clicking on an event."
+    },
+    {
+      "name": "Resources",
+      "type": "IReadOnlyList<TmScheduleResource>?",
+      "isRequired": false,
+      "description": "Resources for grouping columns."
+    },
+    {
+      "name": "EventTemplate",
+      "type": "RenderFragment<TmScheduleEvent>?",
+      "isRequired": false,
+      "description": "Optional custom event template."
+    }
   ],
   "cssClasses": [
     "tm-scheduler-week"

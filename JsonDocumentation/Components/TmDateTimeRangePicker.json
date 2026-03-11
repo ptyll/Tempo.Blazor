@@ -1,9 +1,58 @@
 {
   "itemName": "TmDateTimeRangePicker",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Full datetime range picker combining two TmDateTimePicker instances for start and end, with cross-constraint validation ensuring end is not before start.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers",
     "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "(DateTime? Start, DateTime? End)",
+      "isRequired": true
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<(DateTime? Start, DateTime? End)>",
+      "isRequired": false
+    },
+    {
+      "name": "MinValue",
+      "type": "DateTime?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxValue",
+      "type": "DateTime?",
+      "isRequired": false
+    },
+    {
+      "name": "Presets",
+      "type": "IReadOnlyList<DateRangePreset>?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowSeconds",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-datetime-range-picker",

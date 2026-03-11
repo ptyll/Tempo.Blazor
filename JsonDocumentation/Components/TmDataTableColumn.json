@@ -1,8 +1,131 @@
 {
   "itemName": "TmDataTableColumn",
+  "kind": "Component",
+  "category": "Data Table",
   "description": "Headless column descriptor for TmDataTable that defines header title, field accessor, sorting, filtering, grouping, visibility, alignment, width, custom cell/header templates, and group aggregation.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "parameters": [
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Column header text."
+    },
+    {
+      "name": "Field",
+      "type": "Func<TItem, object?>",
+      "isRequired": false,
+      "default": "default!",
+      "description": "Field accessor that returns the cell value for a given row item."
+    },
+    {
+      "name": "CellTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Optional custom cell template. When set, overrides Field rendering."
+    },
+    {
+      "name": "PropertyName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Property name for sorting and filtering (e.g. \"Name\", \"CreatedAt\"). Defaults to Title when null."
+    },
+    {
+      "name": "Sortable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this column can be sorted by clicking its header."
+    },
+    {
+      "name": "Filterable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this column shows an inline filter input."
+    },
+    {
+      "name": "FilterType",
+      "type": "FilterType",
+      "isRequired": false,
+      "default": "Text",
+      "description": "Type of filter control to render (Text, Number, Date, Boolean, Select)."
+    },
+    {
+      "name": "FilterOptions",
+      "type": "IReadOnlyList<SelectOption<string>>?",
+      "isRequired": false,
+      "description": "Options for Select filter type (string-keyed values)."
+    },
+    {
+      "name": "Hideable",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether this column can be toggled via the column picker. Default true."
+    },
+    {
+      "name": "HiddenByDefault",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this column is hidden by default (user must show it via column picker)."
+    },
+    {
+      "name": "Width",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Column width CSS value (e.g. \"200px\", \"20%\")."
+    },
+    {
+      "name": "MinWidth",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Minimum column width CSS value."
+    },
+    {
+      "name": "Align",
+      "type": "ColumnAlign",
+      "isRequired": false,
+      "default": "Left",
+      "description": "Horizontal text alignment in cells."
+    },
+    {
+      "name": "CssClass",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class applied to each data cell in this column."
+    },
+    {
+      "name": "HeaderTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Custom header render fragment (replaces plain Title text when set)."
+    },
+    {
+      "name": "Order",
+      "type": "int",
+      "isRequired": false,
+      "description": "Display order (lower index = further left). Columns with same order preserve declaration order."
+    },
+    {
+      "name": "Groupable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this column can be used for row grouping."
+    },
+    {
+      "name": "GroupDisplayFormatter",
+      "type": "Func<object?, string>?",
+      "isRequired": false,
+      "description": "Custom display formatter for group header when grouped by this column."
+    },
+    {
+      "name": "GroupAggregates",
+      "type": "IReadOnlyList<AggregateType>?",
+      "isRequired": false,
+      "description": "Aggregation types to show in group row for this column."
+    }
   ],
   "cssClasses": [],
   "examples": [

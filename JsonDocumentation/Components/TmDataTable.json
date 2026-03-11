@@ -1,8 +1,192 @@
 {
   "itemName": "TmDataTable",
+  "kind": "Component",
+  "category": "Data Table",
   "description": "Full-featured data grid with declarative column definitions, client-side and server-side data modes, sorting, inline column filters, global search, row selection with bulk actions, column visibility picker, drag-to-group with multi-level grouping, pagination, virtualized scrolling, external filter builder, and saved view management.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataTable"
+  ],
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IEnumerable<TItem>?",
+      "isRequired": false,
+      "description": "In-memory items. When set without DataProvider, client-side sort/filter/pagination applies."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IDataTableDataProvider<TItem>?",
+      "isRequired": false,
+      "description": "Server-side data provider. When set, overrides Items and calls GetDataAsync on query changes."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, shows a loading spinner instead of rows. Useful for manual loading control."
+    },
+    {
+      "name": "EmptyTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Heading shown in the empty state when no items are available."
+    },
+    {
+      "name": "Selectable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Enables row checkboxes for multi-select."
+    },
+    {
+      "name": "ShowSearch",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows the global search input. Default: true."
+    },
+    {
+      "name": "ShowColumnPicker",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows the column visibility picker. Default: true."
+    },
+    {
+      "name": "ShowPagination",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows the TmPagination bar when more than one page exists. Default: true."
+    },
+    {
+      "name": "DefaultPageSize",
+      "type": "int",
+      "isRequired": false,
+      "default": "25",
+      "description": "Initial page size. Default: 25."
+    },
+    {
+      "name": "PageSizeOptions",
+      "type": "IReadOnlyList<int>",
+      "isRequired": false,
+      "default": "[5, 10, 25, 50, 100]",
+      "description": "Page size options shown in the pagination dropdown."
+    },
+    {
+      "name": "ViewProvider",
+      "type": "IDataTableViewProvider?",
+      "isRequired": false,
+      "description": "Optional view persistence provider. When set, shows TmViewManager."
+    },
+    {
+      "name": "ViewFilterDefinitions",
+      "type": "List<FilterDefinition>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Filter definitions for the view manager filter builder."
+    },
+    {
+      "name": "ShowExternalFilterBuilder",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, shows FilterBuilder for external filtering (visible when ViewProvider is set)."
+    },
+    {
+      "name": "ExternalFilterDefinitions",
+      "type": "List<FilterDefinition>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Filter definitions for the external filter builder (shown above table when ViewProvider is set)."
+    },
+    {
+      "name": "ViewCanCreateTenantViews",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the user can create tenant-wide views. Default: false."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user ID for personal view scoping."
+    },
+    {
+      "name": "CurrentTenantId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current tenant ID for tenant view scoping."
+    },
+    {
+      "name": "ScrollMode",
+      "type": "DataTableScrollMode",
+      "isRequired": false,
+      "default": "Pagination",
+      "description": "Scroll/pagination mode. Default: Pagination."
+    },
+    {
+      "name": "VirtualItemSize",
+      "type": "float",
+      "isRequired": false,
+      "default": "48f",
+      "description": "Height of a single row in pixels (required for Virtualize). Default: 48."
+    },
+    {
+      "name": "VirtualOverscanCount",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "Number of extra items to render above/below viewport. Default: 3."
+    },
+    {
+      "name": "VirtualScrollHeight",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Fixed height for the virtualized scroll container (e.g. \"600px\", \"80vh\")."
+    },
+    {
+      "name": "ShowGrouping",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether to show the grouping drop zone above the table."
+    },
+    {
+      "name": "GroupsCollapsedByDefault",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether groups are collapsed by default."
+    },
+    {
+      "name": "OnRowClick",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires when a data row is clicked."
+    },
+    {
+      "name": "OnSelectionChanged",
+      "type": "EventCallback<IReadOnlyList<TItem>>",
+      "isRequired": false,
+      "description": "Fires when the selection changes."
+    },
+    {
+      "name": "OnGroupingChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Fires when grouping configuration changes."
+    },
+    {
+      "name": "SelectionActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Render fragment shown in the selection action bar (bulk actions)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class applied to the wrapper div."
+    }
   ],
   "cssClasses": [
     "tm-data-table-wrapper",

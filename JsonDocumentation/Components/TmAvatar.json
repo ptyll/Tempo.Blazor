@@ -1,8 +1,51 @@
 {
   "itemName": "TmAvatar",
+  "kind": "Component",
+  "category": "Avatars",
   "description": "Displays a user avatar as an image or initials fallback derived from the Name property. Supports six sizes (Xs, Sm, Md, Lg, Xl, Xxl), two shapes (Circle, Square), and multiple background colors for the initials variant.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Avatars"
+  ],
+  "parameters": [
+    {
+      "name": "Src",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Image source URL. When set, renders an img element."
+    },
+    {
+      "name": "Alt",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Alt text for the avatar image."
+    },
+    {
+      "name": "Name",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Full name used to derive initials when no Src is provided."
+    },
+    {
+      "name": "Size",
+      "type": "AvatarSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "Display size. Defaults to Md."
+    },
+    {
+      "name": "Shape",
+      "type": "AvatarShape",
+      "isRequired": false,
+      "default": "Circle",
+      "description": "Shape variant. Defaults to Circle."
+    },
+    {
+      "name": "Color",
+      "type": "AvatarColor",
+      "isRequired": false,
+      "default": "Gray",
+      "description": "Background color for the initials fallback. Defaults to Gray."
+    }
   ],
   "cssClasses": [
     "tm-avatar",

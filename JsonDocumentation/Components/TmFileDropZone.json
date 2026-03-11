@@ -1,8 +1,49 @@
 {
   "itemName": "TmFileDropZone",
+  "kind": "Component",
+  "category": "Files",
   "description": "Drag-and-drop file upload zone with built-in file browser, file list display with icons and sizes, removable items, and support for multiple files and accept filters.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "OnFilesSelected",
+      "type": "EventCallback<InputFileChangeEventArgs>",
+      "isRequired": false,
+      "description": "Fires when files are selected via click or drag-and-drop."
+    },
+    {
+      "name": "Multiple",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Allow selecting multiple files at once."
+    },
+    {
+      "name": "Accept",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accepted file types (e.g. \"image/*\" or \".pdf,.docx\")."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the drop zone is disabled and no files can be selected."
+    },
+    {
+      "name": "MaxFileCount",
+      "type": "int",
+      "isRequired": false,
+      "default": "10",
+      "description": "Maximum number of files to accept from a single selection. Default 10."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
   ],
   "cssClasses": [
     "tm-file-drop-zone",

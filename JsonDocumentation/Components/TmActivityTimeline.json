@@ -1,8 +1,25 @@
 {
   "itemName": "TmActivityTimeline",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Displays a chronological timeline of activity entries (comments, status changes, assignments, attachments) with author avatars, relative timestamps, and color-coded connector dots per entry type. Entries are sorted newest-first.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "Entries",
+      "type": "IEnumerable<ITimelineEntry>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Timeline entries to display. Sorted newest-first."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the timeline is loading data."
+    }
   ],
   "cssClasses": [
     "tm-timeline",

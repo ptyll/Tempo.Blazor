@@ -1,8 +1,37 @@
 {
   "itemName": "TmSkeleton",
+  "kind": "Component",
+  "category": "Feedback",
   "description": "Animated placeholder skeleton for loading states. Supports text, circle, and rectangle shape variants with configurable width and height.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Variant",
+      "type": "SkeletonVariant",
+      "isRequired": false,
+      "default": "Text",
+      "description": "Shape variant. Defaults to Text."
+    },
+    {
+      "name": "Width",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional CSS width (e.g. \"200px\", \"100%\")."
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional CSS height (e.g. \"40px\", \"1rem\")."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-skeleton",

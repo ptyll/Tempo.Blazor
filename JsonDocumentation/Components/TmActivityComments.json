@@ -1,8 +1,39 @@
 {
   "itemName": "TmActivityComments",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "Comments",
+      "type": "IReadOnlyList<ICommentEntry>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "OnCommentAdded",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCommentDeleted",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCommentEdited",
+      "type": "EventCallback<(string Id, string Html)>",
+      "isRequired": false
+    },
+    {
+      "name": "ShowAddButton",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    }
   ],
   "cssClasses": [
     "tm-comments",

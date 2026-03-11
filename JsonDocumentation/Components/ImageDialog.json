@@ -1,8 +1,33 @@
 {
   "itemName": "ImageDialog",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Internal modal dialog for inserting images in the rich text editor. Provides URL and alt text inputs with URL validation and backdrop click to close.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "CloseOnBackdropClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnConfirm",
+      "type": "EventCallback<(string Url, string Alt)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rte-image-dialog",

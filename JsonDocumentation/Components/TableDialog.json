@@ -1,8 +1,33 @@
 {
   "itemName": "TableDialog",
+  "kind": "Component",
+  "category": "Activity",
   "description": "Internal modal dialog for inserting tables in the rich text editor. Provides numeric row/column inputs (max 20x10) and a visual grid preview for interactive size selection with hover highlighting.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "CloseOnBackdropClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "OnConfirm",
+      "type": "EventCallback<(int Rows, int Cols)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-rte-table-dialog",

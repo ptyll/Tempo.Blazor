@@ -1,8 +1,60 @@
 {
   "itemName": "TmCalendarView",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Full-size calendar view displaying a month grid with event entries, highlighted dates, and click handlers for both dates and events. Suitable for scheduling UIs.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "SelectedDate",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "Currently selected date."
+    },
+    {
+      "name": "OnDateClick",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false,
+      "description": "Fires when a date is clicked."
+    },
+    {
+      "name": "Events",
+      "type": "IReadOnlyList<CalendarEvent>?",
+      "isRequired": false,
+      "description": "Events to display on the calendar."
+    },
+    {
+      "name": "OnEventClick",
+      "type": "EventCallback<CalendarEvent>",
+      "isRequired": false,
+      "description": "Fires when an event is clicked."
+    },
+    {
+      "name": "MinDate",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "Minimum selectable date."
+    },
+    {
+      "name": "MaxDate",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "Maximum selectable date."
+    },
+    {
+      "name": "HighlightedDates",
+      "type": "HashSet<DateOnly>?",
+      "isRequired": false,
+      "description": "Dates to highlight with a dot indicator."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    }
   ],
   "cssClasses": [
     "tm-calendar-view",

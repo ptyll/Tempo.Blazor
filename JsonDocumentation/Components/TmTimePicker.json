@@ -1,8 +1,62 @@
 {
   "itemName": "TmTimePicker",
+  "kind": "Component",
+  "category": "Pickers",
   "description": "Time picker wrapping TmTimeInput with label, placeholder, clear button, and validation styling for out-of-range values.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "TimeOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TimeOnly?>",
+      "isRequired": false
+    },
+    {
+      "name": "MinTime",
+      "type": "TimeOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "MaxTime",
+      "type": "TimeOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowSeconds",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-time-picker",

@@ -1,8 +1,44 @@
 {
   "itemName": "TmActivityAttachments",
+  "kind": "Component",
+  "category": "Activity",
   "description": "File attachment manager that lists uploaded files with type-specific icons, file sizes, and uploader names. Supports chunked file upload with progress bar, download via IFileAttachmentProvider, deletion, duplicate detection, and configurable max file size and accepted types.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Activity"
+  ],
+  "parameters": [
+    {
+      "name": "EntityId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Provider",
+      "type": "IFileAttachmentProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "Attachments",
+      "type": "IReadOnlyList<IFileAttachment>?",
+      "isRequired": false
+    },
+    {
+      "name": "AllowUpload",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "MaxFileSizeBytes",
+      "type": "long",
+      "isRequired": false,
+      "default": "100L * 1024 * 1024"
+    },
+    {
+      "name": "AcceptedFileTypes",
+      "type": "string?",
+      "isRequired": false
+    }
   ],
   "cssClasses": [
     "tm-attachments",

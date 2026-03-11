@@ -1,8 +1,49 @@
 {
   "itemName": "TmSplitButton",
+  "kind": "Component",
+  "category": "Buttons",
   "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
+  ],
+  "parameters": [
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the primary button is clicked."
+    },
+    {
+      "name": "Variant",
+      "type": "ButtonVariant",
+      "isRequired": false,
+      "default": "Primary",
+      "description": "Visual style variant."
+    },
+    {
+      "name": "Size",
+      "type": "ButtonSize?",
+      "isRequired": false,
+      "description": "Button size."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables both the primary and dropdown buttons."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows a loading spinner on the primary button."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) to apply to the root element."
+    }
   ],
   "cssClasses": [
     "tm-split-button",
