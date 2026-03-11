@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Buttons
+@using Microsoft.JSInterop
 @inject IJSRuntime JS
 
 <button type="button"
@@ -51,9 +52,9 @@
             _copied = false;
             StateHasChanged();
         }
-        catch
-        {
-            // Clipboard API may fail silently
-        }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+        catch (TaskCanceledException) { }
     }
 }

@@ -62,9 +62,13 @@ public partial class TmViewManager : ComponentBase
     private List<ActiveFilter> _viewFilters = [];
     private string? _errorMessage;
 
+    private bool _dataLoaded;
+
     protected override async Task OnInitializedAsync()
     {
+        if (_dataLoaded) return;
         await LoadViewsAsync();
+        _dataLoaded = true;
     }
 
     private async Task LoadViewsAsync()

@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Activity
 @using Tempo.Blazor.Interfaces
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div class="tm-rich-editor-simple @(_isFocused ? "tm-rte-focused" : "") @(IsDisabled ? "tm-rte-disabled" : "") @(Class)"
      @attributes="AdditionalAttributes">
@@ -729,8 +729,12 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        try { await JS.InvokeVoidAsync("tmRichEditor.destroy", _editorRef); }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+        catch (TaskCanceledException) { }
         _dotNetRef?.Dispose();
     }
 

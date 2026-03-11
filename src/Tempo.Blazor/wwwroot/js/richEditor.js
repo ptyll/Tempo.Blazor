@@ -652,8 +652,13 @@ window.tmRichEditor = {
      */
     initKeyboardShortcuts: function (element) {
         if (!element) return;
-        
-        element.addEventListener('keydown', (e) => {
+
+        // Remove previous handler if re-initializing
+        if (element._tmKeydownHandler) {
+            element.removeEventListener('keydown', element._tmKeydownHandler);
+        }
+
+        const handler = (e) => {
             // Ctrl/Cmd + B - Bold
             if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
                 e.preventDefault();
@@ -686,6 +691,21 @@ window.tmRichEditor = {
                 e.preventDefault();
                 this.execCommand('redo');
             }
-        });
+        };
+
+        element._tmKeydownHandler = handler;
+        element.addEventListener('keydown', handler);
+    },
+
+    /**
+     * Clean up an editor element (remove event listeners)
+     * @param {HTMLElement} element - The editor element
+     */
+    destroy: function (element) {
+        if (!element) return;
+        if (element._tmKeydownHandler) {
+            element.removeEventListener('keydown', element._tmKeydownHandler);
+            delete element._tmKeydownHandler;
+        }
     }
 };

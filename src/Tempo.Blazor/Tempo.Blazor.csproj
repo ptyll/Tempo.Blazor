@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -11,8 +11,8 @@
     <PackageId>Tempo.Blazor</PackageId>
     <Version>1.0.0</Version>
     <Authors>ptyll</Authors>
-    <Description>Comprehensive Blazor component library with 100+ components, FluentValidation integration, multilingual support, and CSS variable theming. Designed for AI-assisted development.</Description>
-    <PackageTags>blazor;components;ui;fluentvalidation;localization;wasm</PackageTags>
+    <Description>Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes FluentValidation integration, multilingual support (EN/CS), CSS variable theming, and dark mode.</Description>
+    <PackageTags>blazor;components;ui;server;wasm;interactive-auto;fluentvalidation;localization</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
@@ -20,11 +20,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <SupportedPlatform Include="browser" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FluentValidation" Version="12.1.1" />
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="8.0.12" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="9.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.3" />

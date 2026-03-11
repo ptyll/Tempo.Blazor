@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.3" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Tempo.Blazor\Tempo.Blazor.csproj" />
+    <ProjectReference Include="..\..\..\src\Tempo.Blazor.FluentValidation\Tempo.Blazor.FluentValidation.csproj" />
+    <ProjectReference Include="..\..\..\src\Tempo.Blazor.Demo.Shared\Tempo.Blazor.Demo.Shared.csproj" />
+    <ProjectReference Include="..\..\..\src\Tempo.Blazor.Demo.SharedUI\Tempo.Blazor.Demo.SharedUI.csproj" />
+  </ItemGroup>
+
+</Project>

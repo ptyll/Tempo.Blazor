@@ -35,20 +35,33 @@ window.tempoDashboard = {
         const grid = dashboard.element.querySelector('.tm-dashboard-grid');
         if (!grid) return;
 
+        dashboard._grid = grid;
+
+        // Store bound handlers for cleanup
+        dashboard._onDragStart = (e) => this.onDragStart(e, dashboard);
+        dashboard._onDragOver = (e) => this.onDragOver(e, dashboard);
+        dashboard._onDrop = (e) => this.onDrop(e, dashboard);
+        dashboard._onDragEnd = (e) => this.onDragEnd(e, dashboard);
+        dashboard._onMouseDown = (e) => this.onMouseDown(e, dashboard);
+        dashboard._onMouseMove = (e) => this.onMouseMove(e, dashboard);
+        dashboard._onMouseUp = (e) => this.onMouseUp(e, dashboard);
+        dashboard._onDragEnter = (e) => e.preventDefault();
+        dashboard._onDragLeave = (e) => e.preventDefault();
+
         // Drag events
-        grid.addEventListener('dragstart', (e) => this.onDragStart(e, dashboard));
-        grid.addEventListener('dragover', (e) => this.onDragOver(e, dashboard));
-        grid.addEventListener('drop', (e) => this.onDrop(e, dashboard));
-        grid.addEventListener('dragend', (e) => this.onDragEnd(e, dashboard));
+        grid.addEventListener('dragstart', dashboard._onDragStart);
+        grid.addEventListener('dragover', dashboard._onDragOver);
+        grid.addEventListener('drop', dashboard._onDrop);
+        grid.addEventListener('dragend', dashboard._onDragEnd);
 
         // Mouse events for resize
-        grid.addEventListener('mousedown', (e) => this.onMouseDown(e, dashboard));
-        document.addEventListener('mousemove', (e) => this.onMouseMove(e, dashboard));
-        document.addEventListener('mouseup', (e) => this.onMouseUp(e, dashboard));
+        grid.addEventListener('mousedown', dashboard._onMouseDown);
+        document.addEventListener('mousemove', dashboard._onMouseMove);
+        document.addEventListener('mouseup', dashboard._onMouseUp);
 
         // Prevent default drag behaviors
-        grid.addEventListener('dragenter', (e) => e.preventDefault());
-        grid.addEventListener('dragleave', (e) => e.preventDefault());
+        grid.addEventListener('dragenter', dashboard._onDragEnter);
+        grid.addEventListener('dragleave', dashboard._onDragLeave);
     },
 
     onDragStart: function (e, dashboard) {
@@ -286,7 +299,21 @@ window.tempoDashboard = {
 
     destroy: function (element) {
         const id = element.id;
-        if (this.dashboards.has(id)) {
+        const dashboard = this.dashboards.get(id);
+        if (dashboard) {
+            // Remove all event listeners
+            if (dashboard._grid) {
+                dashboard._grid.removeEventListener('dragstart', dashboard._onDragStart);
+                dashboard._grid.removeEventListener('dragover', dashboard._onDragOver);
+                dashboard._grid.removeEventListener('drop', dashboard._onDrop);
+                dashboard._grid.removeEventListener('dragend', dashboard._onDragEnd);
+                dashboard._grid.removeEventListener('mousedown', dashboard._onMouseDown);
+                dashboard._grid.removeEventListener('dragenter', dashboard._onDragEnter);
+                dashboard._grid.removeEventListener('dragleave', dashboard._onDragLeave);
+            }
+            document.removeEventListener('mousemove', dashboard._onMouseMove);
+            document.removeEventListener('mouseup', dashboard._onMouseUp);
+
             this.dashboards.delete(id);
         }
     }

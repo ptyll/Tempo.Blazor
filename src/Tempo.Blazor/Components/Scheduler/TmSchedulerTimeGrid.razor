@@ -1,8 +1,8 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
 @using System.Globalization
-@using System.Threading
 @using Microsoft.JSInterop
+@implements IAsyncDisposable
 @inject IJSRuntime JS
 
 <!-- Event args class for resize completion from JavaScript -->
@@ -115,10 +115,8 @@
 </div>
 
 @code {
-    // Static registry for JS interop callbacks
-    private static readonly Dictionary<string, TmSchedulerTimeGrid> _instances = new();
-    private static int _instanceIdCounter = 0;
-    private string _instanceId = "";
+    private DotNetObjectReference<TmSchedulerTimeGrid>? _dotNetRef;
+    private bool _jsRegistered;
 
     private int _slotsPerDay;
     private bool _hasResources;
@@ -160,11 +158,21 @@
     /// <summary>Optional custom event template.</summary>
     [Parameter] public RenderFragment<TmScheduleEvent>? EventTemplate { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Register this instance for JS interop callbacks
-        _instanceId = $"timegrid_{Interlocked.Increment(ref _instanceIdCounter)}";
-        _instances[_instanceId] = this;
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.registerInstance", _containerRef, _dotNetRef);
+                _jsRegistered = true;
+            }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
+        }
     }
 
     protected override void OnParametersSet()
@@ -446,32 +454,28 @@
         await OnEventChanged.InvokeAsync(evt);
     }
 
-    public void Dispose()
-    {
-        // Unregister this instance
-        if (!string.IsNullOrEmpty(_instanceId))
-        {
-            _instances.Remove(_instanceId);
-        }
-    }
-
     /// <summary>
     /// Called by JavaScript when a resize operation is completed.
-    /// This is a static method that finds the event across all instances and handles the resize.
     /// </summary>
     [JSInvokable]
-    public static async Task NotifyResizeComplete(string instanceId, string eventId, int deltaMinutes, string resizeEdge = "bottom")
+    public async Task NotifyResizeComplete(string eventId, int deltaMinutes, string resizeEdge = "bottom")
     {
-        // Find the instance that has this event
-        foreach (var instance in _instances.Values)
+        await HandleResizeComplete(eventId, deltaMinutes, resizeEdge);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsRegistered)
         {
-            var evt = instance.Events?.FirstOrDefault(e => e.Id == eventId);
-            if (evt != null)
+            try
             {
-                await instance.HandleResizeComplete(eventId, deltaMinutes, resizeEdge);
-                return;
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.unregisterInstance", _containerRef);
             }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
         }
+        _dotNetRef?.Dispose();
     }
 
     // ── Context Menu ──

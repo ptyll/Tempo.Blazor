@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Workflow
 @using System.Globalization
+@using Microsoft.JSInterop
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -157,7 +158,9 @@
         if (_jsInitialized)
         {
             try { await JS.InvokeVoidAsync("tmWorkflowDesigner.destroy", _svgRef); }
-            catch { /* disposal */ }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
         }
         _dotNetRef?.Dispose();
     }
@@ -342,27 +345,38 @@
     }
 
     /// <summary>Sets zoom level programmatically (also calls JS to update viewBox).</summary>
-    public void SetZoom(double scale)
+    public async Task SetZoom(double scale)
     {
         ZoomLevel = Math.Clamp(scale, 0.25, 4.0);
         if (_jsInitialized)
         {
-            _ = JS.InvokeVoidAsync("tmWorkflowDesigner.zoomTo", _svgRef, ZoomLevel);
+            try
+            {
+                await JS.InvokeVoidAsync("tmWorkflowDesigner.zoomTo", _svgRef, ZoomLevel);
+            }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
         }
-        OnZoomLevelChanged.InvokeAsync(ZoomLevel);
-        InvokeAsync(StateHasChanged);
+        await OnZoomLevelChanged.InvokeAsync(ZoomLevel);
+        await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>Fits the canvas view to show all nodes.</summary>
     public async Task FitToView()
     {
-        if (_jsInitialized)
+        if (!_jsInitialized) return;
+
+        try
         {
             var scale = await JS.InvokeAsync<double>("tmWorkflowDesigner.fitToView", _svgRef, 40);
             ZoomLevel = scale;
             await OnZoomLevelChanged.InvokeAsync(scale);
             await InvokeAsync(StateHasChanged);
         }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+        catch (TaskCanceledException) { }
     }
 
     // ── Helpers ──

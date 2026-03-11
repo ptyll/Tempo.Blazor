@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Icons
+@implements IDisposable
 
 <div class="tm-input-wrapper @Class">
     <div class="tm-input-container">
@@ -56,6 +57,7 @@
         $"tm-input tm-input-search tm-input-with-left-icon{(Disabled ? " tm-input-disabled" : "")}";
 
     private System.Timers.Timer? _debounce;
+    private bool _disposed;
 
     private async Task HandleInputAsync(ChangeEventArgs e)
     {
@@ -63,10 +65,11 @@
         if (DebounceMs > 0)
         {
             _debounce?.Stop();
+            _debounce?.Dispose();
             _debounce = new System.Timers.Timer(DebounceMs) { AutoReset = false };
             _debounce.Elapsed += async (_, _) =>
             {
-                _debounce.Stop();
+                if (_disposed) return;
                 await InvokeAsync(() => ValueChanged.InvokeAsync(value));
             };
             _debounce.Start();
@@ -82,4 +85,11 @@
 
     private async Task ClearValueAsync()
         => await ValueChanged.InvokeAsync(string.Empty);
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _debounce?.Stop();
+        _debounce?.Dispose();
+    }
 }

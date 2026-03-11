@@ -2,7 +2,7 @@ namespace Tempo.Blazor.Services;
 
 /// <summary>
 /// Manages the current theme (light/dark) for the application.
-/// Register as a scoped or singleton service and inject into layout components.
+/// Registered as Scoped — each circuit (Server) or tab (WASM) gets its own instance.
 /// </summary>
 public class ThemeService
 {

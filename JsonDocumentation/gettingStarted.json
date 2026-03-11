@@ -1,8 +1,8 @@
 ﻿{
   "title": "Getting Started with Tempo.Blazor",
   "overview": "Tempo.Blazor is a comprehensive Blazor WebAssembly component library providing 100+ UI components for building modern web applications. It includes inputs, forms, data tables, pickers, charts, layout, navigation, feedback, workflow designer, scheduler, and more. All components use the Tm prefix (e.g., TmButton, TmDataTable).",
-  "targetFramework": ".NET 10.0",
-  "platform": "Blazor WebAssembly (WASM)",
+  "targetFramework": ".NET 8.0 / 9.0 / 10.0 (multi-target)",
+  "platform": "Blazor WebAssembly, Blazor Server, and InteractiveAuto (hybrid rendering)",
   "packages": [
     {
       "name": "Tempo.Blazor",
@@ -26,8 +26,8 @@
       "dotnet add package Tempo.Blazor.FluentValidation  # optional"
     ],
     "programCs": {
-      "description": "Register Tempo.Blazor services in Program.cs",
-      "code": "using Tempo.Blazor.Configuration;\n\nvar builder = WebAssemblyHostBuilder.CreateDefault(args);\n\n// Required: register Tempo.Blazor services (localization, ITmLocalizer)\nbuilder.Services.AddTempoBlazor();\n\n// Optional: register FluentValidation validators from your assemblies\nbuilder.Services.AddTempoFluentValidation(typeof(MyValidator).Assembly);\n\n// Optional: register ThemeService for dark mode support\nbuilder.Services.AddScoped<ThemeService>();\n\n// Optional: set culture for localization (supports 'en' and 'cs')\nvar culture = new System.Globalization.CultureInfo(\"cs\");\nSystem.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;\nSystem.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;\n\nawait builder.Build().RunAsync();"
+      "description": "Register Tempo.Blazor services in Program.cs. AddTempoBlazor() registers ITmLocalizer (Singleton), ThemeService (Scoped), and ToastService (Scoped).",
+      "code": "using Tempo.Blazor.Configuration;\n\nvar builder = WebAssemblyHostBuilder.CreateDefault(args);\n\n// Required: register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)\nbuilder.Services.AddTempoBlazor();\n\n// Optional: register FluentValidation validators from your assemblies\nbuilder.Services.AddTempoFluentValidation(typeof(MyValidator).Assembly);\n\n// Optional: set culture for localization (supports 'en' and 'cs')\nvar culture = new System.Globalization.CultureInfo(\"cs\");\nSystem.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;\nSystem.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;\n\nawait builder.Build().RunAsync();"
     },
     "indexHtml": {
       "description": "Add CSS and JS references to wwwroot/index.html",
@@ -36,6 +36,21 @@
     "importsRazor": {
       "description": "Add component namespaces to _Imports.razor for convenient usage without per-file @using directives.",
       "code": "@using Tempo.Blazor.Components.Avatars\n@using Tempo.Blazor.Components.Buttons\n@using Tempo.Blazor.Components.Charts\n@using Tempo.Blazor.Components.Dashboard\n@using Tempo.Blazor.Components.DataDisplay\n@using Tempo.Blazor.Components.DataTable\n@using Tempo.Blazor.Components.Dropdowns\n@using Tempo.Blazor.Components.Feedback\n@using Tempo.Blazor.Components.Files\n@using Tempo.Blazor.Components.Filters\n@using Tempo.Blazor.Components.Forms\n@using Tempo.Blazor.Components.Gallery\n@using Tempo.Blazor.Components.Icons\n@using Tempo.Blazor.Components.ImportExport\n@using Tempo.Blazor.Components.Inputs\n@using Tempo.Blazor.Components.Layout\n@using Tempo.Blazor.Components.Navigation\n@using Tempo.Blazor.Components.Notifications\n@using Tempo.Blazor.Components.Pickers\n@using Tempo.Blazor.Components.Scheduler\n@using Tempo.Blazor.Components.Tags\n@using Tempo.Blazor.Components.Timeline\n@using Tempo.Blazor.Components.Toolbar\n@using Tempo.Blazor.Components.TreeView\n@using Tempo.Blazor.Components.Workflow\n@using Tempo.Blazor.Interfaces\n@using Tempo.Blazor.Models"
+    },
+    "interactiveAutoSetup": {
+      "description": "Tempo.Blazor supports InteractiveAuto (hybrid) rendering in .NET 8+ Blazor Web Apps. Components handle prerendering, double initialization, and JS interop safety automatically. Register services in both Server and Client projects.",
+      "appRazor": "<!DOCTYPE html>\n<html>\n<head>\n    <link href=\"_content/Tempo.Blazor/css/tempo-blazor.bundled.css\" rel=\"stylesheet\" />\n    <HeadOutlet @rendermode=\"InteractiveAuto\" />\n</head>\n<body>\n    <Routes @rendermode=\"InteractiveAuto\" />\n    <script src=\"_content/Tempo.Blazor/js/richEditor.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/dashboard.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/workflow-designer.js\"></script>\n    <script src=\"_content/Tempo.Blazor/js/scheduler.js\"></script>\n    <script src=\"_framework/blazor.web.js\"></script>\n</body>\n</html>",
+      "serverProgramCs": "// Server Program.cs\nbuilder.Services.AddRazorComponents()\n    .AddInteractiveServerComponents()\n    .AddInteractiveWebAssemblyComponents();\n\nbuilder.Services.AddTempoBlazor();",
+      "clientProgramCs": "// Client (WASM) Program.cs\nbuilder.Services.AddTempoBlazor();",
+      "renderModes": {
+        "description": "Tempo.Blazor supports all Blazor render modes.",
+        "modes": [
+          { "name": "InteractiveWebAssembly", "description": "Full client-side rendering in the browser via WebAssembly." },
+          { "name": "InteractiveServer", "description": "Server-side rendering with SignalR connection for interactivity." },
+          { "name": "InteractiveAuto", "description": "Starts with Server rendering, switches to WebAssembly once downloaded. Recommended for best UX." }
+        ],
+        "notes": "Components with JS interop (TmDashboard, TmRichEditorFull/Simple, TmWorkflowDesignerCanvas, TmScheduler) gracefully degrade during prerendering and activate once the client-side runtime is available."
+      }
     }
   },
   "cssFramework": {
@@ -256,8 +271,38 @@
     }
   },
   "localization": {
-    "description": "Tempo.Blazor supports localization via ITmLocalizer. Built-in languages: English (en), Czech (cs). Custom localizer can be registered by implementing ITmLocalizer and replacing the default registration.",
+    "description": "Tempo.Blazor supports localization via the ITmLocalizer interface (namespace Tempo.Blazor.Localization, defined in Tempo.Blazor.Abstractions). All built-in component UI strings (button labels, tooltips, placeholders, validation messages, aria-labels, etc.) go through this interface. The library ships with 500+ localization keys covering all components.",
     "builtInLanguages": ["en", "cs"],
-    "customLocalizer": "builder.Services.AddTempoBlazor();\nbuilder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>();"
+    "architecture": {
+      "interface": "ITmLocalizer — two indexer overloads: this[string key] for simple lookups, this[string key, params object[] arguments] for formatted strings (e.g. Loc[\"TmImageGallery_Counter\", 5, 20] → \"5 of 20\").",
+      "defaultImplementation": "DefaultTmLocalizer (internal) — backed by IStringLocalizer<TmResources> using embedded .resx files (TmResources.resx for English, TmResources.cs.resx for Czech).",
+      "injection": "All components get the localizer via @inject ITmLocalizer Loc in the library's _Imports.razor. Components then use Loc[\"KeyName\"] in markup and code.",
+      "registration": "AddTempoBlazor() registers: (1) ITmLocalizer as Singleton (stateless, thread-safe, backed by .resx), (2) ThemeService as Scoped (per-circuit in Server, per-tab in WASM), (3) ToastService as Scoped (per-circuit in Server, per-tab in WASM). Uses TryAdd* so your custom registrations take precedence if registered AFTER AddTempoBlazor()."
+    },
+    "keyNamingConvention": "Keys follow the pattern Tm[ComponentName]_[Action/State]. Shared keys use Tm_ prefix (e.g. Tm_Save, Tm_Cancel, Tm_Loading). Component-specific keys include the component name (e.g. TmDataTable_NoResults, TmRichEditor_Bold, TmFilterBuilder_Contains).",
+    "keyCategories": {
+      "shared": "Tm_Loading, Tm_Close, Tm_Cancel, Tm_Save, Tm_Delete, Tm_Confirm, Tm_NoResults, Tm_Error, Tm_Retry, Tm_Search, Tm_Clear, Tm_Select, Tm_SelectAll, Tm_DeselectAll, Tm_Edit, Tm_Add, Tm_Remove, Tm_Apply, Tm_Reset, Tm_Previous, Tm_Next, Tm_Download, Tm_Upload, Tm_Create, Tm_Optional, Tm_Required, Tm_Yes, Tm_No",
+      "dataTable": "TmDataTable_NoResults, TmDataTable_Loading, TmDataTable_PageSize, TmDataTable_SearchPlaceholder, TmDataTable_ShowingItems, TmDataTable_SelectAll, TmDataTable_DeselectAll, TmDataTable_BulkActions, TmDataTable_ExpandAll, TmDataTable_CollapseAll, TmDataTable_GroupDropPlaceholder",
+      "richEditor": "TmRichEditor_Bold, TmRichEditor_Italic, TmRichEditor_Underline, TmRichEditor_Undo, TmRichEditor_Redo, TmRichEditor_InsertLink, TmRichEditor_InsertImage, TmRichEditor_InsertTable, etc. (56 keys total)",
+      "filterBuilder": "TmFilterBuilder_Equals, TmFilterBuilder_NotEquals, TmFilterBuilder_Contains, TmFilterBuilder_StartsWith, TmFilterBuilder_Between, TmFilterBuilder_GreaterThan, TmFilterBuilder_LessThan, TmFilterBuilder_In, TmFilterBuilder_NotIn, etc.",
+      "pickers": "TmDatePicker_Today, TmDatePicker_Clear, TmTimePicker_Hours, TmTimePicker_Minutes, TmDateRangePicker_LastWeek, TmDateRangePicker_LastMonth, TmDateRangePicker_ThisYear, etc.",
+      "other": "TmAlert_Dismiss, TmButton_Loading, TmSearchInput_Placeholder, TmNotificationBell_*, TmViewManager_*, TmDashboard_*, TmPasswordStrength_*, TmActivity_*, TmTimeline_*, etc."
+    },
+    "switchLanguage": {
+      "description": "Set the culture in Program.cs before builder.Build(). This makes IStringLocalizer pick the correct .resx file automatically.",
+      "code": "var culture = new System.Globalization.CultureInfo(\"cs\");\nSystem.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;\nSystem.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;"
+    },
+    "customLocalizer": {
+      "description": "To fully replace all component strings (e.g. for a language not shipped with the library), implement ITmLocalizer and register it AFTER AddTempoBlazor(). The TryAddSingleton in AddTempoBlazor() will be skipped if your registration comes first.",
+      "code": "builder.Services.AddTempoBlazor();\n// Register AFTER AddTempoBlazor() — overrides the built-in DefaultTmLocalizer\nbuilder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>();",
+      "implementationExample": "using Tempo.Blazor.Localization;\n\npublic class MyCustomTmLocalizer : ITmLocalizer\n{\n    private readonly Dictionary<string, string> _strings = new()\n    {\n        [\"Tm_Save\"] = \"Speichern\",\n        [\"Tm_Cancel\"] = \"Abbrechen\",\n        [\"Tm_Delete\"] = \"Löschen\",\n        [\"Tm_Loading\"] = \"Wird geladen...\",\n        [\"TmDataTable_NoResults\"] = \"Keine Ergebnisse gefunden\",\n        [\"TmDataTable_SearchPlaceholder\"] = \"Suchen...\",\n        // ... add all 500+ keys for full coverage\n    };\n\n    public string this[string key] =>\n        _strings.TryGetValue(key, out var value) ? value : key;\n\n    public string this[string key, params object[] arguments] =>\n        _strings.TryGetValue(key, out var value)\n            ? string.Format(value, arguments)\n            : string.Format(key, arguments);\n}"
+    },
+    "partialOverride": {
+      "description": "To override only specific keys while keeping the rest from the built-in resources, create a decorator that falls back to the default implementation.",
+      "code": "public class MyPartialLocalizer : ITmLocalizer\n{\n    private readonly ITmLocalizer _inner;\n    private readonly Dictionary<string, string> _overrides = new()\n    {\n        [\"Tm_Save\"] = \"Uložit a zavřít\",\n        [\"TmDataTable_NoResults\"] = \"Žádné záznamy\"\n    };\n\n    public MyPartialLocalizer(IStringLocalizer<TmResources> localizer)\n    {\n        _inner = new DefaultTmLocalizerWrapper(localizer);\n    }\n\n    public string this[string key] =>\n        _overrides.TryGetValue(key, out var v) ? v : _inner[key];\n\n    public string this[string key, params object[] arguments] =>\n        _overrides.TryGetValue(key, out var v)\n            ? string.Format(v, arguments) : _inner[key, arguments];\n}"
+    },
+    "addNewLanguage": {
+      "description": "To add a new language (e.g. German), implement ITmLocalizer with all keys translated. You can export the English .resx keys as a reference. Since DefaultTmLocalizer is internal, a full custom implementation is the recommended approach for new languages."
+    }
   }
 }

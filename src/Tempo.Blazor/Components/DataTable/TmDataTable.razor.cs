@@ -161,14 +161,20 @@ public partial class TmDataTable<TItem>
 
     // ── Lifecycle ─────────────────────────────────────────────────
 
+    private bool _dataLoaded;
+
     protected override async Task OnInitializedAsync()
     {
+        if (_dataLoaded) return;
+
         _pageSize = DefaultPageSize;
 
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
             RefreshClientItems();
+
+        _dataLoaded = true;
     }
 
     protected override Task OnParametersSetAsync()

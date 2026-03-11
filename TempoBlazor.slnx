@@ -2,7 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj" />
     <Project Path="src/Tempo.Blazor.Demo.Shared/Tempo.Blazor.Demo.Shared.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo.SharedUI/Tempo.Blazor.Demo.SharedUI.csproj" />
     <Project Path="src/Tempo.Blazor.Demo/Tempo.Blazor.Demo.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo.Server/Tempo.Blazor.Demo.Server.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto.csproj" />
+    <Project Path="src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto.Client/Tempo.Blazor.Demo.InteractiveAuto.Client.csproj" />
     <Project Path="src/Tempo.Blazor.Demo.Api/Tempo.Blazor.Demo.Api.csproj" />
     <Project Path="src/Tempo.Blazor/Tempo.Blazor.csproj" />
     <Project Path="src/Tempo.Blazor.FluentValidation/Tempo.Blazor.FluentValidation.csproj" />

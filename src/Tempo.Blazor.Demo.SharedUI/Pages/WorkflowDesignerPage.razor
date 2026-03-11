@@ -129,10 +129,11 @@
         _zoomLevel = zoom;
     }
 
-    private void HandleZoomFromToolbox(double zoom)
+    private async Task HandleZoomFromToolbox(double zoom)
     {
         _zoomLevel = zoom;
-        _canvasRef?.SetZoom(zoom);
+        if (_canvasRef is not null)
+            await _canvasRef.SetZoom(zoom);
     }
 
     private async Task HandleFitToView()

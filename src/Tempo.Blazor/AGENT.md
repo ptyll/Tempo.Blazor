@@ -4,7 +4,7 @@ This document is designed for AI coding assistants (Claude, Copilot, Cursor, etc
 
 ## Package Overview
 
-**Tempo.Blazor** is a .NET 10 Blazor WebAssembly component library with 100+ components. All components use the `Tm` prefix (e.g. `TmButton`, `TmTextInput`).
+**Tempo.Blazor** is a Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8.0, 9.0, and 10.0. All components use the `Tm` prefix (e.g. `TmButton`, `TmTextInput`).
 
 Three NuGet packages:
 - **Tempo.Blazor** — UI components (depends on Abstractions)
@@ -14,14 +14,11 @@ Three NuGet packages:
 ## Setup in Consuming Application
 
 ```csharp
-// Program.cs
-builder.Services.AddTempoBlazor();      // registers ITmLocalizer + localization
+// Program.cs (WASM, Server, or both for InteractiveAuto)
+builder.Services.AddTempoBlazor();      // registers ITmLocalizer, ThemeService, ToastService
 
 // Optional: FluentValidation
 builder.Services.AddTempoFluentValidation(typeof(MyValidator).Assembly);
-
-// Optional: Theme service
-builder.Services.AddScoped<ThemeService>();
 ```
 
 ```html

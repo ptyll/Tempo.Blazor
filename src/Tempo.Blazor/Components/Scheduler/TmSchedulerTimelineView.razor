@@ -1,10 +1,11 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @using Tempo.Blazor.Models
 @using System.Globalization
-@using System.Threading
-@implements IDisposable
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
-<div class="tm-scheduler-timeline" data-slot-duration="@SlotDuration">
+<div class="tm-scheduler-timeline" @ref="_containerRef" data-slot-duration="@SlotDuration">
     @* Header: time columns *@
     <div class="tm-scheduler-timeline-header">
         <div class="tm-scheduler-timeline-resource-header"></div>
@@ -79,10 +80,9 @@
 </div>
 
 @code {
-    // Static registry for JS interop callbacks
-    private static readonly Dictionary<string, TmSchedulerTimelineView> _instances = new();
-    private static int _instanceIdCounter = 0;
-    private string _instanceId = "";
+    private DotNetObjectReference<TmSchedulerTimelineView>? _dotNetRef;
+    private bool _jsRegistered;
+    private ElementReference _containerRef;
 
     private int _slotsPerDay;
     private List<TmScheduleResource> _resources = [];
@@ -197,11 +197,21 @@
 
     // ── Drag & Drop ──
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Register this instance for JS interop callbacks
-        _instanceId = $"timeline_{Interlocked.Increment(ref _instanceIdCounter)}";
-        _instances[_instanceId] = this;
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.registerInstance", _containerRef, _dotNetRef);
+                _jsRegistered = true;
+            }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
+        }
     }
 
     private void HandleDragStart(TmScheduleEvent evt, string resourceId)
@@ -276,26 +286,23 @@
     /// Called by JavaScript when a resize operation is completed.
     /// </summary>
     [JSInvokable]
-    public static async Task NotifyTimelineResizeComplete(string instanceId, string eventId, int deltaMinutes, string resizeEdge = "right")
+    public async Task NotifyResizeComplete(string eventId, int deltaMinutes, string resizeEdge = "right")
     {
-        // Find the instance that has this event
-        foreach (var instance in _instances.Values)
-        {
-            var evt = instance.Events?.FirstOrDefault(e => e.Id == eventId);
-            if (evt != null)
-            {
-                await instance.HandleResizeComplete(eventId, deltaMinutes, resizeEdge);
-                return;
-            }
-        }
+        await HandleResizeComplete(eventId, deltaMinutes, resizeEdge);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        // Unregister this instance
-        if (!string.IsNullOrEmpty(_instanceId))
+        if (_jsRegistered)
         {
-            _instances.Remove(_instanceId);
+            try
+            {
+                await JS.InvokeVoidAsync("TempoBlazor.Scheduler.unregisterInstance", _containerRef);
+            }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
         }
+        _dotNetRef?.Dispose();
     }
 }

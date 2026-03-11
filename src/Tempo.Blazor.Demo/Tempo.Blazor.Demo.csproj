@@ -20,6 +20,19 @@
     <ProjectReference Include="..\Tempo.Blazor\Tempo.Blazor.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.FluentValidation\Tempo.Blazor.FluentValidation.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Demo.Shared\Tempo.Blazor.Demo.Shared.csproj" />
+    <ProjectReference Include="..\Tempo.Blazor.Demo.SharedUI\Tempo.Blazor.Demo.SharedUI.csproj" />
+  </ItemGroup>
+
+  <!-- Link shared UI components from SharedUI project -->
+  <ItemGroup>
+    <Compile Remove="Services\**" />
+    <Compile Remove="Validators\**" />
+    <Compile Remove="Layout\**" />
+    <Compile Remove="Pages\**" />
+    <Content Remove="Services\**" />
+    <Content Remove="Validators\**" />
+    <Content Remove="Layout\**" />
+    <Content Remove="Pages\**" />
   </ItemGroup>
 
   <ItemGroup>

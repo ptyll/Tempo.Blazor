@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Tempo.Blazor.Localization;
+using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Configuration;
 
@@ -11,8 +12,13 @@ public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Registers all required Tempo.Blazor services.
+    /// <list type="bullet">
+    ///   <item><description><see cref="ITmLocalizer"/>: Singleton (stateless, thread-safe, backed by .resx)</description></item>
+    ///   <item><description><see cref="ThemeService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
+    ///   <item><description><see cref="ToastService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
+    /// </list>
     ///
-    /// Add this call to your Blazor WASM Program.cs:
+    /// Add this call to your Blazor Program.cs:
     /// <code>
     /// builder.Services.AddTempoBlazor();
     /// </code>
@@ -33,12 +39,15 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddTempoBlazor(this IServiceCollection services)
     {
-        // Register localization (required for IStringLocalizer<TmResources>)
+        // Localization — Singleton (stateless, thread-safe, backed by .resx)
         services.AddLocalization();
-
-        // Register ITmLocalizer with the default implementation (backed by .resx files)
-        // TryAddSingleton allows consumer to override by registering their own ITmLocalizer AFTER this call
         services.TryAddSingleton<ITmLocalizer, DefaultTmLocalizer>();
+
+        // ThemeService — Scoped (each circuit/tab gets its own theme state)
+        services.TryAddScoped<ThemeService>();
+
+        // ToastService — Scoped (each circuit/tab gets its own toast queue)
+        services.TryAddScoped<ToastService>();
 
         return services;
     }

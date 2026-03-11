@@ -7,6 +7,7 @@
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
 @using System.Text.Json
+@using Microsoft.JSInterop
 @implements IAsyncDisposable
 
 <div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") @Class" 
@@ -327,6 +328,7 @@
     
     private ElementReference _dashboardElement;
     private DotNetObjectReference<TmDashboard>? _dotNetRef;
+    private bool _jsInitialized;
     private DashboardConfig? _currentDashboard;
     private List<WidgetInstance> _widgets = [];
     private List<DashboardConfig> _availableDashboards = [];
@@ -351,10 +353,14 @@
     private string? _dashboardToDeleteId;
     private string? _dashboardToDeleteName;
     
+    private bool _dataLoaded;
+
     protected override async Task OnInitializedAsync()
     {
+        if (_dataLoaded) return;
+
         await LoadDashboardsList();
-        
+
         if (!string.IsNullOrEmpty(DashboardId))
         {
             await LoadDashboard(DashboardId);
@@ -363,6 +369,8 @@
         {
             await LoadDefaultDashboard();
         }
+
+        _dataLoaded = true;
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -370,7 +378,13 @@
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("tempoDashboard.init", _dashboardElement, _dotNetRef);
+            try
+            {
+                await JS.InvokeVoidAsync("tempoDashboard.init", _dashboardElement, _dotNetRef);
+                _jsInitialized = true;
+            }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
         }
     }
     
@@ -808,14 +822,16 @@
     
     public async ValueTask DisposeAsync()
     {
-        _dotNetRef?.Dispose();
-        if (_dashboardElement.Context is not null)
+        if (_jsInitialized)
         {
             try
             {
                 await JS.InvokeVoidAsync("tempoDashboard.destroy", _dashboardElement);
             }
-            catch { }
+            catch (JSDisconnectedException) { }
+            catch (InvalidOperationException) { }
+            catch (TaskCanceledException) { }
         }
+        _dotNetRef?.Dispose();
     }
 }

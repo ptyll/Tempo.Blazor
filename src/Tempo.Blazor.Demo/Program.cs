@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Configuration;
-using Tempo.Blazor.Demo;
 using Tempo.Blazor.Demo.Services;
+using Tempo.Blazor.Demo.SharedUI;
 using Tempo.Blazor.Demo.Validators;
 using Tempo.Blazor.FluentValidation;
 using Tempo.Blazor.Interfaces;
@@ -25,14 +25,12 @@ builder.Services.AddScoped<AttachmentHttpProvider>();
 builder.Services.AddScoped<ImageHttpGalleryProvider>();
 builder.Services.AddScoped<ViewHttpProvider>();
 
+// Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
+builder.Services.AddTempoBlazor();
+
 // Register Dashboard services
 builder.Services.AddSingleton<IWidgetRegistry, InMemoryWidgetRegistry>();
-builder.Services.AddSingleton<IDashboardProvider, InMemoryDashboardProvider>();
-
-// Register Tempo.Blazor services (ITmLocalizer + localization infrastructure)
-builder.Services.AddTempoBlazor();
-builder.Services.AddScoped<ThemeService>();
-builder.Services.AddScoped<ToastService>();
+builder.Services.AddScoped<IDashboardProvider, InMemoryDashboardProvider>();
 
 // Register FluentValidation validators from Demo assembly
 builder.Services.AddTempoFluentValidation(typeof(PersonFormValidator).Assembly);

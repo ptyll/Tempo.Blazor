@@ -1,0 +1,96 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Web
+@namespace Tempo.Blazor.Demo.Server.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tempo.Blazor.Demo.Server</title>
+    <base href="~/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png" />
+    
+    <!-- Tailwind CSS - CDN for development -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        slate: {
+                            850: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideIn: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(0)' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+    <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased">
+    <component type="typeof(App)" render-mode="ServerPrerendered" />
+
+    <div id="blazor-error-ui" class="hidden fixed bottom-0 left-0 right-0 z-50">
+        <div class="bg-red-50 dark:bg-red-950 border-t border-red-200 dark:border-red-800 px-6 py-4">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="text-red-800 dark:text-red-200">An unhandled error has occurred.</span>
+                </div>
+                <button class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 font-medium reload">
+                    Reload
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="_content/Tempo.Blazor/js/richEditor.js"></script>
+    <script src="_content/Tempo.Blazor/js/dashboard.js"></script>
+    <script src="_content/Tempo.Blazor/js/workflow-designer.js"></script>
+    <script src="_content/Tempo.Blazor/js/scheduler.js"></script>
+    <script src="_framework/blazor.server.js"></script>
+</body>
+</html>

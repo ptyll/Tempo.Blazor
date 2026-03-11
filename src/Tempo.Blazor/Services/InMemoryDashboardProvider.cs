@@ -6,6 +6,7 @@ namespace Tempo.Blazor.Services;
 /// <summary>
 /// In-memory implementation of IDashboardProvider for testing/demo purposes.
 /// Data is lost on application restart.
+/// Register as Scoped — each circuit (Server) or tab (WASM) gets its own instance with per-user data.
 /// </summary>
 public class InMemoryDashboardProvider : IDashboardProvider
 {

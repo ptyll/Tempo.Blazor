@@ -11,6 +11,7 @@
     window.TempoBlazor.Scheduler = {
 
         _currentResize: null,
+        _dotNetRefs: new Map(),
 
         /**
          * Initialize resize handling for a scheduler
@@ -24,6 +25,26 @@
 
             this._boundMouseDown = this._handleMouseDown.bind(this);
             document.addEventListener('mousedown', this._boundMouseDown);
+        },
+
+        /**
+         * Register a .NET instance reference for a scheduler container element.
+         * Called from C# OnAfterRenderAsync.
+         */
+        registerInstance: function (element, dotNetRef) {
+            if (element) {
+                this._dotNetRefs.set(element, dotNetRef);
+            }
+        },
+
+        /**
+         * Unregister a .NET instance reference.
+         * Called from C# DisposeAsync.
+         */
+        unregisterInstance: function (element) {
+            if (element) {
+                this._dotNetRefs.delete(element);
+            }
         },
 
         /**
@@ -69,6 +90,9 @@
             // Get event ID from the element
             const eventId = eventElement.dataset.eventId;
 
+            // Find the dotNetRef for this scheduler container
+            const dotNetRef = schedulerContainer ? this._dotNetRefs.get(schedulerContainer) : null;
+
             // Store original dimensions
             const containerRect = container.getBoundingClientRect();
             const eventRect = eventElement.getBoundingClientRect();
@@ -82,14 +106,14 @@
 
             // Start resize tracking
             this._startResizeTracking(eventElement, container, startPos, slotMinutes, originalDraggable,
-                originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop);
+                originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop, dotNetRef);
         },
 
         /**
          * Track resize movement
          */
         _startResizeTracking: function (eventElement, container, startPos, slotMinutes, originalDraggable,
-            originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop) {
+            originalSize, containerSize, eventId, isTimeline, resizeEdge, originalLeft, originalTop, dotNetRef) {
             const self = this;
             let currentDelta = 0;
             let isResizing = true;
@@ -112,7 +136,7 @@
                             // Left resize: adjust left position and width
                             const newLeft = originalLeft + deltaPos;
                             const newWidth = originalSize - deltaPos;
-                            
+
                             if (newWidth > 10) { // Minimum width
                                 eventElement.style.left = newLeft + 'px';
                                 eventElement.style.width = newWidth + 'px';
@@ -120,7 +144,7 @@
                         } else {
                             // Right resize: adjust width only
                             const newWidth = originalSize + deltaPos;
-                            
+
                             if (newWidth > 10) { // Minimum width
                                 eventElement.style.width = newWidth + 'px';
                             }
@@ -188,7 +212,7 @@
 
                 // Call Blazor to notify about the resize
                 if (eventId && finalDelta !== 0) {
-                    self._notifyBlazorResize(eventId, finalDelta, isTimeline, resizeEdge);
+                    self._notifyBlazorResize(dotNetRef, eventId, finalDelta, resizeEdge);
                 }
             }
 
@@ -198,13 +222,11 @@
         },
 
         /**
-         * Notify Blazor about the resize completion
+         * Notify Blazor about the resize completion via instance dotNetRef
          */
-        _notifyBlazorResize: function (eventId, deltaMinutes, isTimeline, resizeEdge) {
-            // Call the appropriate static .NET method based on scheduler type
-            if (window.DotNet) {
-                const methodName = isTimeline ? 'NotifyTimelineResizeComplete' : 'NotifyResizeComplete';
-                window.DotNet.invokeMethodAsync('Tempo.Blazor', methodName, '', eventId, deltaMinutes, resizeEdge)
+        _notifyBlazorResize: function (dotNetRef, eventId, deltaMinutes, resizeEdge) {
+            if (dotNetRef) {
+                dotNetRef.invokeMethodAsync('NotifyResizeComplete', eventId, deltaMinutes, resizeEdge)
                     .catch(function (err) {
                         console.warn('Scheduler: Failed to notify Blazor about resize', err);
                     });
@@ -216,6 +238,19 @@
          */
         cancelResize: function () {
             // Implementation for manual cancellation if needed
+        },
+
+        /**
+         * Clean up scheduler event listeners
+         * Call when the scheduler component is disposed
+         */
+        destroy: function () {
+            if (this._boundMouseDown) {
+                document.removeEventListener('mousedown', this._boundMouseDown);
+                this._boundMouseDown = null;
+            }
+            this._currentResize = null;
+            this._dotNetRefs.clear();
         }
     };
 
