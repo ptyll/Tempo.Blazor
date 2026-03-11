@@ -1931,9 +1931,38 @@
     },
     {
       "itemName": "TmIcon",
-      "description": "SVG icon component with 60+ built-in icons (Feather-style), five size variants (Xs–Xl), six color variants, and support for custom icons via IconRegistry.",
+      "description": "SVG icon component with 150+ built-in icons (Feather-style), five size variants (Xs–Xl), six color variants, and support for custom icons via IconRegistry.",
       "requiredImports": [
         "@using Tempo.Blazor.Components.Icons"
+      ],
+      "parameters": [
+        {
+          "name": "Name",
+          "type": "string",
+          "required": true,
+          "description": "Icon name. Use IconNames constants (e.g. IconNames.Check) or a custom registered name."
+        },
+        {
+          "name": "Size",
+          "type": "IconSize",
+          "required": false,
+          "default": "Md",
+          "description": "Icon size: Xs (0.75rem), Sm (1rem), Md (1.25rem), Lg (1.5rem), Xl (2rem)."
+        },
+        {
+          "name": "Color",
+          "type": "IconColor",
+          "required": false,
+          "default": "Current",
+          "description": "Icon color: Current (inherits), Primary, Danger, Success, Warning, Muted."
+        },
+        {
+          "name": "StrokeWidth",
+          "type": "double",
+          "required": false,
+          "default": "2",
+          "description": "SVG stroke width."
+        }
       ],
       "cssClasses": [
         "tm-icon",
@@ -1950,6 +1979,186 @@
         "tm-icon-muted",
         "tm-icon-unknown"
       ],
+      "builtInIcons": {
+        "actions": [
+          "check",
+          "x",
+          "plus",
+          "minus",
+          "edit",
+          "trash",
+          "save",
+          "copy",
+          "paste",
+          "send",
+          "refresh",
+          "download",
+          "upload",
+          "share",
+          "print"
+        ],
+        "navigation": [
+          "home",
+          "menu",
+          "chevron-left",
+          "chevron-right",
+          "chevron-up",
+          "chevron-down",
+          "arrow-left",
+          "arrow-right",
+          "arrow-up",
+          "arrow-down",
+          "external-link",
+          "more-horizontal",
+          "more-vertical"
+        ],
+        "usersAndAuth": [
+          "user",
+          "users",
+          "user-plus",
+          "user-minus",
+          "user-check",
+          "log-in",
+          "log-out",
+          "lock",
+          "unlock",
+          "key",
+          "shield"
+        ],
+        "filesAndFolders": [
+          "file",
+          "file-text",
+          "file-plus",
+          "folder",
+          "folder-open",
+          "folder-plus",
+          "clipboard",
+          "check-square",
+          "paperclip",
+          "image",
+          "film"
+        ],
+        "uiElements": [
+          "search",
+          "filter",
+          "settings",
+          "bell",
+          "bell-off",
+          "grid",
+          "list",
+          "columns",
+          "sidebar",
+          "sliders",
+          "toggle-left",
+          "toggle-right",
+          "grip-vertical",
+          "eye",
+          "eye-off"
+        ],
+        "communication": [
+          "mail",
+          "message",
+          "message-square",
+          "phone",
+          "at-sign",
+          "hash",
+          "link",
+          "link-2"
+        ],
+        "shapesAndIndicators": [
+          "circle",
+          "square",
+          "minus-circle",
+          "plus-circle",
+          "x-circle",
+          "check-circle",
+          "alert-circle",
+          "alert-triangle",
+          "help-circle",
+          "info",
+          "stop"
+        ],
+        "mediaAndPlayback": [
+          "play",
+          "pause",
+          "stop-circle",
+          "skip-back",
+          "skip-forward",
+          "volume-2",
+          "volume-x"
+        ],
+        "dataAndAnalytics": [
+          "bar-chart-2",
+          "pie-chart",
+          "trending-up",
+          "trending-down",
+          "activity",
+          "database",
+          "server",
+          "cloud",
+          "cloud-upload",
+          "cloud-download"
+        ],
+        "gamification": [
+          "trophy",
+          "star",
+          "target",
+          "zap",
+          "award",
+          "crown",
+          "medal",
+          "fire",
+          "gem"
+        ],
+        "misc": [
+          "bug",
+          "code",
+          "terminal",
+          "globe",
+          "map",
+          "map-pin",
+          "calendar",
+          "clock",
+          "tag",
+          "bookmark",
+          "heart",
+          "thumbs-up",
+          "thumbs-down",
+          "package",
+          "box",
+          "layers",
+          "layout",
+          "monitor",
+          "smartphone",
+          "cpu",
+          "hard-drive",
+          "wifi",
+          "wifi-off",
+          "battery",
+          "power",
+          "sun",
+          "moon",
+          "align-left",
+          "align-center",
+          "align-right",
+          "bold",
+          "italic",
+          "underline",
+          "strikethrough",
+          "type",
+          "maximize-2",
+          "minimize-2",
+          "rotate-cw",
+          "rotate-ccw",
+          "zoom-in",
+          "zoom-out",
+          "scissors",
+          "crop"
+        ]
+      },
+      "iconNameAliases": {
+        "Pencil": "edit (alias for Edit)"
+      },
       "examples": [
         {
           "title": "Basic icon",
@@ -1962,7 +2171,33 @@
         {
           "title": "Custom stroke width",
           "code": "<TmIcon Name=\"@IconNames.Heart\" Size=\"IconSize.Xl\" StrokeWidth=\"1.5\" />"
+        },
+        {
+          "title": "Register a custom icon (in Program.cs)",
+          "description": "Register inline SVG content (inner elements only, NOT the <svg> wrapper). Call before app.Run().",
+          "code": "IconRegistry.Register(\"my-custom-logo\", \"<path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/>\");"
+        },
+        {
+          "title": "Register multiple custom icons",
+          "description": "You can register as many custom icons as needed. Names are case-insensitive.",
+          "code": "IconRegistry.Register(\"company-logo\", \"<circle cx='12' cy='12' r='10'/><path d='M8 12h8'/>\");\nIconRegistry.Register(\"custom-arrow\", \"<line x1='12' y1='5' x2='12' y2='19'/><polyline points='19 12 12 19 5 12'/>\");"
+        },
+        {
+          "title": "Use a registered custom icon in Razor",
+          "code": "<TmIcon Name=\"my-custom-logo\" Size=\"IconSize.Lg\" />"
+        },
+        {
+          "title": "Register a custom IIconProvider (in Program.cs)",
+          "description": "Implement IIconProvider to provide a whole set of icons (e.g. from a font or sprite sheet). Providers are consulted after the direct registry, in registration order.",
+          "code": "// 1. Implement IIconProvider\npublic class MyAppIconProvider : IIconProvider\n{\n    private readonly Dictionary<string, string> _icons = new(StringComparer.OrdinalIgnoreCase)\n    {\n        [\"app-dashboard\"] = \"<rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/>\",\n        [\"app-reports\"]   = \"<path d='M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'/>\"\n    };\n\n    public string? GetSvg(string iconName) =>\n        _icons.TryGetValue(iconName, out var svg) ? svg : null;\n\n    public bool HasIcon(string iconName) =>\n        _icons.ContainsKey(iconName);\n}\n\n// 2. Register in Program.cs\nIconRegistry.RegisterProvider(new MyAppIconProvider());"
         }
+      ],
+      "notes": [
+        "Icon names use IconNames constants (e.g. IconNames.Check) to avoid typos.",
+        "Edit and Pencil are aliases pointing to the same 'edit' icon.",
+        "Custom icons registered via IconRegistry.Register() must contain only inner SVG elements (path, circle, line, etc.) — NOT the <svg> wrapper.",
+        "Resolution order: built-in icons → direct registry → registered IIconProvider providers.",
+        "If an icon name is not found anywhere, the component renders a <span class='tm-icon-unknown'> fallback."
       ]
     },
     {
@@ -4035,6 +4270,15 @@
       "category": "Complex Examples",
       "description": "Full workflow state machine editor with canvas, toolbox, properties panel, and minimap.",
       "code": "<div style=\"display: flex; height: calc(100vh - var(--tm-topbar-height)); gap: var(--tm-space-4); padding: var(--tm-space-4);\">\n    <!-- Left: Toolbox -->\n    <TmWorkflowToolbox OnAddState=\"HandleAddState\" OnDeleteSelected=\"HandleDelete\"\n        HasSelection=\"@(_selectedState is not null || _selectedTransition is not null)\"\n        ZoomLevel=\"@_zoomLevel\" OnZoomChanged=\"z => _zoomLevel = z\"\n        OnFitToView=\"HandleFitToView\" />\n\n    <!-- Center: Canvas -->\n    <div style=\"flex: 1; position: relative;\">\n        <TmWorkflowDesignerCanvas Definition=\"@_workflow\"\n            DefinitionChanged=\"def => _workflow = def\"\n            OnStateSelected=\"s => { _selectedState = s; _selectedTransition = null; }\"\n            OnTransitionSelected=\"t => { _selectedTransition = t; _selectedState = null; }\"\n            SelectedStateId=\"@_selectedState?.Id\"\n            SelectedTransitionId=\"@_selectedTransition?.Id\" />\n\n        <!-- Minimap overlay -->\n        <div style=\"position: absolute; bottom: 16px; right: 16px;\">\n            <TmWorkflowMinimap Definition=\"@_workflow\"\n                ViewBoxX=\"@_viewX\" ViewBoxY=\"@_viewY\"\n                ViewBoxW=\"800\" ViewBoxH=\"500\"\n                OnNavigate=\"HandleMinimapNavigate\" />\n        </div>\n    </div>\n\n    <!-- Right: Properties panel -->\n    <TmWorkflowPropertiesPanel SelectedState=\"@_selectedState\"\n        SelectedTransition=\"@_selectedTransition\"\n        States=\"@_workflow.States\"\n        OnStateChanged=\"HandleStateChanged\"\n        OnTransitionChanged=\"HandleTransitionChanged\" />\n</div>"
+    },
+    {
+      "title": "Custom Icon Registration",
+      "category": "Icons",
+      "description": "Register custom application-specific icons via IconRegistry in Program.cs. Icons can be registered individually with inline SVG content, or in bulk via a custom IIconProvider implementation.",
+      "code": "// Program.cs — register custom icons before app.Run()\n\n// 1. Register individual icons (SVG inner content only, NOT the <svg> wrapper)\nIconRegistry.Register(\"company-logo\", \"<circle cx='12' cy='12' r='10'/><path d='M8 12h8'/>\");\nIconRegistry.Register(\"custom-arrow\", \"<line x1='12' y1='5' x2='12' y2='19'/><polyline points='19 12 12 19 5 12'/>\");\n\n// 2. Register a provider for a whole set of icons\nIconRegistry.RegisterProvider(new MyAppIconProvider());\n\nvar app = builder.Build();\napp.Run();",
+      "providerCode": "using Tempo.Blazor.Interfaces;\n\npublic class MyAppIconProvider : IIconProvider\n{\n    private readonly Dictionary<string, string> _icons = new(StringComparer.OrdinalIgnoreCase)\n    {\n        [\"app-dashboard\"] = \"<rect x='3' y='3' width='7' height='7'/><rect x='14' y='3' width='7' height='7'/><rect x='3' y='14' width='7' height='7'/><rect x='14' y='14' width='7' height='7'/>\",\n        [\"app-reports\"]   = \"<path d='M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z'/><polyline points='14 2 14 8 20 8'/>\",\n        [\"app-settings\"]  = \"<circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33'/>\"\n    };\n\n    public string? GetSvg(string iconName) =>\n        _icons.TryGetValue(iconName, out var svg) ? svg : null;\n\n    public bool HasIcon(string iconName) =>\n        _icons.ContainsKey(iconName);\n}",
+      "usageCode": "@* Use registered custom icons in Razor — reference by the registered name *@\n<TmIcon Name=\"company-logo\" Size=\"IconSize.Lg\" />\n<TmIcon Name=\"app-dashboard\" Color=\"IconColor.Primary\" />\n<TmIcon Name=\"app-reports\" Size=\"IconSize.Xl\" StrokeWidth=\"1.5\" />",
+      "setupNote": "Icon resolution order: built-in icons → direct registry (IconRegistry.Register) → IIconProvider providers (in registration order). SVG content must be inner elements only (path, circle, line, rect, polyline, etc.) — NOT the <svg> wrapper. Names are case-insensitive."
     }
   ]
 }
