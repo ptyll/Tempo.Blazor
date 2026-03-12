@@ -2,6 +2,8 @@
 @using Tempo.Blazor.Components.DataDisplay
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
+@using Tempo.Blazor.Demo.Shared
+@using Tempo.Blazor.Demo.Services
 
 <PageTitle>Multi View List – Tempo.Blazor</PageTitle>
 
@@ -68,12 +70,69 @@
                      OnItemClick="OnProjectClick" />
 </section>
 
+<!-- Server-Side MultiViewList with Grouping -->
+<section class="demo-section mt-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Persons (Server-Side with Grouping)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Server-Side</span>
+    </div>
+
+    <div class="p-4 mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+        <p class="text-sm text-green-800 dark:text-green-200">
+            Uses <code>PersonHttpDataProvider</code> with <strong>server-side grouping</strong> and <strong>per-group pagination</strong>.
+        </p>
+        <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+            Requires Demo.Api running on port 5100. Group by Role to see per-group mini-pager.
+        </p>
+    </div>
+
+    <TmMultiViewList TItem="PersonDto"
+                     DataProvider="_personProvider"
+                     ViewContext="persons-mvl"
+                     TitleField="@(p => p.FullName)"
+                     SubTitleField="@(p => p.Email)"
+                     StatusLabelField="@(p => p.IsActive ? "Active" : "Inactive")"
+                     StatusColorField="@(p => p.IsActive ? "#22c55e" : "#ef4444")"
+                     DateField="@(p => new DateTimeOffset(p.HiredAt, TimeOnly.MinValue, TimeSpan.Zero))"
+                     GroupableFields="_personGroupFields"
+                     ShowSearch="true"
+                     ShowViewSwitcher="true"
+                     DefaultPageSize="10"
+                     EmptyTitle="No persons found"
+                     OnItemClick="OnPersonClick" />
+</section>
+
 @code {
+    [Inject] private PersonHttpDataProvider PersonProvider { get; set; } = default!;
     [Inject] private ViewHttpProvider ViewProvider { get; set; } = default!;
 
     private IDataTableViewProvider _viewProvider = default!;
+    private IDataTableDataProvider<PersonDto> _personProvider = default!;
     private string CurrentUserId => "CurrentUserId";
     private string CurrentTenantId => "CurrentTenantId";
+
+    private readonly IReadOnlyList<GroupFieldDefinition<PersonDto>> _personGroupFields =
+    [
+        new GroupFieldDefinition<PersonDto>
+        {
+            FieldName = "Role",
+            Label = "Role",
+            FieldAccessor = p => p.Role
+        },
+        new GroupFieldDefinition<PersonDto>
+        {
+            FieldName = "Department",
+            Label = "Department",
+            FieldAccessor = p => p.Department
+        },
+        new GroupFieldDefinition<PersonDto>
+        {
+            FieldName = "IsActive",
+            Label = "Active",
+            FieldAccessor = p => p.IsActive,
+            DisplayFormatter = v => v is true ? "Active" : "Inactive"
+        }
+    ];
 
     // Filter definitions for View Manager
     private List<FilterDefinition> _filterDefs = 
@@ -245,6 +304,7 @@
     protected override void OnInitialized()
     {
         _viewProvider = ViewProvider;
+        _personProvider = PersonProvider;
     }
 
     private void OnTeamMemberClick(TeamMember item)
@@ -255,6 +315,11 @@
     private void OnProjectClick(Project item)
     {
         Console.WriteLine($"Clicked: {item.Title}");
+    }
+
+    private void OnPersonClick(PersonDto item)
+    {
+        Console.WriteLine($"Clicked: {item.FullName}");
     }
 
     /// <summary>

@@ -53,6 +53,12 @@
       "description": "Available columns for grouping selection in the view modal."
     },
     {
+      "name": "DisplayResolver",
+      "type": "Func<string, string?, string?>?",
+      "isRequired": false,
+      "description": "Universal display resolver for field labels and enum filter values. Typically passed from parent TmDataTable or TmMultiViewList. Flows to FilterBuilder."
+    },
+    {
       "name": "CanCreateTenantViews",
       "type": "bool",
       "isRequired": false,
@@ -101,6 +107,10 @@
     {
       "title": "View manager integrated with data table",
       "code": "<TmViewManager Provider=\"@viewProvider\"\n               ViewContext=\"employees\"\n               OnViewApplied=\"ApplyView\"\n               GetCurrentView=\"GetCurrentTableView\"\n               AvailableColumns=\"@availableColumns\"\n               FilterDefinitions=\"@filterDefs\"\n               CanCreateTenantViews=\"true\"\n               CurrentUserId=\"@userId\"\n               CurrentTenantId=\"@tenantId\" />"
+    },
+    {
+      "title": "View manager with DisplayResolver for localized filter labels",
+      "code": "<TmViewManager Provider=\"@viewProvider\"\n               ViewContext=\"orders\"\n               OnViewApplied=\"ApplyView\"\n               GetCurrentView=\"GetCurrentTableView\"\n               AvailableColumns=\"@availableColumns\"\n               FilterDefinitions=\"@filterDefs\"\n               DisplayResolver=\"ResolveDisplay\"\n               CanCreateTenantViews=\"true\"\n               CurrentUserId=\"@userId\"\n               CurrentTenantId=\"@tenantId\" />\n\n@code {\n    // DisplayResolver flows from TmViewManager → TmFilterBuilder → TmFilterChip.\n    // Usually you set DisplayResolver on the parent TmDataTable or TmMultiViewList\n    // and it flows automatically. Direct usage shown here for standalone scenarios.\n    private string? ResolveDisplay(string fieldName, string? rawValue)\n    {\n        if (rawValue is null)\n            return fieldName switch { \"Status\" => \"Order Status\", \"Priority\" => \"Priority\", _ => null };\n        return (fieldName, rawValue) switch\n        {\n            (\"Status\", \"Pending\") => \"Pending\",\n            (\"Status\", \"Shipped\") => \"Shipped\",\n            (\"Status\", \"Delivered\") => \"Delivered\",\n            _ => null\n        };\n    }\n}"
     }
   ]
 }

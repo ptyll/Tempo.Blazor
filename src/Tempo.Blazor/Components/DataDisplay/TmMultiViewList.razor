@@ -195,7 +195,7 @@
     }
 
     @* ── Pagination ───────────────────────────────────────────── *@
-    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination)
+    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination && !IsGrouped)
     {
         <div class="tm-pagination-container">
             <div class="tm-pagination-info">
@@ -387,6 +387,8 @@
     private IReadOnlyList<DataGroup<TItem>>? _groupedData;
     private bool _groupPickerOpen;
     private bool IsGrouped => _activeGroupFields.Count > 0 && _groupedData is not null;
+    private IReadOnlyDictionary<string, GroupPagination>? _serverGroupPaging;
+    private readonly Dictionary<string, int> _groupPageRequests = new();
     private bool IsVirtualized => ScrollMode == DataTableScrollMode.Virtualized;
 
     private bool HasItems => (IsGrouped ? _groupedData?.Count > 0 : FilteredItems?.Count > 0) == true;
@@ -554,12 +556,40 @@
         StateHasChanged();
         try
         {
+            var filters = _externalFilters.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)).ToList();
+
+            // Try server-side grouping when groups are active
+            if (_activeGroupFields.Count > 0)
+            {
+                var groupQuery = new DataTableQuery
+                {
+                    Page = _currentPage,
+                    PageSize = _pageSize,
+                    SearchText = _searchText,
+                    Filters = filters,
+                    GroupByColumns = _activeGroupFields.ToList(),
+                    GroupPageRequests = _groupPageRequests.Count > 0 ? _groupPageRequests : null,
+                };
+                var grouped = await DataProvider!.GetGroupedDataAsync(groupQuery);
+                if (grouped is not null)
+                {
+                    _groupedData = grouped.Groups;
+                    _totalCount = grouped.TotalCount;
+                    _serverGroupPaging = grouped.GroupPaging;
+                    _serverItems = []; // items are inside groups
+                    return;
+                }
+                // Fall through: server doesn't support grouping → load flat + client-side group
+            }
+
+            _serverGroupPaging = null;
+
             var query = new DataTableQuery
             {
                 Page = _currentPage,
                 PageSize = _pageSize,
                 SearchText = _searchText,
-                Filters = _externalFilters.Select(f => new DataTableFilter(f.FieldName, f.Operator.ToString(), f.Value)).ToList(),
+                Filters = filters,
             };
             var result = await DataProvider!.GetDataAsync(query);
             _serverItems = result.Items.ToList();
@@ -567,6 +597,10 @@
             _currentPage = result.Page;
             _pageSize = result.PageSize;
             _totalPages = result.TotalPages;
+
+            // Client-side grouping fallback when server doesn't support it
+            if (_activeGroupFields.Count > 0)
+                RefreshGroupedData();
         }
         finally
         {
@@ -599,6 +633,7 @@
     private async Task OnSearchChangedAsync(string? value)
     {
         _searchText = value ?? string.Empty;
+        _groupPageRequests.Clear();
         if (DataProvider is not null)
         {
             _currentPage = 1;
@@ -609,6 +644,7 @@
     private async Task OnExternalFiltersChanged(IEnumerable<ActiveFilter> filters)
     {
         _externalFilters = filters.ToList();
+        _groupPageRequests.Clear();
         if (DataProvider is not null)
         {
             _currentPage = 1;
@@ -685,7 +721,7 @@
         _groupPickerOpen = !_groupPickerOpen;
     }
 
-    private void ToggleGroupField(string fieldName, bool enabled)
+    private async Task ToggleGroupField(string fieldName, bool enabled)
     {
         if (enabled && !_activeGroupFields.Contains(fieldName))
         {
@@ -698,8 +734,29 @@
 
         _groupPickerOpen = false;
         _expandedGroups.Clear();
-        RefreshGroupedData();
-        _ = OnGroupingChanged.InvokeAsync(_activeGroupFields.ToList());
+        _groupPageRequests.Clear();
+        _serverGroupPaging = null;
+
+        if (DataProvider is not null)
+        {
+            await LoadFromProviderAsync();
+        }
+        else
+        {
+            RefreshGroupedData();
+        }
+
+        if (_activeGroupFields.Count == 0)
+            _groupedData = null;
+
+        await OnGroupingChanged.InvokeAsync(_activeGroupFields.ToList());
+    }
+
+    private async Task NavigateGroupPageAsync(string groupKey, int page)
+    {
+        _groupPageRequests[groupKey] = page;
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
     }
 
     private void RefreshGroupedData()
@@ -779,6 +836,8 @@
                     {
                         @RenderTableDataRow(item)
                     }
+
+                    @RenderGroupMiniPager(group, "table")
                 }
             }
         }
@@ -848,6 +907,7 @@
                                 @RenderCardItem(item)
                             }
                         </div>
+                        @RenderGroupMiniPager(group, "div")
                     }
                     else
                     {
@@ -857,9 +917,47 @@
                                 @RenderListItem(item)
                             }
                         </ul>
+                        @RenderGroupMiniPager(group, "div")
                     }
                 }
             </div>
+        }
+    };
+
+    private RenderFragment RenderGroupMiniPager(DataGroup<TItem> group, string wrapperType) => __builder =>
+    {
+        var groupKeyStr = group.Key?.ToString() ?? "";
+        if (_serverGroupPaging is not null
+            && _serverGroupPaging.TryGetValue(groupKeyStr, out var paging)
+            && paging.TotalPages > 1)
+        {
+            var capturedKey = groupKeyStr;
+            if (wrapperType == "table")
+            {
+                <tr class="tm-mvl-group-pagination">
+                    <td colspan="@MvlColSpan">
+                        <TmPagination CurrentPage="@paging.Page"
+                                      TotalPages="@paging.TotalPages"
+                                      TotalCount="@paging.TotalCount"
+                                      PageSize="@paging.PageSize"
+                                      PageSizeOptions="@((IReadOnlyList<int>?)null)"
+                                      Class="tm-pagination-compact"
+                                      OnPageChange="page => NavigateGroupPageAsync(capturedKey, page)" />
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <div class="tm-mvl-group-pagination">
+                    <TmPagination CurrentPage="@paging.Page"
+                                  TotalPages="@paging.TotalPages"
+                                  TotalCount="@paging.TotalCount"
+                                  PageSize="@paging.PageSize"
+                                  PageSizeOptions="@((IReadOnlyList<int>?)null)"
+                                  Class="tm-pagination-compact"
+                                  OnPageChange="page => NavigateGroupPageAsync(capturedKey, page)" />
+                </div>
+            }
         }
     };
 

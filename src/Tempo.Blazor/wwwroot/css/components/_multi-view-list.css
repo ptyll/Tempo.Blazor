@@ -333,6 +333,24 @@
   font-size: var(--tm-font-size-sm, 0.875rem);
 }
 
+/* ── Per-Group Pagination ──────────────────────────────────── */
+
+.tm-mvl-group-pagination {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  background: var(--tm-surface-secondary, #f9fafb);
+  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+}
+
+.tm-mvl-group-pagination td {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  background: var(--tm-surface-secondary, #f9fafb);
+  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+}
+
+.tm-mvl-group-pagination .tm-pagination {
+  justify-content: flex-end;
+}
+
 /* ── Virtual Scroll ─────────────────────────────────────────── */
 
 .tm-mvl-virtual-scroll {
