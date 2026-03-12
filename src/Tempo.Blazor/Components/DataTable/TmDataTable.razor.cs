@@ -340,12 +340,38 @@ public partial class TmDataTable<TItem>
         StateHasChanged();
         try
         {
+            // When grouping is active, try server-side grouping first
+            if (_groupByColumns.Count > 0)
+            {
+                var grouped = await DataProvider!.GetGroupedDataAsync(BuildQuery());
+                if (grouped is not null)
+                {
+                    // Server provided pre-grouped data — use directly
+                    _groupedData = grouped.Groups.ToList();
+                    _totalCount = grouped.TotalCount;
+                    _displayedItems = [];
+                    _serverGroupPaging = grouped.GroupPaging;
+
+                    // Set initial expand state
+                    if (!GroupsCollapsedByDefault && _expandedGroups.Count == 0)
+                        ExpandAllGroupsRecursive(_groupedData);
+
+                    return;
+                }
+            }
+
+            // Flat data fetch (non-grouped, or server doesn't support grouping)
             var result = await DataProvider!.GetDataAsync(BuildQuery());
             _displayedItems = result.Items.ToList();
             _totalCount = result.TotalCount;
             _currentPage = result.Page;
             _pageSize = result.PageSize;
             _totalPages = result.TotalPages;
+            _serverGroupPaging = null;
+
+            // Fallback: group the server-provided items client-side
+            if (_groupByColumns.Count > 0)
+                RefreshGroupedData();
         }
         finally
         {
@@ -353,6 +379,9 @@ public partial class TmDataTable<TItem>
             StateHasChanged();
         }
     }
+
+    /// <summary>Per-group pagination metadata from server-side grouping. Null when using client-side grouping.</summary>
+    private IReadOnlyDictionary<string, GroupPagination>? _serverGroupPaging;
 
     private DataTableQuery BuildQuery() => new()
     {
@@ -640,7 +669,13 @@ public partial class TmDataTable<TItem>
                 RefreshGroupedData();
         }
         else
+        {
             _groupedData = null;
+            _serverGroupPaging = null;
+            // Re-fetch flat data when grouping is fully removed (server-side mode empties _displayedItems)
+            if (DataProvider is not null)
+                _ = LoadFromProviderAsync();
+        }
 
         _ = OnGroupingChanged.InvokeAsync(_groupByColumns.ToList());
         StateHasChanged();
@@ -697,33 +732,43 @@ public partial class TmDataTable<TItem>
             return;
         }
 
-        // Build filtered + sorted items (before pagination)
-        var items = (Items ?? []).AsEnumerable();
+        IEnumerable<TItem> items;
 
-        if (!string.IsNullOrWhiteSpace(_searchText))
+        if (DataProvider is not null)
         {
-            var search = _searchText.Trim();
-            items = items.Where(item =>
-                _columns.Any(col =>
-                    col.Field?.Invoke(item)?.ToString()
-                       ?.Contains(search, StringComparison.OrdinalIgnoreCase) == true));
+            // Server-side mode: items are already filtered/sorted by the provider
+            items = _displayedItems;
         }
-
-        foreach (var filter in _activeFilters.Values)
+        else
         {
-            var col = _columns.FirstOrDefault(c => c.Key == filter.Column);
-            if (col?.Field != null)
-                items = ApplyClientFilter(items, col.Field, filter);
-        }
+            // Client-side mode: apply search, filters, and sorting locally
+            items = (Items ?? []).AsEnumerable();
 
-        if (_sortColumn != null)
-        {
-            var sortCol = _columns.FirstOrDefault(c => c.Key == _sortColumn);
-            if (sortCol?.Field != null)
+            if (!string.IsNullOrWhiteSpace(_searchText))
             {
-                items = _sortDescending
-                    ? items.OrderByDescending(x => sortCol.Field(x))
-                    : items.OrderBy(x => sortCol.Field(x));
+                var search = _searchText.Trim();
+                items = items.Where(item =>
+                    _columns.Any(col =>
+                        col.Field?.Invoke(item)?.ToString()
+                           ?.Contains(search, StringComparison.OrdinalIgnoreCase) == true));
+            }
+
+            foreach (var filter in _activeFilters.Values)
+            {
+                var col = _columns.FirstOrDefault(c => c.Key == filter.Column);
+                if (col?.Field != null)
+                    items = ApplyClientFilter(items, col.Field, filter);
+            }
+
+            if (_sortColumn != null)
+            {
+                var sortCol = _columns.FirstOrDefault(c => c.Key == _sortColumn);
+                if (sortCol?.Field != null)
+                {
+                    items = _sortDescending
+                        ? items.OrderByDescending(x => sortCol.Field(x))
+                        : items.OrderBy(x => sortCol.Field(x));
+                }
             }
         }
 

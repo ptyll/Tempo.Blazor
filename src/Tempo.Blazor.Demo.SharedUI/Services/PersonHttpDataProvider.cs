@@ -14,12 +14,35 @@ public class PersonHttpDataProvider : IDataTableDataProvider<PersonDto>
 
     public async Task<PagedResult<PersonDto>> GetDataAsync(DataTableQuery query, CancellationToken ct = default)
     {
-        var url = $"/api/persons?page={query.Page}&pageSize={query.PageSize}" +
+        var url = BuildBaseUrl(query,
+            $"/api/persons?page={query.Page}&pageSize={query.PageSize}");
+
+        return await _http.GetFromJsonAsync<PagedResult<PersonDto>>(url, ct) ?? new();
+    }
+
+    public async Task<GroupedPagedResult<PersonDto>?> GetGroupedDataAsync(DataTableQuery query, CancellationToken ct = default)
+    {
+        if (query.GroupByColumns.Count == 0)
+            return null;
+
+        var url = BuildBaseUrl(query,
+            $"/api/persons/grouped?groupPageSize={query.PageSize}");
+
+        // Add groupBy columns
+        foreach (var col in query.GroupByColumns)
+            url += $"&groupBy={Uri.EscapeDataString(col)}";
+
+        return await _http.GetFromJsonAsync<GroupedPagedResult<PersonDto>>(url, ct);
+    }
+
+    private static string BuildBaseUrl(DataTableQuery query, string baseUrl)
+    {
+        var url = baseUrl +
                   $"&sortColumn={Uri.EscapeDataString(query.SortColumn ?? "")}" +
                   $"&sortDescending={query.SortDescending}" +
                   $"&searchText={Uri.EscapeDataString(query.SearchText ?? "")}";
 
-        // Add filters to URL
+        // Add filters
         if (query.Filters?.Count > 0)
         {
             foreach (var filter in query.Filters)
@@ -30,15 +53,6 @@ public class PersonHttpDataProvider : IDataTableDataProvider<PersonDto>
             }
         }
 
-        // Add groupBy columns to URL
-        if (query.GroupByColumns?.Count > 0)
-        {
-            foreach (var col in query.GroupByColumns)
-            {
-                url += $"&groupBy={Uri.EscapeDataString(col)}";
-            }
-        }
-
-        return await _http.GetFromJsonAsync<PagedResult<PersonDto>>(url, ct) ?? new();
+        return url;
     }
 }

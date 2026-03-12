@@ -279,12 +279,12 @@
                 </TmButton>
             </SelectionActions>
             <ChildContent>
-                <TmDataTableColumn TItem="PersonDto" Title="Jméno" PropertyName="LastName" Sortable="true" Filterable="true" Field="p => p.FullName" Groupable="true" />
+                <TmDataTableColumn TItem="PersonDto" Title="Jméno" PropertyName="LastName" Sortable="true" Field="p => p.FullName" Groupable="true" />
                 <TmDataTableColumn TItem="PersonDto" Title="E-mail" PropertyName="Email" Sortable="true" Field="p => p.Email" />
-                <TmDataTableColumn TItem="PersonDto" Title="Oddělení" PropertyName="Department" Sortable="true" Filterable="true"
-                                   FilterType="FilterType.Select" FilterOptions="_personDeptOptions" Field="p => p.Department" Groupable="true" />
-                <TmDataTableColumn TItem="PersonDto" Title="Pozice" PropertyName="Role" Sortable="true" Filterable="true"
-                                   FilterType="FilterType.Select" FilterOptions="_personRoleOptions" Field="p => p.Role" Groupable="true" />
+                <TmDataTableColumn TItem="PersonDto" Title="Oddělení" PropertyName="Department" Sortable="true"
+                                   Field="p => p.Department" Groupable="true" />
+                <TmDataTableColumn TItem="PersonDto" Title="Pozice" PropertyName="Role" Sortable="true"
+                                   Field="p => p.Role" Groupable="true" />
                 <TmDataTableColumn TItem="PersonDto" Title="Aktivní" PropertyName="IsActive" Sortable="true" Align="ColumnAlign.Center"
                                    Field="@(p => p.IsActive ? "Ano" : "Ne")" />
                 <TmDataTableColumn TItem="PersonDto" Title="Nastoupil" PropertyName="HiredAt" Sortable="true" Field="@(p => p.HiredAt.ToString("d"))" />
