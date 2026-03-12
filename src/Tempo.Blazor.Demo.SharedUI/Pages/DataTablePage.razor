@@ -126,6 +126,7 @@
         <TmFilterBuilder FilterDefinitions="@_employeeFilterDefs"
                          ActiveFilters="@_activeEmployeeFilters"
                          OnFiltersChanged="OnEmployeeFiltersChanged"
+                         DisplayResolver="ResolveDisplay"
                          ShowClearAll="false" />
     </div>
     
@@ -210,6 +211,7 @@
                      ViewCanCreateTenantViews="true"
                      CurrentUserId="CurrentUserId"
                      CurrentTenantId="CurrentTenantId"
+                     DisplayResolver="ResolveDisplay"
                      DefaultPageSize="5">
             <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Sortable="true" Field="e => e.Name" />
             <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Sortable="true" Field="e => e.Role" />
@@ -217,6 +219,87 @@
             <TmDataTableColumn TItem="Employee" Title="Score" PropertyName="Score" Sortable="true" Align="ColumnAlign.Right" Field="e => e.Score" />
         </TmDataTable>
     </div>
+</section>
+
+<!-- Full-Featured Server-Side Table -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Full-Featured Server-Side</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">All-in-One</span>
+    </div>
+
+    <div class="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl mb-4">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+                <p class="text-sm text-emerald-800 dark:text-emerald-200">
+                    Server-side <code>DataProvider</code> + <code>ViewProvider</code> + external filters + <code>DisplayResolver</code> + selection with bulk actions.
+                </p>
+                <p class="text-sm text-emerald-600 dark:text-emerald-400">Requires Demo.Api running on port 5100.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="showcase-card p-0 overflow-hidden">
+        <TmDataTable TItem="PersonDto"
+                     DataProvider="_personProvider"
+                     ViewContext="persons"
+                     ViewProvider="_viewProvider"
+                     ViewFilterDefinitions="_personViewFilterDefs"
+                     ExternalFilterDefinitions="_personExternalFilterDefs"
+                     ShowExternalFilterBuilder="true"
+                     DisplayResolver="ResolvePersonDisplay"
+                     ViewCanCreateTenantViews="true"
+                     CurrentUserId="CurrentUserId"
+                     CurrentTenantId="CurrentTenantId"
+                     Selectable="true"
+                     ShowSearch="true"
+                     ShowGrouping="true"
+                     DefaultPageSize="10"
+                     OnRowClick="OnPersonClick"
+                     OnSelectionChanged="OnPersonSelectionChanged">
+            <SelectionActions>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Danger" OnClick="@(() => _selectedPersonCount = 0)">
+                    <span class="flex items-center space-x-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Smazat (@_selectedPersonCount)</span>
+                    </span>
+                </TmButton>
+                <TmButton Size="ButtonSize.Sm" OnClick="@(() => { })">
+                    <span class="flex items-center space-x-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Export (@_selectedPersonCount)</span>
+                    </span>
+                </TmButton>
+            </SelectionActions>
+            <ChildContent>
+                <TmDataTableColumn TItem="PersonDto" Title="Jméno" PropertyName="LastName" Sortable="true" Filterable="true" Field="p => p.FullName" Groupable="true" />
+                <TmDataTableColumn TItem="PersonDto" Title="E-mail" PropertyName="Email" Sortable="true" Field="p => p.Email" />
+                <TmDataTableColumn TItem="PersonDto" Title="Oddělení" PropertyName="Department" Sortable="true" Filterable="true"
+                                   FilterType="FilterType.Select" FilterOptions="_personDeptOptions" Field="p => p.Department" Groupable="true" />
+                <TmDataTableColumn TItem="PersonDto" Title="Pozice" PropertyName="Role" Sortable="true" Filterable="true"
+                                   FilterType="FilterType.Select" FilterOptions="_personRoleOptions" Field="p => p.Role" Groupable="true" />
+                <TmDataTableColumn TItem="PersonDto" Title="Aktivní" PropertyName="IsActive" Sortable="true" Align="ColumnAlign.Center"
+                                   Field="@(p => p.IsActive ? "Ano" : "Ne")" />
+                <TmDataTableColumn TItem="PersonDto" Title="Nastoupil" PropertyName="HiredAt" Sortable="true" Field="@(p => p.HiredAt.ToString("d"))" />
+            </ChildContent>
+        </TmDataTable>
+    </div>
+
+    @if (_lastClickedPerson is not null)
+    {
+        <div class="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg animate-fade-in">
+            <p class="text-sm text-slate-700 dark:text-slate-300">
+                Kliknuto na: <span class="font-semibold text-emerald-600 dark:text-emerald-400">@_lastClickedPerson.FullName</span> (@_lastClickedPerson.Department, @_lastClickedPerson.Role)
+            </p>
+        </div>
+    }
 </section>
 
 <!-- Pagination Demo -->
@@ -286,15 +369,15 @@
         new FilterDefinition { FieldName = "Score", FieldLabel = "Score", FieldType = FilterFieldType.Number }
     ];
     
-    // External Filter Builder definitions (must match view filter field names)
-    private List<FilterDefinition> _employeeExternalFilterDefs = 
+    // External Filter Builder definitions (FieldName must match Employee property names for reflection-based filtering)
+    private List<FilterDefinition> _employeeExternalFilterDefs =
     [
         new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
-        new FilterDefinition { FieldName = "Role", FieldLabel = "Role", FieldType = FilterFieldType.Select, 
+        new FilterDefinition { FieldName = "Role", FieldLabel = "Role", FieldType = FilterFieldType.Select,
             Options = [new SelectOption<string>("Admin", "Admin"), new SelectOption<string>("User", "User"), new SelectOption<string>("Manager", "Manager")] },
-        new FilterDefinition { FieldName = "Department", FieldLabel = "Department", FieldType = FilterFieldType.Select,
-            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Sales", "Sales"), new SelectOption<string>("Finance", "Finance"), new SelectOption<string>("HR", "HR")] },
-        new FilterDefinition { FieldName = "IsActive", FieldLabel = "Active", FieldType = FilterFieldType.Boolean }
+        new FilterDefinition { FieldName = "Dept", FieldLabel = "Department", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Sales", "Sales"), new SelectOption<string>("IT", "IT"), new SelectOption<string>("HR", "HR")] },
+        new FilterDefinition { FieldName = "Score", FieldLabel = "Score", FieldType = FilterFieldType.Number }
     ];
     private string CurrentUserId => "CurrentUserId";
     private string CurrentTenantId => "CurrentTenantId";
@@ -371,6 +454,120 @@
             FilterOperator.GreaterOrEqual => query.Where(e => selector(e) >= value),
             FilterOperator.LessOrEqual => query.Where(e => selector(e) <= value),
             _ => query
+        };
+    }
+
+    /// <summary>
+    /// DisplayResolver demo: localizes field labels and enum filter values.
+    /// In a real app, this would use IStringLocalizer or a resource file.
+    /// </summary>
+    private string? ResolveDisplay(string fieldName, string? rawValue)
+    {
+        // Field labels (rawValue == null)
+        if (rawValue is null)
+        {
+            return fieldName switch
+            {
+                "Name" or "name" => "Name",
+                "Role" or "role" => "Role",
+                "Dept" or "dept" => "Department",
+                "Score" or "score" => "Score",
+                "IsActive" => "Active",
+                _ => null
+            };
+        }
+
+        // Enum value labels (rawValue != null)
+        return (fieldName.ToLowerInvariant(), rawValue) switch
+        {
+            ("role", "Admin") => "Administrator",
+            ("role", "User") => "Regular User",
+            ("role", "Manager") => "Team Manager",
+            ("dept", "Engineering") => "Engineering Dept.",
+            ("dept", "Marketing") => "Marketing Dept.",
+            ("dept", "Sales") => "Sales Dept.",
+            ("dept", "IT") => "IT Department",
+            ("dept", "HR") => "Human Resources",
+            _ => null // fall back to raw value
+        };
+    }
+
+    // Full-Featured Server-Side
+    private static readonly string[] PersonDepts = ["Engineering", "Sales", "HR", "Finance", "Marketing", "Support"];
+    private static readonly string[] PersonRoles = ["Junior", "Medior", "Senior", "Lead", "Manager", "Director"];
+    private IReadOnlyList<SelectOption<string>> _personDeptOptions = PersonDepts.Select(d => new SelectOption<string> { Value = d, Label = d }).ToList();
+    private IReadOnlyList<SelectOption<string>> _personRoleOptions = PersonRoles.Select(r => new SelectOption<string> { Value = r, Label = r }).ToList();
+    private PersonDto? _lastClickedPerson;
+    private int _selectedPersonCount;
+
+    private List<FilterDefinition> _personViewFilterDefs =
+    [
+        new FilterDefinition { FieldName = "LastName", FieldLabel = "Jméno", FieldType = FilterFieldType.Text },
+        new FilterDefinition { FieldName = "Department", FieldLabel = "Oddělení", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Sales", "Sales"),
+                       new SelectOption<string>("HR", "HR"), new SelectOption<string>("Finance", "Finance"),
+                       new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Support", "Support")] },
+        new FilterDefinition { FieldName = "Role", FieldLabel = "Pozice", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Junior", "Junior"), new SelectOption<string>("Medior", "Medior"),
+                       new SelectOption<string>("Senior", "Senior"), new SelectOption<string>("Lead", "Lead"),
+                       new SelectOption<string>("Manager", "Manager"), new SelectOption<string>("Director", "Director")] },
+        new FilterDefinition { FieldName = "IsActive", FieldLabel = "Aktivní", FieldType = FilterFieldType.Boolean }
+    ];
+
+    private List<FilterDefinition> _personExternalFilterDefs =
+    [
+        new FilterDefinition { FieldName = "LastName", FieldLabel = "Jméno", FieldType = FilterFieldType.Text },
+        new FilterDefinition { FieldName = "Department", FieldLabel = "Oddělení", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Engineering", "Engineering"), new SelectOption<string>("Sales", "Sales"),
+                       new SelectOption<string>("HR", "HR"), new SelectOption<string>("Finance", "Finance"),
+                       new SelectOption<string>("Marketing", "Marketing"), new SelectOption<string>("Support", "Support")] },
+        new FilterDefinition { FieldName = "Role", FieldLabel = "Pozice", FieldType = FilterFieldType.Select,
+            Options = [new SelectOption<string>("Junior", "Junior"), new SelectOption<string>("Medior", "Medior"),
+                       new SelectOption<string>("Senior", "Senior"), new SelectOption<string>("Lead", "Lead"),
+                       new SelectOption<string>("Manager", "Manager"), new SelectOption<string>("Director", "Director")] },
+        new FilterDefinition { FieldName = "IsActive", FieldLabel = "Aktivní", FieldType = FilterFieldType.Boolean }
+    ];
+
+    private void OnPersonClick(PersonDto person) => _lastClickedPerson = person;
+
+    private void OnPersonSelectionChanged(IReadOnlyList<PersonDto> sel) =>
+        _selectedPersonCount = sel.Count;
+
+    /// <summary>
+    /// DisplayResolver for PersonDto: Czech labels for fields and enum-like values.
+    /// </summary>
+    private string? ResolvePersonDisplay(string fieldName, string? rawValue)
+    {
+        if (rawValue is null)
+        {
+            return fieldName switch
+            {
+                "LastName" or "FirstName" => "Jméno",
+                "Email" => "E-mail",
+                "Department" => "Oddělení",
+                "Role" => "Pozice",
+                "IsActive" => "Aktivní",
+                "HiredAt" => "Nastoupil",
+                _ => null
+            };
+        }
+        return (fieldName, rawValue) switch
+        {
+            ("Department", "Engineering") => "Vývoj",
+            ("Department", "Sales") => "Obchod",
+            ("Department", "HR") => "Lidské zdroje",
+            ("Department", "Finance") => "Finance",
+            ("Department", "Marketing") => "Marketing",
+            ("Department", "Support") => "Podpora",
+            ("Role", "Junior") => "Juniorní",
+            ("Role", "Medior") => "Středně pokročilý",
+            ("Role", "Senior") => "Seniorní",
+            ("Role", "Lead") => "Vedoucí týmu",
+            ("Role", "Manager") => "Manažer",
+            ("Role", "Director") => "Ředitel",
+            ("IsActive", "true") => "Ano",
+            ("IsActive", "false") => "Ne",
+            _ => null
         };
     }
 

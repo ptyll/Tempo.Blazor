@@ -38,6 +38,12 @@ public partial class TmViewManager : ComponentBase
     /// <summary>Available columns for grouping selection in the view modal.</summary>
     [Parameter] public List<ViewColumnInfo> AvailableGroupableColumns { get; set; } = [];
 
+    /// <summary>
+    /// Universal display resolver for field labels and filter values.
+    /// Passed from parent TmDataTable/TmMultiViewList — flows to FilterBuilder.
+    /// </summary>
+    [Parameter] public Func<string, string?, string?>? DisplayResolver { get; set; }
+
     /// <summary>Whether the user can create tenant-wide views.</summary>
     [Parameter] public bool CanCreateTenantViews { get; set; } = true;
 
@@ -157,13 +163,7 @@ public partial class TmViewManager : ComponentBase
         _viewScope = view.Scope;
         _selectedColumns = view.VisibleColumns?.ToList() ?? [];
         _selectedGroupColumns = view.GroupByColumns?.ToList() ?? [];
-        _viewFilters = view.Filters?.Select(f => new ActiveFilter(
-            f.FieldName,
-            f.FieldName,
-            ParseOperator(f.Operator),
-            f.Value,
-            f.Value
-        )).ToList() ?? [];
+        _viewFilters = view.Filters?.Select(ResolveActiveFilter).ToList() ?? [];
         _showModal = true;
         _isOpen = false;
     }
@@ -272,13 +272,7 @@ public partial class TmViewManager : ComponentBase
         _viewScope = ViewScope.Personal;
         _selectedColumns = current.VisibleColumns?.ToList() ?? AvailableColumns.Where(c => c.Visible).Select(c => c.Key).ToList();
         _selectedGroupColumns = current.GroupByColumns?.ToList() ?? [];
-        _viewFilters = current.Filters?.Select(f => new ActiveFilter(
-            f.FieldName,
-            f.FieldName,
-            ParseOperator(f.Operator),
-            f.Value,
-            f.Value
-        )).ToList() ?? [];
+        _viewFilters = current.Filters?.Select(ResolveActiveFilter).ToList() ?? [];
         _showModal = true;
         _isOpen = false;
     }
@@ -299,6 +293,15 @@ public partial class TmViewManager : ComponentBase
     private bool CanDeleteView(DataTableView view) => CanEditView(view);
 
     private static FilterOperator ParseOperator(string? op) => Helpers.FilterOperatorParser.Parse(op);
+
+    private ActiveFilter ResolveActiveFilter(FilterConfig f)
+    {
+        var fieldLabel = DisplayResolver?.Invoke(f.FieldName, null)
+            ?? FilterDefinitions.FirstOrDefault(d => d.FieldName == f.FieldName)?.FieldLabel
+            ?? f.FieldName;
+        var displayValue = DisplayResolver?.Invoke(f.FieldName, f.Value) ?? f.Value;
+        return new ActiveFilter(f.FieldName, fieldLabel, ParseOperator(f.Operator), f.Value, displayValue);
+    }
 }
 
 /// <summary>Information about an available column.</summary>

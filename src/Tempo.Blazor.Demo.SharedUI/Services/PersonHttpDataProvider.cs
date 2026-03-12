@@ -30,6 +30,15 @@ public class PersonHttpDataProvider : IDataTableDataProvider<PersonDto>
             }
         }
 
+        // Add groupBy columns to URL
+        if (query.GroupByColumns?.Count > 0)
+        {
+            foreach (var col in query.GroupByColumns)
+            {
+                url += $"&groupBy={Uri.EscapeDataString(col)}";
+            }
+        }
+
         return await _http.GetFromJsonAsync<PagedResult<PersonDto>>(url, ct) ?? new();
     }
 }

@@ -94,6 +94,17 @@ public partial class TmDataTable<TItem>
     /// <summary>Filter definitions for the external filter builder (shown above table when ViewProvider is set).</summary>
     [Parameter] public List<FilterDefinition> ExternalFilterDefinitions { get; set; } = [];
 
+    /// <summary>
+    /// Universal display resolver for field labels and filter values.
+    /// <list type="bullet">
+    ///   <item><c>DisplayResolver(fieldName, null)</c> → localized field/column label (e.g., "Status" → "Stav")</item>
+    ///   <item><c>DisplayResolver(fieldName, rawValue)</c> → localized value (e.g., ("Status","Active") → "Aktivní")</item>
+    /// </list>
+    /// Return null to use defaults (FilterDefinition.FieldLabel, column Title, or raw value).
+    /// Set once on the component — flows to ViewManager, FilterBuilder, and ColumnPicker.
+    /// </summary>
+    [Parameter] public Func<string, string?, string?>? DisplayResolver { get; set; }
+
     /// <summary>Whether the user can create tenant-wide views. Default: false.</summary>
     [Parameter] public bool ViewCanCreateTenantViews { get; set; }
 
@@ -287,11 +298,38 @@ public partial class TmDataTable<TItem>
         var value = filter.Value?.ToString() ?? string.Empty;
         return filter.Operator.ToLowerInvariant() switch
         {
-            "contains"       => items.Where(x => accessor(x)?.ToString()?.Contains(value, StringComparison.OrdinalIgnoreCase) == true),
-            "equals" or "eq" => items.Where(x => string.Equals(accessor(x)?.ToString(), value, StringComparison.OrdinalIgnoreCase)),
-            "startswith"     => items.Where(x => accessor(x)?.ToString()?.StartsWith(value, StringComparison.OrdinalIgnoreCase) == true),
-            _                => items,
+            "contains"                          => items.Where(x => accessor(x)?.ToString()?.Contains(value, StringComparison.OrdinalIgnoreCase) == true),
+            "notcontains"                       => items.Where(x => accessor(x)?.ToString()?.Contains(value, StringComparison.OrdinalIgnoreCase) != true),
+            "equals" or "eq"                    => items.Where(x => string.Equals(accessor(x)?.ToString(), value, StringComparison.OrdinalIgnoreCase)),
+            "notequals"                         => items.Where(x => !string.Equals(accessor(x)?.ToString(), value, StringComparison.OrdinalIgnoreCase)),
+            "startswith"                        => items.Where(x => accessor(x)?.ToString()?.StartsWith(value, StringComparison.OrdinalIgnoreCase) == true),
+            "greaterthan"                       => items.Where(x => CompareValues(accessor(x), value) > 0),
+            "lessthan"                          => items.Where(x => CompareValues(accessor(x), value) < 0),
+            "greaterorequal" or "greaterthanorequal" => items.Where(x => CompareValues(accessor(x), value) >= 0),
+            "lessorequal" or "lessthanorequal"  => items.Where(x => CompareValues(accessor(x), value) <= 0),
+            "isempty"                           => items.Where(x => string.IsNullOrEmpty(accessor(x)?.ToString())),
+            "isnotempty"                        => items.Where(x => !string.IsNullOrEmpty(accessor(x)?.ToString())),
+            _                                   => items,
         };
+    }
+
+    private static int CompareValues(object? fieldValue, string filterValue)
+    {
+        if (fieldValue is null) return -1;
+
+        // Try numeric comparison first
+        if (double.TryParse(fieldValue.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var fieldNum) &&
+            double.TryParse(filterValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var filterNum))
+            return fieldNum.CompareTo(filterNum);
+
+        // Try date comparison
+        if (fieldValue is DateTime dt && DateTime.TryParse(filterValue, out var filterDt))
+            return dt.CompareTo(filterDt);
+        if (fieldValue is DateTimeOffset dto && DateTimeOffset.TryParse(filterValue, out var filterDto))
+            return dto.CompareTo(filterDto);
+
+        // Fallback to string comparison
+        return string.Compare(fieldValue.ToString(), filterValue, StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Server-side data (DataProvider mode) ─────────────────────
@@ -511,13 +549,14 @@ public partial class TmDataTable<TItem>
 
         // Update both internal filters and external filter builder
         _activeFilters.Clear();
-        _externalFilters = view.Filters?.Where(f => !string.IsNullOrEmpty(f.Value)).Select(f => new ActiveFilter(
-            f.FieldName,
-            f.FieldName,
-            ParseFilterOperator(f.Operator),
-            f.Value,
-            f.Value
-        )).ToList() ?? [];
+        _externalFilters = view.Filters?.Where(f => !string.IsNullOrEmpty(f.Value)).Select(f =>
+        {
+            var fieldLabel = DisplayResolver?.Invoke(f.FieldName, null)
+                ?? ExternalFilterDefinitions.FirstOrDefault(d => d.FieldName == f.FieldName)?.FieldLabel
+                ?? f.FieldName;
+            var displayValue = DisplayResolver?.Invoke(f.FieldName, f.Value) ?? f.Value;
+            return new ActiveFilter(f.FieldName, fieldLabel, ParseFilterOperator(f.Operator), f.Value, displayValue);
+        }).ToList() ?? [];
 
         foreach (var filter in _externalFilters)
             _activeFilters[filter.FieldName] = new DataTableFilter(filter.FieldName, filter.Operator.ToString(), filter.Value);

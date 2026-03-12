@@ -88,8 +88,25 @@ public static class PersonEndpoints
                 };
             }
 
+            // Parse groupBy columns from query string
+            var groupByColumns = context.Request.Query["groupBy"].ToList();
+
             var items = query.ToList();
             var totalCount = items.Count;
+
+            // When grouping is active, return all items so client-side grouping
+            // works across the full dataset (not just a single page)
+            if (groupByColumns.Count > 0)
+            {
+                return Results.Ok(new PagedResult<PersonDto>
+                {
+                    Items = items,
+                    TotalCount = totalCount,
+                    Page = 1,
+                    PageSize = totalCount
+                });
+            }
+
             var pagedItems = items
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)

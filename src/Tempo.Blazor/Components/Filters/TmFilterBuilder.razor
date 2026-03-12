@@ -37,7 +37,7 @@
             {
                 var d = def;
                 <button type="button" class="tm-filter-field-option" @onclick="() => SelectField(d)">
-                    @d.FieldLabel
+                    @ResolveFieldLabel(d)
                 </button>
             }
             <button type="button" class="tm-filter-cancel" @onclick="Cancel">
@@ -50,7 +50,7 @@
     @if (_selectedDefinition is not null)
     {
         <div class="tm-filter-editor">
-            <span class="tm-filter-editor-field">@_selectedDefinition.FieldLabel</span>
+            <span class="tm-filter-editor-field">@ResolveFieldLabel(_selectedDefinition)</span>
 
             <select class="tm-filter-operator-select"
                     value="@_selectedOperator"
@@ -80,7 +80,7 @@
                         {
                             @foreach (var opt in _selectedDefinition.Options)
                             {
-                                <option value="@opt.Value">@opt.Label</option>
+                                <option value="@opt.Value">@ResolveValueLabel(_selectedDefinition.FieldName, opt.Value, opt.Label)</option>
                             }
                         }
                     </select>
@@ -126,6 +126,12 @@
     /// <summary>Show the "Clear all" button when filters are active.</summary>
     [Parameter] public bool ShowClearAll { get; set; } = true;
 
+    /// <summary>
+    /// Universal display resolver for field labels and filter values.
+    /// Passed from parent component.
+    /// </summary>
+    [Parameter] public Func<string, string?, string?>? DisplayResolver { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -166,8 +172,16 @@
 
     private void EditFilter(ActiveFilter filter)
     {
+        var definition = FilterDefinitions.FirstOrDefault(d => d.FieldName == filter.FieldName);
+        if (definition is null)
+        {
+            // No matching definition found — cannot edit, cancel gracefully
+            Cancel();
+            return;
+        }
+
         _editingFilter      = filter;
-        _selectedDefinition = FilterDefinitions.FirstOrDefault(d => d.FieldName == filter.FieldName);
+        _selectedDefinition = definition;
         _selectedOperator   = filter.Operator;
         _textValue          = filter.Value?.ToString() ?? string.Empty;
         _showFieldPicker    = true;
@@ -182,12 +196,17 @@
             ? _dateValue?.ToString("d") ?? string.Empty
             : _textValue;
 
+        var resolvedLabel = ResolveFieldLabel(_selectedDefinition);
+        var resolvedDisplay = _selectedDefinition.FieldType == FilterFieldType.Date
+            ? displayVal
+            : ResolveValueLabel(_selectedDefinition.FieldName, displayVal, displayVal);
+
         var newFilter = new ActiveFilter(
             _selectedDefinition.FieldName,
-            _selectedDefinition.FieldLabel,
+            resolvedLabel,
             _selectedOperator,
             value,
-            displayVal);
+            resolvedDisplay);
 
         if (_editingFilter is not null)
             _filters.Remove(_editingFilter);
@@ -259,4 +278,10 @@
         FilterOperator.NotIn         => Loc["TmFilter_NotIn"],
         _                            => op.ToString(),
     };
+
+    private string ResolveFieldLabel(FilterDefinition def) =>
+        DisplayResolver?.Invoke(def.FieldName, null) ?? def.FieldLabel;
+
+    private string ResolveValueLabel(string fieldName, string rawValue, string fallback) =>
+        DisplayResolver?.Invoke(fieldName, rawValue) ?? fallback;
 }

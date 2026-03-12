@@ -87,14 +87,22 @@ public sealed class InMemoryDataProvider<TItem> : IDataTableDataProvider<TItem>
         {
             "contains" => items.Where(x =>
                 accessor(x)?.ToString()?.Contains(filterValue, StringComparison.OrdinalIgnoreCase) == true),
+            "notcontains" => items.Where(x =>
+                accessor(x)?.ToString()?.Contains(filterValue, StringComparison.OrdinalIgnoreCase) != true),
             "equals" or "eq" => items.Where(x =>
                 string.Equals(accessor(x)?.ToString(), filterValue, StringComparison.OrdinalIgnoreCase)),
+            "notequals" => items.Where(x =>
+                !string.Equals(accessor(x)?.ToString(), filterValue, StringComparison.OrdinalIgnoreCase)),
             "startswith" => items.Where(x =>
                 accessor(x)?.ToString()?.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase) == true),
             "endswith" => items.Where(x =>
                 accessor(x)?.ToString()?.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase) == true),
             "gt" or "greaterthan" => items.Where(x => CompareValues(accessor(x), filter.Value) > 0),
             "lt" or "lessthan" => items.Where(x => CompareValues(accessor(x), filter.Value) < 0),
+            "gte" or "greaterorequal" or "greaterthanorequal" => items.Where(x => CompareValues(accessor(x), filter.Value) >= 0),
+            "lte" or "lessorequal" or "lessthanorequal" => items.Where(x => CompareValues(accessor(x), filter.Value) <= 0),
+            "isempty" => items.Where(x => string.IsNullOrEmpty(accessor(x)?.ToString())),
+            "isnotempty" => items.Where(x => !string.IsNullOrEmpty(accessor(x)?.ToString())),
             _ => items
         };
     }

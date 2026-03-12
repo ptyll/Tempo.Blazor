@@ -45,6 +45,7 @@
                      ViewCanCreateTenantViews="true"
                      CurrentUserId="CurrentUserId"
                      CurrentTenantId="CurrentTenantId"
+                     DisplayResolver="ResolveDisplay"
                      ShowSearch="true"
                      ShowViewSwitcher="true"
                      EmptyTitle="No team members found"
@@ -114,74 +115,90 @@
     // Sample data - Team Members
     private List<TeamMember> _teamMembers =
     [
-        new TeamMember 
-        { 
-            Title = "Alice Johnson", 
-            SubTitle = "Senior Developer", 
-            StatusLabel = "Active", 
+        new TeamMember
+        {
+            Title = "Alice Johnson",
+            SubTitle = "Senior Developer",
+            Status = "Active",
+            Role = "Developer",
+            StatusLabel = "Active",
             StatusColor = "#22c55e",
             Date = DateTimeOffset.Now.AddDays(-30),
             AvatarUrl = "https://i.pravatar.cc/150?u=alice"
         },
-        new TeamMember 
-        { 
-            Title = "Bob Smith", 
-            SubTitle = "UI Designer", 
-            StatusLabel = "Active", 
+        new TeamMember
+        {
+            Title = "Bob Smith",
+            SubTitle = "UI Designer",
+            Status = "Active",
+            Role = "Designer",
+            StatusLabel = "Active",
             StatusColor = "#22c55e",
             Date = DateTimeOffset.Now.AddDays(-60),
             AvatarUrl = "https://i.pravatar.cc/150?u=bob"
         },
-        new TeamMember 
-        { 
-            Title = "Carol Williams", 
-            SubTitle = "Project Manager", 
-            StatusLabel = "Inactive", 
+        new TeamMember
+        {
+            Title = "Carol Williams",
+            SubTitle = "Project Manager",
+            Status = "Inactive",
+            Role = "Manager",
+            StatusLabel = "Inactive",
             StatusColor = "#ef4444",
             Date = DateTimeOffset.Now.AddDays(-90),
             AvatarUrl = "https://i.pravatar.cc/150?u=carol"
         },
-        new TeamMember 
-        { 
-            Title = "David Brown", 
-            SubTitle = "Frontend Developer", 
-            StatusLabel = "Active", 
+        new TeamMember
+        {
+            Title = "David Brown",
+            SubTitle = "Frontend Developer",
+            Status = "Active",
+            Role = "Developer",
+            StatusLabel = "Active",
             StatusColor = "#22c55e",
             Date = DateTimeOffset.Now.AddDays(-15),
             AvatarUrl = "https://i.pravatar.cc/150?u=david"
         },
-        new TeamMember 
-        { 
-            Title = "Eva Martinez", 
-            SubTitle = "UX Designer", 
-            StatusLabel = "Pending", 
+        new TeamMember
+        {
+            Title = "Eva Martinez",
+            SubTitle = "UX Designer",
+            Status = "Pending",
+            Role = "Designer",
+            StatusLabel = "Pending",
             StatusColor = "#f59e0b",
             Date = DateTimeOffset.Now.AddDays(-5),
             AvatarUrl = "https://i.pravatar.cc/150?u=eva"
         },
-        new TeamMember 
-        { 
-            Title = "Frank Lee", 
-            SubTitle = "Backend Developer", 
-            StatusLabel = "Active", 
+        new TeamMember
+        {
+            Title = "Frank Lee",
+            SubTitle = "Backend Developer",
+            Status = "Active",
+            Role = "Developer",
+            StatusLabel = "Active",
             StatusColor = "#22c55e",
             Date = DateTimeOffset.Now.AddDays(-45),
             AvatarUrl = "https://i.pravatar.cc/150?u=frank"
         },
-        new TeamMember 
-        { 
-            Title = "Grace Chen", 
-            SubTitle = "Data Analyst", 
-            StatusLabel = "Active", 
+        new TeamMember
+        {
+            Title = "Grace Chen",
+            SubTitle = "Data Analyst",
+            Status = "Active",
+            Role = "Analyst",
+            StatusLabel = "Active",
             StatusColor = "#22c55e",
             Date = DateTimeOffset.Now.AddDays(-20),
             AvatarUrl = "https://i.pravatar.cc/150?u=grace"
         },
-        new TeamMember 
-        { 
-            Title = "Henry Wilson", 
-            SubTitle = "DevOps Engineer", 
-            StatusLabel = "Inactive", 
+        new TeamMember
+        {
+            Title = "Henry Wilson",
+            SubTitle = "DevOps Engineer",
+            Status = "Inactive",
+            Role = "Developer",
+            StatusLabel = "Inactive",
             StatusColor = "#ef4444",
             Date = DateTimeOffset.Now.AddDays(-75),
             AvatarUrl = "https://i.pravatar.cc/150?u=henry"
@@ -240,6 +257,39 @@
         Console.WriteLine($"Clicked: {item.Title}");
     }
 
+    /// <summary>
+    /// DisplayResolver demo: localizes field labels and enum filter values.
+    /// In a real app, this would use IStringLocalizer or a resource file.
+    /// </summary>
+    private string? ResolveDisplay(string fieldName, string? rawValue)
+    {
+        // Field labels (rawValue == null)
+        if (rawValue is null)
+        {
+            return fieldName switch
+            {
+                "Title" => "Název",
+                "Status" => "Stav",
+                "Role" => "Pozice",
+                _ => null
+            };
+        }
+
+        // Enum value labels (rawValue != null)
+        return (fieldName, rawValue) switch
+        {
+            ("Status", "Active") => "Aktivní",
+            ("Status", "Inactive") => "Neaktivní",
+            ("Status", "Pending") => "Čekající",
+            ("Status", "Completed") => "Dokončeno",
+            ("Role", "Developer") => "Vývojář",
+            ("Role", "Designer") => "Designér",
+            ("Role", "Manager") => "Manažer",
+            ("Role", "Analyst") => "Analytik",
+            _ => null
+        };
+    }
+
     // Implementation classes
     private class TeamMember : IMultiViewListItem
     {
@@ -251,6 +301,8 @@
         public DateTimeOffset? Date { get; set; }
         public string? AvatarUrl { get; set; }
         public IReadOnlyList<ITag> Tags { get; set; } = Array.Empty<ITag>();
+        public string? Status { get; set; }
+        public string? Role { get; set; }
     }
 
     private class Project : IMultiViewListItem

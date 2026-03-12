@@ -44,6 +44,7 @@
                                GetCurrentFilters="() => _externalFilters"
                                AvailableColumns="GetAvailableColumns()"
                                FilterDefinitions="ViewFilterDefinitions"
+                               DisplayResolver="DisplayResolver"
                                CanCreateTenantViews="ViewCanCreateTenantViews"
                                CurrentUserId="CurrentUserId"
                                CurrentTenantId="CurrentTenantId" />
@@ -58,6 +59,7 @@
             <TmFilterBuilder FilterDefinitions="ExternalFilterDefinitions"
                              ActiveFilters="_externalFilters"
                              OnFiltersChanged="OnExternalFiltersChanged"
+                             DisplayResolver="DisplayResolver"
                              ShowClearAll="true" />
         </div>
     }
