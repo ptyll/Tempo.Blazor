@@ -44,6 +44,7 @@ public partial class TmDataTable<TItem>
     private string? _draggedColumnKey;
     private int? _draggedChipIndex;
     private bool _isDragOver;
+    private readonly Dictionary<string, int> _groupPageRequests = new();
 
     // ── Parameters: data ─────────────────────────────────────────
 
@@ -392,6 +393,9 @@ public partial class TmDataTable<TItem>
         Filters    = _activeFilters.Values.ToList(),
         SearchText = _searchText,
         GroupByColumns = _groupByColumns.ToList(),
+        GroupPageRequests = _groupPageRequests.Count > 0
+            ? new Dictionary<string, int>(_groupPageRequests)
+            : null,
     };
 
     // ── Sort ──────────────────────────────────────────────────────
@@ -417,6 +421,7 @@ public partial class TmDataTable<TItem>
         }
 
         _currentPage = 1;
+        _groupPageRequests.Clear();
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -443,6 +448,7 @@ public partial class TmDataTable<TItem>
     {
         _searchText = value ?? string.Empty;
         _currentPage = 1;
+        _groupPageRequests.Clear();
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -464,6 +470,7 @@ public partial class TmDataTable<TItem>
         _activeFilters.Clear();
         _searchText = string.Empty;
         _currentPage = 1;
+        _groupPageRequests.Clear();
         if (DataProvider is not null)
             await LoadFromProviderAsync();
         else
@@ -645,6 +652,7 @@ public partial class TmDataTable<TItem>
         if (col is null || !col.Groupable) return;
 
         _groupByColumns.Add(columnKey);
+        _groupPageRequests.Clear();
 
         if (DataProvider is not null)
             _ = LoadFromProviderAsync();
@@ -661,6 +669,7 @@ public partial class TmDataTable<TItem>
         if (!_groupByColumns.Remove(columnKey)) return;
 
         _expandedGroups.Clear();
+        _groupPageRequests.Clear();
         if (_groupByColumns.Count > 0)
         {
             if (DataProvider is not null)
@@ -722,6 +731,14 @@ public partial class TmDataTable<TItem>
     private static string GetGroupId(DataGroup<TItem> group)
     {
         return $"{group.FieldName}:{group.Key}";
+    }
+
+    /// <summary>Navigate to a specific page within a server-side group.</summary>
+    private async Task NavigateGroupPageAsync(string groupKey, int page)
+    {
+        _groupPageRequests[groupKey] = page;
+        if (DataProvider is not null)
+            await LoadFromProviderAsync();
     }
 
     private void RefreshGroupedData()
@@ -879,6 +896,33 @@ public partial class TmDataTable<TItem>
                             builder.CloseElement(); // td
                         }
 
+                        builder.CloseElement(); // tr
+                    }
+
+                    // Per-group mini-pager
+                    var groupKeyStr = g.Key?.ToString() ?? "";
+                    if (_serverGroupPaging is not null
+                        && _serverGroupPaging.TryGetValue(groupKeyStr, out var paging)
+                        && paging.TotalPages > 1)
+                    {
+                        var capturedKey = groupKeyStr;
+                        builder.OpenElement(seq++, "tr");
+                        builder.AddAttribute(seq++, "class", "tm-data-table-group-pagination");
+                        builder.OpenElement(seq++, "td");
+                        builder.AddAttribute(seq++, "colspan", ColSpan);
+
+                        builder.OpenComponent<TmPagination>(seq++);
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.CurrentPage), paging.Page);
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.TotalPages), paging.TotalPages);
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.TotalCount), paging.TotalCount);
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.PageSize), paging.PageSize);
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.PageSizeOptions), (IReadOnlyList<int>?)null);
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.Class), "tm-pagination-compact");
+                        builder.AddComponentParameter(seq++, nameof(TmPagination.OnPageChange),
+                            EventCallback.Factory.Create<int>(this, page => NavigateGroupPageAsync(capturedKey, page)));
+                        builder.CloseComponent();
+
+                        builder.CloseElement(); // td
                         builder.CloseElement(); // tr
                     }
                 }

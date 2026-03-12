@@ -287,7 +287,7 @@
         </table>
     </div>
     @* ── Pagination ───────────────────────────────────────────── *@
-    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination)
+    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination && _groupByColumns.Count == 0)
     {
         <div class="tm-pagination-container">
             @* Left: Info *@

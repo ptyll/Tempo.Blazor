@@ -797,6 +797,35 @@
   color: var(--tm-text-secondary, #6b7280);
 }
 
+/* ── Per-Group Pagination ──────────────────────────────────── */
+
+.tm-data-table-group-pagination td {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  background: var(--tm-surface-secondary, #f9fafb);
+  border-bottom: 1px solid var(--tm-border-color, #d1d5db);
+}
+
+.tm-data-table-group-pagination .tm-pagination {
+  justify-content: flex-end;
+}
+
+.tm-pagination-compact {
+  font-size: var(--tm-font-size-sm, 0.875rem);
+  gap: var(--tm-space-2);
+}
+
+.tm-pagination-compact .tm-pagination-info {
+  font-size: var(--tm-font-size-xs, 0.75rem);
+}
+
+.tm-pagination-compact .tm-page-btn,
+.tm-pagination-compact .tm-pagination-btn {
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 var(--tm-space-1);
+  font-size: var(--tm-font-size-xs, 0.75rem);
+}
+
 /* ── Draggable Column Headers ───────────────────────────────── */
 
 .tm-col-groupable {

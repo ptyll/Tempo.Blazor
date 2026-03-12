@@ -32,6 +32,13 @@ public class PersonHttpDataProvider : IDataTableDataProvider<PersonDto>
         foreach (var col in query.GroupByColumns)
             url += $"&groupBy={Uri.EscapeDataString(col)}";
 
+        // Add per-group page requests
+        if (query.GroupPageRequests is { Count: > 0 })
+        {
+            foreach (var (key, page) in query.GroupPageRequests)
+                url += $"&groupPage[{Uri.EscapeDataString(key)}]={page}";
+        }
+
         return await _http.GetFromJsonAsync<GroupedPagedResult<PersonDto>>(url, ct);
     }
 

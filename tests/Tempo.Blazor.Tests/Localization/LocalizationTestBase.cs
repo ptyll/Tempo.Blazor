@@ -16,6 +16,7 @@ public abstract class LocalizationTestBase : TestContext
     protected LocalizationTestBase()
     {
         Services.AddSingleton<ITmLocalizer>(BuildEnglishLocalizer());
+        JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
     /// <summary>Registers a Czech localizer for this test context.</summary>

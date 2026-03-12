@@ -25,6 +25,12 @@ public class DataTableQuery
 
     /// <summary>Columns to group by on the server side.</summary>
     public IReadOnlyList<string> GroupByColumns { get; init; } = [];
+
+    /// <summary>
+    /// Per-group page requests. Key = group key (e.g. "Engineering"), Value = 1-based page number.
+    /// Null when no specific group page navigation has occurred.
+    /// </summary>
+    public IReadOnlyDictionary<string, int>? GroupPageRequests { get; init; }
 }
 
 /// <summary>Represents a single column filter predicate.</summary>

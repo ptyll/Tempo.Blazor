@@ -478,12 +478,12 @@ public class TmWorkflowDesignerCanvasTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Canvas_SetZoom_UpdatesLevel()
+    public async Task Canvas_SetZoom_UpdatesLevel()
     {
         var cut = RenderComponent<TmWorkflowDesignerCanvas>(p => p
             .Add(x => x.Definition, SimpleWorkflow));
 
-        cut.Instance.SetZoom(2.0);
+        await cut.Instance.SetZoom(2.0);
 
         cut.Instance.ZoomLevel.Should().Be(2.0);
     }
