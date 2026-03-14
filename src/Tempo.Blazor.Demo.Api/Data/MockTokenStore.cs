@@ -7,8 +7,8 @@ namespace Tempo.Blazor.Demo.Api.Data;
 /// </summary>
 public class MockTokenStore
 {
-    public List<TokenDto> Tokens { get; } =
-    [
+    public List<TokenDto> Tokens { get; } = new()
+    {
         // User tokens
         new("user.name", "Jméno uživatele", "Celé jméno přihlášeného uživatele", "Uživatel"),
         new("user.email", "E-mail uživatele", "E-mailová adresa přihlášeného uživatele", "Uživatel"),
@@ -39,7 +39,17 @@ public class MockTokenStore
         new("org.address", "Adresa", "Sídlo organizace", "Organizace"),
         new("org.email", "E-mail organizace", "Kontaktní e-mail organizace", "Organizace"),
         new("org.phone", "Telefon organizace", "Kontaktní telefon organizace", "Organizace"),
-    ];
+    };
+
+    /// <summary>
+    /// Add a new token to the store.
+    /// </summary>
+    public TokenDto AddToken(string key, string displayName, string? description, string? category)
+    {
+        var token = new TokenDto(key, displayName, description, category);
+        Tokens.Add(token);
+        return token;
+    }
 
     /// <summary>
     /// Search tokens by query string.

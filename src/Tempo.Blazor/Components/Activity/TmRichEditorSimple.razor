@@ -656,9 +656,19 @@
         _showTokenDropdown = false;
         try
         {
+            _isInsertingToken = true;
             await JS.InvokeVoidAsync("tmRichEditor.deleteTokenTrigger", _editorRef);
+            // Sync Value so the cursor marker survives Blazor re-renders
+            var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
+            Value = html ?? string.Empty;
+            UpdateEmptyState();
+            await ValueChanged.InvokeAsync(Value);
         }
         catch { /* JS not available */ }
+        finally
+        {
+            _isInsertingToken = false;
+        }
         await OnTokenCreateRequested.InvokeAsync(query);
     }
 
@@ -705,10 +715,18 @@
     {
         try
         {
+            _isInsertingToken = true;
             await JS.InvokeVoidAsync("tmRichEditor.insertToken", _editorRef, key, displayName ?? key);
-            await HandleInput();
+            var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
+            Value = html ?? string.Empty;
+            UpdateEmptyState();
+            await ValueChanged.InvokeAsync(Value);
         }
         catch { /* JS not available in tests / SSR */ }
+        finally
+        {
+            _isInsertingToken = false;
+        }
     }
 
     private static TokenProxy CreateTokenFromItem(TokenItem item) => new()

@@ -439,6 +439,52 @@ window.tmRichEditor = {
      * Place cursor right after the last inserted .tm-token span inside the editor
      * @param {HTMLElement} element - The editor element
      */
+    // Saved cursor position for restoring after dialog closes
+    _savedCursorPosition: null,
+
+    /**
+     * Save the current cursor position in the editor so it can be restored later.
+     * @param {HTMLElement} element - The editor element
+     */
+    saveCursorPosition: function (element) {
+        if (!element) return;
+        const selection = window.getSelection();
+        if (selection.rangeCount === 0) return;
+        const range = selection.getRangeAt(0);
+
+        // Save a bookmark by inserting a zero-width space marker
+        const marker = document.createElement('span');
+        marker.id = 'tm-cursor-marker';
+        marker.style.display = 'none';
+        range.insertNode(marker);
+
+        this._savedCursorPosition = element;
+    },
+
+    /**
+     * Restore cursor position from saved marker, then remove the marker.
+     * @param {HTMLElement} element - The editor element
+     * @returns {boolean} true if cursor was restored
+     */
+    restoreCursorPosition: function (element) {
+        if (!element) return false;
+        const marker = element.querySelector('#tm-cursor-marker');
+        if (!marker) return false;
+
+        element.focus();
+        const range = document.createRange();
+        range.setStartAfter(marker);
+        range.collapse(true);
+        marker.remove();
+
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this._savedCursorPosition = null;
+        return true;
+    },
+
     /**
      * Ensure editor is focused
      */
@@ -509,7 +555,10 @@ window.tmRichEditor = {
      * @param {string} displayName - The display name (e.g. "User Email")
      */
     insertToken: function (element, key, displayName) {
-        if (element) {
+        // Restore saved cursor position first (e.g. after dialog closed)
+        if (element && this._savedCursorPosition) {
+            this.restoreCursorPosition(element);
+        } else if (element) {
             element.focus();
         } else {
             this._ensureFocus();
@@ -632,6 +681,9 @@ window.tmRichEditor = {
                 deleteRange.deleteContents();
             }
         }
+
+        // Save cursor position so it can be restored after dialog closes
+        this.saveCursorPosition(element);
     },
 
     /**

@@ -1,4 +1,5 @@
 using Tempo.Blazor.Demo.Api.Data;
+using Tempo.Blazor.Demo.Shared;
 
 namespace Tempo.Blazor.Demo.Api.Endpoints;
 
@@ -29,6 +30,14 @@ public static class TokenEndpoints
             return Results.Ok(store.Tokens);
         })
         .WithName("GetAllTokens");
+
+        // POST /api/tokens - Create a new token
+        group.MapPost("/", (MockTokenStore store, TokenDto token) =>
+        {
+            var created = store.AddToken(token.Key, token.DisplayName, token.Description, token.Category);
+            return Results.Created($"/api/tokens/{created.Key}", created);
+        })
+        .WithName("CreateToken");
 
         return app;
     }
