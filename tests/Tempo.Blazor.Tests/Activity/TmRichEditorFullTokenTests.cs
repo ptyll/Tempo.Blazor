@@ -20,6 +20,8 @@ public class TmRichEditorFullTokenTests : LocalizationTestBase
 
         public bool SupportsCreation { get; set; } = true;
 
+        public void Refresh() { }
+
         public Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken ct = default)
         {
             IEnumerable<IToken> result = string.IsNullOrEmpty(query)

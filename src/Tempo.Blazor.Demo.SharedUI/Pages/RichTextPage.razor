@@ -429,6 +429,8 @@
 
         public bool SupportsCreation => true;
 
+        public void Refresh() { }
+
         public async Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken cancellationToken = default)
         {
             try
@@ -530,6 +532,8 @@
         ];
 
         public bool SupportsCreation => false;
+
+        public void Refresh() { }
 
         public Task<IEnumerable<IToken>> SearchTokensAsync(string query, CancellationToken cancellationToken = default)
         {

@@ -111,8 +111,6 @@ window.tmRichEditor = {
         
         // Find and delete the @query text that triggered the mention
         const selection = window.getSelection();
-        console.log('[DEBUG] selection.rangeCount:', selection.rangeCount);
-        
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             const textNode = range.startContainer;
@@ -438,6 +436,10 @@ window.tmRichEditor = {
     },
 
     /**
+     * Place cursor right after the last inserted .tm-token span inside the editor
+     * @param {HTMLElement} element - The editor element
+     */
+    /**
      * Ensure editor is focused
      */
     _ensureFocus: function () {
@@ -502,15 +504,36 @@ window.tmRichEditor = {
 
     /**
      * Insert a token chip into the editor (without trigger deletion, e.g. from toolbar button)
+     * @param {HTMLElement} element - The editor element
      * @param {string} key - The token key (e.g. "user.email")
      * @param {string} displayName - The display name (e.g. "User Email")
      */
-    insertToken: function (key, displayName) {
-        this._ensureFocus();
+    insertToken: function (element, key, displayName) {
+        if (element) {
+            element.focus();
+        } else {
+            this._ensureFocus();
+        }
 
-        const tokenHtml = `<span class="tm-token" data-token-key="${this._escapeHtml(key)}" contenteditable="false">{{${this._escapeHtml(displayName)}}}</span>&nbsp;`;
-        document.execCommand('insertHTML', false, tokenHtml);
-        this._restoreFocus();
+        const tokenSpan = document.createElement('span');
+        tokenSpan.className = 'tm-token';
+        tokenSpan.setAttribute('data-token-key', key);
+        tokenSpan.contentEditable = 'false';
+        tokenSpan.textContent = `{{${displayName}}}`;
+
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(tokenSpan);
+
+            // Place cursor after the inserted token
+            const cursorRange = document.createRange();
+            cursorRange.setStartAfter(tokenSpan);
+            cursorRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(cursorRange);
+        }
     },
 
     /**
@@ -533,7 +556,6 @@ window.tmRichEditor = {
 
         // If cursor is not in a text node, try to find one
         if (textNode.nodeType !== Node.TEXT_NODE) {
-            // Walk backwards through child nodes to find the text node with {{
             const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
             let lastTextNode = null;
             while (walker.nextNode()) {
@@ -562,15 +584,25 @@ window.tmRichEditor = {
             deleteRange.setEnd(textNode, offset);
             deleteRange.deleteContents();
 
-            // Place cursor at deletion point and insert token
+            // Create token element via DOM (not execCommand which can break out of parent divs)
+            const tokenSpan = document.createElement('span');
+            tokenSpan.className = 'tm-token';
+            tokenSpan.setAttribute('data-token-key', key);
+            tokenSpan.contentEditable = 'false';
+            tokenSpan.textContent = `{{${displayName}}}`;
+
+            // Insert at the deletion point
             const insertRange = document.createRange();
             insertRange.setStart(textNode, lastTriggerIndex);
             insertRange.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(insertRange);
+            insertRange.insertNode(tokenSpan);
 
-            const tokenHtml = `<span class="tm-token" data-token-key="${this._escapeHtml(key)}" contenteditable="false">{{${this._escapeHtml(displayName)}}}</span>&nbsp;`;
-            document.execCommand('insertHTML', false, tokenHtml);
+            // Place cursor after the inserted token
+            const cursorRange = document.createRange();
+            cursorRange.setStartAfter(tokenSpan);
+            cursorRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(cursorRange);
         }
     },
 

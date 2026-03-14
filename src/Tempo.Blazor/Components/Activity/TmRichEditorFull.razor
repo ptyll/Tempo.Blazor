@@ -24,6 +24,7 @@
              @onfocus="@HandleFocus"
              @onblur="@HandleBlur"
              @onkeydown="@HandleKeyDown"
+             @onkeydown:preventDefault="@_suppressKeyDown"
              data-placeholder="@Placeholder">
         </div>
         
@@ -251,6 +252,8 @@
     private List<TokenItem> _availableTokens = new();
     private bool _isLoadingTokens;
     private bool _tokenOpenedViaTrigger;
+    private bool _suppressKeyDown;
+    private bool _isInsertingToken;
 
     private bool IsOverLimit => MaxLength > 0 && _charCount > MaxLength;
 
@@ -298,7 +301,7 @@
             }
             catch { /* JS not available in tests / SSR */ }
         }
-        else if (_isInitialized)
+        else if (_isInitialized && !_isInsertingToken)
         {
             // Sync external Value changes to editor (only if different from current)
             try
@@ -315,6 +318,7 @@
 
     private async Task HandleInput()
     {
+        if (_isInsertingToken) return;
         try
         {
             var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
@@ -503,21 +507,27 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        _suppressKeyDown = false;
+
         // Handle token dropdown navigation
         if (_showTokenDropdown)
         {
             switch (e.Key)
             {
                 case "ArrowUp":
+                    _suppressKeyDown = true;
                     await MoveTokenHighlightUp();
                     return;
                 case "ArrowDown":
+                    _suppressKeyDown = true;
                     await MoveTokenHighlightDown();
                     return;
                 case "Enter":
+                    _suppressKeyDown = true;
                     await SelectHighlightedToken();
                     return;
                 case "Escape":
+                    _suppressKeyDown = true;
                     _showTokenDropdown = false;
                     return;
             }
@@ -534,15 +544,19 @@
             switch (e.Key)
             {
                 case "ArrowUp":
+                    _suppressKeyDown = true;
                     await MoveMentionHighlightUp();
                     break;
                 case "ArrowDown":
+                    _suppressKeyDown = true;
                     await MoveMentionHighlightDown();
                     break;
                 case "Enter":
+                    _suppressKeyDown = true;
                     await SelectHighlightedMention();
                     break;
                 case "Escape":
+                    _suppressKeyDown = true;
                     _showMentionDropdown = false;
                     break;
             }
@@ -806,17 +820,26 @@
         _tokenOpenedViaTrigger = false;
         try
         {
+            _isInsertingToken = true;
             if (viaTrigger)
             {
                 await JS.InvokeVoidAsync("tmRichEditor.replaceTokenTrigger", _editorRef, token.Key, token.DisplayName);
             }
             else
             {
-                await JS.InvokeVoidAsync("tmRichEditor.insertToken", token.Key, token.DisplayName);
+                await JS.InvokeVoidAsync("tmRichEditor.insertToken", _editorRef, token.Key, token.DisplayName);
             }
-            await HandleInput();
+            // Sync HTML value (HandleInput and OnAfterRenderAsync are blocked by _isInsertingToken)
+            var html = await JS.InvokeAsync<string>("tmRichEditor.getHtml", _editorRef);
+            Value = html ?? string.Empty;
+            UpdateCounts(Value);
+            await ValueChanged.InvokeAsync(Value);
         }
         catch { /* JS not available in tests / SSR */ }
+        finally
+        {
+            _isInsertingToken = false;
+        }
 
         await OnTokenInserted.InvokeAsync(CreateTokenFromItem(token));
     }
@@ -859,6 +882,16 @@
     }
 
     /// <summary>
+    /// Refreshes the token list from the provider.
+    /// Call this after creating/updating tokens so the autocomplete reflects changes.
+    /// </summary>
+    public async Task RefreshTokensAsync()
+    {
+        TokenProvider?.Refresh();
+        await LoadTokensAsync();
+    }
+
+    /// <summary>
     /// Programmatically inserts a token chip into the editor.
     /// Call this from parent component after a token is created via dialog.
     /// </summary>
@@ -866,7 +899,7 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("tmRichEditor.insertToken", key, displayName ?? key);
+            await JS.InvokeVoidAsync("tmRichEditor.insertToken", _editorRef, key, displayName ?? key);
             await HandleInput();
         }
         catch { /* JS not available in tests / SSR */ }
