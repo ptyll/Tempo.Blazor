@@ -152,6 +152,8 @@ public static class TempoNotionMcp
     /// Registers dependencies required by the NotionEditor MCP tools. The host must supply
     /// <c>INotionDataProvider</c> for page metadata/lifecycle tools and
     /// <c>INotionAggregateProvider</c> for canonical recursive reads and atomic block authoring.
+    /// Hosts may implement <c>INotionIdempotentAggregateProvider</c> to replace the registered
+    /// process-local receipt fallback with a durable transactional boundary.
     /// </summary>
     public static IServiceCollection AddTempoNotionMcpTools(this IServiceCollection services)
     {

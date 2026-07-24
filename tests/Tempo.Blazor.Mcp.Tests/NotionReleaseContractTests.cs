@@ -86,7 +86,7 @@ public sealed class NotionReleaseContractTests
     }
 
     [Fact]
-    public void PackableProjects_AreSynchronizedTo270()
+    public void PackableProjects_AreSynchronizedTo271()
     {
         var projectVersions = Directory.EnumerateFiles(
                 Path.Combine(RepoRoot(), "src"),
@@ -103,8 +103,8 @@ public sealed class NotionReleaseContractTests
 
         projectVersions.Should().NotBeEmpty();
         projectVersions.Should().OnlyContain(
-            item => item.Version == "2.7.0",
-            "all locally packable projects in the 2.7.0 release must agree on the version");
+            item => item.Version == "2.7.1",
+            "all locally packable projects in the 2.7.1 patch release must agree on the version");
     }
 
     private static string RepoRoot()

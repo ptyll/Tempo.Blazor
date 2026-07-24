@@ -20,10 +20,20 @@ or structured paste is applied to a clone, validated with
 `INotionAggregateProvider.SaveAsync` request. The MCP authoring tools use the
 same validator.
 
+For durable MCP replay across process restarts, hosts may additionally implement
+`INotionIdempotentAggregateProvider`. The MCP engine passes the complete operation
+through `ExecuteIdempotentAsync`; the provider must invoke the callback with a
+transaction-bound aggregate provider and commit the callback response receipt in
+the same transaction as every aggregate write. Replays and hash collisions return
+before the callback loads or saves a page. Providers that implement only
+`INotionAggregateProvider` retain the process-local in-memory receipt fallback.
+
 For host and consumer tests,
 `Tempo.Blazor.NotionEditor.Testing.FakeNotionAggregateProvider` provides a
 reference all-or-nothing implementation. It checks every page token before
-committing any page and exposes save counters for idempotent-replay tests.
+committing any page and exposes save counters. Durable-replay tests should wrap
+the fake in an `INotionIdempotentAggregateProvider` implementation with the same
+transactional semantics as the production store.
 
 ## Conflict behavior
 

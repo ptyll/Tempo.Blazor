@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.7.1 - 2026-07-24
+
+### Durable direct-MCP Notion idempotency
+
+- Added the optional `INotionIdempotentAggregateProvider` contract. Hosts can execute the complete
+  `notion_apply_block_operations` callback with a transaction-bound aggregate provider and commit
+  the opaque response receipt in the same transaction as every page replacement.
+- Direct MCP retries now resolve a provider receipt before loading targets. An identical request
+  therefore replays its exact original response after a process restart even when the original
+  concurrency token is stale; a different canonical hash returns a collision without invoking the
+  callback.
+- Providers implementing only `INotionAggregateProvider` remain source-compatible and continue to
+  use the existing process-local 24-hour receipt fallback.
+- The durable contract requires rollback of both aggregate writes and receipt on exceptions or
+  cancellation, and exactly one callback invocation for concurrent requests sharing a scoped key.
+
 ## 2.5.5 - 2026-07-22
 
 ### TmCodeEditor — leaving the editor with Tab, and wrapping long lines

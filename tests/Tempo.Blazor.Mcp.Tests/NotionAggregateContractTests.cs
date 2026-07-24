@@ -209,6 +209,27 @@ public sealed class NotionAggregateContractTests
     }
 
     [Fact]
+    public void IdempotentAggregateProvider_AddsOneTransactionalExecutionBoundary()
+    {
+        typeof(INotionIdempotentAggregateProvider).GetInterfaces()
+            .Should().ContainSingle(type => type == typeof(INotionAggregateProvider));
+
+        var method = typeof(INotionIdempotentAggregateProvider)
+            .GetMethod(nameof(INotionIdempotentAggregateProvider.ExecuteIdempotentAsync));
+
+        method.Should().NotBeNull();
+        method!.ReturnType.Should().Be<Task<NotionIdempotentExecutionResult>>();
+        method.GetParameters().Select(parameter => parameter.ParameterType)
+            .Should().Equal(
+                typeof(NotionIdempotentExecutionRequest),
+                typeof(Func<
+                    INotionAggregateProvider,
+                    CancellationToken,
+                    Task<string>>),
+                typeof(CancellationToken));
+    }
+
+    [Fact]
     public void WireContracts_PinEveryPublicPropertyNameExplicitly()
     {
         var wireTypes = new[]
@@ -220,6 +241,8 @@ public sealed class NotionAggregateContractTests
             typeof(NotionAggregateSaveRequest),
             typeof(NotionPageSave),
             typeof(NotionAggregateSaveResult),
+            typeof(NotionIdempotentExecutionRequest),
+            typeof(NotionIdempotentExecutionResult),
             typeof(NotionSavedPage),
             typeof(NotionPageConflict),
             typeof(NotionAggregateIssue),

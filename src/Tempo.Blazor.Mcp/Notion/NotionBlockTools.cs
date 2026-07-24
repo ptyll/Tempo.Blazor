@@ -98,11 +98,12 @@ public static class NotionBlockTools
                 "The host has not registered INotionAggregateProvider.");
         }
         var receipts = services.GetService<InMemoryNotionIdempotencyReceiptStore>();
-        if (receipts is null)
+        if (receipts is null && provider is not INotionIdempotentAggregateProvider)
         {
             return McpToolResults.Failure(
                 McpToolResults.Unsupported,
-                "The host must call AddTempoNotionMcpTools to register the authoring runtime.");
+                "The host must call AddTempoNotionMcpTools to register the fallback authoring " +
+                "runtime or implement INotionIdempotentAggregateProvider.");
         }
 
         if (!TryParseExpectedVersions(

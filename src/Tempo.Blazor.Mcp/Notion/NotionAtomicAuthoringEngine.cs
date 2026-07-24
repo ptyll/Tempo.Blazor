@@ -8,9 +8,10 @@ namespace Tempo.Blazor.Mcp.Notion;
 internal sealed class NotionAtomicAuthoringEngine(
     INotionAggregateProvider provider,
     INotionAtomicOperationCompiler compiler,
-    InMemoryNotionIdempotencyReceiptStore receipts,
+    InMemoryNotionIdempotencyReceiptStore? receipts,
     TimeSpan? receiptRetention = null)
 {
+    private const string OperationScope = "notion_apply_block_operations";
     private readonly TimeSpan _receiptRetention = receiptRetention ?? TimeSpan.FromHours(24);
 
     public async Task<NotionAtomicAuthoringResult> ExecuteAsync(
@@ -71,6 +72,107 @@ internal sealed class NotionAtomicAuthoringEngine(
         }
 
         var requestHash = NotionCanonicalJson.ComputeRequestHash(request, operations, targets);
+        if (provider is INotionIdempotentAggregateProvider idempotentProvider)
+        {
+            return await ExecuteDurablyAsync(
+                idempotentProvider,
+                request,
+                targets,
+                operations,
+                requestHash,
+                cancellationToken);
+        }
+
+        return await ExecuteInMemoryAsync(
+            request,
+            targets,
+            operations,
+            requestHash,
+            cancellationToken);
+    }
+
+    private async Task<NotionAtomicAuthoringResult> ExecuteDurablyAsync(
+        INotionIdempotentAggregateProvider idempotentProvider,
+        NotionAtomicAuthoringRequest request,
+        IReadOnlyList<NotionAggregateTarget> targets,
+        JsonArray operations,
+        string requestHash,
+        CancellationToken cancellationToken)
+    {
+        var execution = await idempotentProvider.ExecuteIdempotentAsync(
+            new NotionIdempotentExecutionRequest
+            {
+                OperationScope = OperationScope,
+                Key = request.IdempotencyKey,
+                RequestHash = requestHash,
+                Retention = _receiptRetention
+            },
+            async (transactionProvider, transactionCancellationToken) =>
+            {
+                var result = await ExecuteCapturedAsync(
+                    transactionProvider,
+                    request,
+                    targets,
+                    operations,
+                    requestHash,
+                    transactionCancellationToken);
+                return JsonSerializer.Serialize(result, NotionAggregateJson.Options);
+            },
+            cancellationToken);
+
+        if (execution.Status == NotionIdempotentExecutionStatus.Collision)
+        {
+            return IdempotencyCollision(requestHash);
+        }
+        if (execution.Status is not (
+                NotionIdempotentExecutionStatus.Executed or
+                NotionIdempotentExecutionStatus.Replayed) ||
+            string.IsNullOrWhiteSpace(execution.ResponseJson))
+        {
+            return Failure(
+                requestHash,
+                Issue(
+                    "idempotency_provider_invalid",
+                    "The idempotent aggregate provider returned no committed response.",
+                    "$.idempotencyKey"));
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<NotionAtomicAuthoringResult>(
+                execution.ResponseJson,
+                NotionAggregateJson.Options);
+            return result is null
+                ? InvalidReceipt(requestHash)
+                : result with
+                {
+                    Replayed = execution.Status == NotionIdempotentExecutionStatus.Replayed
+                };
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return InvalidReceipt(requestHash);
+        }
+    }
+
+    private async Task<NotionAtomicAuthoringResult> ExecuteInMemoryAsync(
+        NotionAtomicAuthoringRequest request,
+        IReadOnlyList<NotionAggregateTarget> targets,
+        JsonArray operations,
+        string requestHash,
+        CancellationToken cancellationToken)
+    {
+        if (receipts is null)
+        {
+            return Failure(
+                requestHash,
+                Issue(
+                    "idempotency_runtime_missing",
+                    "The host must register the in-memory idempotency runtime or implement " +
+                    "INotionIdempotentAggregateProvider.",
+                    "$.idempotencyKey"));
+        }
+
         var acquire = await receipts.AcquireAsync(
             request.IdempotencyKey,
             requestHash,
@@ -81,18 +183,14 @@ internal sealed class NotionAtomicAuthoringEngine(
         }
         if (acquire.Status == NotionReceiptAcquireStatus.Collision)
         {
-            return Failure(
-                requestHash,
-                Issue(
-                    "idempotency_key_reused",
-                    "The idempotency key was already used with a different canonical request.",
-                    "$.idempotencyKey"));
+            return IdempotencyCollision(requestHash);
         }
 
         var lease = acquire.Lease!;
         try
         {
-            var result = await ExecuteOwnedAsync(
+            var result = await ExecuteCapturedAsync(
+                provider,
                 request,
                 targets,
                 operations,
@@ -107,14 +205,6 @@ internal sealed class NotionAtomicAuthoringEngine(
             await receipts.AbandonAsync(lease);
             throw;
         }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException)
-        {
-            var result = Failure(
-                requestHash,
-                Issue("authoring_failed", ex.Message, "$.operations"));
-            await receipts.CompleteAsync(lease, result, _receiptRetention);
-            return result;
-        }
         catch
         {
             await receipts.AbandonAsync(lease);
@@ -122,7 +212,35 @@ internal sealed class NotionAtomicAuthoringEngine(
         }
     }
 
+    private async Task<NotionAtomicAuthoringResult> ExecuteCapturedAsync(
+        INotionAggregateProvider transactionProvider,
+        NotionAtomicAuthoringRequest request,
+        IReadOnlyList<NotionAggregateTarget> targets,
+        JsonArray operations,
+        string requestHash,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteOwnedAsync(
+                transactionProvider,
+                request,
+                targets,
+                operations,
+                requestHash,
+                cancellationToken);
+        }
+        catch (Exception ex) when (
+            ex is JsonException or InvalidOperationException or ArgumentException)
+        {
+            return Failure(
+                requestHash,
+                Issue("authoring_failed", ex.Message, "$.operations"));
+        }
+    }
+
     private async Task<NotionAtomicAuthoringResult> ExecuteOwnedAsync(
+        INotionAggregateProvider transactionProvider,
         NotionAtomicAuthoringRequest request,
         IReadOnlyList<NotionAggregateTarget> effectiveTargets,
         JsonArray operations,
@@ -141,8 +259,8 @@ internal sealed class NotionAtomicAuthoringEngine(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var load = item.Target.Kind == NotionAggregateTargetKind.Page
-                ? await provider.LoadPageAsync(item.Target.Id, cancellationToken)
-                : await provider.LoadBlockAsync(item.Target.Id, cancellationToken);
+                ? await transactionProvider.LoadPageAsync(item.Target.Id, cancellationToken)
+                : await transactionProvider.LoadBlockAsync(item.Target.Id, cancellationToken);
 
             if (!load.Found || load.Snapshot is null)
             {
@@ -374,7 +492,7 @@ internal sealed class NotionAtomicAuthoringEngine(
             .ToList();
 
         cancellationToken.ThrowIfCancellationRequested();
-        var save = await provider.SaveAsync(
+        var save = await transactionProvider.SaveAsync(
             new NotionAggregateSaveRequest { Pages = saveItems },
             cancellationToken);
         if (!save.Success)
@@ -420,6 +538,22 @@ internal sealed class NotionAtomicAuthoringEngine(
             RequestHash = requestHash,
             Errors = errors
         };
+
+    private static NotionAtomicAuthoringResult IdempotencyCollision(string requestHash)
+        => Failure(
+            requestHash,
+            Issue(
+                "idempotency_key_reused",
+                "The idempotency key was already used with a different canonical request.",
+                "$.idempotencyKey"));
+
+    private static NotionAtomicAuthoringResult InvalidReceipt(string requestHash)
+        => Failure(
+            requestHash,
+            Issue(
+                "idempotency_receipt_invalid",
+                "The idempotent aggregate provider returned an invalid committed response.",
+                "$.idempotencyKey"));
 
     private static NotionAtomicAuthoringResult Conflict(
         string requestHash,

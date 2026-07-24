@@ -12,9 +12,9 @@ namespace Tempo.Blazor.NotionEditor.Testing;
 /// <remarks>
 /// The fake is intended for consumer tests and executable examples. It validates every complete
 /// snapshot, checks all optimistic-concurrency tokens before changing state, and commits all page
-/// replacements under one lock. Idempotent request replay remains the responsibility of the
-/// authoring engine because idempotency keys intentionally are not part of
-/// <see cref="INotionAggregateProvider"/>.
+/// replacements under one lock. It intentionally implements only
+/// <see cref="INotionAggregateProvider"/>; durable MCP replay tests should wrap it in a host
+/// implementation of <see cref="INotionIdempotentAggregateProvider"/>.
 /// </remarks>
 public sealed class FakeNotionAggregateProvider : INotionAggregateProvider
 {

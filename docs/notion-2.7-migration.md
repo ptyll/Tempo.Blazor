@@ -66,9 +66,27 @@ var engine = new NotionAtomicAuthoringEngine(
 
 The fake demonstrates multi-page all-or-nothing conflict handling, defensive
 snapshot copies, deterministic `sha256:` digests, and token advancement.
-Idempotency belongs to `NotionAtomicAuthoringEngine`, not the provider
-interface: retry the identical request with the same idempotency key, but use a
-new key after rebuilding a request following a concurrency conflict.
+
+`INotionAggregateProvider` alone uses the MCP engine's process-local receipt
+fallback. A host that requires replay after restart must implement the optional
+`INotionIdempotentAggregateProvider` contract. Its `ExecuteIdempotentAsync`
+implementation must:
+
+1. scope the key by the host tenant/application plus the supplied operation scope;
+2. return the stored opaque response without invoking the callback when the key
+   and canonical request hash match;
+3. return `Collision` without invoking the callback when the key belongs to a
+   different hash;
+4. invoke the callback with an aggregate provider bound to the same transaction;
+5. atomically commit every callback aggregate write and the exact response receipt;
+6. roll back both writes and receipt when the callback throws or cancellation wins;
+7. serialize concurrent calls for the same scoped key so the callback runs once;
+8. expire receipts only after the requested retention interval.
+
+The callback form is intentional: provider-generated concurrency tokens are part
+of the final MCP response, so a receipt written before `SaveAsync` returns cannot
+represent an exact replay. Retry the identical request with the same idempotency
+key, but use a new key after rebuilding a request following a concurrency conflict.
 
 `INotionBlockProvider`, the `BlockProvider` component parameter, and the demo
 `/api/notion/blocks` endpoints were removed. Pass only `AggregateProvider` to
@@ -95,7 +113,8 @@ provider calls.
 
 ## Release checklist
 
-- Update all Tempo.Blazor packages participating in the deployment to 2.7.0.
+- Update all Tempo.Blazor packages participating in the deployment to 2.7.1 when durable direct
+  MCP replay is required; 2.7.0 hosts retain only the process-local fallback.
 - Migrate stored flat table rows before deploying the new assemblies.
 - Exercise a multi-page conflict and verify no partial page is persisted.
 - Exercise an ambiguous retry and verify the provider save count remains one.
@@ -103,4 +122,4 @@ provider calls.
 - Run the supported .NET 8, 9, and 10 build/test matrix before publishing.
 
 Creating a Git tag and publishing packages remain explicit release-owner
-actions; building and validating 2.7.0 packages does not publish them.
+actions; building and validating 2.7.1 packages does not publish them.

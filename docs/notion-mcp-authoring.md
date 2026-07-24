@@ -192,6 +192,10 @@ child set with a strict recursive block forest.
 - Reusing a key with different canonical operations is rejected.
 - On optimistic-concurrency conflict, re-read the page, rebuild against the new token, and submit
   with a new key.
+- `INotionAggregateProvider` hosts use a process-local 24-hour receipt fallback.
+- Implement `INotionIdempotentAggregateProvider` when retries must survive a process restart. Its
+  callback, aggregate writes, and opaque response receipt must share one transaction; Tempo then
+  replays before loading stale targets and never invokes the callback for collisions.
 
 ## Limits and safety
 
