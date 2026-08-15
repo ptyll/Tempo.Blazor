@@ -40,7 +40,7 @@ export function createEditableSurfacePredicates(options) {
         const node = range.startContainer;
         const element = node.nodeType === ELEMENT_NODE ? node : node.parentElement;
         if (!element || !inst.root.contains(element)) return false;
-        if (element.closest && element.closest('figure, .tm-wysiwyg-inline-drawing, .tm-wysiwyg-object-layer-item, .tm-wysiwyg-object-selection-overlay, .tm-wysiwyg-object-guides-overlay, .tm-wysiwyg-drawing-anchor, .tm-document-editor__ribbon, [role="toolbar"]')) {
+        if (element.closest && element.closest('figure, .tm-wysiwyg-inline-drawing, .tm-wysiwyg-object-layer-item, .tm-wysiwyg-object-selection-overlay, .tm-wysiwyg-object-guides-overlay, .tm-wysiwyg-drawing-anchor, .tm-document-editor__ribbon, .tm-wysiwyg-layout-bubble')) {
             return false;
         }
         return node.nodeType === 3 && !!element.closest('[data-block-id], [data-render-block-id]');

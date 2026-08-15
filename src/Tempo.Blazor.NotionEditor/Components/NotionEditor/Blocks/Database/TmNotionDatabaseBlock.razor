@@ -42,7 +42,7 @@
         </div>
 
         @* Toolbar *@
-        <div class="tm-db__toolbar" role="toolbar">
+        <div class="tm-db__toolbar" role="group">
             <button class="tm-db__tool-btn @(_showFilterPanel ? "tm-db__tool-btn--active" : "") @(_localFilter is not null ? "tm-db__tool-btn--filtered" : "")"
                     type="button"
                     @onclick="ToggleFilterPanel"

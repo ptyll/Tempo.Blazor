@@ -11,7 +11,7 @@
      style="@RootStyle"
      data-testid="@TestId("tm-report-viewer")"
      @attributes="AdditionalAttributes">
-    <div class="tm-report-viewer__toolbar" role="toolbar" aria-label="@Loc["TmReportViewer_ToolbarLabel"]" data-testid="@TestId("tm-report-toolbar")">
+    <div class="tm-report-viewer__toolbar" role="group" aria-label="@Loc["TmReportViewer_ToolbarLabel"]" data-testid="@TestId("tm-report-toolbar")">
         <div class="tm-report-viewer__toolbar-group">
             <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="@IconNames.SkipBack" AriaLabel="@Loc["TmReportViewer_FirstPage"]" Disabled="@(!CanGoPrevious)" OnClick="FirstPageAsync" />
             <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="@IconNames.ChevronLeft" AriaLabel="@Loc["TmReportViewer_PreviousPage"]" Disabled="@(!CanGoPrevious)" OnClick="PreviousPageAsync" />

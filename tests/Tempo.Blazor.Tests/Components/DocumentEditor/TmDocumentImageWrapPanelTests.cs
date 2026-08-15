@@ -19,11 +19,14 @@ public sealed class TmDocumentImageWrapPanelTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Panel_HasRoleToolbar()
+    public void Panel_DoesNotClaimToolbarRoleItCannotHonour()
     {
         var cut = Render<TmDocumentImageWrapPanel>();
 
-        cut.Find("[data-testid='document-image-wrap-panel']").GetAttribute("role").Should().Be("toolbar");
+        var panel = cut.Find("[data-testid='document-image-wrap-panel']");
+        panel.GetAttribute("role").Should().Be(
+            "group",
+            "panel nemá roving tabindex; toolbar by sliboval šipky, které neumí");
     }
 
     [Fact]

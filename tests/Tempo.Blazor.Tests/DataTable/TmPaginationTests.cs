@@ -220,6 +220,71 @@ public class TmPaginationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Pagination_Disabled_RendersDisabledClassOnRoot()
+    {
+        var cut = Render<TmPagination>(p => p
+            .Add(c => c.CurrentPage, 1)
+            .Add(c => c.TotalPages, 5)
+            .Add(c => c.TotalCount, 50)
+            .Add(c => c.PageSize, 10)
+            .Add(c => c.Disabled, true));
+
+        cut.Find(".tm-pagination").ClassList.Should().Contain(
+            "tm-pagination-disabled",
+            "Disabled musí třídu na kořen opravdu vydat — pět běhů strážce ji nevidělo, protože "
+            + "žádná trasa zakázaný pager nevykreslila");
+    }
+
+    [Fact]
+    public void Pagination_Enabled_DoesNotRenderDisabledClass()
+    {
+        var cut = Render<TmPagination>(p => p
+            .Add(c => c.CurrentPage, 1)
+            .Add(c => c.TotalPages, 5)
+            .Add(c => c.TotalCount, 50)
+            .Add(c => c.PageSize, 10));
+
+        cut.Find(".tm-pagination").ClassList.Should().NotContain("tm-pagination-disabled");
+    }
+
+    [Fact]
+    public void Pagination_Disabled_DoesNotNavigateWhenAPageButtonIsClicked()
+    {
+        int? navigatedPage = null;
+        var cut = Render<TmPagination>(p => p
+            .Add(c => c.CurrentPage, 1)
+            .Add(c => c.TotalPages, 5)
+            .Add(c => c.TotalCount, 50)
+            .Add(c => c.PageSize, 10)
+            .Add(c => c.Disabled, true)
+            .Add(c => c.OnPageChange, EventCallback.Factory.Create<int>(this, page => navigatedPage = page)));
+
+        cut.FindAll(".tm-page-btn")[2].Click();
+
+        navigatedPage.Should().BeNull("Disabled není jen CSS — klik na stránku se musí spolknout");
+    }
+
+    [Fact]
+    public void Pagination_Disabled_DisablesInteractiveChildren()
+    {
+        var cut = Render<TmPagination>(p => p
+            .Add(c => c.CurrentPage, 2)
+            .Add(c => c.TotalPages, 5)
+            .Add(c => c.TotalCount, 50)
+            .Add(c => c.PageSize, 10)
+            .Add(c => c.PageSizeOptions, new[] { 10, 25 })
+            .Add(c => c.Disabled, true));
+
+        cut.Find(".tm-pagination-prev").HasAttribute("disabled").Should().BeTrue();
+        cut.Find(".tm-pagination-next").HasAttribute("disabled").Should().BeTrue();
+        cut.Find(".tm-pagination-page-size").HasAttribute("disabled").Should().BeTrue();
+        foreach (var button in cut.FindAll(".tm-page-btn"))
+        {
+            button.HasAttribute("disabled").Should().BeTrue("každé číslo stránky je ovládací prvek");
+        }
+    }
+
+    [Fact]
     public void Pagination_HostSplattedAttributes_StillReachTheRoot()
     {
         var cut = Render<TmPagination>(p => p

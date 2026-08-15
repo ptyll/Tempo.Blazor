@@ -79,6 +79,31 @@ public class TmAvatarTests : LocalizationTestBase
         cut.Find(".tm-avatar-fallback").TextContent.Trim().Should().Be("A");
     }
 
+    [Theory]
+    [InlineData(AvatarColor.Gray, "tm-avatar-gray")]
+    [InlineData(AvatarColor.Red, "tm-avatar-red")]
+    [InlineData(AvatarColor.Orange, "tm-avatar-orange")]
+    [InlineData(AvatarColor.Green, "tm-avatar-green")]
+    [InlineData(AvatarColor.Blue, "tm-avatar-blue")]
+    [InlineData(AvatarColor.Purple, "tm-avatar-purple")]
+    [InlineData(AvatarColor.Pink, "tm-avatar-pink")]
+    public void TmAvatar_Applies_Color_CssClass(AvatarColor color, string expectedClass)
+    {
+        var cut = Render<TmAvatar>(p => p
+            .Add(c => c.Name, "Ada Lovelace")
+            .Add(c => c.Color, color));
+
+        cut.Find("div.tm-avatar").ClassList.Should().Contain(expectedClass);
+    }
+
+    [Fact]
+    public void TmAvatar_Default_Color_Is_Gray()
+    {
+        var cut = Render<TmAvatar>(p => p.Add(c => c.Name, "Ada"));
+
+        cut.Find("div.tm-avatar").ClassList.Should().Contain("tm-avatar-gray");
+    }
+
     [Fact]
     public void TmAvatar_No_Src_No_Name_Shows_Placeholder()
     {

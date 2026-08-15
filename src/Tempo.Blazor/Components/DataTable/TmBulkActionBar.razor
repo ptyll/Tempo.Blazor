@@ -2,7 +2,7 @@
 
 @if (SelectedCount > 0)
 {
-    <div class="tm-bulk-action-bar @Class @(Disabled ? "tm-bulk-action-bar-disabled" : "")" role="toolbar" aria-label="@Loc["TmBulkAction_Toolbar"]" @attributes="AdditionalAttributes">
+    <div class="tm-bulk-action-bar @Class @(Disabled ? "tm-bulk-action-bar-disabled" : "")" role="group" aria-label="@Loc["TmBulkAction_Toolbar"]" @attributes="AdditionalAttributes">
         <div class="tm-bulk-action-bar__info">
             <span class="tm-bulk-action-bar__count">@SelectedCount</span>
             <span class="tm-bulk-action-bar__text">@Loc["TmBulkAction_Selected"]</span>

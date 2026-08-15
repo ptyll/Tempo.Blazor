@@ -76,7 +76,7 @@
 
 .tm-btn-outline-secondary {
   background-color: transparent;
-  border-color: var(--tm-border-color);
+  border-color: var(--tm-border-color-control);
   color: var(--tm-text-primary);
 }
 .tm-btn-outline-secondary:hover:not(:disabled) {

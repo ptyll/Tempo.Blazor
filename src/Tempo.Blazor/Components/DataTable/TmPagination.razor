@@ -15,7 +15,7 @@
         <button class="tm-pagination-btn tm-pagination-prev"
                 data-testid="@TestId("pagination-prev")"
                 @onclick="PrevPage"
-                disabled="@(CurrentPage <= 1)"
+                disabled="@(Disabled || CurrentPage <= 1)"
                 aria-label="@Loc["Tm_Previous"]">
             &#8249;
         </button>
@@ -31,6 +31,7 @@
                 <button class="tm-page-btn @(pageNum == CurrentPage ? "tm-page-btn-active" : "")"
                         data-testid="@TestId($"pagination-page-{pageNum}")"
                         aria-current="@(pageNum == CurrentPage ? "page" : null)"
+                        disabled="@Disabled"
                         @onclick="() => GoToPage(pageNum)">
                     @pageNum
                 </button>
@@ -40,7 +41,7 @@
         <button class="tm-pagination-btn tm-pagination-next"
                 data-testid="@TestId("pagination-next")"
                 @onclick="NextPage"
-                disabled="@(CurrentPage >= TotalPages)"
+                disabled="@(Disabled || CurrentPage >= TotalPages)"
                 aria-label="@Loc["Tm_Next"]">
             &#8250;
         </button>
@@ -53,6 +54,7 @@
             <select class="tm-pagination-page-size"
                     data-testid="@TestId("pagination-page-size")"
                     value="@PageSize"
+                    disabled="@Disabled"
                     aria-label="@Loc["TmDataTable_PageSize"]"
                     @onchange="OnPageSizeSelectChange">
                 @foreach (var size in PageSizeOptions)

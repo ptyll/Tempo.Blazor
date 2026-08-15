@@ -119,7 +119,7 @@
             <span>@Loc["TmDocumentEditor_ImageSectionWrapping"]</span>
         </summary>
         <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__group" role="toolbar" aria-label="@Loc["TmDocumentEditor_ImageWrapMode"]">
+            <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageWrapMode"]">
                 <button type="button"
                         class="@WrapButtonClass(DocumentWrapMode.Inline)"
                         aria-pressed="@AriaPressed(CurrentWrapMode == DocumentWrapMode.Inline)"
@@ -207,7 +207,7 @@
             <span>@Loc["TmDocumentEditor_ImageSectionPosition"]</span>
         </summary>
         <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__group" role="toolbar" aria-label="@Loc["TmDocumentEditor_ImageAlignment"]">
+            <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageAlignment"]">
                 <button type="button"
                         class="@AlignmentButtonClass(DocumentImageAlignment.Start)"
                         aria-pressed="@AriaPressed(CurrentAlignment == DocumentImageAlignment.Start)"
@@ -277,7 +277,7 @@
             <span>@Loc["TmDocumentEditor_ImageSectionOrder"]</span>
         </summary>
         <div class="tm-document-image-inspector__section-body">
-            <div class="tm-document-image-inspector__group" role="toolbar" aria-label="@Loc["TmDocumentEditor_ImageSectionOrder"]">
+            <div class="tm-document-image-inspector__group" role="group" aria-label="@Loc["TmDocumentEditor_ImageSectionOrder"]">
                 <button type="button"
                         class="tm-document-image-inspector__swatch"
                         data-testid="@TestId("document-image-inspector-bring-forward")"

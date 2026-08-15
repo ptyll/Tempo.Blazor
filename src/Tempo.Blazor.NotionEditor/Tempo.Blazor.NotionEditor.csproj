@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.NotionEditor</PackageId>
-    <Version>2.8.16</Version>
+    <Version>2.8.17</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.NotionEditor</Title>
     <Description>Notion-style editor components for Tempo.Blazor, including pages, blocks, databases, collaboration UI, comments, media, and Tempo embed blocks.</Description>

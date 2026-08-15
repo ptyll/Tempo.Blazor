@@ -8,6 +8,45 @@
   not green, not a gate) and `Tempo.ReportServer.Api.Tests.MsSql` (27/177, SQL Server missing;
   do not fix). `ReleaseGateFilterTests` keeps the two publish workflows on one filter.
 
+## 2.8.17 - 2026-08-15
+
+The rest of the host application's gap register that did not fit in 2.8.16. Released **as one
+tag** — a register that names a version and then ships half of it stops being read. The list was
+frozen before the first library change: orphan classes that the rendered-DOM probe actually
+saw, the leftover `role="toolbar"` promises, and the outline button whose border token had been
+measured under 3:1. Universal selectors stay a 2.9.0 target. The `dismiss` class on the Blazor
+WASM error UI is a host hook, not a Tempo class.
+
+### Fixed
+
+- **Six class names Tempo rendered with no rule.** `tm-pagination-size` is the page-size wrapper
+  (its label already had a rule). `tm-pagination-disabled` is the disabled-pager modifier —
+  `TmPagination` already put it on the root when `Disabled` is true, but five guard runs never
+  rendered that state, so the missing paint was a claim about the stylesheet, not a finding on a
+  page. It now dims the pager and the component disables every interactive child, not only
+  swallows the click. `tm-avatar-fallback` fills the initials. Every `AvatarColor` modifier
+  (`gray` through `pink`) has a token-backed colour. `tm-avatar-2xl` is the box `AvatarSize.Xxl`
+  already emitted; CSS only had `.tm-avatar-xxl`. `tm-input-search` is the search field's own
+  chrome (`appearance: none`); `.tm-search-input` is a different class on different markup.
+  Guarded by `OrphanClassCssContractTests` (source + shipped bundle, mutation both ways).
+
+- **Twenty-five leftover `role="toolbar"` attributes in 22 files.** Same defect 2.8.16 closed on
+  `TmFormActionBar`: a toolbar is a promise of one tab stop and arrow-key movement. None of the
+  eight files that mention `tabindex` implement toolbar roving — ribbon tabs, canvas roots and
+  comment panes are a different pattern. They are now `role="group"` and keep their accessible
+  name. Guarded by `ToolbarRoleGuardTests` (empty set in `src/`, scanner mutation on attribute
+  vs comment).
+
+- **`ButtonVariant.OutlineSecondary` used the decorative border token.** `--tm-border-color`
+  is 1.24:1 on white and 1.41:1 on the dark surface — below WCAG 1.4.11's 3:1. The control
+  token is 4.83:1 / 5.76:1. The outline button now takes `--tm-border-color-control`.
+
+### Not in this release
+
+- `tm-pagination-controls` / `-prev` / `-next` remain semantic hooks beside the painted
+  `tm-pagination-btn`. `tm-scroll-spy-nav` is a BEM root. `dismiss` belongs to
+  `blazor.webassembly.js`. Universal `*` selectors stay 2.9.0.
+
 ## 2.8.16 - 2026-08-12
 
 Nine entries from a host application's gap register, released **as one tag**. The register's own rule is

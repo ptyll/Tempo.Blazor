@@ -3,7 +3,7 @@
 @inject IBlockRegistry Registry
 
 <div class="tm-email-editor" data-tm-email-editor tabindex="0" @onkeydown="HandleEditorKeyDownAsync">
-    <div class="tm-email-editor__toolbar" role="toolbar" aria-label="@Loc["EmailEditor_Panel_Blocks"]">
+    <div class="tm-email-editor__toolbar" role="group" aria-label="@Loc["EmailEditor_Panel_Blocks"]">
         <div class="tm-email-editor__toolbar-group">
             <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="rotate-ccw"
                       AriaLabel="@Loc["EmailEditor_Toolbar_Undo"]" Disabled="@(!_history.CanUndo)"

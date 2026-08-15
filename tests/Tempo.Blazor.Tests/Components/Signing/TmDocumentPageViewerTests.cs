@@ -111,7 +111,9 @@ public class TmDocumentPageViewerTests : LocalizationTestBase
             parameters.Add(p => p.Page, CreatePage())
                       .Add(p => p.ShowToolbar, true));
 
-        cut.Find(".tm-document-page-viewer__toolbar").GetAttribute("role").Should().Be("toolbar");
+        cut.Find(".tm-document-page-viewer__toolbar").GetAttribute("role").Should().Be(
+            "group",
+            "lišta zoomu nemá roving tabindex");
         cut.Find(".tm-document-page-viewer__zoom-out").GetAttribute("aria-label").Should().Be("Zoom out");
         cut.Find(".tm-document-page-viewer__zoom-in").GetAttribute("aria-label").Should().Be("Zoom in");
         cut.Find(".tm-document-page-viewer__zoom-label").TextContent.Should().Contain("100%");

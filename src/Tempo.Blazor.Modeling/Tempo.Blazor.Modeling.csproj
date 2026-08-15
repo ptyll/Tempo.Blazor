@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Modeling</PackageId>
-    <Version>2.8.16</Version>
+    <Version>2.8.17</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Modeling</Title>
     <Description>Modeling editor components for Tempo.Blazor, including BPMN, UML, ArchiMate, ERD notation profiles and diagram generation.</Description>

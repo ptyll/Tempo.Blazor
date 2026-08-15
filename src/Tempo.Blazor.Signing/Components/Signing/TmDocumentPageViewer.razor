@@ -29,7 +29,7 @@
     {
         @if (ShowToolbar)
         {
-            <div class="tm-document-page-viewer__toolbar" role="toolbar" aria-label="@Loc["TmDocumentPageViewer_ToolbarLabel"]">
+            <div class="tm-document-page-viewer__toolbar" role="group" aria-label="@Loc["TmDocumentPageViewer_ToolbarLabel"]">
                 @if (ShowPaginationControls)
                 {
                     <div class="tm-document-page-viewer__pagination">
@@ -116,7 +116,7 @@
         }
         else if (CommentsEnabled)
         {
-            <div class="tm-document-page-viewer__comments-toolbar" role="toolbar" aria-label="@Loc["TmDocumentComments_ToolbarLabel"]">
+            <div class="tm-document-page-viewer__comments-toolbar" role="group" aria-label="@Loc["TmDocumentComments_ToolbarLabel"]">
                 <button type="button"
                         class="@CommentModeButtonClass"
                         aria-pressed="@(CommentMode == DocumentCommentMode.Comment ? "true" : "false")"

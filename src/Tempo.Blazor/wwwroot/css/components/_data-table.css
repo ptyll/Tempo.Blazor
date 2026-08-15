@@ -467,6 +467,12 @@
   gap: var(--tm-space-2);
   flex: 0 0 auto;
 }
+.tm-pagination-size {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  flex: 0 0 auto;
+}
 .tm-pagination-size-label {
   font-size: var(--tm-font-size-sm);
   color: var(--tm-text-secondary);
@@ -480,6 +486,10 @@
   display: flex;
   align-items: center;
   gap: var(--tm-space-1);
+}
+.tm-pagination-disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 .tm-pagination-btn,
 .tm-page-btn {

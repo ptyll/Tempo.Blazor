@@ -13,12 +13,14 @@ namespace Tempo.Blazor.Tests.Components.DocumentEditor;
 public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBase
 {
     [Fact]
-    public void Toolbar_ExposesToolbarAndTabSemantics()
+    public void Toolbar_ExposesGroupAndTabSemantics()
     {
         var cut = Render<TmDocumentEditorToolbar>();
 
         var toolbar = cut.Find("[data-testid='document-toolbar']");
-        toolbar.GetAttribute("role").Should().Be("toolbar");
+        toolbar.GetAttribute("role").Should().Be(
+            "group",
+            "šipky v téhle liště obsluhují ribbon tablist, ne roving toolbaru");
         toolbar.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
 
         var tablist = cut.Find("[role='tablist']");
@@ -101,7 +103,9 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
         cut.Find("[data-testid='document-image-inspector-alt']").ParentElement!.TextContent.Should().Contain("Alt");
         cut.Find("[data-testid='document-image-inspector-link']").ParentElement!.TextContent.ToLowerInvariant().Should().Contain("url");
         cut.Find("[data-testid='document-image-inspector-alt-warning']").GetAttribute("role").Should().Be("status");
-        cut.FindAll("[role='toolbar']").Should().HaveCountGreaterThanOrEqualTo(2);
+        cut.FindAll("[role='group']").Should().HaveCountGreaterThanOrEqualTo(
+            2,
+            "skupiny wrap/align slibovaly toolbar bez rovingu; group nese přístupné jméno");
     }
 
     [Fact]

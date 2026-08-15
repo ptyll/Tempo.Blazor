@@ -1936,7 +1936,7 @@
     border-block-start: 1px solid var(--tm-color-border-subtle);
 }
 
-.tm-document-image-inspector__section-body .tm-document-image-inspector__group[role="toolbar"] {
+.tm-document-image-inspector__section-body .tm-document-image-inspector__group[role="group"] {
     display: inline-flex;
     width: fit-content;
     max-width: 100%;
@@ -1994,7 +1994,7 @@
     border-color: var(--tm-color-primary);
 }
 
-.tm-document-image-inspector__section-body .tm-document-image-inspector__group[role="toolbar"] .tm-document-image-inspector__swatch {
+.tm-document-image-inspector__section-body .tm-document-image-inspector__group[role="group"] .tm-document-image-inspector__swatch {
     justify-content: center;
     min-width: 2rem;
     min-height: 2rem;

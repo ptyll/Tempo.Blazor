@@ -86,6 +86,10 @@
   background-color: var(--tm-bg-surface-secondary);
   cursor: default;
 }
+.tm-input-search {
+  -webkit-appearance: none;
+  appearance: none;
+}
 .tm-input-with-left-icon  { padding-left: 2.25rem; }
 .tm-input-with-right-icon { padding-right: 2.25rem; }
 .tm-input-left-icon,

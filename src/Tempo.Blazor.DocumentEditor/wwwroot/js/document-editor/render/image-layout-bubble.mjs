@@ -91,7 +91,7 @@ export function createRenderImageLayoutBubbleHtml(options) {
         ];
         return '<span class="tm-wysiwyg-layout-bubble"'
             + ' data-testid="document-wysiwyg-object-layout-bubble"'
-            + ' role="toolbar"'
+            + ' role="group"'
             + ' aria-label="Image layout options"'
             + ' aria-expanded="false">'
             + buttons.join('') + '</span>';

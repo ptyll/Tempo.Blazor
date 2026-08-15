@@ -37,12 +37,16 @@ public class TmBulkActionBarTests : LocalizationTestBase
     }
 
     [Fact]
-    public void BulkActionBar_HasRoleToolbar()
+    public void BulkActionBar_DoesNotClaimToolbarRoleItCannotHonour()
     {
         var cut = Render<TmBulkActionBar>(p => p
             .Add(x => x.SelectedCount, 1));
 
-        cut.Find("[role='toolbar']").Should().NotBeNull();
+        var root = cut.Find(".tm-bulk-action-bar");
+        root.GetAttribute("role").Should().Be(
+            "group",
+            "lišta nemá roving tabindex; toolbar by sliboval šipky, které neumí");
+        root.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
