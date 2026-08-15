@@ -20,6 +20,12 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      smtp4dev:
+        image: rnwood/smtp4dev:latest
+        ports:
+          - 2525:25
+          - 5000:80
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,21 +74,17 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 
-      # E2E testy (Playwright), smtp4dev integrační testy a MsSql testy report serveru
-      # na CI vynecháváme - runner nemá prohlížeče, běžící demo hosty, smtp4dev kontejner
-      # ani SQL Server, takže by spadly na prostředí (NullReferenceException /
-      # Connection refused / SqlException error 26), nikoli na logiku.
-      # MsSql testy (Tempo.ReportServer.Api.Tests.MsSql.*) potřebují buď
-      # localhost\SQLEXPRESS, nebo connection string v env REPORTSERVER_TEST_CONNECTION
-      # (viz MsSqlTestDatabase.cs) - lokálně se spouštět MAJÍ a spouštějí.
-      # Vzor je ZAKOTVENÝ na jmenný prostor, ne holý substring: jinak by z CI tiše
-      # zmizel každý budoucí test se slovem MsSql v názvu, ať leží kdekoli.
-      # POZOR: je to obcházka chybějící infrastruktury, ne řešení. Jakmile bude v CI
-      # SQL service container nebo REPORTSERVER_TEST_CONNECTION, filtr zase zužte.
-      # Drženo v SYNCU s publish-nuget-org.yml - dva různé filtry = jedno CI trvale
-      # červené a tím pádem přestane být čtené jako signál.
+      # Named exceptions of the release gate (DEC-TEMPO-RELEASE-GATE, Fáze 12):
+      #   Tempo.Blazor.E2E — Playwright over the demo hosts; measured separately, not a gate
+      #     until the run finishes green with a recorded duration.
+      #   Tempo.ReportServer.Api.Tests.MsSql — needs localhost\SQLEXPRESS or
+      #     REPORTSERVER_TEST_CONNECTION (see MsSqlTestDatabase.cs). Decision: do not fix;
+      #     owner ptyll. Pattern is anchored on the namespace, not a bare substring.
+      # Smtp4Dev is NOT an exception: the two Demo.Api tests are in the gate and CI starts
+      # smtp4dev as a job service (ports 2525/5000). Keep this filter identical to
+      # publish-nuget-org.yml — ReleaseGateFilterTests enforces both directions.
       - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Smtp4Dev&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
+        run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
 
   publish:
     needs: build-and-test

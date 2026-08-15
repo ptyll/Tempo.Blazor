@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Release gate is the CI filter, not `dotnet test TempoBlazor.slnx`.** Demo.Api including the two
+  smtp4dev tests is in the gate (CI starts `rnwood/smtp4dev`; `Smtp4DevHost` starts the container
+  locally). Named exceptions: `Tempo.Blazor.E2E` (measured 1220/124/79 of 1423 in 12 h 8 min —
+  not green, not a gate) and `Tempo.ReportServer.Api.Tests.MsSql` (27/177, SQL Server missing;
+  do not fix). `ReleaseGateFilterTests` keeps the two publish workflows on one filter.
+
 ## 2.8.16 - 2026-08-12
 
 Nine entries from a host application's gap register, released **as one tag**. The register's own rule is

@@ -12,15 +12,16 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// recipient so it only ever touches its own messages.
 /// </summary>
 [Trait("Category", "RequiresSmtp4Dev")]
-public class EmailTemplateSmtp4DevTests : IClassFixture<WebApplicationFactory<Program>>
+public class EmailTemplateSmtp4DevTests : IClassFixture<WebApplicationFactory<Program>>, IClassFixture<Smtp4DevFixture>
 {
     private const string WelcomeId = "11111111-1111-1111-1111-111111111111";
     private const string NewsletterId = "22222222-2222-2222-2222-222222222222";
 
     private readonly HttpClient _api;
-    private readonly HttpClient _smtp4dev = new() { BaseAddress = new Uri("http://localhost:5000") };
+    private readonly HttpClient _smtp4dev = new() { BaseAddress = new Uri(Smtp4DevHost.RestBaseUrl) };
 
-    public EmailTemplateSmtp4DevTests(WebApplicationFactory<Program> factory) => _api = factory.CreateClient();
+    public EmailTemplateSmtp4DevTests(WebApplicationFactory<Program> factory, Smtp4DevFixture _)
+        => _api = factory.CreateClient();
 
     [Fact]
     public async Task SendWelcome_ArrivesInSmtp4Dev_WithSubstitutedSubjectAndBodies()
