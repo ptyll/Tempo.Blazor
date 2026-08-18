@@ -263,4 +263,41 @@ public class TmDataTablePaginationTests : LocalizationTestBase
         templateWasRendered.Should().BeFalse();
         cut.Find("[data-testid='pagination-info']").TextContent.Should().NotContain("host wording");
     }
+
+    // ── Rows the table was handed must be reachable ───────────────
+    //
+    // The pager is the only element that reaches pages 2..N of a client-side (Items) table.
+    // With ShowPagination=false it is not rendered, so a slice would leave the remaining rows
+    // in no element at all. Slicing is therefore derived from the pager: no pager, no slice.
+    // The opposite arm — pager shown, slice applied — is measured by
+    // DataTable_Pagination_ShowsOnlyFirstPageRows above, so over-fixing is caught there.
+
+    [Fact]
+    public void DataTable_WithoutPagination_RendersEveryItem_NotJustTheFirstPage()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowPagination, false));
+
+        // Positive control: no element in the DOM could reach rows 11..50.
+        cut.FindAll(".tm-pagination").Should().BeEmpty();
+
+        cut.FindAll("tbody tr").Count.Should()
+            .Be(50, "no pager is rendered, so every row handed to the table must be in the DOM");
+    }
+
+    [Fact]
+    public void DataTable_WithoutPagination_RendersEveryItem_EvenWithAControlledPageSize()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.PageSize, 10)
+            .Add(c => c.ShowPagination, false));
+
+        cut.FindAll(".tm-pagination").Should().BeEmpty();
+
+        cut.FindAll("tbody tr").Count.Should()
+            .Be(50, "a controlled PageSize sizes the pager's page, and there is no pager here");
+    }
 }

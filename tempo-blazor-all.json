@@ -8085,7 +8085,7 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "When true, shows the TmPagination bar when more than one page exists. Default: true."
+              "description": "When true, shows the TmPagination bar when more than one page exists. Default: true. When false, a client-side table (Items) renders every item it was handed rather than the first page — the pager is the only element that reaches pages 2..N, so hiding it and still slicing would leave the remaining rows in no element at all. Server-side paging through DataProvider is unaffected: there the page is chosen by the provider."
             },
             {
               "name": "ShowSearch",

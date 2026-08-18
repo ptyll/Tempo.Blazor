@@ -3486,7 +3486,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `Selectable` | `bool` | `false` | Checkboxy pro výběr řádků |
 | `ShowSearch` | `bool` | `true` | Vyhledávání |
 | `ShowColumnPicker` | `bool` | `true` | Výběr sloupců |
-| `ShowPagination` | `bool` | `true` | Stránkování |
+| `ShowPagination` | `bool` | `true` | Stránkování. `false` u klientské tabulky (`Items`) znamená **nekrájet** — vykreslí se všechny předané položky, protože pager je jediný prvek, kterým se dá dosáhnout na stránky 2..N. Serverového stránkování přes `DataProvider` se to netýká |
 | `DefaultPageSize` | `int` | `25` | Počáteční velikost stránky; přečte se jednou při inicializaci a `PageSize` ji přebíjí |
 | `PageSize` | `int?` | `null` | **Řízená** velikost stránky. Vyhrává nad `DefaultPageSize` (včetně prvního dotazu `DataProvider`) a změna po mountu tabulku přestránkuje na místě, bez remountu. Změna vždy vrací na stránku 1 |
 | `PageSizeChanged` | `EventCallback<int>` | — | Umožňuje `@bind-PageSize`. Vystřelí při změně z vestavěného výběru, z `ChangePageSizeAsync`, z aplikovaného pohledu i když `DataProvider` odpoví jinou velikostí, než o kterou tabulka požádala |

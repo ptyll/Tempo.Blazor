@@ -27,7 +27,11 @@ public class TmEmailTemplateEditorTests : BunitContext
         var cut = Render<TmEmailTemplateEditor>();
 
         cut.Find("[data-tm-email-editor]").Should().NotBeNull();
-        cut.Find("[role=toolbar]").Should().NotBeNull();
+
+        // role=group, not role=toolbar: a toolbar promises one tab stop and arrow-key roving, which
+        // this bar does not implement, so 2.8.17 dropped the role across src/ and ToolbarRoleGuardTests
+        // now keeps it out. This assertion was left behind by that sweep.
+        cut.Find("[role=group]").Should().NotBeNull();
         cut.FindAll("[data-tm-toolbox]").Should().ContainSingle();
         cut.FindAll("[data-tm-canvas]").Should().ContainSingle();
         cut.FindAll("[data-tm-properties]").Should().ContainSingle();

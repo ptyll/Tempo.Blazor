@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.DocumentEditor</PackageId>
-    <Version>2.8.17</Version>
+    <Version>2.8.18</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.DocumentEditor</Title>
     <Description>Document editor components for Tempo.Blazor, including canvas rendering, collaboration UI, clipboard normalization, and document editor interop assets.</Description>

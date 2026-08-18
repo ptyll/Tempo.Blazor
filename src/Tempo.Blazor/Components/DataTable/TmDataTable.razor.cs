@@ -478,7 +478,13 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <summary>When true, shows the column visibility picker. Default: true.</summary>
     [Parameter] public bool ShowColumnPicker { get; set; } = true;
 
-    /// <summary>When true, shows the TmPagination bar when more than one page exists. Default: true.</summary>
+    /// <summary>
+    /// When true, shows the TmPagination bar when more than one page exists. Default: true.
+    /// When false, a client-side table (<see cref="Items"/>) renders every item it was handed rather than
+    /// the first page — the pager is the only element that reaches pages 2..N, so hiding it and still
+    /// slicing would leave the remaining rows in no element at all. Server-side paging through
+    /// <see cref="DataProvider"/> is unaffected: there the page is chosen by the provider.
+    /// </summary>
     [Parameter] public bool ShowPagination { get; set; } = true;
 
     /// <summary>
@@ -1173,6 +1179,14 @@ public partial class TmDataTable<TItem> : IDisposable
         if (ScrollMode == DataTableScrollMode.Virtualized)
         {
             // Virtualized mode: no pagination, show all items
+            _displayedItems = list;
+            _totalPages = 0;
+        }
+        else if (!ShowPagination)
+        {
+            // The pager is the only element that reaches pages 2..N, so slicing is derived from it:
+            // with no pager the remaining rows would be in no element at all, and nothing in the UI
+            // would say so. ShowPagination=false therefore means "do not slice", not "slice silently".
             _displayedItems = list;
             _totalPages = 0;
         }

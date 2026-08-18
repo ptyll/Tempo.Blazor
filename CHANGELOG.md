@@ -8,6 +8,36 @@
   not green, not a gate) and `Tempo.ReportServer.Api.Tests.MsSql` (27/177, SQL Server missing;
   do not fix). `ReleaseGateFilterTests` keeps the two publish workflows on one filter.
 
+## 2.8.18 - 2026-08-18
+
+One behaviour change in `TmDataTable`, and it is a change rather than an addition: **`ShowPagination="false"`
+now means "do not paginate", not "paginate and hide the controls".** Read the breaking-change note before
+upgrading — no API was added, so nothing about the parameter list tells you this happened.
+
+### Changed — BREAKING for client-side tables with the pager hidden
+
+- **`ShowPagination="false"` no longer slices the `Items` collection.** `ShowPagination` gated only the
+  render of the pager (`TmDataTable.razor:469`); the slice in `RefreshClientItems()` ran regardless, so a
+  table handed 200 rows with the pager hidden rendered rows 1–25 and offered no element that reached rows
+  26–200. The summary that would have said "showing 1–25 of 200" sits inside the same `@if` as the pager,
+  so it did not lie — it was simply absent, and the failure mode was silence. Slicing is now derived
+  from the pager: no pager, no slice. The client-side table renders every item it was handed.
+
+  **What changes for you:** a consumer that set `ShowPagination="false"` on a collection longer than the
+  effective page size will now see the whole collection instead of its first page. That is the point — the
+  rows were already handed to the component and were already unreachable — but a page that relied on the
+  slice as a display limit has to limit the DATA instead, at the source, and say so. Doing it in the grid is
+  what made the limit invisible. `ScrollMode="Virtualized"` is not the substitute: it renders through
+  `<Virtualize>` into a fixed-height container and turns inline editing off, so it is a different layout,
+  not "show everything".
+
+  **What does not change:** server-side paging through `DataProvider` is untouched — the slice this removes
+  lives only in the `Items` path. A table with the pager visible still pages exactly as before
+  (`DataTable_Pagination_ShowsOnlyFirstPageRows` measures that arm, and inverting the new condition turns 34
+  tests red). No parameter was added: an opt-out would have been a third independent switch beside
+  `ShowPagination` and `ScrollMode` with nothing keeping the three consistent, which is the shape that
+  produced this defect one level up.
+
 ## 2.8.17 - 2026-08-15
 
 The rest of the host application's gap register that did not fit in 2.8.16. Released **as one
