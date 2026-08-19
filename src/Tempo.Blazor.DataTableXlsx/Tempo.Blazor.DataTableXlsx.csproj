@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.DataTableXlsx</PackageId>
-<Version>2.8.18</Version>
+<Version>2.8.19</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.DataTableXlsx</Title>
     <Description>Optional XLSX exporter for Tempo.Blazor TmDataTable, backed by DocumentFormat.OpenXml.</Description>

@@ -28,7 +28,50 @@ fi
 # `dotnet pack` runs here with --no-build, so it reuses whatever the last build left in obj/ — and
 # an incremental build that decided nothing changed leaves the PREVIOUS commit there. Passing the
 # value explicitly removes the dependency on that cache entirely.
-commit="$(git rev-parse HEAD)"
+#
+# AND THE COMMIT IS ONLY A TRUE LABEL IF THE TREE IT NAMES IS THE TREE BEING PACKED.
+#
+# Everything downstream compares the stamp against this one value: the read-back at the end of this
+# script, and `ReleaseContractTests.PackedPackages_RecordTheCommitTheyWereBuiltFrom`. All of them
+# derive from the same read of HEAD below, so over a DIRTY tree the equality holds BY CONSTRUCTION
+# and certifies packages whose bytes came from source that no commit contains. That is not a gap in
+# coverage, it is an active false confirmation: measured on 2026-08-18 the staging directory held 26
+# `Tempo.*.2.8.18.nupkg` stamped `commit="d49ede02…"` — which is 2.8.17 — and every one of the three
+# checks reported them good, because at that moment HEAD really was d49ede02 and the 2.8.18 content
+# was sitting uncommitted in the working tree.
+#
+# No better stamp fixes this. The defect is not WHAT is read but that the label is verified against
+# the same source it was minted from, so any replacement inside that loop (SourceLink, a content
+# hash, a different way of reading HEAD) only moves the tautology. The one thing that breaks it is
+# refusing the situation in which a truthful answer does not exist — which is exactly a dirty tree.
+#
+# ALLOW_DIRTY_PACK=1 is the escape for a deliberate local experiment, and it does NOT restore the
+# lie: the stamp then carries a `-dirty` suffix, so a package built off uncommitted source says so in
+# its own nuspec instead of borrowing its parent commit's good name. Such a package must never be
+# published or copied into a consumed feed — `ReleaseContractTests` will fail it if it is staged,
+# because `-dirty` cannot equal any commit id.
+#
+# ONE MEASURED CONSEQUENCE FOR THE LOCAL WORKFLOW, so nobody reads the refusal as a bug: a full
+# `dotnet build -c Release --no-incremental` leaves the tree clean (measured 2026-08-19), but the TEST
+# suite does not — `src/Tempo.Blazor.Demo.Api/diagrams.db` is tracked and the Demo.Api tests write to
+# it. So "run the gate, then pack" refuses until that file is restored. That is the check working, not
+# misfiring: those bytes really are uncommitted. The message below prints `git status` precisely so the
+# offending path is named rather than guessed at. CI is unaffected — the publish job does its own
+# checkout and packs after a BUILD, with no test run in between.
+dirty_suffix=""
+if [[ -n "$(git status --porcelain)" ]]; then
+  if [[ "${ALLOW_DIRTY_PACK:-}" != "1" ]]; then
+    echo "Working tree is dirty; no commit describes the bytes about to be packed." >&2
+    echo "Commit or stash first, or set ALLOW_DIRTY_PACK=1 to produce packages stamped '-dirty' that must not be published." >&2
+    git status --porcelain >&2
+    exit 1
+  fi
+
+  echo "ALLOW_DIRTY_PACK=1 over a dirty tree: stamping the commit with a '-dirty' suffix." >&2
+  dirty_suffix="-dirty"
+fi
+
+commit="$(git rev-parse HEAD)${dirty_suffix}"
 
 mapfile -t projects < <(grep -vE '^[[:space:]]*(#|$)' "$manifest" | sed 's/[[:space:]]*$//')
 
@@ -92,12 +135,18 @@ fi
 # that reuses obj/ has already been observed to lose to a cached value once — that is the whole
 # reason this block exists — so the only trustworthy check is to open what came out and read it.
 # `unzip -p` streams the nuspec without unpacking, so this stays cheap over 26 packages.
+#
+# The value is read as "anything up to the closing quote" rather than as hex, because under
+# ALLOW_DIRTY_PACK=1 the stamp legitimately ends in `-dirty`. A hex-only pattern would truncate that
+# suffix, the comparison below would then fail on every package, and the escape hatch would be dead
+# code that nobody could exercise — which is the state in which a `-dirty` stamp silently stops being
+# produced at all.
 mismatched=0
 while IFS= read -r package; do
   stamped="$(unzip -p "$package" '*.nuspec' 2>/dev/null \
-    | grep -o 'commit="[0-9a-f]*"' | head -n 1 | sed 's/commit="//; s/"//')"
+    | grep -o 'commit="[^"]*"' | head -n 1 | sed 's/commit="//; s/"//')"
   if [[ "$stamped" != "$commit" ]]; then
-    echo "Package '$package' records commit '${stamped:-<none>}' but HEAD is '$commit'." >&2
+    echo "Package '$package' records commit '${stamped:-<none>}' but this pack stamped '$commit'." >&2
     mismatched=$((mismatched + 1))
   fi
 done < <(find "$output" -maxdepth 1 -type f -name '*.nupkg' ! -name '*.symbols.nupkg')

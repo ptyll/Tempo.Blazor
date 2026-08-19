@@ -10,7 +10,7 @@
     <!-- NuGet Package Metadata -->
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.EmailTemplates</PackageId>
-    <Version>2.8.18</Version>
+    <Version>2.8.19</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.EmailTemplates</Title>
     <Description>Drag-and-drop email template editor component (TmEmailTemplateEditor) for Tempo.Blazor. Visual MJML editor with full MJML 4 parity, bidirectional MJML import/export, Scriban variable templating and live preview. Built entirely on Tempo.Blazor components.</Description>

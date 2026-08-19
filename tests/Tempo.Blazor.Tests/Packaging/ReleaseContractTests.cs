@@ -183,8 +183,26 @@ public sealed class ReleaseContractTests
     /// observe "the commit at the moment of packing", and the staging directory is usually empty on a
     /// developer machine, so a packages-only assertion would pass vacuously exactly when it matters least
     /// and would give a false sense of coverage. The always-running half is therefore the CONTRACT — the
-    /// pack script must both pass the commit in and verify it out of the produced bytes. The second half
-    /// checks any package that happens to be staged, which is what turns a stale local pack red.
+    /// pack script must pass the commit in, refuse to pack a tree no commit describes, and verify the
+    /// stamp back out of the produced bytes. The second half checks any package that happens to be
+    /// staged, which is what turns a stale local pack red.
+    /// </para>
+    /// <para>
+    /// WHY THE DIRTY-TREE CLAUSE IS ASSERTED AS SCRIPT TEXT AND NOT MEASURED: the equality this test
+    /// checks below is a TAUTOLOGY over a dirty tree, and so are the pack script's own two halves —
+    /// all three read the same HEAD, so all three agree by construction while the packed bytes come
+    /// from source no commit contains. This was not silence but an active false confirmation: on
+    /// 2026-08-18 the staging directory held 26 <c>Tempo.*.2.8.18.nupkg</c> stamped
+    /// <c>commit="d49ede02…"</c> (2.8.17) and the loop below certified every one of them, because HEAD
+    /// really was d49ede02 while the 2.8.18 content sat uncommitted. This test cannot escape that on
+    /// its own: <see cref="ReadGitHead"/> deliberately does not shell out to git, so it can read which
+    /// commit HEAD points at but never whether the tree matched it at pack time. The script's
+    /// <c>git status --porcelain</c> refusal is therefore the only place the loop can be broken, and
+    /// the assertions below exist so that deleting it is a red test rather than a silent regression.
+    /// WHAT THEY DO NOT PROVE, stated so nobody reads more into a green: they prove the clause is
+    /// PRESENT in the file, not that it runs, not that it is reachable, and not that its exit code is
+    /// honoured. Only running the script over a dirty tree proves that, and a unit test has no packing
+    /// run to observe.
     /// </para>
     /// </summary>
     [Fact]
@@ -211,6 +229,37 @@ public sealed class ReleaseContractTests
                 "passing the flag is the fix, reading it back out of the produced nupkg is the guard; a "
                 + "-p: value has already been observed losing to a cached one, so the pack must verify "
                 + "the bytes it produced rather than trust that the flag took effect");
+
+            // THE DIRTY-TREE CLAUSE IS ASSERTED AGAINST THE SCRIPT'S CODE, NOT ITS FULL TEXT. All three
+            // needles below also occur in the comment block that explains the clause — deliberately, it
+            // is the record of why the clause exists — so asserting over the whole file would let
+            // "delete the code, keep the prose" stay green, and prose is exactly what survives a hasty
+            // revert. Stripping comment lines makes the mutation that matters red. The three assertions
+            // above keep reading the whole file: their needles are code-only today (measured), and
+            // widening this phase into them would edit guards it was not scoped to.
+            var packScriptCode = string.Join(
+                '\n',
+                packScript.Split('\n').Where(line => !line.TrimStart().StartsWith('#')));
+
+            packScriptCode.Should().Contain(
+                "git status --porcelain",
+                "over a dirty tree there is no commit whose tree equals the bytes being packed, so the "
+                + "stamp, the script's own read-back and the assertion below all agree by construction "
+                + "while labelling the packages with a commit that does not contain their source; the "
+                + "pack has to inspect the working tree, which is the one thing this test cannot do");
+
+            packScriptCode.Should().Contain(
+                "ALLOW_DIRTY_PACK",
+                "the refusal needs a named, explicit escape or the next person under time pressure "
+                + "deletes the check instead; an opt-out nobody can spell is an opt-out that becomes a "
+                + "reverted guard");
+
+            packScriptCode.Should().Contain(
+                "-dirty",
+                "the escape must not restore the lie it exists around: a package packed off uncommitted "
+                + "source has to say so in its own stamp rather than borrow its parent commit's good "
+                + "name, and a '-dirty' stamp can never equal a commit id, so the loop below fails it "
+                + "if such a package is ever staged for a release");
 
             // The staged packages, when there are any. `packages/` is gitignored and normally absent, so
             // this half is evidence when it exists and silent when it does not — the assertions above are

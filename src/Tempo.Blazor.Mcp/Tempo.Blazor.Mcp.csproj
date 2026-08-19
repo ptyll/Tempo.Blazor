@@ -8,7 +8,7 @@
 
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Mcp</PackageId>
-    <Version>2.8.18</Version>
+    <Version>2.8.19</Version>
     <Authors>ptyll</Authors>
     <Description>Model Context Protocol (MCP) tools for designing and editing Tempo.Blazor wireframes, diagrams, editor documents and reports with an LLM. Ships tools + storage abstractions only; the host application maps them onto its own MCP server.</Description>
     <PackageTags>blazor;mcp;wireframe;diagram;draw;editor;reporting;reports;ai;llm;tools</PackageTags>

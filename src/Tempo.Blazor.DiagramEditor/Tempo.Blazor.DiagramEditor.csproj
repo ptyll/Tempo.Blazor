@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.DiagramEditor</PackageId>
-    <Version>2.8.18</Version>
+    <Version>2.8.19</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.DiagramEditor</Title>
     <Description>Diagram editor components for Tempo.Blazor, including stencil libraries, templates, import helpers, auto-layout, and diagram canvas interop.</Description>

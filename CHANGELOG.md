@@ -8,6 +8,51 @@
   not green, not a gate) and `Tempo.ReportServer.Api.Tests.MsSql` (27/177, SQL Server missing;
   do not fix). `ReleaseGateFilterTests` keeps the two publish workflows on one filter.
 
+## 2.8.19 - 2026-08-19
+
+Release tooling only. **No component changed**, so a consumer that is happy on 2.8.18 gains nothing by
+upgrading — this release exists so that the *next* one can be trusted.
+
+### Fixed (release evidence)
+
+- **`eng/pack-nuget-packages.sh` packed a dirty tree and certified the result.** The commit stamped
+  into every nuspec came from `git rev-parse HEAD`; the script then re-opened the packages it had just
+  produced and compared the stamp against that same value, and `ReleaseContractTests` compared it
+  against `HEAD` a third time. Over a **dirty** tree all three are the same number, so the equality
+  held **by construction** while the packed bytes came from source that no commit contains. This was
+  not an uncovered case, it was an active false confirmation: measured on 2026-08-18, `packages/` held
+  26 `Tempo.*.2.8.18.nupkg` stamped `commit="d49ede02…"` — which is the 2.8.17 commit — and all three
+  checks reported them good, because HEAD really was d49ede02 while the 2.8.18 content sat uncommitted
+  in the working tree. Those 26 packages then went red on their own the moment the bump was committed
+  and HEAD moved: same bytes, same stamp, opposite verdict. A guard whose answer depends on when you
+  ask it is not measuring the packages.
+
+  The pack now **refuses a dirty tree** rather than labelling it. `ALLOW_DIRTY_PACK=1` is the explicit
+  escape for a deliberate local experiment, and it does not restore the lie — the stamp then ends in
+  `-dirty`, so a package built off uncommitted source says so in its own nuspec instead of borrowing
+  its parent commit's good name. Such a package must never be published or copied into a consumed
+  feed, and it cannot pass unnoticed: `-dirty` equals no commit id, so the test fails it. Nothing
+  changes for CI, which checks out the tag into a clean tree — the blind spot was always the
+  **local** pack, and a local pack is how consuming repositories fill their own NuGet feeds.
+
+  Why a dirty-check and not a better stamp: the defect is not *what* is read but that the label is
+  verified against the source it was minted from. Any replacement inside that loop — SourceLink, a
+  content hash, another way of reading `HEAD` — only moves the tautology. The only thing that breaks
+  it is refusing the situation in which a truthful answer does not exist.
+
+### Internal
+
+- `ReleaseContractTests.PackedPackages_RecordTheCommitTheyWereBuiltFrom` now also asserts that the
+  script *contains* the refusal, using the same read-the-script technique it already applies to
+  `-p:RepositoryCommit=` and `git rev-parse HEAD`. It has to be a text assertion: `ReadGitHead()`
+  deliberately never shells out to git, so the test can read which commit `HEAD` names but never
+  whether the tree matched it at pack time — it cannot measure the state the refusal exists for. The
+  needles are matched against the script's **code** with comment lines stripped, because the same
+  words appear in the comment block that explains the clause, and "delete the code, keep the prose"
+  is what a hasty revert leaves behind. Stated plainly so a green is not over-read: this proves the
+  clause is present, not that it runs, not that its exit code is honoured. Only running the script
+  over a dirty tree proves that.
+
 ## 2.8.18 - 2026-08-18
 
 One behaviour change in `TmDataTable`, and it is a change rather than an addition: **`ShowPagination="false"`

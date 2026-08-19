@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Spreadsheet</PackageId>
-    <Version>2.8.18</Version>
+    <Version>2.8.19</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Spreadsheet</Title>
     <Description>Excel-like spreadsheet components for Tempo.Blazor, including canvas rendering, formula editing, workbook import/export, and spreadsheet interop assets.</Description>

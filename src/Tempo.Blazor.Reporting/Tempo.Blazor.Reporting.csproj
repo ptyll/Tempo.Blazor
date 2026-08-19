@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Reporting</PackageId>
-    <Version>2.8.18</Version>
+    <Version>2.8.19</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Reporting</Title>
     <Description>Blazor reporting components for Tempo Reporting: report viewer, parameter panel, explorer, lightweight designer, embedded sources, and remote Report Server integration.</Description>
