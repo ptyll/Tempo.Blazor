@@ -141,10 +141,39 @@ fi
 # suffix, the comparison below would then fail on every package, and the escape hatch would be dead
 # code that nobody could exercise — which is the state in which a `-dirty` stamp silently stops being
 # produced at all.
+#
+# `|| true` IS WHAT MAKES THE `${stamped:-<none>}` BELOW REACHABLE, and it is the whole point of it.
+# `grep` exits 1 when the nuspec carries no `commit="…"` at all, `set -o pipefail` promotes that to the
+# pipeline's status, and `set -e` then killed the script on the assignment itself — BEFORE the message
+# that names the offending package could be printed. That was never a hole: the run still failed closed
+# with rc=1. It was worse in a quieter way — a fallback written for exactly this case that this case
+# could not reach, i.e. source that says the script reports an unstamped package when it does not.
+#
+# OF THE TWO TREATMENTS THIS ONE IS CHOSEN — make the fallback reachable, rather than delete it — because
+# the useful output here is the NAME of the package that is missing its stamp. A bare rc=1 names nothing,
+# and this loop runs over the whole manifest, so "one of them is unstamped" is not an actionable answer.
+# The refusal below still fires afterwards, so the run remains fail-closed; only the diagnosis improves.
+# WHAT THE `|| true` ALSO SWALLOWS, since it must be said rather than discovered: a genuinely unreadable
+# archive (`unzip` failing) now also yields an empty value instead of aborting. It is still reported by
+# name, counted as mismatched, and the script still exits 1 — but under its OWN message, for the reason
+# in the next paragraph.
+#
+# TWO DIFFERENT FAILURES, TWO DIFFERENT MESSAGES — and they are split because merging them made the
+# script assert something it had not measured. "Records commit '<none>'" is a POSITIVE claim about the
+# package's content: it says the nuspec was read and carried no stamp. When the archive cannot be opened
+# at all, nothing about its content has been established, and reporting the same sentence sends the
+# reader looking for a missing `-p:RepositoryCommit` in a package whose real problem is that it is not
+# readable. The read is therefore done first, on its own, and an empty result is reported as what it is.
 mismatched=0
 while IFS= read -r package; do
-  stamped="$(unzip -p "$package" '*.nuspec' 2>/dev/null \
-    | grep -o 'commit="[^"]*"' | head -n 1 | sed 's/commit="//; s/"//')"
+  nuspec="$(unzip -p "$package" '*.nuspec' 2>/dev/null || true)"
+  if [[ -z "$nuspec" ]]; then
+    echo "Package '$package' could not be read: no .nuspec came out of the archive, so this pack cannot say which commit it records." >&2
+    mismatched=$((mismatched + 1))
+    continue
+  fi
+
+  stamped="$(printf '%s' "$nuspec" | grep -o 'commit="[^"]*"' | head -n 1 | sed 's/commit="//; s/"//' || true)"
   if [[ "$stamped" != "$commit" ]]; then
     echo "Package '$package' records commit '${stamped:-<none>}' but this pack stamped '$commit'." >&2
     mismatched=$((mismatched + 1))

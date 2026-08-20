@@ -1,6 +1,7 @@
 using FluentAssertions.Execution;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Xunit.Abstractions;
 
 namespace Tempo.Blazor.Tests.Packaging;
 
@@ -20,6 +21,13 @@ public sealed class ReleaseContractTests
 {
     /// <summary>The manifest CI publishes from — the repository's own list of what ships.</summary>
     private static readonly string[] ManifestPath = ["eng", "nuget-packages.txt"];
+
+    /// <summary>The pack script both guards below read; named once so the two never drift apart.</summary>
+    private static readonly string[] PackScriptPath = ["eng", "pack-nuget-packages.sh"];
+
+    private readonly ITestOutputHelper _output;
+
+    public ReleaseContractTests(ITestOutputHelper output) => _output = output;
 
     /// <summary>
     /// The packages ship in lockstep, and the number they ship under is the one the changelog announces.
@@ -204,12 +212,36 @@ public sealed class ReleaseContractTests
     /// honoured. Only running the script over a dirty tree proves that, and a unit test has no packing
     /// run to observe.
     /// </para>
+    /// <para>
+    /// WHY THE LOOP REPORTS THE SIZE OF ITS POPULATION, ZERO INCLUDED. The package half is filtered to
+    /// the announced version, and that filter makes the EMPTY case the normal one: the first thing a
+    /// release does is announce the next number, at which point nothing staged carries it any more and
+    /// the loop iterates over nothing. A silent pass over an empty population is byte-for-byte the same
+    /// green as a pass over a full set of correct packages, so "the packages were checked" could never be
+    /// read out of a green run. Every exit writes one line naming the staged total, the release-matching
+    /// population and how many nuspecs were actually opened; when the population is zero the line also
+    /// names the versions that ARE staged, which is the mechanism rather than a restatement of the count.
+    /// THE FILTER ITSELF IS NOT THE DEFECT and is deliberately left alone — see the comment at its site.
+    /// </para>
+    /// <para>
+    /// THE COMMENT PROJECTION BELOW SEES ONLY WHOLE-LINE <c>#</c>, and that condition is asserted here
+    /// rather than left as a remark. Stripping lines whose first non-space character is <c>#</c> leaves a
+    /// TRAILING comment (<c>code # note</c>) in the projected text, so a needle that survived only inside
+    /// such a comment would keep this guard green after its code was deleted. Today there is no trailing
+    /// comment in the script — measured, not assumed — which is why the projection is still sound; the
+    /// assertion makes that precondition SELF-REPORTING instead of an unwatched assumption, so the day
+    /// somebody adds one the guard says so rather than quietly weakening. A precondition is a red; a
+    /// branch is silence. <see cref="FindTrailingComments"/> decides this by OVER-APPROXIMATION: every
+    /// <c>#</c> outside a whole-line comment counts until a named entry in
+    /// <see cref="HashesThatAreNotComments"/> accounts for it, so the exemptions are readable in the
+    /// source and a false green needs a written reason rather than a gap in a parser.
+    /// </para>
     /// </summary>
     [Fact]
     public void PackedPackages_RecordTheCommitTheyWereBuiltFrom()
     {
         var repositoryRoot = FindRepoRoot();
-        var packScript = File.ReadAllText(Path.Combine(repositoryRoot, "eng", "pack-nuget-packages.sh"));
+        var packScript = File.ReadAllText(Path.Combine([repositoryRoot, .. PackScriptPath]));
         var announced = ReadAnnouncedVersion(repositoryRoot);
 
         using (new AssertionScope())
@@ -230,16 +262,33 @@ public sealed class ReleaseContractTests
                 + "-p: value has already been observed losing to a cached one, so the pack must verify "
                 + "the bytes it produced rather than trust that the flag took effect");
 
-            // THE DIRTY-TREE CLAUSE IS ASSERTED AGAINST THE SCRIPT'S CODE, NOT ITS FULL TEXT. All three
-            // needles below also occur in the comment block that explains the clause — deliberately, it
-            // is the record of why the clause exists — so asserting over the whole file would let
-            // "delete the code, keep the prose" stay green, and prose is exactly what survives a hasty
-            // revert. Stripping comment lines makes the mutation that matters red. The three assertions
-            // above keep reading the whole file: their needles are code-only today (measured), and
-            // widening this phase into them would edit guards it was not scoped to.
+            // THE DIRTY-TREE CLAUSE IS ASSERTED AGAINST THE SCRIPT'S CODE, NOT ITS FULL TEXT. Its
+            // needles also occur in the comment block that explains it — deliberately, it is the record
+            // of why the clause exists — so asserting over the whole file would let "delete the code,
+            // keep the prose" stay green, and prose is exactly what survives a hasty revert. Stripping
+            // comment lines makes the mutation that matters red. The assertions above keep reading the
+            // whole file: their needles are code-only today (measured), and widening this phase into
+            // them would edit guards it was not scoped to.
             var packScriptCode = string.Join(
                 '\n',
                 packScript.Split('\n').Where(line => !line.TrimStart().StartsWith('#')));
+
+            // THE PROJECTION'S PRECONDITION, ASSERTED RATHER THAN ASSUMED. The line above removes only
+            // WHOLE-LINE comments, so a trailing one (`code # note`) passes straight through it. The
+            // needles below would then survive inside prose after their code was deleted, which is
+            // the exact mutation this projection exists to catch. The condition it depends on — "this
+            // script has no trailing comments" — was previously a sentence in a review and nothing else;
+            // as an assertion it announces itself the day it stops holding, instead of silently taking
+            // the strength out of the checks underneath. Widening the projection to strip trailing
+            // comments would need a real shell tokeniser in the strip path, so the cheaper and stricter
+            // move is to forbid the shape and exempt only hashes somebody has written a reason for.
+            FindTrailingComments(packScript).Should().BeEmpty(
+                "the comment projection used by the assertions below only removes whole-line '#', so a "
+                + "trailing comment would let 'delete the code, keep the note' stay green. If a line "
+                + "listed here carries a '#' that is NOT a comment, add it to HashesThatAreNotComments "
+                + "with the reason it is not one — the exemption is meant to be a written, reviewable "
+                + "act; otherwise move the note onto its own line. Already exempted: "
+                + DescribeCommentExemptions());
 
             packScriptCode.Should().Contain(
                 "git status --porcelain",
@@ -261,42 +310,81 @@ public sealed class ReleaseContractTests
                 + "name, and a '-dirty' stamp can never equal a commit id, so the loop below fails it "
                 + "if such a package is ever staged for a release");
 
+            // OVER THE SAME PROJECTION, but about the script's read-back rather than its dirty-tree
+            // refusal — kept apart from the ones above so the grouping stays readable.
+            packScriptCode.Should().Contain(
+                "|| true)\"",
+                "the read-back has to survive a nuspec carrying no commit attribute at all: grep exits 1 "
+                + "there, `set -o pipefail` promotes that to the pipeline's status and `set -e` then kills "
+                + "the script on the assignment itself — before the message naming the offending package "
+                + "is ever printed, which is why the '${stamped:-<none>}' fallback written for exactly "
+                + "that case could not be reached by it. WHAT THIS PROVES, said so nobody reads more into "
+                + "a green: the tolerance is PRESENT in the file. That it RUNS was measured by executing "
+                + "the read-back block over a package with no stamp, which a unit test has no pack run to "
+                + "do");
+
             // The staged packages, when there are any. `packages/` is gitignored and normally absent, so
             // this half is evidence when it exists and silent when it does not — the assertions above are
-            // what run unconditionally.
+            // what run unconditionally. "Silent" is the thing the report below removes: every exit from
+            // here on states how big the population was, so a green run never has to be guessed at.
             var staging = Path.Combine(repositoryRoot, "packages");
             if (!Directory.Exists(staging))
             {
+                ReportStagedPopulation(
+                    announced, staged: 0, candidates: 0, inspected: 0,
+                    note: $"no staging directory at '{staging}', so no package was opened");
                 return;
             }
+
+            // NON-RECURSIVE ON PURPOSE, and said out loud because a nested directory of packages is a shape
+            // this staging area has held: EnumerateFiles without SearchOption.AllDirectories never
+            // descends, so nothing nested has ever been part of this population. That is the right
+            // reading — a nested package was staged for some other release and owes this HEAD nothing.
+            var staged = Directory.EnumerateFiles(staging, "*.nupkg")
+                .Where(path => !path.EndsWith(".symbols.nupkg", StringComparison.Ordinal))
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToList();
 
             var head = ReadGitHead(repositoryRoot);
             if (head is null)
             {
+                ReportStagedPopulation(
+                    announced, staged.Count, candidates: 0, inspected: 0,
+                    note: "HEAD could not be read in this layout, so no package could be compared "
+                        + "against it (see ReadGitHead: guessing would fail correct packages)");
                 return;
             }
 
             // ONLY THE PACKAGES THAT CLAIM TO BE THIS RELEASE. The staging directory is not cleaned
-            // between releases by anything except the pack script itself, so it accumulates older
-            // versions — measured here: 26 leftovers from 2.8.7 next to a stray 2.1.1. Those were built
-            // from the commit they say they were, and demanding they match today's HEAD would make the
-            // guard permanently red for a reason that has nothing to do with the release being shipped.
-            // The invariant is "a package that claims version X was built from the commit that IS
-            // version X", so the population is the packages carrying the announced version.
+            // between releases by anything except the pack script itself, so it accumulates packages
+            // from earlier versions. Those were built from the commit they say they were, and demanding
+            // they match today's HEAD would make the guard permanently red for a reason that has nothing
+            // to do with the release being shipped. The invariant is "a package that claims version X was
+            // built from the commit that IS version X", so the population is the packages carrying the
+            // announced version — and THAT is why the size of it is reported: right after a version bump
+            // this filter legitimately matches nothing, and a silent empty sweep is indistinguishable
+            // from a full one.
             var releaseSuffix = "." + announced + ".nupkg";
 
-            foreach (var package in Directory.EnumerateFiles(staging, "*.nupkg")
-                         .Where(path => !path.EndsWith(".symbols.nupkg", StringComparison.Ordinal))
-                         .Where(path => path.EndsWith(releaseSuffix, StringComparison.Ordinal))
-                         .OrderBy(path => path, StringComparer.Ordinal))
+            var candidates = staged
+                .Where(path => path.EndsWith(releaseSuffix, StringComparison.Ordinal))
+                .ToList();
+
+            var inspected = 0;
+            var withoutNuspec = 0;
+
+            foreach (var package in candidates)
             {
                 using var archive = System.IO.Compression.ZipFile.OpenRead(package);
                 var nuspecEntry = archive.Entries.FirstOrDefault(
                     entry => entry.FullName.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase));
                 if (nuspecEntry is null)
                 {
+                    withoutNuspec++;
                     continue;
                 }
+
+                inspected++;
 
                 using var stream = nuspecEntry.Open();
                 var stamped = XDocument.Load(stream)
@@ -310,8 +398,159 @@ public sealed class ReleaseContractTests
                     + "labelled with an older commit sends the next auditor to a tree that does not "
                     + "contain the change it ships");
             }
+
+            ReportStagedPopulation(
+                announced, staged.Count, candidates.Count, inspected,
+                note: candidates.Count == 0
+                    ? "0 candidates — nothing staged carries the announced version; staged instead: "
+                        + DescribeStagedVersions(staged)
+                    : $"{candidates.Count} candidate(s) checked against HEAD {head}"
+                        + (withoutNuspec == 0
+                            ? string.Empty
+                            : $"; {withoutNuspec} carried no .nuspec and were skipped"));
         }
     }
+
+    /// <summary>
+    /// One line per run stating how many packages the staged half actually opened.
+    /// <para>
+    /// WHY IT IS OUTPUT AND NOT AN ASSERTION: an empty population is legitimate — it is the state the
+    /// repository is in from the moment the changelog announces a version nothing has been packed under
+    /// yet — so asserting non-emptiness would make the guard red for the normal case, and a guard that is
+    /// red for a benign reason is one somebody weakens. What was missing was not a rule but EVIDENCE: the
+    /// green carried no way to tell "nothing to check" from "everything checked". The line is written on
+    /// every path the guard RETURNS from, failed assertions included — those are collected by the
+    /// surrounding <c>AssertionScope</c> rather than thrown, so a red run still says how big its
+    /// population was. A thrown exception (an unreadable archive, say) is the one case that skips it,
+    /// and there the exception is the louder signal anyway.
+    /// </para>
+    /// <para>
+    /// WHAT IT DOES NOT PROVE, said plainly so a reader does not borrow more from it: it reports the
+    /// population this run saw. It is not a claim about what CI staged, and it cannot say whether the
+    /// tree matched HEAD at pack time — that remains the pack script's own refusal.
+    /// </para>
+    /// </summary>
+    private void ReportStagedPopulation(
+        string announced, int staged, int candidates, int inspected, string note) =>
+        _output.WriteLine(
+            $"[ReleaseContract] announced={announced} staged-nupkg={staged} "
+            + $"release-matching={candidates} nuspec-inspected={inspected} :: {note}");
+
+    /// <summary>
+    /// The versions actually sitting in the staging directory, as "version xN", so a reported zero names
+    /// the reason it is zero instead of only its size. Deliberately derived from the filenames present at
+    /// the moment of the run rather than written down anywhere: a recorded expectation here would become a
+    /// second home for the release number and would be wrong one bump later.
+    /// </summary>
+    private static string DescribeStagedVersions(IEnumerable<string> stagedPackages)
+    {
+        var groups = stagedPackages
+            .Select(path => Regex.Match(
+                Path.GetFileName(path), @"\.(?<version>\d+\.\d+\.\d+[^\\/]*)\.nupkg$").Groups["version"].Value)
+            .Where(version => version.Length > 0)
+            .GroupBy(version => version, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => $"{group.Key} x{group.Count()}")
+            .ToList();
+
+        return groups.Count == 0 ? "(no versioned .nupkg at all)" : string.Join(", ", groups);
+    }
+
+    /// <summary>
+    /// Lines of a shell script that are not whole-line comments and still carry a <c>#</c> the allow-list
+    /// below does not account for. Returns "line number: line" for each, so a failure names the offender.
+    /// <para>
+    /// THIS IS AN OVER-APPROXIMATION, AND THAT IS THE DESIGN RATHER THAN A SHORTCUT. It replaces a
+    /// quote-tracking scanner that tried to decide, per line, whether a <c>#</c> really opened a comment.
+    /// That scanner was wrong in the one direction an instrument must never be wrong in: a string opened
+    /// on one physical line and closed on the next took its trailing comment with it into silence
+    /// (<c>x='line1⏎line2' # note</c>, and the same with double quotes), and so did <c>$'…\'…' # note</c>
+    /// — all three are real comments to bash and all three came back as "nothing found". A scanner that
+    /// can be silently wrong is worse than a crude one, because its silence is what the assertion reads
+    /// as "the precondition holds".
+    /// </para>
+    /// <para>
+    /// SO THE ASYMMETRY IS BUILT INSTEAD OF PROMISED. Every <c>#</c> outside a whole-line comment is a
+    /// candidate. The only way out is <see cref="HashesThatAreNotComments"/> — named fragments, each
+    /// carrying the reason that particular <c>#</c> is not a word opener — and a line is cleared only
+    /// when NOTHING with a <c>#</c> is left after those fragments are removed from it, so an allow-listed
+    /// line that also grows a real trailing comment is still reported. A false RED stays possible and is
+    /// the intended side: it costs a human one reading and one allow-list entry. A false GREEN now needs
+    /// somebody to add a fragment with a written reason, which is a reviewed act rather than an oversight.
+    /// </para>
+    /// <para>
+    /// WHAT WAS ACTUALLY MEASURED IN THE SCRIPT, stated narrowly because the previous version of this
+    /// remark claimed more than it had looked at: the only <c>#</c> characters outside whole-line comments
+    /// are the two the allow-list names. Line continuations and arithmetic expansions do occur in the
+    /// file; they carry no <c>#</c>, which is why they do not appear here — not because the file lacks
+    /// them.
+    /// </para>
+    /// </summary>
+    internal static IReadOnlyList<string> FindTrailingComments(string script)
+    {
+        var found = new List<string>();
+        var lines = script.Split('\n');
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index].TrimEnd('\r');
+
+            // A whole-line comment is what the projection above already removes, so it is out of scope
+            // here by construction rather than by exemption.
+            if (line.TrimStart().StartsWith('#') || !line.Contains('#', StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            // REMOVED, NOT MATCHED. Testing "does the line contain an allow-listed fragment" would clear
+            // the WHOLE line, so `expected_count=${#projects[@]} # note` would pass — the exemption would
+            // launder a real comment sitting next to an exempt one. Deleting the fragments and asking
+            // whether any '#' survives keeps the exemption scoped to the characters it was granted for.
+            var residue = line;
+            foreach (var (fragment, _) in HashesThatAreNotComments)
+            {
+                residue = residue.Replace(fragment, string.Empty, StringComparison.Ordinal);
+            }
+
+            if (residue.Contains('#', StringComparison.Ordinal))
+            {
+                found.Add($"{index + 1}: {line.Trim()}");
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// The <c>#</c> characters in <c>eng/pack-nuget-packages.sh</c> that are not comment openers, each
+    /// with the reason it is not one. Keyed on the TEXT of the fragment rather than on a line number:
+    /// a list of numbers is wrong the first time anything above it is edited, and it would be wrong
+    /// silently, whereas a fragment that stops occurring simply stops exempting anything.
+    /// <para>
+    /// This is the instrument's off-diagonal left standing in the source. A reader can see exactly what
+    /// the scanner will not flag and why, without re-running a mutation — which is the difference between
+    /// an exemption and a blind spot.
+    /// </para>
+    /// </summary>
+    /// <summary>
+    /// The allow-list rendered for a failure message, which is also the only reason the Reason half of
+    /// each entry exists as DATA rather than as a comment: a reader who has just been handed a red gets
+    /// the exemptions and their justifications in the same breath, and an entry whose reason nobody can
+    /// state is visibly missing rather than quietly absent.
+    /// </summary>
+    private static string DescribeCommentExemptions() => string.Join(
+        "; ",
+        HashesThatAreNotComments.Select(entry => $"'{entry.Fragment}' — {entry.Reason}"));
+
+    private static readonly (string Fragment, string Reason)[] HashesThatAreNotComments =
+    [
+        ("'^[[:space:]]*(#|$)'",
+            "inside a single-quoted ERE handed to grep: it matches the MANIFEST's comment lines, so the "
+            + "'#' is data the script passes on, never a word the shell opens a comment with"),
+        ("${#projects[@]}",
+            "'${#name[@]}' is the array-length parameter expansion; its '#' follows '{' and belongs to "
+            + "the expansion syntax, so it does not open a word and cannot start a comment"),
+    ];
 
     /// <summary>
     /// The version the changelog announces: the first <c>##</c> heading whose text is a semantic version.
