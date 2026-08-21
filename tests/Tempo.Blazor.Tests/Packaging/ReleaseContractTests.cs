@@ -228,6 +228,24 @@ public sealed partial class ReleaseContractTests
     /// says so instead of hiding inside a green. It also says nothing about nuget.org: a number can be
     /// published without a tag ever existing, and only a feed lookup answers that.
     /// </para>
+    /// <para>
+    /// AND THE OTHER CI LANE CANNOT GO RED EITHER, WHICH IS A SECOND REASON AND NOT THE SAME ONE. On a
+    /// tag push the publish workflows take the version they ship FROM the tag
+    /// (<c>${GITHUB_REF#refs/tags/v}</c>), and <c>eng/verify-announced-version.sh</c> refuses a tag
+    /// that disagrees with the changelog — so the subject of the comparison below, <c>v{announced}</c>,
+    /// IS the pushed tag, and the pushed tag names this very HEAD. The check holds by construction
+    /// there. MEASURED 2026-08-21 over three ref stores with the same binary and the same HEAD: a full
+    /// clone with the changelog announcing an already-tagged number went RED
+    /// (<c>tag-commit=714093ce…</c>, <c>visible-tags=77</c>); a <c>--depth 1 --no-tags</c> clone shaped
+    /// like <c>actions/checkout@v4</c> went GREEN over the identical changelog
+    /// (<c>tag-commit=(no such tag)</c>, <c>visible-tags=0</c>); and a tag-push shape with
+    /// <c>v2.8.20</c> at HEAD and all 78 tags visible went GREEN with <c>tag-commit == head</c>. The
+    /// third cell is why <c>fetch-tags: true</c> is not the treatment: it removes the vacuity and
+    /// leaves the tautology, i.e. it changes how informed the step looks without changing what it can
+    /// detect. THIS GUARD'S PLACE IS THE LOCAL RUN BEFORE A RELEASE, over a clone whose ref store has
+    /// both sides of the comparison; the same limit is written into both publish workflows next to
+    /// their test step, because that is where somebody reads a green and concludes it was checked.
+    /// </para>
     /// </summary>
     [Fact]
     public void AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked()

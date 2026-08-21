@@ -82,9 +82,80 @@ jobs:
       #     owner ptyll. Pattern is anchored on the namespace, not a bare substring.
       # Smtp4Dev is NOT an exception: the two Demo.Api tests are in the gate and CI starts
       # smtp4dev as a job service (ports 2525/5000). Keep this filter identical to
-      # publish-nuget-org.yml — ReleaseGateFilterTests enforces both directions.
+      # publish-nuget-org.yml AND to the second lane below — ReleaseGateFilterTests enforces every
+      # occurrence in both files, not just the first one.
+      #
+      # WHAT THIS GATE DOES NOT COVER — THE TAG GUARD, written here because a green gate is otherwise
+      # read as covering everything the suite contains.
+      # `ReleaseContractTests.AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked`
+      # compares the announced version against the tag of that name. IT CANNOT GO RED ON ANY CI LANE
+      # OF THIS WORKFLOW, for two independent reasons, and removing one leaves the other:
+      #   * on a branch push, `actions/checkout@v4` fetches no tags, so the lookup finds nothing —
+      #     and "no such tag" is that guard's PASSING value. It is VACUOUS. Measured 2026-08-21 by
+      #     running the guard itself over a `git clone --depth 1 --no-tags` of this repository with
+      #     the changelog announcing an already-tagged number: RED in a full clone
+      #     (`tag-commit=714093ce…`, `visible-tags=77`), GREEN in the CI-shaped one
+      #     (`tag-commit=(no such tag)`, `visible-tags=0`). Same binary, same HEAD, same changelog;
+      #     the ref store was the only variable.
+      #   * on a tag push, the version being published is taken FROM the tag (see "Set version"), and
+      #     the step below refuses a tag that disagrees with the changelog — so the guard's subject
+      #     `v<announced>` IS the pushed tag, which names this very HEAD. It is TAUTOLOGICAL. Measured
+      #     in the same clone with `v2.8.20` created at HEAD and all 78 tags visible: GREEN, with
+      #     `tag-commit == head`.
+      # `fetch-tags: true` is therefore NOT the treatment: it would remove the first reason and leave
+      # the second, changing how informed this step looks without changing what it can detect.
+      # ITS PLACE IS THE LOCAL RUN BEFORE A RELEASE — `dotnet test` on a machine holding a full clone,
+      # where the ref store carries every v2.8.* tag and the comparison has both sides.
+      # AND THE OVERLAPPING FEED GUARD IS WEAKER HERE THAN IN publish-nuget-org.yml, so it is not a
+      # substitute: `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed` and the refusal in
+      # eng/pack-nuget-packages.sh both ask NUGET.ORG, which is not the feed this workflow pushes to.
+      # For GitHub Packages the only per-number evidence is the push step's own accounting below.
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
+
+      # A SECOND LANE OVER THE SAME BINARIES, DIFFERING IN EXACTLY ONE VARIABLE: the ambient culture.
+      #
+      # THE CLASS OF DEFECT IT EXISTS FOR, measured rather than imagined: a test whose subject is a
+      # PAGE spells English chrome ("Copied", "Active", "Folder permissions") only because it had to
+      # spell something. Under an English or invariant culture such a test is green while measuring
+      # nothing about language; under a Czech one it reads the Czech translation and turns red. Ten
+      # of them were found that way on 2026-08-21 (commit a51e833d) — on a developer machine, because
+      # no workflow set a locale and .NET then resolves the neutral, English table.
+      #
+      # MEASURED 2026-08-21 over ONE build of tests/Tempo.ReportServer.Web.Tests, with one pinned test
+      # unpinned as the mutation:
+      #     LC_ALL=cs_CZ.UTF-8   -> 1 failed / 97 passed  (the mutated test, on its own assertion)
+      #     LC_ALL=C.UTF-8       -> 98 passed             (what this runner did before this lane)
+      #     no LANG/LC_ALL at all-> 98 passed             (a bare runner's shape)
+      # The binaries were identical in all three, so those greens are the blindness itself.
+      # The whole gate is green under this lane. THE COUNTS ARE DELIBERATELY NOT WRITTEN HERE: the
+      # first version of this comment carried them, and they had already rotted by the end of the
+      # round that wrote it — the same round added four guards, so the number it quoted described the
+      # previous tree. The lane prints its own totals on every run, which is the only place they can
+      # stay true. Cost, measured 2026-08-21 on a developer machine: about a minute of extra test
+      # time and no extra build, because this lane reuses the first one's --no-build output.
+      #
+      # THE LOCALE IS SET ON THIS STEP AND NOWHERE ELSE, and the placement is load-bearing: exporting
+      # a locale before `dotnet build` changes the order in which globbed sources are enumerated and
+      # therefore the emitted IL. This lane must differ from the first in what the tests READ, never
+      # in what was compiled — it reuses the same --no-build output, so it cannot.
+      #
+      # cs_CZ DOES NOT HAVE TO EXIST IN THE RUNNER'S glibc. Measured on a box whose `locale -a` lists
+      # four entries and no fr_FR: LC_ALL=fr_FR.UTF-8 still flipped the culture and turned the mutated
+      # test red. .NET reads the variable and resolves through ICU, so this lane is not silently
+      # vacuous on a stock image. The echo prints both variables on every run, so a lane that lost
+      # them says so instead of passing quietly.
+      #
+      # WHAT IT DOES NOT COVER: a defect that needs a THIRD culture — Turkish dotted-I casing, say —
+      # is invisible to both lanes. This closes "assumes the machine speaks English", not
+      # "is culture-sensitive at all".
+      - name: Test (non-English ambient culture)
+        env:
+          LANG: cs_CZ.UTF-8
+          LC_ALL: cs_CZ.UTF-8
+        run: |
+          echo "[locale-lane] LANG=$LANG LC_ALL=$LC_ALL"
+          dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
 
   publish:
     needs: build-and-test
@@ -139,6 +210,18 @@ jobs:
           # (viz job `if:`), takže větev s CI timestampem (main/master push) z build-and-test zde
           # není dosažitelná a záměrně chybí.
 
+      # THE NUMBER BEING PUBLISHED IS COMPARED WITH THE NUMBER BEING ANNOUNCED, and nothing did that
+      # before this step existed. On a tag push VERSION comes from the TAG (above), while the two feed
+      # guards ask about whichever number they were handed — one about the changelog's, one about
+      # $VERSION. The pair csproj ↔ CHANGELOG is clamped by ReleaseContractTests; the pair
+      # TAG ↔ CHANGELOG was clamped by nobody, only by a procedure ("tag after the bump"), and a
+      # procedure is not a gate. Placed BEFORE Build and Build packages so a disagreeing release is
+      # refused before any work, and before any push can be attempted.
+      - name: Verify the version being published is the one the changelog announces
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: bash eng/verify-announced-version.sh
+
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 
@@ -159,16 +242,19 @@ jobs:
             --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
 
-      # Publikujeme balíčky
+      # EVERY PACKAGE GETS ITS OWN VERDICT, and the job is green only when all of them were published.
+      # `--skip-duplicate` (which the script keeps, and keeps for a reason — see its header) answers a
+      # 409 with EXIT 0, so this loop used to report the same green whether 26 packages went out or
+      # none did. The script pushes all 26 regardless of what happens to any one of them — dropping
+      # the flag would abort the rest and ship half a release — then classifies each as PUBLISHED,
+      # SKIPPED, FAILED or UNRESOLVED and fails the job on anything that is not PUBLISHED.
+      # This is also the ONLY per-number evidence this workflow has: the feed guards in the suite ask
+      # nuget.org, not GitHub Packages.
       - name: Push packages to GitHub Packages
-        run: |
-          for pkg in ./packages/*.nupkg; do
-            echo "Publishing $pkg..."
-            dotnet nuget push "$pkg" \
-              --source "github" \
-              --api-key "${{ secrets.GITHUB_TOKEN }}" \
-              --skip-duplicate
-          done
+        env:
+          PUSH_SOURCE: "github"
+          PUSH_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+        run: bash eng/push-nuget-packages.sh
 
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v4
