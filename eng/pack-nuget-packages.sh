@@ -51,15 +51,24 @@ fi
 # published or copied into a consumed feed — `ReleaseContractTests` will fail it if it is staged,
 # because `-dirty` cannot equal any commit id.
 #
-# ONE MEASURED CONSEQUENCE FOR THE LOCAL WORKFLOW, so nobody reads the refusal as a bug: a full
-# `dotnet build -c Release --no-incremental` leaves the tree clean (measured 2026-08-19), but the TEST
-# suite does not — `src/Tempo.Blazor.Demo.Api/diagrams.db` is tracked and the Demo.Api tests write to
-# it. So "run the gate, then pack" refuses until that file is restored. That is the check working, not
-# misfiring: those bytes really are uncommitted. The message below prints `git status` precisely so the
-# offending path is named rather than guessed at. CI is unaffected — the publish job does its own
-# checkout and packs after a BUILD, with no test run in between.
+# WHAT THIS BLOCK NO LONGER SAYS, AND WHY THAT SENTENCE WAS DELETED RATHER THAN REWORDED.
+#
+# This block used to carry a paragraph saying that "run the suite, then pack" legitimately refuses
+# because `src/Tempo.Blazor.Demo.Api/diagrams.db` is tracked and the Demo.Api tests write to it, and
+# that this was the check working rather than misfiring. The refusal was honest — those bytes really
+# were uncommitted — but the paragraph turned a defect into an expected outcome, and a red that has
+# been explained in advance is a red nobody fixes. The write itself is what was wrong: the unit lane
+# is the last one that had not redirected the database (the e2e lane sets `Demo__DiagramsDbPath`
+# already), and committing the churn was ruled out by measurement, six different contents out of one
+# clean base. That lane now redirects too, so the sentence has been removed rather than reworded:
+# there is no longer a routine dirty state for it to describe.
+#
+# The message below still prints `git status`, so whatever DOES turn up is named rather than guessed
+# at. CI is unaffected either way — the publish job does its own checkout and packs after a BUILD,
+# with no test run in between.
 dirty_suffix=""
-if [[ -n "$(git status --porcelain)" ]]; then
+pre_status="$(git status --porcelain)"
+if [[ -n "$pre_status" ]]; then
   if [[ "${ALLOW_DIRTY_PACK:-}" != "1" ]]; then
     echo "Working tree is dirty; no commit describes the bytes about to be packed." >&2
     echo "Commit or stash first, or set ALLOW_DIRTY_PACK=1 to produce packages stamped '-dirty' that must not be published." >&2
@@ -185,4 +194,65 @@ if [[ "$mismatched" -ne 0 ]]; then
   exit 1
 fi
 
-echo "Packed $actual_count NuGet packages into '$output' at commit $commit."
+# THE SAME QUESTION, ASKED AGAIN AFTERWARDS — because the pack is itself a writer.
+#
+# The refusal at the top runs BEFORE the loop and never again, so it can only see dirt that already
+# existed. `dotnet pack` builds targets of its own: `BundleCssFiles` is hooked
+# `BeforeTargets="ResolveProjectStaticWebAssets;GenerateNuspec;Pack"` and writes
+# `src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css`, which is TRACKED. The trigger is WIDER than
+# packing, and saying "the pack writes it" understates it: any BUILD that does not skip that target
+# writes it too. Measured — a plain `dotnet build --no-incremental` defeats the target's
+# `Inputs`/`Outputs` up-to-date check and the bundler runs. That does not make this check redundant, it
+# makes it the only one that sits where nothing else looks: a build's write lands BEFORE the refusal
+# above and shows up as a red it can explain, whereas a pack's write lands after everything and shows
+# up as nothing at all. A pack that regenerates
+# that file with different bytes therefore ships them under a commit stamp minted from a tree that no
+# longer matches — and every check in this script and in ReleaseContractTests would still agree,
+# because all of them were computed before the write. That is the same tautology the dirty-tree
+# refusal exists to break, arriving through the one door that refusal does not cover.
+#
+# The last time this was caught it was caught by a HUMAN running `git status` after the pack. A step
+# somebody remembers is not a gate: the next pack does not inherit it.
+#
+# WHY THE DELTA AND NOT "IS IT DIRTY". Under ALLOW_DIRTY_PACK=1 the tree is legitimately dirty on the
+# way in, so a bare emptiness test would fire on every deliberate local experiment and be turned off.
+# Comparing against the status recorded at the top asks the question this check can actually answer:
+# did the SET OF PATHS GIT REPORTS, and the status letter against each, change while this pack ran. It
+# is also indifferent to WHICH file — the bundle is the known case, but nobody has measured how many
+# other tracked files a build writes, and a check that has to know their names in advance is only as
+# complete as that list.
+#
+# AND THE LIMIT THAT FOLLOWS FROM THAT, which bites in exactly the mode this shape is argued for:
+# `git status --porcelain` reports PATH STATUSES, NOT CONTENT. Over a NON-EMPTY `pre_status` — that is,
+# under ALLOW_DIRTY_PACK=1 — a pack that rewrites an ALREADY-MODIFIED tracked file with different bytes
+# produces a character-identical `post_status`, so this check passes and reports no change. The bundle
+# is precisely such a file: the comment above records that even a plain build rewrites it, so it can
+# already be sitting modified when the loop starts. Over an EMPTY `pre_status` — the only state in
+# which the packages produced here are publishable at all, since anything else is stamped `-dirty` —
+# the check is COMPLETE, because a write to any tracked file has to move it from clean to modified and
+# that is a change in the set.
+#
+# WHY NOT MOVE THE BUNDLE OUT OF THE TREE INSTEAD. That was the other candidate: generate into obj/
+# and take it into the package from there, after which no check afterwards would be needed. It was
+# rejected on measurement, not taste. Five test files read that bundle from its committed location
+# (OrphanClassCssContractTests, CodeEditorWrapStylesheetTests, CssBundleCalcWhitespaceTests,
+# CssBundlerInputSourceTests, TmSignatureCaptureTests), and CssBundleCalcWhitespaceTests asserts on
+# the COMMITTED bundle deliberately — its own doc records that the sources were fine all along, so a
+# guard over them would measure a permanently green population. Moving the file to a directory
+# `Clean` deletes would take those guards with it. And it cures exactly one file while leaving the
+# class open, whereas this check does not need to know the list.
+#
+# The packages are left where they are on failure, on purpose: they are the evidence of what was
+# produced, and deleting them would leave the reader with a message and nothing to inspect.
+post_status="$(git status --porcelain)"
+if [[ "$post_status" != "$pre_status" ]]; then
+  echo "The pack itself modified the working tree; the commit stamped into these packages no longer describes their source." >&2
+  echo "Before the pack:" >&2
+  echo "${pre_status:-(clean)}" >&2
+  echo "After the pack:" >&2
+  echo "${post_status:-(clean)}" >&2
+  echo "Restore or commit the paths above, then pack again. Do not publish the packages in '$output'." >&2
+  exit 1
+fi
+
+echo "Packed $actual_count NuGet packages into '$output' at commit $commit; no path changed status during this pack."

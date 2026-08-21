@@ -290,8 +290,17 @@ public sealed class ReleaseContractTests
     }
 
     /// <summary>
-    /// The pack script passes the commit in, refuses a tree no commit describes, and reads the stamp
-    /// back out of the bytes it produced.
+    /// The pack script passes the commit in, refuses a tree no commit describes, asks that question
+    /// again AFTER packing, and reads the stamp back out of the bytes it produced.
+    /// <para>
+    /// THE ASYMMETRY THAT WAS THERE UNTIL 2026-08-21, and why the fourth clause exists: the refusal
+    /// ran once, before the loop, and nothing asked again afterwards — while the pack is itself a
+    /// writer, because <c>BundleCssFiles</c> is hooked <c>BeforeTargets=…;GenerateNuspec;Pack</c> and
+    /// writes a TRACKED file. So a pack could ship bytes the stamped commit does not contain and
+    /// every check here would still agree, all of them having been computed before that write. The
+    /// hole had been noticed and papered over with a HAND-RUN <c>git status</c> after the pack, which
+    /// is not a gate: the next pack does not inherit somebody's habit.
+    /// </para>
     /// <para>
     /// THE DEFECT THIS EXISTS FOR, measured rather than imagined: the published 2.8.15 nuspec carries
     /// <c>commit="efb00b89…"</c>, which is 2.8.14 — one release behind the content it actually ships. The
@@ -418,6 +427,28 @@ public sealed class ReleaseContractTests
                 + "source has to say so in its own stamp rather than borrow its parent commit's good "
                 + "name, and a '-dirty' stamp can never equal a commit id, so the staged half fails it "
                 + "if such a package is ever staged for a release");
+
+            // THE OTHER END OF THE DIRTY-TREE QUESTION: the pack is itself a writer, so the refusal
+            // above (which runs once, before the loop) cannot see what the pack does. The needle is
+            // the COMPARISON, not merely a second reading of git status: a bare emptiness test after
+            // the loop would fire on every ALLOW_DIRTY_PACK=1 run and be turned off, and a reading
+            // nobody compares is a variable, not a gate.
+            packScriptCode.Should().Contain(
+                "\"$post_status\" != \"$pre_status\"",
+                "dotnet pack runs BundleCssFiles, which writes the tracked file "
+                + "src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css, so a pack can leave the "
+                + "tree different from the one its commit stamp names — and every other check here "
+                + "was computed before that write, so they all agree by construction. Comparing the "
+                + "status after the loop against the one recorded before it asks whether the SET OF "
+                + "PATHS GIT REPORTS changed while the pack ran, and it stays usable under "
+                + "ALLOW_DIRTY_PACK=1 where a bare emptiness test would not. ITS REACH IS NARROWER "
+                + "THAN 'did the pack change the tree': porcelain reports path STATUSES, not "
+                + "content, so over a non-empty pre_status a rewrite of an ALREADY-MODIFIED file "
+                + "leaves the comparison equal. Over an EMPTY pre_status — the only state whose "
+                + "packages are publishable, the rest being stamped -dirty — it is complete. WHAT "
+                + "THIS PROVES: the comparison is PRESENT. That it FIRES was measured by packing "
+                + "over a tree whose bundle sources had been perturbed, which a unit test has no "
+                + "pack run to do");
 
             // OVER THE SAME PROJECTION, but about the script's read-back rather than its dirty-tree
             // refusal — kept apart from the ones above so the grouping stays readable.
