@@ -18,7 +18,7 @@ namespace Tempo.Blazor.Tests.Packaging;
 /// home for a repo-wide invariant, not a new pattern.
 /// </para>
 /// </summary>
-public sealed class ReleaseContractTests
+public sealed partial class ReleaseContractTests
 {
     /// <summary>The manifest CI publishes from — the repository's own list of what ships.</summary>
     private static readonly string[] ManifestPath = ["eng", "nuget-packages.txt"];

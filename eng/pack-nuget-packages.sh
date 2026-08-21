@@ -15,6 +15,67 @@ if [[ ! -f "$manifest" ]]; then
   exit 1
 fi
 
+# THE NUMBER ITSELF HAS TO STILL BE FREE, and this is the last place that can refuse it.
+#
+# THE DEFECT THIS EXISTS FOR, measured rather than imagined: 2.8.19 was announced twice. The published
+# artefact records commit 714093ce; the 26 packages staged locally under the same number record
+# d1c8e776. Two commits behind one version number, and the first artefact is immutable on the feed.
+# Every other check in this script and in ReleaseContractTests was green throughout and was right to
+# be: they compare csproj against CHANGELOG, and each nuspec against HEAD. Neither pair answers "is
+# this number still free", which is the only question a spent number fails.
+#
+# WHY HERE AS WELL AS IN THE SUITE. `ReleaseContractTests.AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed`
+# asks the same question on every test run, which is earlier and cheaper — but it SKIPS when the feed
+# does not answer, because a suite that cannot run offline is a suite that gets run less. This copy
+# REFUSES instead. They are not redundant, they are the same guard with opposite failure modes, placed
+# where each one's failure mode is the affordable one.
+#
+# AND WHY BEFORE THE DIRTY-TREE REFUSAL. A dirty tree is fixable by committing; a spent version number
+# is not fixable at all. Asking the unfixable question first means the answer arrives before any work,
+# and it is also the only ordering in which this check is reachable while the tree is still dirty.
+#
+# TAG, PUT AND AVAILABILITY ARE THREE DIFFERENT QUANTITIES. This asks the third: is the number VISIBLE
+# on the feed. It says nothing about whether a tag exists, and nothing about a push that has completed
+# but not yet propagated — nuget.org serves this index through a CDN, so a green here is not proof that
+# no PUT has happened.
+#
+# THE PACKAGE ID IS READ, NOT WRITTEN. The flat container answers 404 for an id it does not know, so a
+# misspelled id would report every number as free forever. It is taken from the same csproj the publish
+# workflow reads the version out of, and an empty read is a refusal rather than a guess.
+#
+# ALLOW_UNVERIFIED_VERSION=1 is the named escape for packing with no route to the feed. It covers ONLY
+# the case where the question could not be asked; a version the feed answers WITH is refused outright,
+# because there is nothing to escape to.
+package_id="$(sed -n 's/.*<PackageId>\([^<]*\)<\/PackageId>.*/\1/p' src/Tempo.Blazor/Tempo.Blazor.csproj | head -n 1 | tr '[:upper:]' '[:lower:]')"
+if [[ -z "$package_id" ]]; then
+  echo "src/Tempo.Blazor/Tempo.Blazor.csproj carries no <PackageId>; refusing to guess one, because a wrong id makes every version look free." >&2
+  exit 1
+fi
+
+feed_index="https://api.nuget.org/v3-flatcontainer/${package_id}/index.json"
+feed_body="$(curl -sS --max-time 20 -w '\n%{http_code}' "$feed_index" 2>/dev/null || true)"
+feed_status="$(printf '%s' "$feed_body" | tail -n 1)"
+feed_versions="$(printf '%s' "$feed_body" | sed '$d' | grep -o '"[0-9][^"]*"' | wc -l | tr -d ' ' || true)"
+
+# THE REACH CONTROL, and it is not decoration: measured offline, the probe returns nothing and "the
+# announced version is not in the list" comes out TRUE. Status and population are therefore checked
+# BEFORE membership, so a probe that never arrived cannot answer this question at all.
+if [[ "$feed_status" != "200" || "${feed_versions:-0}" -eq 0 ]]; then
+  if [[ "${ALLOW_UNVERIFIED_VERSION:-}" != "1" ]]; then
+    echo "Could not read $feed_index (http '${feed_status:-<none>}', ${feed_versions:-0} versions parsed), so nobody has checked whether $VERSION is already published." >&2
+    echo "A version number that is already on the feed is spent for good, and this is the last step that can refuse it." >&2
+    echo "Fix the connection, or set ALLOW_UNVERIFIED_VERSION=1 to pack without that answer." >&2
+    exit 1
+  fi
+
+  echo "ALLOW_UNVERIFIED_VERSION=1: packing $VERSION without confirming it is still free on $feed_index." >&2
+elif [[ "$(printf '%s' "$feed_body" | grep -cF "\"$VERSION\"" || true)" != "0" ]]; then
+  echo "Version $VERSION is already published on $feed_index; the artefact under that number is immutable and cannot be replaced." >&2
+  echo "Packing it again would ship different bytes under a label consumers have already resolved to something else." >&2
+  echo "Bump CHANGELOG.md and every packable csproj to the next free number; retagging cannot reach what is already on the feed." >&2
+  exit 1
+fi
+
 # THE COMMIT STAMPED INTO THE NUSPEC IS PASSED IN, NOT INHERITED.
 #
 # Measured on 2.8.15: the published nuspec carried commit="efb00b89…", which is 2.8.14 — one
