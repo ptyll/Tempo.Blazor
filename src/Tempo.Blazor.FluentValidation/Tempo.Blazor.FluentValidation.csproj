@@ -10,7 +10,7 @@
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Tempo.Blazor.FluentValidation</PackageId>
-<Version>2.8.19</Version>
+<Version>2.8.20</Version>
     <Authors>ptyll</Authors>
     <Description>FluentValidation integration for Tempo.Blazor component library. Provides FluentValidationValidator component for EditForm and assembly scanning for validator registration.</Description>
     <PackageTags>blazor;fluentvalidation;validation;forms</PackageTags>

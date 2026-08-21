@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.All</PackageId>
-    <Version>2.8.19</Version>
+    <Version>2.8.20</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.All</Title>
     <Description>Compatibility package for Tempo.Blazor that references the core package and split feature packages for applications that want the full component suite.</Description>

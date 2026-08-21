@@ -1,4 +1,5 @@
 using FluentAssertions.Execution;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit.Abstractions;
@@ -170,7 +171,127 @@ public sealed class ReleaseContractTests
     }
 
     /// <summary>
-    /// The commit a package records as its origin must be the commit it was built from.
+    /// The version the changelog announces is either UNTAGGED, or its tag names the commit being packed.
+    /// <para>
+    /// THE DEFECT THIS EXISTS FOR, measured rather than imagined: on 2026-08-21 the changelog announced
+    /// 2.8.19, <c>v2.8.19</c> pointed at <c>714093ce</c> and <c>HEAD</c> was <c>d1c8e776</c> — a second
+    /// minting of a number that had already gone out. The artefact published under 2.8.19 records
+    /// <c>714093ce</c> in its own nuspec; all 26 packages staged locally under the same number record
+    /// <c>d1c8e776</c>. TWO COMMITS BEHIND ONE VERSION NUMBER is the entire defect: the number is the only
+    /// handle a consumer has, and a reused one stops naming a tree.
+    /// </para>
+    /// <para>
+    /// WHAT THIS DELIBERATELY DOES NOT REST ON: that identical <c>src/</c> implies an identical package.
+    /// <c>git diff --name-only v2.8.19 HEAD -- src/</c> is empty here, which is what made the reuse look
+    /// harmless, and the argument runs the other way round rather than being reversed — nobody has a
+    /// controlled measurement of that implication, because the two packages carrying 2.8.19 do not share
+    /// a commit, so <c>src/</c> was never the only thing that differed between them. The guard needs
+    /// neither direction: it compares a tag against a commit and never opens a package.
+    /// </para>
+    /// <para>
+    /// WHY THE TWO GUARDS AROUND IT DO NOT SEE IT — they compare csproj ↔ CHANGELOG and nuspec ↔ HEAD,
+    /// and BOTH those pairs were perfectly consistent while the number was already taken. The pair
+    /// nobody compared is the announced version against the tag of that name, which is the only one
+    /// that answers "is this number still free". That is the whole reason this is a third test and not
+    /// another assertion inside one of them.
+    /// </para>
+    /// <para>
+    /// UNCONDITIONALLY ASSERTED, and the shape is deliberate: there is no state in which the comparison
+    /// below is skipped. The ternary only chooses how the subject is SPELLED — "no such tag" is a value
+    /// like any commit id, not a branch out of the check — so a missing tag is an accepted value rather
+    /// than a silent exit. Nothing here reports a condition to a reader and leaves the enforcing to them.
+    /// </para>
+    /// <para>
+    /// WHY THIS ONE SHELLS OUT TO GIT WHILE <see cref="ReadGitHead"/> DELIBERATELY DOES NOT. That helper
+    /// exists so the staged-package half survives a container with a working tree and no git binary, and
+    /// it can afford to: reading <c>.git/HEAD</c> is a file read. A TAG cannot be resolved that way here —
+    /// this repository's release tags are ANNOTATED (<c>git cat-file -t v2.8.19</c> = <c>tag</c>), so
+    /// <c>refs/tags/v2.8.19</c> holds a tag OBJECT id and peeling it to a commit means inflating a loose
+    /// object or reading a packfile. A guard that gets that wrong reports "no such tag", which is this
+    /// check's PASSING value — the failure mode of a file-only reader here is a false green, so the
+    /// instrument is git itself and its absence is a red rather than a shrug.
+    /// </para>
+    /// <para>
+    /// AND THE LOOKUP IS <c>rev-parse --verify --quiet</c> RATHER THAN <c>rev-list -n1</c>, for the same
+    /// reason. <c>rev-list -n1 v2.8.20</c> exits 128 both when the tag does not exist AND when the
+    /// command was not run inside a repository at all, so the two would be indistinguishable and the
+    /// second would read as "the number is free". <c>rev-parse --verify --quiet</c> separates them by
+    /// exit code — 0 with the commit on stdout, 1 for a ref that is not there, anything else for an
+    /// instrument that did not work — and the third case is asserted, so a broken lookup is a named
+    /// failure. A precondition is a red; a branch is silence.
+    /// </para>
+    /// <para>
+    /// WHAT A GREEN DOES NOT PROVE, stated because the gap is real and cheap to over-read. It sees the
+    /// tags in THIS ref store. <c>actions/checkout@v4</c> fetches at depth 1 and does not fetch tags, so
+    /// on a push to main the CI run has no tags to find and this passes without having looked at
+    /// anything — which is why the line printed on every run names how many tags were visible, so a zero
+    /// says so instead of hiding inside a green. It also says nothing about nuget.org: a number can be
+    /// published without a tag ever existing, and only a feed lookup answers that.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked()
+    {
+        var repositoryRoot = FindRepoRoot();
+        var announced = ReadAnnouncedVersion(repositoryRoot);
+        var tagName = "v" + announced;
+
+        var head = RunGit(repositoryRoot, "rev-parse", "HEAD");
+        var tagLookup = RunGit(
+            repositoryRoot, "rev-parse", "--verify", "--quiet", $"refs/tags/{tagName}^{{commit}}");
+        var tagList = RunGit(repositoryRoot, "tag", "--list");
+
+        // THE POPULATION, ON EVERY RUN INCLUDING A GREEN ONE. "No such tag" is this guard's passing
+        // value, so "no tags at all" produces the same green as "this number is free" — the count is
+        // what tells them apart, and a run in a ref store with zero tags says so in its own output
+        // rather than being reconstructed later from what somebody assumes CI fetches.
+        var visibleTags = tagList.ExitCode == 0
+            ? tagList.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length
+            : -1;
+
+        var found = tagLookup.ExitCode == 0 ? tagLookup.StandardOutput : NoSuchTag;
+
+        _output.WriteLine(
+            $"[ReleaseContract] announced={announced} tag={tagName} tag-commit={found} "
+            + $"head={(head.ExitCode == 0 ? head.StandardOutput : "(git rev-parse HEAD failed)")} "
+            + $"visible-tags={visibleTags} lookup-exit={tagLookup.ExitCode}");
+
+        using (new AssertionScope())
+        {
+            announced.Should().NotBeEmpty(
+                "the changelog must open with the version being released, or there is no number to ask "
+                + "the tag store about");
+
+            head.ExitCode.Should().Be(
+                0,
+                "the commit being packed is the other half of this comparison, so a HEAD that cannot be "
+                + $"read is a failed check rather than a skipped one (git said: {Describe(head)})");
+
+            tagLookup.ExitCode.Should().BeOneOf(
+                [0, 1],
+                "0 means the tag resolved and 1 means it is not in this ref store; any other status is "
+                + "the lookup itself failing, and letting that count as 'the tag is absent' would turn a "
+                + $"broken instrument into this guard's passing answer (git said: {Describe(tagLookup)})");
+
+            // ONE COMPARISON, NO BRANCH. The subject is what `v<announced>` names right now; the two
+            // acceptable values are "nothing" and "this HEAD". Written as strings rather than as a
+            // nullable commit so the failure message names the TAG, the commit it is stuck on and the
+            // commit it would have to name — the three things somebody staring at a red needs, and the
+            // three a bare "expected null" would not give them.
+            $"{tagName} -> {found}".Should().BeOneOf(
+                [$"{tagName} -> {NoSuchTag}", $"{tagName} -> {head.StandardOutput}"],
+                "a released version number is spent: the tag already names a tree, and the artefact "
+                + "published under it is immutable on the feed, so re-announcing that number ships "
+                + "different bytes under a label that points somewhere else. Either this tag does not "
+                + "exist yet, or it is this very commit being re-packed. If it names another commit, "
+                + "bump the changelog and every packable csproj to the next free number — retagging "
+                + "cannot reach what is already on the feed");
+        }
+    }
+
+    /// <summary>
+    /// The pack script passes the commit in, refuses a tree no commit describes, and reads the stamp
+    /// back out of the bytes it produced.
     /// <para>
     /// THE DEFECT THIS EXISTS FOR, measured rather than imagined: the published 2.8.15 nuspec carries
     /// <c>commit="efb00b89…"</c>, which is 2.8.14 — one release behind the content it actually ships. The
@@ -187,23 +308,22 @@ public sealed class ReleaseContractTests
     /// PREVIOUS commit there.
     /// </para>
     /// <para>
-    /// WHY THIS GUARD READS THE SCRIPT AND THE PACKAGES, AND NOT ONLY THE PACKAGES: a unit test cannot
-    /// observe "the commit at the moment of packing", and the staging directory is usually empty on a
-    /// developer machine, so a packages-only assertion would pass vacuously exactly when it matters least
-    /// and would give a false sense of coverage. The always-running half is therefore the CONTRACT — the
-    /// pack script must pass the commit in, refuse to pack a tree no commit describes, and verify the
-    /// stamp back out of the produced bytes. The second half checks any package that happens to be
-    /// staged, which is what turns a stale local pack red.
+    /// WHY THE CONTRACT IS READ OUT OF THE SCRIPT AT ALL: a unit test cannot observe "the commit at the
+    /// moment of packing". This half is therefore the always-running one and it is a TEXT assertion by
+    /// necessity, not by preference — it is separated from
+    /// <see cref="PackedPackages_RecordTheCommitTheyWereBuiltFrom"/> because that one measures a
+    /// population that is usually empty, and one <c>[Fact]</c> holding both meant the unconditional
+    /// half's green and the empty half's green were the same green.
     /// </para>
     /// <para>
-    /// WHY THE DIRTY-TREE CLAUSE IS ASSERTED AS SCRIPT TEXT AND NOT MEASURED: the equality this test
-    /// checks below is a TAUTOLOGY over a dirty tree, and so are the pack script's own two halves —
+    /// WHY THE DIRTY-TREE CLAUSE IS ASSERTED AS SCRIPT TEXT AND NOT MEASURED: the equality the other
+    /// test checks is a TAUTOLOGY over a dirty tree, and so are the pack script's own two halves —
     /// all three read the same HEAD, so all three agree by construction while the packed bytes come
     /// from source no commit contains. This was not silence but an active false confirmation: on
     /// 2026-08-18 the staging directory held 26 <c>Tempo.*.2.8.18.nupkg</c> stamped
-    /// <c>commit="d49ede02…"</c> (2.8.17) and the loop below certified every one of them, because HEAD
-    /// really was d49ede02 while the 2.8.18 content sat uncommitted. This test cannot escape that on
-    /// its own: <see cref="ReadGitHead"/> deliberately does not shell out to git, so it can read which
+    /// <c>commit="d49ede02…"</c> (2.8.17) and the loop certified every one of them, because HEAD
+    /// really was d49ede02 while the 2.8.18 content sat uncommitted. The tests cannot escape that on
+    /// their own: <see cref="ReadGitHead"/> deliberately does not shell out to git, so it can read which
     /// commit HEAD points at but never whether the tree matched it at pack time. The script's
     /// <c>git status --porcelain</c> refusal is therefore the only place the loop can be broken, and
     /// the assertions below exist so that deleting it is a red test rather than a silent regression.
@@ -211,17 +331,6 @@ public sealed class ReleaseContractTests
     /// PRESENT in the file, not that it runs, not that it is reachable, and not that its exit code is
     /// honoured. Only running the script over a dirty tree proves that, and a unit test has no packing
     /// run to observe.
-    /// </para>
-    /// <para>
-    /// WHY THE LOOP REPORTS THE SIZE OF ITS POPULATION, ZERO INCLUDED. The package half is filtered to
-    /// the announced version, and that filter makes the EMPTY case the normal one: the first thing a
-    /// release does is announce the next number, at which point nothing staged carries it any more and
-    /// the loop iterates over nothing. A silent pass over an empty population is byte-for-byte the same
-    /// green as a pass over a full set of correct packages, so "the packages were checked" could never be
-    /// read out of a green run. Every exit writes one line naming the staged total, the release-matching
-    /// population and how many nuspecs were actually opened; when the population is zero the line also
-    /// names the versions that ARE staged, which is the mechanism rather than a restatement of the count.
-    /// THE FILTER ITSELF IS NOT THE DEFECT and is deliberately left alone — see the comment at its site.
     /// </para>
     /// <para>
     /// THE COMMENT PROJECTION BELOW SEES ONLY WHOLE-LINE <c>#</c>, and that condition is asserted here
@@ -238,11 +347,10 @@ public sealed class ReleaseContractTests
     /// </para>
     /// </summary>
     [Fact]
-    public void PackedPackages_RecordTheCommitTheyWereBuiltFrom()
+    public void PackScript_PassesTheCommitIn_RefusesADirtyTree_AndVerifiesTheStampBackOut()
     {
         var repositoryRoot = FindRepoRoot();
         var packScript = File.ReadAllText(Path.Combine([repositoryRoot, .. PackScriptPath]));
-        var announced = ReadAnnouncedVersion(repositoryRoot);
 
         using (new AssertionScope())
         {
@@ -293,9 +401,10 @@ public sealed class ReleaseContractTests
             packScriptCode.Should().Contain(
                 "git status --porcelain",
                 "over a dirty tree there is no commit whose tree equals the bytes being packed, so the "
-                + "stamp, the script's own read-back and the assertion below all agree by construction "
-                + "while labelling the packages with a commit that does not contain their source; the "
-                + "pack has to inspect the working tree, which is the one thing this test cannot do");
+                + "stamp, the script's own read-back and the assertion in the staged half all agree by "
+                + "construction while labelling the packages with a commit that does not contain their "
+                + "source; the pack has to inspect the working tree, which is the one thing a unit test "
+                + "cannot do");
 
             packScriptCode.Should().Contain(
                 "ALLOW_DIRTY_PACK",
@@ -307,7 +416,7 @@ public sealed class ReleaseContractTests
                 "-dirty",
                 "the escape must not restore the lie it exists around: a package packed off uncommitted "
                 + "source has to say so in its own stamp rather than borrow its parent commit's good "
-                + "name, and a '-dirty' stamp can never equal a commit id, so the loop below fails it "
+                + "name, and a '-dirty' stamp can never equal a commit id, so the staged half fails it "
                 + "if such a package is ever staged for a release");
 
             // OVER THE SAME PROJECTION, but about the script's read-back rather than its dirty-tree
@@ -322,58 +431,79 @@ public sealed class ReleaseContractTests
                 + "a green: the tolerance is PRESENT in the file. That it RUNS was measured by executing "
                 + "the read-back block over a package with no stamp, which a unit test has no pack run to "
                 + "do");
+        }
+    }
 
-            // The staged packages, when there are any. `packages/` is gitignored and normally absent, so
-            // this half is evidence when it exists and silent when it does not — the assertions above are
-            // what run unconditionally. "Silent" is the thing the report below removes: every exit from
-            // here on states how big the population was, so a green run never has to be guessed at.
-            var staging = Path.Combine(repositoryRoot, "packages");
-            if (!Directory.Exists(staging))
-            {
-                ReportStagedPopulation(
-                    announced, staged: 0, candidates: 0, inspected: 0,
-                    note: $"no staging directory at '{staging}', so no package was opened");
-                return;
-            }
+    /// <summary>
+    /// A package staged under the announced version records the commit it was built from.
+    /// <para>
+    /// This is the half that reads the produced bytes. <c>packages/</c> is gitignored and normally
+    /// absent, and even when it exists the population is filtered to the announced version — so it is
+    /// evidence when there is something to check and NOTHING when there is not. The contract half that
+    /// runs on every machine is
+    /// <see cref="PackScript_PassesTheCommitIn_RefusesADirtyTree_AndVerifiesTheStampBackOut"/>.
+    /// </para>
+    /// <para>
+    /// WHY AN EMPTY POPULATION IS A SKIP AND NOT A PASS. The filter makes the empty case the NORMAL one:
+    /// the first thing a release does is announce the next number, at which point nothing staged carries
+    /// it any more. A pass over nothing was byte-for-byte the same green as a pass over 26 correct
+    /// packages, so "the packages were checked" could never be read out of a green run. The previous
+    /// treatment wrote the population size to test output on every exit, which put the evidence somewhere
+    /// nothing holds it: deleting that one line — or the method behind it — left every assertion green,
+    /// so the report was a claim about the run that the run did not enforce. The OUTCOME carries it now.
+    /// An empty population is reported as SKIPPED, which is a third result in the .trx and in every
+    /// runner, so "nothing was checked" can no longer arrive dressed as "everything was checked".
+    /// </para>
+    /// <para>
+    /// AND THE SIZE OF THAT FIX, said plainly rather than inflated: the old shape did not state anything
+    /// FALSE. It stated nothing — the loss was evidence, not truth — which makes this a weaker instance
+    /// of vacuous green than the ones that certify something. It removes an outcome two different states
+    /// shared. It does not make this half run any more often, it does not widen what it looks at, and a
+    /// skip here is not a defect: it is the repository's ordinary state between a bump and a pack.
+    /// </para>
+    /// <para>
+    /// THE SKIP IS DECIDED AT DISCOVERY, BY <see cref="StagedPackagesFactAttribute"/>, AND THAT IS NOT A
+    /// PREFERENCE. xUnit v2 has no runtime skip at all: <c>Assert.Skip</c> is not in
+    /// <c>xunit.assert 2.9.3</c>'s <c>Assert</c>, and the <c>$XunitDynamicSkip$</c> protocol its
+    /// <c>SkipException</c> speaks has zero occurrences in <c>xunit.execution.dotnet.dll</c> of the same
+    /// version — measured with the same tool that finds <c>SkipReason</c> there five times, so the zero
+    /// is a reading and not a silence. The only skip this runner honours is the one an attribute names
+    /// during discovery, so the population has to be surveyed twice: once to decide, once to assert over.
+    /// <see cref="ReleaseStagingSurvey.Take"/> is that one survey, called from both places, so the two
+    /// can disagree about the world changing underneath them but never about what the rule is.
+    /// </para>
+    /// <para>
+    /// THE FIRST ASSERTION IN THE BODY IS A TRIPWIRE, NOT THE RULE — and it is the reason the skip cannot
+    /// be quietly downgraded. Swap the attribute back to a plain <c>[Fact]</c> and the body starts
+    /// running over the empty population, where
+    /// <see cref="ReleaseStagingSurvey.NothingCouldBeOpened"/> is non-null and that assertion goes RED.
+    /// So the two shapes are skip and red; the pass over nothing is not reachable from either. It also
+    /// covers the case the double survey creates on its own: a <c>packages/</c> that changed between
+    /// discovery and execution is a named failure rather than a loop over zero.
+    /// </para>
+    /// <para>
+    /// THE FILTER ITSELF IS NOT THE DEFECT and is deliberately left alone — see the comment at its site.
+    /// WHAT A GREEN HERE STILL DOES NOT PROVE: that the tree matched HEAD at pack time. That remains the
+    /// pack script's own refusal, and <see cref="ReadGitHead"/> cannot see it.
+    /// </para>
+    /// </summary>
+    [StagedPackagesFact]
+    public void PackedPackages_RecordTheCommitTheyWereBuiltFrom()
+    {
+        var survey = ReleaseStagingSurvey.Take();
+        var inspected = 0;
+        var withoutNuspec = 0;
 
-            // NON-RECURSIVE ON PURPOSE, and said out loud because a nested directory of packages is a shape
-            // this staging area has held: EnumerateFiles without SearchOption.AllDirectories never
-            // descends, so nothing nested has ever been part of this population. That is the right
-            // reading — a nested package was staged for some other release and owes this HEAD nothing.
-            var staged = Directory.EnumerateFiles(staging, "*.nupkg")
-                .Where(path => !path.EndsWith(".symbols.nupkg", StringComparison.Ordinal))
-                .OrderBy(path => path, StringComparer.Ordinal)
-                .ToList();
+        using (new AssertionScope())
+        {
+            survey.NothingCouldBeOpened.Should().BeNull(
+                "this test only runs when there is something staged to open — StagedPackagesFactAttribute "
+                + "skips it otherwise. Reaching here with an empty population means either the attribute "
+                + "was removed, which would turn 'nothing was checked' back into a pass, or the staging "
+                + "directory changed between discovery and execution, which makes the run's population "
+                + "unknown rather than empty");
 
-            var head = ReadGitHead(repositoryRoot);
-            if (head is null)
-            {
-                ReportStagedPopulation(
-                    announced, staged.Count, candidates: 0, inspected: 0,
-                    note: "HEAD could not be read in this layout, so no package could be compared "
-                        + "against it (see ReadGitHead: guessing would fail correct packages)");
-                return;
-            }
-
-            // ONLY THE PACKAGES THAT CLAIM TO BE THIS RELEASE. The staging directory is not cleaned
-            // between releases by anything except the pack script itself, so it accumulates packages
-            // from earlier versions. Those were built from the commit they say they were, and demanding
-            // they match today's HEAD would make the guard permanently red for a reason that has nothing
-            // to do with the release being shipped. The invariant is "a package that claims version X was
-            // built from the commit that IS version X", so the population is the packages carrying the
-            // announced version — and THAT is why the size of it is reported: right after a version bump
-            // this filter legitimately matches nothing, and a silent empty sweep is indistinguishable
-            // from a full one.
-            var releaseSuffix = "." + announced + ".nupkg";
-
-            var candidates = staged
-                .Where(path => path.EndsWith(releaseSuffix, StringComparison.Ordinal))
-                .ToList();
-
-            var inspected = 0;
-            var withoutNuspec = 0;
-
-            foreach (var package in candidates)
+            foreach (var package in survey.Candidates)
             {
                 using var archive = System.IO.Compression.ZipFile.OpenRead(package);
                 var nuspecEntry = archive.Entries.FirstOrDefault(
@@ -393,36 +523,171 @@ public sealed class ReleaseContractTests
                     ?.Attribute("commit")?.Value;
 
                 stamped.Should().Be(
-                    head,
+                    survey.Head,
                     $"{Path.GetFileName(package)} must record the commit it was built from; a package "
                     + "labelled with an older commit sends the next auditor to a tree that does not "
                     + "contain the change it ships");
             }
 
-            ReportStagedPopulation(
-                announced, staged.Count, candidates.Count, inspected,
-                note: candidates.Count == 0
-                    ? "0 candidates — nothing staged carries the announced version; staged instead: "
-                        + DescribeStagedVersions(staged)
-                    : $"{candidates.Count} candidate(s) checked against HEAD {head}"
-                        + (withoutNuspec == 0
-                            ? string.Empty
-                            : $"; {withoutNuspec} carried no .nuspec and were skipped"));
+            // THE OTHER WAY THIS HALF COULD PASS WITHOUT CHECKING ANYTHING, closed here rather than
+            // reported. A candidate whose archive carries no .nuspec is counted and skipped by the loop
+            // above, so a non-empty population made entirely of such files runs ZERO assertions,
+            // leaves NothingCouldBeOpened null — the tripwire is about an EMPTY population and cannot
+            // see this — and passes with nuspec-inspected=0. That is the same silent pass over a
+            // non-empty population this whole test was reshaped to remove, arriving through the one
+            // door the skip does not cover.
+            withoutNuspec.Should().Be(
+                0,
+                $"{survey.Candidates.Count} package(s) claim to be this release, so every one of them "
+                + "must be openable and carry the nuspec its commit stamp lives in; a candidate without "
+                + "one is not a package that passed the check, it is a package the check could not read");
+
+            // INSIDE THE SCOPE, so a red run still says how big its population was: failures above are
+            // collected rather than thrown. On this path the line is a convenience and not the evidence —
+            // the assertions are, which is the whole difference from the shape this replaced.
+            _output.WriteLine(DescribeStagedPopulation(
+                survey.Announced, survey.Staged.Count, survey.Candidates.Count, inspected,
+                note: $"{survey.Candidates.Count} candidate(s) checked against HEAD {survey.Head}"
+                    + (withoutNuspec == 0
+                        ? string.Empty
+                        : $"; {withoutNuspec} carried no .nuspec and were skipped")));
         }
     }
 
     /// <summary>
-    /// One line per run stating how many packages the staged half actually opened.
+    /// Marks the staged-package guard as SKIPPED when there is no package for it to open.
     /// <para>
-    /// WHY IT IS OUTPUT AND NOT AN ASSERTION: an empty population is legitimate — it is the state the
-    /// repository is in from the moment the changelog announces a version nothing has been packed under
-    /// yet — so asserting non-emptiness would make the guard red for the normal case, and a guard that is
-    /// red for a benign reason is one somebody weakens. What was missing was not a rule but EVIDENCE: the
-    /// green carried no way to tell "nothing to check" from "everything checked". The line is written on
-    /// every path the guard RETURNS from, failed assertions included — those are collected by the
-    /// surrounding <c>AssertionScope</c> rather than thrown, so a red run still says how big its
-    /// population was. A thrown exception (an unreadable archive, say) is the one case that skips it,
-    /// and there the exception is the louder signal anyway.
+    /// <c>FactAttribute.Skip</c> is virtual and xUnit v2 reads it through
+    /// <c>ReflectionAttributeInfo.GetNamedArgument</c>, which calls the property getter on a real
+    /// instance rather than reading the attribute blob — so an overridden getter is the supported way to
+    /// decide a skip from the environment, and in this runner it is the ONLY way (see the remark on the
+    /// test itself for what was measured about dynamic skip).
+    /// </para>
+    /// <para>
+    /// A BROKEN PROBE MUST NEVER BECOME A SKIP, which is why the catch returns null rather than a reason.
+    /// Null means "do not skip", so an exception in the survey hands the test to the runner, where the
+    /// same exception will be thrown again inside the body and reported as a failure with its stack. The
+    /// opposite treatment — skip on error — would make every future breakage in this file look like the
+    /// repository's ordinary between-releases state.
+    /// </para>
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class StagedPackagesFactAttribute : FactAttribute
+    {
+        public override string? Skip
+        {
+            get
+            {
+                try
+                {
+                    return ReleaseStagingSurvey.Take().NothingCouldBeOpened;
+                }
+#pragma warning disable CA1031 // see the remark above: any failure here must NOT read as "skip"
+                catch (Exception)
+#pragma warning restore CA1031
+                {
+                    return null;
+                }
+            }
+
+            set => base.Skip = value;
+        }
+    }
+
+    /// <summary>
+    /// What the staging directory holds right now, surveyed once and read by both the skip decision and
+    /// the assertions. One method rather than two so the attribute and the test can never be measuring
+    /// different populations by different rules.
+    /// </summary>
+    /// <param name="Announced">The version the changelog announces, which is what the filter is keyed on.</param>
+    /// <param name="Staged">Every non-symbol package in the staging directory, whatever version it carries.</param>
+    /// <param name="Candidates">The subset claiming the announced version — the population that gets opened.</param>
+    /// <param name="Head">The commit the packages are compared against, or null when the layout hides it.</param>
+    /// <param name="NothingCouldBeOpened">
+    /// The reason there is nothing to check, already formatted as the report line, or null when there is.
+    /// Null is the only value that lets the guard run.
+    /// </param>
+    internal sealed record ReleaseStagingSurvey(
+        string Announced,
+        IReadOnlyList<string> Staged,
+        IReadOnlyList<string> Candidates,
+        string? Head,
+        string? NothingCouldBeOpened)
+    {
+        internal static ReleaseStagingSurvey Take()
+        {
+            var repositoryRoot = FindRepoRoot();
+            var announced = ReadAnnouncedVersion(repositoryRoot);
+            var staging = Path.Combine(repositoryRoot, "packages");
+            var stagingExists = Directory.Exists(staging);
+
+            // NON-RECURSIVE ON PURPOSE, and said out loud because a nested directory of packages is a
+            // shape this staging area has held: EnumerateFiles without SearchOption.AllDirectories never
+            // descends, so nothing nested has ever been part of this population. That is the right
+            // reading — a nested package was staged for some other release and owes this HEAD nothing.
+            var staged = stagingExists
+                ? Directory.EnumerateFiles(staging, "*.nupkg")
+                    .Where(path => !path.EndsWith(".symbols.nupkg", StringComparison.Ordinal))
+                    .OrderBy(path => path, StringComparer.Ordinal)
+                    .ToList()
+                : [];
+
+            var head = ReadGitHead(repositoryRoot);
+
+            // ONLY THE PACKAGES THAT CLAIM TO BE THIS RELEASE. The staging directory is not cleaned
+            // between releases by anything except the pack script itself, so it accumulates packages
+            // from earlier versions. Those were built from the commit they say they were, and demanding
+            // they match today's HEAD would make the guard permanently red for a reason that has nothing
+            // to do with the release being shipped. The invariant is "a package that claims version X was
+            // built from the commit that IS version X", so the population is the packages carrying the
+            // announced version — and THAT is why an empty one skips: right after a version bump this
+            // filter legitimately matches nothing, and a silent empty sweep is indistinguishable from a
+            // full one.
+            var releaseSuffix = "." + announced + ".nupkg";
+
+            var candidates = staged
+                .Where(path => path.EndsWith(releaseSuffix, StringComparison.Ordinal))
+                .ToList();
+
+            // THE THREE WAYS THERE IS NOTHING TO OPEN, each keeping its own sentence. They are ordered
+            // from the outermost cause inwards so the reason names the first thing that was missing
+            // rather than the last thing that failed because of it.
+            string? nothingCouldBeOpened = null;
+            if (!stagingExists)
+            {
+                nothingCouldBeOpened = DescribeStagedPopulation(
+                    announced, staged: 0, candidates: 0, inspected: 0,
+                    note: $"no staging directory at '{staging}', so no package was opened");
+            }
+            else if (head is null)
+            {
+                nothingCouldBeOpened = DescribeStagedPopulation(
+                    announced, staged.Count, candidates.Count, inspected: 0,
+                    note: "HEAD could not be read in this layout, so no package could be compared "
+                        + "against it (see ReadGitHead: guessing would fail correct packages)");
+            }
+            else if (candidates.Count == 0)
+            {
+                nothingCouldBeOpened = DescribeStagedPopulation(
+                    announced, staged.Count, candidates: 0, inspected: 0,
+                    note: "0 candidates — nothing staged carries the announced version; staged instead: "
+                        + DescribeStagedVersions(staged));
+            }
+
+            return new ReleaseStagingSurvey(announced, staged, candidates, head, nothingCouldBeOpened);
+        }
+    }
+
+    /// <summary>
+    /// One line stating how many packages the staged half actually opened, used as the reason a run is
+    /// SKIPPED and as the note a run that asserted writes out.
+    /// <para>
+    /// IT IS A STRING RATHER THAN A WRITE, and that is the difference between this and what it replaced.
+    /// The old method wrote to <see cref="ITestOutputHelper"/> and returned; deleting the call left the
+    /// test green, so the population report was carried by nothing. Returning the sentence lets
+    /// <see cref="StagedPackagesFactAttribute"/> hand it to the runner as a SKIP REASON, where it becomes
+    /// part of an outcome instead of part of a log — and an outcome is the thing a runner, a .trx and a
+    /// reviewer all read without being asked to.
     /// </para>
     /// <para>
     /// WHAT IT DOES NOT PROVE, said plainly so a reader does not borrow more from it: it reports the
@@ -430,11 +695,10 @@ public sealed class ReleaseContractTests
     /// tree matched HEAD at pack time — that remains the pack script's own refusal.
     /// </para>
     /// </summary>
-    private void ReportStagedPopulation(
+    private static string DescribeStagedPopulation(
         string announced, int staged, int candidates, int inspected, string note) =>
-        _output.WriteLine(
-            $"[ReleaseContract] announced={announced} staged-nupkg={staged} "
-            + $"release-matching={candidates} nuspec-inspected={inspected} :: {note}");
+        $"[ReleaseContract] announced={announced} staged-nupkg={staged} "
+        + $"release-matching={candidates} nuspec-inspected={inspected} :: {note}";
 
     /// <summary>
     /// The versions actually sitting in the staging directory, as "version xN", so a reported zero names
@@ -561,6 +825,72 @@ public sealed class ReleaseContractTests
             @"^##\s*(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?(?:\+[0-9A-Za-z][0-9A-Za-z.-]*)?)",
             RegexOptions.Multiline)
         .Groups["version"].Value;
+
+    /// <summary>
+    /// How an absent tag is SPELLED in the comparison above. A named constant because it appears as the
+    /// subject and as one of the accepted values, and two literals that must stay identical are one
+    /// typo away from a check that can never pass.
+    /// </summary>
+    private const string NoSuchTag = "(no such tag)";
+
+    /// <summary>
+    /// A git invocation rendered for a failure message: the status and whatever the command said. Used
+    /// only in <c>because</c> arguments, so a red reports what the instrument reported rather than
+    /// leaving the reader to re-run it.
+    /// </summary>
+    private static string Describe((int ExitCode, string StandardOutput, string StandardError) result) =>
+        $"exit {result.ExitCode}"
+        + (result.StandardOutput.Length == 0 ? string.Empty : $", stdout '{result.StandardOutput}'")
+        + (result.StandardError.Length == 0 ? string.Empty : $", stderr '{result.StandardError}'");
+
+    /// <summary>
+    /// Runs git in the repository and hands back status and both streams, trimmed.
+    /// <para>
+    /// NOTHING IS SWALLOWED HERE. A missing git binary throws out of <c>Process.Start</c> and the test
+    /// errors, which is the intended outcome: this file's tag guard has no meaning without git, and a
+    /// caught exception folded into "the tag is absent" would be its passing value. The status is
+    /// RETURNED rather than asserted so each caller can say which statuses are meaningful for the
+    /// question it is asking.
+    /// </para>
+    /// <para>
+    /// Arguments go through <see cref="ProcessStartInfo.ArgumentList"/>, not a joined string, so a ref
+    /// name is never re-parsed by a shell — the peel suffix <c>^{commit}</c> alone would be mangled by
+    /// one. Both streams are read BEFORE the wait, because waiting first deadlocks as soon as either
+    /// pipe fills and <c>git tag --list</c> here is already 77 lines.
+    /// </para>
+    /// <para>
+    /// NOT A NEW PATTERN IN THIS REPOSITORY: <c>BaselineWriteSweep.TrackedScreenshotPaths</c> spawns
+    /// <c>git ls-files</c> the same way, down to <c>ArgumentList</c> and the redirected streams. The
+    /// difference is what a failure means — there a non-zero status throws, here it is returned, because
+    /// "the ref is not present" is a legitimate answer that shares its channel with "the lookup broke".
+    /// </para>
+    /// </summary>
+    private static (int ExitCode, string StandardOutput, string StandardError) RunGit(
+        string repositoryRoot, params string[] arguments)
+    {
+        var startInfo = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = repositoryRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("git could not be started to resolve the release tag.");
+
+        var standardOutput = process.StandardOutput.ReadToEnd();
+        var standardError = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        return (process.ExitCode, standardOutput.Trim(), standardError.Trim());
+    }
 
     /// <summary>
     /// Reads <c>HEAD</c> without shelling out to git, so the guard works in a container that has the

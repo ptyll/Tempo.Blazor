@@ -1,12 +1,75 @@
 # Changelog
 
-## Unreleased
+## 2.8.20 - 2026-08-21
+
+Release tooling only. **No component changed**, so a consumer that is happy on 2.8.19 gains nothing by
+upgrading. This number exists because the previous one was minted twice and nothing in the repository
+could say so.
+
+### Fixed (release evidence)
+
+- **The version being announced was never compared against the tag store.** `v2.8.19` resolves to
+  `714093ce` and the published `tempo.blazor.2.8.19.nupkg` records that same commit in its own nuspec;
+  every one of the 26 packages staged locally under that number records `d1c8e776`. Two commits behind
+  one version number, with the first artefact already immutable on nuget.org (published
+  2026-08-19T06:11:27Z, measured as HTTP 200 on the flat container with 2.8.18 as the positive control).
+  Both existing guards were green throughout and were right to be: one compares every packable csproj
+  against the changelog, the other compares each staged nuspec against `HEAD`. Neither pair answers
+  "is this number still free".
+
+  `ReleaseContractTests.AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` compares
+  that third pair and does it unconditionally: `v<announced>` either does not exist, or resolves to the
+  commit being packed. There is no arm in which the comparison is reported to a reader instead of
+  enforced.
+
+  It does not rest on `git diff --name-only v2.8.19 HEAD -- src/` being empty, which it is. That
+  implication has not been measured in either direction here — the two packages carrying 2.8.19 do not
+  share a commit, so `src/` was never the only thing that differed between them — and the guard needs
+  neither direction, because it compares a tag against a commit and never opens a package.
+
+  What it does not see, since the gap is real and cheap to over-read: tags this ref store does not
+  have. `actions/checkout@v4` fetches at depth 1 without tags, so on a push to `main` there is nothing
+  to find and the check passes without having looked. Every run therefore prints how many tags were
+  visible, so a zero says so instead of hiding inside a green. It says nothing at all about nuget.org:
+  a number can be published without any tag ever existing, and only a feed lookup answers that.
 
 - **Release gate is the CI filter, not `dotnet test TempoBlazor.slnx`.** Demo.Api including the two
   smtp4dev tests is in the gate (CI starts `rnwood/smtp4dev`; `Smtp4DevHost` starts the container
   locally). Named exceptions: `Tempo.Blazor.E2E` (measured 1220/124/79 of 1423 in 12 h 8 min —
   not green, not a gate) and `Tempo.ReportServer.Api.Tests.MsSql` (27/177, SQL Server missing;
   do not fix). `ReleaseGateFilterTests` keeps the two publish workflows on one filter.
+
+### Internal
+
+- **`ReleaseContractTests.PackedPackages_RecordTheCommitTheyWereBuiltFrom` was two guards in one `[Fact]`,
+  and one of them is empty most of the time.** The script-text contract now lives in
+  `PackScript_PassesTheCommitIn_RefusesADirtyTree_AndVerifiesTheStampBackOut` and runs unconditionally.
+  The staged-package half keeps the old name, because that is the half `eng/pack-nuget-packages.sh`
+  points at for the stamp comparison and the name had to stay true there.
+
+  An empty staged population is now reported as a **skip** rather than a pass. The size of that change,
+  said plainly: the old shape asserted nothing false. It wrote the population size to test output and
+  passed, so "nothing was checked" and "26 packages were checked" left the same green — the loss was
+  evidence, not truth, which makes this a weaker instance of vacuous green than one that certifies
+  something. Deleting the reporting line left every assertion green, so the report was a claim about
+  the run that the run did not enforce; the outcome carries it now.
+
+  The skip is decided at discovery by `StagedPackagesFactAttribute`, and that is not a preference:
+  xUnit v2 has no runtime skip. `Assert.Skip` is absent from `xunit.assert 2.9.3`'s `Assert`, and the
+  `$XunitDynamicSkip$` protocol its `SkipException` speaks has zero occurrences in
+  `xunit.execution.dotnet.dll` of the same version — measured with the tool that finds `SkipReason`
+  there five times, so the zero is a reading rather than a silence. The body's first assertion is a
+  tripwire and not the rule: swap the attribute back to `[Fact]` and the empty population makes it red,
+  so the two reachable shapes are skip and red and the pass over nothing is gone from both.
+
+  A second door to the same silent pass is closed in the same change: a candidate whose archive holds
+  no `.nuspec` was counted and skipped by the loop, so a non-empty population made only of such files
+  ran zero assertions and passed with `nuspec-inspected=0`. The tripwire cannot see that — it is about
+  an EMPTY population — so `withoutNuspec` is now asserted to be zero.
+
+  The 2.8.19 note below names the old test for the script-text assertions that have since moved into
+  the new one. It is left as written — it was true when it shipped, and rewriting released notes is a
+  worse habit than a superseded sentence.
 
 ## 2.8.19 - 2026-08-19
 
