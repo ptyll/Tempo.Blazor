@@ -54,6 +54,17 @@ public abstract class ReportServerWebTestBase : BunitContext
     /// <c>TmResources*.json</c> resources. Rendering inside this scope makes the localizer resolve the
     /// requested culture (e.g. <c>cs</c> / <c>fr</c>) so tests can assert real translations, then the
     /// ambient culture is restored. Use it to prove that portal strings are genuinely localizable.
+    /// <para>
+    /// It has a second, opposite use: pinning <c>en</c> around a test whose subject is a PAGE and not a
+    /// language. Such a test spells English chrome ("Active", "Saved …", "Folder permissions") only
+    /// because it had to spell something; without a pin it reads whichever translation the machine's
+    /// ambient culture happens to select, so it turns red on a developer box running under
+    /// <c>cs_CZ</c> while measuring nothing about the page. Pinning keeps the subject and removes the
+    /// machine from the measurement. At the time of writing no <c>TmResources.en.json</c> is embedded
+    /// (measured over the built assembly), so <c>en</c> resolves through the neutral table — but that is
+    /// a premise about today's resources, not a property of the pin, and a test whose subject IS the
+    /// neutral table must reach it through <c>UseUiCulture("")</c> rather than through <c>en</c>.
+    /// </para>
     /// </summary>
     protected static IDisposable UseUiCulture(string culture)
         => new UiCultureScope(culture);

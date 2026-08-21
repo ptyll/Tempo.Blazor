@@ -8,11 +8,16 @@ public sealed class PermissionsPageTests : ReportServerWebTestBase
     [Fact]
     public void PermissionsPage_ListsSeededAclForDefaultFolder_FromTypedClient()
     {
-        SignIn();
-        var cut = Render<PermissionsPage>();
+        // Subject is the page, not the language: pin en so the ambient machine culture cannot
+        // turn a page assertion into a translation assertion. See ReportServerWebTestBase.UseUiCulture.
+        using (UseUiCulture("en"))
+        {
+            SignIn();
+            var cut = Render<PermissionsPage>();
 
-        cut.Find("[data-testid='f12-permissions-page']").TextContent.Should().Contain("Folder permissions");
-        cut.Find("[data-testid='permissions-table']").TextContent.Should().Contain("finance-admins");
+            cut.Find("[data-testid='f12-permissions-page']").TextContent.Should().Contain("Folder permissions");
+            cut.Find("[data-testid='permissions-table']").TextContent.Should().Contain("finance-admins");
+        }
     }
 
     [Fact]

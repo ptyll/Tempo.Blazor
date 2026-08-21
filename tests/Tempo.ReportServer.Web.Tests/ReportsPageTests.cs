@@ -30,19 +30,24 @@ public sealed class ReportsPageTests : ReportServerWebTestBase
     [Fact]
     public void ReportsPage_RendersExplorerFromTypedClient_AndNavigatesToViewerDeepLink()
     {
-        SignIn();
-        var navigation = Services.GetRequiredService<NavigationManager>();
-        var cut = Render<ReportsPage>();
+        // Subject is the page, not the language: pin en so the ambient machine culture cannot
+        // turn a page assertion into a translation assertion. See ReportServerWebTestBase.UseUiCulture.
+        using (UseUiCulture("en"))
+        {
+            SignIn();
+            var navigation = Services.GetRequiredService<NavigationManager>();
+            var cut = Render<ReportsPage>();
 
-        cut.Find("[data-testid='f12-explorer-page']").TextContent.Should().Contain("Report explorer");
+            cut.Find("[data-testid='f12-explorer-page']").TextContent.Should().Contain("Report explorer");
 
-        // The folder tree is built from the flat folder DTOs returned by the typed client.
-        cut.Find("[data-testid='tm-report-folder-/Finance']").Click();
-        cut.Find("[data-testid='tm-report-explorer-grid']").TextContent.Should().Contain("Sales Register");
+            // The folder tree is built from the flat folder DTOs returned by the typed client.
+            cut.Find("[data-testid='tm-report-folder-/Finance']").Click();
+            cut.Find("[data-testid='tm-report-explorer-grid']").TextContent.Should().Contain("Sales Register");
 
-        cut.Find("[data-testid='tm-report-open-sales-register']").Click();
+            cut.Find("[data-testid='tm-report-open-sales-register']").Click();
 
-        navigation.Uri.Should().EndWith("/reports/Finance/sales-register");
+            navigation.Uri.Should().EndWith("/reports/Finance/sales-register");
+        }
     }
 
     [Fact]

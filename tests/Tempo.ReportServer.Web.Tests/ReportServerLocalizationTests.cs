@@ -15,18 +15,39 @@ namespace Tempo.ReportServer.Web.Tests;
 /// </summary>
 public sealed class ReportServerLocalizationTests : ReportServerWebTestBase
 {
+    /// <summary>
+    /// "By default" names the localizer's NEUTRAL (fallback) table — <c>TmResources.json</c>, the table
+    /// <c>JsonStringLocalizer</c> ends every lookup chain with. It does NOT name "whatever an unset
+    /// ambient culture happens to give", and the two are not the same claim: under an ambient
+    /// <c>cs_CZ</c> this shell renders "Sestavy", which is the localizer working rather than a defect.
+    /// <c>UseUiCulture("")</c> selects <c>CultureInfo.InvariantCulture</c>, whose chain is the neutral
+    /// table alone, so it is how the fallback is reached with the machine taken out of the measurement.
+    /// <para>
+    /// Reading the neutral table SPECIFICALLY is the point, not an accident of today's resources. As a
+    /// PREMISE measured over the built assembly at the time of writing, no <c>TmResources.en.json</c> is
+    /// embedded, so pinning <c>en</c> would resolve to this very table and look equivalent. That premise
+    /// can change: the day someone embeds <c>TmResources.en.json</c>, an <c>en</c> pin would read THAT
+    /// and let <c>TmResources.json</c> rot unwatched, whereas this test goes on reading the fallback.
+    /// Measured off-diagonally — breaking the neutral value reddens both shapes, but with an
+    /// <c>en.json</c> present only this one stays red. These two assertions are also the only place in
+    /// this assembly where English navigation is asserted against the real localizer.
+    /// </para>
+    /// </summary>
     [Fact]
     public void Shell_RendersEnglishNavigation_ByDefault()
     {
         SignIn();
 
-        var cut = Render<ReportServerShell>(parameters => parameters
-            .Add(component => component.Title, "Reports")
-            .Add(component => component.ActiveSection, "reports"));
+        using (UseUiCulture(""))
+        {
+            var cut = Render<ReportServerShell>(parameters => parameters
+                .Add(component => component.Title, "Reports")
+                .Add(component => component.ActiveSection, "reports"));
 
-        var nav = cut.Find("[data-testid='nav-reports']").TextContent;
-        nav.Should().Contain("Reports");
-        cut.Find("[data-testid='nav-favorites']").TextContent.Should().Contain("Favorites");
+            var nav = cut.Find("[data-testid='nav-reports']").TextContent;
+            nav.Should().Contain("Reports");
+            cut.Find("[data-testid='nav-favorites']").TextContent.Should().Contain("Favorites");
+        }
     }
 
     [Fact]
