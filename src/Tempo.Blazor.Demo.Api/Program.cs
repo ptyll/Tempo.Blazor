@@ -227,10 +227,14 @@ app.MapHub<TmNotificationHub>("/hubs/notifications");
 app.MapNotificationEndpoints();
 app.MapMcp("/mcp");
 
+// Schema creation goes through DemoDiagramSchema because this host is started CONCURRENTLY against one
+// database — many WebApplicationFactory hosts inside one test process, and the demo as its own process
+// beside them from the e2e lane. A bare EnsureCreated() there is a check-then-act, and the host that loses
+// gets 'table "DiagramSnapshots" already exists' at startup; see that type for the measurement.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DemoDiagramDbContext>();
-    db.Database.EnsureCreated();
+    DemoDiagramSchema.EnsureCreated(db, dbPath);
 }
 
 app.Run();

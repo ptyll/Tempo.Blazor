@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Reporting.Abstractions.Dtos;
 using Tempo.ReportServer.Web.Pages;
@@ -12,8 +13,35 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
     // (ResolveByPathAsync matches the report name within the folder, not the bare id).
     private const string ReportPath = "Finance/Sales Register";
 
+    /// <summary>
+    /// Pressing the star calls the client and flips the button; pressing it again reverses both.
+    /// </summary>
+    /// <remarks>
+    /// WHY THE CLICKS ARE AWAITED, AND WHY THE SYNCHRONOUS FORM WAS A RACE RATHER THAN A STYLE CHOICE.
+    /// <c>ToggleFavoriteAsync</c> is an <c>async Task</c> handler. bUnit's synchronous <c>Click()</c> raises
+    /// the event and returns WITHOUT awaiting what the handler produces, so every line under it reads state
+    /// the handler may still be writing. Nothing about that is hypothetical here: with the fake's
+    /// <c>AddFavoriteAsync</c> made to yield once — the shape any real client has — the synchronous form
+    /// failed on EVERY run, while this awaited form passed on every one. The single variable between those
+    /// two runs is whether the click is awaited.
+    /// <para>
+    /// It also matches what this test was OBSERVED doing. Three of its recorded failures across three
+    /// different suite runs carried a message that contradicts itself —
+    /// <c>Expected fake.AddedFavoriteReportIds {"sales-register"} to contain "sales-register"</c>, and once
+    /// the same for the removal — which is what a collection being written while it is read prints: the
+    /// membership test ran before the write and the message was formatted after it. Twice on the add and
+    /// once on the removal, which is the whole set of places an unawaited click can be read too early.
+    /// </para>
+    /// <para>
+    /// WHAT IS NOT CLAIMED. That mechanism is not shown to be the only way those three reds could arise:
+    /// 400 executions of this body (200 idle, 200 with the machine's cores oversubscribed twofold)
+    /// reproduced nothing, so the trigger was not recreated, only the hazard was — and the hazard is
+    /// removed either way, because an awaited click cannot be read early no matter what makes the handler
+    /// slow.
+    /// </para>
+    /// </remarks>
     [Fact]
-    public void ViewerPage_FavoriteToggle_AddsThenRemovesViaClient()
+    public async Task ViewerPage_FavoriteToggle_AddsThenRemovesViaClient()
     {
         SignIn();
         var fake = (FakeTempoReportServerClient)Services.GetRequiredService<ITempoReportServerClient>();
@@ -22,11 +50,11 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
         var toggle = cut.Find("[data-testid='favorite-toggle']");
         toggle.GetAttribute("aria-pressed").Should().Be("false");
 
-        toggle.Click();
+        await toggle.ClickAsync(new MouseEventArgs());
         fake.AddedFavoriteReportIds.Should().Contain("sales-register");
         cut.Find("[data-testid='favorite-toggle']").GetAttribute("aria-pressed").Should().Be("true");
 
-        cut.Find("[data-testid='favorite-toggle']").Click();
+        await cut.Find("[data-testid='favorite-toggle']").ClickAsync(new MouseEventArgs());
         fake.RemovedFavoriteReportIds.Should().Contain("sales-register");
         cut.Find("[data-testid='favorite-toggle']").GetAttribute("aria-pressed").Should().Be("false");
     }

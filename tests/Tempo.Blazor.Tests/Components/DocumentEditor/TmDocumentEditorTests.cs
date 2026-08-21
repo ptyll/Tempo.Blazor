@@ -1191,6 +1191,15 @@ public class TmDocumentEditorTests : LocalizationTestBase
         var highlightPicker = cut.FindComponents<TmColorPicker>()
             .Single(component => component.Markup.Contains("document-highlight-color-trigger", StringComparison.Ordinal));
 
+        // The clear routes an execCommand whose mocked reply carries no UI snapshot, so the editor falls back
+        // to PULLING getFormattingStateJson. A real engine answers that pull with the highlight already gone —
+        // this line makes the fake answer the same way. Without it the fake would keep serving the pre-clear
+        // colour and the pull would paint it straight back, which is a fixture that contradicts the command it
+        // just accepted, not a product defect. (Before the mini-toolbar helper started keeping the pulled and
+        // pushed snapshots in agreement, this test passed only because the stub happened to carry no highlight
+        // at all — the right answer for the wrong reason.)
+        SetDocumentCanvasFormattingStateJson("""{"bold":false,"italic":false,"underline":false,"alignment":"left"}""");
+
         await cut.InvokeAsync(() => highlightPicker.Instance.ValueChanged.InvokeAsync(string.Empty));
 
         var highlightInvocation = SetupDocumentCanvasModule().Invocations
@@ -4247,11 +4256,42 @@ public class TmDocumentEditorTests : LocalizationTestBase
         }, DocumentEditorJson.Options));
     }
 
-    private static Task NotifyCanvasMiniToolbarAsync(
+    /// <summary>
+    /// Raises the canvas mini-toolbar callback, optionally carrying the pushed UI snapshot (B2).
+    /// </summary>
+    /// <remarks>
+    /// WHY THIS ALSO WRITES THE PULLED FORMATTING SNAPSHOT, AND WHY LEAVING IT OUT WAS A RACE.
+    /// <para>
+    /// <c>TmDocumentCanvasEngineHost.OnCanvasMiniToolbarChanged</c> dispatches TWO handlers for one call:
+    /// <c>OnUiStateChanged</c> applies the pushed snapshot straight into the editor's formatting state, and
+    /// <c>OnMiniToolbarChanged</c> arms <c>TmDocumentEditor.ScheduleCanvasToolbarSync</c> — a detached
+    /// 200&#160;ms debounce that afterwards PULLS <c>getFormattingStateJson</c> and applies it over the very
+    /// same state through the same <c>ApplyCanvasFormattingState</c>. Both writers are legitimate; in the
+    /// product they agree, because the pull reads the engine that pushed. In these tests the module mock
+    /// answered that pull with its default stub, so the two writers DISAGREED, and which one the assertions
+    /// read depended on whether the debounce elapsed before them. That is the whole mechanism behind this
+    /// file's flaky toolbar test, and it explains why the failing assertion moved: the pull resets the whole
+    /// snapshot at once, so whichever assertion happens to run after the re-render is the one that reports.
+    /// </para>
+    /// <para>
+    /// MEASURED, not reasoned: with a deliberate 250&#160;ms pause after this call the test failed on its
+    /// FIRST assertion every time (<c>aria-pressed</c> "false"); with 150&#160;ms — under the debounce — it
+    /// passed. Keeping the pulled snapshot equal to the pushed one removes the losing side of that race and
+    /// changes nothing about what any test asserts: the later pull now applies the same values the push did.
+    /// A test whose subject IS the pulled snapshot still sets it itself, and must do so AFTER this call.
+    /// </para>
+    /// </remarks>
+    private Task NotifyCanvasMiniToolbarAsync(
         IRenderedComponent<TmDocumentEditor> cut,
         WysiwygMiniToolbarRequest request,
         TmDocumentCanvasEngineHost.CanvasEngineUiState? uiState = null)
     {
+        if (uiState?.Formatting is not null)
+        {
+            SetDocumentCanvasFormattingStateJson(
+                JsonSerializer.Serialize(uiState.Formatting, DocumentEditorJson.Options));
+        }
+
         var host = FindCanvasHost(cut);
         var payload = new
         {
