@@ -9,7 +9,7 @@
     <!-- NuGet Package Metadata -->
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor</PackageId>
-<Version>2.8.20</Version>
+<Version>2.8.21</Version>
     <Authors>ptyll</Authors>
     <Description>Comprehensive Blazor component library with 100+ components. Supports WebAssembly, Server, and InteractiveAuto render modes. Multi-targets .NET 8/9/10. Includes multilingual support (EN/CS), CSS variable theming, and dark mode. Optional FluentValidation integration is available through Tempo.Blazor.FluentValidation.</Description>
     <PackageTags>blazor;components;ui;server;wasm;interactive-auto;localization</PackageTags>

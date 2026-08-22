@@ -28,6 +28,16 @@ set -euo pipefail
 # not read, instead of quietly reporting a skipped package as published. A red is fixable; a false
 # green under a release is not.
 #
+# THIS CLASSIFIER IS BOUND TO THE WORDING OF THE SDK THAT WAS MEASURED, not to a machine-readable
+# artefact. Measured SDK: 10.0.111 (the only one installed on the machine that wrote this). There is
+# no per-package structured output from `dotnet nuget push` to read instead; exit 0 covers both 201
+# and 409 once `--skip-duplicate` is on. A second SDK bump without re-measuring leaves the classifier
+# unmeasured. The cheap check that re-measures it is `eng/verify-push-classifier.sh`: python
+# http.server + NuGet.Config with allowInsecureConnections=true + --configfile, over the staged
+# packages, 201 → published=$total exit 0, 409 → skipped=$total exit 1. Both publish workflows run
+# it after pack and before the real push. Run it also on an SDK bump. It is the procedure that
+# keeps a wording-bound classifier from drifting silently; it is not optional documentation.
+#
 # AND WHY THE PUSH RUNS UNDER DOTNET_CLI_UI_LANGUAGE=en. Those sentences are LOCALIZED. Measured on a
 # cs_CZ machine, the same 409 prints "Balíček '…' už v kanálu '…' existuje." — an English-only reader
 # would have classified it UNRESOLVED, i.e. the classifier's premise would have been inherited from

@@ -170,7 +170,7 @@ public sealed class ReleaseGateFilterTests
 
                 // THE ARM THAT WAS MISSING, AND IT WAS MEASURED RATHER THAN IMAGINED. Commenting the
                 // whole step out — every line prefixed with '#' — leaves both markers in the file, so
-                // over the RAW text all four of these guards were GREEN over a lane that no longer
+                // over the RAW text every one of these guards was GREEN over a lane that no longer
                 // runs. Deleting the marker (the arm above) cannot find that, because it removes the
                 // marker from comments too. This one keeps the text and disables it, which is what a
                 // careless revert actually looks like.
@@ -494,6 +494,7 @@ public sealed class ReleaseGateFilterTests
     [
         "bash eng/verify-announced-version.sh",
         "bash eng/push-nuget-packages.sh",
+        "bash eng/verify-push-classifier.sh",
         "Test (non-English ambient culture)",
         "LC_ALL: cs_CZ.UTF-8",
     ];

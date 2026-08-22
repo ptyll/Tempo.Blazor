@@ -10,7 +10,7 @@
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>Tempo.Blazor.Abstractions</PackageId>
-<Version>2.8.20</Version>
+<Version>2.8.21</Version>
     <Authors>ptyll</Authors>
     <Description>Interfaces and models for Tempo.Blazor component library. Zero UI dependencies – safe to reference from API/service projects.</Description>
     <PackageTags>blazor;abstractions;interfaces;models</PackageTags>

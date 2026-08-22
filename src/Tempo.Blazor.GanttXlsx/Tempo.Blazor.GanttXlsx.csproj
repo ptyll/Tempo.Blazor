@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.GanttXlsx</PackageId>
-    <Version>2.8.20</Version>
+    <Version>2.8.21</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.GanttXlsx</Title>
     <Description>Optional XLSX import and export helpers for Tempo.Blazor Gantt components, backed by DocumentFormat.OpenXml.</Description>

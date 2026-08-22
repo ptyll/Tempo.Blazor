@@ -233,6 +233,14 @@ jobs:
       - name: List packages
         run: ls -la ./packages
 
+      # THE PUSH CLASSIFIER IS BOUND TO SDK WORDING (10.0.111: "Your package was pushed." /
+      # "Created http" vs "already exists at feed" / "Conflict http"). A future SDK that rewords
+      # those sentences would classify every package UNRESOLVED and fail the release loudly.
+      # This probe re-measures the wording against a local 201/409 endpoint over the packages
+      # just packed, before anything is sent to the real feed. See eng/verify-push-classifier.sh.
+      - name: Probe the push classifier against a local 201/409 endpoint
+        run: bash eng/verify-push-classifier.sh
+
       # Přidáme GitHub Packages jako NuGet source s PAT tokenem
       - name: Add GitHub Packages source
         run: |

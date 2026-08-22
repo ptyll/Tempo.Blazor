@@ -23,9 +23,22 @@ public class JsonStringLocalizerTests
     public void Resolves_czech_value()
         => ForCulture("cs")["TmFileDropZone_DragDrop"].Value.Should().Be("Přetáhněte soubory sem");
 
+    /// <summary>
+    /// Reads the NEUTRAL table, via <see cref="CultureInfo.InvariantCulture"/>. Pinning <c>en</c>
+    /// would look equivalent only until <c>TmResources.en.json</c> exists; the day it does, <c>en</c>
+    /// would read that file and leave this assertion green over a different subject.
+    /// <c>InvariantCulture</c>'s chain is the neutral table alone (<c>BuildChain</c> stops on an
+    /// empty <c>CultureInfo.Name</c>), so this member stays on <c>TmResources.json</c> by
+    /// construction. The sibling <see cref="Unknown_culture_falls_back_to_neutral"/> still covers
+    /// the key through <c>de</c>.
+    /// </summary>
     [Fact]
     public void Resolves_neutral_english_value()
-        => ForCulture("en")["TmFileDropZone_DragDrop"].Value.Should().Be("Drag and drop files here");
+    {
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+        new JsonStringLocalizer<TmResources>()["TmFileDropZone_DragDrop"].Value
+            .Should().Be("Drag and drop files here");
+    }
 
     [Fact]
     public void Region_culture_falls_back_to_language() // cs-CZ → cs

@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.8.21 - 2026-08-22
+
+Release tooling only. **No component changed.** 2.8.20 is already on nuget.org (immutable); this
+number exists so the feed guard can be green over a number that is still free.
+
+### Fixed (release evidence)
+
+- **The three text-gates on the release path compared their clauses, not their inputs.** A mutation
+  that left the comparison in place and hardcoded the read (`announced="$version"` instead of `sed`
+  over CHANGELOG.md; `published=$total` instead of classifying `dotnet nuget push` output; a fake
+  200 body instead of `curl` of the flat container) stayed green on every existing needle. Each
+  script now has a needle over the READ itself: the mutation is applied in
+  `ReleaseScriptInputReadTests` and must turn that member red, while the unmutated script stays
+  green.
+
+- **The push classifier is bound to SDK wording, and that is now a named property of the step.**
+  PUBLISHED = `Your package was pushed.` / `Created http`; SKIPPED = `already exists at feed` /
+  `Conflict http`; anything else is UNRESOLVED (red). Measured over SDK 10.0.111. A future SDK that
+  rewords those sentences fails the release loudly rather than shipping a false green.
+  `eng/verify-push-classifier.sh` re-measures the wording against a local 201/409 endpoint (python
+  `http.server`, `NuGet.Config` with `allowInsecureConnections=true`) and is called from both
+  publish workflows after pack, before the real push.
+
+- **`Resolves_neutral_english_value` reads the neutral table through `InvariantCulture`, not
+  `en`.** Pinning `en` would have stayed green and silently changed subject the day
+  `TmResources.en.json` appeared. `Shell_RendersEnglishNavigation_ByDefault` still renders inside
+  `UseUiCulture("")`.
+
 ## 2.8.20 - 2026-08-21
 
 Release tooling only. **No component changed**, so a consumer that is happy on 2.8.19 gains nothing by

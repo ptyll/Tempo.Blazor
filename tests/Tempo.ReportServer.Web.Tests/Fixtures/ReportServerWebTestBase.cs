@@ -60,10 +60,8 @@ public abstract class ReportServerWebTestBase : BunitContext
     /// because it had to spell something; without a pin it reads whichever translation the machine's
     /// ambient culture happens to select, so it turns red on a developer box running under
     /// <c>cs_CZ</c> while measuring nothing about the page. Pinning keeps the subject and removes the
-    /// machine from the measurement. At the time of writing no <c>TmResources.en.json</c> is embedded
-    /// (measured over the built assembly), so <c>en</c> resolves through the neutral table — but that is
-    /// a premise about today's resources, not a property of the pin, and a test whose subject IS the
-    /// neutral table must reach it through <c>UseUiCulture("")</c> rather than through <c>en</c>.
+    /// machine from the measurement. A test whose subject IS the neutral table must reach it
+    /// through <c>UseUiCulture("")</c> rather than through <c>en</c>.
     /// </para>
     /// </summary>
     protected static IDisposable UseUiCulture(string culture)

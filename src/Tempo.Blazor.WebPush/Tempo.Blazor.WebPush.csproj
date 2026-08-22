@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.WebPush</PackageId>
-    <Version>2.8.20</Version>
+    <Version>2.8.21</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.WebPush</Title>
     <Description>Optional VAPID Web Push sender for Tempo.Blazor notifications, implementing IWebPushSender on top of the WebPush library.</Description>
