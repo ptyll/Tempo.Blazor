@@ -1,3 +1,4 @@
+using System.Data;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,7 +20,9 @@ namespace Tempo.Blazor.Demo.Api.Data;
 /// <c>SqliteException: SQLite Error 1: 'table "DiagramSnapshots" already exists'</c>. Nothing about that is
 /// specific to a test: the demo host is started concurrently by the test lane (many
 /// <c>WebApplicationFactory</c> hosts from parallel collections in ONE process) and by the e2e lane (the
-/// demo started as its OWN process against a fresh per-run directory).
+/// demo started as its OWN process against a fresh per-run directory). The within-process half is
+/// measured by the six-creator tooth in the Demo.Api test project; the cross-process half is two Demo.Api
+/// host processes over one schema-less file, on a barrier, with and without this lock.
 /// </para>
 /// <para>
 /// WHY IT WENT UNSEEN, AND WHY A COUNT OF GREEN RUNS CANNOT CLOSE IT. The committed
@@ -59,6 +62,28 @@ public static class DemoDiagramSchema
     private static readonly TimeSpan WaitForTheOtherHost = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Test-only: directory in which a host writes a pid file when it has reached schema creation and is
+    /// waiting to be released. Unset in production; the cross-process race tooth is the only writer.
+    /// </summary>
+    public const string TestReadyDirEnvironmentVariable = "TEMPO_TEST_DIAGRAM_SCHEMA_READY_DIR";
+
+    /// <summary>
+    /// Test-only: path of the file a host polls for after writing its ready file. A named
+    /// <c>EventWaitHandle</c> is not supported on this host's OS (Linux throws
+    /// <c>PlatformNotSupportedException</c>); a go-file is. Unset in production.
+    /// </summary>
+    public const string TestGoFileEnvironmentVariable = "TEMPO_TEST_DIAGRAM_SCHEMA_GO_FILE";
+
+    /// <summary>
+    /// Test-only: when set to <c>1</c>, schema creation skips the named mutex and calls
+    /// <c>EnsureCreated()</c> bare. That is the MUTATION the cross-process tooth uses as its positive
+    /// control — without it a green "both hosts started" is indistinguishable from "they never met".
+    /// Unset in production, and must stay unset: a running demo that exported this would re-open the
+    /// race the lock exists to close.
+    /// </summary>
+    public const string TestSkipLockEnvironmentVariable = "TEMPO_TEST_DIAGRAM_SCHEMA_SKIP_LOCK";
+
+    /// <summary>
     /// Ensures the diagram schema exists in <paramref name="databasePath"/>, letting only one host at a
     /// time do it.
     /// </summary>
@@ -72,6 +97,18 @@ public static class DemoDiagramSchema
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
+
+        WaitForTestBarrierIfArmed();
+
+        if (string.Equals(
+                Environment.GetEnvironmentVariable(TestSkipLockEnvironmentVariable),
+                "1",
+                StringComparison.Ordinal))
+        {
+            WidenTheBareCreateSoTwoProcessesCanMeet(context);
+            context.Database.EnsureCreated();
+            return;
+        }
 
         using var oneCreatorAtATime = new Mutex(initiallyOwned: false, LockNameFor(databasePath));
         var owned = false;
@@ -96,6 +133,107 @@ public static class DemoDiagramSchema
             if (owned)
             {
                 oneCreatorAtATime.ReleaseMutex();
+            }
+        }
+    }
+
+    /// <summary>
+    /// When both test variables are set, writes a pid file into the ready directory and waits to be
+    /// released. Production never sets them, so this is a no-op on every real host.
+    /// </summary>
+    /// <remarks>
+    /// The wait is BEFORE the mutex on purpose: releasing two hosts together is what makes an empty
+    /// failure list (or a named SQLite error) mean they actually met. A host that took the lock
+    /// before its neighbour existed would finish creating while the other was still starting, and
+    /// the cross-process tooth would go green without ever entering the window.
+    /// </remarks>
+    private static void WaitForTestBarrierIfArmed()
+    {
+        var readyDir = Environment.GetEnvironmentVariable(TestReadyDirEnvironmentVariable);
+        var goFile = Environment.GetEnvironmentVariable(TestGoFileEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(readyDir) || string.IsNullOrWhiteSpace(goFile))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(readyDir);
+        File.WriteAllText(
+            Path.Combine(readyDir, Environment.ProcessId.ToString(CultureInfo.InvariantCulture)),
+            "ready");
+
+        var deadline = DateTime.UtcNow + WaitForTheOtherHost;
+        long releaseTicks = 0;
+        while (releaseTicks == 0)
+        {
+            if (DateTime.UtcNow >= deadline)
+            {
+                throw new TimeoutException(
+                    "The test schema-creation barrier was not released within "
+                    + WaitForTheOtherHost.TotalSeconds.ToString(CultureInfo.InvariantCulture)
+                    + "s.");
+            }
+
+            if (File.Exists(goFile)
+                && long.TryParse(
+                    File.ReadAllText(goFile).Trim(),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var ticks)
+                && ticks > 0)
+            {
+                releaseTicks = ticks;
+                break;
+            }
+
+            Thread.Sleep(10);
+        }
+
+        var releaseAt = new DateTime(releaseTicks, DateTimeKind.Utc);
+        while (DateTime.UtcNow < releaseAt)
+        {
+            Thread.SpinWait(50);
+        }
+    }
+
+    /// <summary>
+    /// Opens the check-then-act gap so two processes released together actually overlap. CREATE TABLE
+    /// was measured at 0 ms: without this pause the second host arrives at a database that already has
+    /// the table and no-ops, which is indistinguishable from "they never met".
+    /// </summary>
+    private static void WidenTheBareCreateSoTwoProcessesCanMeet(DbContext context)
+    {
+        if (DiagramSnapshotsTableExists(context))
+        {
+            return;
+        }
+
+        Thread.Sleep(100);
+    }
+
+    private static bool DiagramSnapshotsTableExists(DbContext context)
+    {
+        var connection = context.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose)
+        {
+            connection.Open();
+        }
+
+        try
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $name;";
+            var name = command.CreateParameter();
+            name.ParameterName = "$name";
+            name.Value = "DiagramSnapshots";
+            command.Parameters.Add(name);
+            return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture) > 0;
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                connection.Close();
             }
         }
     }

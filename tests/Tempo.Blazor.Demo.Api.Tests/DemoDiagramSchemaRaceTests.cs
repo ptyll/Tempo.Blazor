@@ -49,13 +49,13 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// <para>
 /// AND IT DOES NOT PROVE THE HALF THE SEAM HAD TO LIVE IN THE HOST FOR. The creators below are released
 /// inside ONE PROCESS, and over that population an UNNAMED mutex would pass exactly the same, so what a
-/// green here measures is the within-process half. THE CROSS-PROCESS HALF IS HELD BY CONSTRUCTION, NOT BY
-/// MEASUREMENT — and nothing in this repository contends it today. The only lane that starts the demo as
-/// its OWN process starts its hosts sequentially behind a lock, one demo API among them, into a directory
-/// keyed on the process id; it therefore ENGAGES that half and never contends it. Contending it would take
-/// two hosts over one file, which nothing arranges. The single place it can be observed at all is the
-/// watch whose cheap check reads an e2e run's <c>.trx</c> for that same SQLite message — an observation
-/// point, not a proof, and named here by what it does rather than by an id that would rot.
+/// green here measures is the within-process half. The cross-process half is
+/// <see cref="DemoDiagramSchemaCrossProcessRaceTests"/> — two Demo.Api host processes over one
+/// schema-less file, on a barrier, with the lock and with the lock bypassed. The e2e lane still starts
+/// its hosts sequentially behind a lock, one demo API among them, into a directory keyed on the process
+/// id; it therefore ENGAGES that half and never contends it, and this tooth does not change that
+/// launcher. The cheap check that reads an e2e run's <c>.trx</c> for that same SQLite message remains
+/// an observation point for THAT lane, not a substitute for the cross-process tooth.
 /// </para>
 /// </summary>
 public sealed class DemoDiagramSchemaRaceTests
