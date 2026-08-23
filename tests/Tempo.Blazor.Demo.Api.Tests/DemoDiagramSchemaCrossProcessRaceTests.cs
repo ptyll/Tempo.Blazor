@@ -53,25 +53,35 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// an observation point, not this proof.
 /// </para>
 /// <para>
-/// THE NON-DETERMINISM POPULATION OF THIS TOOTH IS SIX, AND THREE OF THEM ARE STILL LIVE. Earlier in this
-/// workstream it was said to be four. That four was the UNION OF THREE REVIEW LENSES — a list of what
-/// somebody happened to look at — and a union of lenses is not a denominator: nothing about it says the
-/// document was searched. The six below ARE a searched population: each is tagged at its own site with
-/// FIXED or LIVE and counted mechanically (2026-08-23, working tree over 8bb4576c), so the number can be
-/// re-measured rather than believed.
+/// SEVEN NON-DETERMINISM SOURCES ARE TAGGED HERE, FOUR OF THEM LIVE — AND SEVEN IS A FLOOR, NOT A
+/// DENOMINATOR. Earlier in this workstream the number was said to be four. That four was the UNION OF
+/// THREE REVIEW LENSES — a list of what somebody happened to look at — and a union of lenses says nothing
+/// about the document having been searched. Seven is better than that but it is still not a denominator,
+/// because THE TAG IS SELF-REPORTING: the grep below counts the sites that declared themselves, so it can
+/// only ever go up when somebody writes another tag, never when somebody adds an untagged timing.
+/// Two untagged ones are already visible in this very class — <see cref="HostStartupTimeout"/> (120 s) and
+/// <see cref="AfterReleaseTimeout"/> (60 s) are both wall-clock deadlines against a loaded runner, and
+/// neither carries the tag. THE NEEDLE FOR THE GAP, therefore, is not the count but a reading: every
+/// <c>TimeSpan.From</c> constant in these two files, checked one by one against the tag list —
+/// <c>/usr/bin/grep -nE 'TimeSpan\.From[A-Za-z]+\(' tests/Tempo.Blazor.Demo.Api.Tests/DemoDiagramSchemaCrossProcessRaceTests.cs src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs</c>
+/// (6 lines, 2026-08-23 over 319e3c9e; 4 here + 2 there). What the seven ARE is a searched-and-tagged population: each is
+/// tagged at its own site with FIXED or LIVE and counted mechanically, so the floor can be re-measured
+/// rather than believed. It is not a constant either: THE SEVENTH ARRIVED WITH THIS PHASE — with the arm
+/// that measures the seam gate, because an arm that has to wait out a lock has a window it has to choose.
 /// <code>
 /// /usr/bin/grep -cE 'NON-DETERMINISM SOURCE \((LIVE|FIXED)\)' \
 ///   tests/Tempo.Blazor.Demo.Api.Tests/DemoDiagramSchemaCrossProcessRaceTests.cs \
-///   src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs          # 4 + 2 = 6
+///   src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs          # 5 + 2 = 7
 /// /usr/bin/grep -cE 'NON-DETERMINISM SOURCE \(LIVE\)' \
 ///   tests/Tempo.Blazor.Demo.Api.Tests/DemoDiagramSchemaCrossProcessRaceTests.cs \
-///   src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs          # 2 + 1 = 3
+///   src/Tempo.Blazor.Demo.Api/Data/DemoDiagramSchema.cs          # 3 + 1 = 4
 /// </code>
 /// FIXED are the harness picking ports by check-then-act, one constant serving as both the mutex wait and
 /// the barrier deadline, and the unsynchronised read of the shared output buffer. LIVE are the 100 ms
 /// widening sleep the bypass arm needs, the 500 ms go-lead measured against a 10 ms host poll and a 50 ms
-/// harness poll, and the CONTENT of the shared buffer at the moment a reader takes it — locking the read
-/// stopped a crash, it did not make a line that has not arrived yet appear. The three live ones are
+/// harness poll, the CONTENT of the shared buffer at the moment a reader takes it — locking the read
+/// stopped a crash, it did not make a line that has not arrived yet appear — and the derived hold in
+/// <see cref="ADemoApiHostAskedToSkipTheLock_ContendsTheMutexOutsideDevelopment"/>. The four live ones are
 /// recorded as queue rows; none of them is fixed in this file.
 /// </para>
 /// </summary>
@@ -79,6 +89,17 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
 {
     private const string DiagramSnapshotsTable = "DiagramSnapshots";
     private const string SqliteRaceMessage = """SQLite Error 1: 'table "DiagramSnapshots" already exists'""";
+    private const string DevelopmentEnvironment = "Development";
+
+    /// <summary>
+    /// The environment the two seam-gate arms switch to. Any value other than <c>Development</c> would do,
+    /// and <c>Production</c> is named here because it is the one an unattended host actually falls back to.
+    /// It is NOT what a hand-started demo has: <c>Properties/launchSettings.json</c> puts
+    /// <c>ASPNETCORE_ENVIRONMENT=Development</c> into the process, so <c>dotnet run</c> on this project
+    /// lands on the OTHER side of the gate. This sentence used to claim the opposite.
+    /// </summary>
+    private const string OutsideDevelopmentEnvironment = "Production";
+
     private static readonly TimeSpan HostStartupTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan AfterReleaseTimeout = TimeSpan.FromSeconds(60);
 
@@ -345,6 +366,287 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
     }
 
     /// <summary>
+    /// THE OFF-DIAGONAL FOR THE BARRIER HALF OF THE SEAM GATE, AND IT TURNS ON ONE VARIABLE.
+    /// <see cref="TwoDemoApiProcesses_BypassingTheLock_NameTheSqliteRace"/> hands two hosts the three
+    /// TEMPO_TEST_DIAGRAM_SCHEMA_* names and they rendezvous: exactly two ready files appear, and
+    /// <see cref="RunTwoHosts"/> refuses to go on without them. This arm hands two hosts the SAME three
+    /// names, on the same executable, against the same kind of schema-less file, and changes
+    /// <c>ASPNETCORE_ENVIRONMENT</c> to <see cref="OutsideDevelopmentEnvironment"/>. Nothing may appear in
+    /// the ready directory, because a host outside Development must not read those two names at all.
+    /// <para>
+    /// THE GO-FILE IS WRITTEN BEFORE THE HOSTS START, ON PURPOSE. Withholding it would make "both hosts
+    /// reached Kestrel" the assertion doing the work, and then any host that hung for an unrelated reason
+    /// would be reported as a barrier that stayed armed — an attributable-looking red for an unattributed
+    /// death, which is the defect this file already fixed once. With the release lying on disk from the
+    /// start, an armed host sails through the barrier and STILL WRITES ITS READY FILE, because that write
+    /// is unconditional once the two variables are set. So the empty directory is the whole discriminator,
+    /// and it is a positive observation rather than an absence of noise.
+    /// </para>
+    /// <para>
+    /// WHAT THE ABSENT SQLITE MESSAGE HERE DOES NOT PROVE. Both hosts also carry <c>SKIP_LOCK=1</c> and
+    /// neither races. That is what the gate is for — but with the barrier closed nothing forces these two
+    /// processes to overlap, so a green on that message ALONE would be indistinguishable from "they never
+    /// met", which is exactly the confusion the rest of this file exists to avoid. It is asserted because a
+    /// red on it would be worth knowing, not because it carries the claim. The lock half of the gate is
+    /// measured by <see cref="ADemoApiHostAskedToSkipTheLock_ContendsTheMutexOutsideDevelopment"/>, which
+    /// takes the mutex away from the host instead of hoping two processes collide.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void TwoDemoApiProcesses_OutsideDevelopment_DoNotArmTheSchemaTestBarrier()
+    {
+        var directory = NewThrowawayDirectory();
+        var databasePath = Path.Combine(directory, "diagrams.db");
+        var readyDir = Path.Combine(directory, "ready");
+        Directory.CreateDirectory(readyDir);
+        var goFile = Path.Combine(directory, "go");
+        var output = new StringBuilder();
+        var hosts = new List<DemoApiHost>();
+
+        try
+        {
+            TableExists(databasePath, DiagramSnapshotsTable).Should().BeFalse(
+                "these hosts must find a database that still needs its schema, for the same reason the "
+                + "arms above do: a file that arrives with the table in it makes every host a no-op. "
+                + "Looked in: " + databasePath);
+
+            File.WriteAllText(
+                goFile,
+                DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture));
+
+            var executable = DemoApiExecutablePath();
+            File.Exists(executable).Should().BeTrue(
+                "this arm starts the same Demo.Api executable the arms above start; a missing file "
+                + "would make every assertion below about nothing. Looked for: " + executable);
+
+            hosts.Add(StartHost(
+                executable, databasePath, readyDir, goFile, skipLock: true, LetKestrelChooseThePort,
+                output, OutsideDevelopmentEnvironment));
+            hosts.Add(StartHost(
+                executable, databasePath, readyDir, goFile, skipLock: true, LetKestrelChooseThePort,
+                output, OutsideDevelopmentEnvironment));
+
+            WaitUntil(
+                HostStartupTimeout,
+                () => hosts.All(h => h.Listening) || hosts.Any(h => h.HasExited),
+                () => "waiting for two hosts outside Development to reach Kestrel. "
+                      + WhyAHostIsMissing(output, BarrierState.Released) + ". Output:"
+                      + Environment.NewLine + Snapshot(output));
+
+            Directory.GetFiles(readyDir).Should().BeEmpty(
+                "THIS IS THE MEASUREMENT. Both hosts were handed "
+                + DemoDiagramSchema.TestReadyDirEnvironmentVariable + " and "
+                + DemoDiagramSchema.TestGoFileEnvironmentVariable
+                + ", and the only difference from the arm that produces two ready files is "
+                + "ASPNETCORE_ENVIRONMENT. A file here means a host outside Development still reads the "
+                + "barrier variables, and a host that reads them can be parked on a barrier nobody will "
+                + "release and killed by a TimeoutException thrown out of its own startup. Looked in: "
+                + readyDir + ". Output:" + Environment.NewLine + Snapshot(output));
+
+            hosts.Should().OnlyContain(
+                h => !h.HasExited,
+                "a host that exited never got far enough to tell us anything about the seam gate — "
+                + "unless " + WhyAHostIsMissing(output, BarrierState.Released) + ". Output:"
+                + Environment.NewLine + Snapshot(output));
+
+            Snapshot(output).Should().NotContain(
+                SqliteRaceMessage,
+                "the bypass variable was set on both hosts and must have been ignored. This is the "
+                + "weaker half of this arm and says so: with the barrier closed nothing made these two "
+                + "processes overlap, so a green here is consistent with 'they never met'. It is the "
+                + "mutex-contention arm that carries the lock half of the claim");
+
+            TableExists(databasePath, DiagramSnapshotsTable).Should().BeTrue(
+                "the hosts are required to have CREATED the schema, not merely to have survived a "
+                + "closed seam; a gate that also stopped schema creation would move the failure to "
+                + "every later reader. Looked in: " + databasePath);
+        }
+        finally
+        {
+            _output.WriteLine(Snapshot(output));
+            foreach (var host in hosts)
+            {
+                host.Dispose();
+            }
+
+            TryDeleteDirectory(directory);
+        }
+    }
+
+    /// <summary>
+    /// THE OFF-DIAGONAL FOR THE LOCK HALF OF THE SEAM GATE. One host, told to skip the lock, run twice
+    /// against the harness holding that very mutex — and the only thing that differs between the two runs
+    /// is <c>ASPNETCORE_ENVIRONMENT</c>.
+    /// <para>
+    /// WHY NOT TWO RACING PROCESSES. The gate closes the barrier as well, so outside Development there is
+    /// no rendezvous left to release two hosts together, and the plan's arrangement — both arms on the
+    /// barrier — cannot exist once the barrier obeys the same gate. Waiting for two processes to collide
+    /// by luck would put the claim on the 100 ms widening reserve, which is the known flake in
+    /// <see cref="TwoDemoApiProcesses_BypassingTheLock_NameTheSqliteRace"/>. Holding the mutex instead
+    /// makes the discriminator deterministic: a host that honours the bypass reaches Kestrel while this
+    /// process owns the lock, and a host that does not, cannot.
+    /// </para>
+    /// <para>
+    /// THE DEVELOPMENT ARM IS ALSO THE REACHABILITY CONTROL. It proves that on THIS machine, in THIS run,
+    /// a Demo.Api host handed these settings does reach "Now listening on" while the mutex is held — so
+    /// the second arm's silence is a statement about the lock rather than about a host that had not
+    /// finished booting. The second arm adds two more controls of its own: it does not start timing until
+    /// the host has created the database's directory (<c>Program</c>'s first act, long before schema
+    /// creation), and it requires the host to listen once the mutex is RELEASED, which is what a host
+    /// blocked on that mutex does and a host that merely died does not.
+    /// </para>
+    /// <para>
+    /// NON-DETERMINISM SOURCE (LIVE): THE LENGTH OF THE HOLD IN THE SECOND ARM. It is derived — three
+    /// times what the Development arm needed on this machine moments earlier, floored at 5 s and capped
+    /// below the host's own 30 s mutex wait — but derived is not guaranteed. If the second host is still
+    /// booting when the hold expires, this arm reports "it did not listen" about a host that never reached
+    /// the lock, and that is a green which measured nothing. The directory signal shrinks the window to
+    /// the span between "startup began" and "schema creation", it does not remove it. Not fixed here;
+    /// recorded as a queue row.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void ADemoApiHostAskedToSkipTheLock_ContendsTheMutexOutsideDevelopment()
+    {
+        var output = new StringBuilder();
+        var executable = DemoApiExecutablePath();
+        File.Exists(executable).Should().BeTrue(
+            "both arms below start this executable. Looked for: " + executable);
+
+        var developmentDirectory = NewThrowawayDirectory();
+        var developmentDatabase = Path.Combine(developmentDirectory, "db", "diagrams.db");
+        TimeSpan developmentTimeToListen;
+        DemoApiHost? developmentHost = null;
+
+        try
+        {
+            using var heldByTheHarness = TakeTheSchemaLockAwayFromTheHosts(developmentDatabase);
+            var startedAt = DateTime.UtcNow;
+            developmentHost = StartHost(
+                executable, developmentDatabase, readyDir: null, goFile: null, skipLock: true,
+                LetKestrelChooseThePort, output, DevelopmentEnvironment);
+
+            WaitUntil(
+                HostStartupTimeout,
+                () => developmentHost.Listening || developmentHost.HasExited,
+                () => "waiting for a Development host that was told to skip the lock to reach Kestrel "
+                      + "while this process holds that lock. If it never arrives, either the bypass seam "
+                      + "is not honoured in Development — which would silence the positive control the "
+                      + "whole cross-process tooth depends on — or the host could not start at all. "
+                      + WhyAHostIsMissing(output, BarrierState.Released) + ". Output:"
+                      + Environment.NewLine + Snapshot(output));
+
+            developmentTimeToListen = DateTime.UtcNow - startedAt;
+
+            developmentHost.Listening.Should().BeTrue(
+                "the Development arm must walk past a mutex this process owns. Output:"
+                + Environment.NewLine + Snapshot(output));
+
+            TableExists(developmentDatabase, DiagramSnapshotsTable).Should().BeTrue(
+                "walking past the lock means it created the schema without it, which is the very "
+                + "capability the gate has to withhold from every other environment. Looked in: "
+                + developmentDatabase);
+
+            heldByTheHarness.ReleaseMutex();
+        }
+        finally
+        {
+            developmentHost?.Dispose();
+            TryDeleteDirectory(developmentDirectory);
+        }
+
+        var hold = TimeSpan.FromMilliseconds(
+            Math.Clamp(developmentTimeToListen.TotalMilliseconds * 3, 5000, 20000));
+        _output.WriteLine(
+            "DEVELOPMENT ARM: reached Kestrel in "
+            + developmentTimeToListen.TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture)
+            + " ms with the mutex held (bypass honoured). PRODUCTION ARM will hold the mutex for "
+            + hold.TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture) + " ms.");
+
+        var productionDirectory = NewThrowawayDirectory();
+        var productionDatabaseDirectory = Path.Combine(productionDirectory, "db");
+        var productionDatabase = Path.Combine(productionDatabaseDirectory, "diagrams.db");
+        DemoApiHost? productionHost = null;
+
+        try
+        {
+            using var heldByTheHarness = TakeTheSchemaLockAwayFromTheHosts(productionDatabase);
+            productionHost = StartHost(
+                executable, productionDatabase, readyDir: null, goFile: null, skipLock: true,
+                LetKestrelChooseThePort, output, OutsideDevelopmentEnvironment);
+
+            WaitUntil(
+                HostStartupTimeout,
+                () => Directory.Exists(productionDatabaseDirectory) || productionHost.HasExited,
+                () => "waiting for the host outside Development to enter startup at all. Program creates "
+                      + "the database's directory as one of its first acts, well before schema creation, "
+                      + "so this is the cheapest evidence that the process is running rather than still "
+                      + "being loaded — without it, a silent host below would be unattributable between "
+                      + "'held by the lock' and 'not started yet'. Looked for: "
+                      + productionDatabaseDirectory + ". Output:"
+                      + Environment.NewLine + Snapshot(output));
+
+            productionHost.HasExited.Should().BeFalse(
+                "a host that died on startup measures nothing about the lock. "
+                + WhyAHostIsMissing(output, BarrierState.Released) + ". Output:"
+                + Environment.NewLine + Snapshot(output));
+
+            var heldUntil = DateTime.UtcNow + hold;
+            while (DateTime.UtcNow < heldUntil && !productionHost.Listening && !productionHost.HasExited)
+            {
+                Thread.Sleep(50);
+            }
+
+            productionHost.HasExited.Should().BeFalse(
+                "the host must still be alive at the end of the hold; a dead one cannot distinguish "
+                + "'waited for the lock' from 'crashed'. "
+                + WhyAHostIsMissing(output, BarrierState.Released) + ". Output:"
+                + Environment.NewLine + Snapshot(output));
+
+            productionHost.Listening.Should().BeFalse(
+                "THIS IS THE MEASUREMENT. The same executable, the same SKIP_LOCK=1, the same held "
+                + "mutex — only ASPNETCORE_ENVIRONMENT changed, and it is the one that reached Kestrel "
+                + "in "
+                + developmentTimeToListen.TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture)
+                + " ms a moment ago. Listening here means a host outside Development still obeys "
+                + DemoDiagramSchema.TestSkipLockEnvironmentVariable
+                + " and creates the schema with a bare EnsureCreated(), which is the check-then-act the "
+                + "named lock exists to remove. Output:" + Environment.NewLine + Snapshot(output));
+
+            TableExists(productionDatabase, DiagramSnapshotsTable).Should().BeFalse(
+                "and it must not have created the schema either: reaching CREATE TABLE while this "
+                + "process owns the lock is the same bypass seen from the database side. Looked in: "
+                + productionDatabase);
+
+            heldByTheHarness.ReleaseMutex();
+
+            WaitUntil(
+                AfterReleaseTimeout,
+                () => productionHost.Listening || productionHost.HasExited,
+                () => "waiting for the host to come through now that the lock is free. THIS IS THE "
+                      + "CONTROL FOR THE SILENCE ABOVE: a host that was blocked on the mutex proceeds "
+                      + "within milliseconds of its release, while a host that was merely slow, or gone, "
+                      + "does not care that anything was released. "
+                      + WhyAHostIsMissing(output, BarrierState.Released) + ". Output:"
+                      + Environment.NewLine + Snapshot(output));
+
+            productionHost.Listening.Should().BeTrue(
+                "the host has to finish once it gets the lock — the gate closes the bypass, it does not "
+                + "stop a host from starting. Output:" + Environment.NewLine + Snapshot(output));
+
+            TableExists(productionDatabase, DiagramSnapshotsTable).Should().BeTrue(
+                "and it has to have created the schema THROUGH the lock. Looked in: "
+                + productionDatabase);
+        }
+        finally
+        {
+            _output.WriteLine(Snapshot(output));
+            productionHost?.Dispose();
+            TryDeleteDirectory(productionDirectory);
+        }
+    }
+
+    /// <summary>
     /// A port for the collision arm, taken the OLD way — bind 0, read, close — because that is the only way
     /// to name a port the machine is likely to leave alone, and this arm WANTS the two hosts to fight over
     /// it.
@@ -375,11 +677,7 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
         Action<IReadOnlyList<DemoApiHost>, string, StringBuilder> onReleased,
         int forceBothHostsOntoThisPort = LetKestrelChooseThePort)
     {
-        var directory = Path.Combine(
-            Path.GetTempPath(),
-            "tempo-blazor-demo-api-schema-cross-process",
-            Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = NewThrowawayDirectory();
         var databasePath = Path.Combine(directory, "diagrams.db");
         var readyDir = Path.Combine(directory, "ready");
         Directory.CreateDirectory(readyDir);
@@ -457,19 +755,62 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
         }
     }
 
+    private static string NewThrowawayDirectory()
+    {
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "tempo-blazor-demo-api-schema-cross-process",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
+
+    /// <summary>
+    /// Takes the schema lock for <paramref name="databasePath"/> away from any host that wants it, using
+    /// <see cref="DemoDiagramSchema.LockNameFor"/> so the harness and the host cannot be holding two
+    /// differently-named mutexes and calling it contention.
+    /// </summary>
+    private static Mutex TakeTheSchemaLockAwayFromTheHosts(string databasePath)
+    {
+        var mutex = new Mutex(initiallyOwned: false, DemoDiagramSchema.LockNameFor(databasePath));
+        try
+        {
+            if (!mutex.WaitOne(TimeSpan.FromSeconds(30)))
+            {
+                throw new InvalidOperationException(
+                    "the harness could not take the schema lock for " + databasePath
+                    + ", so nothing below would be a measurement of a host waiting for it. A leftover "
+                    + "holder from an earlier run is the usual reason.");
+            }
+        }
+        catch (AbandonedMutexException)
+        {
+            // A previous run died holding it. The wait succeeded; this process owns it now.
+        }
+
+        return mutex;
+    }
+
     private static string DemoApiExecutablePath()
         => Path.Combine(
             AppContext.BaseDirectory,
             OperatingSystem.IsWindows() ? "Tempo.Blazor.Demo.Api.exe" : "Tempo.Blazor.Demo.Api");
 
+    /// <param name="environment">
+    /// The value handed to both <c>ASPNETCORE_ENVIRONMENT</c> and <c>DOTNET_ENVIRONMENT</c>. It is a
+    /// PARAMETER because it is the single variable the seam-gate off-diagonals turn: everything else about
+    /// the two arms — executable, database, ports, the three TEMPO_TEST_DIAGRAM_SCHEMA_* names — is
+    /// identical, so a difference in outcome has exactly one candidate cause.
+    /// </param>
     private static DemoApiHost StartHost(
         string executable,
         string databasePath,
-        string readyDir,
-        string goFile,
+        string? readyDir,
+        string? goFile,
         bool skipLock,
         int requestedPort,
-        StringBuilder output)
+        StringBuilder output,
+        string environment = DevelopmentEnvironment)
     {
         var port = requestedPort;
         var start = new ProcessStartInfo
@@ -482,12 +823,20 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
         };
         start.ArgumentList.Add("--urls");
         start.ArgumentList.Add("http://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture));
-        start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
-        start.Environment["DOTNET_ENVIRONMENT"] = "Development";
+        start.Environment["ASPNETCORE_ENVIRONMENT"] = environment;
+        start.Environment["DOTNET_ENVIRONMENT"] = environment;
         start.Environment["ASPNETCORE_URLS"] = "http://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture);
         start.Environment[DemoDatabaseRedirect.EnvironmentVariable] = databasePath;
-        start.Environment[DemoDiagramSchema.TestReadyDirEnvironmentVariable] = readyDir;
-        start.Environment[DemoDiagramSchema.TestGoFileEnvironmentVariable] = goFile;
+        if (readyDir is not null)
+        {
+            start.Environment[DemoDiagramSchema.TestReadyDirEnvironmentVariable] = readyDir;
+        }
+
+        if (goFile is not null)
+        {
+            start.Environment[DemoDiagramSchema.TestGoFileEnvironmentVariable] = goFile;
+        }
+
         if (skipLock)
         {
             start.Environment[DemoDiagramSchema.TestSkipLockEnvironmentVariable] = "1";

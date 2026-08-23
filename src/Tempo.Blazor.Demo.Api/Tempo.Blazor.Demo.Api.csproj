@@ -6,6 +6,11 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <!-- DemoDiagramSchema.LockNameFor: the cross-process schema tooth has to take the very mutex the host
+         would take, so the lock name has one spelling and both sides read it from there. -->
+    <InternalsVisibleTo Include="Tempo.Blazor.Demo.Api.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor.Demo.Shared\Tempo.Blazor.Demo.Shared.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Abstractions\Tempo.Blazor.Abstractions.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Collaboration\Tempo.Blazor.Collaboration.csproj" />

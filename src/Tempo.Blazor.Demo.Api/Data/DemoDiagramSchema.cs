@@ -50,6 +50,19 @@ namespace Tempo.Blazor.Demo.Api.Data;
 /// about a second machine sharing the file over a network mount, where a mutex is not shared
 /// at all.
 /// </para>
+/// <para>
+/// THE TEST SEAMS BELOW ARE READ ONLY IN DEVELOPMENT, AND THAT IS ENFORCED HERE RATHER THAN ASKED FOR IN
+/// A DOC COMMENT. Three environment variables can park this host on a barrier or walk it straight past the
+/// lock; the sentence that used to guard them said they "must stay unset", which is a description of an
+/// operator's habit and is enforced by nothing — and this file ships inside a host anyone can start.
+/// <c>TestSeamsAreOpen</c> makes every read of those three names conditional on the host running as
+/// <c>Development</c>, so a demo started any other way cannot be talked into the very race the lock exists
+/// to close, and cannot be made to throw <see cref="TimeoutException"/> out of its own startup. The
+/// cross-process tooth starts its hosts with <c>ASPNETCORE_ENVIRONMENT=Development</c> and is unaffected;
+/// what the gate is worth is measured by an arm that changes only that one variable. What it is worth is
+/// NOT a security boundary and NOT closed for a hand-started demo — <c>TestSeamsAreOpen</c> states both,
+/// and neither can be read off this paragraph.
+/// </para>
 /// </remarks>
 public static class DemoDiagramSchema
 {
@@ -101,14 +114,16 @@ public static class DemoDiagramSchema
 
     /// <summary>
     /// Test-only: directory in which a host writes a pid file when it has reached schema creation and is
-    /// waiting to be released. Unset in production; the cross-process race tooth is the only writer.
+    /// waiting to be released. Read only when this host runs as <c>Development</c> (see
+    /// <c>TestSeamsAreOpen</c>); the cross-process race tooth is the only writer.
     /// </summary>
     public const string TestReadyDirEnvironmentVariable = "TEMPO_TEST_DIAGRAM_SCHEMA_READY_DIR";
 
     /// <summary>
     /// Test-only: path of the file a host polls for after writing its ready file. A named
     /// <c>EventWaitHandle</c> is not supported on this host's OS (Linux throws
-    /// <c>PlatformNotSupportedException</c>); a go-file is. Unset in production.
+    /// <c>PlatformNotSupportedException</c>); a go-file is. Read only when this host runs as
+    /// <c>Development</c> (see <c>TestSeamsAreOpen</c>).
     /// </summary>
     public const string TestGoFileEnvironmentVariable = "TEMPO_TEST_DIAGRAM_SCHEMA_GO_FILE";
 
@@ -116,10 +131,88 @@ public static class DemoDiagramSchema
     /// Test-only: when set to <c>1</c>, schema creation skips the named mutex and calls
     /// <c>EnsureCreated()</c> bare. That is the MUTATION the cross-process tooth uses as its positive
     /// control — without it a green "both hosts started" is indistinguishable from "they never met".
-    /// Unset in production, and must stay unset: a running demo that exported this would re-open the
-    /// race the lock exists to close.
+    /// <para>
+    /// IT IS READ ONLY WHEN THIS HOST RUNS AS <c>Development</c> (see <c>TestSeamsAreOpen</c>). This used
+    /// to read "unset in production, and must stay unset", which asked an operator for a promise instead
+    /// of denying the capability. A demo started any other way may export the name to no effect, because
+    /// nothing outside Development looks at it.
+    /// </para>
     /// </summary>
     public const string TestSkipLockEnvironmentVariable = "TEMPO_TEST_DIAGRAM_SCHEMA_SKIP_LOCK";
+
+    /// <summary>
+    /// The one environment in which the three variables above are read at all.
+    /// </summary>
+    private const string TheEnvironmentTheTestSeamsBelongTo = "Development";
+
+    /// <summary>
+    /// Whether this host may act on the three test variables above.
+    /// <para>
+    /// WHY A GATE AND NOT A DOC COMMENT. Each of the three names is a way of making a running host behave
+    /// worse: two of them arm a barrier whose failure mode is a <see cref="TimeoutException"/> thrown out
+    /// of startup, and the third replaces the named lock with a bare <c>EnsureCreated()</c> — the exact
+    /// check-then-act this type exists to remove. Their doc comments asked for them to stay unset, and an
+    /// asked-for property is not a property: nothing went red when the habit broke, and nothing could,
+    /// because the reads were unconditional.
+    /// </para>
+    /// <para>
+    /// IT READS THE TWO VARIABLES THE HOST ITSELF READS, NOT A RESOLVED <c>IHostEnvironment</c>, because
+    /// this is a static seam with no host services in hand and giving it some would change the signature
+    /// of <see cref="EnsureCreated"/> and therefore its call site. The consequence is worth naming rather
+    /// than glossing: a host that selects Development some OTHER way — <c>--environment Development</c> on
+    /// the command line, <c>appsettings</c> — finds the seams CLOSED, not open, because neither of those
+    /// routes writes an environment variable for this method to read. THE LAUNCH PROFILE IS NOT ONE OF
+    /// THOSE ROUTES, and an earlier version of this paragraph listed it as if it were.
+    /// <c>Properties/launchSettings.json</c> sets <c>ASPNETCORE_ENVIRONMENT=Development</c> as a PROCESS
+    /// environment variable, so <c>dotnet run --project src/Tempo.Blazor.Demo.Api</c> — the documented way
+    /// of hand-starting this host — reaches this method with the seams OPEN.
+    /// </para>
+    /// <para>
+    /// THE DIVERGENCE FROM <c>IWebHostEnvironment.IsDevelopment()</c> RUNS BOTH WAYS, which is what
+    /// "it fails shut" hid by naming only one of them. FAIL-SHUT: a tooth that armed its hosts by command
+    /// line or <c>appsettings</c> goes green without ever opening the seam it meant to exercise — that
+    /// costs a test its arrangement. FAIL-OPEN, and this one costs a running demo its lock:
+    /// <c>--environment Production</c> reaches the host through <c>WebApplication.CreateBuilder(args)</c>
+    /// and through NO environment variable, so a host started from the launch profile with that switch is
+    /// Production to itself and Development to this method — HOST PRODUCTION, SEAMS OPEN. Measured
+    /// 2026-08-23 over 319e3c9e, <c>-c Release</c>, by reading the host's own "Hosting environment:" line:
+    /// <c>ASPNETCORE_ENVIRONMENT=Development &lt;exe&gt; --environment Production</c> prints
+    /// <c>Production</c> while <c>ASPNETCORE_ENVIRONMENT</c> is still <c>Development</c> in that process.
+    /// THIS IS A LIMIT, NOT A FIX: the exact predicate needs a resolved <c>IHostEnvironment</c>, which
+    /// changes the signature of <see cref="EnsureCreated"/> and therefore <c>Program.cs</c> — out of scope
+    /// for the phase that wrote this. It is carried as a queue row.
+    /// </para>
+    /// <para>
+    /// ONE SHAPE THAT WAS SUSPECTED AND MEASURED NOT TO DIVERGE, so the next reader does not re-raise it:
+    /// an ASPNETCORE_ENVIRONMENT that is unset, empty or whitespace together with
+    /// <c>DOTNET_ENVIRONMENT=Development</c>. This method falls back to the second name; so does the host,
+    /// which reported <c>Hosting environment: Development</c> in all three shapes (same date, same
+    /// commit, same reading). Gate and host agree there.
+    /// </para>
+    /// <para>
+    /// WHAT THIS GATE IS WORTH, SAID SO NOBODY READS MORE INTO IT. <c>Development</c> IS NOT A SECURITY
+    /// BOUNDARY HERE; IT IS A BOUNDARY AGAINST MISTAKE. What it really buys is that an ambient or
+    /// inherited variable does not open the seam on its own — a host outside Development never reads the
+    /// three names, so a stray <c>TEMPO_TEST_DIAGRAM_SCHEMA_*</c> in someone's shell profile or CI job is
+    /// inert. Against an ADVERSARY the gain is zero: whoever can set
+    /// <c>TEMPO_TEST_DIAGRAM_SCHEMA_SKIP_LOCK</c> in a host's environment can set
+    /// <c>ASPNETCORE_ENVIRONMENT</c> in that same environment, in the same breath. The sentence this
+    /// replaced promised a protection this does not provide.
+    /// </para>
+    /// </summary>
+    private static bool TestSeamsAreOpen()
+    {
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (string.IsNullOrWhiteSpace(environment))
+        {
+            environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+        }
+
+        return string.Equals(
+            environment,
+            TheEnvironmentTheTestSeamsBelongTo,
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Ensures the diagram schema exists in <paramref name="databasePath"/>, letting only one host at a
@@ -136,16 +229,21 @@ public static class DemoDiagramSchema
         ArgumentNullException.ThrowIfNull(context);
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
 
-        WaitForTestBarrierIfArmed();
-
-        if (string.Equals(
-                Environment.GetEnvironmentVariable(TestSkipLockEnvironmentVariable),
-                "1",
-                StringComparison.Ordinal))
+        // Both test seams live inside this one branch, so that a host outside Development does not merely
+        // ignore the three variables — it never reads them.
+        if (TestSeamsAreOpen())
         {
-            WidenTheBareCreateSoTwoProcessesCanMeet(context);
-            context.Database.EnsureCreated();
-            return;
+            WaitForTestBarrierIfArmed();
+
+            if (string.Equals(
+                    Environment.GetEnvironmentVariable(TestSkipLockEnvironmentVariable),
+                    "1",
+                    StringComparison.Ordinal))
+            {
+                WidenTheBareCreateSoTwoProcessesCanMeet(context);
+                context.Database.EnsureCreated();
+                return;
+            }
         }
 
         using var oneCreatorAtATime = new Mutex(initiallyOwned: false, LockNameFor(databasePath));
@@ -177,7 +275,16 @@ public static class DemoDiagramSchema
 
     /// <summary>
     /// When both test variables are set, writes a pid file into the ready directory and waits to be
-    /// released. Production never sets them, so this is a no-op on every real host.
+    /// released.
+    /// <para>
+    /// IT IS NOT REACHED OUTSIDE DEVELOPMENT, AND THAT IS THE CALLER'S DOING. <see cref="EnsureCreated"/>
+    /// calls this only inside its <c>TestSeamsAreOpen</c> branch, so a host in any other environment does
+    /// not read <see cref="TestReadyDirEnvironmentVariable"/> or
+    /// <see cref="TestGoFileEnvironmentVariable"/> at all: it cannot be parked on a barrier nobody intends
+    /// to release, and cannot throw <see cref="TimeoutException"/> out of startup. This paragraph used to
+    /// say "production never sets them, so this is a no-op on every real host", which described what an
+    /// operator would do rather than what this code permits.
+    /// </para>
     /// </summary>
     /// <remarks>
     /// The wait is BEFORE the mutex on purpose: releasing two hosts together is what makes an empty
@@ -288,8 +395,15 @@ public static class DemoDiagramSchema
     /// The mutex name for a database file: a hash of its full path, because a mutex name may not contain a
     /// path separator on every platform this runs on, and because the name has to be identical in two
     /// processes that spelled the same file differently.
+    /// <para>
+    /// INTERNAL RATHER THAN PRIVATE BECAUSE A TOOTH HAS TO HOLD THIS VERY MUTEX. Showing that a host
+    /// outside Development still WAITS for the lock means taking the lock away from it first, and a test
+    /// that recomputed the name would be a second source of truth: once the two spellings drifted, the
+    /// test would be holding a mutex no host shares and the arm that asserts "it walked past" would pass
+    /// without anything ever being contended.
+    /// </para>
     /// </summary>
-    private static string LockNameFor(string databasePath)
+    internal static string LockNameFor(string databasePath)
     {
         var canonical = Path.GetFullPath(databasePath);
         var digest = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
