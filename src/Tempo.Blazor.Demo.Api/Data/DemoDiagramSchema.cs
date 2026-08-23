@@ -58,8 +58,46 @@ public static class DemoDiagramSchema
     /// Generous by design: schema creation is milliseconds, so reaching this is not congestion but a hung
     /// or killed neighbour, and blocking startup for ever on one of those is worse than the race the wait
     /// was protecting against.
+    /// <para>
+    /// THIS IS THE MUTEX WAIT AND NOTHING ELSE. It used to be the test barrier's deadline as well; see
+    /// <see cref="TestBarrierTimeout"/> for why one constant could not honestly be both.
+    /// </para>
     /// </summary>
     private static readonly TimeSpan WaitForTheOtherHost = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Test-only: how long a host armed with the barrier variables waits to be released before giving up.
+    /// <para>
+    /// NON-DETERMINISM SOURCE (FIXED): ONE CONSTANT SERVING AS BOTH THE MUTEX WAIT AND THIS DEADLINE.
+    /// The two are different QUANTITIES that happened to share a number. The mutex wait answers "how long do I tolerate a neighbour that is
+    /// already creating the schema" — milliseconds of real work, so 30 s is enormous. The barrier deadline
+    /// answers "how long do I tolerate a neighbour that has not BOOTED yet", and booting a Demo.Api host on
+    /// a cold or loaded runner is seconds to minutes. Sharing one constant meant the first host to arrive
+    /// gave up on the second after 30 s while its own harness was still willing to wait 120 s for that host
+    /// to appear — and the resulting <see cref="TimeoutException"/> reached the harness as the same
+    /// unattributable red as a genuine schema failure. It also meant that TUNING THE PRODUCTION MUTEX WAIT
+    /// silently retuned a test deadline, in a file where nothing said so.
+    /// </para>
+    /// <para>
+    /// DERIVED FROM THE HARNESS'S HOST-STARTUP TIMEOUT, not from the mutex wait: the barrier may only give
+    /// up AFTER the harness has already given up waiting for hosts to start, otherwise the host kills itself
+    /// while the run that is watching it still considers it healthy. That harness timeout is 120 s
+    /// (<c>DemoDiagramSchemaCrossProcessRaceTests.HostStartupTimeout</c>).
+    /// </para>
+    /// <para>
+    /// WHAT IS DERIVED IS THE INEQUALITY. THE FACTOR IS A CHOICE, AND CALLING IT "1.5x" DRESSED A PICK AS A
+    /// MEASUREMENT. Nothing measured 180 s and nothing can: the harness kills the run at 120 s, so 121 s,
+    /// 180 s and 600 s are indistinguishable in behaviour — each of them expires only after the run that
+    /// was watching has already failed, and no observer downstream can tell which was configured. The
+    /// plateau is (120 s, ∞) and it has NO UPPER EDGE to find, so any experiment that claims to have found
+    /// one measured something else. What is reasoned, and what is toothed, is
+    /// <c>TestBarrierTimeout &gt; HostStartupTimeout</c>:
+    /// <c>TheTestBarrierDeadline_OutlivesTheHarnessWaitForAHostToStart</c> asserts exactly that over the
+    /// two constants, so moving either one the wrong way is red, while moving 180 to any other value above
+    /// 120 is not a change in behaviour at all.
+    /// </para>
+    /// </summary>
+    public static readonly TimeSpan TestBarrierTimeout = TimeSpan.FromSeconds(180);
 
     /// <summary>
     /// Test-only: directory in which a host writes a pid file when it has reached schema creation and is
@@ -161,7 +199,7 @@ public static class DemoDiagramSchema
             Path.Combine(readyDir, Environment.ProcessId.ToString(CultureInfo.InvariantCulture)),
             "ready");
 
-        var deadline = DateTime.UtcNow + WaitForTheOtherHost;
+        var deadline = DateTime.UtcNow + TestBarrierTimeout;
         long releaseTicks = 0;
         while (releaseTicks == 0)
         {
@@ -169,7 +207,7 @@ public static class DemoDiagramSchema
             {
                 throw new TimeoutException(
                     "The test schema-creation barrier was not released within "
-                    + WaitForTheOtherHost.TotalSeconds.ToString(CultureInfo.InvariantCulture)
+                    + TestBarrierTimeout.TotalSeconds.ToString(CultureInfo.InvariantCulture)
                     + "s.");
             }
 
@@ -199,6 +237,14 @@ public static class DemoDiagramSchema
     /// Opens the check-then-act gap so two processes released together actually overlap. CREATE TABLE
     /// was measured at 0 ms: without this pause the second host arrives at a database that already has
     /// the table and no-ops, which is indistinguishable from "they never met".
+    /// <para>
+    /// NON-DETERMINISM SOURCE (LIVE): THE 100 ms IS A RESERVE, NOT A GUARANTEE. It is the whole margin the
+    /// bypass arm has for its neighbour to arrive inside the widened gap, and 100 ms of it has never been
+    /// measured against a loaded runner — a machine that takes longer than that to schedule the second
+    /// process turns the arm's red into a green that means "they never met". This is the known flake in
+    /// <c>TwoDemoApiProcesses_BypassingTheLock_NameTheSqliteRace</c>. Not fixed here; recorded as a queue
+    /// row.
+    /// </para>
     /// </summary>
     private static void WidenTheBareCreateSoTwoProcessesCanMeet(DbContext context)
     {
