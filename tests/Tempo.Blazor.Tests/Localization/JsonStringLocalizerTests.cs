@@ -24,21 +24,25 @@ public class JsonStringLocalizerTests
         => ForCulture("cs")["TmFileDropZone_DragDrop"].Value.Should().Be("Přetáhněte soubory sem");
 
     /// <summary>
-    /// Reads the NEUTRAL table, via <see cref="CultureInfo.InvariantCulture"/>. Pinning <c>en</c>
-    /// would look equivalent only until <c>TmResources.en.json</c> exists; the day it does, <c>en</c>
+    /// A member whose subject IS the neutral table must reach it through
+    /// <see cref="CultureInfo.InvariantCulture"/> rather than through <c>en</c>: pinning <c>en</c>
+    /// looks equivalent only until <c>TmResources.en.json</c> exists; the day it does, <c>en</c>
     /// would read that file and leave this assertion green over a different subject.
     /// <c>InvariantCulture</c>'s chain is the neutral table alone (<c>BuildChain</c> stops on an
     /// empty <c>CultureInfo.Name</c>), so this member stays on <c>TmResources.json</c> by
-    /// construction. The sibling <see cref="Unknown_culture_falls_back_to_neutral"/> still covers
-    /// the key through <c>de</c>.
+    /// construction. The rule is scoped to the SUBJECT: it binds a member that asserts WHICH table
+    /// served a value, not one that pins a culture only to spell an expectation. Such a pin also
+    /// buys less than it looks — <c>ForCulture</c> sets <c>CurrentUICulture</c>, which selects the
+    /// table; the argument-taking indexer still formats under the ambient <c>CurrentCulture</c>
+    /// (<c>string.Format(CultureInfo.CurrentCulture, …)</c> in <c>JsonStringLocalizer</c>).
+    /// The sibling <see cref="Unknown_culture_falls_back_to_neutral"/> still covers the key
+    /// through <c>de</c>. (<c>ForCulture("")</c> passes <c>CultureInfo.GetCultureInfo("")</c>: an
+    /// empty <c>Name</c>, equal to <see cref="CultureInfo.InvariantCulture"/> though not the same
+    /// instance, so it takes that same neutral-only chain.)
     /// </summary>
     [Fact]
     public void Resolves_neutral_english_value()
-    {
-        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-        new JsonStringLocalizer<TmResources>()["TmFileDropZone_DragDrop"].Value
-            .Should().Be("Drag and drop files here");
-    }
+        => ForCulture("")["TmFileDropZone_DragDrop"].Value.Should().Be("Drag and drop files here");
 
     [Fact]
     public void Region_culture_falls_back_to_language() // cs-CZ → cs

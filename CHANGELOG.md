@@ -23,7 +23,7 @@ number exists so the feed guard can be green over a number that is still free.
   `http.server`, `NuGet.Config` with `allowInsecureConnections=true`) and is called from both
   publish workflows after pack, before the real push.
 
-- **`Resolves_neutral_english_value` reads the neutral table through `InvariantCulture`, not
+- **`Resolves_neutral_english_value` reads the neutral table through an empty culture name, not
   `en`.** Pinning `en` would have stayed green and silently changed subject the day
   `TmResources.en.json` appeared. `Shell_RendersEnglishNavigation_ByDefault` still renders inside
   `UseUiCulture("")`.
