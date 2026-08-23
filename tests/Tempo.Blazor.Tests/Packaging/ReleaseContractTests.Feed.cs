@@ -302,33 +302,26 @@ public sealed partial class ReleaseContractTests
     }
 
     /// <summary>
-    /// Marks the feed guard as SKIPPED when nuget.org did not answer, with the survey line as the
-    /// reason. Same mechanism and the same deliberate catch-returns-null as
-    /// <see cref="StagedPackagesFactAttribute"/>: a broken probe is handed to the runner so the
-    /// exception is thrown again inside the body and reported with its stack, because "skip on error"
-    /// would make every future breakage in this file look like being offline.
+    /// Marks a guard as SKIPPED when nuget.org did not answer, with the survey line as the reason.
+    /// <para>
+    /// The MECHANISM is shared with <see cref="StagedPackagesFactAttribute"/> and lives once in
+    /// <see cref="ProbeDecidedFactAttribute"/> — including the deliberate catch-returns-null, because
+    /// "skip on error" would make every future breakage in this file look like being offline. This class
+    /// supplies only the question: did the flat container answer.
+    /// </para>
+    /// <para>
+    /// UNREACHABLE IS NOT THE SAME AS 404. A feed that answers 404 for the id is REACHED, and that path
+    /// is deliberately not a skip: it is a broken instrument the decorated member's own assertions must
+    /// report. Only a probe that got no answer at all skips.
+    /// </para>
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class FeedReachableFactAttribute : FactAttribute
+    public sealed class FeedReachableFactAttribute : ProbeDecidedFactAttribute
     {
-        public override string? Skip
+        protected override string? ProbeSkipReason()
         {
-            get
-            {
-                try
-                {
-                    var survey = PublishedVersionSurvey.Take();
-                    return survey.Unreachable is null ? null : survey.Report;
-                }
-#pragma warning disable CA1031 // see the remark above: any failure here must NOT read as "skip"
-                catch (Exception)
-#pragma warning restore CA1031
-                {
-                    return null;
-                }
-            }
-
-            set => base.Skip = value;
+            var survey = PublishedVersionSurvey.Take();
+            return survey.Unreachable is null ? null : survey.Report;
         }
     }
 

@@ -210,8 +210,65 @@ public sealed class ReleaseScriptInputReadTests
     /// mutation it defends against is "the curl read replaced by a canned body", and a run that never
     /// curls cannot tell the two apart.
     /// </para>
+    /// <para>
+    /// WHICH IS WHY IT IS GATED ON REACH, added 2026-08-23 — and the measurement that produced the gate
+    /// is NOT the one that was expected, so it is written down as it came out. With no route,
+    /// <c>curl</c> fails and the script takes its own <c>feed_status != "200"</c> branch, printing
+    /// "Could not read … so nobody has checked whether 2.8.20 is already published." and exiting 1. The
+    /// member did not go red on that. It went GREEN: the old positive control asked only for the
+    /// substring <c>already published</c>, which that sentence ends in; the exit code is 1 in both
+    /// worlds; and the mutated arm needs no network at all, because its whole point is a canned body. So
+    /// offline this member certified the feed read while never reading the feed — the exact failure this
+    /// file was written against, sitting in its own guard. The control was tightened to name the refusal
+    /// line (see the comment at that assertion), which turns the no-route world into a REAL red, and the
+    /// gate then turns that red into a skip.
+    /// </para>
+    /// <para>
+    /// THE GATE IS BORROWED, NOT BUILT. A no-route world is exactly what
+    /// <see cref="AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed"/> built
+    /// <see cref="ReleaseContractTests.FeedReachableFactAttribute"/> for, having written down that "a
+    /// suite that cannot run offline is a suite that gets run less". Reusing it means no route is
+    /// SKIPPED — a third outcome in the .trx, never a green and never a red — and it means one shape to
+    /// fix rather than two, which is the lesson the shared
+    /// <see cref="ProbeDecidedFactAttribute"/> came out of.
+    /// </para>
+    /// <para>
+    /// THE OTHER TREATMENT WAS CONSIDERED AND REJECTED: pointing the unmutated arm at a stubbed feed, the
+    /// way the push arm is pointed at a fake <c>dotnet</c>. It needs a seam on the feed URL, and that is
+    /// a worse seam than the ones this file already has. <c>CHANGELOG_PATH</c> and <c>PACKAGE_MANIFEST</c>
+    /// only move WHERE an answer is read from; a URL seam would let a caller hand the release script the
+    /// answer "this number is free", which is the one answer no override may ever be able to supply. The
+    /// stubbed-feed shape does exist, in <c>PackScriptManifestSweepTests</c>, and it is right there
+    /// because the question there is the sweep's POPULATION and not the read.
+    /// </para>
+    /// <para>
+    /// WHAT THE SKIP COSTS, stated because an unstated limit gets read as a stronger claim than anybody
+    /// measured: on a machine with no route to <c>api.nuget.org</c> the read this needle defends is
+    /// UNCHECKED — the same admitted hole as its sibling, arriving here for the same reason. Two things
+    /// were measured for THIS member rather than carried over from the sibling's paragraph, because a
+    /// relayed reason is the relayer's own claim: this repository carries no <c>NuGet.config</c> at any
+    /// depth (measured 2026-08-23 by <c>find . -iname nuget.config</c> over the tree with
+    /// <c>obj/</c>, <c>bin/</c> and <c>node_modules/</c> excluded — zero hits), so <c>dotnet restore</c>
+    /// resolves against the SDK's default source; and in both publish workflows the <c>Restore
+    /// dependencies</c> step runs before the <c>Test</c> step, which is itself <c>--no-build</c>. A CI
+    /// lane therefore cannot reach this member without having reached that host first — EXCEPT on a
+    /// runner whose NuGet cache is already warm, where a restore can succeed without a packet leaving the
+    /// machine, a world neither this member nor the sibling MEASURED. And one gap that is this member's
+    /// alone — the skip is decided by an <c>HttpClient</c> probe while the script reads the feed with
+    /// <c>curl</c>, so a machine that has a route but no <c>curl</c> is red here rather than skipped.
+    /// </para>
+    /// <para>
+    /// AND A COST THIS MEMBER ADDS RATHER THAN INHERITS, because a limit nobody writes down gets paid
+    /// silently: the gate decides its skip through <c>PublishedVersionSurvey.Take()</c>, which is NOT
+    /// cached. Every call builds a fresh <c>HttpClient</c> and issues the flat-container GET, and nothing
+    /// on that path holds a previous answer — deliberately, for the reason the sibling records: an answer
+    /// kept from a healthier past would grant a skip the feed never gave. The price is that gating a
+    /// SECOND member on <c>[FeedReachableFact]</c> is a second live request to <c>api.nuget.org</c> at
+    /// discovery time, on top of the two the sibling already names, and it is paid on every run of this
+    /// suite whether or not the feed has anything new to say.
+    /// </para>
     /// </summary>
-    [Fact]
+    [ReleaseContractTests.FeedReachableFact]
     public void PackScript_KeepClauseBreakTheRead_TurnsTheNeedleRed_UnmutatedStaysGreen()
     {
         string root = FindRepoRoot();
@@ -243,10 +300,27 @@ public sealed class ReleaseScriptInputReadTests
 
             ScriptResult unmutated = RunBash(harnessedHealthyPath, root, env);
             Dump("pack unmutated spent version", unmutated);
+
+            // THE POSITIVE CONTROL NAMES THE WHOLE REFUSAL LINE, and the reason is a defect measured
+            // 2026-08-23 rather than a preference for precision. This used to assert Contain("already
+            // published"), and the branch taken when the feed CANNOT BE READ prints "…so nobody has
+            // checked whether 2.8.20 is already published." — which contains that substring. So the
+            // control passed in both worlds: the one where the feed said the number is spent, and the
+            // one where nothing was asked at all. That is the vacuous green this whole file exists
+            // against, arriving in the assertion that was supposed to be the guard against it. The two
+            // messages are told apart by "is already published ON", which only the refusal has, and by
+            // the negative below, which names the blind branch outright.
             unmutated.Combined.Should().Contain(
-                "already published",
-                "positive control: unmutated pack script must refuse a number the feed serves "
+                $"Version {spent} is already published on",
+                "positive control: unmutated pack script must refuse a number the feed serves, and it "
+                + "must be THAT refusal — the could-not-read branch also ends in the words 'already "
+                + $"published' and would satisfy a looser needle over a feed nobody reached "
                 + $"({unmutated.Combined})");
+            unmutated.Combined.Should().NotContain(
+                "Could not read",
+                "reaching the could-not-read branch means this run measured the script's OFFLINE "
+                + "behaviour and nothing about the feed read it exists to defend; that state is a "
+                + $"skip decided by [FeedReachableFact], never a result ({unmutated.Combined})");
             unmutated.Combined.Should().NotContain("PAST_FEED");
             unmutated.Exit.Should().Be(1);
 

@@ -606,41 +606,17 @@ public sealed partial class ReleaseContractTests
     /// <summary>
     /// Marks the staged-package guard as SKIPPED when there is no package for it to open.
     /// <para>
-    /// <c>FactAttribute.Skip</c> is virtual and xUnit v2 reads it through
-    /// <c>ReflectionAttributeInfo.GetNamedArgument</c>, which calls the property getter on a real
-    /// instance rather than reading the attribute blob — so an overridden getter is the supported way to
-    /// decide a skip from the environment, and in this runner it is the ONLY way (see the remark on the
-    /// test itself for what was measured about dynamic skip).
-    /// </para>
-    /// <para>
-    /// A BROKEN PROBE MUST NEVER BECOME A SKIP, which is why the catch returns null rather than a reason.
-    /// Null means "do not skip", so an exception in the survey hands the test to the runner, where the
-    /// same exception will be thrown again inside the body and reported as a failure with its stack. The
-    /// opposite treatment — skip on error — would make every future breakage in this file look like the
-    /// repository's ordinary between-releases state.
+    /// The MECHANISM — an overridden <c>Skip</c> getter, why that is the only skip this runner honours,
+    /// and why a throwing probe deliberately does not skip — lives once in
+    /// <see cref="ProbeDecidedFactAttribute"/> and is not repeated here. This class supplies only the
+    /// question: what does the staging directory hold right now.
     /// </para>
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class StagedPackagesFactAttribute : FactAttribute
+    public sealed class StagedPackagesFactAttribute : ProbeDecidedFactAttribute
     {
-        public override string? Skip
-        {
-            get
-            {
-                try
-                {
-                    return ReleaseStagingSurvey.Take().NothingCouldBeOpened;
-                }
-#pragma warning disable CA1031 // see the remark above: any failure here must NOT read as "skip"
-                catch (Exception)
-#pragma warning restore CA1031
-                {
-                    return null;
-                }
-            }
-
-            set => base.Skip = value;
-        }
+        protected override string? ProbeSkipReason() =>
+            ReleaseStagingSurvey.Take().NothingCouldBeOpened;
     }
 
     /// <summary>
