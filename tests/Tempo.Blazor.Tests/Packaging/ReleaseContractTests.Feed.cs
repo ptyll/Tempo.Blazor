@@ -79,6 +79,17 @@ public sealed partial class ReleaseContractTests
     /// number can be spent there and free here; this is keyed on nuget.org because that is the feed
     /// whose artefacts are public and immutable.
     /// </para>
+    /// <para>
+    /// AND WHAT IT DOES NOT COVER IN THE OTHER DIRECTION — the POPULATION, which the paragraph above
+    /// about a misspelled id does not imply. This probe asks about ONE id, the lead package read from
+    /// <c>src/Tempo.Blazor/Tempo.Blazor.csproj</c>, while <c>eng/nuget-packages.txt</c> lists 26. A
+    /// PARTIAL release — the state <c>eng/push-nuget-packages.sh</c> exists for, where a push died
+    /// part-way through an alphabetical glob — is therefore invisible here whenever Tempo.Blazor is
+    /// among the ids that did not get pushed. That gap is closed in <c>eng/pack-nuget-packages.sh</c>,
+    /// which asks the same question over every id in the manifest; it is deliberately NOT closed here,
+    /// because this probe runs twice on every test run and 26 ids would put 52 requests on the path of
+    /// a suite whose affordable failure mode is a skip rather than a refusal.
+    /// </para>
     /// </summary>
     [FeedReachableFact]
     public void AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed()

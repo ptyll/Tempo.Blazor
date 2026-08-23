@@ -15,6 +15,8 @@ if [[ ! -f "$manifest" ]]; then
   exit 1
 fi
 
+mapfile -t projects < <(grep -vE '^[[:space:]]*(#|$)' "$manifest" | sed 's/[[:space:]]*$//')
+
 # THE NUMBER ITSELF HAS TO STILL BE FREE, and this is the last place that can refuse it.
 #
 # THE DEFECT THIS EXISTS FOR, measured rather than imagined: 2.8.19 was announced twice. The published
@@ -46,16 +48,80 @@ fi
 # ALLOW_UNVERIFIED_VERSION=1 is the named escape for packing with no route to the feed. It covers ONLY
 # the case where the question could not be asked; a version the feed answers WITH is refused outright,
 # because there is nothing to escape to.
+#
+# THE POPULATION IS THE WHOLE MANIFEST, NOT THE LEAD PACKAGE, and the gap was measured rather than
+# imagined: `eng/nuget-packages.txt` listed 26 projects when this was written (measured 2026-08-23 with
+# `/usr/bin/grep -cvE '^[[:space:]]*(#|$)' eng/nuget-packages.txt`, which is the same read the loop
+# below uses to build its own list). That number is DATED on purpose: it is expected to move, the very
+# next paragraph is about what happens when a 27th package is added, and nothing here depends on it —
+# the loop reads the manifest rather than a count. This probe used to ask about exactly one of
+# them — the id read from `src/Tempo.Blazor/Tempo.Blazor.csproj`. The very state that
+# `eng/push-nuget-packages.sh` exists for, a PARTIAL release where a push died part-way through an
+# alphabetical glob, is invisible to a one-id question whenever Tempo.Blazor is among the ids that did
+# not get pushed. It was caught only by the push (`published != total`), i.e. after the pack and after
+# 26 PUTs against the live feed, by a guard whose whole argument is "first and cheapest".
+#
+# WHY A 404 IS NOT FATAL FOR THE OTHER 25, settled before the loop was written because the loop opens
+# this trap: a 404 on the flat container is AMBIGUOUS. It means "misspelled id" and it equally means
+# "this package was never published" — and the second is the legitimate state of a newly added 27th
+# package. Applying the lead id's strictness to all 26 would let the first newly added package block
+# the release, and a guard that the first new package blocks is a guard somebody switches off. So the
+# LEAD id keeps today's strictness — it is provably published, so a non-200 there is a typo or an
+# unreachable feed — while for the remaining ids a 404 is REPORTED and skipped, and membership is
+# asked only where a 200 actually arrived.
+#
+# WHERE THE REACH CONTROL LIVES UNDER THAT SPLIT, because the loop has none of its own: an unreachable
+# feed answers non-200 for every id, and 25 silent skips read exactly like 25 free ids. The lead probe
+# is what refuses that. It runs FIRST, it is strict, and the loop is entered only when it answered —
+# so no run can reach the loop without the feed having answered at least once.
+#
+# AND THE LIMIT THAT REMAINS AFTER ALL THAT, stated rather than left to be discovered: a non-lead id
+# that answers something other than 200 or 404 — a 5xx, a request that timed out — is reported and
+# skipped, so a number already spent under THAT id would still get through. The lead probe proves the
+# feed was reachable, not that all 26 questions were answered; the counts printed at the end of the
+# loop are the record of how many were.
+#
+# AND WHAT THE LOOP COSTS, including the part of it that is a CEILING rather than a measurement. The
+# questions are asked one after another, each with `--max-time 20`, so 25 further requests put a worst
+# case of +500 s on a pack — and nothing in this script bounds that. The lead probe does not: it proves
+# the feed answered ONCE, at t0, which is a statement about reachability at that instant and says
+# nothing about the 25 requests that follow it. What was measured is the other end: 7.67 s and 8.33 s
+# for the whole probe over two runs (2026-08-23), and a re-measure of the two shapes alone the same day
+# gave 5.10 s / 3.53 s for 26 sequential requests against 2.80 s / 2.65 s for a single curl handed all
+# 26 URLs. The cheaper shape is therefore worth 1.3x-1.9x here and was measured at 2.8x earlier the
+# same day, which is exactly why it is filed as a conditional queue row and not taken now: the number
+# is network-dependent, and the honest trigger is the manifest outgrowing 40 ids or a measured pack
+# cost above 30 s, not a ratio.
+#
+# WHETHER THIS LOOP CAN FIRE AGAINST THE LIVE FEED TODAY, since a guard nobody has ever seen work is a
+# guard nobody trusts: no, and the reason is not that the feed answers uniformly — it does not.
+# Measured 2026-08-23 over all 26 ids, the answers fall into SIX different version sets (3 ids serve
+# 105 versions, 19 serve 86, and four singletons serve 58 / 55 / 48 / 30). The property that actually
+# holds is weaker and is the only one the conclusion needs: the union of every version any id serves is
+# exactly the 105 the LEAD id serves, with 0 versions outside it. Under that SUPERSET a number spent
+# anywhere is also spent on the lead, which is why the one-id question was adequate for as long as it
+# was — and the property dies at the first partial publication of a non-lead id under a number the lead
+# does not carry, which is the state this loop was added for. Until that happens the refusal arm is
+# exercised only offline, against a stubbed feed, by
+# `tests/Tempo.Blazor.Tests/Packaging/PackScriptManifestSweepTests.cs`.
 package_id="$(sed -n 's/.*<PackageId>\([^<]*\)<\/PackageId>.*/\1/p' src/Tempo.Blazor/Tempo.Blazor.csproj | head -n 1 | tr '[:upper:]' '[:lower:]')"
 if [[ -z "$package_id" ]]; then
   echo "src/Tempo.Blazor/Tempo.Blazor.csproj carries no <PackageId>; refusing to guess one, because a wrong id makes every version look free." >&2
   exit 1
 fi
 
-feed_index="https://api.nuget.org/v3-flatcontainer/${package_id}/index.json"
-feed_body="$(curl -sS --max-time 20 -w '\n%{http_code}' "$feed_index" 2>/dev/null || true)"
-feed_status="$(printf '%s' "$feed_body" | tail -n 1)"
-feed_versions="$(printf '%s' "$feed_body" | sed '$d' | grep -o '"[0-9][^"]*"' | wc -l | tr -d ' ' || true)"
+# ONE PROBE, ASKED ONCE PER ID. The three values it leaves behind are read by the lead arm below and
+# by the manifest loop after it, so both ask the feed the same way and can never drift into two
+# different notions of "the feed answered".
+probe_feed_index() {
+  feed_index="https://api.nuget.org/v3-flatcontainer/${1}/index.json"
+  feed_body="$(curl -sS --max-time 20 -w '\n%{http_code}' "$feed_index" 2>/dev/null || true)"
+  feed_status="$(printf '%s' "$feed_body" | tail -n 1)"
+  feed_versions="$(printf '%s' "$feed_body" | sed '$d' | grep -o '"[0-9][^"]*"' | wc -l | tr -d ' ' || true)"
+}
+
+lead_answered=0
+probe_feed_index "$package_id"
 
 # THE REACH CONTROL, and it is not decoration: measured offline, the probe returns nothing and "the
 # announced version is not in the list" comes out TRUE. Status and population are therefore checked
@@ -70,10 +136,62 @@ if [[ "$feed_status" != "200" || "${feed_versions:-0}" -eq 0 ]]; then
 
   echo "ALLOW_UNVERIFIED_VERSION=1: packing $VERSION without confirming it is still free on $feed_index." >&2
 elif [[ "$(printf '%s' "$feed_body" | grep -cF "\"$VERSION\"" || true)" != "0" ]]; then
-  echo "Version $VERSION is already published on $feed_index; the artefact under that number is immutable and cannot be replaced." >&2
+  echo "Version $VERSION is already published on $feed_index, under package id '$package_id'; the artefact under that number is immutable and cannot be replaced." >&2
   echo "Packing it again would ship different bytes under a label consumers have already resolved to something else." >&2
   echo "Bump CHANGELOG.md and every packable csproj to the next free number; retagging cannot reach what is already on the feed." >&2
   exit 1
+else
+  lead_answered=1
+fi
+
+# THE SAME QUESTION OVER THE REST OF THE MANIFEST. Guarded on the lead answer for the reason in the
+# block above: without that guard an unreachable feed would walk this loop reporting nothing.
+if [[ "$lead_answered" == "1" ]]; then
+  manifest_spent=""
+  manifest_answered=0
+  manifest_unpublished=0
+  manifest_unanswered=0
+
+  for project in "${projects[@]}"; do
+    if [[ ! -f "$project" ]]; then
+      echo "Package project '$project' from '$manifest' was not found." >&2
+      exit 1
+    fi
+
+    member_id="$(sed -n 's/.*<PackageId>\([^<]*\)<\/PackageId>.*/\1/p' "$project" | head -n 1 | tr '[:upper:]' '[:lower:]')"
+    if [[ -z "$member_id" || "$member_id" == "$package_id" ]]; then
+      continue
+    fi
+
+    probe_feed_index "$member_id"
+
+    if [[ "$feed_status" == "404" ]]; then
+      manifest_unpublished=$((manifest_unpublished + 1))
+      echo "  $member_id: 404, never published — there is no artefact under that id for $VERSION to collide with." >&2
+      continue
+    fi
+
+    if [[ "$feed_status" != "200" || "${feed_versions:-0}" -eq 0 ]]; then
+      manifest_unanswered=$((manifest_unanswered + 1))
+      echo "  $member_id: http '${feed_status:-<none>}', ${feed_versions:-0} versions parsed — this id was NOT asked, and a number spent under it would not be seen here." >&2
+      continue
+    fi
+
+    manifest_answered=$((manifest_answered + 1))
+    if [[ "$(printf '%s' "$feed_body" | grep -cF "\"$VERSION\"" || true)" != "0" ]]; then
+      manifest_spent="$member_id"
+      break
+    fi
+  done
+
+  if [[ -n "$manifest_spent" ]]; then
+    echo "Version $VERSION is already published on $feed_index, under package id '$manifest_spent'; the artefact under that number is immutable and cannot be replaced." >&2
+    echo "The lead id '$package_id' does not serve $VERSION, which is why asking about that one id alone reported the number free — a partially published release is exactly that shape." >&2
+    echo "Bump CHANGELOG.md and every packable csproj to the next free number; retagging cannot reach what is already on the feed." >&2
+    exit 1
+  fi
+
+  echo "Version $VERSION is free on '$package_id' and on $manifest_answered further manifest id(s) the feed answered for; $manifest_unpublished never published, $manifest_unanswered not answered." >&2
 fi
 
 # THE COMMIT STAMPED INTO THE NUSPEC IS PASSED IN, NOT INHERITED.
@@ -142,8 +260,6 @@ if [[ -n "$pre_status" ]]; then
 fi
 
 commit="$(git rev-parse HEAD)${dirty_suffix}"
-
-mapfile -t projects < <(grep -vE '^[[:space:]]*(#|$)' "$manifest" | sed 's/[[:space:]]*$//')
 
 mkdir -p "$output"
 # This delete is load-bearing, and nothing else in the pipeline knows it.

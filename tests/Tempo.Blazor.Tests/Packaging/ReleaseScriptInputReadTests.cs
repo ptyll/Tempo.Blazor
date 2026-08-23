@@ -194,6 +194,23 @@ public sealed class ReleaseScriptInputReadTests
         }
     }
 
+    /// <summary>
+    /// The keep-clause-break-the-read needle over the pack script's feed probe.
+    /// <para>
+    /// WHAT THIS MEMBER'S 2.8.20 RUN DOES AND DOES NOT EXERCISE, measured 2026-08-23 and worth stating
+    /// because the script has grown a second feed question since this was written: 2.8.20 is served by
+    /// the LEAD id, so the unmutated run is refused by the lead arm — in about 0.18 s, before the
+    /// manifest loop is reached at all. It therefore says nothing about the sweep over the other 25
+    /// ids; that behaviour is measured offline against a stubbed feed in
+    /// <c>PackScriptManifestSweepTests</c>, and this member remains what it always was, a needle on
+    /// the READ rather than on the population.
+    /// </para>
+    /// <para>
+    /// This member does reach the live feed, unlike the sweep tests. That is deliberate here: the
+    /// mutation it defends against is "the curl read replaced by a canned body", and a run that never
+    /// curls cannot tell the two apart.
+    /// </para>
+    /// </summary>
     [Fact]
     public void PackScript_KeepClauseBreakTheRead_TurnsTheNeedleRed_UnmutatedStaysGreen()
     {
@@ -352,13 +369,13 @@ public sealed class ReleaseScriptInputReadTests
         chmod?.WaitForExit();
     }
 
-    private sealed record ScriptResult(int Exit, string StdOut, string StdErr)
+    internal sealed record ScriptResult(int Exit, string StdOut, string StdErr)
     {
         public string Combined =>
             $"exit={Exit}\n--- stdout ---\n{StdOut}\n--- stderr ---\n{StdErr}";
     }
 
-    private ScriptResult RunBash(
+    internal static ScriptResult RunBash(
         string scriptPath,
         string workDir,
         IReadOnlyDictionary<string, string> extraEnv)
@@ -396,10 +413,10 @@ public sealed class ReleaseScriptInputReadTests
         _output.WriteLine(result.Combined);
     }
 
-    private static string CodeLinesOf(string text) =>
+    internal static string CodeLinesOf(string text) =>
         string.Join('\n', text.Split('\n').Where(line => !line.TrimStart().StartsWith('#')));
 
-    private static string FindRepoRoot()
+    internal static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null &&
@@ -412,13 +429,13 @@ public sealed class ReleaseScriptInputReadTests
             ?? throw new DirectoryNotFoundException("Could not locate the Tempo.Blazor repository root.");
     }
 
-    private static void TryDelete(string path)
+    internal static void TryDelete(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); }
         catch (IOException) { /* temp cleanup */ }
     }
 
-    private static void TryDeleteDir(string path)
+    internal static void TryDeleteDir(string path)
     {
         try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
         catch (IOException) { /* temp cleanup */ }

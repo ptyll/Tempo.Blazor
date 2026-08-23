@@ -310,6 +310,30 @@ public sealed class ReleaseGateFilterTests
     /// THE POPULATION IS ASSERTED, because a segmentation that matched nothing would report "no job
     /// sets LC_ALL early" — the passing answer — out of an empty list.
     /// </para>
+    /// <para>
+    /// AND A THIRD HOLE, which is neither of the two above and was the needle rather than the
+    /// segmentation: this asked <c>body.IndexOf("LC_ALL:")</c>, i.e. the YAML mapping spelling of ONE
+    /// of the two variables. The rationale in this block turns on a locale EXPORTED before
+    /// <c>dotnet build</c>, and two spellings do exactly that while a <c>LC_ALL:</c> needle reports
+    /// them as absence: <c>LANG:</c> in a job- or workflow-level <c>env:</c> (both workflows set
+    /// both variables, and with <c>LC_ALL</c> unset <c>LANG</c> is the one .NET reads), and
+    /// <c>export LC_ALL=…</c> or <c>LC_ALL=… dotnet build</c> inside a <c>run:</c> block, which carries
+    /// no colon at all. <see cref="LocaleIsSetHere"/> is the widened needle and carries the reason a
+    /// MENTION of either variable is deliberately left out of the population.
+    /// </para>
+    /// <para>
+    /// AND A FOURTH HOLE, which was in the SEGMENTATION and not in the needle: the paragraph above
+    /// says "job- or workflow-level <c>env:</c>", and the workflow-level half of that sentence was
+    /// false. <see cref="JobSegments"/> starts after <c>^jobs:$</c>, so a mapping above that key lies
+    /// in no job body; measured 2026-08-23 over <c>publish-nuget-org.yml</c>, inserting a top-level
+    /// <c>env:</c> with <c>LC_ALL</c> in it left the offender list EMPTY with the needle already
+    /// widened. That placement is the worst of the three rather than the mildest, because GitHub
+    /// merges a workflow <c>env:</c> into every job and one mapping therefore wraps BOTH lanes' builds.
+    /// <see cref="WorkflowLevelEnvBlock"/> is the reach that was added, and the arms in
+    /// <see cref="TheOrderingGuard_DetectsALocaleThatWrapsTheReleaseBuild"/> measure both directions:
+    /// the inserted mapping names both jobs, and the workflow-level <c>env:</c> that
+    /// <c>publish-nuget.yml</c> really carries (<c>NUGET_SOURCE</c>) names none.
+    /// </para>
     /// </summary>
     [Fact]
     public void TheNonEnglishLaneSetsItsLocaleAfterTheBuild_NotAroundIt()
@@ -327,7 +351,9 @@ public sealed class ReleaseGateFilterTests
                     + "silence rather than evidence");
 
                 offenders.Should().BeEmpty(
-                    $"{relative} must not set LC_ALL before a build or a pack in the SAME job: a "
+                    $"{relative} must not set LC_ALL or LANG before a build or a pack in the SAME "
+                    + "job — nor anywhere in a workflow-level env:, which reaches every job — in a "
+                    + "YAML env: mapping or as a shell assignment: a "
                     + "locale exported around `dotnet build` changes source enumeration order and "
                     + "therefore the emitted IL, which turns the second lane from 'same binaries, "
                     + "different culture' into two different builds and makes its red unattributable — "
@@ -375,6 +401,102 @@ public sealed class ReleaseGateFilterTests
                 "build-and-test",
                 "hoisting the second lane's locale to job level compiles the gate under it, which is "
                 + "the IL-order change the two lanes exist to avoid");
+
+            // THE TWO SPELLINGS THE OLD NEEDLE COULD NOT SEE, one arm each — and they are separate
+            // mutations rather than one, because `LC_ALL:` failed to see them for two different
+            // reasons: the first is the wrong VARIABLE, the second is the wrong SEPARATOR. A single
+            // arm would leave one of the two reasons unmeasured.
+            string langEnvOnPublish = healthy.Replace(
+                "  publish:\n",
+                "  publish:\n    env:\n      LANG: cs_CZ.UTF-8\n",
+                StringComparison.Ordinal);
+            langEnvOnPublish.Should().NotBe(healthy, "the mutation must actually change the text");
+            JobsWhereLocalePrecedesABuild(langEnvOnPublish, out _).Should().Contain(
+                "publish",
+                "LANG alone sets the culture whenever LC_ALL is unset — which is what a job-level "
+                + "env: on the publish job produces — so a needle keyed on LC_ALL reports the "
+                + "publish build as unwrapped while it is wrapped");
+
+            // The separator half: an assignment inside a `run:` block carries no colon, so the old
+            // needle scored zero hits over it no matter which variable it named.
+            string exportBeforeTheReleaseBuild = healthy.Replace(
+                "        run: bash eng/verify-announced-version.sh\n\n      - name: Build\n        run: dotnet build",
+                "        run: bash eng/verify-announced-version.sh\n\n"
+                + "      - name: Pick a locale\n        run: export LC_ALL=cs_CZ.UTF-8\n\n"
+                + "      - name: Build\n        run: dotnet build",
+                StringComparison.Ordinal);
+            exportBeforeTheReleaseBuild.Should().NotBe(healthy, "the mutation must actually change the text");
+            JobsWhereLocalePrecedesABuild(exportBeforeTheReleaseBuild, out _).Should().Contain(
+                "publish",
+                "`export LC_ALL=…` in a run: block before the publish job's build is the exported "
+                + "locale this guard's whole rationale is about, and it is the spelling a needle "
+                + "with a colon in it cannot match");
+
+            // AND THE MENTION THAT IS NOT AN ASSIGNMENT, kept as an arm so the narrowing in
+            // LocaleIsSetHere is measured rather than merely described: moving the locale-lane echo
+            // in front of the publish build must NOT produce an offender, because that line sets
+            // nothing and cannot change the emitted IL.
+            string echoBeforeTheReleaseBuild = healthy.Replace(
+                "        run: bash eng/verify-announced-version.sh\n\n      - name: Build\n        run: dotnet build",
+                "        run: bash eng/verify-announced-version.sh\n\n"
+                + "      - name: Say the locale\n        run: echo \"[locale-lane] LANG=$LANG LC_ALL=$LC_ALL\"\n\n"
+                + "      - name: Build\n        run: dotnet build",
+                StringComparison.Ordinal);
+            echoBeforeTheReleaseBuild.Should().NotBe(healthy, "the mutation must actually change the text");
+            JobsWhereLocalePrecedesABuild(echoBeforeTheReleaseBuild, out _).Should().NotContain(
+                "publish",
+                "a line that READS the variables is not a line that sets them; flagging it would be a "
+                + "red correct only by accident, and one nobody can fix by removing a real cause");
+
+            // THE PLACEMENT THE SEGMENTATION COULD NOT REACH AT ALL: a workflow-level env:, which
+            // sits ABOVE `jobs:` and is therefore in no job body. This is not a milder version of the
+            // job-level arm above — it is the strictly worse one, because GitHub merges it into
+            // EVERY job, so a single mapping wraps the gate lane's build and the publish lane's build
+            // at once. The assertion is on the offender NAMES for that reason: a count of 2 could
+            // also come out of one job being listed twice.
+            string workflowLevelEnv = healthy.Replace(
+                "\njobs:\n",
+                "\nenv:\n  LC_ALL: cs_CZ.UTF-8\n\njobs:\n",
+                StringComparison.Ordinal);
+            workflowLevelEnv.Should().NotBe(healthy, "the mutation must actually change the text");
+            WorkflowLevelEnvBlock(workflowLevelEnv).Should().Contain(
+                "LC_ALL",
+                "the block reader has to reach the mapping that was inserted, or the offender list "
+                + "below would be empty for a reason that has nothing to do with the guard");
+
+            IReadOnlyList<string> underWorkflowEnv =
+                JobsWhereLocalePrecedesABuild(workflowLevelEnv, out int jobsUnderWorkflowEnv);
+            jobsUnderWorkflowEnv.Should().Be(
+                2,
+                "the population: both jobs of publish-nuget-org.yml build, and an offender list out "
+                + "of a segmentation that lost one of them is silence rather than evidence");
+            // NAMED ONE BY ONE before the set is compared, because the reader of a red needs to see
+            // WHICH job was left unguarded; "a collection with 2 items" is the same sentence for two
+            // different holes.
+            underWorkflowEnv.Should().Contain(
+                "build-and-test",
+                "a workflow-level env: is merged into every job, so LC_ALL up there precedes the gate "
+                + "lane's build — the IL-order change the two lanes exist to avoid");
+            underWorkflowEnv.Should().Contain(
+                "publish",
+                "the same mapping also precedes the publish lane's build and pack, which is the one "
+                + "whose output ships");
+            underWorkflowEnv.Should().BeEquivalentTo(
+                new[] { "build-and-test", "publish" },
+                "both jobs and no others: an empty list here is the hole this arm was added for, and "
+                + "a longer one would mean the segmentation is inventing jobs");
+
+            // AND THE OTHER DIRECTION over a REAL workflow-level env: rather than a constructed one:
+            // publish-nuget.yml carries one (NUGET_SOURCE) and it sets no locale, so widening the
+            // reach must not have made that file red.
+            string githubPackages = ReadWorkflowCode(WorkflowRelativePaths[0]);
+            WorkflowLevelEnvBlock(githubPackages).Should().Contain(
+                "NUGET_SOURCE",
+                "publish-nuget.yml really does carry a workflow-level env:, and the false-red check "
+                + "below is worth nothing unless the reader actually reads it");
+            JobsWhereLocalePrecedesABuild(githubPackages, out _).Should().BeEmpty(
+                "a workflow-level env: that sets no locale must not be an offender: the widened reach "
+                + "is about LC_ALL and LANG, not about the existence of a top-level env: block");
         }
     }
 
@@ -531,15 +653,89 @@ public sealed class ReleaseGateFilterTests
     ];
 
     /// <summary>
-    /// Names of the jobs in which an <c>LC_ALL:</c> appears BEFORE that job's last build or pack.
+    /// Where a locale is SET for the processes a job starts. Three spellings, because the reason this
+    /// guard exists covers all three and the needle used to see one of them.
+    /// <para>
+    /// WHAT IT MATCHES: <c>LC_ALL</c> and <c>LANG</c> — the rationale above turns on ".NET reads that
+    /// variable", and with <c>LC_ALL</c> unset <c>LANG</c> is the one it reads — followed by a
+    /// <c>:</c> (a YAML <c>env:</c> mapping key) or by a <c>=</c> in a position where a shell performs
+    /// an ASSIGNMENT: at the start of a line, after <c>run:</c>, after a command separator, with an
+    /// optional <c>export</c> in front. The old needle was <c>LC_ALL:</c>, which is the YAML half of
+    /// one of the two names, so <c>LANG:</c> in a job-level <c>env:</c> and
+    /// <c>export LC_ALL=cs_CZ.UTF-8</c> inside a <c>run:</c> block both read as absence.
+    /// </para>
+    /// <para>
+    /// AND WHAT IT DELIBERATELY DOES NOT MATCH: a MENTION of the variable rather than a write to it.
+    /// Both workflows carry <c>echo "[locale-lane] LANG=$LANG LC_ALL=$LC_ALL"</c> (measured
+    /// 2026-08-23: <c>publish-nuget-org.yml</c> line 154, <c>publish-nuget.yml</c> line 157, both in
+    /// <c>build-and-test</c> and both AFTER that job's build on 72 / 75). A bare <c>=</c>-shaped needle
+    /// matches that line, and today it would be harmless only because of where it sits — move it above
+    /// the build and this guard turns red over a line that sets nothing and changes no IL. That is a
+    /// red which is correct only by accident, and a red nobody can fix by removing a real cause is a
+    /// red that gets the guard switched off. The mechanism this guard is about is "the locale the
+    /// build process inherits", so a mention is not in the population — and the criterion for that is
+    /// what the line DOES with the name, not what stands in front of it. The <c>echo</c> above EXPANDS
+    /// the variables (<c>$LANG</c> on the right of the <c>=</c>) into its own stdout and writes them
+    /// nowhere; that is why it sets nothing. What the <c>=</c> arm actually keys on is the assignment
+    /// POSITION, which is a PROXY for that criterion — exact over this <c>echo</c>, and wrong in one
+    /// known direction named in the next paragraph.
+    /// </para>
+    /// <para>
+    /// THE PRICE OF THAT NARROWING, since it is the direction an instrument must not be silently wrong
+    /// in — two shapes, and the second one is a real setter rather than a hypothetical:
+    /// </para>
+    /// <para>
+    /// (a) A genuine assignment hidden mid-line behind something other than a separator — inside a
+    /// <c>$(…)</c>, or as an argument to <c>env</c> / <c>xargs</c> — is not seen. No such spelling
+    /// exists in either workflow today (measured with the same read), and this file has no shell
+    /// parser.
+    /// </para>
+    /// <para>
+    /// (b) <c>echo "LC_ALL=cs_CZ.UTF-8" &gt;&gt; "$GITHUB_ENV"</c> is not seen EITHER, and this one is
+    /// not a mention: GitHub reads that file back and exports every line of it into the environment of
+    /// every LATER step in the job, so the line sets the locale for a build that follows it — exactly
+    /// the defect this guard exists for. It has a command word in front of it, which is precisely why
+    /// "a command word in front ⇒ a mention" would be a FALSE rule rather than an incomplete one: the
+    /// two shapes are told apart by the destination (<c>&gt;&gt; "$GITHUB_ENV"</c> versus stdout), not
+    /// by the position of the name. Its population in both workflows today is 0 occurrences (measured
+    /// 2026-08-23: <c>/usr/bin/grep -c 'GITHUB_ENV' .github/workflows/publish-nuget-org.yml</c> and
+    /// the same over <c>publish-nuget.yml</c>, both 0), and it is deliberately NOT added to the needle
+    /// here: it is a different lexical class — a redirection target, not an assignment — and widening
+    /// the regex to cover a shape with no instances would be a change nothing could measure. It is
+    /// filed as its own queue row instead.
+    /// </para>
+    /// <para>
+    /// The alternative to (a) and (b) was keeping the <c>echo</c> in the population, which buys the
+    /// first case at the cost of a false red on a line that cannot cause the defect.
+    /// </para>
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex LocaleIsSetHere = new(
+        @"(?:^[ \t]*(?:-[ \t]+)?(?:run:[ \t]*)?|[;&|][ \t]*)(?:export[ \t]+)?(?:LC_ALL|LANG)[ \t]*(?::|=)",
+        System.Text.RegularExpressions.RegexOptions.Multiline);
+
+    /// <summary>
+    /// Names of the jobs in which a locale is SET before that job's last build or pack — see
+    /// <see cref="LocaleIsSetHere"/> for which spellings count and which deliberately do not.
     /// <paramref name="jobsWithABuild"/> carries the population, so a segmentation that matched
     /// nothing is a red rather than an empty offender list.
+    /// <para>
+    /// A WORKFLOW-LEVEL <c>env:</c> COUNTS AGAINST EVERY JOB, and it is asked separately because
+    /// <see cref="JobSegments"/> deliberately starts AFTER <c>jobs:</c> — so a mapping above that key
+    /// lies in no job body and used to be invisible here (measured 2026-08-23 over
+    /// <c>publish-nuget-org.yml</c>: an inserted top-level <c>env: LC_ALL: cs_CZ.UTF-8</c> produced an
+    /// empty offender list). It is the most dangerous placement of the three, not the mildest: GitHub
+    /// merges workflow <c>env:</c> into every job, so ONE such mapping wraps BOTH builds at once —
+    /// the gate lane's and the publish lane's — and the doc above this method has always claimed the
+    /// reach it did not have. Position inside the block is not compared against the build, because
+    /// there is nothing to compare: the whole block precedes every step of every job.
+    /// </para>
     /// </summary>
     internal static IReadOnlyList<string> JobsWhereLocalePrecedesABuild(
         string workflowCode, out int jobsWithABuild)
     {
         List<string> offenders = [];
         jobsWithABuild = 0;
+        bool localeAboveEveryJob = LocaleIsSetHere.IsMatch(WorkflowLevelEnvBlock(workflowCode));
 
         foreach ((string name, string body) in JobSegments(workflowCode))
         {
@@ -552,14 +748,52 @@ public sealed class ReleaseGateFilterTests
             }
 
             jobsWithABuild++;
-            int firstLocale = body.IndexOf("LC_ALL:", StringComparison.Ordinal);
-            if (firstLocale >= 0 && firstLocale < lastBuild)
+            var locale = LocaleIsSetHere.Match(body);
+            if (localeAboveEveryJob || (locale.Success && locale.Index < lastBuild))
             {
                 offenders.Add(name);
             }
         }
 
         return offenders;
+    }
+
+    /// <summary>
+    /// The body of the workflow-level <c>env:</c> mapping — the region ABOVE <c>jobs:</c> whose keys
+    /// GitHub merges into every job — or an empty string when the workflow has none.
+    /// <para>
+    /// WHY A BLOCK RATHER THAN THE WHOLE HEAD: everything above <c>jobs:</c> also carries <c>on:</c>
+    /// with its <c>workflow_dispatch.inputs</c>, and an input NAMED after a locale variable would be a
+    /// false red out of a region that sets no environment at all. The block is cut from <c>^env:$</c>
+    /// to the next line that starts in column 0, which is how a top-level YAML mapping ends.
+    /// </para>
+    /// <para>
+    /// THAT THIS READER REACHES ANYTHING IS ASSERTED rather than assumed:
+    /// <c>publish-nuget.yml</c> carries a real workflow-level <c>env:</c> (<c>NUGET_SOURCE</c>,
+    /// measured 2026-08-23) and <c>publish-nuget-org.yml</c> carries none, so the two files cover both
+    /// answers and <see cref="TheOrderingGuard_DetectsALocaleThatWrapsTheReleaseBuild"/> checks the
+    /// non-empty one — otherwise a reader that returned the empty string for every input would look
+    /// exactly like "no workflow sets a locale up there".
+    /// </para>
+    /// </summary>
+    internal static string WorkflowLevelEnvBlock(string workflowCode)
+    {
+        var jobsKey = System.Text.RegularExpressions.Regex.Match(workflowCode, @"^jobs:\s*$",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        string head = jobsKey.Success ? workflowCode[..jobsKey.Index] : workflowCode;
+
+        var envKey = System.Text.RegularExpressions.Regex.Match(head, @"^env:[ \t]*$",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        if (!envKey.Success)
+        {
+            return string.Empty;
+        }
+
+        string tail = head[(envKey.Index + envKey.Length)..];
+        var nextTopLevelKey = System.Text.RegularExpressions.Regex.Match(tail, @"^(?![ \t])\S",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        return nextTopLevelKey.Success ? tail[..nextTopLevelKey.Index] : tail;
     }
 
     /// <summary>
