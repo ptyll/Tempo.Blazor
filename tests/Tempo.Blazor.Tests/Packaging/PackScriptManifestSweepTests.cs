@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Xunit.Abstractions;
@@ -56,6 +55,13 @@ public sealed class PackScriptManifestSweepTests
     /// manifest_spent" — true, and not the claim those members are about. Read this one for what the
     /// script CONTAINS and the two below for what it DECIDES.
     /// </para>
+    /// <para>
+    /// AND THEREFORE NO PLATFORM GUARD. This member reads a file; it starts no process and never
+    /// constructs the fixture that does. <see cref="BashScriptFactAttribute"/> would report it as
+    /// skipped on Windows carrying a reason that says the member starts <c>bash</c> — of THIS member
+    /// that sentence is false, and a skip reason that is false about its own member is worse than the
+    /// unmeasured platform it was written to disclose.
+    /// </para>
     /// </summary>
     [Fact]
     public void PackScript_ReadsItsPopulationThroughThePackageManifestSeam()
@@ -85,7 +91,7 @@ public sealed class PackScriptManifestSweepTests
     /// A number spent under a NON-LEAD manifest id refuses the pack and names that id — and the old
     /// one-id shape packs it.
     /// </summary>
-    [Fact]
+    [BashScriptFact]
     public void PackScript_AsksEveryManifestId_SoASpentNonLeadNumberIsRefused()
     {
         string root = ReleaseScriptInputReadTests.FindRepoRoot();
@@ -178,7 +184,7 @@ public sealed class PackScriptManifestSweepTests
     /// cannot fire against the live feed (all 26 ids answer 200, measured 2026-08-23) and it is the
     /// branch that decides whether a newly added 27th package blocks the release.
     /// </summary>
-    [Fact]
+    [BashScriptFact]
     public void PackScript_ReportsANeverPublishedManifestId_AndPacksOn()
     {
         string root = ReleaseScriptInputReadTests.FindRepoRoot();
@@ -373,12 +379,7 @@ public sealed class PackScriptManifestSweepTests
                 exit 0
                 """);
 
-            using var chmod = Process.Start(new ProcessStartInfo("/bin/chmod")
-            {
-                ArgumentList = { "+x", path },
-                UseShellExecute = false,
-            });
-            chmod?.WaitForExit();
+            ReleaseScriptInputReadTests.MakeExecutable(path);
         }
     }
 }

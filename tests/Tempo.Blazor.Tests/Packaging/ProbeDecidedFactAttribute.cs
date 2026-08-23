@@ -26,7 +26,7 @@ namespace Tempo.Blazor.Tests.Packaging;
 /// with 0 errors, so the red names the seal rather than a broken probe file. <c>new</c> is NOT refused:
 /// a subclass carrying <c>public new string? Skip { get; set; }</c> compiles, measured the same way, 0
 /// errors. What covers THAT one is the reflexive cell
-/// <see cref="ProbeDecidedSkipTests.SharedShape_IsWhereBothAttributesGetTheirGetter"/>, which reads the
+/// <see cref="ProbeDecidedSkipTests.SharedShape_IsWhereEveryProbeDecidedAttributeGetsItsGetter"/>, which reads the
 /// DECLARING type of each attribute's <c>Skip</c>: hiding with <c>new</c> moves that declaring type onto
 /// the subclass (measured on a stand-in hierarchy the same day — <c>GetProperty("Skip").DeclaringType</c>
 /// answered the shape for an honest subclass and the subclass itself for one that hid it), which the

@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Tempo.Blazor.Tests.Packaging;
 
 /// <summary>
-/// The two <c>FactAttribute</c> subclasses in this folder decide their skip from a probe. This is the
+/// The <c>FactAttribute</c> subclasses in this folder decide their skip from a probe. This is the
 /// needle over the OTHER half of that property: an explicitly written
 /// <c>[FeedReachableFact(Skip = "flaky, see #123")]</c> must actually skip.
 /// <para>
@@ -26,8 +26,8 @@ namespace Tempo.Blazor.Tests.Packaging;
 /// WITHOUT TOUCHING THE NETWORK — deliberately, because the honest expectation for a live probe is
 /// whatever a second live probe says, and two probes can disagree about a world that moved between
 /// them. It is covered instead through the shape both attributes now share:
-/// <see cref="SharedShape_IsWhereBothAttributesGetTheirGetter"/> pins that neither attribute declares a
-/// <c>Skip</c> of its own, and <see cref="UnsetSkip_ReturnsTheProbeVerdict_OnTheSharedShape"/> measures
+/// <see cref="SharedShape_IsWhereEveryProbeDecidedAttributeGetsItsGetter"/> pins that none of them
+/// declares a <c>Skip</c> of its own, and <see cref="UnsetSkip_ReturnsTheProbeVerdict_OnTheSharedShape"/> measures
 /// both cells over a probe whose verdict is known. What is NOT claimed: that the feed attribute's own
 /// probe was exercised here.
 /// </para>
@@ -120,12 +120,20 @@ public sealed class ProbeDecidedSkipTests
     }
 
     /// <summary>
-    /// The reason the cells above are allowed to stand in for both real attributes: the getter they
-    /// measure is the one those attributes use. A copy re-declared on either of them would move the
+    /// The reason the cells above are allowed to stand in for the real attributes: the getter they
+    /// measure is the one those attributes use. A copy re-declared on any of them would move the
     /// declaring type and turn this red — which is precisely how the original defect spread, by copy.
+    /// <para>
+    /// THE LIST IS THE POPULATION, and it is enumerated rather than discovered on purpose: a reflective
+    /// sweep for every <see cref="ProbeDecidedFactAttribute"/> subclass would silently include the
+    /// stand-ins declared in this file, whose whole job is to have known verdicts, and would report a
+    /// green over a list nobody chose. What this cell therefore does NOT say is that these are all the
+    /// probe-decided attributes that exist — an attribute added without being named here is not
+    /// measured by it.
+    /// </para>
     /// </summary>
     [Fact]
-    public void SharedShape_IsWhereBothAttributesGetTheirGetter()
+    public void SharedShape_IsWhereEveryProbeDecidedAttributeGetsItsGetter()
     {
         using (new AssertionScope())
         {
@@ -133,6 +141,8 @@ public sealed class ProbeDecidedSkipTests
                      {
                          typeof(ReleaseContractTests.StagedPackagesFactAttribute),
                          typeof(ReleaseContractTests.FeedReachableFactAttribute),
+                         typeof(BashScriptFactAttribute),
+                         typeof(BashScriptFeedReachableFactAttribute),
                      })
             {
                 attributeType.Should().BeDerivedFrom<ProbeDecidedFactAttribute>(

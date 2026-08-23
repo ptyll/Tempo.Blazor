@@ -28,7 +28,7 @@ public sealed class ReleaseScriptInputReadTests
 
     public ReleaseScriptInputReadTests(ITestOutputHelper output) => _output = output;
 
-    [Fact]
+    [BashScriptFact]
     public void VerifyScript_KeepClauseBreakTheRead_TurnsTheNeedleRed_UnmutatedStaysGreen()
     {
         string root = FindRepoRoot();
@@ -118,7 +118,7 @@ public sealed class ReleaseScriptInputReadTests
         }
     }
 
-    [Fact]
+    [BashScriptFact]
     public void PushScript_KeepClauseBreakTheRead_TurnsTheNeedleRed_UnmutatedStaysGreen()
     {
         string root = FindRepoRoot();
@@ -233,6 +233,14 @@ public sealed class ReleaseScriptInputReadTests
     /// <see cref="ProbeDecidedFactAttribute"/> came out of.
     /// </para>
     /// <para>
+    /// AND SINCE 2026-08-23 THE GATE ASKS A SECOND QUESTION FIRST. The attribute on this member is
+    /// <see cref="BashScriptFeedReachableFactAttribute"/> rather than the feed attribute named above:
+    /// this member also RUNS a POSIX shell script, which on Windows is a Win32Exception rather than a
+    /// result. Windows is asked first, so a Windows run costs no live request, and a run anywhere else
+    /// asks the feed exactly as often as it did before. The feed half is not a copy — both attributes
+    /// call <see cref="ReleaseContractTests.FeedUnreachableSkipReason"/>.
+    /// </para>
+    /// <para>
     /// THE OTHER TREATMENT WAS CONSIDERED AND REJECTED: pointing the unmutated arm at a stubbed feed, the
     /// way the push arm is pointed at a fake <c>dotnet</c>. It needs a seam on the feed URL, and that is
     /// a worse seam than the ones this file already has. <c>CHANGELOG_PATH</c> and <c>PACKAGE_MANIFEST</c>
@@ -268,7 +276,7 @@ public sealed class ReleaseScriptInputReadTests
     /// suite whether or not the feed has anything new to say.
     /// </para>
     /// </summary>
-    [ReleaseContractTests.FeedReachableFact]
+    [BashScriptFeedReachableFact]
     public void PackScript_KeepClauseBreakTheRead_TurnsTheNeedleRed_UnmutatedStaysGreen()
     {
         string root = FindRepoRoot();
@@ -320,7 +328,7 @@ public sealed class ReleaseScriptInputReadTests
                 "Could not read",
                 "reaching the could-not-read branch means this run measured the script's OFFLINE "
                 + "behaviour and nothing about the feed read it exists to defend; that state is a "
-                + $"skip decided by [FeedReachableFact], never a result ({unmutated.Combined})");
+                + $"skip decided by [BashScriptFeedReachableFact], never a result ({unmutated.Combined})");
             unmutated.Combined.Should().NotContain("PAST_FEED");
             unmutated.Exit.Should().Be(1);
 
@@ -435,12 +443,33 @@ public sealed class ReleaseScriptInputReadTests
             fi
             exit 0
             """);
-        using var chmod = Process.Start(new ProcessStartInfo("/bin/chmod")
+        MakeExecutable(path);
+    }
+
+    /// <summary>
+    /// Marks a fixture script executable without starting a process to do it.
+    /// <para>
+    /// WHY NOT <c>/bin/chmod</c>, which is what this replaced: that path is an absolute POSIX path, so
+    /// on Windows <c>Process.Start</c> threw <c>Win32Exception</c> before the fixture was ever used.
+    /// <see cref="File.SetUnixFileMode(string, UnixFileMode)"/> asks the runtime the same question and
+    /// needs no child process. It is itself unsupported on Windows, which is why the call sits behind
+    /// the platform guard — a decorated member is skipped there anyway by
+    /// <see cref="BashScriptFactAttribute"/>, and the guard is what makes THAT true of the source
+    /// rather than only of the runner's schedule.
+    /// </para>
+    /// </summary>
+    internal static void MakeExecutable(string path)
+    {
+        if (OperatingSystem.IsWindows())
         {
-            ArgumentList = { "+x", path },
-            UseShellExecute = false,
-        });
-        chmod?.WaitForExit();
+            return;
+        }
+
+        File.SetUnixFileMode(
+            path,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+            | UnixFileMode.GroupRead | UnixFileMode.GroupExecute
+            | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
     }
 
     internal sealed record ScriptResult(int Exit, string StdOut, string StdErr)
@@ -454,14 +483,19 @@ public sealed class ReleaseScriptInputReadTests
         string workDir,
         IReadOnlyDictionary<string, string> extraEnv)
     {
-        var start = new ProcessStartInfo("/usr/bin/env")
+        // "bash" RATHER THAN "/usr/bin/env", and the difference is not cosmetic. The absolute path made
+        // this helper a POSIX-only helper: on Windows Process.Start threw Win32Exception before any
+        // script was read. A bare file name is resolved through PATH by the runtime, so the helper now
+        // asks for a program instead of for a location. Callers are gated by BashScriptFactAttribute,
+        // which is what keeps WINDOWS a SKIP rather than a red. The guard asks that one question and
+        // nothing else, so it says nothing about a machine that simply has no bash.
+        var start = new ProcessStartInfo("bash")
         {
             WorkingDirectory = workDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
         };
-        start.ArgumentList.Add("bash");
         start.ArgumentList.Add(scriptPath);
         foreach (KeyValuePair<string, string> pair in extraEnv)
         {

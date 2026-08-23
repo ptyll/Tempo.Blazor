@@ -350,11 +350,20 @@ public sealed partial class ReleaseContractTests
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class FeedReachableFactAttribute : ProbeDecidedFactAttribute
     {
-        protected override string? ProbeSkipReason()
-        {
-            var survey = PublishedVersionSurvey.Take();
-            return survey.Unreachable is null ? null : survey.Report;
-        }
+        protected override string? ProbeSkipReason() => FeedUnreachableSkipReason();
     }
 
+    /// <summary>
+    /// The feed question itself, in one place because it now has TWO callers: this file's
+    /// <see cref="FeedReachableFactAttribute"/> and
+    /// <see cref="BashScriptFeedReachableFactAttribute"/>, which asks the same question after its own.
+    /// Copying the two lines instead would recreate exactly the shape
+    /// <see cref="ProbeDecidedFactAttribute"/> was extracted to remove.
+    /// </summary>
+    /// <returns>The survey line when nuget.org did not answer, or null when it did.</returns>
+    internal static string? FeedUnreachableSkipReason()
+    {
+        var survey = PublishedVersionSurvey.Take();
+        return survey.Unreachable is null ? null : survey.Report;
+    }
 }
