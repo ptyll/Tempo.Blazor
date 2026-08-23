@@ -9,7 +9,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// Locks down WHERE the CSS bundler takes the content of <c>tempo-blazor.bundled.css</c> from.
 /// <para>
 /// The bundled stylesheet is a TRACKED file that the <c>BundleCssFiles</c> target of
-/// <c>Tempo.Blazor.csproj</c> rewrites on every build and every pack. A pre-pack "is the working
+/// <c>Tempo.Blazor.csproj</c> can rewrite during a build or a pack. A pre-pack "is the working
 /// tree clean?" check runs BEFORE that rewrite, so it cannot see dirt the pack itself produces.
 /// Today that costs nothing, because the bundler is deterministic and reproduces the committed
 /// bytes exactly — measured 2026-08-20 on <c>096849fc</c>: three forced runs of
@@ -128,7 +128,6 @@ public class CssBundlerInputSourceTests
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["BundleCssFiles/BundleCss"] = "the single writer of the bundle; it resolves the @import graph of one entry stylesheet",
-            ["CleanBundledCss/Delete"] = "removes the bundle on Clean. A delete cannot put content in, so it cannot make the bundle depend on directory order",
         };
 
     /// <summary>
@@ -142,7 +141,6 @@ public class CssBundlerInputSourceTests
             ["CssBundleInputs/@Exclude"] = "keeps the bundle out of the glob that drives the up-to-date check, so the bundler is not listed as its own input",
             ["Target/@Outputs"] = "declares the bundle as the target's output for MSBuild's timestamp comparison; a declaration, not a write",
             ["BundleCss/@OutputFile"] = "the write itself - reasoned about in AllowedTargetTasks",
-            ["Delete/@Files"] = "the Clean-time delete",
         };
 
     /// <summary>

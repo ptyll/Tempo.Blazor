@@ -262,8 +262,12 @@ fi
 # `BeforeTargets="ResolveProjectStaticWebAssets;GenerateNuspec;Pack"` and writes
 # `src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css`, which is TRACKED. The trigger is WIDER than
 # packing, and saying "the pack writes it" understates it: any BUILD that does not skip that target
-# writes it too. Measured — a plain `dotnet build --no-incremental` defeats the target's
-# `Inputs`/`Outputs` up-to-date check and the bundler runs. That does not make this check redundant, it
+# writes it too. WHEN it does not skip is a CONDITION, not a guarantee — and the one build switch this
+# comment used to name as certain owed that certainty to a target that no longer exists: while
+# `CleanBundledCss` was there, `--no-incremental` meant Rebuild and its Clean-time `Delete` took the
+# target's declared output away, so the `Inputs`/`Outputs` up-to-date check had nothing to compare
+# against. Nothing here says a build WILL rebundle; the condition is spelled out in the comment at the
+# end of `src/Tempo.Blazor/Tempo.Blazor.csproj`. That does not make this check redundant, it
 # makes it the only one that sits where nothing else looks: a build's write lands BEFORE the refusal
 # above and shows up as a red it can explain, whereas a pack's write lands after everything and shows
 # up as nothing at all. A pack that regenerates
@@ -287,7 +291,7 @@ fi
 # `git status --porcelain` reports PATH STATUSES, NOT CONTENT. Over a NON-EMPTY `pre_status` — that is,
 # under ALLOW_DIRTY_PACK=1 — a pack that rewrites an ALREADY-MODIFIED tracked file with different bytes
 # produces a character-identical `post_status`, so this check passes and reports no change. The bundle
-# is precisely such a file: the comment above records that even a plain build rewrites it, so it can
+# is precisely such a file: the comment above records that a build can rewrite it too, so it can
 # already be sitting modified when the loop starts. Over an EMPTY `pre_status` — the only state in
 # which the packages produced here are publishable at all, since anything else is stamped `-dirty` —
 # the check is COMPLETE, because a write to any tracked file has to move it from clean to modified and

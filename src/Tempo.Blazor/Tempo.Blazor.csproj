@@ -170,8 +170,28 @@ catch (Exception ex)
     <BundleCss InputFile="$(MSBuildProjectDirectory)\wwwroot\css\tempo-blazor.css" OutputFile="$(MSBuildProjectDirectory)\wwwroot\css\tempo-blazor.bundled.css" Minify="true" />
   </Target>
 
-  <Target Name="CleanBundledCss" BeforeTargets="Clean">
-    <Delete Files="wwwroot\css\tempo-blazor.bundled.css" />
-  </Target>
+  <!-- There is deliberately NO Clean-time delete of the bundled stylesheet.
+       wwwroot\css\tempo-blazor.bundled.css is a TRACKED SOURCE, not a build artefact: five tests reach
+       for it at its committed location - four read its content (TmSignatureCaptureTests,
+       CodeEditorWrapStylesheetTests, CssBundleCalcWhitespaceTests, OrphanClassCssContractTests) and
+       CssBundlerInputSourceTests asserts that it exists there at all - and
+       CssBundleCalcWhitespaceTests asserts on the COMMITTED bundle on purpose. The former
+       CleanBundledCss target ran a Delete BeforeTargets="Clean", which made `dotnet clean` leave the
+       working tree with a tracked file missing, and — because the no-incremental build switch means
+       Rebuild, i.e. Clean followed by Build — opened a window in which a dependent resolving Tempo's
+       static web assets could find no file. That window was reported once, 2026-08-22; the MSB4018
+       counts that used to stand here carried neither a commit nor a command to remeasure them, so
+       they are DROPPED rather than restated. That window is state-dependent, not certain: measured
+       2026-08-23 on efa8bc5c with the Delete still in place, `dotnet build TempoBlazor.slnx -c
+       Release` with the no-incremental switch was rc=0 in 4 of 4 full runs. (That switch cannot be
+       spelled out here: a double hyphen is illegal inside an XML comment and MSBuild refuses to load
+       the project.) What IS deterministic, and is the reason
+       this target is gone, was read out of a -v:d log of the same day: CleanBundledCss ran 4x and the
+       first one logged the file's removal. Removing the delete does not stop the bundler, but it does
+       change WHEN it runs: BundleCssFiles above is driven by its Inputs/Outputs, so a build over an
+       up-to-date bundle now skips it (with the delete, the missing output forced a rebundle every
+       time). Measured 2026-08-23: after `touch` of wwwroot/css/tokens.css the same full build logged
+       "CSS bundle created" and the bundle's mtime moved, while its bytes - and therefore git status -
+       did not change. -->
 
 </Project>

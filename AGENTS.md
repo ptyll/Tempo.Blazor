@@ -172,7 +172,7 @@ dotnet run
 ```
 wwwroot/css/
 ├── tempo-blazor.css          # Main entry point with @imports
-├── tempo-blazor.bundled.css  # Auto-generated bundled version
+├── tempo-blazor.bundled.css  # Tracked source: the committed bundle of the above
 ├── tokens.css                # Design tokens (colors, spacing, typography)
 ├── tokens-dark.css           # Dark mode token overrides
 ├── base.css                  # Reset and base styles

@@ -41,9 +41,6 @@ ScaffoldingReadMe.txt
 *~
 CodeCoverage/
 
-# Generated CSS bundle (build artifact)
-src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css
-
 # MSBuild Binary and Structured Log
 *.binlog
 
