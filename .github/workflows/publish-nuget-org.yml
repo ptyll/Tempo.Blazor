@@ -107,6 +107,21 @@ jobs:
       # `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed` in this step and the refusal in
       # eng/pack-nuget-packages.sh both ask nuget.org whether the number is already SERVED, and
       # neither of those is vacuous here. Tag, PUT and availability are three different quantities.
+      #
+      # AND THIS IS THE STEP A RE-RUN OF A SPENT RELEASE DIES IN, which is why the bound about re-runs
+      # is repeated here and not left beside the push step alone. The `publish` job carries `needs:
+      # build-and-test`, so once the announced number is visible on nuget.org this step goes
+      # red and the publish job never starts — the reader who clicked "Re-run jobs" therefore meets
+      # THIS failure, not the push step's explanation of it, and not even the refusal in
+      # eng/pack-nuget-packages.sh at the `Build packages` step, which is itself ahead of the
+      # `Push packages to NuGet.org` step. So, said here: a re-run over a number that already went out is EXPECTEDLY RED
+      # and is NOT evidence that the release failed. The number is spent, the artefacts under it are
+      # immutable, and THE TREATMENT IS A BUMP, NOT A RE-RUN — no re-run of that run can come back
+      # green.
+      # THE EXCEPTION IS THE PROPAGATION WINDOW: for roughly the first 431 s after the PUT (measured
+      # once, for 2.8.20 — an observation, not a limit; see eng/pack-nuget-packages.sh) neither feed
+      # guard can see the number, both pass truthfully, and the push step's own accounting is the only
+      # thing that refuses. The two placements cover different moments of the same re-run.
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
 
@@ -252,6 +267,17 @@ jobs:
       # none did. The script pushes all 26 regardless of what happens to any one of them — dropping
       # the flag would abort the rest and ship half a release — then classifies each as PUBLISHED,
       # SKIPPED, FAILED or UNRESOLVED and fails the job on anything that is not PUBLISHED.
+      #
+      # AND THERE IS NO GREEN SECOND RUN OF THIS STEP ONCE IT HAS PUSHED. That is the intended
+      # semantics of the accounting above, and it is written down here so the next reader does not go
+      # hunting for a defect that is not there. The verdict is `published == total`, and a package the
+      # feed already serves under this number classifies as SKIPPED rather than PUBLISHED — so a second
+      # run over a number that already went out reports every staged package SKIPPED and fails, and it
+      # will keep failing that way for as long as that number exists. Re-running this job because the
+      # artefact upload died, or because somebody clicked "Re-run jobs", is therefore EXPECTEDLY RED
+      # and is NOT evidence that the release failed. THE TREATMENT IS A BUMP, NOT A RE-RUN: the number
+      # is spent, the artefacts under it are immutable, and the way forward is the next number on a new
+      # run. No re-run of this one can come back green.
       - name: Push packages to NuGet.org
         env:
           PUSH_SOURCE: "https://api.nuget.org/v3/index.json"

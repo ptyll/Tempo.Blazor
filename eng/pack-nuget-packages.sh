@@ -41,6 +41,44 @@ mapfile -t projects < <(grep -vE '^[[:space:]]*(#|$)' "$manifest" | sed 's/[[:sp
 # but not yet propagated — nuget.org serves this index through a CDN, so a green here is not proof that
 # no PUT has happened.
 #
+# HOW LONG THAT PROPAGATION TOOK, ONCE — AN OBSERVATION AND NOT A BOUND. Release 2.8.20 on 2026-08-22,
+# GHA run 32557365946: the push step PUT completed at 06:48:30Z and this same flat container index
+# first answered 200 for that number at 06:55:41Z, which is 431 s later. The publish job that produced
+# that PUT ran 06:43:25Z to 06:48:35Z, i.e. 310 s. THE COMPARISON IS THE FINDING: 431 s is longer than
+# 310 s, so the blind window outlasts the job that opens it. A release can therefore finish green while
+# this check and its copy in ReleaseContractTests both still read the number as free — and in that
+# window NEITHER OF THEM IS WRONG. Each answers "is the number VISIBLE as taken", and for a number
+# that has been PUT but not yet propagated the truthful answer to that question really is "not
+# visible". The two guards are right and the release is still unsafe, because the question they can
+# answer is not the question a second publish would need answered.
+# ONE SAMPLE OF A CDN IS NOT A LIMIT: nothing here sleeps or retries for those 431 s, no release may be
+# scheduled against them, and the next propagation may take longer. What the number establishes is only
+# that this window is neither negligible nor shorter than a publish. The endpoint stays the flat
+# container for the reason given above; registration and search answer a DIFFERENT question, so moving
+# there would change the quantity being measured rather than shorten the window.
+#
+# AND THIS IS WHERE A RE-RUN ACTUALLY LANDS, which is why the bound is repeated here instead of only
+# beside the push step. The push step in both publish workflows carries the sentence "a re-run over a
+# spent number is EXPECTEDLY RED and the treatment is a bump, not a re-run" — and whoever clicks
+# "Re-run jobs" never reaches that sentence, because two guards refuse first. Measured over the two
+# files 2026-08-23, and named BY STEP rather than by line number — line numbers move with the very
+# commit that writes them, step names do not: in both publish-nuget.yml and publish-nuget-org.yml the
+# `publish` job carries `needs: build-and-test`, so the suite's
+# `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed`, which runs inside the `Test` step of
+# `build-and-test`, turns red and the publish job never starts; and if it did, THIS refusal fires at
+# the `Build packages` step, still ahead of the push step (`Push packages to NuGet.org` there,
+# `Push packages to GitHub Packages` in publish-nuget.yml). A sentence the reader cannot reach is not
+# a bound, so the refusal messages below say it themselves.
+# THE ONE WINDOW IN WHICH THE PUSH-STEP COPY IS THE ONE THAT FIRES is the propagation window above: for
+# the first ~431 s neither feed guard can see the number, both pass truthfully, and the push is the
+# only thing left to refuse. The two placements are therefore not duplicates — they cover different
+# moments of the same re-run.
+# AND publish-nuget.yml IS ASYMMETRIC TO THIS, stated because the ordering above would otherwise be
+# read as holding for both feeds: that workflow pushes to GITHUB PACKAGES, while this refusal and the
+# suite guard both ask nuget.org. A number spent only on GitHub Packages is invisible to both, so for a
+# re-run of that workflow alone the push step's own accounting really is the first and only refusal —
+# the copy beside it is in the right place there.
+#
 # THE PACKAGE ID IS READ, NOT WRITTEN. The flat container answers 404 for an id it does not know, so a
 # misspelled id would report every number as free forever. It is taken from the same csproj the publish
 # workflow reads the version out of, and an empty read is a refusal rather than a guess.
@@ -139,6 +177,7 @@ elif [[ "$(printf '%s' "$feed_body" | grep -cF "\"$VERSION\"" || true)" != "0" ]
   echo "Version $VERSION is already published on $feed_index, under package id '$package_id'; the artefact under that number is immutable and cannot be replaced." >&2
   echo "Packing it again would ship different bytes under a label consumers have already resolved to something else." >&2
   echo "Bump CHANGELOG.md and every packable csproj to the next free number; retagging cannot reach what is already on the feed." >&2
+  echo "If you got here by clicking \"Re-run jobs\" after a release that already pushed: this red is EXPECTED and is not evidence that the release failed. The number is spent, the artefacts under it are immutable, and no re-run of this run can come back green. The treatment is a bump, not a re-run." >&2
   exit 1
 else
   lead_answered=1
@@ -188,6 +227,7 @@ if [[ "$lead_answered" == "1" ]]; then
     echo "Version $VERSION is already published on $feed_index, under package id '$manifest_spent'; the artefact under that number is immutable and cannot be replaced." >&2
     echo "The lead id '$package_id' does not serve $VERSION, which is why asking about that one id alone reported the number free — a partially published release is exactly that shape." >&2
     echo "Bump CHANGELOG.md and every packable csproj to the next free number; retagging cannot reach what is already on the feed." >&2
+    echo "If you got here by clicking \"Re-run jobs\" after a release that already pushed: this red is EXPECTED and is not evidence that the release failed. The number is spent, the artefacts under it are immutable, and no re-run of this run can come back green. The treatment is a bump, not a re-run." >&2
     exit 1
   fi
 

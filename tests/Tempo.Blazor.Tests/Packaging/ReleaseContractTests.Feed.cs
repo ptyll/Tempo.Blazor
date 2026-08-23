@@ -36,6 +36,38 @@ public sealed partial class ReleaseContractTests
     /// taken", which a release can act on — not "was a PUT accepted", which nothing here can see.
     /// </para>
     /// <para>
+    /// HOW LONG "a while" WAS, ONCE — AN OBSERVATION AND NOT A BOUND. Release 2.8.20 on 2026-08-22,
+    /// GHA run 32557365946: the push step's PUT completed at 06:48:30Z and the flat container first
+    /// answered 200 for that number at 06:55:41Z, which is 431 s later. The whole publish job that
+    /// produced the PUT ran 06:43:25Z to 06:48:35Z, i.e. 310 s. THE COMPARISON IS THE FINDING: 431 s
+    /// is longer than 310 s, so the blind window outlasts the job that opens it, and a release can
+    /// finish GREEN while this guard and the copy in <c>eng/pack-nuget-packages.sh</c> both still read
+    /// the number as free. In that window neither of them is wrong — each answers its own question,
+    /// "is the number VISIBLE as taken", correctly — and both would say "free" about a number that is
+    /// already spent. ONE SAMPLE OF A CDN IS NOT A LIMIT: nothing here waits for those 431 s, no
+    /// release may be scheduled against them, and the next propagation may take longer or less. What
+    /// the number establishes is only that this window is not negligible and not shorter than a
+    /// publish. The endpoint is unchanged by this note: <see cref="PublishedVersionSurvey.IndexUrl"/>
+    /// is still the flat container, because registration and search answer a DIFFERENT question and
+    /// swapping to one of them would change the quantity rather than shorten the window.
+    /// </para>
+    /// <para>
+    /// WHAT THIS GUARD COSTS ON A PULL REQUEST, decided rather than discovered — see decision
+    /// <c>REL-FEED-GUARD-PR-COST</c>. Between the moment a release becomes visible on the feed and the
+    /// moment the changelog is bumped past it, this guard is RED, and it is red for a TRUE reason: the
+    /// announced number really is taken. <c>build-and-test</c> carries no <c>if:</c> in either publish
+    /// workflow, so it also runs on <c>pull_request</c>, and inside that window every pull request goes
+    /// red over release accounting its author cannot fix. THE WINDOW WAS MEASURED, not estimated: for
+    /// 2.8.20 it opened at 06:55:41Z (the first 200 above) and closed with the bump commit f86f9095
+    /// dated 2026-08-22 10:40:16Z — 3 h 44 m 35 s. The previous wave's own run inside it reported
+    /// 11199 total / 11198 passed / 1 failed, and that count belongs to that run and that tree.
+    /// THE GUARD IS DELIBERATELY NOT SKIPPED ON <c>pull_request</c>. A skip there would buy a quiet
+    /// window at the price of a NEW WAY TO BE GREEN FOR THE WRONG REASON, on the one lane where a human
+    /// is reading the diff that announces the number — which is exactly where this defect gets
+    /// authored. The red is a correct answer arriving at an inconvenient moment; the treatment is the
+    /// bump, which the release owes anyway.
+    /// </para>
+    /// <para>
     /// THE REACH CONTROL IS INSIDE THE ASSERTIONS, NOT BESIDE THEM, because every failure mode of this
     /// probe wears the shape of its passing answer. Measured over four worlds: online the index returns
     /// 200 with 104 versions; with the connection refused the probe returns nothing in 31 ms; against a
