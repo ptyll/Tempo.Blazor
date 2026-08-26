@@ -97,7 +97,7 @@
     {
         <div class="tm-data-table-selection-bar">
             <span>@Loc["TmDataTable_BulkActions", _selectedItems.Count]</span>
-            <button class="tm-btn-link" type="button" @onclick="DeselectAllAsync">
+            <button class="tm-link-button" type="button" @onclick="DeselectAllAsync">
                 @Loc["TmDataTable_DeselectAll"]
             </button>
             @SelectionActions
@@ -167,17 +167,21 @@
                         }
                         @foreach (var col in _visibleColumns)
                         {
-                            @* A sortable header is operable by keyboard, not only by mouse: it is a focus
-                               stop and answers Enter/Space (Shift for multi-sort), mirroring the click.
+                            @* A header that DOES something is operable by keyboard, not only by mouse: it is
+                               a focus stop and answers Enter (Shift for multi-sort), mirroring the click,
+                               and P for the pin. Space is deliberately not an activation key — on a plain
+                               <th tabindex="0"> it stays the browser's "scroll one screen" and Blazor
+                               cannot cancel that default for one key only.
                                The sort target stays the <th> itself — the header may hold a consumer's
                                HeaderTemplate as well as the pin button and resize handle, so it cannot be
                                wrapped in a <button> without nesting interactive elements. *@
                             <th class="@GetHeaderClass(col)"
                                 style="@GetColumnStyle(col)"
                                 data-sortable="@col.Sortable.ToString().ToLower()"
-                                tabindex="@(col.Sortable ? "0" : null)"
+                                tabindex="@(IsHeaderOperable(col) ? "0" : null)"
                                 draggable="@(col.Groupable ? "true" : "false")"
                                 aria-sort="@GetAriaSortValue(col)"
+                                aria-keyshortcuts="@(ShowColumnMenu ? "P" : null)"
                                 @ondragstart="() => OnColumnDragStart(col.Key)"
                                 @ondragend="OnColumnDragEnd"
                                 @onkeydown="e => HandleHeaderKeyDownAsync(e, col)"
@@ -200,7 +204,12 @@
                                 }
                                 @if (ShowColumnMenu)
                                 {
+                                    @* tabindex="-1": the pin is reachable from its header with P, not as a
+                                       stop of its own. As a sequential stop it cost one extra Tab per
+                                       column — six columns were eleven stops — and painted nothing until
+                                       the header was hovered. *@
                                     <button type="button"
+                                            tabindex="-1"
                                             class="tm-col-pin-btn @(GetPin(col) != ColumnPin.None ? "tm-col-pin-btn--active" : "")"
                                             title="@Loc["TmDataTable_PinColumn"]"
                                             aria-label="@Loc["TmDataTable_PinColumn"]"

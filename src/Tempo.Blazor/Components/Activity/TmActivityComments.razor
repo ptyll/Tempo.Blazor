@@ -50,7 +50,7 @@
                                             @onclick="() => SubmitEditAsync(c.Id)">
                                         @Loc["Tm_Save"]
                                     </button>
-                                    <button class="tm-btn-link tm-comment-cancel-btn"
+                                    <button class="tm-link-button tm-comment-cancel-btn"
                                             type="button"
                                             @onclick="CancelEdit">
                                         @Loc["Tm_Cancel"]
@@ -73,7 +73,7 @@
                             <div class="tm-comment-actions">
                                 @if (c.CanEdit)
                                 {
-                                    <button class="tm-btn-link tm-comment-edit-btn"
+                                    <button class="tm-link-button tm-comment-edit-btn"
                                             type="button"
                                             @onclick="() => StartEdit(c)">
                                         @Loc["Tm_Edit"]
@@ -81,7 +81,7 @@
                                 }
                                 @if (c.CanDelete)
                                 {
-                                    <button class="tm-btn-link tm-comment-delete-btn"
+                                    <button class="tm-link-button tm-comment-delete-btn"
                                             type="button"
                                             @onclick="() => DeleteCommentAsync(c.Id)">
                                         @Loc["Tm_Delete"]
@@ -115,7 +115,7 @@
                         @onclick="SubmitNewCommentAsync">
                     @Loc["TmActivityComments_SubmitComment"]
                 </button>
-                <button class="tm-btn-link tm-comment-cancel-btn"
+                <button class="tm-link-button tm-comment-cancel-btn"
                         type="button"
                         @onclick="CancelEditor">
                     @Loc["Tm_Cancel"]

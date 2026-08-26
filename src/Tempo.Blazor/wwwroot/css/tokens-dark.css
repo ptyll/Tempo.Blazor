@@ -18,6 +18,16 @@
      --tm-bg-muted (the same colour), so it cannot mark an unchecked control. The dark scale's
      gray-400 (#94a3b8) is 5.71:1 on the surface and 4.04:1 on the muted panel. */
   --tm-border-color-control: var(--tm-color-gray-400);
+  /* Sort indicator — see tokens.css. The IDLE tone takes a DIFFERENT step of the scale here, because
+     the dark gray-500 is #cbd5e1 and would leave the active state nowhere brighter to go (1,47:1).
+     gray-300 (#64748b) measures 3,75:1 on the header surface and 4,34:1 against the active tone. */
+  --tm-sort-indicator-idle:  var(--tm-color-gray-300);
+  /* The ACTIVE tone repeats the SAME expression as tokens.css, and that repetition is the point: a
+     token declared only on :root substitutes its var() where it is DECLARED, so it would compute with
+     the LIGHT --tm-text-primary and then just inherit that finished colour — a theme switched on a
+     PARENT element would never reach it. Same reason --tm-color-on-primary is repeated below.
+     Measured here: #f1f5f9 is 16,30:1 on the header surface. */
+  --tm-sort-indicator-active: var(--tm-text-primary);
   /* Ink on a primary fill — the SAME expressions as in tokens.css, re-declared here on purpose.
      This is not a second definition: a custom property substitutes its var() at the element where it
      is DECLARED, so a token declared on :root computes with the LIGHT values and then inherits that

@@ -148,6 +148,26 @@
   color: var(--tm-color-primary-hover);
 }
 
+/* A link-looking button that is NOT a .tm-btn — the deselect link of a data table, the reset of the
+   column picker, the comment and attachment actions, "today" in the date picker. Without .tm-btn
+   there is no reset at all, so the user-agent border, background and font would show through; this
+   class supplies exactly that reset. It is a SEPARATE class rather than more declarations on
+   .tm-btn-link because the two cases want opposite things: a bare button needs `border: none` and
+   an inherited font size, a .tm-btn wants the 1px box and the font size of its size class. Merging
+   them is how the data-table copy came to overwrite the variant in the first place. */
+.tm-link-button {
+  background: none;
+  border: none;
+  color: var(--tm-color-primary);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  height: auto;
+}
+.tm-link-button:hover { color: var(--tm-color-primary-hover); }
+
 .tm-btn-default {
   background-color: var(--tm-bg-surface);
   border-color: var(--tm-border-color);

@@ -42,7 +42,7 @@
                     <div class="tm-attach-actions">
                         @if (CanDownload(a))
                         {
-                            <a class="tm-btn-link tm-attach-download-link"
+                            <a class="tm-link-button tm-attach-download-link"
                                href="#"
                                @onclick:preventDefault="true"
                                @onclick="() => DownloadAsync(a)">
@@ -51,7 +51,7 @@
                         }
                         @if (a.CanDelete)
                         {
-                            <button class="tm-btn-link tm-attach-delete-btn"
+                            <button class="tm-link-button tm-attach-delete-btn"
                                     type="button"
                                     aria-label="@Loc["Tm_Delete"]"
                                     @onclick="() => DeleteAsync(a)">

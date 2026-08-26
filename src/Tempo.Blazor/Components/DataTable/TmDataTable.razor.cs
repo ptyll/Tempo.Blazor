@@ -2061,8 +2061,8 @@ public partial class TmDataTable<TItem> : IDisposable
     }
 
     /// <summary>
-    /// Keyboard equivalent of clicking a sortable column header, so sorting is not mouse-only (WCAG 2.1.1).
-    /// Shift mirrors the multi-sort modifier of the click.
+    /// Keyboard contract of a column header: Enter sorts (Shift mirrors the multi-sort modifier of the
+    /// click) and P cycles the pin, so neither is mouse-only (WCAG 2.1.1).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -2085,13 +2085,33 @@ public partial class TmDataTable<TItem> : IDisposable
     /// meaning. WCAG 2.1.1 is satisfied by Enter, and a keyboard user keeps paging through the table with
     /// the key that has always done it.
     /// </para>
+    /// <para>
+    /// <b>P cycles the column pin</b>, added in 2.8.22 together with <c>tabindex="-1"</c> on the pin
+    /// button. That button was a real <c>&lt;button&gt;</c> inside every visible header, so six columns
+    /// cost eleven Tab presses and five of those stops painted nothing until hover; taking it out of the
+    /// sequential order WITHOUT giving the header a key would have made pinning unreachable rather than
+    /// cheaper. Pinning does not need a sortable column, so P is answered on any header while
+    /// <c>ShowColumnMenu</c> is on, and <c>aria-keyshortcuts</c> announces it.
+    /// </para>
     /// </remarks>
     private Task HandleHeaderKeyDownAsync(KeyboardEventArgs e, TmDataTableColumn<TItem> col)
     {
+        if (ShowColumnMenu && (e.Key is "p" or "P"))
+        {
+            return CyclePinAsync(col);
+        }
+
         if (!col.Sortable) return Task.CompletedTask;
         if (e.Key is not "Enter") return Task.CompletedTask;
         return SortByAsync(col, e.ShiftKey);
     }
+
+    /// <summary>
+    /// Whether the header offers anything a keyboard user can do — and therefore whether it belongs in
+    /// the focus order at all. Sorting is one such thing; since 2.8.22 the pin is the other, because the
+    /// pin button itself is no longer a stop.
+    /// </summary>
+    private bool IsHeaderOperable(TmDataTableColumn<TItem> col) => col.Sortable || ShowColumnMenu;
 
     // ── Helper methods ────────────────────────────────────────────
 
@@ -2132,9 +2152,18 @@ public partial class TmDataTable<TItem> : IDisposable
         return sort.Direction == DataTableSortDirection.Descending ? "tm-sort-desc" : "tm-sort-asc";
     }
 
-    private string GetAriaSortValue(TmDataTableColumn<TItem> col)
+    /// <summary>
+    /// The <c>aria-sort</c> of a header, or <c>null</c> where the attribute would be a lie.
+    /// </summary>
+    /// <remarks>
+    /// ARIA defines <c>aria-sort</c> for a <c>columnheader</c> whose column participates in sorting, and
+    /// <c>none</c> there means "sortable, not currently sorted". On a column that cannot be sorted — an
+    /// ACTIONS column — it announced an affordance that does not exist. Blazor omits an attribute whose
+    /// value is null, so returning null is what removes it.
+    /// </remarks>
+    private string? GetAriaSortValue(TmDataTableColumn<TItem> col)
     {
-        if (!col.Sortable) return "none";
+        if (!col.Sortable) return null;
         var sort = GetColumnSort(col.Key);
         if (sort is null) return "none";
         return sort.Direction == DataTableSortDirection.Descending ? "descending" : "ascending";

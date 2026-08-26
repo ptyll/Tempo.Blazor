@@ -60,6 +60,14 @@ internal static class ThemeCss
     public static string ComponentCss(string file) =>
         StripComments(File.ReadAllText(CssPath("components", file)));
 
+    /// <summary>
+    /// The stylesheet a consumer actually links, comments stripped. It is the only text in which the
+    /// ORDER of two rules coming from two different component files is visible, so every guard about
+    /// "which of two equally specific rules wins" has to read this and not the sources.
+    /// </summary>
+    public static string BundledCss() =>
+        StripComments(File.ReadAllText(CssPath("tempo-blazor.bundled.css")));
+
     public static string Normalise(string text) => Whitespace.Replace(text, " ").Trim();
 
     /// <summary>All <c>--tm-*</c> declarations of a file, later declarations winning.</summary>
@@ -222,6 +230,48 @@ internal static class ThemeCss
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The opaque colour a viewer sees when <paramref name="foreground"/> is painted at
+    /// <paramref name="alpha"/> over <paramref name="background"/> — the ONE way this suite composites,
+    /// so two probes can no longer disagree by compositing differently.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Fáze 14 left two numbers for the sort indicator that looked like a methodological dispute — the
+    /// UX review read 1,91:1 light and 2,95:1 dark, the application probe read 2,52:1 and 3,58:1 — and
+    /// the register recorded the difference as "probably the reference background". It was not. Feeding
+    /// this one function the four recorded pixel values reproduces BOTH pairs against the SAME
+    /// background: the review measured the UNSORTED icon, the probe measured the SORTED one. Same
+    /// method, different question. <c>SortIndicatorContrastTests</c> pins that arithmetic.
+    /// </para>
+    /// <para>
+    /// Nested <c>opacity</c> multiplies: an <c>::after</c> at <c>opacity: 1</c> inside a box at
+    /// <c>opacity: .4</c> paints at 0.4, not at 1. That is why an <c>opacity: 1</c> on the pseudo-element
+    /// changed nothing and why alpha, not colour, has to be passed in here explicitly.
+    /// </para>
+    /// </remarks>
+    public static string Composite(string foreground, double alpha, string background)
+    {
+        alpha.Should().BeInRange(0, 1, "alpha je podíl, ne procento");
+
+        var over = Channels(foreground);
+        var under = Channels(background);
+        var mixed = Enumerable.Range(0, 3)
+            .Select(i => (int)Math.Round((alpha * over[i]) + ((1 - alpha) * under[i]), MidpointRounding.AwayFromZero))
+            .Select(value => Math.Clamp(value, 0, 255));
+
+        return "#" + string.Concat(mixed.Select(value => value.ToString("x2", CultureInfo.InvariantCulture)));
+    }
+
+    private static int[] Channels(string hex)
+    {
+        hex = hex.Trim().TrimStart('#');
+        hex.Length.Should().Be(6, $"'{hex}' must resolve to an opaque #rrggbb colour");
+        return Enumerable.Range(0, 3)
+            .Select(i => int.Parse(hex.Substring(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture))
+            .ToArray();
     }
 
     /// <summary>WCAG relative luminance of an opaque <c>#rrggbb</c> colour.</summary>

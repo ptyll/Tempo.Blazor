@@ -106,6 +106,15 @@
      and 4.39:1 on --tm-bg-muted. Decorative separators keep using --tm-border-color. */
   --tm-border-color-control:   var(--tm-color-gray-500);
   --tm-border-color-focus:     var(--tm-color-primary);
+  /* Sort indicator of a data-table header. Two tones, because SC 1.4.11 asks TWICE here: the arrow
+     has to read against the header background (3:1) AND the sorted state has to be distinguishable
+     from the unsorted one (3:1 again). Until 2.8.22 neither held — the arrow was painted through
+     `opacity: .4` in BOTH states and the sorted colour lost to `.tm-data-table th` on specificity,
+     so the whole difference a user could see was 1,32:1 light and 1,22:1 dark. Measured now, light:
+     gray-500 idle 4,63:1 on the header surface, --tm-text-primary active 16,98:1, and 3,67:1 between
+     the two states. Asserted by Tempo.Blazor.Tests SortIndicatorContrastTests in BOTH themes. */
+  --tm-sort-indicator-idle:    var(--tm-color-gray-500);
+  --tm-sort-indicator-active:  var(--tm-text-primary);
   /* Glyph drawn ON a selection control's filled state — the checkbox tick and indeterminate dash
      (_checkbox.css) and the multiselect option tick (_multiselect.css). Exactly the same usage role
      as --tm-color-on-primary (ink on a primary fill), so it ALIASES it instead of carrying a second

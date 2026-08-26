@@ -165,7 +165,12 @@ public class TmDataTableDefaultSortTests : LocalizationTestBase
         var cut = RenderWithColumns(p => p.Add(c => c.DefaultSortColumn, "Name"), sortable: false);
 
         FirstColumn(cut).Should().Equal("Alice", "Bob", "Charlie");
-        cut.Find("th[data-sortable='false']").GetAttribute("aria-sort").Should().Be("none");
+
+        // Since 2.8.22 the attribute is ABSENT rather than "none": ARIA reserves aria-sort for a column
+        // that participates in sorting, so "none" on a header the user cannot operate announced an
+        // affordance that does not exist. The assertion still measures the same promise — the header
+        // offers no sort affordance — it just measures it where the promise now lives.
+        cut.Find("th[data-sortable='false']").GetAttribute("aria-sort").Should().BeNull();
     }
 
     [Fact]

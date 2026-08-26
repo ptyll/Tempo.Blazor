@@ -1,5 +1,88 @@
 # Changelog
 
+## 2.8.22 - 2026-08-26
+
+Three defects, one release. Every one of them was invisible to a markup assertion and to a
+screenshot, because in all three cases the class was on the element, the rule was in the file, and
+something else decided what the user saw.
+
+### Fixed
+
+- **A component stylesheet may no longer redefine a library-wide button class.** `_pivot-table.css`
+  declared a second, GLOBAL `.tm-btn` — its own `gap`, `padding`, `font-size` and the shorthand
+  `border: 1px solid transparent` — and `css/tempo-blazor.css` imports it at line 82 while
+  `_button.css` is at line 33. Both selectors are (0,1,0), so source order decided, and in the
+  shipped bundle the two rules stood at line 190 (`.tm-btn-outline-secondary`) and line 1344 (the
+  duplicate). Consequence measured on a consumer of 2.8.16 AND 2.8.21: every `ButtonVariant.Outline*`
+  rendered with `border-color: rgba(0,0,0,0)` in both themes — a button that is only text. The token
+  fix of 2.8.17 (`--tm-border-color` → `--tm-border-color-control`, 1,24:1 → 4,83:1) had been landing
+  on a property that a few hundred lines later was written back to transparent, which is why two
+  releases of it changed nothing. The block is now `.tm-pivot-btn` and the 14 buttons that used it —
+  `TmPivotFieldPanel`, `TmDocumentEditor`, `TmDiagramEditor`, `TmNotionTemplateButtonBlock` and the
+  demo notification page — carry the new name. No public API changed. `OutlineSecondary` now measures
+  **4,83:1 light / 5,71:1 dark** against the surface.
+
+  Two things came out of the sweep that the report did not contain. `.tm-btn--primary` was referenced
+  by three of those buttons and declared NOWHERE, so they rendered as a bare base with a transparent
+  border; it exists now as `.tm-pivot-btn--primary`. And `_data-table.css` carried the SAME defect on
+  a second class: a global `.tm-btn-link` with `border: none` and `font-size: inherit`, imported at
+  line 79, which took the 1px box and the size-class font size away from every `ButtonVariant.Link`
+  in the library. The standalone reset those bare link buttons genuinely need is now its own class,
+  `.tm-link-button`, in `_button.css`. `PivotButtonScopeTests` sweeps the whole `components/`
+  directory rather than a list, so the next one fails wherever it is written.
+
+- **The sorted column is distinguishable again.** The difference between a sorted and an unsorted
+  header was **1,32:1 light and 1,22:1 dark**, against the 3:1 of WCAG 2.2 SC 1.4.11 — a user could
+  not tell what the table was ordered by. Two dead rules, and neither matched the hypotheses that had
+  been written down. `.tm-col-sorted-asc { color: … }` is (0,1,0) against the (0,1,1) of
+  `.tm-data-table th { color: … }`, so the sorted state contributed nothing at any source order; and
+  `opacity: 1` on `.tm-sort-icon.tm-sort-asc::after` was inert, because nested opacity MULTIPLIES —
+  1 inside a box at `opacity: .4` still paints at 0.4, in both states. What the earlier probe had
+  actually recorded was the header's `:hover`/`:focus-visible` colour, which is (0,2,0) and does beat
+  the base rule: composite `--tm-text-secondary` at 0.4 over the header background and you get
+  `rgb(179,184,190)` light / `rgb(90,99,115)` dark to the pixel, composite `--tm-text-primary` the
+  same way and you get `rgb(156,160,166)` / `rgb(105,112,125)`.
+
+  The indicator now takes two tokens on the SPAN itself — `--tm-sort-indicator-idle` and
+  `--tm-sort-indicator-active` — where no inherited header colour can reach it, and no opacity at
+  all. Measured, both themes: idle **4,63:1** light / **3,75:1** dark against the header background,
+  active **16,98:1** / **16,30:1**, and the state change **3,67:1** / **4,34:1**. The sorted label
+  rule was raised to `.tm-data-table th.tm-col-sorted-asc` so that it, too, applies.
+
+- **Column headers stopped lying to a screen reader and stopped costing two Tab presses each.**
+  `aria-sort="none"` was rendered on non-sortable headers as well — on an ACTIONS column that
+  announces a sort affordance which does not exist, because ARIA reserves the attribute for a column
+  that participates in sorting. It is now absent there. The pin toggle was a real `<button>` in every
+  visible header, so six columns cost eleven Tab stops and five of them painted nothing until hover;
+  it is `tabindex="-1"` now and its header answers **P** instead, advertised through
+  `aria-keyshortcuts`. A header that offers only the pin became a focus stop so the function stayed
+  reachable, and a header that offers nothing at all still is not one.
+
+  Space is deliberately still NOT an activation key, and that is the decision of 2.8.9 unchanged: on
+  a plain `<th tabindex="0">` Space is the browser's "scroll one screen", and Blazor binds
+  `:preventDefault` when the handler is registered rather than per event, so it cannot be cancelled
+  for one key without cancelling Tab and trapping the keyboard. Enter satisfies WCAG 2.1.1 and
+  `columnheader` has no Space activation to begin with.
+
+### Measurement
+
+- `ThemeCss.Composite` is the one place this suite composites a colour over a background, and
+  `SortIndicatorContrastTests.TheTwoRecordedReadings` pins the four pixel values and the four ratios
+  it reproduces. The apparent disagreement between the two reviews of the sort indicator — 1,91:1 /
+  2,95:1 against 2,52:1 / 3,58:1, recorded as "probably a different reference background" — was not
+  methodological: one read the UNSORTED icon and the other read the icon in the state it had just
+  clicked into. Same background, same compositing, different question.
+- `CssCascade` resolves specificity and source order over any stylesheet and is FAIL-CLOSED: a
+  selector it cannot model, whose subject could be the element under test, is reported as unmodelled
+  and fails the caller instead of being counted as "does not match". `TmDataTableAlignmentTests` was
+  the first, private implementation of that shape and now delegates to it, so the extraction is
+  proved by guards that already existed.
+
+**nuget.org publication is NOT part of this release commit.** It is the named manual step of the
+repository owner (`ptyll`), per `DEC-TEMPO-287-NUGET-DELIVERY`: `dotnet nuget push` over the packed
+`packages/*.2.8.22.nupkg`. 2.8.17 was tagged and never reached the feed precisely because that step
+was assumed rather than named, and two phases were rewritten because of it.
+
 ## 2.8.21 - 2026-08-22
 
 Release tooling only. **No component changed.** 2.8.20 is already on nuget.org (immutable); this

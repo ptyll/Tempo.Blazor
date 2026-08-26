@@ -7,11 +7,11 @@
         <span class="tm-pivot-field-panel-hint">@Loc["TmPivotTable_DragHint"]</span>
         <div class="tm-pivot-field-panel-actions">
             <button type="button"
-                    class="tm-btn tm-btn--secondary tm-btn--sm"
+                    class="tm-pivot-btn tm-pivot-btn--secondary tm-pivot-btn--sm"
                     disabled="@(!HasDraftChanges)"
                     @onclick="ApplyAsync">@Loc["TmPivotTable_Apply"]</button>
-            <button type="button" class="tm-btn tm-btn--ghost tm-btn--sm" @onclick="Cancel">@Loc["TmPivotTable_Cancel"]</button>
-            <button type="button" class="tm-btn tm-btn--ghost tm-btn--sm" @onclick="ClearAll">@Loc["TmPivotTable_ClearAll"]</button>
+            <button type="button" class="tm-pivot-btn tm-pivot-btn--ghost tm-pivot-btn--sm" @onclick="Cancel">@Loc["TmPivotTable_Cancel"]</button>
+            <button type="button" class="tm-pivot-btn tm-pivot-btn--ghost tm-pivot-btn--sm" @onclick="ClearAll">@Loc["TmPivotTable_ClearAll"]</button>
         </div>
     </div>
 

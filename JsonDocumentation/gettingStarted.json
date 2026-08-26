@@ -286,7 +286,9 @@
             "--tm-border-color-control": "var(--tm-color-gray-500)",
             "--tm-border-color-focus": "var(--tm-color-primary)",
             "--tm-control-glyph-color": "var(--tm-color-on-primary)",
-            "--tm-control-hover-fill": "var(--tm-color-primary-100)"
+            "--tm-control-hover-fill": "var(--tm-color-primary-100)",
+            "--tm-sort-indicator-idle": "var(--tm-color-gray-500)",
+            "--tm-sort-indicator-active": "var(--tm-text-primary)"
           }
         },
         "text": {

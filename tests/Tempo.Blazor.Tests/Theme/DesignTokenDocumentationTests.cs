@@ -95,6 +95,8 @@ public class DesignTokenDocumentationTests
     [InlineData("--tm-border-color-control")]
     [InlineData("--tm-control-glyph-color")]
     [InlineData("--tm-control-hover-fill")]
+    [InlineData("--tm-sort-indicator-idle")]
+    [InlineData("--tm-sort-indicator-active")]
     public void AccessibilityTokens_AreDocumented(string token)
         => DocumentedTokens().Should().ContainKey(token,
             "a consumer repointing the palette cannot honour a contract that is not published");

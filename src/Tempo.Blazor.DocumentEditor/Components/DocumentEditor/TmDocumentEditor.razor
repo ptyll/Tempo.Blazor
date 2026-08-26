@@ -487,12 +487,12 @@
                                 }
                                 <div class="tm-document-editor__image-dialog-actions">
                                     <button type="button"
-                                            class="tm-btn tm-btn--secondary"
+                                            class="tm-pivot-btn tm-pivot-btn--secondary"
                                             @onclick="CancelCanvasImageDialog">
                                         @Loc["Tm_Cancel"]
                                     </button>
                                     <button type="button"
-                                            class="tm-btn tm-btn--primary"
+                                            class="tm-pivot-btn tm-pivot-btn--primary"
                                             disabled="@string.IsNullOrWhiteSpace(_canvasImageUrl)"
                                             @onclick="InsertCanvasImageFromDialogAsync"
                                             data-testid="@TestId("document-canvas-insert-image-url")">

@@ -33,10 +33,14 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
         new("Bob",     35),
     ];
 
-    private IRenderedComponent<TmDataTable<KeyPerson>> RenderTable(bool sortable = true, bool secondColumn = false)
+    private IRenderedComponent<TmDataTable<KeyPerson>> RenderTable(
+        bool sortable = true,
+        bool secondColumn = false,
+        bool showColumnMenu = true)
         => Render<TmDataTable<KeyPerson>>(p =>
         {
             p.Add(c => c.Items, People);
+            p.Add(c => c.ShowColumnMenu, showColumnMenu);
             p.AddChildContent(b =>
             {
                 b.OpenComponent<TmDataTableColumn<KeyPerson>>(0);
@@ -71,11 +75,20 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
         cut.Find("th[data-sortable='true']").GetAttribute("tabindex").Should().Be("0");
     }
 
+    /// <summary>
+    /// Tabbing through headers that do nothing is noise, not access.
+    /// </summary>
+    /// <remarks>
+    /// <c>ShowColumnMenu</c> is switched OFF here, and that is the whole content of the change made in
+    /// 2.8.22: with the menu on, the header hosts the pin toggle, and since the toggle stopped being a
+    /// tab stop of its own the header IS the way to reach it. "Does nothing" therefore has to be set up,
+    /// not assumed from <c>Sortable="false"</c> alone — see
+    /// <c>TmDataTableHeaderAccessibilityTests.AHeaderThatOnlyOffersThePin_IsStillAFocusStop</c>.
+    /// </remarks>
     [Fact]
     public void NonSortableHeader_IsNotAFocusStop()
     {
-        // Tabbing through headers that do nothing is noise, not access.
-        var cut = RenderTable(sortable: false);
+        var cut = RenderTable(sortable: false, showColumnMenu: false);
 
         cut.Find("th[data-sortable='false']").GetAttribute("tabindex").Should().BeNull();
     }

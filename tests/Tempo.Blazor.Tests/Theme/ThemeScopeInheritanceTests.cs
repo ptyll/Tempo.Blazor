@@ -105,6 +105,8 @@ public class ThemeScopeInheritanceTests
     [InlineData("--tm-control-glyph-color")]
     [InlineData("--tm-control-hover-fill")]
     [InlineData("--tm-border-color-control")]
+    [InlineData("--tm-sort-indicator-idle")]
+    [InlineData("--tm-sort-indicator-active")]
     public void ControlAndInkTokens_AreDeclaredInTheDarkBlock(string token)
         => ThemeCss.Declarations(ThemeCss.CssPath("tokens-dark.css")).Should().ContainKey(token,
             "this token carries a contrast fix, so it must reach a consumer that switches the theme with "

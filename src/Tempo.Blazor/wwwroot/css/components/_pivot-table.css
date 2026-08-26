@@ -423,10 +423,15 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Buttons (compact)
+   Buttons (compact) — SCOPED TO THIS COMPONENT.
+   Until 2.8.22 this block redefined the GLOBAL .tm-btn. The manifest imports this file after
+   _button.css and both selectors are (0,1,0), so source order decided: every outline variant of
+   every Tempo button in a consuming application lost its border-colour to the `border: 1px solid
+   transparent` shorthand written here, and gap / padding / font-size with it. A component
+   stylesheet styles its own class.
    ═══════════════════════════════════════════════════════════════ */
 
-.tm-btn {
+.tm-pivot-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -441,34 +446,48 @@
   white-space: nowrap;
 }
 
-.tm-btn--sm {
+.tm-pivot-btn--sm {
   padding: var(--tm-space-1) var(--tm-space-2);
   font-size: var(--tm-font-size-xs);
 }
 
-.tm-btn--secondary {
+.tm-pivot-btn--secondary {
   background: var(--tm-color-primary);
   color: var(--tm-text-inverse);
   border-color: var(--tm-color-primary);
 }
 
-.tm-btn--secondary:hover {
+.tm-pivot-btn--secondary:hover {
   background: var(--tm-color-primary-hover);
 }
 
-.tm-btn--ghost {
+/* Referenced by TmDocumentEditor, TmNotionTemplateButtonBlock and the demo notification page since
+   before 2.8.16 under the name .tm-btn--primary, which nothing declared — those buttons rendered as
+   the bare base with a transparent border. Renaming the block would have carried the orphan over
+   under a new name, so it is declared here instead. */
+.tm-pivot-btn--primary {
+  background: var(--tm-color-primary);
+  color: var(--tm-text-inverse);
+  border-color: var(--tm-color-primary);
+}
+
+.tm-pivot-btn--primary:hover {
+  background: var(--tm-color-primary-hover);
+}
+
+.tm-pivot-btn--ghost {
   background: transparent;
   color: var(--tm-text-secondary);
   border-color: var(--tm-border-color);
 }
 
-.tm-btn--ghost:hover {
+.tm-pivot-btn--ghost:hover {
   background: var(--tm-bg-surface-secondary);
   color: var(--tm-text-primary);
 }
 
-.tm-btn:disabled,
-.tm-btn[disabled] {
+.tm-pivot-btn:disabled,
+.tm-pivot-btn[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;

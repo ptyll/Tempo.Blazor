@@ -127,20 +127,31 @@
 /* Sortable column header */
 .tm-col-sortable { cursor: pointer; user-select: none; }
 .tm-col-sortable:hover { color: var(--tm-text-primary); }
-.tm-col-sorted-asc,
-.tm-col-sorted-desc { color: var(--tm-color-primary-text); }
+/* The sorted label carries `.tm-data-table th` in its selector on purpose. As a bare
+   `.tm-col-sorted-asc` it was (0,1,0) against the (0,1,1) of `.tm-data-table th { color: … }`, so it
+   lost at every source order and the sorted header was painted in the ordinary header colour — the
+   rule read like a promise and applied to nothing. */
+.tm-data-table th.tm-col-sorted-asc,
+.tm-data-table th.tm-col-sorted-desc { color: var(--tm-color-primary-text); }
 
-/* Sort icon */
+/* Sort icon.
+   NO OPACITY. It used to be `opacity: .4` here with `opacity: 1` on the active pseudo-element, which
+   does nothing: nested opacity MULTIPLIES, so both states painted at 0.4 and the arrow's real colour
+   was written down nowhere. The two states now take two tokens, declared on the SPAN — an inherited
+   header colour (hover, focus-visible, sorted) can never reach an element that has a colour of its
+   own, so there is no specificity race left to lose. */
 .tm-sort-icon {
   display: inline-block;
   width: 0.875rem;
   height: 0.875rem;
   margin-left: var(--tm-space-1);
   vertical-align: middle;
-  opacity: 0.4;
+  color: var(--tm-sort-indicator-idle);
 }
-.tm-sort-icon.tm-sort-asc::after  { content: '\2191'; opacity: 1; }
-.tm-sort-icon.tm-sort-desc::after { content: '\2193'; opacity: 1; }
+.tm-sort-icon.tm-sort-asc,
+.tm-sort-icon.tm-sort-desc { color: var(--tm-sort-indicator-active); }
+.tm-sort-icon.tm-sort-asc::after  { content: '\2191'; }
+.tm-sort-icon.tm-sort-desc::after { content: '\2193'; }
 .tm-sort-icon.tm-sort-none::after { content: '\2195'; }
 
 /* Pinned (sticky) columns */
@@ -415,17 +426,12 @@
 /* Loading / empty states in table */
 .tm-data-table .tm-spinner { margin: var(--tm-space-6) auto; }
 
-/* Link-style button for deselect */
-.tm-btn-link {
-  background: none;
-  border: none;
-  color: var(--tm-color-primary);
-  cursor: pointer;
-  font-size: inherit;
-  padding: 0;
-  text-decoration: underline;
-}
-.tm-btn-link:hover { color: var(--tm-color-primary-hover); }
+/* The deselect link used to declare a second, GLOBAL `.tm-btn-link` here. Same defect as the
+   duplicate `.tm-btn` of _pivot-table.css and found by the same sweep: this file is imported after
+   _button.css, both selectors are (0,1,0), so `border: none` and `font-size: inherit` reached every
+   ButtonVariant.Link in the library and took away its 1px box and its size class. The standalone
+   reset those bare buttons DO need now has its own name, `.tm-link-button`, and lives in
+   _button.css next to the variant it belongs with. */
 
 /* ═══════════════════════════════════════════════════════════════
    Pagination Footer

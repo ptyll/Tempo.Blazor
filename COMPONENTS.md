@@ -86,6 +86,7 @@ Univerzální tlačítko s variantami, velikostmi a ikonami.
 |-------|-------|
 | `tm-btn` | Root třída tlačítka |
 | `tm-btn-primary` / `tm-btn-secondary` / `tm-btn-ghost` / `tm-btn-danger` / `tm-btn-outline` / `tm-btn-link` / `tm-btn-default` | Varianta |
+| `tm-link-button` | Samostatné tlačítko vypadající jako odkaz — BEZ `tm-btn`. Nese vlastní reset (`border: none`, `background: none`, `font-size: inherit`), který `tm-btn-link` mít nesmí: varianta `tm-btn` si drží svůj 1px box a písmo velikostní třídy. |
 | `tm-btn-xs` / `tm-btn-sm` / `tm-btn-md` / `tm-btn-lg` | Velikost |
 | `tm-btn-block` | Celá šířka |
 
@@ -3463,7 +3464,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `tm-col-groupable` | Seskupitelný sloupec |
 | `tm-col-sorted-asc` | Řazení vzestupně |
 | `tm-col-sorted-desc` | Řazení sestupně |
-| `tm-sort-icon` | Ikona řazení |
+| `tm-sort-icon` | Ikona řazení. Barvu bere z `--tm-sort-indicator-idle`, ve stavu `tm-sort-asc`/`tm-sort-desc` z `--tm-sort-indicator-active`; ŽÁDNÁ `opacity` — vnořené průhlednosti se násobí a výsledná barva by pak nebyla nikde napsaná. |
 | `tm-filter-row` | Řádek filtrů |
 | `tm-col-filter` | Filtr sloupce |
 | `tm-col-filter-input` | Input filtru |
