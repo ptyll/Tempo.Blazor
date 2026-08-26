@@ -243,8 +243,10 @@ internal static class ThemeCss
     /// UX review read 1,91:1 light and 2,95:1 dark, the application probe read 2,52:1 and 3,58:1 — and
     /// the register recorded the difference as "probably the reference background". It was not. Feeding
     /// this one function the four recorded pixel values reproduces BOTH pairs against the SAME
-    /// background: the review measured the UNSORTED icon, the probe measured the SORTED one. Same
-    /// method, different question. <c>SortIndicatorContrastTests</c> pins that arithmetic.
+    /// background: the review measured the icon of a header AT REST, the probe measured the icon of the
+    /// header it had just clicked — a <c>:hover</c>/<c>:focus-visible</c> state. Same method, same
+    /// background, different STATE OF THE ELEMENT; and neither of them was the sorted state, which had
+    /// no colour of its own. <c>SortIndicatorContrastTests</c> pins that arithmetic.
     /// </para>
     /// <para>
     /// Nested <c>opacity</c> multiplies: an <c>::after</c> at <c>opacity: 1</c> inside a box at

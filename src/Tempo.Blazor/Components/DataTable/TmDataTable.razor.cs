@@ -2096,6 +2096,17 @@ public partial class TmDataTable<TItem> : IDisposable
     /// </remarks>
     private Task HandleHeaderKeyDownAsync(KeyboardEventArgs e, TmDataTableColumn<TItem> col)
     {
+        // A key pressed inside the consumer's HeaderTemplate bubbles to this handler. Reaching the
+        // shortcut from there is WCAG 2.1.4 (Character Key Shortcuts): typing "prague" into a filter box
+        // in the header pinned and unpinned the column three times, and Enter re-sorted the table. The
+        // template's own handler runs first — that is what bubbling means — so the flag it sets is
+        // always seen here, and reading it CLEARS it so one intercepted key cannot swallow the next.
+        if (_headerKeyCameFromTemplate)
+        {
+            _headerKeyCameFromTemplate = false;
+            return Task.CompletedTask;
+        }
+
         if (ShowColumnMenu && (e.Key is "p" or "P"))
         {
             return CyclePinAsync(col);
@@ -2112,6 +2123,25 @@ public partial class TmDataTable<TItem> : IDisposable
     /// pin button itself is no longer a stop.
     /// </summary>
     private bool IsHeaderOperable(TmDataTableColumn<TItem> col) => col.Sortable || ShowColumnMenu;
+
+    /// <summary>
+    /// Set by the barrier around a consumer's <c>HeaderTemplate</c> and consumed by
+    /// <see cref="HandleHeaderKeyDownAsync"/> on the very next dispatch of the same DOM event.
+    /// </summary>
+    /// <remarks>
+    /// It is a field rather than <c>@onkeydown:stopPropagation</c> because both are correct in a browser
+    /// but only this one is MEASURABLE: bUnit's dispatcher does not implement Blazor's propagation flags
+    /// (the literal <c>stopPropagation</c> does not appear in bunit.dll), so the flag form would have
+    /// shipped with no test able to see it. Bubbling still happens and is harmless — the outer handler
+    /// simply declines the event.
+    /// </remarks>
+    private bool _headerKeyCameFromTemplate;
+
+    private void NoteHeaderKeyCameFromTemplate(KeyboardEventArgs e)
+    {
+        _ = e;
+        _headerKeyCameFromTemplate = true;
+    }
 
     // ── Helper methods ────────────────────────────────────────────
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 
@@ -35,13 +36,23 @@ internal static class CssCascade
     private static readonly Regex RuleBlock =
         new(@"(?<selector>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.Compiled, Timeout);
 
-    /// <summary>One element of the modelled tree: its tag and the classes it carries.</summary>
-    public sealed record Element(string Tag, IReadOnlySet<string> Classes)
+    /// <summary>
+    /// One element of the modelled tree: its tag, the classes it carries, and — for the last element of
+    /// a chain — an optional pseudo-element.
+    /// </summary>
+    /// <remarks>
+    /// The pseudo-element is not decoration. <c>opacity</c> on a <c>::after</c> MULTIPLIES with the
+    /// opacity of every ancestor, so a guard that cannot address the pseudo-element cannot answer
+    /// "what is this glyph actually painted at" — which is the question the sort indicator turned on.
+    /// </remarks>
+    public sealed record Element(string Tag, IReadOnlySet<string> Classes, string? PseudoElement = null)
     {
         public Element(string tag, params string[] classes)
             : this(tag, new HashSet<string>(classes, StringComparer.Ordinal))
         {
         }
+
+        public Element With(string pseudoElement) => this with { PseudoElement = pseudoElement };
     }
 
     /// <summary>The winning declaration, plus everything the model could not read.</summary>
@@ -261,37 +272,40 @@ internal static class CssCascade
             return Verdict.NoMatch;
         }
 
-        // A pseudo-ELEMENT styles a box this model does not represent (::after has its own colour and
-        // its own opacity); it is never the element under test.
-        if (selector.Contains("::", StringComparison.Ordinal))
+        // A pseudo-ELEMENT is a box of its own, with its own colour and its own opacity. It matches only
+        // when the caller asked about that box by name; asking about the element itself must not pick up
+        // its ::after, and vice versa.
+        var pseudoElement = PseudoElementOf(selector);
+        if (!string.Equals(pseudoElement, chain[^1].PseudoElement, StringComparison.Ordinal))
         {
             return Verdict.NoMatch;
+        }
+
+        if (pseudoElement is not null)
+        {
+            selector = selector[..selector.IndexOf("::", StringComparison.Ordinal)];
         }
 
         var compounds = selector.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var rightmost = compounds[^1];
 
-        // An id or an attribute is a DECIDED non-match, not an unreadable one: the elements this model
-        // describes carry a tag and classes and nothing else, so `[data-tm]` and `#foo` cannot select
-        // them. Saying so is what keeps the fail-closed report about the cases that are genuinely
-        // unknown instead of drowning them in rules that were never candidates.
+        // An id or an attribute ON THE SUBJECT is a decided non-match: the elements this model describes
+        // carry a tag and classes and nothing else, so `#foo` and `td[colspan]` cannot select them.
         if (rightmost.IndexOfAny(['[', '#']) >= 0)
         {
             return Verdict.NoMatch;
         }
 
-        // A structural combinator IS out of model, and it matters only when the rule could reach this
-        // element — so the subject is checked before the answer is declared unknown.
-        if (selector.IndexOfAny(['>', '+', '~']) >= 0)
+        // Anywhere ELSE in the selector the same syntax is NOT decidable, and treating it as a
+        // non-match is how this reader shipped a hole. `[data-theme="dark"] .tm-sort-icon` names an
+        // ANCESTOR the model does not represent — the theme is applied by the caller through the token
+        // graph, not by an element in the chain — so whether it matches depends on something this
+        // model cannot see. The bundle already uses that idiom twice, and a mutation adding a third
+        // stayed GREEN while the docstring promised fail-closed. It is now reported as unreadable
+        // whenever the subject could be this element.
+        if (selector.IndexOfAny(['>', '+', '~', '[', '#']) >= 0)
         {
             return CouldBeSubject(rightmost, chain[^1], activeStates) ? Verdict.Unreadable : Verdict.NoMatch;
-        }
-
-        // An ancestor written with an attribute or an id cannot be confirmed either, but the same
-        // reasoning applies: this model's ancestors have tags and classes only.
-        if (selector.IndexOfAny(['[', '#']) >= 0)
-        {
-            return Verdict.NoMatch;
         }
 
         if (!CompoundMatches(rightmost, chain[^1], activeStates))
@@ -323,6 +337,74 @@ internal static class CssCascade
 
     private static int CountPseudoClasses(string compound) =>
         compound.Count(character => character == ':');
+
+    /// <summary>The <c>::name</c> of a selector, or null when it addresses an element rather than a box.</summary>
+    private static string? PseudoElementOf(string selector)
+    {
+        var marker = selector.IndexOf("::", StringComparison.Ordinal);
+        if (marker < 0)
+        {
+            return null;
+        }
+
+        var name = selector[(marker + 2)..];
+        var end = name.IndexOfAny([' ', ':', '.', '[', '(']);
+        return end < 0 ? name : name[..end];
+    }
+
+    /// <summary>
+    /// The opacity a box is ACTUALLY painted at: the product of the winning <c>opacity</c> of every
+    /// element from the root of the chain down to the subject, pseudo-element included.
+    /// </summary>
+    /// <remarks>
+    /// Nested opacity multiplies — that is the whole reason <c>opacity: 1</c> on
+    /// <c>.tm-sort-icon.tm-sort-asc::after</c> did nothing inside a span at <c>opacity: .4</c>. A guard
+    /// that reads only the rules naming the element itself is blind to an ancestor: adding
+    /// <c>.tm-data-table thead th { opacity: .4 }</c> restores the original defect one level up, and
+    /// such a mutation stayed GREEN until this existed.
+    /// </remarks>
+    public static double EffectiveOpacity(
+        string css,
+        IReadOnlyList<Element> chain,
+        IReadOnlySet<string>? activeStates = null)
+    {
+        // The BOXES an opacity can sit on, outermost first: every ancestor, then the element itself, and
+        // only then its pseudo-element. Walking the chain as given would skip the element's own opacity
+        // whenever the subject is a ::after, which is precisely the rule that started all of this.
+        var boxes = new List<IReadOnlyList<Element>>();
+        var bare = chain[^1] with { PseudoElement = null };
+        for (var depth = 1; depth <= chain.Count; depth++)
+        {
+            var prefix = chain.Take(depth).ToList();
+            prefix[^1] = depth == chain.Count ? bare : prefix[^1] with { PseudoElement = null };
+            boxes.Add(prefix);
+        }
+
+        if (chain[^1].PseudoElement is not null)
+        {
+            boxes.Add([.. chain.Take(chain.Count - 1), chain[^1]]);
+        }
+
+        var product = 1.0;
+        foreach (var box in boxes)
+        {
+            var resolved = Resolve(css, box, "opacity", activeStates);
+
+            resolved.Unmodelled.Should().BeEmpty(
+                "průhlednost prvku, kterou sonda neumí přečíst, je NEMĚŘITELNÁ, ne 1");
+
+            if (resolved.Value is null)
+            {
+                continue;
+            }
+
+            double.TryParse(resolved.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+                .Should().BeTrue("opacity '{0}' z pravidla '{1}' musí být číslo", resolved.Value, resolved.Source);
+            product *= value;
+        }
+
+        return product;
+    }
 
     /// <summary>
     /// Whether the subject of a selector the model cannot express could still be this element. A bare

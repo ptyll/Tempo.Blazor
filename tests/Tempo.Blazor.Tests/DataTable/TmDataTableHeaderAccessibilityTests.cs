@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Tests.Localization;
@@ -191,4 +192,86 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
     public void TheHeaderDoesNotAdvertiseAShortcutItDoesNotOffer()
         => RenderTable(showColumnMenu: false).Find("th[data-sortable='true']")
             .GetAttribute("aria-keyshortcuts").Should().BeNull();
+
+    // ── The shortcut must not reach a consumer's own controls ─────
+
+    /// <summary>
+    /// A header carrying a consumer's <c>HeaderTemplate</c> — the realistic case: a per-column filter
+    /// box the user types into.
+    /// </summary>
+    private IRenderedComponent<TmDataTable<HeaderPerson>> RenderTableWithHeaderInput()
+        => Render<TmDataTable<HeaderPerson>>(p =>
+        {
+            p.Add(c => c.Items, People);
+            p.Add(c => c.ShowColumnMenu, true);
+            p.AddChildContent(b =>
+            {
+                b.OpenComponent<TmDataTableColumn<HeaderPerson>>(0);
+                b.AddAttribute(1, "Title", "Name");
+                b.AddAttribute(2, "PropertyName", "Name");
+                b.AddAttribute(3, "Sortable", true);
+                b.AddAttribute(4, "Field", (Func<HeaderPerson, object?>)(x => x.Name));
+                b.AddAttribute(5, "HeaderTemplate", (RenderFragment)(hb =>
+                {
+                    hb.OpenElement(0, "input");
+                    hb.AddAttribute(1, "type", "text");
+                    hb.AddAttribute(2, "data-testid", "consumer-header-filter");
+                    hb.CloseElement();
+                }));
+                b.CloseComponent();
+            });
+        });
+
+    /// <summary>
+    /// The regression 2.8.22 introduced and 2.8.23 closes. <c>keydown</c> BUBBLES, so the single-key
+    /// shortcut on the <c>&lt;th&gt;</c> fired for every letter typed into a control the consumer had
+    /// put inside the header: typing "prague" into a filter box pinned and unpinned the column three
+    /// times. WCAG 2.1.4 (Character Key Shortcuts, level A) allows a single-character shortcut only
+    /// when it can be turned off, remapped, or is active solely while the component has focus — and
+    /// focus on a DESCENDANT does not satisfy the third exception.
+    /// </summary>
+    [Fact]
+    public void TypingIntoAConsumerHeaderControl_DoesNotPinTheColumn()
+    {
+        var cut = RenderTableWithHeaderInput();
+
+        cut.Find("[data-testid='consumer-header-filter']").KeyDown(new KeyboardEventArgs { Key = "p" });
+
+        cut.Find("th[data-sortable='true']").ClassList.Should().NotContain(
+            "tm-col-pinned-left",
+            "psaní písmene do consumerova vstupu nesmí připnout sloupec — keydown bublá");
+    }
+
+    /// <summary>
+    /// Enter has the same shape and is older than the pin shortcut: it reached the sort handler from
+    /// inside the template just as P did. Submitting a consumer's header filter must not re-sort the
+    /// table underneath the user.
+    /// </summary>
+    [Fact]
+    public void PressingEnterInAConsumerHeaderControl_DoesNotSort()
+    {
+        var cut = RenderTableWithHeaderInput();
+
+        cut.Find("[data-testid='consumer-header-filter']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be(
+            "none",
+            "odeslání consumerova filtru v hlavičce nesmí přeřadit tabulku pod rukama");
+    }
+
+    /// <summary>
+    /// The counterpart, so the fix is not "the header stopped answering the keyboard": pressing the
+    /// keys on the HEADER ITSELF still works while a template is present.
+    /// </summary>
+    [Fact]
+    public void TheHeaderItself_StillAnswersTheKeyboard_WhenATemplateIsPresent()
+    {
+        var cut = RenderTableWithHeaderInput();
+
+        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
+
+        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "p" });
+        cut.Find("th[data-sortable='true']").ClassList.Should().Contain("tm-col-pinned-left");
+    }
 }

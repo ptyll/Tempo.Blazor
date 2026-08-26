@@ -124,6 +124,11 @@
 .tm-data-table tbody tr:hover { background-color: var(--tm-bg-surface-secondary); }
 .tm-data-table tbody tr.tm-row-selected { background-color: var(--tm-color-primary-subtle); }
 
+/* The barrier around a consumer's HeaderTemplate (see TmDataTable.razor). `display: contents` means
+   it stops keydown from bubbling to the header's shortcut handler WITHOUT adding a box, so a template
+   that lays itself out keeps doing so. */
+.tm-col-header-content { display: contents; }
+
 /* Sortable column header */
 .tm-col-sortable { cursor: pointer; user-select: none; }
 .tm-col-sortable:hover { color: var(--tm-text-primary); }

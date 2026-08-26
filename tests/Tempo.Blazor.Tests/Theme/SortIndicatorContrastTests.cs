@@ -109,30 +109,50 @@ public class SortIndicatorContrastTests
     }
 
     /// <summary>
-    /// The indicator must not be painted through a transparency at all. Any <c>opacity</c> on the span
-    /// or on its pseudo-element would put the numbers above back into a product this suite would then
-    /// have to guess at — and guessing at it is how "0,30 → 0,40" got written down.
+    /// The glyph must reach the screen at full strength — measured as the PRODUCT of every opacity from
+    /// the table down to the <c>::after</c> that draws the arrow, not as "no rule mentioning tm-sort-*
+    /// declares opacity".
     /// </summary>
-    [Fact]
-    public void TheIndicator_IsPaintedAtFullOpacity()
+    /// <remarks>
+    /// The earlier version of this guard read only <c>_data-table.css</c> rules whose selector contained
+    /// <c>tm-sort-</c>, and a mutation adding <c>.tm-data-table thead th { opacity: .4 }</c> — which
+    /// restores the ORIGINAL defect one level up — stayed green. Nested opacity multiplies, so the
+    /// population of a guard about it is the whole ancestor chain and nothing less.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(States))]
+    public void TheIndicator_ReachesTheScreenAtFullOpacity(string stateClass, bool dark)
     {
-        foreach ((string selector, string body) in ThemeCss.Rules("_data-table.css"))
-        {
-            foreach (var part in ThemeCss.SelectorParts(selector))
-            {
-                if (!part.Contains("tm-sort-icon", StringComparison.Ordinal)
-                    && !part.Contains("tm-sort-asc", StringComparison.Ordinal)
-                    && !part.Contains("tm-sort-desc", StringComparison.Ordinal)
-                    && !part.Contains("tm-sort-none", StringComparison.Ordinal))
-                {
-                    continue;
-                }
+        _ = dark; // opacity does not depend on the token graph; the theme is here to keep the case list one list.
 
-                ThemeCss.Declares(body, "opacity").Should().BeFalse(
-                    "{0} nesmí malovat indikátor přes průhlednost — vnořené opacity se násobí a " +
-                    "výsledná barva pak není v CSS napsaná nikde", part);
-            }
-        }
+        CssCascade.EffectiveOpacity(ThemeCss.BundledCss(), Icon(stateClass)).Should().Be(
+            1.0,
+            "součin průhledností celého řetězce musí být 1 — jinak výsledná barva ikony není v CSS " +
+            "napsaná nikde a každý, kdo ji chce znát, ji musí dopočítat");
+
+        var glyph = Icon(stateClass).ToList();
+        glyph[^1] = glyph[^1].With("after");
+        CssCascade.EffectiveOpacity(ThemeCss.BundledCss(), glyph).Should().Be(
+            1.0,
+            "šipku maluje ::after, takže i ta má vlastní box s vlastní opacitou");
+    }
+
+    /// <summary>
+    /// The negative control for the guard above, and the reason it was rewritten: the defect this
+    /// release removed has to be VISIBLE to the reader that claims it is gone — including when it is
+    /// reintroduced on an ancestor rather than on the icon.
+    /// </summary>
+    [Theory]
+    [InlineData(".tm-sort-icon{opacity:0.4;}", 0.4)]
+    [InlineData(".tm-data-table thead th{opacity:0.4;}", 0.4)]
+    [InlineData(".tm-data-table{opacity:0.5;}", 0.5)]
+    [InlineData(".tm-sort-icon.tm-sort-asc::after{opacity:0.25;}", 0.25)]
+    public void TheOpacityReader_SeesATransparencyWhereverItIsReintroduced(string mutation, double expected)
+    {
+        var glyph = Icon("tm-sort-asc").ToList();
+        glyph[^1] = glyph[^1].With("after");
+
+        CssCascade.EffectiveOpacity(ThemeCss.BundledCss() + mutation, glyph).Should().Be(expected);
     }
 
     /// <summary>
@@ -167,9 +187,12 @@ public class SortIndicatorContrastTests
 
     /// <summary>
     /// One compositing function, fed the declarations of 2.8.21, reproduces every number the two
-    /// reviews of Fáze 14 disagreed about. There was no methodological difference: the UX review read
-    /// the UNSORTED icon (1,91:1 light, 2,95:1 dark), the application probe read the SORTED one
-    /// (2,52:1, 3,58:1), and both read them against the same header background.
+    /// reviews of Fáze 14 disagreed about. There was no methodological difference and no difference of
+    /// reference background: the UX review read the icon of a header AT REST (1,91:1 light, 2,95:1
+    /// dark), the application probe read the icon of the header it had just clicked, which is a
+    /// <c>:hover</c>/<c>:focus-visible</c> state (2,51:1 and 3,58:1 — recorded as 2,52 and 3,58). The
+    /// difference is the STATE OF THE ELEMENT, not the method — and neither reading is "the sorted
+    /// state", which had no colour of its own at all.
     /// </summary>
     [Theory]
     [InlineData(false, "var(--tm-text-secondary)", "#b3b8be", 1.9108)]
@@ -193,6 +216,36 @@ public class SortIndicatorContrastTests
             0.0001,
             "jedna sonda, jeden způsob skládání — rozdíl mezi recenzí a sondou byl v tom, KTERÝ stav " +
             "která z nich četla, ne v referenčním pozadí");
+    }
+
+    /// <summary>
+    /// The correction itself, asserted rather than described: over the declarations of 2.8.21 the two
+    /// RESTING states resolved to the same colour, so the difference a user could see was 1,00:1 — not
+    /// the 1,32:1 / 1,22:1 the register carried, which is idle against hovered. Written as a guard on
+    /// the ARITHMETIC (the reader is fed the old declarations explicitly), because the shipped CSS no
+    /// longer contains the defect and a guard over it would be measuring the fix, not the claim.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheRestingStatesOf2821_WereIndistinguishable(bool dark)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var background = ThemeCss.ResolveColour(HeaderBackground, tokens);
+
+        // At rest BOTH states took `.tm-data-table th { color: var(--tm-text-secondary) }`: the sorted
+        // rule was (0,1,0) against its (0,1,1) and never applied. Same colour, same 0.4 opacity.
+        var unsorted = ThemeCss.Composite(ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens), 0.4, background);
+        var sorted = ThemeCss.Composite(ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens), 0.4, background);
+
+        sorted.Should().Be(unsorted);
+        ThemeCss.Contrast(sorted, unsorted).Should().Be(
+            1.0,
+            "v klidovém stavu nebyl rozdíl žádný; 1,32:1 a 1,22:1 z registru je idle proti hoveru");
+
+        // And the hovered reading the register mistook for it, reproduced from the rule that did apply.
+        var hovered = ThemeCss.Composite(ThemeCss.ResolveColour("var(--tm-text-primary)", tokens), 0.4, background);
+        ThemeCss.Contrast(hovered, unsorted).Should().BeApproximately(dark ? 1.2156 : 1.3158, 0.0002);
     }
 
     /// <summary>

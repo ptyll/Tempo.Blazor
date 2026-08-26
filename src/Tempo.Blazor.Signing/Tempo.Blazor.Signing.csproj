@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Signing</PackageId>
-    <Version>2.8.22</Version>
+    <Version>2.8.23</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Signing</Title>
     <Description>Signing workflow components for Tempo.Blazor, including PDF template design, recipient roles, signing form runner, document comments, verification panels, and audit trail UI.</Description>

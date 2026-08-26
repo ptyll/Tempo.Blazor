@@ -7,7 +7,7 @@
     <LangVersion>latest</LangVersion>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Codes</PackageId>
-    <Version>2.8.22</Version>
+    <Version>2.8.23</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Codes</Title>
     <Description>QR code and barcode components for Tempo.Blazor backed by QRCoder and ZXing.Net.</Description>

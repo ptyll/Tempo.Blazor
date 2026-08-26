@@ -188,7 +188,23 @@
                                 @onclick="e => SortByAsync(col, e.ShiftKey)">
                                 @if (col.HeaderTemplate is not null)
                                 {
-                                    @col.HeaderTemplate
+                                    @* The consumer's own controls live in here, and keydown BUBBLES: without
+                                       this barrier every letter typed into a filter box inside the header
+                                       reached the header's own key handler, so "prague" pinned and unpinned
+                                       the column three times and Enter re-sorted the table. WCAG 2.1.4 allows
+                                       a single-character shortcut only while the component itself has focus,
+                                       and focus on a DESCENDANT is not that.
+                                       The barrier is a HANDLER, not `:stopPropagation`. Both are correct in a
+                                       browser, where the inner handler always runs first, but bUnit 2.8's
+                                       dispatcher does not implement the propagation flags — measured: the
+                                       string `stopPropagation` does not occur in bunit.dll — so that form of
+                                       the fix could not be asserted by any test in this repository, and an
+                                       unmeasurable fix is what this release exists to stop shipping.
+                                       Only KEYDOWN is intercepted: clicking a templated header has always
+                                       sorted and still does. *@
+                                    <span class="tm-col-header-content" @onkeydown="NoteHeaderKeyCameFromTemplate">
+                                        @col.HeaderTemplate
+                                    </span>
                                 }
                                 else
                                 {

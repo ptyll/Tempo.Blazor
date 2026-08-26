@@ -1,5 +1,68 @@
 # Changelog
 
+## 2.8.23 - 2026-08-26
+
+Three things 2.8.22 got wrong about itself, and one regression it introduced. **2.8.22 is on
+nuget.org** (measured: the flat container lists 107 versions ending 2.8.22) and its
+`tempo-blazor.bundled.css` matches this repository byte for byte, so the fixes it carried ARE
+delivered — this release is what has to follow them.
+
+### Fixed
+
+- **A single-character shortcut fired from inside a consumer's `HeaderTemplate`.** 2.8.22 gave the
+  column header `P` for the pin, and `keydown` bubbles: a filter box a consumer puts in the header
+  passed every keystroke up to the header's handler, so typing "prague" pinned and unpinned the
+  column three times, and Enter re-sorted the table under the user. WCAG 2.1.4 (level A) permits a
+  single-character shortcut only when it can be turned off, remapped, or is active solely while the
+  component has focus — and focus on a DESCENDANT is not the third exception. `Enter` had the same
+  shape and is older than the pin. The template now renders inside a `display: contents` barrier that
+  stops **keydown** only: clicking a templated header has always sorted and still does.
+
+- **The `.tm-btn` sweep's denominator was right for its question and wrong for the sentence written
+  about it.** The changelog of 2.8.22 said the sweep covered the whole `components/` directory "so
+  the next one fails wherever it is written". It sweeps the directory for `.tm-btn*` and for nothing
+  else, and the number that sentence was written from was 61 while the directory holds **139**.
+  `UnconstrainedClassOwnershipTests` now asks the general question — which classes are declared
+  unconstrained in more than one component stylesheet AND disagree about a property — and finds
+  **fifteen further pairs**, each with its own row rather than a count. Two of them are the same
+  defect as `.tm-btn` with the same consequence: `.tm-filter-chip` (`_data-table.css` at manifest
+  line 79 against `_filter-chip.css` at 110, disagreeing about `color`, `border-radius`, `font-size`
+  and five more) and the six `.tm-modal*` classes (`_dashboard.css` at 164 against `_modal.css` at
+  165, disagreeing about `max-width`, `padding`, `z-index`, `align-items` and more). They are
+  recorded, not fixed: repairing them is a broad visual change across modal, scheduler, timeline,
+  rich-text and form layout, and this release's subject is not that. The guard fails on a sixteenth.
+
+- **`CssCascade` claimed fail-closed and was not.** Two mutations stayed green. A selector containing
+  `[` or `#` anywhere was classified as a decided non-match, so `[data-theme="dark"] .tm-sort-icon
+  { color: … }` — an idiom the bundle already uses — would have silently overridden a measured colour;
+  it is now reported as unreadable whenever the subject could be the element under test. And the
+  opacity guard read only `_data-table.css` rules whose selector mentioned `tm-sort-`, so
+  `.tm-data-table thead th { opacity: .4 }` restored the ORIGINAL defect one level up and passed.
+  Nested opacity multiplies, so the population is the whole ancestor chain: `CssCascade` now models
+  pseudo-elements and `EffectiveOpacity` returns the product from the table down to the `::after`
+  that draws the arrow.
+
+### Corrected
+
+- **The sorted column was not 1,32:1 different from an unsorted one. It was 1,00:1.** That figure,
+  carried in the register since Fáze 14, compares an idle header with a HOVERED one. A sorted header
+  under no pointer painted the *identical* colour to an unsorted one, because `.tm-col-sorted-asc`
+  (0,1,0) lost to `.tm-data-table th` (0,1,1) and contributed nothing at all. The harm is in the
+  RESTING state and the recorded number described a transient one, which also means the UX review of
+  the consuming application was right about the resting state and the probe was measuring something
+  else. 2.8.22's fix is unaffected — 3,67:1 light and 4,34:1 dark are measured between the two
+  resting states — but the size of the defect it repaired was understated.
+
+- **The 2.8.22 docstrings said the application probe "read the SORTED one".** It read the icon in the
+  state it had just clicked into, which is a `:hover`/`:focus-visible` state that happens to occur on
+  a sorted header — not the sorted state, which was invisible. Two paragraphs of the same file
+  disagreed about this. Corrected, because that text is what the next phase reads as the explanation.
+
+**nuget.org publication remains the repository owner's manual step** (`DEC-TEMPO-287-NUGET-DELIVERY`)
+— `VERSION=2.8.23 eng/pack-nuget-packages.sh` then `dotnet nuget push packages/*.2.8.23.nupkg`. What
+changed since 2.8.22 is that this step is no longer a blocker for consuming the button and sort-state
+fixes: those are on the feed under 2.8.22 already.
+
 ## 2.8.22 - 2026-08-26
 
 Three defects, one release. Every one of them was invisible to a markup assertion and to a
@@ -29,7 +92,8 @@ something else decided what the user saw.
   line 79, which took the 1px box and the size-class font size away from every `ButtonVariant.Link`
   in the library. The standalone reset those bare link buttons genuinely need is now its own class,
   `.tm-link-button`, in `_button.css`. `PivotButtonScopeTests` sweeps the whole `components/`
-  directory rather than a list, so the next one fails wherever it is written.
+  directory rather than a list — but only for the `.tm-btn*` names, which is a complete answer to a
+  narrower question than this paragraph originally claimed. See 2.8.23.
 
 - **The sorted column is distinguishable again.** The difference between a sorted and an unsorted
   header was **1,32:1 light and 1,22:1 dark**, against the 3:1 of WCAG 2.2 SC 1.4.11 — a user could
