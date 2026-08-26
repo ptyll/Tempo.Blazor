@@ -194,15 +194,20 @@
                                        the column three times and Enter re-sorted the table. WCAG 2.1.4 allows
                                        a single-character shortcut only while the component itself has focus,
                                        and focus on a DESCENDANT is not that.
-                                       The barrier is a HANDLER, not `:stopPropagation`. Both are correct in a
-                                       browser, where the inner handler always runs first, but bUnit 2.8's
-                                       dispatcher does not implement the propagation flags — measured: the
-                                       string `stopPropagation` does not occur in bunit.dll — so that form of
-                                       the fix could not be asserted by any test in this repository, and an
-                                       unmeasurable fix is what this release exists to stop shipping.
-                                       Only KEYDOWN is intercepted: clicking a templated header has always
-                                       sorted and still does. *@
-                                    <span class="tm-col-header-content" @onkeydown="NoteHeaderKeyCameFromTemplate">
+                                       The barrier is STATELESS on purpose. 2.8.23 first shipped a flag set
+                                       here and cleared by the header's own handler, which never ran for an
+                                       intercepted key — so the flag survived and the user's NEXT genuine
+                                       press on the header was spent clearing it. `:stopPropagation` carries
+                                       nothing between events and cannot have that failure mode.
+                                       IT NEEDS THE EMPTY HANDLER NEXT TO IT. The flag alone was measured
+                                       NOT to stop the bubble: a dispatcher visits an ancestor because it
+                                       has a handler there, and reads the propagation flag while it is
+                                       visiting. With no handler the element is never visited and the flag
+                                       is never read. `SwallowTemplateKey` does nothing and exists only to
+                                       make this element a stop on the path.
+                                       Only KEYDOWN is stopped: clicking a templated header has always sorted
+                                       and still does. *@
+                                    <span class="tm-col-header-content" @onkeydown="SwallowTemplateKey" @onkeydown:stopPropagation="true">
                                         @col.HeaderTemplate
                                     </span>
                                 }

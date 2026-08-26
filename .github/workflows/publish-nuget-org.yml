@@ -104,7 +104,7 @@ jobs:
       # ITS PLACE IS THE LOCAL RUN BEFORE A RELEASE — `dotnet test` on a machine holding a full clone,
       # where the ref store carries every v2.8.* tag and the comparison has both sides.
       # WHAT CI DOES COVER of the same danger, so this is not read as "nobody checks the number":
-      # `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed` in this step and the refusal in
+      # `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds` in this step and the refusal in
       # eng/pack-nuget-packages.sh both ask nuget.org whether the number is already SERVED, and
       # neither of those is vacuous here. Tag, PUT and availability are three different quantities.
       #

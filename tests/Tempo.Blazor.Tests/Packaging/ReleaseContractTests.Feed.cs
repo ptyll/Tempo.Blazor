@@ -15,158 +15,143 @@ namespace Tempo.Blazor.Tests.Packaging;
 public sealed partial class ReleaseContractTests
 {
     /// <summary>
-    /// The version the changelog announces is not already published on nuget.org.
-    /// <para>
-    /// THE DEFECT THIS EXISTS FOR, measured rather than imagined: 2.8.19 was announced twice. The tag
-    /// side of that story is guarded by
-    /// <see cref="AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked"/>; the OTHER
-    /// side — an artefact already sitting on the feed, immutable, under that number — was left to a
-    /// reader, and a reader is what failed. Measured 2026-08-21: 2.8.19 and 2.8.18 answer 200 on the
-    /// flat container while 2.8.20 answers 404, so this question has a live answer today.
-    /// </para>
-    /// <para>
-    /// TAG, PUT AND AVAILABILITY ARE THREE DIFFERENT QUANTITIES and this guard speaks only about the
-    /// third. A number can be published with no tag ever existing, and a tag can name a commit whose
-    /// package was never pushed — so nothing here may be read as a statement about the tag store, and
-    /// nothing the tag guard says may be read as a statement about the feed. IT ALSO DOES NOT CLOSE
-    /// the known gap that the tag guard cannot go red on any CI lane: that is a different guard about
-    /// a different quantity, and this one being live in CI leaves it exactly where it was. Nor does a
-    /// green mean "no push has happened": nuget.org serves this index through a CDN, so a completed
-    /// push can still read as absent for a while. The question answered is "is the number VISIBLE as
-    /// taken", which a release can act on — not "was a PUT accepted", which nothing here can see.
-    /// </para>
-    /// <para>
-    /// HOW LONG "a while" WAS, ONCE — AN OBSERVATION AND NOT A BOUND. Release 2.8.20 on 2026-08-22,
-    /// GHA run 32557365946: the push step's PUT completed at 06:48:30Z and the flat container first
-    /// answered 200 for that number at 06:55:41Z, which is 431 s later. The whole publish job that
-    /// produced the PUT ran 06:43:25Z to 06:48:35Z, i.e. 310 s. THE COMPARISON IS THE FINDING: 431 s
-    /// is longer than 310 s, so the blind window outlasts the job that opens it, and a release can
-    /// finish GREEN while this guard and the copy in <c>eng/pack-nuget-packages.sh</c> both still read
-    /// the number as free. In that window neither of them is wrong — each answers its own question,
-    /// "is the number VISIBLE as taken", correctly — and both would say "free" about a number that is
-    /// already spent. ONE SAMPLE OF A CDN IS NOT A LIMIT: nothing here waits for those 431 s, no
-    /// release may be scheduled against them, and the next propagation may take longer or less. What
-    /// the number establishes is only that this window is not negligible and not shorter than a
-    /// publish. The endpoint is unchanged by this note: <see cref="PublishedVersionSurvey.IndexUrl"/>
-    /// is still the flat container, because registration and search answer a DIFFERENT question and
-    /// swapping to one of them would change the quantity rather than shorten the window.
-    /// </para>
-    /// <para>
-    /// WHAT THIS GUARD COSTS ON A PULL REQUEST, decided rather than discovered — see decision
-    /// <c>REL-FEED-GUARD-PR-COST</c>. Between the moment a release becomes visible on the feed and the
-    /// moment the changelog is bumped past it, this guard is RED, and it is red for a TRUE reason: the
-    /// announced number really is taken. <c>build-and-test</c> carries no <c>if:</c> in either publish
-    /// workflow, so it also runs on <c>pull_request</c>, and inside that window every pull request goes
-    /// red over release accounting its author cannot fix. THE WINDOW WAS MEASURED, not estimated: for
-    /// 2.8.20 it opened at 06:55:41Z (the first 200 above) and closed with the bump commit f86f9095
-    /// dated 2026-08-22 10:40:16Z — 3 h 44 m 35 s. The previous wave's own run inside it reported
-    /// 11199 total / 11198 passed / 1 failed, and that count belongs to that run and that tree.
-    /// THE GUARD IS DELIBERATELY NOT SKIPPED ON <c>pull_request</c>. A skip there would buy a quiet
-    /// window at the price of a NEW WAY TO BE GREEN FOR THE WRONG REASON, on the one lane where a human
-    /// is reading the diff that announces the number — which is exactly where this defect gets
-    /// authored. The red is a correct answer arriving at an inconvenient moment; the treatment is the
-    /// bump, which the release owes anyway.
-    /// </para>
-    /// <para>
-    /// THE REACH CONTROL IS INSIDE THE ASSERTIONS, NOT BESIDE THEM, because every failure mode of this
-    /// probe wears the shape of its passing answer. Measured over four worlds: online the index returns
-    /// 200 with 104 versions; with the connection refused the probe returns nothing in 31 ms; against a
-    /// blackholed route it returns nothing at the timeout; and with the announced version set to 2.8.19
-    /// it returns 200 and finds it. In THREE of those four the naive reading "the announced version is
-    /// not in the list" is TRUE, and in only one of them does it mean anything. So the status has to be
-    /// 200 and the list has to be non-empty before membership is asked about at all.
-    /// </para>
-    /// <para>
-    /// AND THAT IS ALSO WHAT ANSWERS THE PACKAGE-ID TYPO, which is the same trap wearing different
-    /// clothes: the flat container answers 404 for an id it does not know, so a misspelled id would
-    /// report every number as free, forever, in green. Two things close it. The id is not written here
-    /// — it is READ from <c>src/Tempo.Blazor/Tempo.Blazor.csproj</c>, the same file the publish
-    /// workflow reads the version out of, so it cannot drift from what actually ships without the
-    /// build noticing. And a 404 is not a value this guard accepts: it fails the status assertion,
-    /// which reports a broken instrument rather than an empty feed.
-    /// </para>
-    /// <para>
-    /// UNREACHABLE IS A SKIP, AND THAT IS A HOLE THIS NAMES RATHER THAN HIDES. A guard that reaches the
-    /// network cannot be red offline without making the suite unrunnable without one. The skip carries
-    /// the population — url, status, version count, elapsed time and the exception — so "nothing was
-    /// asked" arrives as a third outcome in the .trx instead of dressed as "the number is free". WHAT
-    /// IT COSTS: on a machine with no route to nuget.org this release number is unchecked here. The
-    /// mitigation is a MEASUREMENT and not a guarantee: this repository carries no NuGet.config, so
-    /// <c>dotnet restore</c> — which runs before the test step in both publish workflows — resolves
-    /// against nuget.org, and CI does not reach this test without having reached that host. A runner
-    /// with a fully warm package cache and no network was not measured. The other half of the answer is
-    /// that the same question is asked again in <c>eng/pack-nuget-packages.sh</c>, where it refuses
-    /// rather than skips; see <see cref="PackScript_RefusesAVersionTheFeedAlreadyServes"/>.
-    /// </para>
-    /// <para>
-    /// THE SKIP IS DECIDED AT DISCOVERY, by <see cref="FeedReachableFactAttribute"/>, for the reason
-    /// the staged half records: xUnit v2 has no runtime skip at all. The survey therefore runs twice
-    /// per test run, once to decide and once to assert over — two requests, measured at 0.3 to 0.45 s
-    /// each. It is deliberately NOT memoised: a probe that reached the feed at discovery and failed at
-    /// execution is a BROKEN INSTRUMENT, and the first assertion below turns that into a named red
-    /// instead of a skip granted by a healthier past.
-    /// </para>
-    /// <para>
-    /// WHAT THIS DOES NOT COVER: the GitHub Packages feed that <c>publish-nuget.yml</c> pushes to. A
-    /// number can be spent there and free here; this is keyed on nuget.org because that is the feed
-    /// whose artefacts are public and immutable.
-    /// </para>
-    /// <para>
-    /// AND WHAT IT DOES NOT COVER IN THE OTHER DIRECTION — the POPULATION, which the paragraph above
-    /// about a misspelled id does not imply. This probe asks about ONE id, the lead package read from
-    /// <c>src/Tempo.Blazor/Tempo.Blazor.csproj</c>, while <c>eng/nuget-packages.txt</c> lists 26. A
-    /// PARTIAL release — the state <c>eng/push-nuget-packages.sh</c> exists for, where a push died
-    /// part-way through an alphabetical glob — is therefore invisible here whenever Tempo.Blazor is
-    /// among the ids that did not get pushed. That gap is closed in <c>eng/pack-nuget-packages.sh</c>,
-    /// which asks the same question over every id in the manifest; it is deliberately NOT closed here,
-    /// because this probe runs twice on every test run and 26 ids would put 52 requests on the path of
-    /// a suite whose affordable failure mode is a skip rather than a refusal.
-    /// </para>
+    /// What lies under the announced number on nuget.org is what THIS TREE builds.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// THIS REPLACES A BLACKLIST WITH A WHITELIST, per <c>DEC-TEMPO-RELEASE-GATE</c> points 6–10. The
+    /// previous guard asked "is the announced number already taken" and refused when it was. That
+    /// question is a PROXY for the harm — a consumer resolving the announced number to bytes other
+    /// than the ones this tree builds — and the proxy demonstrably came apart from the harm: 2.8.22
+    /// and 2.8.23 are both on the feed, both were verified byte-for-byte against this repository, and
+    /// the old guard was RED over both. A guard that reports failure over a release that arrived
+    /// correctly teaches its readers to bump past it, which is how a gate stops being read.
+    /// </para>
+    /// <para>
+    /// THREE STATES, NOT TWO (<c>DEC-VACUOUS-CONSISTENCY</c> point 1). "Absent" and "present and
+    /// matching" are both green and they are NOT the same evidence, so they never report the same
+    /// word: absent is <c>unpublished</c> — a legal pre-publication state that proves nothing about
+    /// delivery — while present-and-matching is <c>verified</c>, which is strictly stronger than
+    /// anything the old guard could say, because it positively establishes that the release arrived.
+    /// Present-and-different is red. A feed that does not answer is a fourth outcome,
+    /// <c>unmeasured:feed-unreachable</c>, decided at discovery by <see cref="FeedReachableFact"/> and
+    /// counted as its own state — never folded into green, and never into red either, because a gate
+    /// that fails over infrastructure is switched off within a week.
+    /// </para>
+    /// <para>
+    /// THE PACKAGE IS NOT COMPARED AS A FILE. A <c>.nupkg</c> is a zip carrying timestamps, entry
+    /// order and a signature block, so byte equality of the ARCHIVE is not achievable in general and a
+    /// gate resting on it would go red for reasons that have nothing to do with content. What is
+    /// compared is the CONTENT ITEMS, and the denominator is derived from the source rather than
+    /// chosen: every file under <c>src/Tempo.Blazor/wwwroot</c>, which the SDK packs to
+    /// <c>staticwebassets/&lt;relative path&gt;</c>. Measured on 2.8.23: 168 files in the tree, 168
+    /// present in the package, 168 byte-identical. A hand-picked list would shrink to whichever file
+    /// somebody once cared about — the <c>MeasuredSites</c> mistake — so the count carries a floor and
+    /// a package entry with no counterpart in the tree is REPORTED rather than ignored.
+    /// </para>
+    /// <para>
+    /// WHAT A DIFFERENCE MEANS IS NOT ONE THING, and the message says so, because the two mechanisms
+    /// have different cures. (i) The repository moved after the publish — somebody changed the library
+    /// without bumping. The cure is a bump and it is the ordinary case. (ii) The published artefact
+    /// did not come from the tagged tree at all. That is a supply-chain finding, it is the graver of
+    /// the two, and it must NOT be quietly disposed of by bumping: the push is a named manual step and
+    /// this is the only instrument that can say anything about it.
+    /// </para>
+    /// <para>
+    /// SCOPE, stated so a green is not read as more than it is: ONE package id, the lead
+    /// <c>Tempo.Blazor</c>, and only its <c>wwwroot</c> content. The other 25 ids in
+    /// <c>eng/nuget-packages.txt</c> and the compiled assemblies are outside it — assemblies are not
+    /// reproducible byte-for-byte from a clean build here, so comparing them would report noise as
+    /// provenance. Widening the id set costs a download per id on every test run.
+    /// </para>
+    /// </remarks>
     [FeedReachableFact]
-    public void AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed()
+    public void AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds()
     {
         var survey = PublishedVersionSurvey.Take();
-
         _output.WriteLine(survey.Report);
 
         using (new AssertionScope())
         {
             survey.Unreachable.Should().BeNull(
                 "this test only runs when the feed answered — FeedReachableFactAttribute skips it "
-                + "otherwise. Reaching here without an answer means either the attribute was removed, "
-                + "which turns 'nobody asked' back into 'the number is free', or the feed stopped "
-                + "answering between discovery and execution, which makes this run's answer unknown "
-                + $"rather than negative ({survey.Report})");
+                + "otherwise with unmeasured:feed-unreachable. Reaching here without an answer means "
+                + "the feed stopped answering between discovery and execution, which makes this run's "
+                + $"answer UNKNOWN rather than favourable ({survey.Report})");
 
             survey.Status.Should().Be(
                 200,
                 "the membership question below is only meaningful over a list the feed actually served. "
                 + "A 404 here means nuget.org does not know this package id, which read as an answer "
-                + $"would report every version number as free for as long as the typo lived ({survey.Report})");
+                + $"would report every number as unpublished for as long as the typo lived ({survey.Report})");
 
             survey.Versions.Should().NotBeEmpty(
-                "an empty version list and a list not containing the announced number produce the same "
-                + "green, and only one of them is evidence; the positive control for this probe is that "
-                + $"it can see any versions at all ({survey.Report})");
-
-            $"{survey.Announced} -> {(survey.Versions.Contains(survey.Announced) ? AlreadyOnFeed : StillFree)}"
-                .Should().Be(
-                    $"{survey.Announced} -> {StillFree}",
-                    "a published version number is spent for good: the artefact on nuget.org is "
-                    + "immutable, so re-announcing that number ships different bytes under a label "
-                    + "consumers have already resolved to something else. No retag and no repack can "
-                    + "reach what is already on the feed — bump the changelog and every packable csproj "
-                    + $"to the next free number ({survey.Report})");
+                "an empty version list and a list without the announced number produce the same green, "
+                + $"and only one of them is evidence ({survey.Report})");
         }
+
+        if (!survey.Versions.Contains(survey.Announced))
+        {
+            // State one. Legal, green, and deliberately not called "verified": nothing has been
+            // delivered yet, so there is nothing to have provenance over.
+            _output.WriteLine($"[Provenance] {survey.Announced} -> {Unpublished}");
+            return;
+        }
+
+        var provenance = PackageProvenance.Take(survey.PackageId, survey.Announced);
+        _output.WriteLine(provenance.Report);
+
+        using (new AssertionScope())
+        {
+            provenance.Unreachable.Should().BeNull(
+                "the index answered but the package itself did not, so this run measured NOTHING about "
+                + $"provenance — that is unmeasured:package-unreachable, not a verdict ({provenance.Report})");
+
+            provenance.TreeFileCount.Should().BeGreaterThanOrEqualTo(
+                PackedContentFloor,
+                "the denominator is every file under src/Tempo.Blazor/wwwroot, and it has never been "
+                + "smaller than this. A sudden shrink means the sweep is reading the wrong directory, "
+                + $"and a sweep over nothing is green ({provenance.Report})");
+
+            provenance.Missing.Should().BeEmpty(
+                "a file this tree builds and the published package does not carry is a provenance "
+                + $"failure, not a rounding difference ({provenance.Report})");
+
+            provenance.Differing.Should().BeEmpty(
+                "WHAT LIES UNDER {0} ON THE FEED IS NOT WHAT THIS TREE BUILDS. Two mechanisms produce "
+                + "this and the cure differs. (i) The repository moved after the publish: somebody "
+                + "changed the library without bumping. Cure: bump the changelog and every packable "
+                + "csproj, because the number is spent. (ii) The published artefact did not come from "
+                + "the tagged tree. That is a SUPPLY-CHAIN finding and it must NOT be disposed of by "
+                + "bumping — compare the tag, the commit recorded in the nuspec and the pushed "
+                + "artefact before anything else. Decide WHICH before choosing the cure ({1})",
+                survey.Announced, provenance.Report);
+        }
+
+        _output.WriteLine($"[Provenance] {survey.Announced} -> {Verified}");
     }
+
+    /// <summary>
+    /// The three outcomes this guard reports, as words rather than as a boolean, so a reader of a log
+    /// can tell "nothing has been published yet" from "the published thing was checked".
+    /// </summary>
+    private const string Unpublished = "unpublished";
+
+    private const string Verified = "verified";
+
+    /// <summary>
+    /// Floor for the content denominator. 168 files were measured under
+    /// <c>src/Tempo.Blazor/wwwroot</c> on 2.8.23; the floor sits below that so ordinary deletions do
+    /// not trip it, and far enough above zero that a sweep reading the wrong path cannot pass.
+    /// </summary>
+    private const int PackedContentFloor = 120;
 
     /// <summary>
     /// The pack script refuses a version the feed already serves, and refuses to guess when it cannot
     /// ask.
     /// <para>
     /// WHY THE SAME QUESTION LIVES IN TWO PLACES, said plainly so neither is read as redundant.
-    /// <see cref="AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed"/> asks it on every test run, which
+    /// <see cref="AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds"/> asks it on every test run, which
     /// is earlier and cheaper, and SKIPS when the feed does not answer — a suite that cannot run
     /// offline gets run less, and that is the affordable failure mode there. The pack script REFUSES
     /// instead, because by then the alternative is shipping. Same guard, opposite failure modes, each
@@ -233,19 +218,168 @@ public sealed partial class ReleaseContractTests
         }
     }
 
-    /// <summary>How an already-published number is SPELLED below; a constant for the same reason as
-    /// <see cref="NoSuchTag"/> — two literals that must stay identical are one typo from a check that
-    /// can never fail.</summary>
-    private const string AlreadyOnFeed = "ALREADY PUBLISHED";
 
-    /// <summary>The other accepted value of that same comparison.</summary>
-    private const string StillFree = "not on the feed";
 
     /// <summary>
     /// What nuget.org serves right now, surveyed once and read by both the skip decision and the
     /// assertions — the same one-survey-two-readers shape as <see cref="ReleaseStagingSurvey"/>, so the
     /// attribute and the test can never be measuring different worlds by different rules.
     /// </summary>
+    /// <summary>
+    /// Downloads the published package for one version and compares its CONTENT ITEMS against the
+    /// working tree. Never compares the archive itself — see the guard's remark for why that is not a
+    /// well-defined question.
+    /// </summary>
+    /// <param name="PackageId">The lead package id, taken from the same survey the index came from.</param>
+    /// <param name="Version">The announced version this provenance is about.</param>
+    /// <param name="TreeFileCount">The denominator: files found under <c>wwwroot</c>.</param>
+    /// <param name="Matching">Items present in both and byte-identical.</param>
+    /// <param name="Differing">Items present in both whose bytes differ — the finding.</param>
+    /// <param name="Missing">Items the tree builds that the package does not carry.</param>
+    /// <param name="ExtraInPackage">
+    /// Items the package carries with no counterpart in <c>wwwroot</c>. NOT a finding: the SDK
+    /// generates the scoped-CSS bundle and packs component-colocated <c>.razor.js</c> from outside
+    /// that directory (5 of them on 2.8.23). Reported rather than dropped, because "the sweep ignored
+    /// something" and "there was nothing to ignore" must not look alike.
+    /// </param>
+    /// <param name="Unreachable">Why the package could not be read, when it could not.</param>
+    internal sealed record PackageProvenance(
+        string PackageId,
+        string Version,
+        int TreeFileCount,
+        IReadOnlyList<string> Matching,
+        IReadOnlyList<string> Differing,
+        IReadOnlyList<string> Missing,
+        IReadOnlyList<string> ExtraInPackage,
+        long ElapsedMilliseconds,
+        string? Unreachable)
+    {
+        /// <summary>Where a Razor class library's <c>wwwroot</c> lands inside the package.</summary>
+        private const string StaticWebAssetRoot = "staticwebassets/";
+
+        internal string PackageUrl =>
+            $"https://api.nuget.org/v3-flatcontainer/{PackageId.ToLowerInvariant()}/{Version}/"
+            + $"{PackageId.ToLowerInvariant()}.{Version}.nupkg";
+
+        internal string Report =>
+            $"[Provenance] version={Version} tree-files={TreeFileCount} matching={Matching.Count} "
+            + $"differing={Differing.Count} missing={Missing.Count} extra-in-package={ExtraInPackage.Count} "
+            + $"elapsed-ms={ElapsedMilliseconds} url={PackageUrl}"
+            + (Differing.Count == 0 ? string.Empty : $" :: differing={string.Join(",", Differing.Take(10))}")
+            + (Missing.Count == 0 ? string.Empty : $" :: missing={string.Join(",", Missing.Take(10))}")
+            + (Unreachable is null ? string.Empty : $" :: unmeasured:package-unreachable {Unreachable}");
+
+        internal static PackageProvenance Take(string packageId, string version)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var tree = TreeContent();
+
+            try
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
+                var empty = new PackageProvenance(packageId, version, tree.Count, [], [], [], [], 0, null);
+                using var response = client.GetAsync(empty.PackageUrl).GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    return empty with
+                    {
+                        ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                        Unreachable = $"HTTP {(int)response.StatusCode}",
+                    };
+                }
+
+                using var stream = new MemoryStream(response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult());
+                using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read);
+
+                var packed = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var entry in archive.Entries)
+                {
+                    if (!entry.FullName.StartsWith(StaticWebAssetRoot, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    using var content = entry.Open();
+                    using var buffer = new MemoryStream();
+                    content.CopyTo(buffer);
+                    packed[entry.FullName[StaticWebAssetRoot.Length..]] = Hash(buffer.ToArray());
+                }
+
+                return Compare(packageId, version, tree, packed, stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException
+                                              or InvalidDataException or IOException)
+            {
+                return new PackageProvenance(
+                    packageId, version, tree.Count, [], [], [], [], stopwatch.ElapsedMilliseconds,
+                    $"{error.GetType().Name}: {error.Message}");
+            }
+        }
+
+        /// <summary>
+        /// The comparison itself, over two dictionaries and nothing else.
+        /// </summary>
+        /// <remarks>
+        /// SEPARATED FROM THE DOWNLOAD ON PURPOSE. The network path only runs when the announced number
+        /// is already published, which for most of a release cycle it is not — so without this the
+        /// whole comparison would sit untested behind a branch that a green run never enters, and the
+        /// guard would report success having executed nothing. <c>ProvenanceComparisonTests</c> drives
+        /// it directly through all four outcomes.
+        /// </remarks>
+        internal static PackageProvenance Compare(
+            string packageId,
+            string version,
+            IReadOnlyDictionary<string, string> tree,
+            IReadOnlyDictionary<string, string> packed,
+            long elapsedMilliseconds)
+        {
+            List<string> matching = [], differing = [], missing = [];
+            foreach (var (relative, hash) in tree.OrderBy(item => item.Key, StringComparer.Ordinal))
+            {
+                if (!packed.TryGetValue(relative, out var packedHash))
+                {
+                    missing.Add(relative);
+                }
+                else if (string.Equals(packedHash, hash, StringComparison.Ordinal))
+                {
+                    matching.Add(relative);
+                }
+                else
+                {
+                    differing.Add(relative);
+                }
+            }
+
+            var extra = packed.Keys.Where(key => !tree.ContainsKey(key)).Order(StringComparer.Ordinal).ToList();
+
+            return new PackageProvenance(
+                packageId, version, tree.Count, matching, differing, missing, extra, elapsedMilliseconds, null);
+        }
+
+        /// <summary>Exposes the source-derived denominator so its own guard can measure it.</summary>
+        internal static IReadOnlyDictionary<string, string> TreeContentForTests() => TreeContent();
+
+        /// <summary>
+        /// The denominator, derived from the source tree: every file the SDK packs out of the lead
+        /// package's <c>wwwroot</c>. Enumerated, never listed by hand.
+        /// </summary>
+        private static Dictionary<string, string> TreeContent()
+        {
+            var root = Path.Combine(FindRepoRoot(), "src", "Tempo.Blazor", "wwwroot");
+            var content = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
+                content[relative] = Hash(File.ReadAllBytes(file));
+            }
+
+            return content;
+        }
+
+        private static string Hash(byte[] bytes) =>
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+    }
+
     internal sealed record PublishedVersionSurvey(
         string Announced,
         string PackageId,

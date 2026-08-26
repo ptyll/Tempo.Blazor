@@ -26,7 +26,7 @@ mapfile -t projects < <(grep -vE '^[[:space:]]*(#|$)' "$manifest" | sed 's/[[:sp
 # be: they compare csproj against CHANGELOG, and each nuspec against HEAD. Neither pair answers "is
 # this number still free", which is the only question a spent number fails.
 #
-# WHY HERE AS WELL AS IN THE SUITE. `ReleaseContractTests.AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed`
+# WHY HERE AS WELL AS IN THE SUITE. `ReleaseContractTests.AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds`
 # asks the same question on every test run, which is earlier and cheaper — but it SKIPS when the feed
 # does not answer, because a suite that cannot run offline is a suite that gets run less. This copy
 # REFUSES instead. They are not redundant, they are the same guard with opposite failure modes, placed
@@ -64,7 +64,7 @@ mapfile -t projects < <(grep -vE '^[[:space:]]*(#|$)' "$manifest" | sed 's/[[:sp
 # files 2026-08-23, and named BY STEP rather than by line number — line numbers move with the very
 # commit that writes them, step names do not: in both publish-nuget.yml and publish-nuget-org.yml the
 # `publish` job carries `needs: build-and-test`, so the suite's
-# `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed`, which runs inside the `Test` step of
+# `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds`, which runs inside the `Test` step of
 # `build-and-test`, turns red and the publish job never starts; and if it did, THIS refusal fires at
 # the `Build packages` step, still ahead of the push step (`Push packages to NuGet.org` there,
 # `Push packages to GitHub Packages` in publish-nuget.yml). A sentence the reader cannot reach is not

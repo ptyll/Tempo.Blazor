@@ -2086,6 +2086,11 @@ public partial class TmDataTable<TItem> : IDisposable
     /// the key that has always done it.
     /// </para>
     /// <para>
+    /// A key pressed inside a consumer's <c>HeaderTemplate</c> never reaches this method: the template is
+    /// wrapped in a barrier that stops keydown from bubbling (see <c>TmDataTable.razor</c>). Reaching the
+    /// shortcut from there was WCAG 2.1.4 — typing into a filter box in the header pinned the column.
+    /// </para>
+    /// <para>
     /// <b>P cycles the column pin</b>, added in 2.8.22 together with <c>tabindex="-1"</c> on the pin
     /// button. That button was a real <c>&lt;button&gt;</c> inside every visible header, so six columns
     /// cost eleven Tab presses and five of those stops painted nothing until hover; taking it out of the
@@ -2096,17 +2101,6 @@ public partial class TmDataTable<TItem> : IDisposable
     /// </remarks>
     private Task HandleHeaderKeyDownAsync(KeyboardEventArgs e, TmDataTableColumn<TItem> col)
     {
-        // A key pressed inside the consumer's HeaderTemplate bubbles to this handler. Reaching the
-        // shortcut from there is WCAG 2.1.4 (Character Key Shortcuts): typing "prague" into a filter box
-        // in the header pinned and unpinned the column three times, and Enter re-sorted the table. The
-        // template's own handler runs first — that is what bubbling means — so the flag it sets is
-        // always seen here, and reading it CLEARS it so one intercepted key cannot swallow the next.
-        if (_headerKeyCameFromTemplate)
-        {
-            _headerKeyCameFromTemplate = false;
-            return Task.CompletedTask;
-        }
-
         if (ShowColumnMenu && (e.Key is "p" or "P"))
         {
             return CyclePinAsync(col);
@@ -2125,23 +2119,14 @@ public partial class TmDataTable<TItem> : IDisposable
     private bool IsHeaderOperable(TmDataTableColumn<TItem> col) => col.Sortable || ShowColumnMenu;
 
     /// <summary>
-    /// Set by the barrier around a consumer's <c>HeaderTemplate</c> and consumed by
-    /// <see cref="HandleHeaderKeyDownAsync"/> on the very next dispatch of the same DOM event.
+    /// Does nothing, on purpose. It exists so the barrier around a consumer's <c>HeaderTemplate</c> is a
+    /// stop on the event path: a dispatcher visits an ancestor because a handler is registered there and
+    /// reads <c>:stopPropagation</c> while visiting, so the flag on its own — measured — does not stop
+    /// the bubble. Being empty is what keeps the barrier stateless, which is the property the flag-based
+    /// attempt in 2.8.23 lacked.
     /// </summary>
-    /// <remarks>
-    /// It is a field rather than <c>@onkeydown:stopPropagation</c> because both are correct in a browser
-    /// but only this one is MEASURABLE: bUnit's dispatcher does not implement Blazor's propagation flags
-    /// (the literal <c>stopPropagation</c> does not appear in bunit.dll), so the flag form would have
-    /// shipped with no test able to see it. Bubbling still happens and is harmless — the outer handler
-    /// simply declines the event.
-    /// </remarks>
-    private bool _headerKeyCameFromTemplate;
+    private static void SwallowTemplateKey(KeyboardEventArgs e) => _ = e;
 
-    private void NoteHeaderKeyCameFromTemplate(KeyboardEventArgs e)
-    {
-        _ = e;
-        _headerKeyCameFromTemplate = true;
-    }
 
     // ── Helper methods ────────────────────────────────────────────
 

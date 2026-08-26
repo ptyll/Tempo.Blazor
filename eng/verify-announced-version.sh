@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # THE DEFECT THIS EXISTS FOR, measured over the two publish workflows rather than imagined:
 #   * `ReleaseContractTests.PackableProjects_AgreeOnOneVersion…` clamps csproj ↔ CHANGELOG.
-#   * `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed` asks the feed about the CHANGELOG number.
+#   * `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds` asks the feed about the CHANGELOG number.
 #   * `eng/pack-nuget-packages.sh` asks the feed about $VERSION.
 #   * the publish job's "Set version" step, on a TAG push, takes VERSION=${GITHUB_REF#refs/tags/v} —
 #     that is, FROM THE TAG. On that branch it computes BASE_VERSION out of the csproj and then does

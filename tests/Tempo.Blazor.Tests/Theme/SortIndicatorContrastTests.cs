@@ -219,12 +219,34 @@ public class SortIndicatorContrastTests
     }
 
     /// <summary>
-    /// The correction itself, asserted rather than described: over the declarations of 2.8.21 the two
-    /// RESTING states resolved to the same colour, so the difference a user could see was 1,00:1 — not
-    /// the 1,32:1 / 1,22:1 the register carried, which is idle against hovered. Written as a guard on
-    /// the ARITHMETIC (the reader is fed the old declarations explicitly), because the shipped CSS no
-    /// longer contains the defect and a guard over it would be measuring the fix, not the claim.
+    /// The rules of 2.8.21 that decided the sort indicator's colour, verbatim from
+    /// <c>git show v2.8.21:…/_data-table.css</c>. They are quoted rather than described because the
+    /// guard below RESOLVES them — the point is what a cascade reader makes of them, not what a comment
+    /// says about them.
     /// </summary>
+    private const string RulesOf2821 = """
+        .tm-data-table th { color: var(--tm-text-secondary); }
+        .tm-col-sortable:hover { color: var(--tm-text-primary); }
+        .tm-col-sorted-asc,
+        .tm-col-sorted-desc { color: var(--tm-color-primary-text); }
+        .tm-sort-icon { opacity: 0.4; }
+        .tm-sort-icon.tm-sort-asc::after { content: '\2191'; opacity: 1; }
+        .tm-sort-icon.tm-sort-none::after { content: '\2195'; }
+        """;
+
+    /// <summary>
+    /// The correction, MEASURED. Over the rules of 2.8.21 the icon had no colour of its own, so both
+    /// states inherited whatever the header resolved to — and at rest that is the same declaration for
+    /// both, because <c>.tm-col-sorted-asc</c> (0,1,0) lost to <c>.tm-data-table th</c> (0,1,1). The
+    /// difference a user could see was therefore <b>1,00:1</b>, not the 1,32:1 / 1,22:1 the register
+    /// carried; those compare an idle header with a HOVERED one.
+    /// </summary>
+    /// <remarks>
+    /// This runs the real <see cref="CssCascade"/> over the real declarations and asks it who wins. An
+    /// earlier version of this test composited the same token twice by hand and compared the results,
+    /// which is green whatever the CSS says — a record wearing the shape of a guard. If the resolver
+    /// stopped honouring specificity, this now goes red.
+    /// </remarks>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -233,19 +255,68 @@ public class SortIndicatorContrastTests
         var tokens = ThemeCss.TokenGraph(dark);
         var background = ThemeCss.ResolveColour(HeaderBackground, tokens);
 
-        // At rest BOTH states took `.tm-data-table th { color: var(--tm-text-secondary) }`: the sorted
-        // rule was (0,1,0) against its (0,1,1) and never applied. Same colour, same 0.4 opacity.
-        var unsorted = ThemeCss.Composite(ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens), 0.4, background);
-        var sorted = ThemeCss.Composite(ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens), 0.4, background);
+        var sorted = RestingIconColourUnder2821("tm-sort-asc", tokens, background);
+        var unsorted = RestingIconColourUnder2821("tm-sort-none", tokens, background);
 
-        sorted.Should().Be(unsorted);
+        sorted.Should().Be(
+            unsorted,
+            "seřazená hlavička v klidu malovala TOTOŽNOU barvu jako neseřazená");
         ThemeCss.Contrast(sorted, unsorted).Should().Be(
             1.0,
-            "v klidovém stavu nebyl rozdíl žádný; 1,32:1 a 1,22:1 z registru je idle proti hoveru");
+            "změna stavu v klidovém stavu byla nulová; 1,32:1 a 1,22:1 z registru je idle proti hoveru");
+    }
 
-        // And the hovered reading the register mistook for it, reproduced from the rule that did apply.
-        var hovered = ThemeCss.Composite(ThemeCss.ResolveColour("var(--tm-text-primary)", tokens), 0.4, background);
-        ThemeCss.Contrast(hovered, unsorted).Should().BeApproximately(dark ? 1.2156 : 1.3158, 0.0002);
+    /// <summary>
+    /// The reading the register mistook for the sorted state: the same icon on a header UNDER THE
+    /// POINTER, where <c>.tm-col-sortable:hover</c> (0,2,0) does beat the base rule. Measured through
+    /// the same resolver, differing from the case above in one thing — the active state.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 1.3158)]
+    [InlineData(true, 1.2156)]
+    public void WhatTheRegisterRecordedWasTheHoveredHeader(bool dark, double recordedRatio)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var background = ThemeCss.ResolveColour(HeaderBackground, tokens);
+
+        var resting = RestingIconColourUnder2821("tm-sort-asc", tokens, background);
+        var hovered = RestingIconColourUnder2821("tm-sort-asc", tokens, background, hovered: true);
+
+        hovered.Should().NotBe(resting, "hover byl JEDINÝ stav, který barvu hlavičky opravdu měnil");
+        ThemeCss.Contrast(hovered, resting).Should().BeApproximately(recordedRatio, 0.0002);
+    }
+
+    /// <summary>
+    /// The icon's painted colour under the 2.8.21 rules: it declared no colour, so it inherited the
+    /// header's — resolved through the cascade, at the requested state — and was then painted through
+    /// the 0.4 the span carried.
+    /// </summary>
+    private static string RestingIconColourUnder2821(
+        string stateClass,
+        Dictionary<string, string> tokens,
+        string background,
+        bool hovered = false)
+    {
+        IReadOnlyList<CssCascade.Element> header =
+        [
+            new("table", "tm-data-table"),
+            new("thead"),
+            new("tr"),
+            stateClass == "tm-sort-none"
+                ? new CssCascade.Element("th", "tm-col-sortable")
+                : new CssCascade.Element("th", "tm-col-sortable", "tm-col-sorted-asc"),
+        ];
+
+        var states = hovered
+            ? new HashSet<string>([":hover"], StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+
+        var inherited = CssCascade.Winning(RulesOf2821, header, "color", states);
+        var alpha = CssCascade.EffectiveOpacity(
+            RulesOf2821,
+            [.. header, new CssCascade.Element("span", "tm-sort-icon", stateClass).With("after")]);
+
+        return ThemeCss.Composite(ThemeCss.ResolveColour(inherited, tokens), alpha, background);
     }
 
     /// <summary>

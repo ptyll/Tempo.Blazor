@@ -225,7 +225,7 @@ public sealed class ReleaseScriptInputReadTests
     /// </para>
     /// <para>
     /// THE GATE IS BORROWED, NOT BUILT. A no-route world is exactly what
-    /// <see cref="AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed"/> built
+    /// <see cref="AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds"/> built
     /// <see cref="ReleaseContractTests.FeedReachableFactAttribute"/> for, having written down that "a
     /// suite that cannot run offline is a suite that gets run less". Reusing it means no route is
     /// SKIPPED — a third outcome in the .trx, never a green and never a red — and it means one shape to

@@ -1,5 +1,75 @@
 # Changelog
 
+## 2.8.24 - 2026-08-27
+
+The barrier 2.8.23 put around a consumer's `HeaderTemplate` cost the next keystroke. This release
+fixes that and rewrites the release gate from an absence check to a provenance check.
+
+### Fixed
+
+- **After a key was intercepted in a `HeaderTemplate`, the user's next genuine press on the header
+  did nothing.** 2.8.23 stopped the bubbling with a flag: the barrier set it, the header's own
+  handler cleared it. But the header's handler is exactly what an intercepted key never reaches, so
+  the flag survived the event that set it and was spent clearing on the NEXT press. Type a filter in
+  the header, move to the header, press `P` or `Enter` — nothing; press again — it works. Measured:
+  `[tm-col-sortable]` after the first press, `[tm-col-sortable, tm-col-pinned, tm-col-pinned-left]`
+  after the second. The comment above that code claimed the opposite property.
+
+  The barrier is now `@onkeydown:stopPropagation="true"` — stateless, so it has no next event to
+  spend. **The reason 2.8.23 gave for not using it was wrong and was itself a measurement error:**
+  the string `stopPropagation` does not occur in `bunit.dll` (0 hits, ascii and utf-16, all four
+  TFMs) and that was read as "bUnit does not implement the flags". The name is composed at runtime,
+  so the grep measured the wrong thing. A controlled experiment over three trees differing only in
+  one attribute name settles it — `__internal_stopPropagation_onkeydown` stops the bubble,
+  `__internal_bogus_onkeydown` and `data-nothing` do not. Five tests now cover the barrier: two that
+  the shortcut does not fire from inside the template, two that the next key on the header still
+  works, one that the header itself still answers while a template is present.
+
+- **The release gate asked the wrong question, and had begun reporting failure over releases that
+  arrived correctly.** See `DEC-TEMPO-RELEASE-GATE` points 6–10, which carry the original wording of
+  the test verbatim along with why it no longer holds. The old guard refused a version number that
+  was already on the feed. That is a PROXY for the harm — a consumer resolving the announced number
+  to bytes other than the ones this tree builds — and the proxy came apart from the harm: 2.8.22 and
+  2.8.23 are both published, both are byte-identical to this repository, and the guard was red over
+  both. A gate that goes red over a successful delivery teaches people to bump past it.
+
+  The question is now a whitelist: **what lies under the announced number on the feed is what this
+  tree builds.** It reports three states rather than two — `unpublished` (absent; legal, green, and
+  deliberately not called verified, because nothing has been delivered), `verified` (present and
+  matching, which is strictly stronger evidence than the old guard could produce), and red (present
+  and different). A feed that does not answer is a fourth, `unmeasured:feed-unreachable`, counted as
+  its own state and folded into neither.
+
+  It does not compare the `.nupkg` as a file — a zip carries timestamps, entry order and a signature
+  block, so archive equality is not a well-defined question. It compares content items, over a
+  denominator derived from the source rather than chosen: every file under
+  `src/Tempo.Blazor/wwwroot`, which the SDK packs to `staticwebassets/<relative path>`. Measured on
+  2.8.23: **168 files in the tree, 168 in the package, 168 byte-identical.** The count carries a
+  floor so the sweep cannot shrink to whichever file somebody once cared about, and package entries
+  with no counterpart in the tree — the generated scoped-CSS bundle and four colocated `.razor.js`,
+  five on 2.8.23 — are reported rather than dropped.
+
+  When bytes differ the release is refused, and the message forces the author to name which of two
+  mechanisms it is, because the cures differ: the repository moved after the publish (cure: bump), or
+  the published artefact did not come from the tagged tree (a supply-chain finding, which must not be
+  disposed of by bumping — the push is a manual step and this is the only instrument that can say
+  anything about it).
+
+- **A guard that was green whatever the CSS said.** `TheRestingStatesOf2821_WereIndistinguishable`
+  composited the same token expression twice and compared the results, so it passed independently of
+  the code — a record wearing the shape of a pledge. It now runs the real cascade resolver over the
+  2.8.21 rules quoted verbatim from `git show v2.8.21:…/_data-table.css` and asks it who wins; if the
+  resolver stopped honouring specificity, it goes red. A second case measures the reading the
+  register mistook for the sorted state — the same icon on a header under the pointer, where
+  `.tm-col-sortable:hover` (0,2,0) does beat the base rule — reproducing 1,3158:1 light and 1,2156:1
+  dark from the declarations rather than from a note.
+
+**This number was raised because the content changed, not because a gate was red**
+(`DEC-TEMPO-RELEASE-GATE` point 10). 2.8.23 stays published and is green under provenance.
+Publication of 2.8.24 remains the repository owner's manual step (`DEC-TEMPO-287-NUGET-DELIVERY`):
+`VERSION=2.8.24 eng/pack-nuget-packages.sh`, then `dotnet nuget push packages/*.2.8.24.nupkg`.
+**The keystroke defect above is live on the feed under 2.8.23.**
+
 ## 2.8.23 - 2026-08-26
 
 Three things 2.8.22 got wrong about itself, and one regression it introduced. **2.8.22 is on

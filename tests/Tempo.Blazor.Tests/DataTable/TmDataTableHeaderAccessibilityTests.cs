@@ -260,6 +260,44 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
     }
 
     /// <summary>
+    /// The barrier must not COST the next keystroke. This is the defect the first attempt at the fix
+    /// shipped in 2.8.23: the barrier set a flag that only the header's own handler cleared, so after a
+    /// key was intercepted in the template the next genuine press on the header was spent clearing the
+    /// flag and did nothing. A user typing a filter and then reaching for the header had to press twice.
+    /// </summary>
+    [Fact]
+    public void AfterAKeyIsInterceptedInTheTemplate_TheNextKeyOnTheHeaderStillWorks()
+    {
+        var cut = RenderTableWithHeaderInput();
+
+        cut.Find("[data-testid='consumer-header-filter']").KeyDown(new KeyboardEventArgs { Key = "p" });
+        cut.Find("th[data-sortable='true']").ClassList.Should().NotContain("tm-col-pinned-left");
+
+        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "p" });
+
+        cut.Find("th[data-sortable='true']").ClassList.Should().Contain(
+            "tm-col-pinned-left",
+            "bariéra smí zahodit klávesu z templatu, ne tu následující z hlavičky");
+    }
+
+    /// <summary>
+    /// The same for Enter, because the two keys travel different branches of the handler and a
+    /// stateful barrier would swallow whichever came first.
+    /// </summary>
+    [Fact]
+    public void AfterAKeyIsInterceptedInTheTemplate_EnterOnTheHeaderStillSorts()
+    {
+        var cut = RenderTableWithHeaderInput();
+
+        cut.Find("[data-testid='consumer-header-filter']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
+
+        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
+    }
+
+    /// <summary>
     /// The counterpart, so the fix is not "the header stopped answering the keyboard": pressing the
     /// keys on the HEADER ITSELF still works while a template is present.
     /// </summary>

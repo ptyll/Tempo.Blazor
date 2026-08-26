@@ -107,7 +107,7 @@ jobs:
       # ITS PLACE IS THE LOCAL RUN BEFORE A RELEASE — `dotnet test` on a machine holding a full clone,
       # where the ref store carries every v2.8.* tag and the comparison has both sides.
       # AND THE OVERLAPPING FEED GUARD IS WEAKER HERE THAN IN publish-nuget-org.yml, so it is not a
-      # substitute: `AnnouncedVersion_IsNotAlreadyPublishedOnTheFeed` and the refusal in
+      # substitute: `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds` and the refusal in
       # eng/pack-nuget-packages.sh both ask NUGET.ORG, which is not the feed this workflow pushes to.
       # For GitHub Packages the only per-number evidence is the push step's own accounting below.
       #

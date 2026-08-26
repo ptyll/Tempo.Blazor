@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Maps</PackageId>
-    <Version>2.8.23</Version>
+    <Version>2.8.24</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Maps</Title>
     <Description>Leaflet powered interactive map components for Tempo.Blazor with bundled OpenStreetMap tiles support, Canvas-rendered marker batches, and marker clustering.</Description>
