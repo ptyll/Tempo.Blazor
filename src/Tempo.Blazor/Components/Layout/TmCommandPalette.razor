@@ -19,6 +19,7 @@
                 <input class="tm-command-palette-input"
                        value="@_query"
                        @oninput="HandleInput"
+                       @onkeydown="HandleInputKeyDownAsync"
                        placeholder="@Loc["TmCommandPalette_Placeholder"]"
                        aria-label="@Loc["TmCommandPalette_SearchAria"]"
                        autocomplete="off" />
@@ -140,7 +141,23 @@
         }
     }
 
+    // Escape stays container-level so it works wherever focus sits inside the
+    // dialog (input, close button). Arrow/Enter navigation is handled on the
+    // search input itself (HandleInputKeyDownAsync): the close control is a
+    // native <button>, and a container-level Enter case ran the highlighted
+    // action when the user actually pressed Enter on "close" — the button's
+    // own click then ALSO closed the palette.
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await CloseAsync();
+        }
+    }
+
+    // Arrow/Enter keydowns inside a text input produce no native click, so
+    // this input-level handler is where list navigation + execution belong.
+    private async Task HandleInputKeyDownAsync(KeyboardEventArgs e)
     {
         switch (e.Key)
         {
@@ -161,9 +178,6 @@
                 {
                     await ExecuteAsync(_filtered[_highlightedIndex]);
                 }
-                break;
-            case "Escape":
-                await CloseAsync();
                 break;
         }
     }

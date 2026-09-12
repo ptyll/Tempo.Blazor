@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Dropdowns;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -226,6 +227,32 @@ public class TmFilterableDropdownTests : LocalizationTestBase
             .Add(c => c.Disabled, true));
 
         cut.FindAll(".tm-filterable-dropdown-clear").Should().BeEmpty();
+    }
+
+    // ── Keyboard activation ────────────────────────────────────────────────
+    // Enter-to-select is intended for the filter input only (a text input
+    // produces no native click); the menu container must not also act on
+    // Enter — any focusable child inside the menu (e.g. the retry <button>)
+    // would otherwise double-fire.
+
+    [Fact]
+    public void TmFilterableDropdown_Enter_In_FilterInput_Selects_Focused_Item_Once()
+    {
+        var selections = new List<SelectOption<string>?>();
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.ValueChanged,
+                EventCallback.Factory.Create<SelectOption<string>?>(this, v => selections.Add(v))));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+        var input = cut.Find(".tm-filterable-dropdown-filter-input");
+        // Arrows bubble from the input to the menu container (focus moves).
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        selections.Should().HaveCount(1);
+        selections[0].Should().Be(FruitOptions[0]);
     }
 
 }

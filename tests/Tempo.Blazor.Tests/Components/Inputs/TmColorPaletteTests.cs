@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
@@ -119,18 +120,57 @@ public class TmColorPaletteTests : LocalizationTestBase
     [Fact]
     public void TmColorPalette_EnterAndSpace_SelectFocusedSwatch()
     {
-        var selected = string.Empty;
-        var cut = RenderPalette("#111111", value => selected = value);
+        // Swatches are native <button> elements: Enter produces a click on
+        // keydown, Space on keyup — the keydown handler must not also select,
+        // or one key press fires ValueChanged twice.
+        var selections = new List<string>();
+        var cut = Render<PaletteHost>(p => p
+            .Add(h => h.OnChanged,
+                EventCallback.Factory.Create<string>(this, v => selections.Add(v))));
 
+        // Enter sequence: rove focus, keydown, then the native click.
         cut.FindAll(".tm-color-palette-swatch")[0].KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
         cut.FindAll(".tm-color-palette-swatch")[1].KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-color-palette-swatch")[1].Click();
 
-        selected.Should().Be("#222222");
+        selections.Should().Equal("#222222");
 
+        // Space sequence: rove focus, keydown, keyup, then the native click.
         cut.FindAll(".tm-color-palette-swatch")[1].KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
         cut.FindAll(".tm-color-palette-swatch")[2].KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-color-palette-swatch")[2].KeyUp(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-color-palette-swatch")[2].Click();
 
-        selected.Should().Be("#333333");
+        selections.Should().Equal("#222222", "#333333");
+    }
+
+    /// <summary>
+    /// Wraps the palette in a div carrying no-op keyup/keydown sinks so bUnit
+    /// can dispatch those events on the swatches (bUnit requires a handler on
+    /// the target or an ancestor; a real browser always bubbles key events).
+    /// </summary>
+    private sealed class PaletteHost : ComponentBase
+    {
+        [Parameter] public EventCallback<string> OnChanged { get; set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "onkeydown",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+            builder.AddAttribute(2, "onkeyup",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+
+            builder.OpenComponent<TmColorPalette>(3);
+            builder.AddAttribute(4, "Value", "#111111");
+            builder.AddAttribute(5, "Colors", new[] { "#111111", "#222222", "#333333", "#444444" });
+            builder.AddAttribute(6, "Columns", 2);
+            builder.AddAttribute(7, "ShowClearButton", false);
+            builder.AddAttribute(8, "ValueChanged", OnChanged);
+            builder.CloseComponent();
+
+            builder.CloseElement();
+        }
     }
 
     private IRenderedComponent<TmColorPalette> RenderPalette(

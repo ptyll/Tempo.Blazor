@@ -120,6 +120,23 @@ public class TmDocumentCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SearchInput_Escape_Closes_Once()
+    {
+        // Escape is handled on keydown; a keyup handler that also closed the
+        // palette would fire OnClose a second time for the same gesture.
+        var closeCalls = 0;
+        var cut = Render<TmDocumentCommandPalette>(parameters =>
+            parameters.Add(p => p.IsOpen, true)
+                      .Add(p => p.Commands, MakeCommands())
+                      .Add(p => p.OnClose, EventCallback.Factory.Create(this, () => closeCalls++)));
+
+        var search = cut.Find("[data-testid='document-command-palette-search']");
+        search.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        closeCalls.Should().Be(1);
+    }
+
+    [Fact]
     public void ItemButton_SpaceSequence_ExecutesCommandExactlyOnce()
     {
         var executed = new List<string>();

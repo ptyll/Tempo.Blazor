@@ -133,8 +133,11 @@ public class DocumentEditorToolbarUxBugsTests : LocalizationTestBase
     }
 
     [Fact]
-    public void OverflowMenu_EnterAfterCommand_DoesNotBubbleToParent()
+    public void OverflowMenu_EnterKeySequence_ExecutesExactlyOnce()
     {
+        // The menu items are native <button> elements: the browser itself turns
+        // Enter into a click (keydown -> click). The keydown handler must NOT
+        // also run the command, otherwise one key press executes it twice.
         var executed = new List<string>();
         var parentKeys = new List<string>();
         var cut = Render<TmDocumentToolbarOverflowMenu>(p => p
@@ -145,13 +148,19 @@ public class DocumentEditorToolbarUxBugsTests : LocalizationTestBase
             .Add(x => x.OnMenuItemKeyDown, EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs>(this, args => parentKeys.Add(args.Key))));
 
         var item = cut.Find("[role='menuitem']");
+        // Real browser sequence for Enter on a focused <button>: keydown, then
+        // the native click on the same element (bUnit does not synthesize it).
         item.KeyDown("Enter");
+        item.Click();
+
         executed.Should().Equal("bold");
-        parentKeys.Should().BeEmpty("Enter po vykonání příkazu nesmí bublat do rodiče");
+
+        // Unhandled keys still delegate to the parent (it owns Escape/focus);
+        // Enter is delegated too — the parent handler ignores it.
+        parentKeys.Should().Equal("Enter");
 
         item.KeyDown("ArrowDown");
-        parentKeys.Should().ContainSingle(
-            "navigační klávesy dál bublají (rodič řídí fokus/zavírání)").Which.Should().Be("ArrowDown");
+        parentKeys.Should().Equal("Enter", "ArrowDown");
     }
 
     // ─── Mini toolbar fractional font size ──────────────────────────────────

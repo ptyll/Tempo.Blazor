@@ -131,6 +131,7 @@
                            value="@_filterText"
                            @ref="_filterInputRef"
                            @oninput="HandleFilterInputAsync"
+                           @onkeydown="HandleFilterKeyDownAsync"
                            @onclick:stopPropagation="true"
                            aria-label="@Loc["TmMultiSelect_Search"]" />
                 </div>

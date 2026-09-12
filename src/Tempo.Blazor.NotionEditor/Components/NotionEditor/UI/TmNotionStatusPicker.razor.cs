@@ -90,13 +90,24 @@ public partial class TmNotionStatusPicker : ComponentBase
     {
         switch (e.Key)
         {
-            case "Enter" when !IsInsertDisabled:
-                await InsertAsync();
-                break;
+            // No Enter handling here: it is handled on the label input itself
+            // (HandleInputKeyDownAsync). Keydowns from the color swatches and
+            // the insert <button> also bubble to this container — the browser
+            // turns Enter on a focused <button> into a click on keydown, so a
+            // container-level Enter->insert would fire InsertAsync twice on the
+            // button, and would submit while merely picking a color.
             case "Escape":
                 await OnClosed.InvokeAsync();
                 break;
         }
+    }
+
+    // Enter inside the text input produces no native click, so this is the one
+    // place where keyboard-activated insert belongs.
+    private async Task HandleInputKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !IsInsertDisabled)
+            await InsertAsync();
     }
 
     private async Task InsertAsync()

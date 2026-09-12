@@ -21,7 +21,8 @@
                placeholder="@Loc["Notion_Status_Placeholder"]"
                value="@_label"
                @ref="_inputRef"
-               @oninput="HandleLabelInputAsync" />
+               @oninput="HandleLabelInputAsync"
+               @onkeydown="HandleInputKeyDownAsync" />
 
         <div class="tm-notion-status-picker__preview" aria-live="polite">
             <span class="@PreviewClass">

@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -442,5 +443,58 @@ public class TmMultiSelectTests : LocalizationTestBase
 
         cut.Find("[role='combobox']").GetAttribute("aria-expanded").Should().Be("true");
         cut.Find("[role='listbox']").Should().NotBeNull();
+    }
+
+    // ── Keyboard activation ────────────────────────────────────────────────
+    // Enter-to-toggle is intended for the filter input only (a text input
+    // produces no native click). The select-all/retry controls are native
+    // <button> elements inside the same popup — a container-level Enter case
+    // toggled the focused option *and* the button's own click ran its action.
+
+    [Fact]
+    public void TmMultiSelect_Enter_In_FilterInput_Toggles_Focused_Option_Once()
+    {
+        var changes = new List<IReadOnlyList<string>>();
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.ShowCheckBox, true)
+            .Add(c => c.ValuesChanged,
+                EventCallback.Factory.Create<IReadOnlyList<string>>(this, v => changes.Add(v))));
+
+        cut.Find(".tm-multiselect").Click();
+        var input = cut.Find(".tm-multiselect__filter-input");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        changes.Should().HaveCount(1);
+        changes[0].Should().Equal("apple");
+    }
+
+    [Fact]
+    public void TmMultiSelect_Enter_On_SelectAll_Button_Does_Not_Also_Toggle_Focused_Option()
+    {
+        var changes = new List<IReadOnlyList<string>>();
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.ShowCheckBox, true)
+            .Add(c => c.ShowSelectAll, true)
+            .Add(c => c.ValuesChanged,
+                EventCallback.Factory.Create<IReadOnlyList<string>>(this, v => changes.Add(v))));
+
+        cut.Find(".tm-multiselect").Click();
+        cut.Find(".tm-multiselect__filter-input")
+            .KeyDown(new KeyboardEventArgs { Key = "ArrowDown" }); // focus option 0
+
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        var button = cut.Find(".tm-multiselect__select-all-btn");
+        button.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-multiselect__select-all-btn").Click();
+
+        changes.Should().HaveCount(1);
+        changes[0].Should().Equal("apple", "banana", "cherry", "date");
     }
 }

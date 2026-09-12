@@ -21,7 +21,6 @@
                        value="@_query"
                        @oninput="HandleSearchInput"
                        @onkeydown="HandleSearchKeyDownAsync"
-                       @onkeyup="HandleSearchKeyUpAsync"
                        placeholder="@Loc["TmCommandPalette_Placeholder"]"
                        aria-label="@Loc["TmCommandPalette_Placeholder"]"
                        autocomplete="off"
@@ -183,10 +182,8 @@
         return HandleListKeyDownAsync(args, executeOnEnter: true);
     }
 
-    private Task HandleSearchKeyUpAsync(KeyboardEventArgs args)
-    {
-        return args.Key == "Escape" ? CloseAsync() : Task.CompletedTask;
-    }
+    // Escape closes on keydown (HandleListKeyDownAsync); it deliberately is not
+    // also handled on keyup — that fired OnClose twice for one gesture.
 
     private Task HandleItemKeyDownAsync(KeyboardEventArgs args, int index)
     {

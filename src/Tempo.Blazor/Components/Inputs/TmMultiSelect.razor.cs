@@ -392,12 +392,23 @@ public partial class TmMultiSelect<TItem, TValue>
             case "ArrowUp":
                 _focusedIndex = Math.Max(_focusedIndex - 1, 0);
                 break;
-            case "Enter" when _focusedIndex >= 0 && _focusedIndex < items.Count:
-                await ToggleItemAsync(items[_focusedIndex]);
-                break;
+            // No Enter handling here: it is handled on the filter input itself
+            // (HandleFilterKeyDownAsync). The select-all and retry controls are
+            // native <button> elements inside this popup — a container-level
+            // Enter case toggled the focused option when the user pressed Enter
+            // on those buttons, and the buttons' own click then also ran.
             case "Backspace" when string.IsNullOrEmpty(_filterText) && Values.Count > 0:
                 await RemoveItemAsync(Values[^1]);
                 break;
         }
+    }
+
+    // Enter inside a text input produces no native click, so keyboard option
+    // toggling belongs on the filter input — the only intended Enter origin.
+    private async Task HandleFilterKeyDownAsync(KeyboardEventArgs e)
+    {
+        var items = GetVisibleItems().ToList();
+        if (e.Key == "Enter" && _focusedIndex >= 0 && _focusedIndex < items.Count)
+            await ToggleItemAsync(items[_focusedIndex]);
     }
 }

@@ -87,4 +87,84 @@ public class TmNotionStatusPickerTests : LocalizationTestBase
 
         fired.Should().BeFalse();
     }
+
+    // ── Keyboard activation ─────────────────────────────────────────────────
+    // The swatches and the insert button are native <button> elements: Enter
+    // produces a click on keydown. A container-level Enter->insert handler
+    // therefore fired InsertAsync a second time (or while picking a color).
+
+    [Fact]
+    public void StatusPicker_EnterOnInsertButton_InsertsExactlyOnce()
+    {
+        var inserts = 0;
+        var cut = Render<TmNotionStatusPicker>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.InitialLabel, "DONE")
+            .Add(x => x.OnInserted,
+                EventCallback.Factory.Create<(string, NotionStatusColor)>(
+                    this, _ => inserts++)));
+
+        var button = cut.Find(".tm-notion-status-picker__insert");
+        button.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-notion-status-picker__insert").Click();
+
+        inserts.Should().Be(1);
+    }
+
+    [Fact]
+    public void StatusPicker_EnterOnSwatch_SelectsColor_WithoutInserting()
+    {
+        var fired = false;
+        var cut = Render<TmNotionStatusPicker>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.InitialLabel, "DONE")
+            .Add(x => x.OnInserted,
+                EventCallback.Factory.Create<(string, NotionStatusColor)>(
+                    this, _ => fired = true)));
+
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        var swatch = cut.Find(".tm-notion-status-picker__swatch--blue");
+        swatch.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-notion-status-picker__swatch--blue").Click();
+
+        fired.Should().BeFalse("picking a color must not submit the form");
+        cut.Find(".tm-notion-status-picker__swatch--blue")
+            .ClassList.Should().Contain("tm-notion-status-picker__swatch--selected");
+    }
+
+    [Fact]
+    public void StatusPicker_EnterInLabelInput_InsertsOnce()
+    {
+        // Enter inside the label input produces no native click — the input's
+        // own keydown handler is what submits, and it must still work.
+        var inserts = 0;
+        (string Label, NotionStatusColor Color) inserted = default;
+        var cut = Render<TmNotionStatusPicker>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.InitialLabel, "BLOCKED")
+            .Add(x => x.OnInserted,
+                EventCallback.Factory.Create<(string, NotionStatusColor)>(
+                    this, args => { inserts++; inserted = args; })));
+
+        cut.Find(".tm-notion-status-picker__input")
+            .KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        inserts.Should().Be(1);
+        inserted.Label.Should().Be("BLOCKED");
+    }
+
+    [Fact]
+    public void StatusPicker_EscapeOnSwatch_StillClosesPicker()
+    {
+        // Escape keeps bubbling from any focused child to the container.
+        var closed = false;
+        var cut = Render<TmNotionStatusPicker>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.OnClosed, EventCallback.Factory.Create(this, () => closed = true)));
+
+        cut.Find(".tm-notion-status-picker__swatch--blue")
+            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        closed.Should().BeTrue();
+    }
 }

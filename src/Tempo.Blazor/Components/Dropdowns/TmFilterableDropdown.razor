@@ -42,7 +42,8 @@
                        @ref="_filterInput"
                        placeholder="@(FilterPlaceholder ?? Loc["TmFilterableDropdown_Search"])"
                        value="@_filterText"
-                       @oninput="OnFilterInput" />
+                       @oninput="OnFilterInput"
+                       @onkeydown="HandleFilterKeyDownAsync" />
             </div>
 
             @if (_isLoading)
@@ -244,10 +245,21 @@
             case "ArrowUp":
                 _selectedIndex = Math.Max(_selectedIndex - 1, 0);
                 break;
-            case "Enter" when _selectedIndex >= 0 && _selectedIndex < filtered.Count:
-                await SelectItemAsync(filtered[_selectedIndex]);
-                break;
+            // No Enter handling here: it is handled on the filter input itself
+            // (HandleFilterKeyDownAsync) — the only intended Enter origin inside
+            // this menu. Any future focusable child (the retry <button> renders
+            // here in the error state) would otherwise have its bubbled Enter
+            // select the focused item on top of the button's own click.
         }
+    }
+
+    // Enter inside a text input produces no native click, so keyboard item
+    // selection belongs on the filter input.
+    private async Task HandleFilterKeyDownAsync(KeyboardEventArgs e)
+    {
+        var filtered = GetFilteredItems().ToList();
+        if (e.Key == "Enter" && _selectedIndex >= 0 && _selectedIndex < filtered.Count)
+            await SelectItemAsync(filtered[_selectedIndex]);
     }
 
     private IEnumerable<TItem> GetFilteredItems()

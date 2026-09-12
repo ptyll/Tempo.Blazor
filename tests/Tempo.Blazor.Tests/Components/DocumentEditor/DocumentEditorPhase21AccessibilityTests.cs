@@ -55,7 +55,9 @@ public sealed class DocumentEditorPhase21AccessibilityTests : LocalizationTestBa
         items[0].GetAttribute("tabindex").Should().Be("-1");
         items[1].GetAttribute("tabindex").Should().Be("0");
 
-        await items[0].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        // Native <button> sequence: Enter produces the click on keydown.
+        await items[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        await cut.FindAll("[role='menuitem']")[1].ClickAsync(new MouseEventArgs());
         executed.Should().Be("italic");
     }
 

@@ -139,9 +139,12 @@
             case "ArrowUp":
                 await OnHighlightedIndexChanged.InvokeAsync(Math.Max(HighlightedIndex - 1, 0));
                 break;
-            case "Enter":
-                await SelectItemAsync(Items[Math.Clamp(HighlightedIndex, 0, Items.Count - 1)]);
-                break;
+            // No Enter activation: item buttons are native <button> elements and
+            // this container is never focused itself (no tabindex), so Enter
+            // only ever arrives here by bubbling from a focused item — which the
+            // browser also turns into a click that reaches SelectItemAsync via
+            // @onclick. Selecting here too fired OnItemSelected twice per key
+            // press (and for the highlighted item rather than the focused one).
         }
     }
 

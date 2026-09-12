@@ -437,6 +437,25 @@ public class TmFileManagerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmFileManager_Enter_On_Toolbar_Button_Does_Not_Reach_Grid_Handler()
+    {
+        // Toolbar buttons are native <button> elements nested under the grid
+        // container: the browser turns Enter into a click on keydown, and the
+        // bubbled keydown must not ALSO reach the grid's Enter case (which
+        // would open/navigate the focused item). The toolbar is isolated with
+        // @onkeydown:stopPropagation, so bUnit finds no reachable onkeydown
+        // handler for an event dispatched inside it and throws — proving the
+        // keydown can never reach the grid handler.
+        var cut = Render<TmFileManager>(p => p
+            .Add(c => c.DataProvider, CreateMockProvider()));
+
+        var newFolderButton = cut.FindAll("button.tm-file-manager__toolbar-button").First();
+        var act = () => newFolderButton.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        act.Should().Throw<MissingEventHandlerException>();
+    }
+
+    [Fact]
     public void TmFileManager_Keyboard_Delete_Shows_Confirm_Dialog()
     {
         var cut = Render<TmFileManager>(p => p

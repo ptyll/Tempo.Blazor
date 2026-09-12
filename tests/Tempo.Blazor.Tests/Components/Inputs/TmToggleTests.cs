@@ -1,6 +1,8 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
 
@@ -69,6 +71,57 @@ public class TmToggleTests : LocalizationTestBase
         cut.Find("input[type='checkbox']").Change(true);
 
         captured.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TmToggle_Space_Sequence_Fires_ValueChanged_Exactly_Once()
+    {
+        // A native <input type="checkbox"> already toggles from Space: keydown,
+        // keyup, then the checked state flips and the browser fires "change" —
+        // HandleChangeAsync reports it via ValueChanged. A keydown handler that
+        // also invokes ValueChanged(!Value) makes one press report twice.
+        var invocations = new List<bool>();
+        var cut = Render<ToggleHost>(p => p
+            .Add(h => h.Value, false)
+            .Add(h => h.ValueChanged,
+                EventCallback.Factory.Create<bool>(this, v => invocations.Add(v))));
+
+        var input = cut.Find("input[type='checkbox']");
+        // Real browser sequence for Space on a focused checkbox:
+        // keydown -> keyup -> native checked flip -> change event.
+        input.KeyDown(" ");
+        input.KeyUp(" ");
+        input.Change(true);
+
+        invocations.Should().Equal(true);
+    }
+
+    /// <summary>
+    /// Hosts a <see cref="TmToggle"/> inside a div that carries no-op key
+    /// handlers so bUnit can dispatch keydown/keyup on the input (bUnit
+    /// requires a handler on the target or an ancestor; real browsers bubble
+    /// key events to the document regardless).
+    /// </summary>
+    private sealed class ToggleHost : ComponentBase
+    {
+        [Parameter] public bool Value { get; set; }
+        [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "onkeydown",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+            builder.AddAttribute(2, "onkeyup",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+
+            builder.OpenComponent<TmToggle>(3);
+            builder.AddAttribute(4, "Value", Value);
+            builder.AddAttribute(5, "ValueChanged", ValueChanged);
+            builder.CloseComponent();
+
+            builder.CloseElement();
+        }
     }
 
     // ── Accessible name without visible text ──────────────────────

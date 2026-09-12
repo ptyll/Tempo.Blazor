@@ -6,8 +6,11 @@
 @inject ITmLocalizer Loc
 
 <div class="tm-file-manager @(Disabled ? "tm-file-manager--disabled" : "") @Class" @attributes="AdditionalAttributes" tabindex="0" @onkeydown="HandleKeyDown">
-    <!-- Toolbar -->
-    <div class="tm-file-manager__toolbar">
+    <!-- Toolbar — stopPropagation keeps toolbar keydowns out of the grid
+         handler: these are native <button> elements, and a bubbled Enter would
+         also open/delete the keyboard-focused item on top of the button's own
+         click. -->
+    <div class="tm-file-manager__toolbar" @onkeydown:stopPropagation="true">
         <div class="tm-file-manager__toolbar-group">
             @if (ShowNewFolderButton && !Disabled)
             {
@@ -50,8 +53,8 @@
         </div>
     </div>
 
-    <!-- Breadcrumb -->
-    <div class="tm-file-manager__breadcrumb">
+    <!-- Breadcrumb — same isolation as the toolbar (native <button> items). -->
+    <div class="tm-file-manager__breadcrumb" @onkeydown:stopPropagation="true">
         <button type="button" class="tm-file-manager__breadcrumb-root" @onclick="NavigateToRoot">
             <TmIcon Name="home" />
         </button>
@@ -69,7 +72,9 @@
         <!-- Folder Tree Sidebar -->
         @if (ShowFolderTree)
         {
-            <div class="tm-file-manager__sidebar">
+            @* Same isolation as the toolbar: folder buttons are native
+               <button> elements — keep their keys out of the grid handler. *@
+            <div class="tm-file-manager__sidebar" @onkeydown:stopPropagation="true">
                 <div class="tm-file-manager__sidebar-header">
                     <span class="tm-file-manager__sidebar-title">@Loc["TmFileManager_Folders"]</span>
                 </div>
@@ -155,6 +160,10 @@
         </div>
     </div>
 
+    @* Overlay layer: upload progress + dialogs contain native <button>s whose
+       keydowns must not bubble into the grid handler (Enter on a dialog button
+       would also open the focused item). *@
+    <div @onkeydown:stopPropagation="true">
     <TmFileUploadProgress Uploads="_uploads"
                           OnCancel="CancelUploadAsync"
                           OnResume="ResumeUploadAsync"
@@ -170,5 +179,6 @@
               CancelButtonText="@Loc["TmFileManager_CancelDelete"]"
               IsDangerous="true"
               OnResult="HandleDeleteDialogResult" />
+    </div>
 
 </div>

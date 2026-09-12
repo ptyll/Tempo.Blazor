@@ -145,11 +145,12 @@ public partial class TmNotionBlockTypeSwitcher : ComponentBase
             case "ArrowUp":
                 _highlightedIndex = (_highlightedIndex - 1 + _flatItems.Count) % _flatItems.Count;
                 break;
-            case "Enter":
-            case " ":
-                if (_highlightedIndex >= 0 && _highlightedIndex < _flatItems.Count)
-                    await SelectTypeAsync(_flatItems[_highlightedIndex].Type);
-                break;
+            // No Enter/Space activation: this panel is never focused itself (no
+            // tabindex), so those keys only ever arrive by bubbling from a
+            // focused item <button> — which the browser also turns into a click
+            // that reaches SelectTypeAsync via @onclick. Selecting the
+            // highlighted item here too fired OnTypeChanged twice per key press
+            // (and could pick a different item than the one activated).
             case "Escape":
                 await OnClosed.InvokeAsync();
                 break;

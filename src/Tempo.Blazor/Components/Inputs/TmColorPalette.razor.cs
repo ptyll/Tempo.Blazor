@@ -155,7 +155,7 @@ public partial class TmColorPalette
         _keyboardIndex = Math.Clamp(index, 0, Math.Max(0, _effectiveColors.Count - 1));
     }
 
-    private async Task HandleSwatchKeyDownAsync(KeyboardEventArgs args, int index)
+    private void HandleSwatchKeyDown(KeyboardEventArgs args, int index)
     {
         if (_effectiveColors.Count == 0)
         {
@@ -183,10 +183,10 @@ public partial class TmColorPalette
             return;
         }
 
-        if (args.Key is "Enter" or " " or "Space" or "Spacebar")
-        {
-            await SelectColorAsync(_effectiveColors[_keyboardIndex]);
-        }
+        // No Enter/Space emulation: swatches are native <button> elements, so
+        // the browser itself produces the activation click (Enter on keydown,
+        // Space on keyup) which reaches SelectColorAsync via @onclick.
+        // Selecting here too fired ValueChanged twice per key press.
     }
 
     private int MoveIndex(int index, int delta)

@@ -141,7 +141,7 @@ public class TmCommandPaletteTests : LocalizationTestBase
         // First item is highlighted on open.
         cut.FindAll(".tm-command-palette-item")[0].ClassList.Should().Contain("tm-command-palette-item-focused");
 
-        cut.Find(".tm-command-palette").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-command-palette-input").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
 
         var items = cut.FindAll(".tm-command-palette-item");
         items[0].ClassList.Should().NotContain("tm-command-palette-item-focused");
@@ -155,7 +155,7 @@ public class TmCommandPaletteTests : LocalizationTestBase
             .Add(c => c.IsOpen, true)
             .Add(c => c.Actions, MakeActions()));
 
-        cut.Find(".tm-command-palette").KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        cut.Find(".tm-command-palette-input").KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
 
         var items = cut.FindAll(".tm-command-palette-item");
         items[^1].ClassList.Should().Contain("tm-command-palette-item-focused");
@@ -174,10 +174,38 @@ public class TmCommandPaletteTests : LocalizationTestBase
             .Add(c => c.IsOpen, true)
             .Add(c => c.Actions, actions));
 
-        cut.Find(".tm-command-palette").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
-        cut.Find(".tm-command-palette").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-command-palette-input").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-command-palette-input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         executed.Should().Be("Second");
+    }
+
+    [Fact]
+    public void TmCommandPalette_Enter_On_Close_Button_Closes_Without_Executing()
+    {
+        // The close control is a native <button>: Enter produces a click on
+        // keydown. When the container also ran the highlighted action from its
+        // keydown handler, one press executed an action AND closed the palette.
+        var executed = 0;
+        var isOpen = true;
+        var actions = new ICommandPaletteAction[]
+        {
+            new TestAction("a1", "First", null, Execute: () => { executed++; return Task.CompletedTask; }),
+        };
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Actions, actions)
+            .Add(c => c.IsOpenChanged,
+                EventCallback.Factory.Create<bool>(this, v => isOpen = v)));
+
+        var close = cut.Find(".tm-command-palette-close");
+        // Real browser sequence for Enter on a focused <button>:
+        // keydown -> native click on the same element.
+        close.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-command-palette-close").Click();
+
+        executed.Should().Be(0);
+        isOpen.Should().BeFalse();
     }
 
     [Fact]

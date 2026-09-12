@@ -167,17 +167,12 @@
             case "End":
                 MoveActiveToEnd();
                 break;
-            case "Enter":
-            case " ":
-                var active = MenuItems.ElementAtOrDefault(ActiveIndex);
-                if (active?.IsEnabled == true)
-                {
-                    await OnCommandRequested.InvokeAsync(active.CommandName);
-                    // Fáze 18: po vykonání příkazu Enter/Space nebublá do rodiče (rodič by
-                    // klávesu zpracoval znovu — např. re-toggle menu).
-                    return;
-                }
-                break;
+            // No Enter/Space emulation: menu items are native <button> elements,
+            // so the browser itself produces the activation click (Enter on
+            // keydown, Space on keyup) which reaches OnCommandRequested via
+            // @onclick. Running the command here too executed it twice per key
+            // press. The key simply falls through to OnMenuItemKeyDown — the
+            // parent only reacts to Escape, so this is safe.
         }
 
         await OnMenuItemKeyDown.InvokeAsync(args);
