@@ -56,6 +56,9 @@
         }
     }
 
+    // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is
+    // a div[role=button], not a native <button>, so the browser never produces
+    // a click for Enter/Space on its own.
     private void HandleTriggerKeyDown(KeyboardEventArgs e)
     {
         if (e.Key is "Enter" or " ")

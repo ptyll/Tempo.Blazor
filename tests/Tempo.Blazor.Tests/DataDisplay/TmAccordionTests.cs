@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Tests.Localization;
@@ -131,12 +132,29 @@ public class TmAccordionTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Accordion_KeyboardEnter_TogglesItem()
+    public void Accordion_KeyboardEnter_TogglesItem_ExactlyOnce()
     {
-        var cut = RenderAccordion();
+        var cut = RenderAccordion(withKeySinks: true);
 
         var header = cut.FindAll(".tm-accordion-item__header")[0];
+        // Native <button> sequence for Enter: keydown -> click. Emulating the
+        // activation in keydown would toggle twice (expand then collapse = no-op).
         header.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        header.Click();
+
+        cut.FindAll(".tm-accordion-item--expanded").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Accordion_KeyboardSpace_TogglesItem_ExactlyOnce()
+    {
+        var cut = RenderAccordion(withKeySinks: true);
+
+        var header = cut.FindAll(".tm-accordion-item__header")[0];
+        // Native <button> sequence for Space: keydown -> keyup -> click.
+        header.KeyDown(new KeyboardEventArgs { Key = " " });
+        header.KeyUp(new KeyboardEventArgs { Key = " " });
+        header.Click();
 
         cut.FindAll(".tm-accordion-item--expanded").Should().HaveCount(1);
     }
@@ -162,10 +180,20 @@ public class TmAccordionTests : LocalizationTestBase
     }
 
     // ── Helper ─────────────────────────────────────────────
-    private IRenderedComponent<TmAccordion> RenderAccordion(bool multiple = false)
+    // withKeySinks attaches no-op key handlers to the accordion root so bUnit
+    // can dispatch keydown/keyup on the header buttons (bUnit requires a
+    // handler on the target or an ancestor; real browsers bubble to document).
+    private IRenderedComponent<TmAccordion> RenderAccordion(bool multiple = false, bool withKeySinks = false)
     {
         return Render<TmAccordion>(p => p
             .Add(x => x.Multiple, multiple)
+            .Add(x => x.AdditionalAttributes, withKeySinks
+                ? new Dictionary<string, object>
+                {
+                    ["onkeydown"] = EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }),
+                    ["onkeyup"] = EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }),
+                }
+                : null)
             .AddChildContent<TmAccordionItem>(i => i
                 .Add(x => x.Title, "First")
                 .AddChildContent("Content One"))

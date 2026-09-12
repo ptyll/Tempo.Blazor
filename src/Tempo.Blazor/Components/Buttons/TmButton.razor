@@ -8,7 +8,6 @@
         tabindex="@TabIndex"
         aria-label="@AriaLabel"
         @onclick="HandleClickAsync"
-        @onkeydown="HandleKeyDownAsync"
         @attributes="AdditionalAttributes">
 
     @if (IsLoading)
@@ -126,10 +125,7 @@
         if (!Disabled && !IsLoading)
             await OnClick.InvokeAsync();
     }
-
-    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
-    {
-        if (e.Key is "Enter" or " ")
-            await HandleClickAsync();
-    }
+    // No keydown emulation: a native <button> already produces click for
+    // Enter (on keydown) and Space (on keyup). A synthetic activation here
+    // fired OnClick twice per key press.
 }

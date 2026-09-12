@@ -52,7 +52,7 @@
                                 disabled="@(!command.IsEnabled)"
                                 tabindex="@(selected ? "0" : "-1")"
                                 title="@GetDisabledReason(command)"
-                                @onkeydown="args => HandleItemKeyDownAsync(args, index, command.Name)"
+                                @onkeydown="args => HandleItemKeyDownAsync(args, index)"
                                 @onclick="() => ExecuteAsync(command.Name)">
                             @if (!string.IsNullOrWhiteSpace(command.Icon))
                             {
@@ -188,15 +188,14 @@
         return args.Key == "Escape" ? CloseAsync() : Task.CompletedTask;
     }
 
-    private Task HandleItemKeyDownAsync(KeyboardEventArgs args, int index, string commandName)
+    private Task HandleItemKeyDownAsync(KeyboardEventArgs args, int index)
     {
         _highlightedIndex = index;
 
-        if (args.Key is "Enter" or " ")
-        {
-            return ExecuteAsync(commandName);
-        }
-
+        // No Enter/Space emulation: items are native <button> elements, so the
+        // browser itself produces the activation click (Enter on keydown,
+        // Space on keyup) which reaches ExecuteAsync via @onclick. Executing
+        // here too ran the command twice per key press.
         return HandleListKeyDownAsync(args, executeOnEnter: false);
     }
 

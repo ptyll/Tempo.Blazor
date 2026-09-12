@@ -7,8 +7,7 @@
             class="tm-accordion-item__header"
             aria-expanded="@(IsExpanded ? "true" : "false")"
             disabled="@(Disabled ? true : (bool?)null)"
-            @onclick="Toggle"
-            @onkeydown="HandleKeyDown">
+            @onclick="Toggle">
         <div class="tm-accordion-item__header-text">
             @if (!string.IsNullOrEmpty(Icon))
             {
@@ -88,12 +87,7 @@
         IsExpanded = !IsExpanded;
         Parent?.OnItemToggled(this);
     }
-
-    private void HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key is "Enter" or " ")
-        {
-            Toggle();
-        }
-    }
+    // No keydown emulation: the header is a native <button>, which produces
+    // click for Enter (on keydown) and Space (on keyup) by itself. A synthetic
+    // activation here toggled the item twice per key press (a no-op bug).
 }

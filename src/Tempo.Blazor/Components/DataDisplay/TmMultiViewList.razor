@@ -1074,6 +1074,9 @@
         }
     };
 
+    // Keyboard emulation is REQUIRED here (unlike on TmButton): the clickable
+    // rows/cards/items are <tr>/<div>/<li> elements, not native <button>, so
+    // the browser never produces a click for Enter/Space on its own.
     private Task HandleItemKeyDownAsync(KeyboardEventArgs e, TItem item)
     {
         if (e.Key is "Enter" or " ")

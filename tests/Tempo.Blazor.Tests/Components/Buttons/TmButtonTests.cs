@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Buttons;
 using Tempo.Blazor.Components.Icons;
@@ -247,30 +248,173 @@ public class TmButtonTests : LocalizationTestBase
         clicked.Should().BeTrue();
     }
 
+    // ─── Keyboard activation ──────────────────────────────────────────────────
+    // A native <button> already produces "click" from the keyboard:
+    // Enter fires click on keydown, Space on keyup. TmButton must not emulate
+    // that in @onkeydown — emulation + the native click invoke OnClick TWICE
+    // per key press. bUnit does not synthesize the native keyboard->click
+    // behavior, so each test dispatches the full real-browser event sequence.
+    // The no-op key handlers on the host wrapper exist only because bUnit
+    // refuses to dispatch an event that has no handler on the target or its
+    // ancestors; a real browser always bubbles key events to the document.
+
     [Fact]
-    public void TmButton_Enter_Key_Fires_OnClick()
+    public void TmButton_KeyDown_Alone_Does_Not_Fire_OnClick()
     {
-        var clicked = false;
-        var cut = Render<TmButton>(p => p
-            .Add(c => c.OnClick, EventCallback.Factory.Create(this, () => { clicked = true; }))
-            .AddChildContent("Click"));
+        // keydown is not an activation — the browser delivers the click itself.
+        var clicks = 0;
+        var cut = Render<ButtonHost>(p => p
+            .Add(h => h.OnClick, EventCallback.Factory.Create(this, () => { clicks++; })));
 
         cut.Find("button").KeyDown(Key.Enter);
 
-        clicked.Should().BeTrue();
+        clicks.Should().Be(0);
     }
 
     [Fact]
-    public void TmButton_Space_Key_Fires_OnClick()
+    public void TmButton_Enter_Sequence_Fires_OnClick_Exactly_Once()
     {
-        var clicked = false;
-        var cut = Render<TmButton>(p => p
-            .Add(c => c.OnClick, EventCallback.Factory.Create(this, () => { clicked = true; }))
-            .AddChildContent("Click"));
+        var clicks = 0;
+        var cut = Render<ButtonHost>(p => p
+            .Add(h => h.OnClick, EventCallback.Factory.Create(this, () => { clicks++; })));
 
-        cut.Find("button").KeyDown(" ");
+        var button = cut.Find("button");
+        // Real browser sequence for Enter on a focused <button>:
+        // keydown -> native click on the same element.
+        button.KeyDown(Key.Enter);
+        button.Click();
 
-        clicked.Should().BeTrue();
+        clicks.Should().Be(1);
+    }
+
+    [Fact]
+    public void TmButton_Space_Sequence_Fires_OnClick_Exactly_Once()
+    {
+        var clicks = 0;
+        var cut = Render<ButtonHost>(p => p
+            .Add(h => h.OnClick, EventCallback.Factory.Create(this, () => { clicks++; })));
+
+        var button = cut.Find("button");
+        // Real browser sequence for Space: keydown -> keyup -> native click.
+        button.KeyDown(" ");
+        button.KeyUp(" ");
+        button.Click();
+
+        clicks.Should().Be(1);
+    }
+
+    [Fact]
+    public void TmButton_FocusRestoreContainer_KeySequence_Does_Not_Double_Fire()
+    {
+        // Regression test: a "trap" container (popover/dialog-style) closes on
+        // keydown and restores focus to its TmButton trigger — so the trailing
+        // native keyup/click lands on the trigger. With the old keydown
+        // emulation OnClick fired twice per key press (the second invocation
+        // re-opened the panel / re-triggered the action).
+        var cut = Render<FocusRestoreTrapHost>();
+
+        // Open the panel with a native click.
+        var trigger = cut.Find("button.tm-btn");
+        trigger.Click();
+        cut.FindAll(".trap-panel").Should().HaveCount(1);
+        cut.Instance.TriggerClickCount.Should().Be(1);
+
+        // Space on the focused trigger: keydown (container restores focus to
+        // the trigger) -> keyup -> native click delivered to the trigger.
+        trigger.KeyDown(" ");
+        trigger.KeyUp(" ");
+        trigger.Click();
+
+        cut.Instance.FocusRestoredToTrigger.Should().BeTrue();
+        cut.Instance.TriggerClickCount.Should().Be(2, "one activation per gesture");
+        cut.FindAll(".trap-panel").Should().BeEmpty("the panel must not re-open");
+    }
+
+    /// <summary>
+    /// Hosts a <see cref="TmButton"/> inside a div that carries no-op key
+    /// handlers so bUnit can dispatch keydown/keyup on the button (bUnit
+    /// requires a handler on the target or an ancestor; real browsers bubble
+    /// key events to the document regardless).
+    /// </summary>
+    private sealed class ButtonHost : ComponentBase
+    {
+        [Parameter] public EventCallback OnClick { get; set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "onkeydown",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+            builder.AddAttribute(2, "onkeyup",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+
+            builder.OpenComponent<TmButton>(3);
+            builder.AddAttribute(4, "OnClick", OnClick);
+            builder.AddAttribute(5, "ChildContent",
+                (RenderFragment)(b => b.AddContent(0, "Click")));
+            builder.CloseComponent();
+
+            builder.CloseElement();
+        }
+    }
+
+    /// <summary>
+    /// Models a focus-restore "trap" container (popover/dialog-style): on
+    /// keydown it moves focus back to the TmButton trigger — recorded here as
+    /// <see cref="FocusRestoredToTrigger"/> (a real implementation calls
+    /// element.focus(); bUnit has no focus system, so the test dispatches the
+    /// trailing keyup/click on the trigger element directly, exactly where the
+    /// browser delivers them once focus is restored). The panel close itself
+    /// is the trigger's toggle action, so the panel end-state reflects exactly
+    /// one OnClick invocation per key gesture.
+    /// </summary>
+    private sealed class FocusRestoreTrapHost : ComponentBase
+    {
+        public bool PanelOpen { get; private set; }
+        public int TriggerClickCount { get; private set; }
+        public bool FocusRestoredToTrigger { get; private set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "onkeydown",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, HandleKeyDown));
+            // no-op keyup sink — bUnit needs a handler somewhere on the bubble
+            // path to dispatch the event at all.
+            builder.AddAttribute(2, "onkeyup",
+                EventCallback.Factory.Create<KeyboardEventArgs>(this, _ => { }));
+
+            builder.OpenComponent<TmButton>(2);
+            builder.AddAttribute(3, "OnClick",
+                EventCallback.Factory.Create(this, HandleTriggerClick));
+            builder.AddAttribute(4, "ChildContent",
+                (RenderFragment)(b => b.AddContent(0, "Trigger")));
+            builder.CloseComponent();
+
+            if (PanelOpen)
+            {
+                builder.OpenElement(5, "div");
+                builder.AddAttribute(6, "class", "trap-panel");
+                builder.CloseElement();
+            }
+
+            builder.CloseElement();
+        }
+
+        private void HandleTriggerClick()
+        {
+            TriggerClickCount++;
+            PanelOpen = !PanelOpen;
+        }
+
+        private void HandleKeyDown(KeyboardEventArgs e)
+        {
+            // The container's own close+focus-restore runs on keydown; the
+            // panel close itself is driven by the trigger's toggle action so
+            // that the end state reflects exactly one OnClick invocation.
+            if (e.Key is "Enter" or " ")
+                FocusRestoredToTrigger = true;
+        }
     }
 
     // ─── TabIndex ─────────────────────────────────────────────────────────────
