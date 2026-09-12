@@ -111,6 +111,15 @@
     [Parameter] public RenderFragment<DocumentAutocompleteItem>? ItemTemplate { get; set; }
 
     /// <summary>Raised when an item is selected.</summary>
+    /// <remarks>
+    /// The menu itself never activates an item on Enter: item buttons are
+    /// native <c>&lt;button&gt;</c>s whose keydown→click already reaches
+    /// this callback (see <c>HandleKeyDownAsync</c>), and this container is
+    /// never focused. Hosts that keep DOM focus inside an editor input while
+    /// the menu is open own the Enter key — wire
+    /// <c>Enter → OnItemSelected(Items[HighlightedIndex])</c> on the host's
+    /// input handler, after <c>OnHighlightedIndexChanged</c> arrow updates.
+    /// </remarks>
     [Parameter] public EventCallback<DocumentAutocompleteItem> OnItemSelected { get; set; }
 
     /// <summary>Raised when the highlighted index changes.</summary>

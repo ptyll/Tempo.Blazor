@@ -554,4 +554,135 @@ public class TmMultiSelectTests : LocalizationTestBase
         changes[0].Should().Equal("banana");
         cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
     }
+
+    // ── AllowFiltering=false keyboard path ──────────────────────────────────
+    // With no filter input there is no focusable element inside the popup, so
+    // DOM focus stays on the trigger combobox. The trigger therefore carries
+    // the option navigation itself (aria-activedescendant pattern): arrows
+    // move the highlight, Enter/Space toggles the highlighted option.
+
+    [Theory]
+    [InlineData("Enter")]
+    [InlineData(" ")]
+    public void TmMultiSelect_NoFilter_ArrowDown_Then_Key_Toggles_Focused_Option_Once(string key)
+    {
+        var changes = new List<IReadOnlyList<string>>();
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.AllowFiltering, false)
+            .Add(c => c.ShowCheckBox, true) // checkbox mode keeps the popup open after a toggle
+            .Add(c => c.ValuesChanged,
+                EventCallback.Factory.Create<IReadOnlyList<string>>(this, v => changes.Add(v))));
+
+        var trigger = cut.Find(".tm-multiselect");
+        trigger.KeyDown(new KeyboardEventArgs { Key = "Enter" }); // open
+        cut.Find(".tm-multiselect__popup").Should().NotBeNull();
+        cut.FindAll(".tm-multiselect__filter-input").Should().BeEmpty();
+
+        trigger.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-multiselect__option--focused").Should().NotBeNull();
+        trigger.KeyDown(new KeyboardEventArgs { Key = key });
+
+        changes.Should().HaveCount(1);
+        changes[0].Should().Equal("apple");
+        cut.FindAll(".tm-multiselect__popup").Should().ContainSingle("CheckBox mode stays open");
+    }
+
+    [Fact]
+    public void TmMultiSelect_NoFilter_Trigger_Carries_AriaActiveDescendant()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Id, "ms-no-filter")
+            .Add(c => c.AllowFiltering, false));
+
+        var trigger = cut.Find(".tm-multiselect");
+        trigger.Click();
+        trigger.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        trigger.GetAttribute("aria-activedescendant").Should().Be("ms-no-filter-opt-0");
+        cut.Find("#ms-no-filter-opt-0").ClassList.Should().Contain("tm-multiselect__option--focused");
+    }
+
+    // ── Focus management ────────────────────────────────────────────────────
+    // Opening focuses the filter input; every close destroys it, so focus is
+    // restored to the trigger combobox (WCAG 2.4.3). ElementReference.FocusAsync
+    // surfaces in bUnit's Loose JSInterop as "Blazor._internal.domWrapper.focus".
+
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+
+    [Fact]
+    public void TmMultiSelect_Open_Focuses_Filter_Input()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").Click();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+    }
+
+    [Fact]
+    public void TmMultiSelect_Open_Without_Filtering_Does_Not_Focus_Anything()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.AllowFiltering, false));
+
+        cut.Find(".tm-multiselect").Click();
+
+        // Focus stays on the trigger — nothing inside the popup to move it to.
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(0);
+    }
+
+    [Fact]
+    public void TmMultiSelect_Escape_In_Popup_Restores_Focus_To_Trigger()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        // The filter input's own keydown handler only handles Enter — Escape
+        // bubbles to the popup container, which closes and restores focus.
+        cut.Find(".tm-multiselect__filter-input")
+            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+    }
+
+    [Fact]
+    public void TmMultiSelect_Confirm_Closes_And_Restores_Focus_To_Trigger()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.ShowConfirmButton, true));
+
+        cut.Find(".tm-multiselect").Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        cut.Find(".tm-multiselect__confirm-btn").Click();
+
+        cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+    }
 }

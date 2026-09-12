@@ -19,9 +19,11 @@
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
          aria-haspopup="listbox"
          aria-owns="@(Id + "-listbox")"
+         aria-activedescendant="@(!AllowFiltering ? ActiveOptionId : null)"
          aria-required="@(Required ? "true" : null)"
          aria-invalid="@(IsInvalid ? "true" : null)"
          aria-describedby="@DescribedBy"
+         @ref="_triggerRef"
          @onclick="ToggleDropdownAsync"
          @onkeydown="HandleTriggerKeyDownAsync">
 
@@ -135,7 +137,8 @@
                            @oninput="HandleFilterInputAsync"
                            @onkeydown="HandleFilterKeyDownAsync"
                            @onclick:stopPropagation="true"
-                           aria-label="@Loc["TmMultiSelect_Search"]" />
+                           aria-label="@Loc["TmMultiSelect_Search"]"
+                           aria-activedescendant="@(AllowFiltering ? ActiveOptionId : null)" />
                 </div>
             }
 
@@ -239,6 +242,7 @@
 @{
     RenderFragment RenderOption(TItem item, int idx) =>
         @<div class="tm-multiselect__option @(IsSelected(item) ? "tm-multiselect__option--selected" : "") @(idx == _focusedIndex ? "tm-multiselect__option--focused" : "") @(IsMaxReached && !IsSelected(item) ? "tm-multiselect__option--disabled" : "")"
+             id="@($"{Id}-opt-{idx}")"
              role="option"
              aria-selected="@IsSelected(item).ToString().ToLowerInvariant()"
              @key="GetItemId(item)"

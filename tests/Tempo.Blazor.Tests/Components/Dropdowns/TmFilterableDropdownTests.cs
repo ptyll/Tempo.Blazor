@@ -326,4 +326,111 @@ public class TmFilterableDropdownTests : LocalizationTestBase
         cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
     }
 
+    // ── Focus management ────────────────────────────────────────────────────
+    // Opening moves DOM focus into the filter input; closing destroys that
+    // input. Without an explicit restore, focus falls to <body> (WCAG 2.4.3).
+    // Close paths that can carry popup focus (menu Escape, item select) return
+    // it to the trigger — ElementReference.FocusAsync surfaces in bUnit's
+    // Loose JSInterop as a "Blazor._internal.domWrapper.focus" invocation.
+
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+
+    [Fact]
+    public void TmFilterableDropdown_Open_Focuses_Filter_Input()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Escape_In_Filter_Restores_Focus_To_Trigger()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        // The filter input has no Escape handler — it bubbles to the menu,
+        // which closes and restores focus to the trigger.
+        cut.Find(".tm-filterable-dropdown-filter-input")
+            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Enter_Select_Restores_Focus_To_Trigger()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+        var input = cut.Find(".tm-filterable-dropdown-filter-input");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Item_Click_Restores_Focus_To_Trigger()
+    {
+        // Clicking an option div does not move DOM focus — it stays on the
+        // filter input, which is then destroyed with the popup.
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+        cut.FindAll(".tm-filterable-dropdown-item").First().Click();
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+    }
+
+    // ── Combobox/listbox semantics ──────────────────────────────────────────
+
+    [Fact]
+    public void TmFilterableDropdown_AriaLabel_Sets_Trigger_Accessible_Name()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.AriaLabel, "Fruit picker"));
+
+        cut.Find(".tm-filterable-dropdown-trigger")
+            .GetAttribute("aria-label").Should().Be("Fruit picker");
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Items_Have_Option_Role_And_AriaSelected()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.Value, FruitOptions[1])
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+
+        var items = cut.FindAll(".tm-filterable-dropdown-item");
+        items.Should().AllSatisfy(i => i.GetAttribute("role").Should().Be("option"));
+        items[1].GetAttribute("aria-selected").Should().Be("true");
+        items[0].GetAttribute("aria-selected").Should().Be("false");
+    }
+
 }

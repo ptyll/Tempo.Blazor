@@ -167,6 +167,50 @@ public partial class TmMultiSelect<TItem, TValue>
     private List<TItem> _providerItems = [];
     private CancellationTokenSource? _debounceToken;
     private ElementReference _filterInputRef;
+    private ElementReference _triggerRef;
+    private bool _focusFilterPending;
+    private bool _focusTriggerAfterClose;
+
+    // ── Lifecycle ────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Opening moved DOM focus into the filter input so the user can type
+        // immediately; the same move means every close destroys the focused
+        // element, which is why the close paths restore to the trigger.
+        if (_focusFilterPending && _isOpen)
+        {
+            _focusFilterPending = false;
+            if (AllowFiltering)
+            {
+                try
+                {
+                    await _filterInputRef.FocusAsync();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Best-effort: the element/JS may not be ready (e.g. prerender). Ignore.
+                }
+            }
+        }
+
+        // Focus was inside the popup when it closed — return it to the
+        // trigger combobox instead of dropping it to <body> (WCAG 2.4.3).
+        // Mirrors TmColorPicker's close-restore pattern.
+        if (_focusTriggerAfterClose)
+        {
+            _focusTriggerAfterClose = false;
+            try
+            {
+                await _triggerRef.FocusAsync(preventScroll: true);
+            }
+            catch (InvalidOperationException)
+            {
+                // Best-effort, same as above.
+            }
+        }
+    }
 
     // ── Computed ──────────────────────────────────────────────────
 
@@ -189,6 +233,11 @@ public partial class TmMultiSelect<TItem, TValue>
     }
 
     private bool IsMaxReached => MaxSelectionCount > 0 && Values.Count >= MaxSelectionCount;
+
+    // aria-activedescendant target for the currently-highlighted option. The
+    // option ids are generated in RenderOption as "{Id}-opt-{visible index}".
+    private string? ActiveOptionId =>
+        _isOpen && _focusedIndex >= 0 ? $"{Id}-opt-{_focusedIndex}" : null;
 
     private string GetItemId(TItem item)
     {
@@ -239,12 +288,17 @@ public partial class TmMultiSelect<TItem, TValue>
         {
             _filterText = string.Empty;
             _focusedIndex = -1;
+            // Move DOM focus into the filter input once the popup has rendered.
+            _focusFilterPending = true;
             if (DataProvider is not null)
                 await LoadFromProviderAsync();
             await OnOpen.InvokeAsync();
         }
         else
         {
+            // Focus was inside the popup (filter input / a popup control) —
+            // restore to the trigger.
+            _focusTriggerAfterClose = true;
             await OnClose.InvokeAsync();
         }
     }
@@ -298,7 +352,10 @@ public partial class TmMultiSelect<TItem, TValue>
 
         // In plain chip/delimiter modes (no checkboxes), close after selection
         if (!ShowCheckBox && Mode != MultiSelectMode.CheckBox)
+        {
             _isOpen = false;
+            _focusTriggerAfterClose = true;
+        }
     }
 
     private async Task RemoveItemAsync(TValue val)
@@ -331,6 +388,7 @@ public partial class TmMultiSelect<TItem, TValue>
     private async Task ConfirmSelectionAsync()
     {
         _isOpen = false;
+        _focusTriggerAfterClose = true;
         await OnClose.InvokeAsync();
     }
 
@@ -361,8 +419,26 @@ public partial class TmMultiSelect<TItem, TValue>
     {
         switch (e.Key)
         {
+            // With AllowFiltering=false there is no focusable element inside the
+            // popup, so DOM focus stays on this combobox and the combobox
+            // carries the option navigation (aria-activedescendant pattern):
+            // arrows move _focusedIndex, Enter/Space toggles that option. The
+            // trigger is a non-native focusable — this emulation is legitimate.
+            case "Enter" or " " when _isOpen && !AllowFiltering && _focusedIndex >= 0:
+            {
+                var items = GetVisibleItems().ToList();
+                if (_focusedIndex < items.Count)
+                    await ToggleItemAsync(items[_focusedIndex]);
+                break;
+            }
             case "Enter" or " ":
                 await ToggleDropdownAsync();
+                break;
+            case "ArrowDown" when _isOpen && !AllowFiltering:
+                _focusedIndex = Math.Min(_focusedIndex + 1, GetVisibleItems().Count() - 1);
+                break;
+            case "ArrowUp" when _isOpen && !AllowFiltering:
+                _focusedIndex = Math.Max(_focusedIndex - 1, 0);
                 break;
             case "Escape" when _isOpen:
                 _isOpen = false;
@@ -384,6 +460,9 @@ public partial class TmMultiSelect<TItem, TValue>
         {
             case "Escape":
                 _isOpen = false;
+                // Keydown inside the popup means focus was inside it (filter
+                // input or a popup control) — it is destroyed now, restore.
+                _focusTriggerAfterClose = true;
                 await OnClose.InvokeAsync();
                 break;
             case "ArrowDown":

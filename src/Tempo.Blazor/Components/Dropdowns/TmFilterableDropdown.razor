@@ -10,8 +10,10 @@
     <div class="tm-filterable-dropdown-trigger"
          role="combobox"
          tabindex="0"
+         aria-label="@AriaLabel"
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
          aria-haspopup="listbox"
+         @ref="_triggerRef"
          @onclick="ToggleAsync"
          @onkeydown="HandleTriggerKeyDownAsync">
         @if (Value is null || IsEmptyValue(Value))
@@ -73,6 +75,8 @@
                         var item = filtered[i];
                         var idx = i;
                         <div class="tm-filterable-dropdown-item @(idx == _selectedIndex ? "tm-filterable-dropdown-item-selected" : "")"
+                             role="option"
+                             aria-selected="@IsValue(item).ToString().ToLowerInvariant()"
                              @key="GetItemKey(item)"
                              @onclick="() => SelectItemAsync(item)">
                             @if (ItemTemplate is not null)
@@ -138,6 +142,12 @@
     [Parameter] public bool Disabled { get; set; }
 
     /// <summary>
+    /// Accessible name for the combobox trigger. When null the visible
+    /// placeholder/value text inside the trigger names it instead.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>
     /// When true (default), filtering ignores diacritics via FormD normalization —
     /// e.g. "usti" matches "Ústí" and "práha" matches "Praha". Set to false for
     /// accent-sensitive (but still case-insensitive) filtering.
@@ -155,7 +165,9 @@
     private int _selectedIndex = -1;
     private List<TItem> _providerItems = [];
     private ElementReference _filterInput;
+    private ElementReference _triggerRef;
     private bool _focusFilterPending;
+    private bool _focusTriggerAfterClose;
 
     private async Task ToggleAsync()
     {
@@ -182,6 +194,22 @@
             catch (InvalidOperationException)
             {
                 // Best-effort: the element/JS may not be ready (e.g. during prerender). Ignore.
+            }
+        }
+
+        // Focus was inside the popup when it closed (the filter input is
+        // destroyed with it) — give it back to the trigger so it does not
+        // fall to <body>. Mirrors TmColorPicker's close-restore pattern.
+        if (_focusTriggerAfterClose)
+        {
+            _focusTriggerAfterClose = false;
+            try
+            {
+                await _triggerRef.FocusAsync(preventScroll: true);
+            }
+            catch (InvalidOperationException)
+            {
+                // Best-effort, same as above.
             }
         }
     }
@@ -218,6 +246,9 @@
         await ValueChanged.InvokeAsync(item);
         _isOpen = false;
         _filterText = string.Empty;
+        // Focus was on the filter input (Enter-select, or an option click —
+        // clicking a non-focusable div keeps focus where it was) — restore.
+        _focusTriggerAfterClose = true;
     }
 
     private async Task ClearValueAsync()
@@ -260,6 +291,9 @@
         {
             case "Escape":
                 _isOpen = false;
+                // Keydown inside the menu means focus was inside the popup
+                // (the filter input) — it is destroyed now, restore to trigger.
+                _focusTriggerAfterClose = true;
                 break;
             case "ArrowDown":
                 _selectedIndex = Math.Min(_selectedIndex + 1, filtered.Count - 1);
@@ -300,6 +334,11 @@
 
     private bool IsEmptyValue(TItem value) =>
         value is null || (value is string s && string.IsNullOrEmpty(s));
+
+    // aria-selected on a listbox option reflects the selected VALUE — the
+    // _selectedIndex highlight (tm-…-item-selected class) is the keyboard
+    // cursor, a different concept.
+    private bool IsValue(TItem item) => EqualityComparer<TItem>.Default.Equals(item, Value);
 
     private string GetDisplayText(TItem item)
     {
