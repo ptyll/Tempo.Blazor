@@ -235,6 +235,9 @@ No hardcoded colors/sizes in CSS. Always use tokens:
 }
 ```
 
+#### Keyboard Activation
+Exactly one activation per key press: never emulate Enter/Space on native activatable elements, always emulate on non-native focusables, and fence native children inside emulating containers with `@onkeydown:stopPropagation`. See [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md).
+
 ### Global Usings
 All components have access to `ITmLocalizer` via `_Imports.razor`:
 ```razor

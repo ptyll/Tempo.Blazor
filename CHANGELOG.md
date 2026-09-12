@@ -36,7 +36,8 @@ from keydown to keyup, so read the consumer notes at the bottom before upgrading
 
 - **Native children nested in a keyboard-handling container are fenced off.**
   `@onkeydown:stopPropagation` barriers now sit on the clear and chip-remove buttons inside
-  `TmMultiSelect`'s trigger (Space on them used to toggle the dropdown on top of the removal), on the
+  `TmMultiSelect`'s trigger and on the clear button inside `TmFilterableDropdown`'s trigger (Space on
+  them used to toggle the dropdown on top of the removal), on the
   selection checkboxes and row-expander button of `TmDataTable` and `TmMultiViewList`, and on the
   toolbar/breadcrumb/sidebar/overlay chrome of `TmFileManager` and `TmDocumentManager`, where a
   bubbled Enter could reach the grid's open/delete handler.
@@ -87,7 +88,8 @@ from keydown to keyup, so read the consumer notes at the bottom before upgrading
   breaking surface of this release.
 - **Newly fenced children also cut off ancestor keydown handlers.** A consumer's own `@onkeydown`
   placed on a wrapper ABOVE the barriered elements — the `TmMultiSelect` clear and chip-remove
-  buttons, `TmDataTable`/`TmMultiViewList` selection checkboxes and row expanders,
+  buttons, the `TmFilterableDropdown` clear button, `TmDataTable`/`TmMultiViewList` selection
+  checkboxes and row expanders,
   `TmFileManager`/`TmDocumentManager` chrome — no longer observes keydowns that originate on those
   children: the `@onkeydown:stopPropagation` barrier stops the bubble before it reaches the wrapper.
   That is the intended effect — the ancestor handler was precisely the collision being fixed — but a
@@ -111,8 +113,12 @@ from keydown to keyup, so read the consumer notes at the bottom before upgrading
 **This number was raised because the content changed** (`DEC-TEMPO-RELEASE-GATE` point 10), and it
 is a patch number because the change is a defect correction plus one additive parameter — the same
 shape 2.8.13 shipped under, which added six parameters and stayed a patch. Publication of 2.8.25
-remains the repository owner's manual step (`DEC-TEMPO-287-NUGET-DELIVERY`):
-`VERSION=2.8.25 eng/pack-nuget-packages.sh`, then `dotnet nuget push packages/*.2.8.25.nupkg`.
+remains the repository owner's manual step (`DEC-TEMPO-287-NUGET-DELIVERY`), and the order is the
+2.1.0 one: **merge to `main` first, tag `v2.8.25` at the commit the packages were packed from, then
+pack and push** — `VERSION=2.8.25 eng/pack-nuget-packages.sh`, then
+`dotnet nuget push packages/*.2.8.25.nupkg`. The `commit` stamp inside each nuspec names that commit,
+so it has to be one consumers can fetch: an artefact stamped with a commit that never lands on `main`
+is a label pointing nowhere.
 **The double-activation defect is live on the feed under 2.8.24.**
 
 ## 2.8.24 - 2026-08-27
