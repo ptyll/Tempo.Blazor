@@ -76,4 +76,108 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
         cut.Find(".tm-spreadsheet-hyperlink__btn--cancel").Click();
         fired.Should().BeTrue();
     }
+
+    // ── Keyboard activation ─────────────────────────────────────────────────
+    // Ctrl+Enter -> save lives on the dialog root; the footer buttons and the
+    // header close button isolate their keydowns so the browser's native
+    // keydown -> click on a <button> can't also trigger the root shortcut.
+
+    [Fact]
+    public void CtrlEnter_OnSaveButton_SavesExactlyOnce()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cut = Render<TmSpreadsheetHyperlinkDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++));
+
+        cut.Find("#hl-target").Input("https://test.com");
+
+        cut.Find(".tm-spreadsheet-hyperlink__btn--ok")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+        cut.Find(".tm-spreadsheet-hyperlink__btn--ok").Click();
+
+        saves.Should().Be(1);
+    }
+
+    [Fact]
+    public void Enter_OnCancelButton_Cancels_WithoutSaving()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cancels = 0;
+        var cut = Render<TmSpreadsheetHyperlinkDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++)
+                .Add(p => p.OnCancel, () => cancels++));
+
+        cut.Find(".tm-spreadsheet-hyperlink__btn--cancel")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-spreadsheet-hyperlink__btn--cancel").Click();
+
+        cancels.Should().Be(1);
+        saves.Should().Be(0);
+    }
+
+    [Fact]
+    public void Escape_OnSaveButton_CancelsOnce()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cancels = 0;
+        var cut = Render<TmSpreadsheetHyperlinkDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++)
+                .Add(p => p.OnCancel, () => cancels++));
+
+        // Escape stays usable from the footer: the actions group handles it
+        // locally and stops it from also reaching the root's Escape case.
+        cut.Find(".tm-spreadsheet-hyperlink__btn--ok")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        cancels.Should().Be(1);
+        saves.Should().Be(0);
+    }
+
+    [Fact]
+    public void CtrlEnter_InInput_StillSaves()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        SpreadsheetHyperlink? saved = null;
+        var cut = Render<TmSpreadsheetHyperlinkDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, h => saved = h));
+
+        cut.Find("#hl-target").Input("https://test.com");
+
+        cut.Find("#hl-target")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+
+        saved.Should().NotBeNull();
+        saved!.Target.Should().Be("https://test.com");
+    }
+
+    [Fact]
+    public void CtrlEnter_OnCloseButton_Cancels_WithoutSaving()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cancels = 0;
+        var cut = Render<TmSpreadsheetHyperlinkDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++)
+                .Add(p => p.OnCancel, () => cancels++));
+
+        cut.Find(".tm-spreadsheet-hyperlink__close")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+        cut.Find(".tm-spreadsheet-hyperlink__close").Click();
+
+        cancels.Should().Be(1);
+        saves.Should().Be(0);
+    }
 }

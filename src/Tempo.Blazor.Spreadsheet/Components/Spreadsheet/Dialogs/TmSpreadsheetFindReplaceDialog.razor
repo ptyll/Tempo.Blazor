@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Spreadsheet.Dialogs
 @using Tempo.Blazor.Components.Spreadsheet.Enums
 
-<div class="tm-spreadsheet-find" role="dialog" aria-label="@Loc["TmSpreadsheet_Find_Title"]" @onkeydown="OnKeyDown">
+<div class="tm-spreadsheet-find" role="dialog" aria-label="@Loc["TmSpreadsheet_Find_Title"]" @onkeydown="OnRootKeyDown">
     <div class="tm-spreadsheet-find__header">
         <span class="tm-spreadsheet-find__title">@Loc["TmSpreadsheet_Find_Title"]</span>
         <button type="button"
@@ -19,7 +19,8 @@
                aria-label="@Loc["TmSpreadsheet_Find_Query"]"
                value="@_query"
                @ref="_queryInput"
-               @oninput="OnQueryInput" />
+               @oninput="OnQueryInput"
+               @onkeydown="OnFieldKeyDown" />
         <span class="tm-spreadsheet-find__counter">@CounterText</span>
     </div>
 
@@ -28,7 +29,8 @@
                placeholder="@Loc["TmSpreadsheet_Find_ReplaceWith"]"
                aria-label="@Loc["TmSpreadsheet_Find_ReplaceWith"]"
                value="@_replacement"
-               @oninput="OnReplacementInput" />
+               @oninput="OnReplacementInput"
+               @onkeydown="OnFieldKeyDown" />
     </div>
 
     <div class="tm-spreadsheet-find__options">

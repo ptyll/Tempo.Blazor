@@ -9,7 +9,10 @@
          @onkeydown="OnKeyDown">
         <div class="tm-spreadsheet-named-range-edit__header">
             <span class="tm-spreadsheet-named-range-edit__title">@(_isNew ? Loc["TmSpreadsheet_NamesEdit_TitleNew"] : Loc["TmSpreadsheet_NamesEdit_Title"])</span>
-            <button type="button" class="tm-spreadsheet-named-range-edit__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]" @onclick="OnCancelClick">
+            @* Native <button>: its keydown must not reach the dialog's
+               Ctrl+Enter -> save shortcut on top of the button's own click. *@
+            <button type="button" class="tm-spreadsheet-named-range-edit__close" title="@Loc["Tm_Close"]" aria-label="@Loc["Tm_Close"]"
+                    @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true" @onclick="OnCancelClick">
                 <TmIcon Name="close" />
             </button>
         </div>
@@ -64,7 +67,11 @@
             </div>
         </div>
 
-        <div class="tm-spreadsheet-named-range-edit__actions">
+        @* Native <button>s: their keydowns must not reach the dialog's
+           Ctrl+Enter -> save shortcut on top of each button's own click.
+           Escape is re-handled locally so it still cancels from the footer. *@
+        <div class="tm-spreadsheet-named-range-edit__actions"
+             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
             <button type="button" class="tm-spreadsheet-named-range-edit__btn tm-spreadsheet-named-range-edit__btn--cancel" @onclick="OnCancelClick">@Loc["TmSpreadsheet_NamesEdit_Cancel"]</button>
             <button type="button" class="tm-spreadsheet-named-range-edit__btn tm-spreadsheet-named-range-edit__btn--ok" @onclick="OnSaveClick">@Loc["TmSpreadsheet_NamesEdit_Save"]</button>
         </div>

@@ -335,6 +335,7 @@
                                            aria-label="@Loc["TmDataTable_SelectRow"]"
                                            checked="@IsSelected(rowItem)"
                                            @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
+                                           @onkeydown:stopPropagation="true"
                                            @onclick:stopPropagation="true" />
                                 </td>
                             }
@@ -441,6 +442,7 @@
                                                 aria-label="@Loc["TmDataTable_ToggleDetail"]"
                                                 aria-expanded="@IsRowExpanded(rowItem).ToString().ToLowerInvariant()"
                                                 data-testid="@TestId("expander")"
+                                                @onkeydown:stopPropagation="true"
                                                 @onclick:stopPropagation="true"
                                                 @onclick="() => ToggleRowDetailAsync(rowItem)">
                                             <span class="tm-row-expander-icon @(IsRowExpanded(rowItem) ? "tm-row-expander-icon--open" : "")" aria-hidden="true"></span>
@@ -454,6 +456,7 @@
                                                aria-label="@Loc["TmDataTable_SelectRow"]"
                                                checked="@IsSelected(rowItem)"
                                                @onchange="e => ToggleRowSelectionAsync(rowItem, e)"
+                                               @onkeydown:stopPropagation="true"
                                                @onclick:stopPropagation="true" />
                                     </td>
                                 }

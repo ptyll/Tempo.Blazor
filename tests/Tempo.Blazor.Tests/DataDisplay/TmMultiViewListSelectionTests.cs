@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Interfaces;
@@ -116,6 +117,39 @@ public class TmMultiViewListSelectionTests : LocalizationTestBase
 
         captured.Should().NotBeNull();
         captured!.Should().NotContain("1");
+    }
+
+    [Fact]
+    public void Selection_Checkbox_Space_Does_Not_Fire_OnItemClick()
+    {
+        // The row <tr> maps Enter/Space to OnItemClick (it is a non-native
+        // focusable, so that emulation is legitimate) — but the checkbox cell
+        // isolates its keydowns with @onkeydown:stopPropagation: the browser
+        // turns Space on a focused checkbox into a checked flip + change event,
+        // and the bubbled keydown must not also fire OnItemClick. bUnit reports
+        // the boundary as "no reachable onkeydown handler" and throws.
+        SelItem? clicked = null;
+        HashSet<string>? captured = null;
+        var cut = Render<TmMultiViewList<SelItem>>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.AllowSelection, true)
+            .Add(c => c.OnItemClick,
+                EventCallback.Factory.Create<SelItem>(this, i => clicked = i))
+            .Add(c => c.SelectedIdsChanged,
+                EventCallback.Factory.Create<HashSet<string>>(this, s => captured = s)));
+
+        // First row checkbox (index 1, index 0 is header "select all")
+        var checkbox = cut.FindAll("input[type='checkbox']")[1];
+        var act = () => checkbox.KeyDown(new KeyboardEventArgs { Key = " " });
+
+        act.Should().Throw<MissingEventHandlerException>(
+            "the selection cell stops keydowns before they reach the row's Enter/Space handler");
+
+        // The native part of the sequence still toggles the selection.
+        cut.FindAll("input[type='checkbox']")[1].Change(true);
+        captured.Should().NotBeNull();
+        captured!.Should().Contain("1");
+        clicked.Should().BeNull();
     }
 
     [Fact]

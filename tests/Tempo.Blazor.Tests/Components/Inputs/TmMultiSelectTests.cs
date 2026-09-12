@@ -497,4 +497,61 @@ public class TmMultiSelectTests : LocalizationTestBase
         changes.Should().HaveCount(1);
         changes[0].Should().Equal("apple", "banana", "cherry", "date");
     }
+
+    // ── Trigger chrome isolation ────────────────────────────────────────────
+    // The clear and chip-remove buttons sit inside the trigger, whose keydown
+    // handler maps Enter/Space to ToggleDropdownAsync. Both buttons carry
+    // @onkeydown:stopPropagation, so a bubbled keydown can never reach the
+    // trigger handler — bUnit reports that as no reachable handler at all.
+
+    [Fact]
+    public void TmMultiSelect_Enter_On_Clear_Button_Clears_Without_Toggling_Dropdown()
+    {
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        var changes = new List<List<string>>();
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.ShowClearButton, true)
+            .Add(c => c.Values, new List<string> { "apple" })
+            .Add(c => c.ValuesChanged,
+                EventCallback.Factory.Create<IReadOnlyList<string>>(this, v => changes.Add(v.ToList()))));
+
+        var clear = cut.Find(".tm-multiselect__clear");
+        var act = () => clear.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the clear button isolates its keydown from the trigger's Enter/Space toggle");
+
+        cut.Find(".tm-multiselect__clear").Click();
+
+        changes.Should().HaveCount(1);
+        changes[0].Should().BeEmpty();
+        cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TmMultiSelect_Enter_On_Chip_Remove_Button_Removes_Without_Toggling_Dropdown()
+    {
+        var changes = new List<List<string>>();
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Mode, MultiSelectMode.Chip)
+            .Add(c => c.Values, new List<string> { "apple", "banana" })
+            .Add(c => c.ValuesChanged,
+                EventCallback.Factory.Create<IReadOnlyList<string>>(this, v => changes.Add(v.ToList()))));
+
+        var remove = cut.Find(".tm-multiselect__chip-remove");
+        var act = () => remove.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the chip-remove button isolates its keydown from the trigger's Enter/Space toggle");
+
+        cut.Find(".tm-multiselect__chip-remove").Click();
+
+        changes.Should().HaveCount(1);
+        changes[0].Should().Equal("banana");
+        cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
+    }
 }

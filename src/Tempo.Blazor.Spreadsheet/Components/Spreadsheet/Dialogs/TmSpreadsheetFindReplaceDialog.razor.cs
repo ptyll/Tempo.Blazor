@@ -123,12 +123,21 @@ public partial class TmSpreadsheetFindReplaceDialog
 
     private Task Close() => OnClose.InvokeAsync();
 
-    private Task OnKeyDown(KeyboardEventArgs e)
+    // Escape stays on the root so it works wherever focus sits in the dialog.
+    // Enter/F3 live on the text inputs only (OnFieldKeyDown): the close and
+    // action controls are native <button>s — the browser turns Enter on them
+    // into a click on keydown, so a root-level Enter case would find-next AND
+    // run the button's own click for one key press.
+    private Task OnRootKeyDown(KeyboardEventArgs e)
+    {
+        return e.Key == "Escape" ? Close() : Task.CompletedTask;
+    }
+
+    private Task OnFieldKeyDown(KeyboardEventArgs e)
     {
         return e.Key switch
         {
             "Enter" => e.ShiftKey ? FindPrevious() : FindNext(),
-            "Escape" => Close(),
             "F3" => e.ShiftKey ? FindPrevious() : FindNext(),
             _ => Task.CompletedTask
         };

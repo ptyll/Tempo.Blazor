@@ -255,4 +255,75 @@ public class TmFilterableDropdownTests : LocalizationTestBase
         selections[0].Should().Be(FruitOptions[0]);
     }
 
+    // ── Trigger keyboard activation ─────────────────────────────────────────
+    // The trigger is a non-native focusable (role="combobox"), so it needs
+    // explicit Enter/Space/ArrowDown handling — the nested clear <button>
+    // isolates its keydowns so Enter on it clears without toggling.
+
+    [Fact]
+    public void TmFilterableDropdown_Enter_On_Trigger_Opens_Menu()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger")
+            .KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Space_On_Trigger_Opens_Menu()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger")
+            .KeyDown(new KeyboardEventArgs { Key = " " });
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_ArrowDown_On_Trigger_Opens_Menu()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger")
+            .KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Enter_On_Clear_Button_Clears_Without_Opening()
+    {
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        // The clear button stops its keydown before the trigger's Enter ->
+        // toggle handler; bUnit reports the boundary by throwing.
+        var selections = new List<SelectOption<string>?>();
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.Value, FruitOptions[0])
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.ShowClearButton, true)
+            .Add(c => c.ValueChanged,
+                EventCallback.Factory.Create<SelectOption<string>?>(this, v => selections.Add(v))));
+
+        var clear = cut.Find(".tm-filterable-dropdown-clear");
+        var act = () => clear.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the clear button isolates its keydown from the trigger's toggle handler");
+
+        cut.Find(".tm-filterable-dropdown-clear").Click();
+
+        selections.Should().HaveCount(1);
+        selections[0].Should().BeNull();
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
+    }
+
 }

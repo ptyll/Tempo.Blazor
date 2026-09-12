@@ -148,11 +148,15 @@
 
                                     @if (_editingEntryId == node.Entry.Id)
                                     {
-                                        <div class="tm-ntcp__edit-wrap">
+                                        @* Isolated from the entry's Enter->reply
+                                           handler: Enter inside the edit textarea
+                                           must insert a newline, not start a reply. *@
+                                        <div class="tm-ntcp__edit-wrap" @onkeydown:stopPropagation="true">
                                             <textarea class="tm-ntcp__edit-input"
                                                       rows="3"
                                                       @bind="_editText"
                                                       @bind:event="oninput"
+                                                      @onkeydown="HandleEditKeyDownAsync"
                                                       aria-label="@Loc["TmNotionTextComment_EditLabel"]"></textarea>
                                             <div class="tm-ntcp__edit-actions">
                                                 <button class="tm-ntcp__edit-save" type="button"
@@ -170,16 +174,20 @@
                                         {
                                             <span class="tm-ntcp__entry-edited">@Loc["TmNotionTextComment_Edited"]</span>
                                         }
-                                        <TmCommentReactions Reactions="node.Entry.Reactions"
+                                        @* Reaction buttons are native <button>s inside
+                                           the keyed entry — isolate their keydowns too. *@
+                                        <span @onkeydown:stopPropagation="true"><TmCommentReactions Reactions="node.Entry.Reactions"
                                                             EntryId="@node.Entry.Id"
                                                             CurrentUserId="@CurrentUserId"
                                                             Provider="@(Context.CommentProvider as ITmCommentReactionProvider)"
-                                                            OnChanged="StateHasChanged" />
+                                                            OnChanged="StateHasChanged" /></span>
                                     }
 
                                     @if (_editingEntryId != node.Entry.Id)
                                     {
-                                        <div class="tm-ntcp__entry-actions" role="group">
+                                        @* Native <button>s: their keydowns must not
+                                           bubble into the entry's Enter->reply case. *@
+                                        <div class="tm-ntcp__entry-actions" role="group" @onkeydown:stopPropagation="true">
                                             <button class="tm-ntcp__entry-action"
                                                     type="button"
                                                     title="@Loc["TmNotionTextComment_ReplyToThis"]"
@@ -219,7 +227,7 @@
                                     @* Inline reply *@
                                     @if (_replyingToEntryId == node.Entry.Id)
                                     {
-                                        <div class="tm-ntcp__inline-reply">
+                                        <div class="tm-ntcp__inline-reply" @onkeydown:stopPropagation="true">
                                             <textarea class="tm-ntcp__reply-input"
                                                       rows="2"
                                                       placeholder="@Loc["TmNotionTextComment_ReplyPlaceholder"]"

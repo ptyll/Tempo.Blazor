@@ -202,4 +202,14 @@ public partial class TmSpreadsheetFormatCellsDialog
         else if (e.Key == "Enter" && e.CtrlKey)
             Apply();
     }
+
+    // The dialog's Ctrl+Enter -> Apply shortcut lives on the root; the chrome
+    // (tabs, footer buttons) isolates its keydowns so Enter/Ctrl+Enter on a
+    // button runs only the button's native click. Escape is re-handled here
+    // so it still closes while focus sits on those controls.
+    private void OnChromeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            OnClose.InvokeAsync();
+    }
 }

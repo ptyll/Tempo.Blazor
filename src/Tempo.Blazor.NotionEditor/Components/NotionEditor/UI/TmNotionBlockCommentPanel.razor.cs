@@ -308,6 +308,15 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable
             CancelInlineReply();
     }
 
+    // The edit wrap stops keydown propagation, so the edit input needs its own
+    // Escape->cancel (it previously relied on the keydown bubbling up to the
+    // entry handler). Plain Enter stays unhandled → native newline.
+    private void HandleEditKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            CancelEdit();
+    }
+
     private async Task HandleEntryKeyDownAsync(KeyboardEventArgs e, TmCommentEntry entry)
     {
         if (e.Key == "Enter" && _replyingToEntryId != entry.Id)

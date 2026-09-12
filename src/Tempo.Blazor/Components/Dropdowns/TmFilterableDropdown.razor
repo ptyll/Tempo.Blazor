@@ -12,7 +12,8 @@
          tabindex="0"
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
          aria-haspopup="listbox"
-         @onclick="ToggleAsync">
+         @onclick="ToggleAsync"
+         @onkeydown="HandleTriggerKeyDownAsync">
         @if (Value is null || IsEmptyValue(Value))
         {
             <span class="tm-filterable-dropdown-placeholder">@(Placeholder ?? Loc["TmFilterableDropdown_Placeholder"])</span>
@@ -27,7 +28,8 @@
                     class="tm-filterable-dropdown-clear"
                     aria-label="@Loc["TmFilterableDropdown_ClearSelection"]"
                     @onclick="ClearValueAsync"
-                    @onclick:stopPropagation="true">
+                    @onclick:stopPropagation="true"
+                    @onkeydown:stopPropagation="true">
                 ✕
             </button>
         }
@@ -230,6 +232,26 @@
 
     private void OnFilterInput(ChangeEventArgs e) =>
         _filterText = e.Value?.ToString() ?? string.Empty;
+
+    // The trigger is a non-native focusable (role="combobox"), so keyboard
+    // activation is legitimate emulation here — matching TmMultiSelect's
+    // trigger. The nested clear <button> stops its keydowns from reaching this
+    // handler (@onkeydown:stopPropagation), so Enter on it only clears.
+    private async Task HandleTriggerKeyDownAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter" or " ":
+                await ToggleAsync();
+                break;
+            case "Escape" when _isOpen:
+                _isOpen = false;
+                break;
+            case "ArrowDown" when !_isOpen:
+                await ToggleAsync();
+                break;
+        }
+    }
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
     {

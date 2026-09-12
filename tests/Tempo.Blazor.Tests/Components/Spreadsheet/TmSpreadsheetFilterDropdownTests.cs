@@ -94,4 +94,75 @@ public class TmSpreadsheetFilterDropdownTests : LocalizationTestBase
 
         sortedColumn.Should().Be(0);
     }
+
+    // ── Keyboard activation ─────────────────────────────────────────────────
+    // Enter->apply is scoped to the search input; the buttons are native
+    // <button>s whose bubbled keydown must not also apply the filter.
+
+    [Fact]
+    public void EnterOnCancelButton_Closes_WithoutApplying()
+    {
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        // A container-level Enter->apply would apply the filter on top of the
+        // button's own close click.
+        var sheet = BuildSheet();
+        var applies = 0;
+        var closes = 0;
+        var cut = Render<TmSpreadsheetFilterDropdown>(p => p
+            .Add(c => c.Sheet, sheet)
+            .Add(c => c.Filter, Filter())
+            .Add(c => c.ColumnIndex, 0)
+            .Add(c => c.Culture, CultureInfo.InvariantCulture)
+            .Add(c => c.OnApply, EventCallback.Factory.Create<SpreadsheetColumnFilter?>(this, _ => applies++))
+            .Add(c => c.OnClose, EventCallback.Factory.Create(this, () => closes++)));
+
+        var cancel = cut.Find(".tm-spreadsheet-filter-dropdown__btn--cancel");
+        cancel.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-spreadsheet-filter-dropdown__btn--cancel").Click();
+
+        closes.Should().Be(1);
+        applies.Should().Be(0);
+    }
+
+    [Fact]
+    public void EnterInSearchInput_AppliesOnce()
+    {
+        var sheet = BuildSheet();
+        var applies = 0;
+        var cut = Render<TmSpreadsheetFilterDropdown>(p => p
+            .Add(c => c.Sheet, sheet)
+            .Add(c => c.Filter, Filter())
+            .Add(c => c.ColumnIndex, 0)
+            .Add(c => c.Culture, CultureInfo.InvariantCulture)
+            .Add(c => c.OnApply, EventCallback.Factory.Create<SpreadsheetColumnFilter?>(this, _ => applies++)));
+
+        cut.Find(".tm-spreadsheet-filter-dropdown__search")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        applies.Should().Be(1);
+    }
+
+    [Fact]
+    public void EnterOnSortButton_DoesNotApplyFilter()
+    {
+        var sheet = BuildSheet();
+        var applies = 0;
+        int? sortedColumn = null;
+        var cut = Render<TmSpreadsheetFilterDropdown>(p => p
+            .Add(c => c.Sheet, sheet)
+            .Add(c => c.Filter, Filter())
+            .Add(c => c.ColumnIndex, 0)
+            .Add(c => c.Culture, CultureInfo.InvariantCulture)
+            .Add(c => c.OnSortAscending, EventCallback.Factory.Create<int>(this, c => sortedColumn = c))
+            .Add(c => c.OnApply, EventCallback.Factory.Create<SpreadsheetColumnFilter?>(this, _ => applies++)));
+
+        var sort = cut.FindAll(".tm-spreadsheet-filter-dropdown__item")
+            .First(e => e.TextContent.Contains("Sort A → Z"));
+        sort.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-spreadsheet-filter-dropdown__item")
+            .First(e => e.TextContent.Contains("Sort A → Z")).Click();
+
+        sortedColumn.Should().Be(0);
+        applies.Should().Be(0);
+    }
 }

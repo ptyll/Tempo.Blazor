@@ -8,7 +8,7 @@
      data-testid="@TestId("document-find-panel")"
      role="search"
      aria-label="@Loc["TmDocumentEditor_FindPanelLabel"]"
-     @onkeydown="HandleKeyDownAsync">
+     @onkeydown="HandleRootKeyDownAsync">
 
     <div class="tm-document-find-panel__row">
         <input class="tm-document-find-panel__input"
@@ -19,6 +19,7 @@
                value="@_query"
                @oninput="HandleSearchInput"
                @onkeydown="HandleKeyDownAsync"
+               @onkeydown:stopPropagation="true"
                @ref="_searchInput" />
 
         <span class="tm-document-find-panel__count"
@@ -103,6 +104,7 @@
                    placeholder="@Loc["TmDocumentEditor_ReplacePlaceholder"]"
                    aria-label="@Loc["TmDocumentEditor_ReplacePlaceholder"]"
                    @onkeydown="HandleKeyDownAsync"
+                   @onkeydown:stopPropagation="true"
                    @bind="_replacement" />
 
             <button class="tm-document-find-panel__btn"
@@ -259,6 +261,17 @@
     private async Task CloseAsync()
     {
         await OnClose.InvokeAsync();
+    }
+
+    // Root keeps only Escape so the panel still closes when focus sits on a
+    // button or an option. Enter/Shift+Enter live on the two text inputs only:
+    // the prev/next/close/result controls are native <button>s — the browser
+    // turns Enter on them into a click (keydown -> click), so a root-level
+    // Enter case would navigate AND run the button's own click for one press.
+    private async Task HandleRootKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+            await CloseAsync();
     }
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)

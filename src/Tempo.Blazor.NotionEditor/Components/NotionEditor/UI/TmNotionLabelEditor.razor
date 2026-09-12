@@ -4,7 +4,7 @@
 
 <section class="tm-notion-labels"
          aria-label="@Loc["Notion_Labels_Title"]"
-         @onkeydown="HandleKeyDownAsync">
+         @onkeydown="HandleSectionKeyDownAsync">
     <div class="tm-notion-labels__chips">
         @if (_labels.Count == 0)
         {
@@ -49,7 +49,8 @@
                    aria-label="@Loc["Notion_Labels_Placeholder"]"
                    value="@_input"
                    @onfocus="LoadSuggestionsAsync"
-                   @oninput="HandleInputAsync" />
+                   @oninput="HandleInputAsync"
+                   @onkeydown="HandleInputKeyDownAsync" />
             <button class="tm-notion-labels__add"
                     type="button"
                     disabled="@string.IsNullOrWhiteSpace(_input)"

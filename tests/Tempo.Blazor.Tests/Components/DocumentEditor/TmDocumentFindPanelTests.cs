@@ -175,7 +175,10 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         cut.Find("[data-testid='document-find-input']").Input("cat");
         // Enter right after typing: the pending debounced search must flush immediately so
         // navigation works without waiting — active result advances to 2 of 2.
-        cut.Find("[data-testid='document-find-panel']")
+        // Enter navigation is scoped to the text inputs (the panel's buttons are
+        // native <button>s — a container-level Enter would double-fire with
+        // their native keydown -> click).
+        cut.Find("[data-testid='document-find-input']")
             .KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         cut.WaitForAssertion(
@@ -241,6 +244,118 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         // After clicking next once with 2 results, active index should be 1 → "2 of 2"
         var count = cut.Find("[data-testid='document-find-count']");
         count.TextContent.Should().Contain("2 of 2");
+    }
+
+    [Fact]
+    public void Panel_EnterOnNextButton_NavigatesExactlyOnce()
+    {
+        // Native <button> sequence: keydown -> click. A root-level Enter case
+        // would navigate on the bubbled keydown too, advancing two results for
+        // one key press.
+        var doc = new DocumentEditorDocument
+        {
+            Blocks =
+            [
+                new DocumentBlock
+                {
+                    Id = "b1",
+                    Content = new ParagraphBlockContent
+                    {
+                        Inlines = [new TextRun { Text = "cat and cat and cat" }]
+                    }
+                }
+            ]
+        };
+        var navigations = new List<int>();
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.OnNavigateRequested, EventCallback.Factory.Create<int>(this, d => navigations.Add(d))));
+
+        cut.Find("[data-testid='document-find-input']").Input("cat");
+        cut.WaitForAssertion(
+            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 3"),
+            TimeSpan.FromSeconds(3));
+
+        var next = cut.Find("[data-testid='document-find-next']");
+        next.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("[data-testid='document-find-next']").Click();
+
+        cut.WaitForAssertion(
+            () => navigations.Should().Equal(1),
+            TimeSpan.FromSeconds(3));
+        cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2 of 3");
+    }
+
+    [Fact]
+    public void Panel_EnterOnCloseButton_DoesNotNavigate()
+    {
+        // Enter on the close button must only close — a bubbled Enter that
+        // also ran GoToNext would emit OnNavigateRequested for a gesture the
+        // user meant as "close".
+        var doc = new DocumentEditorDocument
+        {
+            Blocks =
+            [
+                new DocumentBlock
+                {
+                    Id = "b1",
+                    Content = new ParagraphBlockContent
+                    {
+                        Inlines = [new TextRun { Text = "cat and cat" }]
+                    }
+                }
+            ]
+        };
+        var closes = 0;
+        var navigations = 0;
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, doc)
+            .Add(x => x.OnClose, EventCallback.Factory.Create(this, () => closes++))
+            .Add(x => x.OnNavigateRequested, EventCallback.Factory.Create<int>(this, _ => navigations++)));
+
+        cut.Find("[data-testid='document-find-input']").Input("cat");
+        cut.WaitForAssertion(
+            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 2"),
+            TimeSpan.FromSeconds(3));
+
+        var close = cut.Find("[data-testid='document-find-close']");
+        close.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("[data-testid='document-find-close']").Click();
+
+        cut.WaitForAssertion(() => closes.Should().Be(1), TimeSpan.FromSeconds(3));
+        navigations.Should().Be(0);
+    }
+
+    [Fact]
+    public void Panel_EscapeOnButton_ClosesOnce()
+    {
+        // Escape stays on the root so it works from any focused control, but
+        // the inputs stop their own keydowns — one Escape gesture, one OnClose.
+        var closes = 0;
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, EmptyDocument())
+            .Add(x => x.OnClose, EventCallback.Factory.Create(this, () => closes++)));
+
+        cut.Find("[data-testid='document-find-close']")
+            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.WaitForAssertion(() => closes.Should().Be(1), TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public void Panel_EscapeInSearchInput_ClosesExactlyOnce()
+    {
+        // The input handles Escape itself and stops the keydown from also
+        // reaching the root's Escape case — one gesture, one OnClose.
+        var closes = 0;
+        var cut = Render<TmDocumentFindPanel>(p => p
+            .Add(x => x.Document, EmptyDocument())
+            .Add(x => x.OnClose, EventCallback.Factory.Create(this, () => closes++)));
+
+        cut.Find("[data-testid='document-find-input']")
+            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.WaitForAssertion(() => closes.Should().Be(1), TimeSpan.FromSeconds(3));
     }
 
     [Fact]

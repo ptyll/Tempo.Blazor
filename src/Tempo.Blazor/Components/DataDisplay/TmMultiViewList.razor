@@ -1097,7 +1097,7 @@
             @ondragend="HandleDragEnd">
             @if (AllowSelection)
             {
-                <td class="tm-mvl-col-select" @onclick:stopPropagation>
+                <td class="tm-mvl-col-select" @onclick:stopPropagation @onkeydown:stopPropagation>
                     <input type="checkbox"
                            class="tm-mvl-checkbox"
                            checked="@selected"
@@ -1227,7 +1227,7 @@
             {
                 @if (AllowSelection)
                 {
-                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation>
+                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation>
                         <input type="checkbox"
                                class="tm-mvl-checkbox"
                                checked="@selected"
@@ -1240,7 +1240,7 @@
             {
                 @if (AllowSelection)
                 {
-                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation>
+                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation>
                         <input type="checkbox"
                                class="tm-mvl-checkbox"
                                checked="@selected"
@@ -1288,7 +1288,7 @@
             @ondragend="HandleDragEnd">
             @if (AllowSelection)
             {
-                <div class="tm-mvl-list-select" @onclick:stopPropagation>
+                <div class="tm-mvl-list-select" @onclick:stopPropagation @onkeydown:stopPropagation>
                     <input type="checkbox"
                            class="tm-mvl-checkbox"
                            checked="@selected"

@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Tests.Localization;
 
@@ -43,6 +44,35 @@ public class TmDataTableSelectionTests : LocalizationTestBase
         selected.Should().NotBeNull();
         selected!.Count.Should().Be(1);
         selected[0].Name.Should().Be("Alice");
+    }
+
+    [Fact]
+    public void DataTable_CheckboxSpace_Toggles_WithoutRowClick()
+    {
+        // The row maps Enter/Space to OnRowClick (a non-native <tr tabindex>
+        // needs that emulation); the checkbox's bubbled Space keydown must not
+        // reach it — @onkeydown:stopPropagation makes the row handler
+        // unreachable, which bUnit reports by throwing.
+        var rowClicks = 0;
+        IReadOnlyList<SelPerson>? selected = null;
+        var cut = Render<TmDataTable<SelPerson>>(p => p
+            .Add(c => c.Items, People)
+            .Add(c => c.Selectable, true)
+            .Add(c => c.OnRowClick,
+                EventCallback.Factory.Create<SelPerson>(this, _ => rowClicks++))
+            .Add(c => c.OnSelectionChanged,
+                EventCallback.Factory.Create<IReadOnlyList<SelPerson>>(this, s => selected = s)));
+
+        var checkbox = cut.FindAll("tbody tr td input[type='checkbox']").First();
+        var act = () => checkbox.KeyDown(new KeyboardEventArgs { Key = " " });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the checkbox isolates its keydown from the row's Enter/Space handler");
+
+        // The native part of the sequence still toggles the selection.
+        cut.FindAll("tbody tr td input[type='checkbox']").First().Change(true);
+        selected.Should().NotBeNull();
+        selected!.Count.Should().Be(1);
+        rowClicks.Should().Be(0);
     }
 
     [Fact]

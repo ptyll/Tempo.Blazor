@@ -15,13 +15,16 @@ public class TmDataTableMasterDetailTests : LocalizationTestBase
 
     private IRenderedComponent<TmDataTable<Person>> Render(
         RenderFragment<Person>? detail = null,
-        Func<Person, Task>? onLoad = null)
+        Func<Person, Task>? onLoad = null,
+        Action<Person>? onRowClick = null)
         => Render<TmDataTable<Person>>(p =>
         {
             p.Add(c => c.ViewContext, "md-test");
             p.Add(c => c.Items, new List<Person> { new("Ann") });
             if (detail is not null) p.Add(c => c.DetailTemplate, detail);
             if (onLoad is not null) p.Add(c => c.OnLoadDetail, onLoad);
+            if (onRowClick is not null)
+                p.Add(c => c.OnRowClick, EventCallback.Factory.Create<Person>(this, onRowClick));
             p.AddChildContent(b =>
             {
                 var seq = 0;
@@ -90,5 +93,26 @@ public class TmDataTableMasterDetailTests : LocalizationTestBase
 
         loads.Should().Be(1);
         cut.FindAll("[data-testid='row-detail']").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void EnterOnExpander_TogglesDetail_WithoutRowClick()
+    {
+        // The row maps Enter/Space to OnRowClick (a non-native <tr tabindex>
+        // needs that emulation); the expander is a native <button> whose
+        // keydown must not reach it — @onkeydown:stopPropagation makes the
+        // row handler unreachable, which bUnit reports by throwing.
+        var rowClicks = 0;
+        var cut = Render(Detail(), onRowClick: _ => rowClicks++);
+
+        var expander = cut.Find("[data-testid='expander']");
+        var act = () => expander.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the expander isolates its keydown from the row's Enter/Space handler");
+
+        // The native click still toggles the detail — exactly once.
+        cut.Find("[data-testid='expander']").Click();
+        cut.FindAll("[data-testid='row-detail']").Should().ContainSingle();
+        rowClicks.Should().Be(0);
     }
 }

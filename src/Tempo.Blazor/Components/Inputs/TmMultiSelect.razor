@@ -47,6 +47,7 @@
                                     tabindex="-1"
                                     aria-label="@Loc["TmMultiSelect_RemoveItem", DisplayField(item)]"
                                     @onclick:stopPropagation="true"
+                                    @onkeydown:stopPropagation="true"
                                     @onclick="() => RemoveItemAsync(itemVal)">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -92,6 +93,7 @@
                         class="tm-multiselect__clear"
                         aria-label="@Loc["TmMultiSelect_ClearAll"]"
                         @onclick:stopPropagation="true"
+                        @onkeydown:stopPropagation="true"
                         @onclick="ClearAllAsync">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round">

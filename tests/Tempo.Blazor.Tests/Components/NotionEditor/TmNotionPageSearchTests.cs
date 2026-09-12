@@ -54,6 +54,67 @@ public sealed class TmNotionPageSearchTests : LocalizationTestBase
         });
     }
 
+    [Fact]
+    public async Task EnterOnFilterToggle_TogglesFilters_WithoutNavigatingOrClosing()
+    {
+        // The filter toggle is a native <button>: the browser turns Enter into
+        // a click on keydown. A card-level Enter->select would ALSO navigate
+        // the highlighted result (closing the panel) for the same gesture.
+        var provider = new CapturingSearchProvider();
+        var navigated = new List<string>();
+        var context = new NotionEditorContext
+        {
+            SearchProvider = provider,
+            NavigateTo = id => { navigated.Add(id); return Task.CompletedTask; }
+        };
+
+        var host = Render<CascadingValue<NotionEditorContext>>(parameters => parameters
+            .Add(component => component.Value, context)
+            .AddChildContent<TmNotionPageSearch>());
+        var search = host.FindComponent<TmNotionPageSearch>();
+
+        await search.InvokeAsync(() => search.Instance.OpenPageSearch());
+        host.WaitForAssertion(() => host.Find(".tm-nps").Should().NotBeNull());
+
+        await host.Find(".tm-nps__search-input").InputAsync(new ChangeEventArgs { Value = "beacon" });
+        host.WaitForAssertion(() => host.FindAll(".tm-nps__item").Should().NotBeEmpty());
+
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        var toggle = host.Find(".tm-nps__filter-toggle");
+        await toggle.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        await host.Find(".tm-nps__filter-toggle").ClickAsync(new MouseEventArgs());
+
+        navigated.Should().BeEmpty("Enter on the filter toggle is not a result selection");
+        host.Find(".tm-nps__filters").Should().NotBeNull();
+        host.Find(".tm-nps").Should().NotBeNull("the panel must stay open");
+    }
+
+    [Fact]
+    public async Task EnterInSearchInput_SelectsHighlightedResult()
+    {
+        var provider = new CapturingSearchProvider();
+        var navigated = new List<string>();
+        var context = new NotionEditorContext
+        {
+            SearchProvider = provider,
+            NavigateTo = id => { navigated.Add(id); return Task.CompletedTask; }
+        };
+
+        var host = Render<CascadingValue<NotionEditorContext>>(parameters => parameters
+            .Add(component => component.Value, context)
+            .AddChildContent<TmNotionPageSearch>());
+        var search = host.FindComponent<TmNotionPageSearch>();
+
+        await search.InvokeAsync(() => search.Instance.OpenPageSearch());
+        await host.Find(".tm-nps__search-input").InputAsync(new ChangeEventArgs { Value = "beacon" });
+        host.WaitForAssertion(() => host.FindAll(".tm-nps__item").Should().NotBeEmpty());
+
+        await host.Find(".tm-nps__search-input")
+            .KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+        navigated.Should().HaveCount(1);
+    }
+
     private sealed class CapturingSearchProvider : INotionSearchProvider
     {
         public string LastQuery { get; private set; } = string.Empty;

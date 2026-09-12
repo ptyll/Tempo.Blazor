@@ -35,7 +35,8 @@
            placeholder="@Loc["TmSpreadsheet_Filter_SearchPlaceholder"]"
            aria-label="@Loc["TmSpreadsheet_Filter_SearchPlaceholder"]"
            value="@_search"
-           @oninput="OnSearchInput" />
+           @oninput="OnSearchInput"
+           @onkeydown="OnSearchKeyDown" />
 
     <label class="tm-spreadsheet-filter-dropdown__check tm-spreadsheet-filter-dropdown__check--all">
         <input type="checkbox" checked="@AllVisibleChecked" @onchange="ToggleSelectAll" />

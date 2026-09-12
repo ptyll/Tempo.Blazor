@@ -210,7 +210,21 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
 
     // ── Keyboard navigation ───────────────────────────────────────────────────
 
-    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    // Escape stays on the card so it works wherever focus sits inside the
+    // dialog. Arrow/Enter navigation is handled on the search input itself:
+    // the card contains native <button>s (filter toggle, filter controls,
+    // result items) — a card-level Enter case selected the highlighted result
+    // when the user actually pressed Enter on one of those buttons, on top of
+    // the button's own native click.
+    private async Task HandleCardKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await CloseAsync();
+    }
+
+    // Arrow/Enter keydowns inside a text input produce no native click, so
+    // this input-level handler is where result navigation + selection belong.
+    private async Task HandleSearchKeyDownAsync(KeyboardEventArgs e)
     {
         switch (e.Key)
         {
@@ -226,10 +240,6 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
 
             case "Enter":
                 await SelectCurrentAsync();
-                return;
-
-            case "Escape":
-                await CloseAsync();
                 return;
         }
     }

@@ -68,6 +68,24 @@ public sealed class TmModelingModelTreeTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Enter_on_node_selects_exactly_once()
+    {
+        // Native <button role="treeitem"> sequence: Enter produces the click on
+        // keydown — keydown -> click. A keydown handler that also selected the
+        // element fired OnElementSelected twice for one key press.
+        var selections = new List<ModelingElementDto>();
+        using var cut = Render<TmModelingModelTree>(parameters => parameters
+            .Add(p => p.Elements, CreateElements())
+            .Add(p => p.OnElementSelected, EventCallback.Factory.Create<ModelingElementDto>(this, element => selections.Add(element))));
+
+        var node = cut.Find("[data-testid='modeling-tree-node-task-review']");
+        node.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.Find("[data-testid='modeling-tree-node-task-review']").Click();
+
+        selections.Select(e => e.Id).Should().Equal("task-review");
+    }
+
+    [Fact]
     public void Dragstart_exposes_element_id_for_data_transfer_bridge()
     {
         ModelingElementDto? dragged = null;

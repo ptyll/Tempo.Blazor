@@ -305,11 +305,14 @@
 
                                     @if (_editingEntryId == node.Entry.Id)
                                     {
-                                        @* Edit mode *@
-                                        <div class="tm-nbcp__edit-wrap">
+                                        @* Edit mode — isolated from the entry's
+                                           Enter->reply handler: Enter inside the edit
+                                           input must insert a newline, not start a reply. *@
+                                        <div class="tm-nbcp__edit-wrap" @onkeydown:stopPropagation="true">
                                             <TmCommentMentionInput Class="tm-nbcp__edit-input"
                                                                    Rows="3"
                                                                    @bind-Value="_editText"
+                                                                   OnKeyDown="HandleEditKeyDownAsync"
                                                                    AriaLabel="@Loc["TmNotionBlockComment_EditLabel"]"
                                                                    MentionProvider="Context.MentionProvider" />
                                             <div class="tm-nbcp__edit-actions">
@@ -334,17 +337,21 @@
                                         {
                                             <span class="tm-nbcp__entry-edited">@Loc["TmNotionBlockComment_Edited"]</span>
                                         }
-                                        <TmCommentReactions Reactions="node.Entry.Reactions"
+                                        @* Reaction buttons are native <button>s inside
+                                           the keyed entry — isolate their keydowns too. *@
+                                        <span @onkeydown:stopPropagation="true"><TmCommentReactions Reactions="node.Entry.Reactions"
                                                             EntryId="@node.Entry.Id"
                                                             CurrentUserId="@CurrentUserId"
                                                             Provider="@(Context.CommentProvider as ITmCommentReactionProvider)"
-                                                            OnChanged="StateHasChanged" />
+                                                            OnChanged="StateHasChanged" /></span>
                                     }
 
                                     @* Entry actions *@
                                     @if (_editingEntryId != node.Entry.Id)
                                     {
-                                        <div class="tm-nbcp__entry-actions" role="group" aria-label="@Loc["TmNotionBlockComment_EntryActions"]">
+                                        @* Native <button>s: their keydowns must not
+                                           bubble into the entry's Enter->reply case. *@
+                                        <div class="tm-nbcp__entry-actions" role="group" aria-label="@Loc["TmNotionBlockComment_EntryActions"]" @onkeydown:stopPropagation="true">
                                             <button class="tm-nbcp__entry-action"
                                                     type="button"
                                                     title="@Loc["TmNotionBlockComment_ReplyToThis"]"
@@ -386,7 +393,7 @@
                                     @* Inline reply *@
                                     @if (_replyingToEntryId == node.Entry.Id)
                                     {
-                                        <div class="tm-nbcp__inline-reply">
+                                        <div class="tm-nbcp__inline-reply" @onkeydown:stopPropagation="true">
                                             <TmCommentMentionInput Class="tm-nbcp__reply-input"
                                                                    Rows="2"
                                                                    Placeholder="@Loc["TmNotionBlockComment_ReplyPlaceholder"]"

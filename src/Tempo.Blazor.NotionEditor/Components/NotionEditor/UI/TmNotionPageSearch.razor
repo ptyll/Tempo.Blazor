@@ -19,7 +19,7 @@
              role="dialog"
              aria-modal="true"
              aria-label="@Loc["TmNotionPageSearch_DialogLabel"]"
-             @onkeydown="HandleKeyDownAsync"
+             @onkeydown="HandleCardKeyDownAsync"
              @onkeydown:stopPropagation="true"
              @onclick:stopPropagation="true">
 
@@ -44,7 +44,8 @@
                        placeholder="@Loc["TmNotionPageSearch_Placeholder"]"
                        value="@_query"
                        @ref="_inputRef"
-                       @oninput="HandleQueryInputAsync" />
+                       @oninput="HandleQueryInputAsync"
+                       @onkeydown="HandleSearchKeyDownAsync" />
 
                 <button class="tm-nps__filter-toggle @(_showFilters || HasActiveFilters ? "tm-nps__filter-toggle--active" : "")"
                         type="button"

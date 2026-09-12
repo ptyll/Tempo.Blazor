@@ -73,4 +73,14 @@ public partial class TmSpreadsheetHyperlinkDialog
         else if (e.Key == "Enter" && e.CtrlKey)
             OnSaveClick();
     }
+
+    // The dialog's Ctrl+Enter -> save shortcut lives on the root; the chrome
+    // buttons isolate their keydowns (stopPropagation) so Enter/Ctrl+Enter on
+    // them runs only the button's native click. Escape is re-handled here so
+    // it still cancels while focus sits on a button.
+    private async Task OnChromeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await OnCancel.InvokeAsync();
+    }
 }

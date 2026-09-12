@@ -83,4 +83,118 @@ public class TmSpreadsheetNamedRangeEditDialogTests : LocalizationTestBase
         cut.Find(".tm-spreadsheet-named-range-edit__btn--cancel").Click();
         fired.Should().BeTrue();
     }
+
+    // ── Keyboard activation ─────────────────────────────────────────────────
+    // Ctrl+Enter -> save lives on the dialog root; the footer buttons and the
+    // header close button isolate their keydowns so the browser's native
+    // keydown -> click on a <button> can't also trigger the root shortcut.
+
+    [Fact]
+    public void CtrlEnter_OnSaveButton_SavesExactlyOnce()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cut = Render<TmSpreadsheetNamedRangeEditDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++));
+
+        cut.Find("#nr-name").Input("Total");
+        cut.Find("#nr-refers").Input("B1:B10");
+
+        // keydown (native click would follow) — the actions group stops the
+        // keydown before the root's Ctrl+Enter -> save case.
+        cut.Find(".tm-spreadsheet-named-range-edit__btn--ok")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+        cut.Find(".tm-spreadsheet-named-range-edit__btn--ok").Click();
+
+        saves.Should().Be(1);
+    }
+
+    [Fact]
+    public void Enter_OnCancelButton_Cancels_WithoutSaving()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cancels = 0;
+        var cut = Render<TmSpreadsheetNamedRangeEditDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++)
+                .Add(p => p.OnCancel, () => cancels++));
+
+        cut.Find("#nr-name").Input("Total");
+        cut.Find("#nr-refers").Input("B1:B10");
+
+        cut.Find(".tm-spreadsheet-named-range-edit__btn--cancel")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-spreadsheet-named-range-edit__btn--cancel").Click();
+
+        cancels.Should().Be(1);
+        saves.Should().Be(0);
+    }
+
+    [Fact]
+    public void Escape_OnSaveButton_CancelsOnce()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cancels = 0;
+        var cut = Render<TmSpreadsheetNamedRangeEditDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++)
+                .Add(p => p.OnCancel, () => cancels++));
+
+        // Escape stays usable from the footer: the actions group handles it
+        // locally and stops it from also reaching the root's Escape case.
+        cut.Find(".tm-spreadsheet-named-range-edit__btn--ok")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        cancels.Should().Be(1);
+        saves.Should().Be(0);
+    }
+
+    [Fact]
+    public void CtrlEnter_InInput_StillSaves()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        SpreadsheetNamedRange? saved = null;
+        var cut = Render<TmSpreadsheetNamedRangeEditDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, r => saved = r));
+
+        cut.Find("#nr-name").Input("Total");
+        cut.Find("#nr-refers").Input("B1:B10");
+
+        cut.Find("#nr-name")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+
+        saved.Should().NotBeNull();
+        saved!.Name.Should().Be("Total");
+    }
+
+    [Fact]
+    public void CtrlEnter_OnCloseButton_Cancels_WithoutSaving()
+    {
+        var workbook = new SpreadsheetWorkbook();
+        var saves = 0;
+        var cancels = 0;
+        var cut = Render<TmSpreadsheetNamedRangeEditDialog>(
+            parameters => parameters
+                .Add(p => p.Workbook, workbook)
+                .Add(p => p.OnSave, _ => saves++)
+                .Add(p => p.OnCancel, () => cancels++));
+
+        cut.Find("#nr-name").Input("Total");
+        cut.Find("#nr-refers").Input("B1:B10");
+
+        cut.Find(".tm-spreadsheet-named-range-edit__close")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+        cut.Find(".tm-spreadsheet-named-range-edit__close").Click();
+
+        cancels.Should().Be(1);
+        saves.Should().Be(0);
+    }
 }

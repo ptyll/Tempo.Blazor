@@ -8,8 +8,11 @@
             <h3 class="tm-fcd__title">@Loc["TmSpreadsheet_FormatCells"]</h3>
         </div>
 
-        <!-- Tab bar -->
-        <div class="tm-fcd__tabs" role="tablist">
+        <!-- Tab bar — native <button>s: their keydowns must not reach the
+             dialog's Ctrl+Enter -> Apply shortcut on top of the tab's own
+             click. Escape is re-handled locally so it still closes. -->
+        <div class="tm-fcd__tabs" role="tablist"
+             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
             @foreach (var tab in _tabs)
             {
                 <button class="tm-fcd__tab @(_activeTab == tab ? "tm-fcd__tab--active" : "")"
@@ -53,8 +56,11 @@
             </div>
         </div>
 
-        <!-- Actions -->
-        <div class="tm-fcd__actions">
+        <!-- Actions — native <button>s: their keydowns must not reach the
+             dialog's Ctrl+Enter -> Apply shortcut on top of each button's own
+             click. Escape is re-handled locally so it still closes. -->
+        <div class="tm-fcd__actions"
+             @onkeydown="OnChromeKeyDown" @onkeydown:stopPropagation="true">
             <TmButton Variant="ButtonVariant.Secondary" OnClick="OnClose">@Loc["Tm_Cancel"]</TmButton>
             <TmButton OnClick="Apply">@Loc["Tm_Apply"]</TmButton>
         </div>

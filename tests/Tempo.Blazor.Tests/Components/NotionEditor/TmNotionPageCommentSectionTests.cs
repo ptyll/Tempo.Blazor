@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
@@ -120,6 +121,134 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
             cut.Find(".tm-npcp__thread").ClassList.Should().Contain("tm-npcp__thread--resolved"));
         provider.PageComments[0].Status.Should().Be(TmCommentThreadStatus.Resolved);
     }
+
+    // ── Keyboard isolation ──────────────────────────────────────────────────
+    // Entry rows are non-native focusables (<div tabindex="0">) that
+    // legitimately map Enter -> start inline reply. The native controls nested
+    // inside an entry stop their keydowns from reaching that handler —
+    // otherwise Enter on the Edit button opened the editor (native click) AND
+    // started a reply (bubbled keydown) for one key press.
+
+    [Fact]
+    public async Task PageCommentSection_EnterOnEntryEditButton_OpensEdit_WithoutStartingReply()
+    {
+        var provider = new FakeCommentProvider(PageId.ToString("D"));
+        var context = new NotionEditorContext
+        {
+            DataProvider = default!,
+            BlockService = default!,
+            CommentProvider = provider
+        };
+        var cut = Render<PageCommentHost>(parameters => parameters
+            .Add(component => component.Context, context)
+            .Add(component => component.PageId, PageId.ToString("D")));
+
+        await SeedCommentAsync(cut);
+
+        var edit = FindEntryAction(cut, "Edit");
+        var act = () => edit.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the actions group stops keydowns before the entry's Enter->reply handler");
+        cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
+
+        // The native click half of the sequence still does the button's own job.
+        FindEntryAction(cut, "Edit").Click();
+        cut.FindAll(".tm-npcp__edit-wrap").Should().ContainSingle();
+        cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PageCommentSection_EnterOnEntryDeleteButton_Confirms_WithoutStartingReply()
+    {
+        var provider = new FakeCommentProvider(PageId.ToString("D"));
+        var context = new NotionEditorContext
+        {
+            DataProvider = default!,
+            BlockService = default!,
+            CommentProvider = provider
+        };
+        var cut = Render<PageCommentHost>(parameters => parameters
+            .Add(component => component.Context, context)
+            .Add(component => component.PageId, PageId.ToString("D")));
+
+        await SeedCommentAsync(cut);
+
+        var delete = FindEntryAction(cut, "Delete");
+        var act = () => delete.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>();
+
+        FindEntryAction(cut, "Delete").Click();
+        cut.FindAll(".tm-dialog").Should().ContainSingle("the delete click shows its confirm dialog");
+        cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PageCommentSection_EnterInEditTextarea_DoesNotStartReply_EscapeCancelsEdit()
+    {
+        var provider = new FakeCommentProvider(PageId.ToString("D"));
+        var context = new NotionEditorContext
+        {
+            DataProvider = default!,
+            BlockService = default!,
+            CommentProvider = provider
+        };
+        var cut = Render<PageCommentHost>(parameters => parameters
+            .Add(component => component.Context, context)
+            .Add(component => component.PageId, PageId.ToString("D")));
+
+        await SeedCommentAsync(cut);
+        FindEntryAction(cut, "Edit").Click();
+        cut.FindAll(".tm-npcp__edit-wrap").Should().ContainSingle();
+
+        // Enter inside the edit input inserts a newline natively; the edit
+        // wrap stops the keydown so the entry must not start a reply.
+        cut.Find("textarea.tm-npcp__edit-input")
+            .KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-npcp__edit-wrap").Should().ContainSingle();
+        cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
+
+        // Escape->cancel previously relied on bubbling to the entry handler;
+        // the edit input now handles it locally.
+        cut.Find("textarea.tm-npcp__edit-input")
+            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.FindAll(".tm-npcp__edit-wrap").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PageCommentSection_EnterOnEntryItself_StillStartsInlineReply()
+    {
+        // Legitimate emulation kept: the entry row is a non-native focusable.
+        var provider = new FakeCommentProvider(PageId.ToString("D"));
+        var context = new NotionEditorContext
+        {
+            DataProvider = default!,
+            BlockService = default!,
+            CommentProvider = provider
+        };
+        var cut = Render<PageCommentHost>(parameters => parameters
+            .Add(component => component.Context, context)
+            .Add(component => component.PageId, PageId.ToString("D")));
+
+        await SeedCommentAsync(cut);
+
+        cut.Find(".tm-npcp__entry").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-npcp__inline-reply").Should().ContainSingle();
+    }
+
+    private static async Task SeedCommentAsync(IRenderedComponent<PageCommentHost> cut)
+    {
+        await cut.Find(".tm-npcp__toggle").ClickAsync(new MouseEventArgs());
+        cut.Find(".tm-npcp__new-comment .tm-npcp__reply-input").Input("Page comment");
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-npcp__new-comment .tm-npcp__reply-send").HasAttribute("disabled").Should().BeFalse());
+        await cut.Find(".tm-npcp__new-comment .tm-npcp__reply-send").ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-npcp__entry-text").TextContent.Should().Contain("Page comment"));
+    }
+
+    private static IElement FindEntryAction(IRenderedComponent<PageCommentHost> cut, string titlePart)
+        => cut.FindAll(".tm-npcp__entry-action")
+              .First(e => e.GetAttribute("title")?.Contains(titlePart) == true);
 
     public sealed class PageCommentHost : ComponentBase
     {

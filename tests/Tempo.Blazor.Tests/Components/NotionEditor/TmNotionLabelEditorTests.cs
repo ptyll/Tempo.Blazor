@@ -86,6 +86,46 @@ public sealed class TmNotionLabelEditorTests : LocalizationTestBase
         navigatedPageId.Should().Be("22222222-2222-2222-2222-222222222222");
     }
 
+    [Fact]
+    public void LabelEditor_EnterOnSuggestion_AddsOnlyTheSuggestion()
+    {
+        // The suggestion is a native <button>: the browser turns Enter into a
+        // click on keydown. A section-level Enter->add case would ALSO add the
+        // typed input text, so one gesture added two labels.
+        var provider = new LabelDataProvider();
+        var changed = new List<IReadOnlyList<string>>();
+        var cut = RenderLabelEditor(provider, ["release"], labels => changed.Add(labels));
+
+        cut.Find(".tm-notion-labels__input").Input("cust");
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-notion-labels__suggestion").TextContent.Should().Be("customer success"));
+
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        var suggestion = cut.Find(".tm-notion-labels__suggestion");
+        suggestion.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-notion-labels__suggestion").Click();
+
+        cut.WaitForAssertion(() =>
+            provider.Labels[PageId].Should().Equal("release", "customer success"));
+        changed.Should().NotBeEmpty();
+        changed.Last().Should().Equal("release", "customer success");
+    }
+
+    [Fact]
+    public void LabelEditor_EnterInInput_StillAddsTypedLabel()
+    {
+        var provider = new LabelDataProvider();
+        var changed = new List<IReadOnlyList<string>>();
+        var cut = RenderLabelEditor(provider, ["release"], labels => changed.Add(labels));
+
+        var input = cut.Find(".tm-notion-labels__input");
+        input.Input("qa");
+        input.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        cut.WaitForAssertion(() =>
+            provider.Labels[PageId].Should().Equal("release", "qa"));
+    }
+
     private IRenderedComponent<CascadingValue<NotionEditorContext>> RenderLabelEditor(
         LabelDataProvider provider,
         IReadOnlyList<string> labels,

@@ -110,12 +110,10 @@ public partial class TmModelingModelTree
 
     private async Task HandleNodeKeyDownAsync(ModelingElementDto element, KeyboardEventArgs args)
     {
-        if (args.Key is "Enter" or " ")
-        {
-            await SelectElementAsync(element);
-            return;
-        }
-
+        // No Enter/Space activation here: the node is a native <button>, so the
+        // browser itself produces the activation click (Enter on keydown, Space
+        // on keyup) which reaches SelectElementAsync via @onclick. Selecting
+        // here as well fired OnElementSelected twice per key press.
         var visibleElements = FilteredGroups
             .SelectMany(group => group.Elements)
             .ToArray();

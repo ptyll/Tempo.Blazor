@@ -154,10 +154,14 @@
 
                                                 @if (_editingEntryId == node.Entry.Id)
                                                 {
-                                                    <div class="tm-npcp__edit-wrap">
+                                                    @* Isolated from the entry's Enter->reply
+                                                       handler: Enter inside the edit input must
+                                                       insert a newline, not start a reply. *@
+                                                    <div class="tm-npcp__edit-wrap" @onkeydown:stopPropagation="true">
                                                         <TmCommentMentionInput Class="tm-npcp__edit-input"
                                                                                Rows="3"
                                                                                @bind-Value="_editText"
+                                                                               OnKeyDown="HandleEditKeyDownAsync"
                                                                                AriaLabel="@Loc["TmNotionPageComment_EditLabel"]"
                                                                                MentionProvider="Context.MentionProvider" />
                                                         <div class="tm-npcp__edit-actions">
@@ -176,16 +180,20 @@
                                                     {
                                                         <span class="tm-npcp__entry-edited">@Loc["TmNotionPageComment_Edited"]</span>
                                                     }
-                                                    <TmCommentReactions Reactions="node.Entry.Reactions"
+                                                    @* Reaction buttons are native <button>s inside
+                                                       the keyed entry — isolate their keydowns too. *@
+                                                    <span @onkeydown:stopPropagation="true"><TmCommentReactions Reactions="node.Entry.Reactions"
                                                                         EntryId="@node.Entry.Id"
                                                                         CurrentUserId="@CurrentUserId"
                                                                         Provider="@(Context.CommentProvider as ITmCommentReactionProvider)"
-                                                                        OnChanged="StateHasChanged" />
+                                                                        OnChanged="StateHasChanged" /></span>
                                                 }
 
                                                 @if (_editingEntryId != node.Entry.Id)
                                                 {
-                                                    <div class="tm-npcp__entry-actions" role="group">
+                                                    @* Native <button>s: their keydowns must not
+                                                       bubble into the entry's Enter->reply case. *@
+                                                    <div class="tm-npcp__entry-actions" role="group" @onkeydown:stopPropagation="true">
                                                         <button class="tm-npcp__entry-action"
                                                                 type="button"
                                                                 title="@Loc["TmNotionPageComment_ReplyToThis"]"
@@ -225,7 +233,7 @@
                                                 @* Inline reply *@
                                                 @if (_replyingToEntryId == node.Entry.Id)
                                                 {
-                                                    <div class="tm-npcp__inline-reply">
+                                                    <div class="tm-npcp__inline-reply" @onkeydown:stopPropagation="true">
                                                         <TmCommentMentionInput Class="tm-npcp__reply-input"
                                                                                Rows="2"
                                                                                Placeholder="@Loc["TmNotionPageComment_ReplyPlaceholder"]"

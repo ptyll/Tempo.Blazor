@@ -117,6 +117,60 @@ public class TmSpreadsheetFindReplaceDialogTests : LocalizationTestBase
         fired.Should().BeTrue();
     }
 
+    // ── Keyboard activation ─────────────────────────────────────────────────
+    // Enter/F3 are scoped to the text inputs; the action controls are native
+    // <button>s whose bubbled keydown must not also trigger find-next.
+
+    [Fact]
+    public void EnterOnReplaceAllButton_FiresOnce_WithoutFindNext()
+    {
+        // Real sequence for Enter on a focused <button>: keydown -> click.
+        var findNexts = 0;
+        var replaceAlls = new List<string>();
+        var cut = Render<TmSpreadsheetFindReplaceDialog>(p => p
+            .Add(x => x.OnFindNext, EventCallback.Factory.Create(this, () => findNexts++))
+            .Add(x => x.OnReplaceAllRequested, EventCallback.Factory.Create<string>(this, s => replaceAlls.Add(s))));
+
+        cut.Find(".tm-spreadsheet-find__replace").Input("xyz");
+        var button = cut.FindAll(".tm-spreadsheet-find__btn--text")[1];
+        button.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-spreadsheet-find__btn--text")[1].Click();
+
+        replaceAlls.Should().Equal("xyz");
+        findNexts.Should().Be(0);
+    }
+
+    [Fact]
+    public void EnterInQueryInput_StillFindsNext()
+    {
+        var findNexts = 0;
+        var findPreviouses = 0;
+        var cut = Render<TmSpreadsheetFindReplaceDialog>(p => p
+            .Add(x => x.OnFindNext, EventCallback.Factory.Create(this, () => findNexts++))
+            .Add(x => x.OnFindPrevious, EventCallback.Factory.Create(this, () => findPreviouses++)));
+
+        var query = cut.Find(".tm-spreadsheet-find__query");
+        query.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        query.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+        query.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "F3" });
+
+        findNexts.Should().Be(2);
+        findPreviouses.Should().Be(1);
+    }
+
+    [Fact]
+    public void EscapeOnCloseButton_ClosesOnce()
+    {
+        var closes = 0;
+        var cut = Render<TmSpreadsheetFindReplaceDialog>(p => p
+            .Add(x => x.OnClose, EventCallback.Factory.Create(this, () => closes++)));
+
+        cut.Find(".tm-spreadsheet-find__close")
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        closes.Should().Be(1);
+    }
+
     [Fact]
     public void Counter_ShowsMatchPosition()
     {

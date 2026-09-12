@@ -144,11 +144,20 @@ public partial class TmSpreadsheetFilterDropdown
 
     private Task Close() => OnClose.InvokeAsync();
 
+    // Escape stays container-level so it works wherever focus sits in the
+    // dropdown. Enter->ApplyValues lives on the search input only: every other
+    // control here is a native <button> or checkbox — the browser turns Enter
+    // on a focused <button> into a click on keydown, so a container-level
+    // Enter case applied the filter on top of the control's own click.
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Escape")
             await Close();
-        else if (e.Key == "Enter")
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
             await ApplyValues();
     }
 }

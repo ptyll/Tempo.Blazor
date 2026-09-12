@@ -66,16 +66,26 @@ public partial class TmNotionLabelEditor : ComponentBase, IDisposable
         await LoadSuggestionsAsync();
     }
 
-    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    // Escape stays on the section so it works wherever focus sits. Enter->add
+    // lives on the text input itself: the chips, remove, add, suggestion and
+    // filter-close controls are native <button>s — the browser turns Enter on
+    // a focused <button> into a click on keydown, so a section-level Enter
+    // case added the typed input on top of the button's own click (e.g. a
+    // suggestion click would add BOTH the suggestion and the typed text).
+    private void HandleSectionKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            _input = string.Empty;
+            CloseFilter();
+        }
+    }
+
+    private async Task HandleInputKeyDownAsync(KeyboardEventArgs args)
     {
         if (args.Key == "Enter" && !string.IsNullOrWhiteSpace(_input) && !ReadOnly)
         {
             await AddCurrentInputAsync();
-        }
-        else if (args.Key == "Escape")
-        {
-            _input = string.Empty;
-            CloseFilter();
         }
     }
 
