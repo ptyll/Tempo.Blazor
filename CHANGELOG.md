@@ -1,5 +1,104 @@
 # Changelog
 
+## 2.8.25 - 2026-09-12
+
+Every Enter and Space on a native activatable element ran its action twice — once from the browser's
+own sequence (keydown→click for Enter, keyup→click for Space) and once from the component's
+`@onkeydown` handler emulating the same click. This release removes the emulation wherever the
+element activates natively — 43 component files across five packages — and where a non-native
+container legitimately keeps a keyboard contract, the handler now lives on the element that owns it,
+fenced off from native children by a propagation barrier. The removal also moves Space activation
+from keydown to keyup, so read the consumer notes at the bottom before upgrading a test suite.
+
+### Fixed
+
+- **One press, one activation.** `TmButton`, the `TmAccordionItem` header, `TmToggle`,
+  `TmColorPalette` swatches, `TmModelingModelTree` nodes, and the items of
+  `TmDocumentCommandPalette`, `TmDocumentToolbarOverflowMenu`, `TmDocumentAutocompleteMenu` and
+  `TmNotionBlockTypeSwitcher` render native `<button>`/`<input>` markup and *additionally* invoked
+  the click action from `keydown`. Enter therefore fired the action twice per press, and Space fired
+  once on keydown (the emulation) and again on keyup (the native click). In containers that restore
+  focus to the trigger on close, the second invocation landed on the re-focused trigger and
+  re-opened the panel the key had just closed. The handlers are gone; the browser's sequence is now
+  the only one. Emulation on genuinely non-native elements — the `TmContextMenu` trigger, the
+  `TmMultiViewList` rows/cards, the command-palette search input — is required and stays.
+
+- **Container Enter handlers no longer act on top of a focused child's own click.** A root-level
+  `@onkeydown` that treats Enter as confirm receives every bubbled keydown — including the one whose
+  native click is about to do something else, so a prev/next/sort/cancel button ran its own action
+  AND the container's. The pattern repeated across `TmDocumentFindPanel`,
+  `TmSpreadsheetFindReplaceDialog`, `TmSpreadsheetFilterDropdown` (Enter→ApplyValues),
+  `TmNotionPageSearch`, `TmNotionLabelEditor`, `TmCommandPalette`, `TmNotionStatusPicker`, the three
+  Notion comment panels (page/block/text) and three spreadsheet dialogs (FormatCells, NamedRangeEdit,
+  Hyperlink). Navigation keys moved onto the text inputs that own them; the inputs that lost the
+  bubbled route to Escape got a local one; and in the comment panels the action buttons, reaction
+  groups and edit/reply wraps are isolated from the entry's Enter→reply handler.
+
+- **Native children nested in a keyboard-handling container are fenced off.**
+  `@onkeydown:stopPropagation` barriers now sit on the clear and chip-remove buttons inside
+  `TmMultiSelect`'s trigger (Space on them used to toggle the dropdown on top of the removal), on the
+  selection checkboxes and row-expander button of `TmDataTable` and `TmMultiViewList`, and on the
+  toolbar/breadcrumb/sidebar/overlay chrome of `TmFileManager` and `TmDocumentManager`, where a
+  bubbled Enter could reach the grid's open/delete handler.
+
+- **`TmDataTable` grouped leaf rows are reachable by keyboard, and their checkbox no longer fires
+  the row click.** `RenderGroupRows` emitted leaf `<tr>`s with `onclick` but no `tabindex` or
+  `onkeydown`, and the grouped selection checkbox carried no barrier — clicking it toggled selection
+  AND fired `OnRowClick`. The rows now carry the ungrouped contract — `tabindex="0"`, Enter/Space →
+  `OnRowClick` — and the checkbox stops keydown and click propagation through
+  `AddEventStopPropagationAttribute`, the same frames the Razor compiler emits for
+  `@on…:stopPropagation`, because a plain attribute name inside a `RenderTreeBuilder` is not picked
+  up as a barrier.
+
+- **Closing a popup no longer drops focus on `<body>`.** `TmFilterableDropdown` and `TmMultiSelect`
+  focus the filter input on open, so every close destroyed the focused element — a WCAG 2.4.3
+  focus-order violation. The `@ref`'d trigger now receives `FocusAsync(preventScroll: true)` on
+  every close path where focus could have been inside the popup — Escape, item select, confirm,
+  toggle-close — the pattern `TmColorPicker` already used. The reference `TmMultiSelect` captured
+  for that input is also actually focused on open; it was captured and never used.
+
+- **`TmMultiSelect` with `AllowFiltering=false` can now be driven from the keyboard.** With no
+  filter input there was no element to carry Enter, so the options were mouse-only. In that
+  configuration the combobox keeps DOM focus and now owns the navigation itself: ArrowUp/ArrowDown
+  move the highlight, Enter/Space toggle it, and `aria-activedescendant` on the trigger — or on the
+  filter input when filtering is on — names the `{Id}-opt-{i}` option.
+
+### Added
+
+- **`TmFilterableDropdown.AriaLabel`, a keyboard-operable trigger, and listbox semantics.** The
+  trigger is a non-native focusable (`role="combobox"`), which activates only when the library says
+  so: it now handles Enter, Space and ArrowDown to open. Items carry `role="option"` with
+  `aria-selected` reflecting the selected value. `AriaLabel` gives the combobox an accessible-name
+  override for the cases where the visible text does not describe the field.
+
+### Notes for consumers
+
+- **Space activation moved from `keydown` to `keyup`** — the native timing the emulation had been
+  shadowing. A test that dispatches `KeyDown(" ")` alone and asserts activation must now dispatch
+  the real sequence (`keydown` → `keyup` → `click`, or simply `Click`); under the old code that test
+  was asserting the defect's extra invocation. Real browsers always produced both halves, so only
+  simulations see a change. The same retiming applies to Enter only in tests that relied on the
+  emulated handler — the native click still lands on `keydown`.
+- **Keyboard callbacks consumers attached still fire — they no longer activate.** A consumer's
+  `@onkeydown` on a `TmButton` or a menu item still observes the event; the component no longer
+  calls the click action from it. Code that dispatched `keydown` alone to *reach* an action is the
+  breaking surface of this release.
+- **Focus now returns to the trigger when a `TmFilterableDropdown`/`TmMultiSelect` popup closes.**
+  Tests asserting `document.activeElement` after Escape, or counting `FocusAsync` interop calls (in
+  bUnit's Loose mode the call is observable as `Blazor._internal.domWrapper.focus`), observe the
+  change.
+- The regression coverage — 90 new cases across 30 test files — dispatches the real browser order,
+  `keydown` → `click` for Enter and `keydown` → `keyup` → `click`/`change` for Space, and asserts
+  exactly-once activation. That is the only order in which the removed emulation can be told apart
+  from the fix, because bUnit does not synthesize the native keyboard→click sequence.
+
+**This number was raised because the content changed** (`DEC-TEMPO-RELEASE-GATE` point 10), and it
+is a patch number because the change is a defect correction plus one additive parameter — the same
+shape 2.8.13 shipped under, which added six parameters and stayed a patch. Publication of 2.8.25
+remains the repository owner's manual step (`DEC-TEMPO-287-NUGET-DELIVERY`):
+`VERSION=2.8.25 eng/pack-nuget-packages.sh`, then `dotnet nuget push packages/*.2.8.25.nupkg`.
+**The double-activation defect is live on the feed under 2.8.24.**
+
 ## 2.8.24 - 2026-08-27
 
 The barrier 2.8.23 put around a consumer's `HeaderTemplate` cost the next keystroke. This release
