@@ -1930,7 +1930,11 @@ public partial class TmDataTable<TItem> : IDisposable
                         var rowItem = item;
                         builder.OpenElement(seq++, "tr");
                         builder.AddAttribute(seq++, "class", GetRowClass(rowItem));
+                        // Same keyboard contract as the ungrouped rows: a non-native
+                        // focusable <tr> offers Enter/Space -> OnRowClick itself.
+                        builder.AddAttribute(seq++, "tabindex", "0");
                         builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleRowClickAsync(rowItem)));
+                        builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleRowKeyDownAsync(e, rowItem)));
                         builder.AddMultipleAttributes(seq++, GetRowAttributes(rowItem));
 
                         if (HasDetail)
@@ -1949,6 +1953,11 @@ public partial class TmDataTable<TItem> : IDisposable
                             builder.AddAttribute(seq++, "aria-label", Loc["TmDataTable_SelectRow"]);
                             builder.AddAttribute(seq++, "checked", IsSelected(rowItem));
                             builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => ToggleRowSelectionAsync(rowItem, e)));
+                            // Same barriers as the ungrouped checkboxes: the row is a
+                            // non-native focusable that emulates Enter/Space, so this
+                            // native control's keydown/click must not leak into it.
+                            builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
+                            builder.AddEventStopPropagationAttribute(seq++, "onclick", true);
                             builder.CloseElement(); // input
                             builder.CloseElement(); // td
                         }

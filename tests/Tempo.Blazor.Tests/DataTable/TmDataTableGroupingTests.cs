@@ -404,4 +404,102 @@ public class TmDataTableGroupingTests : LocalizationTestBase
             Arg.Is<DataTableQuery>(q => q.GroupByColumns.Contains("Department")),
             Arg.Any<CancellationToken>());
     }
+
+    // --- Grouped leaf rows: keyboard parity + checkbox isolation ---
+
+    private async Task<IRenderedComponent<TmDataTable<GroupPerson>>> RenderSelectableGroupedTable(
+        Action<GroupPerson> onRowClick,
+        Action<IReadOnlyList<GroupPerson>> onSelectionChanged)
+    {
+        var cut = Render<TmDataTable<GroupPerson>>(p =>
+        {
+            p.Add(c => c.Items, People);
+            p.Add(c => c.ShowGrouping, true);
+            p.Add(c => c.GroupsCollapsedByDefault, false);
+            p.Add(c => c.Selectable, true);
+            p.Add(c => c.OnRowClick,
+                EventCallback.Factory.Create<GroupPerson>(this, onRowClick));
+            p.Add(c => c.OnSelectionChanged,
+                EventCallback.Factory.Create<IReadOnlyList<GroupPerson>>(this, onSelectionChanged));
+            p.AddChildContent(b =>
+            {
+                b.OpenComponent<TmDataTableColumn<GroupPerson>>(0);
+                b.AddAttribute(1, "Title", "Name");
+                b.AddAttribute(2, "PropertyName", "Name");
+                b.AddAttribute(3, "Field", (Func<GroupPerson, object?>)(x => x.Name));
+                b.CloseComponent();
+
+                b.OpenComponent<TmDataTableColumn<GroupPerson>>(10);
+                b.AddAttribute(11, "Title", "Department");
+                b.AddAttribute(12, "PropertyName", "Department");
+                b.AddAttribute(13, "Field", (Func<GroupPerson, object?>)(x => x.Department));
+                b.AddAttribute(14, "Groupable", true);
+                b.CloseComponent();
+            });
+        });
+
+        await cut.InvokeAsync(() => cut.Instance.AddGroupColumn("Department"));
+        return cut;
+    }
+
+    private static AngleSharp.Dom.IElement FirstGroupedLeafRow(IRenderedComponent<TmDataTable<GroupPerson>> cut)
+        => cut.FindAll("tbody tr:not(.tm-data-table-group-row)").First();
+
+    [Fact]
+    public async Task DataTable_Grouped_CheckboxClick_Toggles_WithoutRowClick()
+    {
+        // The leaf <tr> has an onclick; the selection checkbox sits inside it,
+        // so without @onclick:stopPropagation one gesture both toggles and
+        // fires OnRowClick. bUnit reports the barriered click path as "no
+        // reachable onclick handler" and throws.
+        var rowClicks = 0;
+        IReadOnlyList<GroupPerson>? selected = null;
+        var cut = await RenderSelectableGroupedTable(_ => rowClicks++, s => selected = s);
+
+        var checkbox = FirstGroupedLeafRow(cut).QuerySelector("input[type='checkbox']")!;
+        var act = () => checkbox.Click();
+        act.Should().Throw<MissingEventHandlerException>(
+            "the grouped selection checkbox isolates its click from the row's onclick");
+
+        // The native part of the sequence still toggles the selection.
+        FirstGroupedLeafRow(cut).QuerySelector("input[type='checkbox']")!.Change(true);
+        selected.Should().NotBeNull();
+        selected!.Should().ContainSingle();
+        rowClicks.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("Enter")]
+    [InlineData(" ")]
+    public async Task DataTable_Grouped_RowKeyDown_FiresOnRowClickOnce(string key)
+    {
+        // Ungrouped rows are <tr tabindex="0"> mapping Enter/Space to
+        // OnRowClick — a legitimate emulation on a non-native focusable.
+        // Grouped leaf rows must offer the same contract.
+        var clicks = new List<GroupPerson>();
+        var cut = await RenderSelectableGroupedTable(clicks.Add, _ => { });
+
+        var row = FirstGroupedLeafRow(cut);
+        row.GetAttribute("tabindex").Should().Be("0");
+        row.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = key });
+
+        clicks.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task DataTable_Grouped_CheckboxKeyDown_DoesNotFireOnRowClick()
+    {
+        // Same boundary as the ungrouped paths: the checkbox is a native
+        // control inside a row that emulates Enter/Space — its keydown must
+        // not bubble into HandleRowKeyDownAsync.
+        var rowClicks = 0;
+        var cut = await RenderSelectableGroupedTable(_ => rowClicks++, _ => { });
+
+        var checkbox = FirstGroupedLeafRow(cut).QuerySelector("input[type='checkbox']")!;
+        var act = () => checkbox.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the grouped selection checkbox isolates its keydown from the row's Enter/Space handler");
+
+        rowClicks.Should().Be(0);
+    }
 }
