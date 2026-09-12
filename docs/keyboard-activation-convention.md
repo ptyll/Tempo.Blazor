@@ -6,9 +6,11 @@ what is native, always emulate what is not, and fence the two off from each othe
 
 ## Native elements activate natively — never emulate
 
-`<button>`, `<a href>`, `<input type="checkbox">` and `<select>` turn keys into clicks themselves:
-Enter fires `click` on **keydown**, Space fires it on **keyup**, and a checkbox's Space produces
-`change` on keyup.
+`<button>` turns keys into clicks itself: Enter fires `click` on **keydown**, Space fires it on
+**keyup**. The other natively activatable elements differ per element — a checkbox's Space produces
+`change` on keyup while its Enter does not activate, an `<a href>` answers Enter while Space
+scrolls, a `<select>` opens — so the rule is per element, not per "activatable": never attach an
+`@onkeydown` that invokes the same action the element already performs natively.
 
 ```razor
 @* ✘ rejected — the emulated invocation plus the native click fire the action TWICE *@
@@ -58,11 +60,18 @@ intentionally container-level (it means "dismiss the surface", whichever child h
 
 ## Consumer templates self-barrier
 
-Focusable content a consumer puts into `CellTemplate`, `EditTemplate`, `HeaderTemplate` and similar
-render fragments is outside the library's reach — the library cannot fence markup it does not
-render. Consumers placing inputs or buttons inside a keyboard-handling container must add
-`@onkeydown:stopPropagation="true"` on that content themselves; without it the host's header/row
-handler answers keys meant for the templated control.
+The library **can** fence template output at a wrapper boundary it renders — `TmDataTable` does
+exactly that for `HeaderTemplate`, wrapping it in a span carrying `SwallowTemplateKey` plus
+`@onkeydown:stopPropagation` (`TmDataTable.razor:210`), so consumer content inside a column header
+needs no barrier of its own. What the library cannot do is reach INSIDE a fragment — and where the
+fragment renders with no such wrapper, no fence exists at all: `TmDataTable`'s `CellTemplate` /
+`EditTemplate` emit straight into the `<td>` (`TmDataTable.razor:466-469`), and `TmMultiSelect`'s
+`HeaderTemplate` sits unfenced inside a popup whose container-level handler answers Escape, arrows
+and Backspace (`TmMultiSelect.razor:124-126`). Consumers placing focusables in those fragments must
+add `@onkeydown:stopPropagation="true"` on that content themselves — otherwise the host's row or
+popup handler answers keys meant for the templated control (in the MultiSelect header: arrows move
+the option highlight under the user's input, Escape closes the popup, Backspace removes the last
+selected value).
 
 ## Focus restoration on popup close
 
@@ -86,8 +95,8 @@ browser order explicitly:
 
 Then assert the action ran **exactly once**. A lone `KeyDown` asserting activation tests the
 emulation path — which is the defect shape, not the contract. On a barriered path, bUnit's
-`MissingEventHandlerException` ("no handler is associated with the event") is the observable proof
-that the keydown never reached the container's handler.
+`MissingEventHandlerException` ("The element does not have an event handler for the event
+'onkeydown'") is the observable proof that the keydown never reached the container's handler.
 
 ## Motivating change
 
