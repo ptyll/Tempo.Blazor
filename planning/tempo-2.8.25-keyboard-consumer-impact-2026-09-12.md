@@ -77,6 +77,12 @@ Změřeno grepem po `*.razor` (počet souborů obsahující komponentu) a po tes
 
 ## Shrnutí pro poznámky k vydání
 
+Rozsah verdictů: per-repo závěry výše pokrývají jen delta 2.8.24 → 2.8.25. Konzumenti na
+1.1.x / 2.3.9-preview / 2.8.4 cestou na 2.8.25 překračují i dřívější breaking poznámky — zejména
+2.8.16 (`### Changed (source-breaking, one parameter)`: `TmNavigationGuard.OnSaveAndLeave` z
+`EventCallback` na `Func<Task<bool>>?`, `TmStatCard` odmítá `SubValueColor` bez `SubValue`)
+a 2.8.18 (`### Changed — BREAKING for client-side tables with the pager hidden`).
+
 Pro všechny konzumenty je adoption `dotnet add package Tempo.Blazor --version 2.8.25` (resp. bump
 `TempoVersion`/`Version=`). Povinná akce existuje jen pro testovací sestavy, které simulují
 keydown-only Space/Enter proti Tempo komponentám — v nalezených repozitářích se žádná taková

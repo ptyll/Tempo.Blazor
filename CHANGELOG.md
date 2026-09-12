@@ -71,18 +71,34 @@ from keydown to keyup, so read the consumer notes at the bottom before upgrading
   `aria-selected` reflecting the selected value. `AriaLabel` gives the combobox an accessible-name
   override for the cases where the visible text does not describe the field.
 
-### Notes for consumers
+### Notes for consumers — test-suite breaking surface
 
 - **Space activation moved from `keydown` to `keyup`** — the native timing the emulation had been
   shadowing. A test that dispatches `KeyDown(" ")` alone and asserts activation must now dispatch
   the real sequence (`keydown` → `keyup` → `click`, or simply `Click`); under the old code that test
   was asserting the defect's extra invocation. Real browsers always produced both halves, so only
-  simulations see a change. The same retiming applies to Enter only in tests that relied on the
-  emulated handler — the native click still lands on `keydown`.
+  simulations see a change. The Enter shape is the same one event earlier: a `KeyDown("Enter")`-only
+  bUnit assertion was exercising the *removed emulation*, not the native path — real browsers click
+  on `keydown`, and bUnit never produces that click at all (the caveat the coverage bullet below
+  spells out), so the emulation was the only thing a lone `keydown` could have activated.
 - **Keyboard callbacks consumers attached still fire — they no longer activate.** A consumer's
   `@onkeydown` on a `TmButton` or a menu item still observes the event; the component no longer
   calls the click action from it. Code that dispatched `keydown` alone to *reach* an action is the
   breaking surface of this release.
+- **Newly fenced children also cut off ancestor keydown handlers.** A consumer's own `@onkeydown`
+  placed on a wrapper ABOVE the barriered elements — the `TmMultiSelect` clear and chip-remove
+  buttons, `TmDataTable`/`TmMultiViewList` selection checkboxes and row expanders,
+  `TmFileManager`/`TmDocumentManager` chrome — no longer observes keydowns that originate on those
+  children: the `@onkeydown:stopPropagation` barrier stops the bubble before it reaches the wrapper.
+  That is the intended effect — the ancestor handler was precisely the collision being fixed — but a
+  wrapper handler that counted on seeing those keys has to move onto the child or below the barrier.
+- **Markup assertions observe new rendered attributes.** bUnit/markup tests that assert exact
+  attributes will see: `tabindex="0"` on grouped `TmDataTable` leaf rows — which also changes the
+  production tab order, since those rows are now in the tab sequence — `role="option"` with
+  `aria-selected` on `TmFilterableDropdown` items alongside its trigger's existing
+  `role="combobox"`/`aria-haspopup="listbox"`/`aria-expanded` and new `aria-label` when `AriaLabel`
+  is set, and `{Id}-opt-{i}` option ids plus `aria-activedescendant` on `TmMultiSelect` (on the
+  trigger when `AllowFiltering=false`, on the filter input when filtering).
 - **Focus now returns to the trigger when a `TmFilterableDropdown`/`TmMultiSelect` popup closes.**
   Tests asserting `document.activeElement` after Escape, or counting `FocusAsync` interop calls (in
   bUnit's Loose mode the call is observable as `Blazor._internal.domWrapper.focus`), observe the
