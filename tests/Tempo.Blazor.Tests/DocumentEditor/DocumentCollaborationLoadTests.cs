@@ -206,16 +206,32 @@ public class RedisDocumentCollaborationBackplaneTests
                 ],
             });
 
-            // Redis pub/sub is asynchronous — poll briefly for the fan-out.
-            IReadOnlyList<DocumentCollaborationOperationBatch> onB = [];
-            for (var attempt = 0; attempt < 50 && onB.Count == 0; attempt++)
-            {
-                await Task.Delay(100);
-                onB = await instanceB.GetOperationBatchesAsync("redis-doc", 0);
-            }
-
+            // Redis pub/sub is asynchronous — the barrier is the fan-out landing in B's stream,
+            // named by the helper rather than slept past.
+            var onB = await WaitForBatchesAsync(instanceB, "redis-doc");
             onB.Should().ContainSingle("the batch must arrive through Redis pub/sub");
             onB[0].Batch.Operations.Single().Text.Should().Be("Přes Redis");
         }
+    }
+
+    /// <summary>
+    /// Waits until the backplane's fan-out has landed in <paramref name="reader"/>'s operation
+    /// stream. Pub/sub delivery produces no event the test can await directly, so the state — a
+    /// non-empty stream — is polled, with the deadline named here instead of a bare sleep count.
+    /// </summary>
+    private static async Task<IReadOnlyList<DocumentCollaborationOperationBatch>> WaitForBatchesAsync(
+        BackplaneDocumentCollaborationProvider reader,
+        string documentId,
+        int timeoutMs = 10_000)
+    {
+        var deadline = Environment.TickCount64 + timeoutMs;
+        IReadOnlyList<DocumentCollaborationOperationBatch> batches = [];
+        while (batches.Count == 0 && Environment.TickCount64 < deadline)
+        {
+            await Task.Delay(50);
+            batches = await reader.GetOperationBatchesAsync(documentId, 0);
+        }
+
+        return batches;
     }
 }

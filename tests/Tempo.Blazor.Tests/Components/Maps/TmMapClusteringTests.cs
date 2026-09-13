@@ -217,7 +217,10 @@ public class TmMapClusteringTests : LocalizationTestBase
         await WaitUntilAsync(() => provider.Calls.Count == 2);
         provider.Calls[1].Viewport.Zoom.Should().Be(10.0);
 
-        await Task.Delay(300);
+        // The barrier is "nothing can still call the provider": every scheduled debounce→load
+        // chain — cancelled or completed — has settled. A chain that escaped supersession is still
+        // pending here, and it delivers a third call before this wait ends.
+        await WaitUntilAsync(() => cut.Instance.PendingDataRequests == 0);
         provider.Calls.Should().HaveCount(2);
     }
 
@@ -260,9 +263,13 @@ public class TmMapClusteringTests : LocalizationTestBase
         await WaitUntilAsync(() => provider.Calls.Count == 3 && provider.Calls[1].Token.IsCancellationRequested);
 
         // Late result of the superseded request must be discarded.
-        var setDataCountBefore = module.Invocations.Count(i => i.Identifier == "setData");
         firstRelease.SetResult(new MapDataResult(Markers: [new MapMarker("stale", 0, 0, null)]));
-        await Task.Delay(200);
+
+        // The barrier is "the stale continuation has finished": request #2's chain stays pending
+        // until the released provider task's continuation has run — applied or discarded. Waiting
+        // on that is the only point where the payload below is final; a fixed delay could return
+        // before the continuation ever ran.
+        await WaitUntilAsync(() => cut.Instance.PendingDataRequests == 0);
 
         var lastPayload = PayloadOf(module.Invocations.Last(i => i.Identifier == "setData"));
         lastPayload.Markers.Should().NotContain(m => m.Id == "stale");

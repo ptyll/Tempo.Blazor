@@ -91,10 +91,28 @@ public sealed class DocumentVersionAndImageCacheTests
         cache.Set("doc-1", "asset-1", "url-1");
         cache.TryGet("doc-1", "asset-1", out _).Should().BeTrue();
 
-        await Task.Delay(120);
+        // The barrier is the expired entry reporting a miss — the state the TTL produces — not a
+        // fixed wall-clock margin a loaded machine can outrun.
+        await WaitUntilAsync(() => !cache.TryGet("doc-1", "asset-1", out _));
 
         cache.TryGet("doc-1", "asset-1", out var url).Should().BeFalse("entry must expire after TTL");
         url.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Polls until <paramref name="condition"/> holds. A cache expiry produces no event, so the only
+    /// honest barrier is the state itself — and a fixed delay can observe the pre-expiry state on a
+    /// slow machine and read it as green.
+    /// </summary>
+    private static async Task WaitUntilAsync(Func<bool> condition, int timeoutMs = 5000)
+    {
+        var deadline = Environment.TickCount64 + timeoutMs;
+        while (!condition() && Environment.TickCount64 < deadline)
+        {
+            await Task.Delay(10);
+        }
+
+        condition().Should().BeTrue("the awaited state should hold within the timeout");
     }
 
     [Fact]

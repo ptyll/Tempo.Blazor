@@ -133,9 +133,12 @@ public class ToastServiceTests
         svc.ShowInfo("Sticky", duration: 0);
         svc.ShowError("AlsoSticky", duration: -1);
 
-        // give plenty of time for a (wrongly) scheduled auto-dismiss to fire
-        Thread.Sleep(300);
-
+        // The barrier is STATE, not elapsed time: a wrongly-scheduled timer would either still sit
+        // armed in the dictionary (a -1 ms timer never fires and never leaves) or have already fired
+        // and taken a toast with it (a 0 ms timer). Both failures are visible right now.
+        svc.PendingAutoDismissCount.Should().Be(0,
+            "duration <= 0 must never schedule an auto-dismiss timer — a wrongly armed one either "
+            + "stays armed forever or has already fired, and either way it shows up here");
         svc.Toasts.Should().HaveCount(2, "duration <= 0 means the toast is sticky and must never auto-dismiss");
     }
 
@@ -153,10 +156,12 @@ public class ToastServiceTests
         act.Should().NotThrow();
         changeCount.Should().Be(1, "the manual Remove should raise OnChange exactly once");
 
-        // Wait well past the original duration: if the pending timer wasn't
-        // cancelled it will fire and call Remove again, raising OnChange a
-        // second time (Remove currently always invokes OnChange).
-        Thread.Sleep(400);
+        // The barrier is the cancelled timer leaving the dictionary: a timer still armed is a timer
+        // that can still call Remove again, and it is visible immediately — no wall-clock margin
+        // needed. A firing-then-removed timer is the only shape that could escape this, and it would
+        // have raised the second OnChange the test asserts against below.
+        svc.PendingAutoDismissCount.Should().Be(0,
+            "Remove must dispose the pending auto-dismiss timer, not just the toast");
 
         changeCount.Should().Be(1, "the pending auto-dismiss timer must be cancelled by the manual Remove");
         svc.Toasts.Should().BeEmpty();
@@ -175,7 +180,9 @@ public class ToastServiceTests
         svc.Clear();
         changeCount.Should().Be(1);
 
-        Thread.Sleep(400);
+        svc.PendingAutoDismissCount.Should().Be(0,
+            "Clear() must cancel every pending auto-dismiss timer — an armed leftover is observable "
+            + "the moment Clear returns, not after a deadline");
 
         changeCount.Should().Be(1, "Clear() must cancel any pending auto-dismiss timers");
         svc.Toasts.Should().BeEmpty();

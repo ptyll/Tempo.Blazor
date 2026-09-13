@@ -42,6 +42,20 @@ public sealed class ToastService : IDisposable
     /// <summary>Fired when a new toast is added.</summary>
     public event Action? OnChange;
 
+    /// <summary>
+    /// How many auto-dismiss timers are still armed. Test-visible state: the "the timer must not
+    /// fire" assertions wait on THIS — a cancelled timer leaves the dictionary, a never-scheduled
+    /// one never enters it — instead of sleeping a fixed wall-clock margin past the deadline.
+    /// </summary>
+    internal int PendingAutoDismissCount
+    {
+        get
+        {
+            lock (_lock)
+                return _autoDismissTimers.Count;
+        }
+    }
+
     /// <summary>Current active toasts (read-only snapshot).</summary>
     public IReadOnlyList<ToastInstance> Toasts
     {

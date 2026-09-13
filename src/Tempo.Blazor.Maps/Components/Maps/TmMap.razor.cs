@@ -27,6 +27,15 @@ public partial class TmMap : TmComponentBase, IAsyncDisposable
     private bool _renderedClientClustering;
     private CancellationTokenSource? _debounceCts;
     private CancellationTokenSource? _loadCts;
+    private int _pendingDataRequests;
+
+    /// <summary>
+    /// How many scheduled debounce→load chains are still alive — armed debounces AND in-flight
+    /// provider calls. Test-visible state: the "no further request may arrive" assertions wait on
+    /// this reaching zero, which is the only point where nothing can still call the provider —
+    /// instead of sleeping a fixed wall-clock margin past the debounce window.
+    /// </summary>
+    internal int PendingDataRequests => Volatile.Read(ref _pendingDataRequests);
     private int _loadSequence;
     private MapViewport? _lastViewport;
 
@@ -426,7 +435,25 @@ public partial class TmMap : TmComponentBase, IAsyncDisposable
     {
         _debounceCts?.Cancel();
         _debounceCts = new CancellationTokenSource();
-        _ = DebounceThenLoadAsync(_debounceCts.Token);
+        Interlocked.Increment(ref _pendingDataRequests);
+        _ = ReleasePendingRequestWhenSettledAsync(DebounceThenLoadAsync(_debounceCts.Token));
+    }
+
+    /// <summary>
+    /// Tracks a debounce→load chain through cancellation, provider hangs and stale-result discards,
+    /// so <see cref="PendingDataRequests"/> only reaches zero when NOTHING can still call the
+    /// provider — the state the "no further request" tests wait on.
+    /// </summary>
+    private async Task ReleasePendingRequestWhenSettledAsync(Task chain)
+    {
+        try
+        {
+            await chain;
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _pendingDataRequests);
+        }
     }
 
     private async Task DebounceThenLoadAsync(CancellationToken debounceToken)

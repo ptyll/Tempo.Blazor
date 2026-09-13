@@ -13,9 +13,6 @@ public class TmSearchInputTests : LocalizationTestBase
     /// <summary>Debounce delay used by the timing tests.</summary>
     private const int DebounceMs = 60;
 
-    /// <summary>Comfortably longer than <see cref="DebounceMs"/>, so a pending timer has fired.</summary>
-    private const int DebounceSettleMs = 400;
-
     /// <summary>
     /// Polls until <paramref name="condition"/> holds or the timeout expires. ValueChanged does not
     /// re-render the component when the consumer does not feed Value back, so bUnit's
@@ -128,8 +125,10 @@ public class TmSearchInputTests : LocalizationTestBase
 
         delivered.Should().ContainSingle().Which.Should().Be("abc");
 
-        // The pending debounce must not deliver a second time once the timer would have elapsed.
-        Thread.Sleep(DebounceSettleMs);
+        // The barrier is the disarmed timer: `change` cancels the pending debounce, so once
+        // HasPendingDebounce reads false no second delivery can arrive. A timer that escaped
+        // cancellation stays armed — and fires inside this wait, taking the delivery count to 2.
+        WaitUntil(() => !cut.Instance.HasPendingDebounce);
         delivered.Should().ContainSingle().Which.Should().Be("abc");
     }
 
@@ -172,7 +171,7 @@ public class TmSearchInputTests : LocalizationTestBase
         input.Input("abc");
         input.Change("abc");
 
-        Thread.Sleep(DebounceSettleMs);
+        WaitUntil(() => !cut.Instance.HasPendingDebounce);
         delivered.Should().ContainSingle().Which.Should().Be("abc");
     }
 
@@ -314,7 +313,9 @@ public class TmSearchInputTests : LocalizationTestBase
         cut.Find("input").Input("abc"); // starts the debounce timer
         cut.Find(".tm-search-clear").Click();
 
-        Thread.Sleep(DebounceSettleMs);
+        // The clear delivered; the barrier for "the old text can't still arrive" is the cancelled
+        // timer, not a wall-clock margin — an armed leftover would fire inside this wait.
+        WaitUntil(() => !cut.Instance.HasPendingDebounce);
         delivered.Should().Equal(string.Empty);
     }
 }

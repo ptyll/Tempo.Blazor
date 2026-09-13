@@ -58,7 +58,14 @@ public sealed class CanvasEngineAssetUrlCacheReviewTests : LocalizationTestBase
         // než se model staví ⇒ obrázek se neztratí ani na jeden render.
         var cache = new ImageResolveCache(capacity: 8, ttl: TimeSpan.FromMilliseconds(40));
         cache.Set("doc", "asset", "signed-url-1");
-        await Task.Delay(100);
+
+        // Bariéra je stav, který TTL produkuje — expirovaný záznam hlásí miss — ne fixní
+        // čekací doba, kterou zatížený stroj předběhne.
+        var deadline = Environment.TickCount64 + 5000;
+        while (cache.TryGet("doc", "asset", out _) && Environment.TickCount64 < deadline)
+        {
+            await Task.Delay(10);
+        }
 
         cache.TryGet("doc", "asset", out _).Should().BeFalse("po TTL je záznam miss → vynutí re-resolve");
         cache.Set("doc", "asset", "signed-url-2");

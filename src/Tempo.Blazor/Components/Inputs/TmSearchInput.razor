@@ -61,8 +61,17 @@
     private string InputCssClass =>
         $"tm-input tm-input-search tm-input-with-left-icon{(Disabled ? " tm-input-disabled" : "")}";
 
-    private System.Timers.Timer? _debounce;
+    // volatile because the test-visible property below is polled off the renderer thread.
+    private volatile System.Timers.Timer? _debounce;
     private bool _disposed;
+
+    /// <summary>
+    /// Test-visible state: is a debounce timer still armed? The "the pending debounce must not
+    /// deliver" assertions wait on THIS — <see cref="CancelDebounce"/> disposes and clears the
+    /// reference, so a still-armed timer means a delivery is still possible — instead of sleeping a
+    /// fixed wall-clock margin past the deadline.
+    /// </summary>
+    internal bool HasPendingDebounce => _debounce is not null;
 
     // Last value handed to ValueChanged. Deliberately NOT compared against the Value parameter:
     // consumers may bind only ValueChanged and never supply Value, which would leave Value
