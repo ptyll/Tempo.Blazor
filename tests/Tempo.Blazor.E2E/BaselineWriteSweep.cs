@@ -45,7 +45,9 @@ namespace Tempo.Blazor.E2E;
 /// <c>[baseline-sweep] DISABLED:</c> line in the assembly-init output. A green run on such a
 /// machine therefore means "not measured", never "measured clean". The trade-off is deliberate:
 /// a missing git must not take the whole suite down, and the init output is the one channel a
-/// dev-box run is certain to surface.
+/// dev-box run is certain to surface. The boundary is exact: DISABLED covers ONLY environment
+/// failures while establishing the population; a dirty starting tree throws OUTSIDE that catch
+/// and fails the run — a measured violation must never wear the "not measured" banner.
 /// </para>
 /// </summary>
 [TestClass]
@@ -82,10 +84,6 @@ public static class BaselineWriteSweep
             context.WriteLine(string.Create(CultureInfo.InvariantCulture,
                 $"[baseline-sweep] {BaselineRootPathspec}: indexed={staged.Count} on-disk={onDisk.Count} "
                 + $"(expected 0/0); writes allowed = {BaselineGeneratorTestBase.WritesAllowed}"));
-
-            // The starting state must already be clean — a staged or leftover PNG predates the run
-            // and failing at cleanup would blame the run for what it found.
-            AssertNoBaselinePngsExist();
         }
         catch (Exception ex)
         {
@@ -93,7 +91,15 @@ public static class BaselineWriteSweep
             // reports it could not measure instead of pretending it measured nothing.
             _enabled = false;
             context.WriteLine($"[baseline-sweep] DISABLED: {ex.Message}");
+            return;
         }
+
+        // The starting state must already be clean — a staged or leftover PNG predates the run
+        // and failing at cleanup would blame the run for what it found. This call is deliberately
+        // OUTSIDE the try: a dirty starting tree is a MEASURED violation, not a missing git, and
+        // reclassifying its InvalidOperationException as DISABLED would disarm the sweep on the
+        // exact state it exists to catch — a green run with no guard (architect finding, 2.8.26).
+        AssertNoBaselinePngsExist();
     }
 
     /// <summary>
