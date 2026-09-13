@@ -6149,6 +6149,21 @@
       ],
       "parameters": [
         {
+          "name": "Document",
+          "type": "DocumentEditorDocument?",
+          "isRequired": false
+        },
+        {
+          "name": "OnActiveResultChanged",
+          "type": "EventCallback<DocumentSearchResult>",
+          "isRequired": false
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
           "name": "OnNavigateRequested",
           "type": "EventCallback<int>",
           "isRequired": false,
@@ -6160,10 +6175,25 @@
           "isRequired": false
         },
         {
+          "name": "OnReplaceOneRequested",
+          "type": "EventCallback<DocumentFindReplaceRequest>",
+          "isRequired": false
+        },
+        {
+          "name": "OnResultsChanged",
+          "type": "EventCallback<IReadOnlyList<DocumentSearchResult>>",
+          "isRequired": false
+        },
+        {
           "name": "OnSearchRequested",
           "type": "EventCallback<DocumentSearchQuery>",
           "isRequired": false,
           "description": "R.4.8 — raised when the query/options change, so a host (e.g. the core engine) can run its own search + highlight. Carries the current query."
+        },
+        {
+          "name": "ShowReplace",
+          "type": "bool",
+          "isRequired": false
         }
       ]
     },

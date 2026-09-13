@@ -2757,22 +2757,7 @@
       ],
       "parameters": [
         {
-          "name": "MenuType",
-          "type": "WireframeContextMenuType",
-          "isRequired": true
-        },
-        {
-          "name": "OnFitToView",
-          "type": "EventCallback",
-          "isRequired": false
-        },
-        {
-          "name": "OnSetConnectorRouting",
-          "type": "EventCallback<string>",
-          "isRequired": false
-        },
-        {
-          "name": "SnapToObjects",
+          "name": "CanRedo",
           "type": "bool",
           "isRequired": false
         },
@@ -2782,13 +2767,168 @@
           "isRequired": false
         },
         {
+          "name": "HasClipboardStyle",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "HasGroupInSelection",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "IsOpen",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "IsSelectionLocked",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "MenuType",
+          "type": "WireframeContextMenuType",
+          "isRequired": true
+        },
+        {
+          "name": "OnAlign",
+          "type": "EventCallback<WireframeAlignment>",
+          "isRequired": false
+        },
+        {
+          "name": "OnBringToFront",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
           "name": "OnClose",
-          "type": "bool CanGroup => SelectedCount >= 2; // ── Actions ────────────────────────────────────────────────────────────── [Parameter] public EventCallback",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnCopyStyle",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnDistribute",
+          "type": "EventCallback<WireframeDistribution>",
+          "isRequired": false
+        },
+        {
+          "name": "OnDuplicate",
+          "type": "EventCallback",
           "isRequired": false
         },
         {
           "name": "OnEditConnectorLabel",
           "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnFitToView",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnGroup",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnLock",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnPasteSize",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnPasteStyle",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnRedo",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnSelectAll",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnSendToBack",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnSetConnectorRouting",
+          "type": "EventCallback<string>",
+          "isRequired": false
+        },
+        {
+          "name": "OnToggleGrid",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnToggleSnapToObjects",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnUndo",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnUngroup",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnUnlock",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "SelectedCount",
+          "type": "int",
+          "isRequired": false
+        },
+        {
+          "name": "ShowGrid",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "SnapToObjects",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "X",
+          "type": "double",
+          "isRequired": false
+        },
+        {
+          "name": "Y",
+          "type": "double",
           "isRequired": false
         }
       ]
@@ -3202,6 +3342,21 @@
           "name": "DefaultFileName",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnExport",
+          "type": "EventCallback<WireframeExportDialogResult>",
+          "isRequired": false
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false
         }
       ]
     },
@@ -3219,9 +3374,41 @@
       ],
       "parameters": [
         {
+          "name": "ActiveLayerId",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "ActiveLayerIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Document",
+          "type": "WireframeDocument?",
+          "isRequired": true,
+          "editorRequired": true
+        },
+        {
           "name": "DocumentChanged",
           "type": "EventCallback<WireframeDocument>",
           "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "SelectedElementIds",
+          "type": "string[]",
+          "isRequired": false,
+          "default": "[]"
         }
       ]
     },
@@ -3376,12 +3563,6 @@
           "default": "[]",
           "description": "IDs of the currently selected elements. Empty = no selection shown.",
           "defaultValue": "[]"
-        },
-        {
-          "name": "CommandStack",
-          "type": "WireframeCommandStack?",
-          "isRequired": false,
-          "description": "Cascaded from TmWireframeEditor. When present all mutations are recorded for undo/redo."
         }
       ],
       "cssClasses": [

@@ -3740,6 +3740,26 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "Options",
+          "type": "IReadOnlyList<SelectOption<string>>?",
+          "isRequired": false
+        },
+        {
+          "name": "PreviewRenderer",
+          "type": "Func<string?, string>?",
+          "isRequired": false
+        },
+        {
+          "name": "Value",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false
         }
       ]
     },
@@ -4026,8 +4046,18 @@
       ],
       "parameters": [
         {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
           "name": "OnImport",
           "type": "EventCallback<CsvImportResult>",
+          "isRequired": false
+        },
+        {
+          "name": "Show",
+          "type": "bool",
           "isRequired": false
         }
       ]
@@ -4154,9 +4184,41 @@
       ],
       "parameters": [
         {
+          "name": "ActiveLayerId",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "ActiveLayerIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Document",
+          "type": "DiagramDocument?",
+          "isRequired": true,
+          "editorRequired": true
+        },
+        {
           "name": "DocumentChanged",
           "type": "EventCallback<DiagramDocument>",
           "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "SelectedIds",
+          "type": "string[]",
+          "isRequired": false,
+          "default": "[]"
         }
       ]
     },
@@ -4227,8 +4289,24 @@
       ],
       "parameters": [
         {
-          "name": "OnEdgeRoutingChanged",
-          "type": "EventCallback<(string EdgeId, string OldRouting, string NewRouting)>",
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Document",
+          "type": "DiagramDocument?",
+          "isRequired": true,
+          "editorRequired": true
+        },
+        {
+          "name": "DocumentChanged",
+          "type": "EventCallback<DiagramDocument>",
+          "isRequired": false
+        },
+        {
+          "name": "OnApplyLayout",
+          "type": "EventCallback<(string Algorithm, string Direction)>",
           "isRequired": false
         },
         {
@@ -4236,6 +4314,38 @@
           "type": "EventCallback<(string EdgeId, bool Value)>",
           "isRequired": false,
           "description": "Raised when the \"Manual routing\" checkbox is toggled for an edge. The editor listens so it can seed an empty Waypoints list from the auto-router when the user flips to manual on an orthogonal-like edge — otherwise the edge would collapse to a straight line at the moment of toggle."
+        },
+        {
+          "name": "OnEdgeRoutingChanged",
+          "type": "EventCallback<(string EdgeId, string OldRouting, string NewRouting)>",
+          "isRequired": false
+        },
+        {
+          "name": "OnPageSizeChanged",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "SelectedIds",
+          "type": "string[]",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "SelectedTableCells",
+          "type": "List<(int Row, int Column)>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "SelectedTableCellsChanged",
+          "type": "EventCallback<List<(int Row, int Column)>>",
+          "isRequired": false
         }
       ]
     },
@@ -4253,9 +4363,20 @@
       ],
       "parameters": [
         {
+          "name": "IsSelected",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
           "name": "OnClick",
           "type": "EventCallback",
           "isRequired": false
+        },
+        {
+          "name": "Routing",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"straight\""
         }
       ]
     },
@@ -4459,8 +4580,18 @@
       ],
       "parameters": [
         {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
           "name": "OnImport",
           "type": "EventCallback<SqlImportResult>",
+          "isRequired": false
+        },
+        {
+          "name": "Show",
+          "type": "bool",
           "isRequired": false
         }
       ]
@@ -4479,9 +4610,45 @@
       ],
       "parameters": [
         {
+          "name": "Document",
+          "type": "DiagramDocument?",
+          "isRequired": false
+        },
+        {
+          "name": "IsSelected",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Node",
+          "type": "DiagramNode",
+          "isRequired": true
+        },
+        {
+          "name": "OnPortMouseDownEvent",
+          "type": "EventCallback<string>",
+          "isRequired": false
+        },
+        {
+          "name": "OnSectionEdit",
+          "type": "EventCallback<(string DataKey, object Value)>",
+          "isRequired": false
+        },
+        {
+          "name": "Page",
+          "type": "DiagramPage?",
+          "isRequired": false
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "SelectedTableCells",
+          "type": "List<(int Row, int Column)>",
+          "isRequired": false,
+          "default": "[]"
         }
       ]
     },
@@ -4525,6 +4692,21 @@
           "type": "string",
           "isRequired": false,
           "default": "\"\""
+        },
+        {
+          "name": "OnClick",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "Selected",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Template",
+          "type": "DiagramTemplate",
+          "isRequired": true
         }
       ]
     },
@@ -4543,8 +4725,18 @@
       ],
       "parameters": [
         {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
           "name": "OnSelect",
           "type": "EventCallback<DiagramTemplate>",
+          "isRequired": false
+        },
+        {
+          "name": "Show",
+          "type": "bool",
           "isRequired": false
         }
       ]

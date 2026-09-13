@@ -928,7 +928,10 @@ internal static class ComponentDocumentationScanner
 
         var directory = Path.GetDirectoryName(razorFile)!;
         var name = Path.GetFileNameWithoutExtension(razorFile);
-        foreach (var file in Directory.GetFiles(directory, $"{name}*.cs", SearchOption.TopDirectoryOnly)
+        // The glob is "{name}.*.cs", not "{name}*.cs": a prefix match would fold the NEXT component's
+        // code-behind into this one's source — TmGantt*.cs also matches TmGanttTaskPanel.razor.cs,
+        // TmGanttFilterPanel.razor.cs, … and their [Parameter]s were being attributed to TmGantt.
+        foreach (var file in Directory.GetFiles(directory, $"{name}.*.cs", SearchOption.TopDirectoryOnly)
                      .Where(f => !PackageDocumentationGenerator.IsUnderBuildOutput(f))
                      .OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {
@@ -1165,9 +1168,19 @@ internal static class SourceDocParser
 
             var attrs = trimmed;
             var j = i + 1;
-            while (j < lines.Length && lines[j].TrimStart().StartsWith("[", StringComparison.Ordinal))
+            // Continuation lines are pure attribute lists — a '['-led line that also carries the
+            // property declaration (e.g. "[Parameter] public string X { get; set; }") is the NEXT
+            // parameter, not an attribute of this one. Absorbing it swallowed every parameter of a
+            // consecutive [Parameter] run except the last.
+            while (j < lines.Length)
             {
-                attrs += " " + lines[j].Trim();
+                var next = lines[j].Trim();
+                if (!next.StartsWith("[", StringComparison.Ordinal) || !next.EndsWith("]", StringComparison.Ordinal))
+                {
+                    break;
+                }
+
+                attrs += " " + next;
                 j++;
             }
 

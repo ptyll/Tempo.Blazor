@@ -394,7 +394,9 @@
               "--tm-border-color-control": "var(--tm-color-gray-500)",
               "--tm-border-color-focus": "var(--tm-color-primary)",
               "--tm-control-glyph-color": "var(--tm-color-on-primary)",
-              "--tm-control-hover-fill": "var(--tm-color-primary-100)"
+              "--tm-control-hover-fill": "var(--tm-color-primary-100)",
+              "--tm-sort-indicator-idle": "var(--tm-color-gray-500)",
+              "--tm-sort-indicator-active": "var(--tm-text-primary)"
             }
           },
           "text": {
@@ -403,6 +405,7 @@
               "--tm-text-primary": "var(--tm-color-gray-900)",
               "--tm-text-secondary": "var(--tm-color-gray-600)",
               "--tm-text-tertiary": "var(--tm-color-gray-500)",
+              "--tm-text-placeholder": "var(--tm-text-tertiary)",
               "--tm-text-disabled": "var(--tm-color-gray-400)",
               "--tm-text-inverse": "var(--tm-color-white)",
               "--tm-text-link": "var(--tm-color-primary)"
@@ -1117,14 +1120,8 @@
       ],
       "parameters": [
         {
-          "name": "ShowAddButton",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
           "name": "Comments",
-          "type": "IReadOnlyList<ICommentEntry>",
+          "type": "IReadOnlyList<TmCommentEntry>",
           "isRequired": false,
           "default": "[]"
         },
@@ -1142,6 +1139,12 @@
           "name": "OnCommentEdited",
           "type": "EventCallback<(string Id, string Html)>",
           "isRequired": false
+        },
+        {
+          "name": "ShowAddButton",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
         }
       ],
       "cssClasses": [
@@ -1182,9 +1185,65 @@
       ],
       "parameters": [
         {
+          "name": "AttachmentProvider",
+          "type": "ITmAttachmentProvider?",
+          "isRequired": false
+        },
+        {
+          "name": "Attachments",
+          "type": "IReadOnlyList<TmAttachment>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "Comments",
+          "type": "IReadOnlyList<TmCommentEntry>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "EntityId",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "EntityType",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"activity-entity\""
+        },
+        {
+          "name": "FileProvider",
+          "type": "ITmFileProvider?",
+          "isRequired": false
+        },
+        {
+          "name": "OnCommentAdded",
+          "type": "EventCallback<string>",
+          "isRequired": false
+        },
+        {
           "name": "OnCommentDeleted",
           "type": "EventCallback<string>",
           "isRequired": false
+        },
+        {
+          "name": "ShowAttachments",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowComments",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowTimeline",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
         },
         {
           "name": "ShowTimelineFilterBar",
@@ -1197,6 +1256,12 @@
           "type": "ITimelineDataProvider?",
           "isRequired": false,
           "description": "Optional async data provider for the timeline tab (server-side filtering + pagination)."
+        },
+        {
+          "name": "TimelineEntries",
+          "type": "IReadOnlyList<ITimelineEntry>",
+          "isRequired": false,
+          "default": "[]"
         },
         {
           "name": "TimelineEntryTypeFilter",
@@ -1221,62 +1286,6 @@
           "type": "int?",
           "isRequired": false,
           "description": "Page size for the timeline tab's incremental \"load more\" paging. null (default) shows every entry."
-        },
-        {
-          "name": "EntityId",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "TimelineEntries",
-          "type": "IReadOnlyList<ITimelineEntry>",
-          "isRequired": false,
-          "default": "[]"
-        },
-        {
-          "name": "Comments",
-          "type": "IReadOnlyList<TmCommentEntry>",
-          "isRequired": false,
-          "default": "[]"
-        },
-        {
-          "name": "Attachments",
-          "type": "IReadOnlyList<TmAttachment>",
-          "isRequired": false,
-          "default": "[]"
-        },
-        {
-          "name": "AttachmentProvider",
-          "type": "ITmAttachmentProvider?",
-          "isRequired": false
-        },
-        {
-          "name": "FileProvider",
-          "type": "ITmFileProvider?",
-          "isRequired": false
-        },
-        {
-          "name": "ShowTimeline",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowComments",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowAttachments",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "OnCommentAdded",
-          "type": "EventCallback<string>",
-          "isRequired": false
         }
       ],
       "cssClasses": [
@@ -2504,7 +2513,7 @@
       "kind": "Component",
       "category": "Buttons",
       "namespace": "Tempo.Blazor.Components.Buttons",
-      "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode.",
+      "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Buttons/TmButton.razor",
       "documentationStatus": "merged",
@@ -2577,7 +2586,7 @@
           "type": "ButtonSize",
           "isRequired": false,
           "default": "ButtonSize.Md",
-          "description": "Size variant. Defaults to Md."
+          "description": "Button size. Defaults to Md (tm-btn-md). Since 2.8.26 the base .tm-btn rule itself carries the medium height and padding, so even markup that forgets the modifier gets the 38 px button box; the four size modifiers override it by source order."
         },
         {
           "name": "TabIndex",
@@ -3025,6 +3034,12 @@
       ],
       "parameters": [
         {
+          "name": "Animated",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
           "name": "AreaGradient",
           "type": "bool",
           "isRequired": false,
@@ -3039,8 +3054,19 @@
         {
           "name": "Class",
           "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Data",
+          "type": "ChartData",
           "isRequired": true,
           "editorRequired": true
+        },
+        {
+          "name": "Height",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"300px\""
         },
         {
           "name": "InteractiveLegend",
@@ -3049,10 +3075,27 @@
           "description": "When true, legend items become buttons that toggle the visibility of their series (multi-dataset legend) or single value (per-value legend). The component owns the hidden state; OnSeriesToggle reports each change. Default false keeps the legend non-interactive (backward compatible)."
         },
         {
+          "name": "OnSegmentClick",
+          "type": "EventCallback<ChartSegment>",
+          "isRequired": false
+        },
+        {
           "name": "OnSeriesToggle",
           "type": "EventCallback<ChartSeriesToggle>",
           "isRequired": false,
           "description": "Raised whenever a legend series/value is toggled."
+        },
+        {
+          "name": "ShowGrid",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowLegend",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
         },
         {
           "name": "ShowTooltip",
@@ -3060,6 +3103,11 @@
           "isRequired": false,
           "default": "true",
           "description": "Shows a tooltip when hovering a bar, point or slice. Default true."
+        },
+        {
+          "name": "ShowValues",
+          "type": "bool",
+          "isRequired": false
         },
         {
           "name": "TimeAxisMax",
@@ -3092,6 +3140,12 @@
           "description": "Hierarchical data for ChartType.Treemap: top-level nodes render as groups with header strips, their children as tiles sized by value. When null, a treemap renders flat from Data (one tile per label/value)."
         },
         {
+          "name": "Type",
+          "type": "ChartType",
+          "isRequired": true,
+          "editorRequired": true
+        },
+        {
           "name": "WaterfallShowConnectors",
           "type": "bool",
           "isRequired": false,
@@ -3108,40 +3162,6 @@
           "type": "string",
           "isRequired": false,
           "default": "\"100%\""
-        },
-        {
-          "name": "Height",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"300px\""
-        },
-        {
-          "name": "ShowLegend",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowGrid",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowValues",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Animated",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "OnSegmentClick",
-          "type": "EventCallback<ChartSegment>",
-          "isRequired": false
         }
       ],
       "cssClasses": [
@@ -3222,9 +3242,66 @@
       ],
       "parameters": [
         {
+          "name": "Animated",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "Height",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"160px\""
+        },
+        {
+          "name": "LabelFormat",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Max",
+          "type": "double",
+          "isRequired": false,
+          "default": "100"
+        },
+        {
+          "name": "Min",
+          "type": "double",
+          "isRequired": false,
+          "default": "0"
+        },
+        {
+          "name": "Ranges",
+          "type": "IReadOnlyList<GaugeRange>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "ShowValue",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "Type",
+          "type": "GaugeType",
+          "isRequired": false,
+          "default": "GaugeType.Arc"
+        },
+        {
+          "name": "Value",
+          "type": "double",
+          "isRequired": false
+        },
+        {
+          "name": "Width",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"200px\""
         }
       ]
     },
@@ -3354,6 +3431,30 @@
           "name": "Class",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "Data",
+          "type": "double[]",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "Height",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"40px\""
+        },
+        {
+          "name": "Type",
+          "type": "SparklineType",
+          "isRequired": false,
+          "default": "SparklineType.Line"
+        },
+        {
+          "name": "Width",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"100%\""
         }
       ]
     },
@@ -3371,7 +3472,47 @@
       ],
       "parameters": [
         {
+          "name": "Animated",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
           "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Data",
+          "type": "IReadOnlyList<StockChartDataPoint>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "Height",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"400px\""
+        },
+        {
+          "name": "ShowGrid",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowVolume",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "Type",
+          "type": "StockChartType",
+          "isRequired": false,
+          "default": "StockChartType.Candlestick"
+        },
+        {
+          "name": "Width",
           "type": "string?",
           "isRequired": false
         }
@@ -4186,6 +4327,16 @@
       "documentationStatus": "merged"
     },
     {
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataTable",
+      "description": "Which element renders the \"showing X–Y of Z\" item range in a TmDataTable{TItem} paging footer.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+      "documentationStatus": "generated",
+      "itemName": "DataTablePaginationInfoPlacement"
+    },
+    {
       "itemName": "DataTableScrollMode",
       "kind": "Enum",
       "category": "Components",
@@ -4541,6 +4692,16 @@
           "description": "Fix to the bottom of the viewport."
         }
       ]
+    },
+    {
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "Meaning of the content in the Status slot.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/FormActionBarStatusSeverity.cs",
+      "documentationStatus": "generated",
+      "itemName": "FormActionBarStatusSeverity"
     },
     {
       "itemName": "GanttDropPosition",
@@ -6218,8 +6379,14 @@
       ],
       "parameters": [
         {
-          "name": "WidgetTemplate",
-          "type": "RenderFragment<WidgetInstance>?",
+          "name": "AllowEdit",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "Class",
+          "type": "string?",
           "isRequired": false
         },
         {
@@ -6228,13 +6395,8 @@
           "isRequired": false
         },
         {
-          "name": "UserId",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "Class",
-          "type": "string?",
+          "name": "OnDashboardChanged",
+          "type": "EventCallback<DashboardConfig>",
           "isRequired": false
         },
         {
@@ -6244,14 +6406,13 @@
           "default": "true"
         },
         {
-          "name": "AllowEdit",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
+          "name": "UserId",
+          "type": "string?",
+          "isRequired": false
         },
         {
-          "name": "OnDashboardChanged",
-          "type": "EventCallback<DashboardConfig>",
+          "name": "WidgetTemplate",
+          "type": "RenderFragment<WidgetInstance>?",
           "isRequired": false
         }
       ],
@@ -6321,24 +6482,24 @@
       ],
       "parameters": [
         {
-          "name": "OnClose",
-          "type": "EventCallback",
-          "isRequired": false
-        },
-        {
-          "name": "WidgetRegistry",
-          "type": "IWidgetRegistry?",
-          "isRequired": false
-        },
-        {
           "name": "ExistingWidgets",
           "type": "List<string>",
           "isRequired": false,
           "default": "[]"
         },
         {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
           "name": "OnSelect",
           "type": "EventCallback<WidgetDefinition>",
+          "isRequired": false
+        },
+        {
+          "name": "WidgetRegistry",
+          "type": "IWidgetRegistry?",
           "isRequired": false
         }
       ],
@@ -6554,6 +6715,24 @@
           "isRequired": false,
           "default": "BadgeVariant.Default",
           "description": "Color variant. Defaults to Default."
+        },
+        {
+          "name": "Style",
+          "type": "BadgeStyle",
+          "isRequired": false,
+          "description": "Alias for BadgeStyle."
+        },
+        {
+          "name": "IsPill",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Alias for Pill."
+        },
+        {
+          "name": "HasDot",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Alias for Dot."
         }
       ],
       "cssClasses": [
@@ -7299,6 +7478,12 @@
           "description": "Fires when an item row/card is clicked."
         },
         {
+          "name": "PaginationInfoPlacement",
+          "type": "DataTablePaginationInfoPlacement",
+          "isRequired": true,
+          "description": "Which of the two item-range labels in the paging footer is rendered — the list's own summary (Summary, the default) or the one inside the embedded TmPagination (Pagination), or neither (None). Showing both prints the count twice. Per-group mini-pagers are unaffected; they have no sibling summary and always state their own range."
+        },
+        {
           "name": "ScrollMode",
           "type": "DataTableScrollMode",
           "isRequired": false,
@@ -7575,7 +7760,7 @@
           "name": "SubValueColor",
           "type": "string?",
           "isRequired": false,
-          "description": "CSS classes for the SubValue color (e.g. \"text-green-600\"). Only meaningful together with SubValue: the sub-value span is rendered only when SubValue is non-empty, so a colour on its own would never reach the screen. The component THROWS InvalidOperationException for that pair instead of ignoring it."
+          "description": "Colour for the SubValue as a CSS colour value — a var(--tm-*) token reference or a literal like #16a34a. Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves via var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the value therefore always wins over the default colour regardless of consumer stylesheet order. (Before 2.8.26 this parameter took a class name, which no library rule backed — it could not win.) Only meaningful together with SubValue: the component THROWS InvalidOperationException for SubValueColor without SubValue."
         },
         {
           "name": "Title",
@@ -7589,6 +7774,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Primary metric value (e.g. \"1,234\" or \"$5,000\")."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": false,
+          "default": "Empty",
+          "description": "Alias for Title."
         }
       ],
       "cssClasses": [
@@ -7600,7 +7792,7 @@
       "examples": [
         {
           "title": "Stat card with trend",
-          "code": "<TmStatCard Title=\"Total Revenue\"\n            Value=\"$45,231\"\n            SubValue=\"+12.5% from last month\"\n            SubValueColor=\"text-green-600\" />"
+          "code": "<TmStatCard Title=\"Total Revenue\"\n            Value=\"$45,231\"\n            SubValue=\"+12.5% from last month\"\n            SubValueColor=\"var(--tm-color-success-text)\" />"
         },
         {
           "title": "Simple stat card",
@@ -7682,25 +7874,25 @@
       ],
       "parameters": [
         {
-          "name": "OnFilterChange",
-          "type": "EventCallback<DataTableFilter?>",
-          "isRequired": false
-        },
-        {
           "name": "ColumnKey",
           "type": "string",
           "isRequired": false,
-          "default": "Empty"
+          "default": "\"\""
+        },
+        {
+          "name": "FilterOptions",
+          "type": "IReadOnlyList<SelectOption<string>>?",
+          "isRequired": false
         },
         {
           "name": "FilterType",
           "type": "FilterType",
           "isRequired": false,
-          "default": "Text"
+          "default": "FilterType.Text"
         },
         {
-          "name": "FilterOptions",
-          "type": "IReadOnlyList<SelectOption<string>>?",
+          "name": "OnFilterChange",
+          "type": "EventCallback<DataTableFilter?>",
           "isRequired": false
         }
       ],
@@ -7736,14 +7928,19 @@
       ],
       "parameters": [
         {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
           "name": "Columns",
           "type": "IReadOnlyList<ColumnVisibilityItem>",
           "isRequired": false,
           "default": "[]"
         },
         {
-          "name": "OnToggleColumn",
-          "type": "EventCallback<string>",
+          "name": "Disabled",
+          "type": "bool",
           "isRequired": false
         },
         {
@@ -7752,13 +7949,8 @@
           "isRequired": false
         },
         {
-          "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Class",
-          "type": "string?",
+          "name": "OnToggleColumn",
+          "type": "EventCallback<string>",
           "isRequired": false
         }
       ],
@@ -7784,7 +7976,7 @@
       "kind": "Component",
       "category": "Data Table",
       "namespace": "Tempo.Blazor.Components.DataTable",
-      "description": "Full-featured data grid with declarative column definitions, client-side and server-side data modes, sorting, inline column filters, global search, row selection with bulk actions, column visibility picker, drag-to-group with multi-level grouping, pagination with per-group mini-pager for server-side grouping, virtualized scrolling, external filter builder, and saved view management.\\n\\nComposition rule: either the owning page filters the data and the table renders a content-only surface (set ToolbarMode=ContentOnly and supply pre-filtered Items/DataProvider), or the table owns filtering via its own toolbar and external filter builder. Avoid enabling both filter surfaces at the same time unless they are explicitly integrated (e.g. the page reads the table's ActiveFilters).\n\nPagination test hooks: the paging footer carries data-testid=\"pagination-container\" and the table's own item-range text \"pagination-summary\"; the embedded TmPagination contributes \"pagination\", \"pagination-info\", \"pagination-prev\", \"pagination-next\", \"pagination-page-{n}\" and \"pagination-page-size\". TestIdPrefix set on the table is propagated into the embedded pagination, so two tables on one page do not collide. Use PaginationAttributes for non-test attributes on the pagination root and PaginationInfoTemplate (context: DataTablePaginationInfo) to replace the built-in \"showing X-Y of Z\" wording.",
+      "description": "Full-featured data grid with declarative column definitions, client-side and server-side data modes, sorting, inline column filters, global search, row selection with bulk actions, column visibility picker, drag-to-group with multi-level grouping, pagination with per-group mini-pager for server-side grouping, virtualized scrolling, external filter builder, and saved view management.\\n\\nComposition rule: either the owning page filters the data and the table renders a content-only surface (set ToolbarMode=ContentOnly and supply pre-filtered Items/DataProvider), or the table owns filtering via its own toolbar and external filter builder. Avoid enabling both filter surfaces at the same time unless they are explicitly integrated (e.g. the page reads the table's ActiveFilters).\n\nPagination test hooks: the paging footer carries data-testid=\"pagination-container\" and the table's own item-range text \"pagination-summary\"; the embedded TmPagination contributes \"pagination\", \"pagination-info\", \"pagination-prev\", \"pagination-next\", \"pagination-page-{n}\" and \"pagination-page-size\". TestIdPrefix set on the table is propagated into the embedded pagination, so two tables on one page do not collide. Use PaginationAttributes for non-test attributes on the pagination root and PaginationInfoTemplate (context: DataTablePaginationInfo) to replace the built-in \"showing X-Y of Z\" wording. Exactly one item-range label is rendered: PaginationInfoPlacement picks between the table summary (\"pagination-summary\", the default) and the pagination bar's own label (\"pagination-info\"), or None for neither, so only the id of the chosen placement exists in the DOM.\n\nMethods (via @ref): ResetPageAsync() returns the table to the first page and reloads. Call it whenever the host narrows the result set itself (its own search or filter). The table does not reset the page on an Items change — it only clamps the current page down to the new last page — so without this call a search performed while on page 3 leaves the user on page 3. It is not automatic by design: a table re-polling the same list on a timer would otherwise yank a reading user back to page 1 on every refresh.\n\nAccessibility: a sortable column header contains a real <button type=\"button\" class=\"tm-th-sort\"> around the label and sort icon — it is the focus stop and Enter and Space activate it natively (Space included, without scrolling the page, which is only true on a button), with Shift for multi-sort, mirroring Shift+click. The button's click bubbles to the th, so clicking anywhere else in the header sorts too. aria-sort lives on the th of sortable columns only. A consumer's HeaderTemplate stays a SIBLING of the button — interactive content must not nest inside one — wrapped in a keydown barrier so typing in a header control never reaches the column shortcuts. P cycles the column pin (aria-keyshortcuts announces it on the focused element); the pin button itself carries tabindex=\"-1\". A header whose only affordance is the pin keeps tabindex=\"0\" on the th; a non-sortable, menu-less header is not a focus stop.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataTable/TmDataTable.razor",
       "documentationStatus": "merged",
@@ -7847,6 +8039,19 @@
           "isRequired": false,
           "default": "25",
           "description": "Initial page size. Default: 25."
+        },
+        {
+          "name": "DefaultSortColumn",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Key of the column the table is sorted by on first render, before the user clicks any header. The key is the column's PropertyName, falling back to its Title. Null (default) starts unsorted, in the order the items were supplied. Seeded before the first load, so a server-side DataProvider receives it in its very first query. Clicking cycles on from it normally (from Ascending, the first click on that column sorts descending and the second clears the sort); applying a saved view replaces it; an unknown key leaves the table unsorted. The column need not be Sortable — a non-sortable column still orders the data, which is how you express a fixed order the user cannot change."
+        },
+        {
+          "name": "DefaultSortDirection",
+          "type": "DataTableSortDirection",
+          "isRequired": false,
+          "default": "DataTableSortDirection.Ascending",
+          "description": "Direction applied to DefaultSortColumn; ignored when that is null. Values: Ascending (default), Descending."
         },
         {
           "name": "DetailTemplate",
@@ -7971,6 +8176,18 @@
           "description": "Fires when the selection changes."
         },
         {
+          "name": "PageSize",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Controlled page size. When set, it wins over DefaultPageSize — including in the very first IDataTableDataProvider{TItem} query — and changing it after the table is mounted resizes the table in place. Null (the default) leaves the table uncontrolled: it starts at DefaultPageSize and the built-in page-size dropdown owns the value from then on."
+        },
+        {
+          "name": "PageSizeChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Fires whenever the effective page size changes — from the built-in dropdown, from ChangePageSizeAsync, from an applied saved view, or because an IDataTableDataProvider{TItem} answered with a page size different from the one asked for. Enables @bind-PageSize."
+        },
+        {
           "name": "PageSizeOptions",
           "type": "IReadOnlyList<int>",
           "isRequired": false,
@@ -7984,10 +8201,16 @@
           "description": "Additional HTML attributes splatted onto the built-in TmPagination root element. Use it to attach host-owned hooks (analytics ids, extra ARIA) to the pagination bar; the data-testids of the pagination controls themselves come from TestIdPrefix, which this table propagates to the pagination automatically."
         },
         {
+          "name": "PaginationInfoPlacement",
+          "type": "DataTablePaginationInfoPlacement",
+          "isRequired": true,
+          "description": "Which of the two item-range labels in the paging footer is rendered, so the count is not printed twice. Summary (default) uses the table's own summary on the left of the footer, which is the placement that honours PaginationInfoTemplate; Pagination moves the range into the TmPagination bar itself; None shows page controls only."
+        },
+        {
           "name": "PaginationInfoTemplate",
           "type": "RenderFragment<DataTablePaginationInfo>?",
           "isRequired": false,
-          "description": "Replaces the built-in \"showing X–Y of Z\" summary next to the pagination bar. The context carries the current paging state (DataTablePaginationInfo), so a host can render its own wording instead of the library's TmDataTable_ShowingItems resource. When null the localized default is used."
+          "description": "Replaces the built-in \"showing X–Y of Z\" summary next to the pagination bar. The context carries the current paging state (DataTablePaginationInfo), so a host can render its own wording instead of the library's TmDataTable_ShowingItems resource. When null the localized default is used. Applies to the Summary placement only, which is the only placement the table itself renders."
         },
         {
           "name": "RowAttributes",
@@ -8083,7 +8306,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "When true, shows the TmPagination bar when more than one page exists. Default: true."
+          "description": "When true, shows the TmPagination bar when more than one page exists. Default: true. When false, a client-side table (Items) renders every item it was handed rather than the first page — the pager is the only element that reaches pages 2..N, so hiding it and still slicing would leave the remaining rows in no element at all. Server-side paging through DataProvider is unaffected: there the page is chosen by the provider."
         },
         {
           "name": "ShowSearch",
@@ -8171,6 +8394,7 @@
         "tm-data-table-virtual-scroll",
         "tm-data-table",
         "tm-col-sortable",
+        "tm-th-sort",
         "tm-col-sorted-asc",
         "tm-col-sorted-desc",
         "tm-sort-icon",
@@ -8494,6 +8718,13 @@
           "description": "Page sizes offered by the page size selector. When null or empty the selector is not rendered."
         },
         {
+          "name": "ShowInfo",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the \"X-Y of Z\" item range label is rendered inside the pagination bar. Default true, which is what a standalone pager needs. A host that already states the range next to the pager — as TmDataTable does with its own summary — sets this to false so the count is not printed twice."
+        },
+        {
           "name": "TotalCount",
           "type": "int",
           "isRequired": false,
@@ -8626,6 +8857,11 @@
           "type": "EventCallback<object>",
           "isRequired": false,
           "description": "Fires when an item is expanded."
+        },
+        {
+          "name": "OnPageChange",
+          "type": "EventCallback<int>",
+          "isRequired": false
         },
         {
           "name": "OnPageSizeChange",
@@ -9142,6 +9378,12 @@
           "description": "When true (default), filtering ignores diacritics via FormD normalization — e.g. \"usti\" matches \"Ústí\" and \"práha\" matches \"Praha\". Set to false for accent-sensitive (but still case-insensitive) filtering."
         },
         {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name for the combobox trigger. When null the visible placeholder/value text inside the trigger names it instead."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -9471,6 +9713,16 @@
           "default": "\"Cancel\""
         },
         {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
           "name": "CloseOnEscape",
           "type": "bool",
           "isRequired": false,
@@ -9485,6 +9737,11 @@
           "description": "When true, clicking the backdrop cancels the dialog. Defaults to false so a decision prompt is not dismissed by an accidental outside click (current behavior)."
         },
         {
+          "name": "DefaultValue",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
           "name": "FooterContent",
           "type": "RenderFragment?",
           "isRequired": false
@@ -9496,42 +9753,25 @@
           "default": "false"
         },
         {
+          "name": "Message",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\""
+        },
+        {
+          "name": "OkButtonText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"OK\""
+        },
+        {
           "name": "OnPromptResult",
           "type": "EventCallback<string?>",
           "isRequired": false
         },
         {
-          "name": "Show",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Type",
-          "type": "DialogType",
-          "isRequired": false,
-          "default": "Alert"
-        },
-        {
-          "name": "Variant",
-          "type": "DialogVariant",
-          "isRequired": false,
-          "default": "Info"
-        },
-        {
-          "name": "Title",
-          "type": "string",
-          "isRequired": false,
-          "default": "Empty"
-        },
-        {
-          "name": "Message",
-          "type": "string",
-          "isRequired": false,
-          "default": "Empty"
-        },
-        {
-          "name": "DefaultValue",
-          "type": "string?",
+          "name": "OnResult",
+          "type": "EventCallback<bool?>",
           "isRequired": false
         },
         {
@@ -9541,20 +9781,27 @@
           "default": "\"Enter value...\""
         },
         {
-          "name": "OkButtonText",
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Title",
           "type": "string",
           "isRequired": false,
-          "default": "\"OK\""
+          "default": "\"\""
         },
         {
-          "name": "OnResult",
-          "type": "EventCallback<bool?>",
-          "isRequired": false
+          "name": "Type",
+          "type": "DialogType",
+          "isRequired": false,
+          "default": "DialogType.Alert"
         },
         {
-          "name": "Class",
-          "type": "string?",
-          "isRequired": false
+          "name": "Variant",
+          "type": "DialogVariant",
+          "isRequired": false,
+          "default": "DialogVariant.Info"
         }
       ],
       "cssClasses": [
@@ -9613,7 +9860,29 @@
           "default": "true"
         },
         {
+          "name": "CancelButtonText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"Cancel\""
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
           "name": "CloseOnEscape",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "CloseOnOverlayClick",
           "type": "bool",
           "isRequired": false,
           "default": "true"
@@ -9624,78 +9893,15 @@
           "isRequired": false
         },
         {
-          "name": "OkButtonDisabled",
-          "type": "bool",
-          "isRequired": false,
-          "default": "false"
-        },
-        {
-          "name": "OnOpen",
-          "type": "EventCallback",
-          "isRequired": false
-        },
-        {
-          "name": "Show",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Title",
-          "type": "string",
-          "isRequired": false,
-          "default": "Empty"
-        },
-        {
-          "name": "Subtitle",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
           "name": "Icon",
           "type": "string?",
           "isRequired": false
         },
         {
-          "name": "Size",
-          "type": "ModalSize",
-          "isRequired": false,
-          "default": "Medium"
-        },
-        {
-          "name": "Position",
-          "type": "ModalPosition",
-          "isRequired": false,
-          "default": "Center"
-        },
-        {
-          "name": "ShowCloseButton",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowFooter",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowDefaultFooterButtons",
+          "name": "OkButtonDisabled",
           "type": "bool",
           "isRequired": false,
           "default": "false"
-        },
-        {
-          "name": "ShowOkButton",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
-        },
-        {
-          "name": "ShowCancelButton",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
         },
         {
           "name": "OkButtonText",
@@ -9704,22 +9910,10 @@
           "default": "\"OK\""
         },
         {
-          "name": "CancelButtonText",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"Cancel\""
-        },
-        {
           "name": "OkButtonVariant",
           "type": "ButtonVariant",
           "isRequired": false,
-          "default": "Primary"
-        },
-        {
-          "name": "CloseOnOverlayClick",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
+          "default": "ButtonVariant.Primary"
         },
         {
           "name": "OnClose",
@@ -9732,9 +9926,67 @@
           "isRequired": false
         },
         {
-          "name": "Class",
+          "name": "OnOpen",
+          "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "Position",
+          "type": "ModalPosition",
+          "isRequired": false,
+          "default": "ModalPosition.Center"
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "ShowCancelButton",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowCloseButton",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowDefaultFooterButtons",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false"
+        },
+        {
+          "name": "ShowFooter",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "ShowOkButton",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
+        },
+        {
+          "name": "Size",
+          "type": "ModalSize",
+          "isRequired": false,
+          "default": "ModalSize.Medium"
+        },
+        {
+          "name": "Subtitle",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\""
         }
       ],
       "cssClasses": [
@@ -11557,38 +11809,22 @@
       ],
       "parameters": [
         {
-          "name": "OnBlur",
-          "type": "EventCallback<FocusEventArgs>",
-          "isRequired": false
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<string>",
-          "isRequired": false
-        },
-        {
-          "name": "ValueExpression",
-          "type": "Expression<Func<string>>?",
-          "isRequired": false
-        },
-        {
-          "name": "Label",
+          "name": "AutoComplete",
           "type": "string?",
           "isRequired": false
         },
         {
-          "name": "Placeholder",
+          "name": "AutoFocus",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Class",
           "type": "string?",
           "isRequired": false
         },
         {
-          "name": "Type",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"text\""
-        },
-        {
-          "name": "Required",
+          "name": "Disabled",
           "type": "bool",
           "isRequired": false
         },
@@ -11604,52 +11840,27 @@
           "default": "Guid.NewGuid().ToString(\"n\")[..8]"
         },
         {
+          "name": "Label",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
           "name": "LeftIcon",
           "type": "string?",
           "isRequired": false
         },
         {
-          "name": "RightIcon",
-          "type": "string?",
+          "name": "OnBlur",
+          "type": "EventCallback<FocusEventArgs>",
           "isRequired": false
         },
         {
-          "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "ReadOnly",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "TabIndex",
-          "type": "int",
-          "isRequired": false
-        },
-        {
-          "name": "AutoFocus",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Class",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "AutoComplete",
-          "type": "string?",
+          "name": "OnFocus",
+          "type": "EventCallback<FocusEventArgs>",
           "isRequired": false
         },
         {
           "name": "OnKeyDown",
-          "type": "EventCallback<KeyboardEventArgs>",
-          "isRequired": false
-        },
-        {
-          "name": "OnKeyUp",
           "type": "EventCallback<KeyboardEventArgs>",
           "isRequired": false
         },
@@ -11659,15 +11870,56 @@
           "isRequired": false
         },
         {
-          "name": "OnFocus",
-          "type": "EventCallback<FocusEventArgs>",
+          "name": "OnKeyUp",
+          "type": "EventCallback<KeyboardEventArgs>",
           "isRequired": false
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "RightIcon",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "TabIndex",
+          "type": "int",
+          "isRequired": false
+        },
+        {
+          "name": "Type",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"text\""
         },
         {
           "name": "Value",
           "type": "string",
           "isRequired": false,
-          "default": "Empty"
+          "default": "\"\""
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false
+        },
+        {
+          "name": "ValueExpression",
+          "type": "Expression<Func<string>>?",
+          "isRequired": false
         }
       ],
       "cssClasses": [
@@ -14552,6 +14804,13 @@
           "description": "Help text below the input."
         },
         {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+          "description": "Id of the input, so the rendered Label can point at it with for and the error and help text can be referenced. Defaults to a generated value."
+        },
+        {
           "name": "Label",
           "type": "string?",
           "isRequired": false,
@@ -14580,6 +14839,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Prefix text (e.g. \"$\")."
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Marks the field required: the asterisk on the label (tm-input-label-required, the marker the other inputs use) plus required and aria-required on the input."
         },
         {
           "name": "ShowButtons",
@@ -15213,7 +15478,7 @@
           "name": "ValueChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Fires when the search value changes."
+          "description": "Fires when the search value changes. Raised at most once per change: the input element reports a single user edit as both an input and a change event, and the same value is never delivered twice in a row."
         }
       ],
       "cssClasses": [
@@ -15410,35 +15675,16 @@
           "description": "Background color of the canvas. When null, the canvas is transparent."
         },
         {
-          "name": "Changed",
-          "type": "EventCallback<TmSignatureCaptureChangedEventArgs>",
-          "isRequired": false,
-          "description": "Callback invoked when the captured signature value changes."
-        },
-        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class for the wrapper element."
         },
         {
-          "name": "Confirmed",
-          "type": "EventCallback<TmSignatureCaptureChangedEventArgs>",
-          "isRequired": false,
-          "description": "Whether to show an explicit confirmation button for the current signature."
-        },
-        {
           "name": "Disabled",
           "type": "bool",
           "isRequired": false,
           "description": "When true, the canvas is read-only and the clear button is hidden."
-        },
-        {
-          "name": "ExportFormat",
-          "type": "TmSignatureCaptureExportFormat",
-          "isRequired": false,
-          "default": "TmSignatureCaptureExportFormat.Svg",
-          "description": "Capture modes shown in the mode selector."
         },
         {
           "name": "Height",
@@ -15448,84 +15694,11 @@
           "description": "Canvas height in pixels. Default is 200."
         },
         {
-          "name": "Initials",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the component is disabled."
-        },
-        {
-          "name": "Mode",
-          "type": "TmSignatureCaptureMode",
-          "isRequired": false,
-          "default": "TmSignatureCaptureMode.Draw",
-          "description": "Callback invoked when the signature value or signing metadata changes."
-        },
-        {
-          "name": "ModeChanged",
-          "type": "EventCallback<TmSignatureCaptureMode>",
-          "isRequired": false,
-          "description": "Current capture mode. Defaults to draw mode."
-        },
-        {
-          "name": "Modes",
-          "type": "IReadOnlyList<TmSignatureCaptureMode>?",
-          "isRequired": false,
-          "description": "Callback invoked when the active capture mode changes."
-        },
-        {
-          "name": "OnQrSigningRequested",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Callback invoked when the upload flow should be opened."
-        },
-        {
-          "name": "OnUploadRequested",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Previously saved signature value that can be reused."
-        },
-        {
-          "name": "PreviousValue",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Callback invoked when the current signature is explicitly confirmed."
-        },
-        {
-          "name": "Required",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Export format used when drawing signatures. Defaults to SVG."
-        },
-        {
-          "name": "RequireReason",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Optional SVG background color."
-        },
-        {
           "name": "ShowClearButton",
           "type": "bool",
           "isRequired": false,
           "default": "true",
           "description": "Whether to show the clear button. Default is true."
-        },
-        {
-          "name": "ShowConfirmButton",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether to show a QR/mobile signing button."
-        },
-        {
-          "name": "ShowQrSigningButton",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether to show the remember signature checkbox."
-        },
-        {
-          "name": "ShowRememberSignature",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether a reason input should be shown."
         },
         {
           "name": "StrokeColor",
@@ -15540,13 +15713,6 @@
           "isRequired": false,
           "default": "2",
           "description": "Stroke width in pixels. Default is 2."
-        },
-        {
-          "name": "TypedFont",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"script\"",
-          "description": "Whether typed mode should collect initials instead of a full signature."
         },
         {
           "name": "Value",
@@ -16194,6 +16360,18 @@
       ],
       "parameters": [
         {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name for the switch, rendered as aria-label on the inner input rather than on the wrapper. Use it when the switch must carry a name without any visible text of its own; it takes precedence over Label for the accessible name and does not render a visible span."
+        },
+        {
+          "name": "AriaLabelledBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Space-separated id list of the element(s) that name the switch, rendered as aria-labelledby on the inner input. Use it when the visible label already exists elsewhere on the page and the switch itself has to stay alone inside its own element."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -16206,10 +16384,22 @@
           "description": "Disables the toggle."
         },
         {
+          "name": "Id",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Id applied to the inner input, so a host-owned <label for=\"…\"> can point at the switch. Null (the default) renders no id attribute."
+        },
+        {
           "name": "Label",
           "type": "string?",
           "isRequired": false,
           "description": "Label text shown beside the toggle."
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Marks the switch required: aria-required=\"true\" on the input and, when Label renders visible text, the same asterisk marker the other inputs use."
         },
         {
           "name": "Value",
@@ -16401,6 +16591,19 @@
           "description": "Overrides the no-results message."
         },
         {
+          "name": "FloatingMenu",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Lifts the results list out of the normal flow so an ancestor with overflow: auto — a modal body, a scrolling form column — cannot clip it or scroll it away from its input. The list is then positioned against the input by script, flipping above it when there is not enough room below. Off by default: it costs a JS module import, and a picker that is not inside a scroll container does not need it."
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+          "description": "Id of the search input, so the rendered Label can point at it with for. Defaults to a generated value; supply one when the page owns the label."
+        },
+        {
           "name": "ItemTemplate",
           "type": "RenderFragment<TUser>?",
           "isRequired": false,
@@ -16438,6 +16641,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Search box placeholder."
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Marks the field required: the asterisk on the label (tm-input-label-required, the same marker the other inputs use) plus required and aria-required on the search input."
         },
         {
           "name": "ResolveProvider",
@@ -17204,47 +17413,11 @@
           "description": "The child content (TmSplitterPane elements)."
         },
         {
-          "name": "Collapsed",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the pane is collapsed."
-        },
-        {
-          "name": "CollapsedChanged",
-          "type": "EventCallback<bool>",
-          "isRequired": false,
-          "description": "Event fired when collapsed state changes."
-        },
-        {
-          "name": "Collapsible",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the pane can be collapsed."
-        },
-        {
-          "name": "MaxSize",
-          "type": "string?",
-          "isRequired": false,
-          "description": "The maximum size of the pane."
-        },
-        {
-          "name": "MinSize",
-          "type": "string?",
-          "isRequired": false,
-          "description": "The minimum size of the pane."
-        },
-        {
           "name": "Orientation",
           "type": "SplitterOrientation",
           "isRequired": false,
           "default": "SplitterOrientation.Horizontal",
           "description": "Splitter orientation. Defaults to Horizontal."
-        },
-        {
-          "name": "Size",
-          "type": "string?",
-          "isRequired": false,
-          "description": "The initial size of the pane (in pixels or percentage)."
         }
       ],
       "cssClasses": [
@@ -17329,12 +17502,6 @@
           "type": "string?",
           "isRequired": false,
           "description": "The initial size of the pane (in pixels or percentage)."
-        },
-        {
-          "name": "Parent",
-          "type": "TmSplitter?",
-          "isRequired": false,
-          "description": "Additional CSS classes."
         }
       ]
     },
@@ -17903,20 +18070,20 @@
           "name": "OnSaveAndLeave",
           "type": "Func<Task<bool>>?",
           "isRequired": false,
-          "description": "Optional callback that persists the pending work before navigation continues. When set, the confirmation dialog shows a third \"save and leave\" button. RETURN TRUE ONLY WHEN THE WORK IS PERSISTED: on true the guard re-issues the blocked navigation, on false it navigates nowhere and leaves the dialog open, so a failed save cannot discard the very changes the guard exists to protect. Until 2.8.16 this was an EventCallback and the guard left regardless of the outcome."
+          "description": "Optional save callback. When set, the confirmation dialog gets a third \"save and leave\" button. Return true ONLY when the work is persisted: on true the guard re-issues the blocked navigation, on false it navigates nowhere and leaves the dialog open, so a failed save cannot discard the changes the guard exists to protect. Before 2.8.16 this was an EventCallback and the guard left regardless of the outcome."
         },
         {
           "name": "SaveAndLeaveText",
           "type": "string",
           "isRequired": false,
           "default": "\"Save and leave\"",
-          "description": "Text for the optional third button that saves the pending work and then leaves. The button is only rendered when OnSaveAndLeave is set, so existing two-choice usages are unchanged."
+          "description": "Text of the third button. Rendered only when OnSaveAndLeave is set."
         },
         {
           "name": "ShouldGuard",
           "type": "Func<string, bool>?",
           "isRequired": false,
-          "description": "Optional predicate over the target URI deciding whether a navigation should be guarded at all. Return false to let a navigation through without prompting even when the host is dirty (e.g. moving between URL tabs or the detail↔sub-page of the same document). When null, every navigation is guarded."
+          "description": "Optional predicate over the target URI deciding whether a navigation is guarded at all. Return false to let a navigation through without prompting even when the host is dirty (e.g. URL tabs of the same document). When null, every navigation is guarded."
         }
       ],
       "cssClasses": [],
@@ -17965,6 +18132,13 @@
           "description": "Fires whenever the active section changes, whether by click or scroll-spy."
         },
         {
+          "name": "AutoSelectFirstItem",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the first visible item is active before anything selects one. Default true, the released behaviour. Set it to false when nothing should be marked current until the user clicks or scrolls into a section — with scroll-spy off, the default otherwise leaves aria-current=\"true\" stuck on the first section and going stale as the reader scrolls. Prefer this over feeding in an empty ActiveId, which is not a valid section id."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -17995,6 +18169,12 @@
           "type": "EventCallback<string>",
           "isRequired": false,
           "description": "Raised when a section is explicitly selected by click (not by scroll-spy)."
+        },
+        {
+          "name": "ScrollContainerSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element that actually scrolls the sections. Null (the default) listens on the window, which is correct only when the page itself scrolls; an application shell that puts the content in its own overflow-y: auto column never raises a window scroll event, so scroll-spy silently never fires. Point this at that column and ScrollOffset is then measured from the top of the container rather than from the top of the viewport."
         },
         {
           "name": "ScrollOffset",
@@ -18288,6 +18468,12 @@
       ],
       "parameters": [
         {
+          "name": "CurrentUserId",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"demo\""
+        },
+        {
           "name": "IsPanelOpen",
           "type": "bool",
           "isRequired": false
@@ -18308,9 +18494,10 @@
       ],
       "parameters": [
         {
-          "name": "OnNavigate",
-          "type": "EventCallback<(int Year, int Month)>",
-          "isRequired": false
+          "name": "DisplayMonth",
+          "type": "int",
+          "isRequired": false,
+          "default": "DateTime.Today.Month"
         },
         {
           "name": "DisplayYear",
@@ -18319,33 +18506,7 @@
           "default": "DateTime.Today.Year"
         },
         {
-          "name": "DisplayMonth",
-          "type": "int",
-          "isRequired": false,
-          "default": "DateTime.Today.Month"
-        },
-        {
-          "name": "SelectedDate",
-          "type": "DateOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "RangeStart",
-          "type": "DateOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "RangeEnd",
-          "type": "DateOnly?",
-          "isRequired": false
-        },
-        {
           "name": "HoverDate",
-          "type": "DateOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "MinDate",
           "type": "DateOnly?",
           "isRequired": false
         },
@@ -18355,13 +18516,38 @@
           "isRequired": false
         },
         {
-          "name": "OnDateSelected",
-          "type": "EventCallback<DateOnly>",
+          "name": "MinDate",
+          "type": "DateOnly?",
           "isRequired": false
         },
         {
           "name": "OnDateHovered",
           "type": "EventCallback<DateOnly>",
+          "isRequired": false
+        },
+        {
+          "name": "OnDateSelected",
+          "type": "EventCallback<DateOnly>",
+          "isRequired": false
+        },
+        {
+          "name": "OnNavigate",
+          "type": "EventCallback<(int Year, int Month)>",
+          "isRequired": false
+        },
+        {
+          "name": "RangeEnd",
+          "type": "DateOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "RangeStart",
+          "type": "DateOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "SelectedDate",
+          "type": "DateOnly?",
           "isRequired": false
         }
       ],
@@ -18487,23 +18673,8 @@
       ],
       "parameters": [
         {
-          "name": "Value",
-          "type": "DateOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<DateOnly?>",
-          "isRequired": false
-        },
-        {
-          "name": "MinDate",
-          "type": "DateOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "MaxDate",
-          "type": "DateOnly?",
+          "name": "Class",
+          "type": "string?",
           "isRequired": false
         },
         {
@@ -18513,17 +18684,7 @@
           "default": "\"dd.MM.yyyy\""
         },
         {
-          "name": "Placeholder",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
           "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Required",
           "type": "bool",
           "isRequired": false
         },
@@ -18533,8 +18694,33 @@
           "isRequired": false
         },
         {
-          "name": "Class",
+          "name": "MaxDate",
+          "type": "DateOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "MinDate",
+          "type": "DateOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "Placeholder",
           "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Value",
+          "type": "DateOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<DateOnly?>",
           "isRequired": false
         }
       ],
@@ -18576,18 +18762,24 @@
       ],
       "parameters": [
         {
-          "name": "Value",
-          "type": "(DateOnly? Start, DateOnly? End)",
-          "isRequired": true
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<(DateOnly? Start, DateOnly? End)>",
+          "name": "Class",
+          "type": "string?",
           "isRequired": false
         },
         {
-          "name": "MinDate",
-          "type": "DateOnly?",
+          "name": "DateFormat",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"dd.MM.yyyy\""
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Label",
+          "type": "string?",
           "isRequired": false
         },
         {
@@ -18596,10 +18788,14 @@
           "isRequired": false
         },
         {
-          "name": "DateFormat",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"dd.MM.yyyy\""
+          "name": "MinDate",
+          "type": "DateOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false
         },
         {
           "name": "Presets",
@@ -18613,23 +18809,13 @@
           "default": "true"
         },
         {
-          "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
+          "name": "Value",
+          "type": "(DateOnly? Start, DateOnly? End)",
+          "isRequired": true
         },
         {
-          "name": "Placeholder",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "Label",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "Class",
-          "type": "string?",
+          "name": "ValueChanged",
+          "type": "EventCallback<(DateOnly? Start, DateOnly? End)>",
           "isRequired": false
         }
       ],
@@ -18671,28 +18857,8 @@
       ],
       "parameters": [
         {
-          "name": "Label",
+          "name": "Class",
           "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "Value",
-          "type": "DateTime?",
-          "isRequired": false
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<DateTime?>",
-          "isRequired": false
-        },
-        {
-          "name": "MinValue",
-          "type": "DateTime?",
-          "isRequired": false
-        },
-        {
-          "name": "MaxValue",
-          "type": "DateTime?",
           "isRequired": false
         },
         {
@@ -18702,22 +18868,7 @@
           "default": "\"dd.MM.yyyy\""
         },
         {
-          "name": "ShowSeconds",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Placeholder",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
           "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Required",
           "type": "bool",
           "isRequired": false
         },
@@ -18727,8 +18878,49 @@
           "isRequired": false
         },
         {
-          "name": "Class",
+          "name": "Label",
           "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "MaxValue",
+          "type": "DateTime?",
+          "isRequired": false
+        },
+        {
+          "name": "MinValue",
+          "type": "DateTime?",
+          "isRequired": false
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "ShowSeconds",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "TimeLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional label rendered above the time (HH:mm) sub-field. Null = no label (backward compatible)."
+        },
+        {
+          "name": "Value",
+          "type": "DateTime?",
+          "isRequired": false
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<DateTime?>",
           "isRequired": false
         }
       ],
@@ -18765,22 +18957,27 @@
       ],
       "parameters": [
         {
-          "name": "Value",
-          "type": "(DateTime? Start, DateTime? End)",
-          "isRequired": true
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<(DateTime? Start, DateTime? End)>",
+          "name": "Class",
+          "type": "string?",
           "isRequired": false
         },
         {
-          "name": "MinValue",
-          "type": "DateTime?",
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Label",
+          "type": "string?",
           "isRequired": false
         },
         {
           "name": "MaxValue",
+          "type": "DateTime?",
+          "isRequired": false
+        },
+        {
+          "name": "MinValue",
           "type": "DateTime?",
           "isRequired": false
         },
@@ -18795,18 +18992,13 @@
           "isRequired": false
         },
         {
-          "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
+          "name": "Value",
+          "type": "(DateTime? Start, DateTime? End)",
+          "isRequired": true
         },
         {
-          "name": "Label",
-          "type": "string?",
-          "isRequired": false
-        },
-        {
-          "name": "Class",
-          "type": "string?",
+          "name": "ValueChanged",
+          "type": "EventCallback<(DateTime? Start, DateTime? End)>",
           "isRequired": false
         }
       ],
@@ -18900,8 +19092,23 @@
       ],
       "parameters": [
         {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
           "name": "MaxTime",
           "type": "TimeOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "MinTime",
+          "type": "TimeOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "ShowSeconds",
+          "type": "bool",
           "isRequired": false
         },
         {
@@ -18912,21 +19119,6 @@
         {
           "name": "ValueChanged",
           "type": "EventCallback<TimeOnly?>",
-          "isRequired": false
-        },
-        {
-          "name": "ShowSeconds",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Disabled",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "MinTime",
-          "type": "TimeOnly?",
           "isRequired": false
         }
       ],
@@ -18964,32 +19156,7 @@
       ],
       "parameters": [
         {
-          "name": "Value",
-          "type": "TimeOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<TimeOnly?>",
-          "isRequired": false
-        },
-        {
-          "name": "MinTime",
-          "type": "TimeOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "MaxTime",
-          "type": "TimeOnly?",
-          "isRequired": false
-        },
-        {
-          "name": "ShowSeconds",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Placeholder",
+          "name": "Class",
           "type": "string?",
           "isRequired": false
         },
@@ -18999,18 +19166,43 @@
           "isRequired": false
         },
         {
-          "name": "Required",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
           "name": "Label",
           "type": "string?",
           "isRequired": false
         },
         {
-          "name": "Class",
+          "name": "MaxTime",
+          "type": "TimeOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "MinTime",
+          "type": "TimeOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "Placeholder",
           "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Required",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "ShowSeconds",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Value",
+          "type": "TimeOnly?",
+          "isRequired": false
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<TimeOnly?>",
           "isRequired": false
         }
       ],
@@ -19047,32 +19239,7 @@
       ],
       "parameters": [
         {
-          "name": "Value",
-          "type": "(TimeOnly? Start, TimeOnly? End)",
-          "isRequired": true
-        },
-        {
-          "name": "ValueChanged",
-          "type": "EventCallback<(TimeOnly? Start, TimeOnly? End)>",
-          "isRequired": false
-        },
-        {
-          "name": "ShowDuration",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "ShowSwapButton",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "ShowSeconds",
-          "type": "bool",
-          "isRequired": false
-        },
-        {
-          "name": "Label",
+          "name": "Class",
           "type": "string?",
           "isRequired": false
         },
@@ -19082,8 +19249,33 @@
           "isRequired": false
         },
         {
-          "name": "Class",
+          "name": "Label",
           "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "ShowDuration",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "ShowSeconds",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "ShowSwapButton",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
+          "name": "Value",
+          "type": "(TimeOnly? Start, TimeOnly? End)",
+          "isRequired": true
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<(TimeOnly? Start, TimeOnly? End)>",
           "isRequired": false
         }
       ],
@@ -19603,13 +19795,6 @@
           "description": "When true, dep-drag handles are rendered on every task bar."
         },
         {
-          "name": "AllTasks",
-          "type": "IReadOnlyList<TmWorkItem>",
-          "isRequired": false,
-          "default": "[]",
-          "description": "The task being edited."
-        },
-        {
           "name": "AutoSchedule",
           "type": "bool",
           "isRequired": false,
@@ -19623,11 +19808,22 @@
           "description": "Named schedule snapshots for baseline comparison."
         },
         {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Fires when the user clicks \"Run\" on a report."
+        },
+        {
           "name": "Columns",
           "type": "IReadOnlyList<GanttColumnDefinition>",
           "isRequired": false,
           "default": "DefaultColumns",
           "description": "Column definitions for the tree grid. Defaults to all standard columns visible."
+        },
+        {
+          "name": "ContainerWidth",
+          "type": "double?",
+          "isRequired": false
         },
         {
           "name": "CustomFields",
@@ -19637,24 +19833,11 @@
           "description": "User-defined custom field definitions."
         },
         {
-          "name": "Dependencies",
-          "type": "IReadOnlyList<GanttDependency>",
-          "isRequired": false,
-          "default": "[]",
-          "description": "All tasks for parent selection."
-        },
-        {
           "name": "DependencyItems",
           "type": "IReadOnlyList<GanttDependency>",
           "isRequired": false,
           "default": "[]",
           "description": "In-memory dependencies. Used when WorkItemSource is null."
-        },
-        {
-          "name": "DisplayMode",
-          "type": "WorkloadDisplayMode",
-          "isRequired": false,
-          "default": "WorkloadDisplayMode.Hours"
         },
         {
           "name": "Filters",
@@ -19671,12 +19854,6 @@
           "description": "Activity history entries to display in the history drawer."
         },
         {
-          "name": "IsOpen",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Audit history entries to display."
-        },
-        {
           "name": "Items",
           "type": "IReadOnlyList<TmWorkItem>",
           "isRequired": false,
@@ -19688,18 +19865,6 @@
           "type": "TmNotificationPreferences?",
           "isRequired": false,
           "description": "Notification preferences for the current user."
-        },
-        {
-          "name": "OnAttachmentRemoved",
-          "type": "EventCallback<string>",
-          "isRequired": false,
-          "description": "Fires when the user selects a file to attach."
-        },
-        {
-          "name": "OnAttachmentUpload",
-          "type": "EventCallback<IBrowserFile>",
-          "isRequired": false,
-          "description": "Fires when the description textarea changes (live)."
         },
         {
           "name": "OnAutoScheduled",
@@ -19720,22 +19885,10 @@
           "description": "Fires when the user triggers a bulk status/property update."
         },
         {
-          "name": "OnClose",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Fires when the user confirms export with the chosen options."
-        },
-        {
           "name": "OnColumnsChanged",
           "type": "EventCallback<IReadOnlyList<GanttColumnDefinition>>",
           "isRequired": false,
           "description": "Fires when column visibility/order changes via the column toggle UI."
-        },
-        {
-          "name": "OnCommentAdded",
-          "type": "EventCallback<TmCommentEntry>",
-          "isRequired": false,
-          "description": "Fires when the user removes an attachment (by attachment Id)."
         },
         {
           "name": "OnCustomFieldChanged",
@@ -19762,18 +19915,6 @@
           "description": "Fires when a new dependency is added."
         },
         {
-          "name": "OnDescriptionChanged",
-          "type": "EventCallback<string?>",
-          "isRequired": false,
-          "description": "Fires when a dependency is removed (by its Id)."
-        },
-        {
-          "name": "OnExport",
-          "type": "EventCallback<GanttExportOptions>",
-          "isRequired": false,
-          "description": "Whether the dialog is visible."
-        },
-        {
           "name": "OnExportRequested",
           "type": "EventCallback<GanttExportOptions>",
           "isRequired": false,
@@ -19784,12 +19925,6 @@
           "type": "EventCallback<IReadOnlyList<GanttFilter>>",
           "isRequired": false,
           "description": "Fires when the user adds/removes filters via the filter panel."
-        },
-        {
-          "name": "OnImport",
-          "type": "EventCallback<IReadOnlyList<GanttColumnMapping>>",
-          "isRequired": false,
-          "description": "Whether the dialog is visible."
         },
         {
           "name": "OnImportCompleted",
@@ -19834,8 +19969,28 @@
           "description": "Fires when a task's status is changed from the board view."
         },
         {
+          "name": "OnTaskAdded",
+          "type": "EventCallback<TmWorkItem>",
+          "isRequired": false
+        },
+        {
+          "name": "OnTaskInserted",
+          "type": "EventCallback<GanttTaskInsertedArgs>",
+          "isRequired": false
+        },
+        {
+          "name": "OnTaskRemoved",
+          "type": "EventCallback<string>",
+          "isRequired": false
+        },
+        {
           "name": "OnTaskReordered",
           "type": "EventCallback<GanttTaskReorderedArgs>",
+          "isRequired": false
+        },
+        {
+          "name": "OnTaskSelected",
+          "type": "EventCallback<TmWorkItem>",
           "isRequired": false
         },
         {
@@ -19875,12 +20030,6 @@
           "description": "Fires when the user creates a new virtual (placeholder) resource."
         },
         {
-          "name": "Projects",
-          "type": "IReadOnlyList<GanttPortfolioProject>",
-          "isRequired": false,
-          "default": "[]"
-        },
-        {
           "name": "RealtimeConnection",
           "type": "IGanttRealtimeConnection?",
           "isRequired": false,
@@ -19899,6 +20048,11 @@
           "isRequired": false,
           "default": "[]",
           "description": "Resource calendars for vacation/day-off overlays in People view."
+        },
+        {
+          "name": "SelectedTask",
+          "type": "TmWorkItem?",
+          "isRequired": false
         },
         {
           "name": "ShowCriticalPath",
@@ -19920,23 +20074,26 @@
           "description": "When true (default), the left sidebar navigation is visible."
         },
         {
+          "name": "ShowTaskPanel",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
           "name": "ShowWorkloadPanel",
           "type": "bool",
           "isRequired": false,
           "description": "When true, shows the workload panel below the Gantt timeline."
         },
         {
-          "name": "SourceColumns",
-          "type": "IEnumerable<string>",
+          "name": "View",
+          "type": "GanttView",
           "isRequired": false,
-          "default": "[]",
-          "description": "Source column names from the imported file."
+          "default": "GanttView.Week"
         },
         {
-          "name": "Task",
-          "type": "TmWorkItem?",
-          "isRequired": false,
-          "description": "The task being edited."
+          "name": "ViewChanged",
+          "type": "EventCallback<GanttView>",
+          "isRequired": false
         },
         {
           "name": "ViewSettings",
@@ -19969,12 +20126,6 @@
           "isRequired": false,
           "default": "GanttZoomPreset.Weeks",
           "description": "Current timeline zoom preset (Weeks by default)."
-        },
-        {
-          "name": "Class",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Fires when the user clicks \"Run\" on a report."
         }
       ]
     },
@@ -20025,8 +20176,19 @@
       ],
       "parameters": [
         {
+          "name": "Filters",
+          "type": "List<GanttFilter>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
           "name": "OnClose",
           "type": "EventCallback",
+          "isRequired": false
+        },
+        {
+          "name": "OnFiltersChanged",
+          "type": "EventCallback<IReadOnlyList<GanttFilter>>",
           "isRequired": false
         }
       ]
@@ -20321,6 +20483,17 @@
           "type": "WorkloadDisplayMode",
           "isRequired": false,
           "default": "WorkloadDisplayMode.Hours"
+        },
+        {
+          "name": "Tasks",
+          "type": "IReadOnlyList<TmWorkItem>",
+          "isRequired": false,
+          "default": "[]"
+        },
+        {
+          "name": "WorkingSchedule",
+          "type": "WorkingSchedule",
+          "isRequired": true
         }
       ]
     },
@@ -22679,6 +22852,13 @@
           "description": "Save/validation status content shown next to the start content (e.g. \"Saved\")."
         },
         {
+          "name": "StatusSeverity",
+          "type": "FormActionBarStatusSeverity",
+          "isRequired": false,
+          "default": "FormActionBarStatusSeverity.None",
+          "description": "What the Status content means. Defaults to None, which leaves the slot inheriting its colour."
+        },
+        {
           "name": "TestId",
           "type": "string",
           "isRequired": false,
@@ -23112,41 +23292,24 @@
         {
           "name": "Class",
           "type": "string?",
+          "isRequired": false
+        },
+        {
+          "name": "Definition",
+          "type": "WorkflowCanvasDefinition?",
           "isRequired": true,
           "editorRequired": true
         },
         {
-          "name": "OnZoomLevelChanged",
-          "type": "EventCallback<double>",
-          "isRequired": false,
-          "description": "Fires when zoom level changes (from mouse wheel or JS)."
-        },
-        {
           "name": "DefinitionChanged",
           "type": "EventCallback<WorkflowCanvasDefinition>",
           "isRequired": false
-        },
-        {
-          "name": "DefinitionChanged",
-          "type": "EventCallback<WorkflowCanvasDefinition>",
-          "isRequired": false
-        },
-        {
-          "name": "ShowGrid",
-          "type": "bool",
-          "isRequired": false,
-          "default": "true"
         },
         {
           "name": "GridSize",
           "type": "int",
           "isRequired": false,
           "default": "20"
-        },
-        {
-          "name": "ReadOnly",
-          "type": "bool",
-          "isRequired": false
         },
         {
           "name": "OnStateSelected",
@@ -23159,6 +23322,17 @@
           "isRequired": false
         },
         {
+          "name": "OnZoomLevelChanged",
+          "type": "EventCallback<double>",
+          "isRequired": false,
+          "description": "Fires when zoom level changes (from mouse wheel or JS)."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false
+        },
+        {
           "name": "SelectedStateId",
           "type": "string?",
           "isRequired": false
@@ -23167,6 +23341,12 @@
           "name": "SelectedTransitionId",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "ShowGrid",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true"
         }
       ],
       "cssClasses": [
@@ -24247,11 +24427,11 @@
     }
   ],
   "summary": {
-    "itemCount": 340,
+    "itemCount": 342,
     "manualItemCount": 340,
-    "generatedItemCount": 332,
-    "generatedOnlyItemCount": 0,
+    "generatedItemCount": 334,
+    "generatedOnlyItemCount": 2,
     "componentCount": 194,
-    "publicApiTypeCount": 138
+    "publicApiTypeCount": 140
   }
 }
