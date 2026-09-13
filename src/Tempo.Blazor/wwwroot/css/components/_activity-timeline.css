@@ -81,13 +81,16 @@
   color: var(--tm-text-tertiary);
 }
 
-.tm-timeline-content {
+/* Same shared-name story as .tm-timeline-author above — and here the values genuinely differed:
+   this relaxed line-height was silently styling TmTimeline's content too, while its own
+   --tm-line-height-normal never painted. */
+.tm-timeline-item .tm-timeline-content {
   font-size: var(--tm-font-size-sm);
   color: var(--tm-text-secondary);
   line-height: var(--tm-line-height-relaxed);
 }
-.tm-timeline-content p { margin: 0 0 var(--tm-space-2); }
-.tm-timeline-content p:last-child { margin-bottom: 0; }
+.tm-timeline-item .tm-timeline-content p { margin: 0 0 var(--tm-space-2); }
+.tm-timeline-item .tm-timeline-content p:last-child { margin-bottom: 0; }
 
 .tm-timeline-loading {
   display: flex;

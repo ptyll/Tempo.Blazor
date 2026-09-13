@@ -52,7 +52,6 @@ public class UnconstrainedClassOwnershipTests
     /// </summary>
     private static readonly string[] RecordedCollisions =
     [
-        ".tm-timeline-content _activity-timeline.css|_timeline.css",
         ".tm-timeline-empty _activity-timeline.css|_timeline.css",
     ];
 
