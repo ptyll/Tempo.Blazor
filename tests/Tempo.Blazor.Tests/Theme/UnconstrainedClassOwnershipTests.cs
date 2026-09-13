@@ -23,6 +23,18 @@ namespace Tempo.Blazor.Tests.Theme;
 /// anti-pattern. The frozen list below is therefore an inventory, not a budget: a pair that is fixed
 /// must be deleted from it, and a pair that appears must fail here before anyone can add it.
 /// </para>
+/// <para>
+/// SCOPE LIMIT, DECLARED: the sweep reads only BARE class selectors (<see cref="BareClass"/> rejects
+/// anything with a space, combinator, pseudo or attribute), so a DESCENDANT collision is outside the
+/// model by construction — two files declaring <c>.tm-x .tm-y</c> with different values still let
+/// import order decide. One such residual is KNOWN and recorded here where the boundary lives:
+/// <c>.tm-rte-form-group label</c> is declared in <c>_link-dialog.css</c>
+/// (margin-bottom <c>--tm-space-2</c>, 8px) and in <c>_image-dialog.css</c>
+/// (<c>--tm-space-1</c>, 4px) with equal specificity; the manifest order makes the image value win in
+/// all five RTE dialogs including the link one (UX review of 2.8.26; ~4px, cosmetic, owner ptyll).
+/// Extending the sweep to descendant selectors is a separate decision — the mechanism is documented,
+/// the residual is named, and neither is hidden.
+/// </para>
 /// </summary>
 public class UnconstrainedClassOwnershipTests
 {
