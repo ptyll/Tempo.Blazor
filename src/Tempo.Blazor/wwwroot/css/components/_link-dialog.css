@@ -73,7 +73,11 @@
   padding: var(--tm-space-4);
 }
 
-.tm-rte-form-group {
+/* This class is shared scaffolding across every rte dialog, but this declaration is the LINK
+   dialog's own value. As a bare rule it raced _image-dialog.css's copy for all five dialogs and
+   lost on import order — the link dialog painted space-3 despite asking for space-4. Scoped under
+   the dialog's root class it owns exactly its own markup again. */
+.tm-rte-link-dialog .tm-rte-form-group {
   margin-bottom: var(--tm-space-4);
 }
 
