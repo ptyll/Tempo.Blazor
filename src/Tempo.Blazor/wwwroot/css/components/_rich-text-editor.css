@@ -128,14 +128,6 @@
 }
 .tm-rte-mention-item:hover { background: var(--tm-color-gray-100); }
 
-.tm-rte-mention-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
 .tm-rte-mention-name {
   flex: 1;
   min-width: 0;

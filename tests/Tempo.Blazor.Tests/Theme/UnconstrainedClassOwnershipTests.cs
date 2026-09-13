@@ -52,7 +52,6 @@ public class UnconstrainedClassOwnershipTests
     /// </summary>
     private static readonly string[] RecordedCollisions =
     [
-        ".tm-rte-mention-avatar _mention-autocomplete.css|_rich-text-editor.css",
         ".tm-rte-mention-dropdown _mention-autocomplete.css|_rich-text-editor.css",
         ".tm-rte-toolbar _editor-toolbar.css|_rich-text-editor.css",
         ".tm-timeline-author _activity-timeline.css|_timeline.css",
