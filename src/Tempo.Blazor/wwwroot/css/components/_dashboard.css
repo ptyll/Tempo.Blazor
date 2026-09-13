@@ -724,22 +724,9 @@
   padding: var(--tm-space-2) var(--tm-space-3);
 }
 
-/* Modal Overlay */
-.tm-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--tm-space-4);
-}
-
-/* The .tm-modal* block that used to sit above this comment styled classes no dashboard component
-   renders — dead duplicates of _modal.css that the import order already defeated. _modal.css is
-   the single owner of every .tm-modal* class. */
+/* The .tm-modal* block that used to sit here styled classes no dashboard component renders —
+   dead duplicates of _modal.css that the import order already defeated. _modal.css is the
+   single owner of every .tm-modal* class. */
 
 /* ═══════════════════════════════════════════════════════════════
    Improved Dashboard Menu
