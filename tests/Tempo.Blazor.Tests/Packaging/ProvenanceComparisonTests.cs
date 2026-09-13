@@ -28,7 +28,7 @@ public class ProvenanceComparisonTests
     [Fact]
     public void APackageThatCarriesTheTree_IsAllMatching()
     {
-        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), Tree(), 0);
+        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), Tree(), [], 0);
 
         result.Matching.Should().HaveCount(3);
         result.Differing.Should().BeEmpty();
@@ -43,7 +43,7 @@ public class ProvenanceComparisonTests
         var packed = Tree();
         packed["css/tempo-blazor.bundled.css"] = "CHANGED";
 
-        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), packed, 0);
+        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), packed, [], 0);
 
         result.Differing.Should().Equal("css/tempo-blazor.bundled.css");
         result.Matching.Should().HaveCount(2);
@@ -56,7 +56,7 @@ public class ProvenanceComparisonTests
         var packed = Tree();
         packed.Remove("js/data-table.js");
 
-        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), packed, 0);
+        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), packed, [], 0);
 
         result.Missing.Should().Equal("js/data-table.js");
         result.Differing.Should().BeEmpty("a file that is absent is absent, not different");
@@ -74,12 +74,125 @@ public class ProvenanceComparisonTests
         var packed = Tree();
         packed["Tempo.Blazor.abc123.bundle.scp.css"] = "GENERATED";
 
-        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), packed, 0);
+        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), packed, [], 0);
 
         result.ExtraInPackage.Should().Equal("Tempo.Blazor.abc123.bundle.scp.css");
         result.Differing.Should().BeEmpty();
         result.Missing.Should().BeEmpty();
         result.Report.Should().Contain("extra-in-package=1");
+    }
+
+    /// <summary>
+    /// The compiled assemblies under <c>lib/</c> are the content the comparison CANNOT see — not
+    /// byte-reproducible from a clean build. They are a registry row, not silence: for most of the 25
+    /// satellite ids they are the whole payload, and "this id was measured" must read differently from
+    /// "this id had nothing to measure".
+    /// </summary>
+    [Fact]
+    public void LibEntries_AreRegisteredAsNonReproducible_NotCompared()
+    {
+        var result = ReleaseContractTests.PackageProvenance.Compare(
+            Id, Version, Tree(), Tree(), ["lib/net8.0/Tempo.Blazor.dll"], 0);
+
+        result.NonReproducible.Should().Equal("lib/net8.0/Tempo.Blazor.dll");
+        result.Differing.Should().BeEmpty("an assembly is registered, not compared — a hash mismatch "
+            + "there is noise, not provenance");
+        result.ExtraInPackage.Should().BeEmpty("lib/** never reaches the staticwebassets comparison");
+        result.Report.Should().Contain("nonreproducible=1");
+    }
+
+    /// <summary>
+    /// The artefact is asked for by its exact URL — the same <c>{id}/{version}/{id}.{version}.nupkg</c>
+    /// object a consumer's restore resolves. A URL built any other way would have the HEAD and the
+    /// download confirming different things.
+    /// </summary>
+    [Fact]
+    public void ThePackageUrl_IsTheExactNupkgObject_TheFeedServes()
+    {
+        var result = ReleaseContractTests.PackageProvenance.Compare(Id, Version, Tree(), Tree(), [], 0);
+
+        result.PackageUrl.Should().Be(
+            "https://api.nuget.org/v3-flatcontainer/tempo.blazor/9.9.9/tempo.blazor.9.9.9.nupkg");
+        result.Report.Should().Contain(result.PackageUrl);
+    }
+
+    /// <summary>
+    /// Every arm of <see cref="ReleaseContractTests.IndexVerdict"/>, without a network — the same
+    /// reason the comparison itself is tested here: the feed guard takes most of these branches only
+    /// in broken-instrument states a green run never reaches, and a verdict nobody has seen produce
+    /// its word is not a verdict.
+    /// </summary>
+    [Fact]
+    public void AnIndexThatListsTheAnnouncedVersion_AsksForThePackageBytes()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            Id, "Tempo.Blazor", 200, ["2.8.24", Version], null);
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: true)
+            .Should().Be(ReleaseContractTests.CompareContent);
+    }
+
+    [Fact]
+    public void AnIndexWithoutTheAnnouncedVersion_IsUnpublished_NotVerified()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            Id, "Tempo.Blazor", 200, ["2.8.24", "2.8.25"], null);
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: true)
+            .Should().Be("unpublished");
+    }
+
+    [Fact]
+    public void A404ForASatelliteId_IsUnpublished_BecauseTheIdWasNeverPublished()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            "tempo.blazor.mcp", "Tempo.Blazor.Mcp", 404, [], null);
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: false)
+            .Should().StartWith("unpublished");
+    }
+
+    [Fact]
+    public void A404ForTheLead_IsUnmeasured_BecauseEveryNumberWouldReadAsFree()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            Id, "Tempo.Blazor", 404, [], null);
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: true)
+            .Should().Be("unmeasured:lead-index-http-404",
+                "a lead the feed does not know cannot answer the membership question at all");
+    }
+
+    [Fact]
+    public void ANonTwoHundredIndex_IsUnmeasured_NotUnpublished()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            "tempo.blazor.mcp", "Tempo.Blazor.Mcp", 500, [], null);
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: false)
+            .Should().Be("unmeasured:index-http-500",
+                "a network fault must never dress itself as a version check");
+    }
+
+    [Fact]
+    public void AnEmptyVersionList_IsUnmeasured_AnEmptyListCannotAnswerMembership()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            "tempo.blazor.mcp", "Tempo.Blazor.Mcp", 200, [], null);
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: false)
+            .Should().Be("unmeasured:index-http-200",
+                "an empty list and a list without the announced number must not produce the same green");
+    }
+
+    [Fact]
+    public void AnUnansweredId_IsUnmeasured_WithItsOwnReason()
+    {
+        var answer = new ReleaseContractTests.ManifestAnswer(
+            "tempo.blazor.mcp", "Tempo.Blazor.Mcp", -1, [], "HttpRequestException: timed out");
+
+        ReleaseContractTests.IndexVerdict(answer, Version, isLead: false)
+            .Should().Be("unmeasured:HttpRequestException: timed out");
     }
 
     /// <summary>
@@ -100,5 +213,48 @@ public class ProvenanceComparisonTests
         tree.Should().ContainKey("css/tokens.css");
         tree.Keys.Should().AllSatisfy(key => key.Should().NotContain("\\", "paths are compared in the "
             + "package's separator, so a Windows run must not produce a different denominator"));
+    }
+
+    /// <summary>
+    /// The sweep's denominator is every row in <c>eng/nuget-packages.txt</c> — 26 of them — and every
+    /// row must yield a package id the feed can be asked about. A csproj without <c>&lt;PackageId&gt;</c>
+    /// records itself as unasked rather than guessed, so this asserts none of them has to.
+    /// </summary>
+    [Fact]
+    public void EveryManifestRow_YieldsAnAskablePackageId()
+    {
+        var root = FindRepoRoot();
+        var rows = File.ReadAllLines(Path.Combine(root, "eng", "nuget-packages.txt"))
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith('#'))
+            .ToList();
+
+        rows.Should().HaveCount(26, "the manifest is the sweep's denominator — a count drift is a "
+            + "population drift, and this number is the record of what 'all' means");
+
+        var unreadable = rows.Where(row =>
+        {
+            var csproj = Path.Combine(root, row.Replace('/', Path.DirectorySeparatorChar));
+            return !File.Exists(csproj)
+                || !System.Text.RegularExpressions.Regex.IsMatch(
+                    File.ReadAllText(csproj), @"<PackageId>[^<]+</PackageId>");
+        }).ToList();
+
+        unreadable.Should().BeEmpty(
+            "a manifest row whose csproj carries no <PackageId> enters the survey as unasked — the "
+            + "feed is never given the chance to answer for it, and 'the sweep asked every id' stops "
+            + "being true");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName
+            ?? throw new InvalidOperationException("repository root not found from " + AppContext.BaseDirectory);
     }
 }
