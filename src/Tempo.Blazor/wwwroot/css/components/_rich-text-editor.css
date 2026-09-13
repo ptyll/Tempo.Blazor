@@ -103,35 +103,7 @@
   line-height: var(--tm-line-height-relaxed);
 }
 
-.tm-rte-mention-dropdown {
-  position: absolute;
-  z-index: var(--tm-z-dropdown);
-  min-width: 200px;
-  background: var(--tm-bg-surface);
-  border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: var(--tm-shadow-lg);
-  padding: var(--tm-space-1) 0;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.tm-rte-mention-item {
-  display: flex;
-  align-items: center;
-  gap: var(--tm-space-2);
-  padding: var(--tm-space-2) var(--tm-space-3);
-  cursor: pointer;
-  font-size: var(--tm-font-size-sm);
-  color: var(--tm-text-primary);
-  transition: background var(--tm-transition-fast);
-}
-.tm-rte-mention-item:hover { background: var(--tm-color-gray-100); }
-
-.tm-rte-mention-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* The .tm-rte-mention-dropdown/-item/-avatar/-name block that lived here styled a mention UI that
+   no markup renders — the live autocomplete is MentionAutocomplete.razor, owned by
+   _mention-autocomplete.css (imported later, so it won every shared property anyway). The whole
+   dead implementation went with the dropdown so no orphan rules remain pointing at it. */
