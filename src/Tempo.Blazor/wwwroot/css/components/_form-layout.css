@@ -15,7 +15,9 @@
 .tm-form-row--cols-2    { grid-template-columns: repeat(2, 1fr); }
 .tm-form-row--cols-3    { grid-template-columns: repeat(3, 1fr); }
 .tm-form-row--cols-4    { grid-template-columns: repeat(4, 1fr); }
-.tm-form-field           { display: flex; flex-direction: column; gap: var(--tm-space-1); }
+/* .tm-form-field's bare rule lived here as a verbatim copy of _form-field.css's — same three
+   declarations, same values — so the only thing the copy ever did was tie the class to two owners.
+   _form-field.css is the component's own stylesheet and stays the single owner. */
 .tm-form-field-label     { font-size: var(--tm-font-size-sm); font-weight: var(--tm-font-weight-medium); color: var(--tm-text-secondary); }
 .tm-form-field-required  { color: var(--tm-color-danger); margin-left: 0.125rem; }
 .tm-form-field-control   { display: contents; }
