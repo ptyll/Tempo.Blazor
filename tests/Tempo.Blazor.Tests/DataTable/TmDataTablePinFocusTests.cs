@@ -147,6 +147,7 @@ public class TmDataTablePinFocusTests
     [InlineData(".tm-data-table th:focus-visible")]
     [InlineData(".tm-data-table tbody tr:focus-visible")]
     [InlineData(".tm-col-pin-btn:focus-visible")]
+    [InlineData(".tm-th-sort:focus-visible")]
     public void EveryElementTheTableMakesFocusable_BringsItsOwnFocusRing(string selector)
         => ThemeCss.TryProperty("_data-table.css", selector, "outline")
             .Should().NotBeNull(

@@ -32,12 +32,12 @@ namespace Tempo.Blazor.Tests.DataTable;
 /// </item>
 /// </list>
 /// <para>
-/// SPACE IS DELIBERATELY NOT AN ACTIVATION KEY here, and that is a decision of 2.8.9 this release did
-/// not reverse — see <see cref="TmDataTableKeyboardSortTests.Space_DoesNotSort_SoItKeepsScrollingThePage"/>.
-/// On a plain <c>&lt;th tabindex="0"&gt;</c> Space is the browser's "scroll one screen", and Blazor's
-/// <c>:preventDefault</c> is bound when the handler is registered, not per event, so it cannot cancel
-/// the scroll for one key without cancelling Tab as well. Accepting Space would therefore sort AND
-/// throw the user a screen down.
+/// Since 2.8.26 the activatable element in a sortable header is a real
+/// <c>&lt;button type="button" class="tm-th-sort"&gt;</c> inside the <c>&lt;th&gt;</c> — see
+/// <see cref="TmDataTableKeyboardSortTests"/>. Space activates there natively AND cannot scroll the
+/// page, because a button consumes the key: the old "sort or scroll" conflict is gone rather than
+/// suppressed. The <c>&lt;th&gt;</c> keeps <c>tabindex="0"</c> only for a header whose sole
+/// affordance is the pin.
 /// </para>
 /// </summary>
 public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
@@ -89,7 +89,9 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
 
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        // .Click() on the sort button is the keyboard activation: a browser turns Enter and Space
+        // on a focused <button> into this very click.
+        cut.Find("button.tm-th-sort").Click();
 
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
     }
@@ -110,7 +112,9 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
 
     /// <summary>
     /// The count is the point, so it is asserted as a count. Two columns with the menu on used to be
-    /// four stops (two headers plus two pins) and one of the headers was not even focusable.
+    /// four stops (two headers plus two pins) and one of the headers was not even focusable. Now the
+    /// sortable column's stop is its <c>.tm-th-sort</c> button — a native stop, so it carries no
+    /// tabindex and is counted by tag — and the pin-only column's stop is its <c>&lt;th&gt;</c>.
     /// </summary>
     [Fact]
     public void EveryHeaderIsExactlyOneTabStop()
@@ -118,9 +122,10 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
         var cut = RenderTable();
 
         var stops = cut.FindAll("thead tr:first-child th[tabindex='0']").Count
+                    + cut.FindAll("thead tr:first-child button.tm-th-sort").Count
                     + cut.FindAll("thead tr:first-child [tabindex='0']:not(th)").Count;
 
-        stops.Should().Be(2, "dva sloupce = dvě zastávky, ne čtyři");
+        stops.Should().Be(2, "dva sloupce = dvě zastávky, ne čtyři — sort button + pin-only <th>");
     }
 
     [Fact]
@@ -142,7 +147,8 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
 
         cut.Find("th[data-sortable='true']").ClassList.Should().NotContain("tm-col-pinned-left");
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "p" });
+        // Focus on a sortable header sits on its sort button — the P keydown bubbles to the <th>.
+        cut.Find("button.tm-th-sort").KeyDown(new KeyboardEventArgs { Key = "p" });
 
         cut.Find("th[data-sortable='true']").ClassList.Should().Contain("tm-col-pinned-left");
     }
@@ -172,7 +178,7 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
     {
         var cut = RenderTable();
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "p" });
+        cut.Find("button.tm-th-sort").KeyDown(new KeyboardEventArgs { Key = "p" });
 
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
         cut.FindAll("tbody tr td:first-child").Select(cell => cell.TextContent.Trim())
@@ -181,16 +187,27 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
 
     /// <summary>
     /// The shortcut has to be discoverable: a key that only the source code knows about is not a
-    /// replacement for a tab stop.
+    /// replacement for a tab stop. On a sortable header the focused element is the sort button, so
+    /// the attribute belongs on it — on the <c>&lt;th&gt;</c> it would announce nothing to the
+    /// element actually holding focus.
     /// </summary>
     [Fact]
     public void TheHeaderAdvertisesTheShortcut()
-        => RenderTable().Find("th[data-sortable='true']").GetAttribute("aria-keyshortcuts")
+        => RenderTable().Find("button.tm-th-sort").GetAttribute("aria-keyshortcuts")
+            .Should().Be("P");
+
+    /// <summary>
+    /// A pin-only header keeps the announcement on the <c>&lt;th&gt;</c> itself — it is the stop
+    /// there, so the shortcut is advertised where focus lands.
+    /// </summary>
+    [Fact]
+    public void APinOnlyHeader_AdvertisesTheShortcutOnTheTh()
+        => RenderTable().Find("th[data-sortable='false']").GetAttribute("aria-keyshortcuts")
             .Should().Be("P");
 
     [Fact]
     public void TheHeaderDoesNotAdvertiseAShortcutItDoesNotOffer()
-        => RenderTable(showColumnMenu: false).Find("th[data-sortable='true']")
+        => RenderTable(showColumnMenu: false).Find("button.tm-th-sort")
             .GetAttribute("aria-keyshortcuts").Should().BeNull();
 
     // ── The shortcut must not reach a consumer's own controls ─────
@@ -273,7 +290,8 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
         cut.Find("[data-testid='consumer-header-filter']").KeyDown(new KeyboardEventArgs { Key = "p" });
         cut.Find("th[data-sortable='true']").ClassList.Should().NotContain("tm-col-pinned-left");
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "p" });
+        // Focus on a sortable header sits on its sort button; the P keydown bubbles to the <th>.
+        cut.Find("button.tm-th-sort").KeyDown(new KeyboardEventArgs { Key = "p" });
 
         cut.Find("th[data-sortable='true']").ClassList.Should().Contain(
             "tm-col-pinned-left",
@@ -281,35 +299,35 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// The same for Enter, because the two keys travel different branches of the handler and a
-    /// stateful barrier would swallow whichever came first.
+    /// The same for activation, because the two travel different paths — the intercepted keydown vs.
+    /// the sort button's click — and a stateful barrier would swallow whichever came first.
     /// </summary>
     [Fact]
-    public void AfterAKeyIsInterceptedInTheTemplate_EnterOnTheHeaderStillSorts()
+    public void AfterAKeyIsInterceptedInTheTemplate_ActivatingTheSortStillWorks()
     {
         var cut = RenderTableWithHeaderInput();
 
         cut.Find("[data-testid='consumer-header-filter']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("button.tm-th-sort").Click();
 
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
     }
 
     /// <summary>
-    /// The counterpart, so the fix is not "the header stopped answering the keyboard": pressing the
-    /// keys on the HEADER ITSELF still works while a template is present.
+    /// The counterpart, so the fix is not "the header stopped answering the keyboard": activating the
+    /// sort button and pressing P on it still works while a template is present.
     /// </summary>
     [Fact]
-    public void TheHeaderItself_StillAnswersTheKeyboard_WhenATemplateIsPresent()
+    public void TheSortButton_StillAnswersTheKeyboard_WhenATemplateIsPresent()
     {
         var cut = RenderTableWithHeaderInput();
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("button.tm-th-sort").Click();
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "p" });
+        cut.Find("button.tm-th-sort").KeyDown(new KeyboardEventArgs { Key = "p" });
         cut.Find("th[data-sortable='true']").ClassList.Should().Contain("tm-col-pinned-left");
     }
 }

@@ -2070,34 +2070,31 @@ public partial class TmDataTable<TItem> : IDisposable
     }
 
     /// <summary>
-    /// Keyboard contract of a column header: Enter sorts (Shift mirrors the multi-sort modifier of the
-    /// click) and P cycles the pin, so neither is mouse-only (WCAG 2.1.1).
+    /// The <c>&lt;th&gt;</c>'s own key handler exists for ONE shortcut now: P for the pin. Activation is
+    /// deliberately NOT handled here — a sortable header's activatable element is the
+    /// <c>.tm-th-sort</c> button inside it, where Enter and Space produce a native <c>click</c> that
+    /// bubbles up to the <c>&lt;th&gt;</c>'s <c>@onclick</c> (WCAG 2.1.1).
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>Enter only — Space deliberately does not sort.</b> The header is a plain
-    /// <c>&lt;th tabindex="0"&gt;</c>, not a <c>&lt;button&gt;</c>, so Space keeps its browser meaning
-    /// there: scroll down one screen. Accepting Space as well meant every press did BOTH — the table
-    /// re-sorted and the page jumped a screen down, away from the result the user had just asked for.
+    /// <b>Why a button inside, and why no Enter branch here.</b> Up to 2.8.25 the header itself was the
+    /// control — <c>&lt;th tabindex="0"&gt;</c> answering Enter in this handler — because the header
+    /// could not be wrapped in a <c>&lt;button&gt;</c> without nesting the pin toggle, the resize handle
+    /// and a consumer's <c>HeaderTemplate</c> inside interactive content. 2.8.26 wraps only the label and
+    /// the sort icon instead: those siblings stay outside, the markup stays valid, and the key handling
+    /// the <c>&lt;th&gt;</c> used to emulate becomes native. Space now activates too — a button's default
+    /// for Space is "click", not "scroll one screen", so the old sort-and-jump conflict is gone rather
+    /// than suppressed.
     /// </para>
     /// <para>
-    /// The scroll cannot be suppressed from here. Blazor's <c>@onkeydown:preventDefault</c> is evaluated
-    /// when the handler is REGISTERED, not per event, so it cannot be made conditional on the key: a
-    /// static <c>true</c> would cancel the default action of every keydown on the header, including
-    /// <b>Tab</b>, turning a cosmetic annoyance into a keyboard trap (WCAG 2.1.2). Suppressing it from
-    /// JavaScript would make sorting depend on an interop module the consumer has to reference, which a
-    /// keyboard path must not.
+    /// Keeping an Enter branch HERE would sort twice in a real browser: once from the keydown, and once
+    /// from the <c>click</c> the keydown itself synthesizes on a button. So this method answers P only;
+    /// activation arrives exclusively through the bubbled click, for keyboard and mouse alike.
     /// </para>
     /// <para>
-    /// Enter alone is also the conventional answer: Space is the activation key of a <c>button</c>, while
-    /// this element is a <c>columnheader</c> inside a <c>grid</c>, where Space carries no activation
-    /// meaning. WCAG 2.1.1 is satisfied by Enter, and a keyboard user keeps paging through the table with
-    /// the key that has always done it.
-    /// </para>
-    /// <para>
-    /// A key pressed inside a consumer's <c>HeaderTemplate</c> never reaches this method: the template is
-    /// wrapped in a barrier that stops keydown from bubbling (see <c>TmDataTable.razor</c>). Reaching the
-    /// shortcut from there was WCAG 2.1.4 — typing into a filter box in the header pinned the column.
+    /// P reaches this handler by bubbling — pressed on the sort button it travels to the
+    /// <c>&lt;th&gt;</c>; pressed inside a consumer's <c>HeaderTemplate</c> the keydown barrier stops it
+    /// before it gets here (WCAG 2.1.4 — typing into a filter box in the header pinned the column).
     /// </para>
     /// <para>
     /// <b>P cycles the column pin</b>, added in 2.8.22 together with <c>tabindex="-1"</c> on the pin
@@ -2105,7 +2102,8 @@ public partial class TmDataTable<TItem> : IDisposable
     /// cost eleven Tab presses and five of those stops painted nothing until hover; taking it out of the
     /// sequential order WITHOUT giving the header a key would have made pinning unreachable rather than
     /// cheaper. Pinning does not need a sortable column, so P is answered on any header while
-    /// <c>ShowColumnMenu</c> is on, and <c>aria-keyshortcuts</c> announces it.
+    /// <c>ShowColumnMenu</c> is on, and <c>aria-keyshortcuts</c> announces it on whichever element is the
+    /// stop — the sort button, or the <c>&lt;th&gt;</c> itself when the pin is all it offers.
     /// </para>
     /// </remarks>
     private Task HandleHeaderKeyDownAsync(KeyboardEventArgs e, TmDataTableColumn<TItem> col)
@@ -2115,17 +2113,16 @@ public partial class TmDataTable<TItem> : IDisposable
             return CyclePinAsync(col);
         }
 
-        if (!col.Sortable) return Task.CompletedTask;
-        if (e.Key is not "Enter") return Task.CompletedTask;
-        return SortByAsync(col, e.ShiftKey);
+        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Whether the header offers anything a keyboard user can do — and therefore whether it belongs in
-    /// the focus order at all. Sorting is one such thing; since 2.8.22 the pin is the other, because the
-    /// pin button itself is no longer a stop.
+    /// Whether the <c>&lt;th&gt;</c> itself — not a control inside it — is the focus stop. That is true
+    /// only for a header whose sole keyboard affordance is the pin: a sortable header's stop is its
+    /// <c>.tm-th-sort</c> button, and a header with no affordance at all is no stop. See
+    /// <c>TmDataTableHeaderAccessibilityTests.AHeaderThatOnlyOffersThePin_IsStillAFocusStop</c>.
     /// </summary>
-    private bool IsHeaderOperable(TmDataTableColumn<TItem> col) => col.Sortable || ShowColumnMenu;
+    private bool IsPinOnlyHeader(TmDataTableColumn<TItem> col) => !col.Sortable && ShowColumnMenu;
 
     /// <summary>
     /// Does nothing, on purpose. It exists so the barrier around a consumer's <c>HeaderTemplate</c> is a

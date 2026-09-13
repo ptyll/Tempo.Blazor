@@ -132,6 +132,30 @@
 /* Sortable column header */
 .tm-col-sortable { cursor: pointer; user-select: none; }
 .tm-col-sortable:hover { color: var(--tm-text-primary); }
+/* The activatable element inside a sortable <th> is a real <button> — the only element where Enter
+   AND Space both mean "activate" natively, and where Space does so WITHOUT scrolling the page (on the
+   plain <th tabindex="0"> it stayed the browser's "scroll one screen", which a keydown handler could
+   not cancel for one key only). It wraps just the label and the sort icon; the pin toggle, the resize
+   handle and a consumer's HeaderTemplate stay siblings, because interactive content must not nest in
+   a button. The resets make it paint as the header text it replaces: `font` does not cover
+   text-transform/letter-spacing, so those inherit explicitly. `color: inherit` lets the th's own
+   states — .tm-col-sortable:hover, .tm-col-sorted-asc/desc — keep reaching the label. */
+.tm-th-sort {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--tm-radius-sm, 3px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+.tm-th-sort:hover { color: var(--tm-text-primary); }
 /* The sorted label carries `.tm-data-table th` in its selector on purpose. As a bare
    `.tm-col-sorted-asc` it was (0,1,0) against the (0,1,1) of `.tm-data-table th { color: … }`, so it
    lost at every source order and the sorted header was painted in the ordinary header colour — the
@@ -236,11 +260,12 @@
    turns an element into a control owns that element's focus indicator. */
 .tm-data-table th:focus-visible,
 .tm-data-table tbody tr:focus-visible,
-.tm-col-pin-btn:focus-visible {
+.tm-col-pin-btn:focus-visible,
+.tm-th-sort:focus-visible {
   outline: 2px solid var(--tm-color-primary, #3b82f6);
   outline-offset: -2px;
 }
-.tm-col-sortable:focus-visible { color: var(--tm-text-primary); }
+.tm-th-sort:focus-visible { color: var(--tm-text-primary); }
 
 /* Column resize handle */
 .tm-col-resize-handle {

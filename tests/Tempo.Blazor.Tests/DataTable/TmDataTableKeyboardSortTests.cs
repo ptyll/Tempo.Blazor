@@ -10,16 +10,21 @@ namespace Tempo.Blazor.Tests.DataTable;
 /// <summary>
 /// Sorting has to be reachable without a mouse (WCAG 2.1.1 Keyboard).
 /// <para>
-/// The sort target is the <c>&lt;th&gt;</c> itself, which is a plain element: it was clickable but not
-/// focusable and had no key handler, so a keyboard user could not sort at all. It cannot simply be
-/// wrapped in a <c>&lt;button&gt;</c> either — the header also carries the consumer's
-/// <c>HeaderTemplate</c>, the pin toggle and the resize handle, and a button around those would nest
-/// interactive elements. So the header itself becomes the focus stop and answers <b>Enter</b>.
+/// Up to 2.8.25 the sort target was the <c>&lt;th tabindex="0"&gt;</c> itself, answering Enter in a
+/// keydown handler — Space had to stay a non-key there, because on a plain element it still means
+/// "scroll one screen" and Blazor cannot cancel that default for one key only. Since 2.8.26 the
+/// activatable element is a real <c>&lt;button type="button" class="tm-th-sort"&gt;</c> inside the
+/// <c>&lt;th&gt;</c>: Enter AND Space are native activation on a button, Space included — a button's
+/// default for Space is "click", not "scroll", so sorting no longer throws the user a screen down.
+/// The button wraps only the label and the sort icon; the pin toggle, the resize handle and a
+/// consumer's <c>HeaderTemplate</c> stay siblings of it, because interactive content must not nest
+/// inside a <c>&lt;button&gt;</c>.
 /// </para>
 /// <para>
-/// Enter and not Space: on a plain <c>&lt;th&gt;</c> Space still means "scroll one screen", and Blazor
-/// cannot cancel that default for one key only. See
-/// <see cref="Space_DoesNotSort_SoItKeepsScrollingThePage"/>.
+/// The button carries no <c>@onclick</c> of its own: its native click bubbles to the <c>&lt;th&gt;</c>,
+/// so keyboard and mouse take the same single path and a key can never sort twice. bUnit dispatches
+/// the events a test asks for, so a keyboard activation is expressed as <c>.Click()</c> on the button —
+/// which is exactly what a browser turns Enter and Space into on a focused <c>&lt;button&gt;</c>.
 /// </para>
 /// </summary>
 public class TmDataTableKeyboardSortTests : LocalizationTestBase
@@ -65,105 +70,138 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
     private static IReadOnlyList<string> Names(IRenderedComponent<TmDataTable<KeyPerson>> cut)
         => cut.FindAll("tbody tr").Select(r => r.QuerySelector("td")!.TextContent.Trim()).ToList();
 
-    // ── Focusability ──────────────────────────────────────────────
+    // ── The control inside the header ─────────────────────────────
 
+    /// <summary>
+    /// The contract this release promises: a sortable <c>&lt;th&gt;</c> contains
+    /// <c>&lt;button type="button" class="tm-th-sort"&gt;</c>. <c>type="button"</c> is asserted on its
+    /// own because inside a consumer's <c>&lt;form&gt;</c> the default <c>type="submit"</c> would
+    /// submit the form on every sort.
+    /// </summary>
     [Fact]
-    public void SortableHeader_IsAFocusStop()
+    public void SortableHeader_RendersAnInnerSortButton()
     {
         var cut = RenderTable();
 
-        cut.Find("th[data-sortable='true']").GetAttribute("tabindex").Should().Be("0");
+        var button = cut.Find("th[data-sortable='true'] > button.tm-th-sort");
+
+        button.GetAttribute("type").Should().Be("button",
+            "v consumerově <form> by výchozí type=\"submit\" při každém řazení formulář odeslal");
     }
 
     /// <summary>
-    /// Tabbing through headers that do nothing is noise, not access.
+    /// A header with nothing to sort by does not offer the control — the button is the affordance,
+    /// so its absence is what makes the column non-operable, not just a missing tabindex.
     /// </summary>
-    /// <remarks>
-    /// <c>ShowColumnMenu</c> is switched OFF here, and that is the whole content of the change made in
-    /// 2.8.22: with the menu on, the header hosts the pin toggle, and since the toggle stopped being a
-    /// tab stop of its own the header IS the way to reach it. "Does nothing" therefore has to be set up,
-    /// not assumed from <c>Sortable="false"</c> alone — see
-    /// <c>TmDataTableHeaderAccessibilityTests.AHeaderThatOnlyOffersThePin_IsStillAFocusStop</c>.
-    /// </remarks>
     [Fact]
-    public void NonSortableHeader_IsNotAFocusStop()
+    public void NonSortableHeader_RendersNoSortButton()
     {
-        var cut = RenderTable(sortable: false, showColumnMenu: false);
+        var cut = RenderTable(sortable: false);
 
-        cut.Find("th[data-sortable='false']").GetAttribute("tabindex").Should().BeNull();
+        cut.Find("th[data-sortable='false']").QuerySelector("button.tm-th-sort").Should().BeNull();
+    }
+
+    /// <summary>
+    /// The <c>&lt;button&gt;</c> is a native tab stop without a tabindex attribute — that is what
+    /// makes it the element where Space activates without scrolling. The <c>&lt;th&gt;</c> itself is
+    /// out of the order: two stops per column would be the noise 2.8.22 removed for the pin.
+    /// </summary>
+    [Fact]
+    public void SortableHeader_ItsButtonIsTheFocusStop_NotTheTh()
+    {
+        var cut = RenderTable();
+
+        var header = cut.Find("th[data-sortable='true']");
+        header.GetAttribute("tabindex").Should().BeNull(
+            "tlačítko uvnitř je nativní zastávka — tabindex na <th> by přidal druhou");
+        header.QuerySelector("button.tm-th-sort").Should().NotBeNull(
+            "bez vykresleného tlačítka by hlavička neměla zastávku vůbec");
     }
 
     // ── Operability ───────────────────────────────────────────────
 
     [Fact]
-    public void Enter_SortsAscending()
+    public void ActivatingTheButton_SortsAscending()
     {
         var cut = RenderTable();
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        // .Click() IS the keyboard path here: a browser turns Enter and Space on a focused <button>
+        // into this very click.
+        cut.Find("button.tm-th-sort").Click();
 
         Names(cut).Should().Equal("Alice", "Bob", "Charlie");
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
     }
 
     /// <summary>
-    /// Space must NOT sort — it stays the browser's "scroll one screen".
+    /// Space sorts because the target is a button — and it cannot scroll the page, because the
+    /// button consumes the key as activation. The assertion is on the markup fact that produces
+    /// both behaviours (a real <c>&lt;button type="button"&gt;</c>), plus one dispatch proving the
+    /// sort is NOT emulated on keydown: Space arrives exclusively through the native click, so
+    /// there is no handler that could fire it while the page still scrolls.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This assertion is the reverse of what it was in 2.8.9, and the reversal is the fix. The header is
-    /// a <c>&lt;th tabindex="0"&gt;</c>, not a <c>&lt;button&gt;</c>, so Space keeps its default action
-    /// there. Accepting it as a sort key therefore did not replace the scroll, it ADDED to it: one press
-    /// re-sorted the table and threw the user a screen down, off the result they had just asked for.
-    /// </para>
-    /// <para>
-    /// Keeping Space and cancelling the scroll is not available from Blazor. <c>:preventDefault</c> is
-    /// bound at handler registration, not per event, so it cannot look at the key — a static <c>true</c>
-    /// would cancel Tab as well and trap the keyboard (WCAG 2.1.2), which is strictly worse than the
-    /// annoyance it fixes.
-    /// </para>
-    /// <para>
-    /// Nothing is lost in coverage terms: Enter sorts, so WCAG 2.1.1 Keyboard still holds, and Space is
-    /// not an activation key for a <c>columnheader</c> in the first place.
-    /// </para>
-    /// </remarks>
     [Fact]
-    public void Space_DoesNotSort_SoItKeepsScrollingThePage()
+    public void Space_SortsThroughTheNativeClick_WhichCannotScroll()
     {
         var cut = RenderTable();
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = " " });
+        var button = cut.Find("button.tm-th-sort");
+        button.TagName.Should().Be("BUTTON",
+            "jen na <button> je Space nativní aktivace — na prostém <th> zůstávalo „scroll o obrazovku“");
+
+        button.KeyDown(new KeyboardEventArgs { Key = " " });
 
         Names(cut).Should().Equal("Charlie", "Alice", "Bob");
-        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none",
+            "řazení se NEemuluje na keydown — Space aktivuje přes nativní click, který button konzumuje");
+    }
+
+    /// <summary>
+    /// The same guard for Enter: no keydown branch may fire the sort, or a real browser would sort
+    /// twice — once from the keydown, once from the click the keydown synthesizes on a button.
+    /// </summary>
+    [Fact]
+    public void KeydownEnter_DoesNotSort_TheClickDoes()
+    {
+        var cut = RenderTable();
+
+        cut.Find("button.tm-th-sort").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none",
+            "v prohlížeči keydown Enter na <button> sám vyrobí click — handler, který by řadil znovu, řadí dvakrát");
+
+        cut.Find("button.tm-th-sort").Click();
+
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
     }
 
     [Fact]
-    public void Enter_CyclesTheSameTriStateAsClicking()
+    public void ActivatingTheButton_CyclesTheSameTriStateAsClickingTheHeader()
     {
         var cut = RenderTable();
 
-        var header = cut.Find("th[data-sortable='true']");
-        header.KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("button.tm-th-sort").Click();
+        cut.Find("button.tm-th-sort").Click();
 
         Names(cut).Should().Equal("Charlie", "Bob", "Alice");
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("button.tm-th-sort").Click();
 
         Names(cut).Should().Equal("Charlie", "Alice", "Bob"); // back to the supplied order
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
     }
 
+    /// <summary>
+    /// Shift is the multi-sort modifier on the bubbled click — the browser reports it on the click
+    /// Enter produces exactly as it does on a mouse click.
+    /// </summary>
     [Fact]
-    public void ShiftEnter_MultiSorts_LikeShiftClick()
+    public void ShiftActivate_MultiSorts_LikeShiftClick()
     {
         var cut = RenderTable(secondColumn: true);
 
-        var headers = cut.FindAll("th[data-sortable='true']");
-        headers[0].KeyDown(new KeyboardEventArgs { Key = "Enter" });
-        cut.FindAll("th[data-sortable='true']")[1]
-           .KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+        cut.FindAll("button.tm-th-sort")[0].Click();
+        cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { ShiftKey = true });
 
         // Both columns are now sort keys, which only the multi-sort path produces.
         cut.FindAll("th[data-sortable='true']")
@@ -171,23 +209,37 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
            .Should().Equal("ascending", "ascending");
     }
 
+    /// <summary>
+    /// Clicking the header outside the button still sorts — the mouse path is unchanged; the button
+    /// added the keyboard one.
+    /// </summary>
+    [Fact]
+    public void ClickingTheHeaderElsewhere_StillSorts()
+    {
+        var cut = RenderTable();
+
+        cut.Find("th[data-sortable='true']").Click();
+
+        cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("ascending");
+    }
+
     [Fact]
     public void AnUnrelatedKey_DoesNotSort()
     {
         var cut = RenderTable();
 
-        cut.Find("th[data-sortable='true']").KeyDown(new KeyboardEventArgs { Key = "a" });
+        cut.Find("button.tm-th-sort").KeyDown(new KeyboardEventArgs { Key = "a" });
 
         Names(cut).Should().Equal("Charlie", "Alice", "Bob");
         cut.Find("th[data-sortable='true']").GetAttribute("aria-sort").Should().Be("none");
     }
 
     [Fact]
-    public void Enter_OnANonSortableHeader_DoesNothing()
+    public void Click_OnANonSortableHeader_DoesNothing()
     {
         var cut = RenderTable(sortable: false);
 
-        cut.Find("th[data-sortable='false']").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("th[data-sortable='false']").Click();
 
         Names(cut).Should().Equal("Charlie", "Alice", "Bob");
     }

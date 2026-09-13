@@ -167,21 +167,25 @@
                         }
                         @foreach (var col in _visibleColumns)
                         {
-                            @* A header that DOES something is operable by keyboard, not only by mouse: it is
-                               a focus stop and answers Enter (Shift for multi-sort), mirroring the click,
-                               and P for the pin. Space is deliberately not an activation key — on a plain
-                               <th tabindex="0"> it stays the browser's "scroll one screen" and Blazor
-                               cannot cancel that default for one key only.
-                               The sort target stays the <th> itself — the header may hold a consumer's
-                               HeaderTemplate as well as the pin button and resize handle, so it cannot be
-                               wrapped in a <button> without nesting interactive elements. *@
+                            @* A sortable header's control is a real <button> inside the <th>, not the <th>
+                               itself. On a <button> BOTH Enter and Space are native activation — Space
+                               included, because a button's default for Space is "click", where on the plain
+                               <th tabindex="0"> it stayed "scroll one screen" and Blazor could not cancel
+                               that default for one key only. The button wraps only the label and the sort
+                               icon: the consumer's HeaderTemplate, the pin toggle and the resize handle
+                               stay SIBLINGS of it, because interactive content cannot nest inside a
+                               <button> (invalid HTML — the reason 2.8.x refused to wrap the whole header).
+                               Clicking anywhere else in the header still sorts through the <th>'s own
+                               @onclick — the mouse path is unchanged; the button adds the keyboard one.
+                               A header that offers ONLY the pin keeps <th tabindex="0"> as its stop, as
+                               2.8.22 established; a sortable header's stop is its button. *@
                             <th class="@GetHeaderClass(col)"
                                 style="@GetColumnStyle(col)"
                                 data-sortable="@col.Sortable.ToString().ToLower()"
-                                tabindex="@(IsHeaderOperable(col) ? "0" : null)"
+                                tabindex="@(IsPinOnlyHeader(col) ? "0" : null)"
                                 draggable="@(col.Groupable ? "true" : "false")"
                                 aria-sort="@GetAriaSortValue(col)"
-                                aria-keyshortcuts="@(ShowColumnMenu ? "P" : null)"
+                                aria-keyshortcuts="@(ShowColumnMenu && !col.Sortable ? "P" : null)"
                                 @ondragstart="() => OnColumnDragStart(col.Key)"
                                 @ondragend="OnColumnDragEnd"
                                 @onkeydown="e => HandleHeaderKeyDownAsync(e, col)"
@@ -191,9 +195,9 @@
                                     @* The consumer's own controls live in here, and keydown BUBBLES: without
                                        this barrier every letter typed into a filter box inside the header
                                        reached the header's own key handler, so "prague" pinned and unpinned
-                                       the column three times and Enter re-sorted the table. WCAG 2.1.4 allows
-                                       a single-character shortcut only while the component itself has focus,
-                                       and focus on a DESCENDANT is not that.
+                                       the column three times. WCAG 2.1.4 allows a single-character
+                                       shortcut only while the component itself has focus, and focus on a
+                                       DESCENDANT is not that.
                                        The barrier is STATELESS on purpose. 2.8.23 first shipped a flag set
                                        here and cleared by the header's own handler, which never ran for an
                                        intercepted key — so the flag survived and the user's NEXT genuine
@@ -205,23 +209,39 @@
                                        visiting. With no handler the element is never visited and the flag
                                        is never read. `SwallowTemplateKey` does nothing and exists only to
                                        make this element a stop on the path.
-                                       Only KEYDOWN is stopped: clicking a templated header has always sorted
-                                       and still does. *@
+                                       Only KEYDOWN is stopped: clicking a templated header has always
+                                       sorted and still does — the click bubbles to the <th>. *@
                                     <span class="tm-col-header-content" @onkeydown="SwallowTemplateKey" @onkeydown:stopPropagation="true">
                                         @col.HeaderTemplate
                                     </span>
                                 }
-                                else
-                                {
-                                    <span>@col.Title</span>
-                                }
                                 @if (col.Sortable)
                                 {
-                                    <span class="tm-sort-icon @GetSortIconClass(col)" aria-hidden="true"></span>
-                                    @if (_sortDescriptors.Count > 1 && GetColumnSortIndex(col.Key) >= 0)
-                                    {
-                                        <span class="tm-sort-order" aria-hidden="true">@(GetColumnSortIndex(col.Key) + 1)</span>
-                                    }
+                                    @* type="button" matters: inside a consumer's <form> the default
+                                       type="submit" would submit the form on every sort. The button carries
+                                       no @onclick of its own — its native click bubbles to the <th>, so
+                                       Enter, Space and the mouse all take the same single path and a key
+                                       can never double-fire a sort the way an explicit keydown handler did.
+                                       When a HeaderTemplate supplies the visible label the button keeps an
+                                       accessible name from the column title (or the localized fallback). *@
+                                    <button type="button"
+                                            class="tm-th-sort"
+                                            aria-label="@(col.HeaderTemplate is not null ? (col.Title ?? Loc["TmDataTable_SortAscending"]) : null)"
+                                            aria-keyshortcuts="@(ShowColumnMenu ? "P" : null)">
+                                        @if (col.HeaderTemplate is null)
+                                        {
+                                            <span>@col.Title</span>
+                                        }
+                                        <span class="tm-sort-icon @GetSortIconClass(col)" aria-hidden="true"></span>
+                                        @if (_sortDescriptors.Count > 1 && GetColumnSortIndex(col.Key) >= 0)
+                                        {
+                                            <span class="tm-sort-order" aria-hidden="true">@(GetColumnSortIndex(col.Key) + 1)</span>
+                                        }
+                                    </button>
+                                }
+                                else if (col.HeaderTemplate is null)
+                                {
+                                    <span>@col.Title</span>
                                 }
                                 @if (ShowColumnMenu)
                                 {
