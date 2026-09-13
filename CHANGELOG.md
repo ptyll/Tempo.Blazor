@@ -268,9 +268,10 @@ fixes that and rewrites the release gate from an absence check to a provenance c
 
 **This number was raised because the content changed, not because a gate was red**
 (`DEC-TEMPO-RELEASE-GATE` point 10). 2.8.23 stays published and is green under provenance.
-Publication of 2.8.24 remains the repository owner's manual step (`DEC-TEMPO-287-NUGET-DELIVERY`):
-`VERSION=2.8.24 eng/pack-nuget-packages.sh`, then `dotnet nuget push packages/*.2.8.24.nupkg`.
-**The keystroke defect above is live on the feed under 2.8.23.**
+**2.8.24 is on nuget.org** — the publication was performed by the repository owner as the named
+manual step (`DEC-TEMPO-287-NUGET-DELIVERY`), so the keystroke defect above is fixed on the feed
+under 2.8.24. (Corrected in 2.8.26: this paragraph previously said publication was still pending,
+which was true only when it was written.)
 
 ## 2.8.23 - 2026-08-26
 
@@ -640,10 +641,12 @@ stops being read. Six of the nine are about a form's action bar, its navigation 
 that sits above them, and they share one defect class — **an affordance with no mechanism**: a marker,
 a role or a parameter that states an intent the rendering, the keyboard or the save path never honours.
 
-### Known issue in the published 2.8.15 package — read this before auditing that release
+### Known issue in the 2.8.15 artefact — read this before auditing that release
 
-**The `2.8.15` package on the feed carries `repository commit="efb00b89"`, which is the commit of
-`2.8.14`** — see the section below, kept here because it is still true of the package on the feed.
+**The `2.8.15` artefact that was packed carries `repository commit="efb00b89"`, which is the commit
+of `2.8.14`.** (Corrected in 2.8.26: the heading said "the published 2.8.15 package", but the flat
+container has never listed 2.8.15 — the artefact was packed and audited, never pushed. The stale
+label described below is therefore a property of the staged file, not of anything the feed serves.)
 `2.8.16` is the first release packed by the fixed script, and its label was verified against the bytes
 during the pack, not only in a test.
 
@@ -733,12 +736,14 @@ during the pack, not only in a test.
   how many action groups reach a phone is something only the host knows, and that limit is spelled out in the
   token itself, together with the arithmetic.
 
-### Known issue in the published 2.8.15 package — read this before auditing that release
+### Known issue in the packed 2.8.15 artefact — read this before auditing that release
 
-**The `2.8.15` package on the feed carries `repository commit="efb00b89"`, which is the commit of
-`2.8.14`.** The package CONTENT is correct — it contains the `width: auto` fix described under 2.8.15
-— only the provenance label is one release behind. An auditor who checks out the labelled commit will
-find the fix missing and conclude the release did not ship it, which is why this is written down
+**The `2.8.15` artefact that was packed carries `repository commit="efb00b89"`, which is the commit
+of `2.8.14`.** (Corrected in 2.8.26: the heading called it "the published 2.8.15 package", but the
+flat container has never listed 2.8.15 — it was packed and its label inspected, never pushed.) The
+artefact's CONTENT was correct — it contained the `width: auto` fix described under 2.8.15 — only
+the provenance label was one release behind. An auditor who checks out the labelled commit finds
+the fix missing and concludes the release did not ship it, which is why this is written down
 rather than left as a curiosity.
 
 Cause: `eng/pack-nuget-packages.sh` packed with `--no-build`, and `dotnet pack --no-build` inherits
@@ -749,10 +754,10 @@ Fixed for every future release in `7dcdce52`: the pack script passes
 produced bytes** and refuses to publish a mismatch. Guarded both ways by
 `ReleaseContractTests.PackedPackages_RecordTheCommitTheyWereBuiltFrom`.
 
-The already-published `2.8.15` is deliberately **not** repackaged: republishing the same version with
+The already-packed `2.8.15` was deliberately **not** repackaged: republishing the same version with
 different bytes is worse than the wrong label, because it breaks the one property a version number
-has. It gets corrected by the next release. **When 2.8.16 ships, verify that the label matches its own
-commit** — that is the first live proof the guard works during a real pack, not only in a test.
+has. It was corrected by the next release. **When 2.8.16 shipped, the label was verified to match its
+own commit** — the first live proof the guard works during a real pack, not only in a test.
 
 ## 2.8.15 - 2026-08-10
 

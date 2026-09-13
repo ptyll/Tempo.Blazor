@@ -5214,7 +5214,7 @@ Sticky/plovoucí panel akcí pro dlouhé formuláře. Vlevo obsah (`ChildContent
 
 | Třída | Popis |
 |-------|-------|
-| `tm-form-action-bar` | Kořenový kontejner (`role="toolbar"`) |
+| `tm-form-action-bar` | Kořenový kontejner (`role="group"`) |
 | `tm-form-action-bar--static` / `--sticky-top` / `--floating-bottom` | Varianta pozice |
 | `tm-form-action-bar--show-on-scroll` | Skryto, dokud scroll nepřekročí práh |
 | `tm-form-action-bar--visible` | Přidáno JS listenerem po překročení prahu |

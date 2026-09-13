@@ -12,6 +12,12 @@ namespace Tempo.Blazor.Tests.Toolbar;
 /// používají na tablist / plátno / komentáře, ne na roving položek toolbaru — změřeno před
 /// tímto slibem. Strážce proto tvrdí prázdnou množinu atributů v <c>src/</c> (komentáře se
 /// nepočítají).
+/// <para>
+/// 2.8.26 rozšiřuje sondu o <c>COMPONENTS.md</c>: dokumentace tvrdila u <c>tm-form-action-bar</c>
+/// <c>role="toolbar"</c> poté, co komponenta přešla na <c>role="group"</c> — stejný slib bez
+/// mechanismu, jen o úroveň výš. Sonda čte dokument jako markup, takže věta v backtitech padá
+/// stejně jako atribut v razoru.
+/// </para>
 /// </remarks>
 public sealed class ToolbarRoleGuardTests
 {
@@ -64,18 +70,26 @@ public sealed class ToolbarRoleGuardTests
         var root = FindRepositoryRoot();
         var src = Path.Combine(root, "src");
         string[] extensions = [".razor", ".mjs", ".js"];
-        return
-        [
-            .. Directory.EnumerateFiles(src, "*.*", SearchOption.AllDirectories)
-                .Where(path =>
-                    extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
-                    && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                    && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                    && !path.Contains($"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}lib{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                .Select(path => (
-                    RelativePath: Path.GetRelativePath(root, path).Replace('\\', '/'),
-                    Text: File.ReadAllText(path)))
-        ];
+        var files = Directory.EnumerateFiles(src, "*.*", SearchOption.AllDirectories)
+            .Where(path =>
+                extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
+                && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !path.Contains($"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}lib{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Select(path => (
+                RelativePath: Path.GetRelativePath(root, path).Replace('\\', '/'),
+                Text: File.ReadAllText(path)))
+            .ToList();
+
+        // COMPONENTS.md is the contract a consumer reads before the markup itself; a role claim
+        // there is the same affordance without a mechanism, one level up.
+        var componentsDoc = Path.Combine(root, "COMPONENTS.md");
+        if (File.Exists(componentsDoc))
+        {
+            files.Add(("COMPONENTS.md", File.ReadAllText(componentsDoc)));
+        }
+
+        return files;
     }
 
     private static string FindRepositoryRoot()
