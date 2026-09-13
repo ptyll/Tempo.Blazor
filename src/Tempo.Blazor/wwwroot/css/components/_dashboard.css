@@ -737,21 +737,6 @@
   padding: var(--tm-space-4);
 }
 
-.tm-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--tm-space-5) var(--tm-space-6);
-  border-bottom: 1px solid var(--tm-border-color);
-}
-
-.tm-modal-header h3 {
-  font-size: var(--tm-font-size-lg);
-  font-weight: var(--tm-font-weight-semibold);
-  color: var(--tm-text-primary);
-  margin: 0;
-}
-
 /* The .tm-modal* block that used to sit above this comment styled classes no dashboard component
    renders — dead duplicates of _modal.css that the import order already defeated. _modal.css is
    the single owner of every .tm-modal* class. */
