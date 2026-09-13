@@ -52,7 +52,6 @@ public class UnconstrainedClassOwnershipTests
     /// </summary>
     private static readonly string[] RecordedCollisions =
     [
-        ".tm-modal-body _dashboard.css|_modal.css",
         ".tm-modal-close _dashboard.css|_modal.css",
         ".tm-modal-footer _dashboard.css|_modal.css",
         ".tm-modal-header _dashboard.css|_modal.css",

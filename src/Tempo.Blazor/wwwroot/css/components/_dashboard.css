@@ -772,10 +772,6 @@
   color: var(--tm-text-primary);
 }
 
-.tm-modal-body {
-  padding: var(--tm-space-6);
-}
-
 .tm-modal-footer {
   display: flex;
   align-items: center;
