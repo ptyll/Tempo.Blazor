@@ -737,15 +737,6 @@
   padding: var(--tm-space-4);
 }
 
-.tm-modal {
-  width: 100%;
-  max-width: 480px;
-  background: var(--tm-bg-surface);
-  border-radius: var(--tm-radius-xl);
-  box-shadow: var(--tm-shadow-xl);
-  overflow: hidden;
-}
-
 .tm-modal-header {
   display: flex;
   align-items: center;
@@ -903,11 +894,7 @@
   .tm-widget-selector-grid {
     grid-template-columns: 1fr;
   }
-  
-  .tm-modal {
-    margin: var(--tm-space-4);
-  }
-  
+
   .tm-dashboard-name-input {
     min-width: 150px;
   }
