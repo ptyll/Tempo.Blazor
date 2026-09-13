@@ -50,6 +50,12 @@
   --tm-text-tertiary:        #94a3b8; /* slate-400: AA on dark input/surface (was slate-500 #64748b) */
   --tm-text-disabled:        #475569;
   --tm-text-inverse:         #0f172a;
+  /* Placeholder — the SAME expression tokens.css declares on :root, re-declared here on purpose
+     (the convention documented above for --tm-sort-indicator-active): the file names its own
+     dark step rather than trusting the light alias to reach the right element. Measured: the
+     dark tertiary #94a3b8 is 5,71:1 on --tm-bg-surface (#1e293b), where the light step #6b7280
+     would measure 3,03:1. */
+  --tm-text-placeholder:     var(--tm-text-tertiary);
 
   /* Primary — shift lighter for dark bg contrast */
   --tm-color-primary:        var(--tm-color-primary-400);

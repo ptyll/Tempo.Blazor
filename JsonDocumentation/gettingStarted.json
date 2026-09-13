@@ -297,6 +297,7 @@
             "--tm-text-primary": "var(--tm-color-gray-900)",
             "--tm-text-secondary": "var(--tm-color-gray-600)",
             "--tm-text-tertiary": "var(--tm-color-gray-500)",
+            "--tm-text-placeholder": "var(--tm-text-tertiary)",
             "--tm-text-disabled": "var(--tm-color-gray-400)",
             "--tm-text-inverse": "var(--tm-color-white)",
             "--tm-text-link": "var(--tm-color-primary)"
