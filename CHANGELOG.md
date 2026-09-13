@@ -1,5 +1,86 @@
 # Changelog
 
+## 2.8.26 (unreleased)
+
+The promised content of this release is EXACTLY the D17 register items (all four groups) plus D2 and
+D3 — nothing more, nothing less. The number is 2.8.26 rather than 2.8.25 because 2.8.25 shipped on
+2026-09-12 with a different subject (the Enter/Space emulation removal), and a published number is
+spent: `AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` refuses to re-announce a
+tag that names another commit, `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds` refuses to call
+another tree's artefact this tree's release, and the cure both guards prescribe is the next free
+number.
+
+### Fixed (D17 — the CSS contract items)
+
+- **`.tm-stat-subvalue` could not be coloured by `SubValueColor` (ed256446).** The subvalue painted
+  `var(--tm-text-secondary)` unconditionally, so the documented parameter emitted a class no
+  consumer rule could out-rank. The declaration is now
+  `color: var(--tm-stat-subvalue-color, var(--tm-text-secondary))` and the component emits
+  `style="--tm-stat-subvalue-color: …"` when the parameter is set. Guarded by a bUnit test that
+  resolves the cascade through `CssCascade` over `tempo-blazor.bundled.css`.
+
+- **`.tm-btn` carried no size of its own (2bed637e).** Padding and min-height lived only on the
+  `tm-btn-{xs,sm,md,lg}` modifiers, so any button missing the modifier — including markup that sets
+  `.tm-btn` directly — rendered at content height. The base `.tm-btn` now carries the medium values
+  (`padding: var(--tm-btn-padding-md)`, `min-height: var(--tm-input-height-md)`); the four size
+  modifiers are unchanged.
+
+- **The dark theme had no `--tm-text-placeholder` (910c84fe).** `tokens.css` defines it as an alias
+  of `--tm-text-tertiary`, but `tokens-dark.css` never overrode it, so dark-mode placeholders
+  inherited whatever the light token resolved to. The dark token is now declared with a measured
+  ≥ 4.5:1 contrast against `--tm-bg-surface`, and the pair is pinned by a fail-closed text×surface
+  contrast test.
+
+- **The class-contract sweeps were blind to two whole packages and to `@media` (a3169f68,
+  4fefa6de).** `OrphanClassCssContractTests` hand-listed eleven classes; it is replaced by
+  `MarkupClassCoverageTests`, which derives the population from the markup itself. The sweeps now
+  cover Signing and NotionEditor stylesheets, and `CssCascade` models `@media` blocks instead of
+  flattening them.
+
+### Fixed (D2 — the sortable table header)
+
+- **`TmDataTable` sortable headers are real `<button>` elements (4cbb713b).** The `<th>` used to own
+  `tabindex`, `@onkeydown` and the click handler, which made Space scroll the page instead of
+  sorting and left the sort affordance unreachable to anything that queries for activatable
+  elements. Sortable columns now render `<button type="button" class="tm-th-sort">` inside the
+  `<th>`; Enter and Space both sort, the header template barrier still shields nested controls,
+  `aria-sort` is emitted only on sortable headers, and the pin button stays out of the tab order.
+
+### Fixed (D3 — class ownership)
+
+- **All fifteen unconstrained class-ownership pairs are resolved (7833ae30).** Every pair in
+  `UnconstrainedClassOwnershipTests.RecordedCollisions` — the six `.tm-modal*` duplicates between
+  `_dashboard.css` and `_modal.css`, `.tm-filter-chip`, `.tm-form-field`, the four `.tm-rte-*`
+  classes and the three `.tm-timeline-*` classes — got its own fix and its own commit, and the
+  frozen list is empty.
+
+### Release gate
+
+- **Provenance now asks about every package this repository publishes (67883259, 9480b1fd).** The
+  feed guard surveyed only `Tempo.Blazor`; it now iterates all 26 ids of `eng/nuget-packages.txt`,
+  registers `lib/**` as the non-reproducible package content it cannot compare, decides each
+  package's reachability at discovery time, and confirms the announced version's exact `.nupkg`
+  URL with a HEAD request so a network outage cannot dress itself as a version check.
+
+- **Seven timing-based waits in the release gate are state-based (b93a1bd1, 2f46eed2).** Toast
+  timers, search-input debounce, map clustering callbacks, Redis polling, two cache TTL waits and
+  the image inspector's render polling each name their barrier and wait on the state it produces.
+
+- **Baseline PNGs moved out of the repository (D4).** Generators under `TM_WRITE_BASELINES=1` write
+  to `artifacts/baseline/`; the index holds none; `BaselineWriteSweep` fails closed if a baseline
+  PNG is ever staged under `__baseline__` again.
+
+- **Component JSON documentation has a freshness guard.** `ComponentDocumentationFreshnessTests`
+  reflects over every `Tm*.razor` carrying `[Parameter]`, requires a matching
+  `JsonDocumentation/Components/<Component>.json`, and compares parameter sets — the previously
+  undocumented components are a frozen, itemized set.
+
+### Expected post-publication shape
+
+`[Provenance] 2.8.26 -> verified` is the line the feed guard will print on the first gate run AFTER
+the owner's manual `dotnet nuget push`. Until that run the feed answer for 2.8.26 is `unpublished`,
+which is the legal pre-publication state — recorded here as a pending item, not as a measurement.
+
 ## 2.8.25 - 2026-09-12
 
 Every Enter and Space on a native activatable element ran its action twice — once from the browser's
