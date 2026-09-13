@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.8.26 (unreleased)
+## 2.8.26 - 2026-09-13
 
 The promised content of this release is EXACTLY the D17 register items (all four groups) plus D2 and
 D3 — nothing more, nothing less. The number is 2.8.26 rather than 2.8.25 because 2.8.25 shipped on
