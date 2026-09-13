@@ -2,7 +2,7 @@
   "itemName": "TmButton",
   "kind": "Component",
   "category": "Buttons",
-  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode.",
+  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
   ],
@@ -26,7 +26,7 @@
       "type": "ButtonSize",
       "isRequired": false,
       "default": "Md",
-      "description": "Size variant. Defaults to Md."
+      "description": "Button size. Defaults to Md (tm-btn-md). Since 2.8.26 the base .tm-btn rule itself carries the medium height and padding, so even markup that forgets the modifier gets the 38 px button box; the four size modifiers override it by source order."
     },
     {
       "name": "Icon",

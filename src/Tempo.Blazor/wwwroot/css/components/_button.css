@@ -7,6 +7,12 @@
   font-weight: var(--tm-font-weight-medium);
   border-radius: var(--tm-radius-md);
   border: 1px solid transparent;
+  /* The base carries the MEDIUM size — the same values .tm-btn-md declares — so markup that emits
+     .tm-btn without a size modifier still gets a real button box (38 px), not content height.
+     height, not min-height: min-height would clamp .tm-btn-xs/.tm-btn-sm up to the medium size
+     without editing a byte of them, while height stays overrideable by source order. */
+  height: var(--tm-input-height-md);
+  padding: 0 var(--tm-space-4);
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
