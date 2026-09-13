@@ -27,12 +27,6 @@
       "description": "IDs of the currently selected elements. Empty = no selection shown."
     },
     {
-      "name": "CommandStack",
-      "type": "WireframeCommandStack?",
-      "isRequired": false,
-      "description": "Cascaded from TmWireframeEditor. When present all mutations are recorded for undo/redo."
-    },
-    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

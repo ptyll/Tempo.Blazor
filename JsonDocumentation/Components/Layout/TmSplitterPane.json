@@ -48,12 +48,6 @@
       "description": "The minimum size of the pane."
     },
     {
-      "name": "Parent",
-      "type": "TmSplitter?",
-      "isRequired": false,
-      "description": "Additional CSS classes."
-    },
-    {
       "name": "Size",
       "type": "string?",
       "isRequired": false,

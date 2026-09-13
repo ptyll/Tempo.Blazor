@@ -2,7 +2,7 @@
   "itemName": "TmNotionEmojiPicker",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Shared emoji picker popup. Renders a search input, categorised emoji grid, and optional Remove button. Positioning is relative to the nearest positioned ancestor — callers must provide that context.",
+  "description": "Emoji picker popup used by the Notion editor in two variants: the Shared picker renders a search input, categorised emoji grid and an optional Remove button positioned relative to the nearest positioned ancestor; the UI variant is an absolutely-positioned popup driven by Visible/Top/Left coordinates.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.Shared",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Shared/TmNotionEmojiPicker.razor",
@@ -18,16 +18,46 @@
       "description": "Fired when the backdrop is clicked (close without action)."
     },
     {
+      "name": "OnSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Shared variant: fired with the chosen emoji."
+    },
+    {
       "name": "OnRemoved",
       "type": "EventCallback",
       "isRequired": false,
-      "description": "Fired when the user clicks \"Remove icon\"."
+      "description": "Shared variant: fired when the optional Remove action is used."
     },
     {
       "name": "ShowRemoveButton",
       "type": "bool",
       "isRequired": false,
-      "description": "When true, a \"Remove icon\" button is shown in the header."
+      "description": "Shared variant: shows the Remove action that raises OnRemoved."
+    },
+    {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "UI variant: whether the popup is shown."
+    },
+    {
+      "name": "Top",
+      "type": "double",
+      "isRequired": false,
+      "description": "UI variant: vertical position of the popup in pixels."
+    },
+    {
+      "name": "Left",
+      "type": "double",
+      "isRequired": false,
+      "description": "UI variant: horizontal position of the popup in pixels."
+    },
+    {
+      "name": "OnEmojiSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "UI variant: fired with the chosen emoji."
     }
   ],
   "subcategory": "Shared"

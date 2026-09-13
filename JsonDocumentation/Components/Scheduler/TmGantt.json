@@ -36,13 +36,6 @@
       "description": "When true, dep-drag handles are rendered on every task bar."
     },
     {
-      "name": "AllTasks",
-      "type": "IReadOnlyList<GanttTask>",
-      "isRequired": false,
-      "default": "[]",
-      "description": "The task being edited."
-    },
-    {
       "name": "AutoSchedule",
       "type": "bool",
       "isRequired": false,
@@ -76,13 +69,6 @@
       "description": "User-defined custom field definitions."
     },
     {
-      "name": "Dependencies",
-      "type": "IReadOnlyList<GanttDependency>",
-      "isRequired": false,
-      "default": "[]",
-      "description": "All tasks for parent selection."
-    },
-    {
       "name": "Filters",
       "type": "IReadOnlyList<GanttFilter>",
       "isRequired": false,
@@ -97,28 +83,10 @@
       "description": "Activity history entries to display in the history drawer."
     },
     {
-      "name": "IsOpen",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Audit history entries to display."
-    },
-    {
       "name": "NotificationSettings",
       "type": "TmNotificationPreferences?",
       "isRequired": false,
       "description": "Notification preferences for the current user."
-    },
-    {
-      "name": "OnAttachmentRemoved",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Fires when the user selects a file to attach."
-    },
-    {
-      "name": "OnAttachmentUpload",
-      "type": "EventCallback<IBrowserFile>",
-      "isRequired": false,
-      "description": "Fires when the description textarea changes (live)."
     },
     {
       "name": "OnAutoScheduled",
@@ -139,22 +107,10 @@
       "description": "Fires when the user triggers a bulk status/property update."
     },
     {
-      "name": "OnClose",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Fires when the user confirms export with the chosen options."
-    },
-    {
       "name": "OnColumnsChanged",
       "type": "EventCallback<IReadOnlyList<GanttColumnDefinition>>",
       "isRequired": false,
       "description": "Fires when column visibility/order changes via the column toggle UI."
-    },
-    {
-      "name": "OnCommentAdded",
-      "type": "EventCallback<GanttComment>",
-      "isRequired": false,
-      "description": "Fires when the user removes an attachment (by attachment Id)."
     },
     {
       "name": "OnCustomFieldChanged",
@@ -181,18 +137,6 @@
       "description": "Fires when a new dependency is added."
     },
     {
-      "name": "OnDescriptionChanged",
-      "type": "EventCallback<string?>",
-      "isRequired": false,
-      "description": "Fires when a dependency is removed (by its Id)."
-    },
-    {
-      "name": "OnExport",
-      "type": "EventCallback<GanttExportOptions>",
-      "isRequired": false,
-      "description": "Whether the dialog is visible."
-    },
-    {
       "name": "OnExportRequested",
       "type": "EventCallback<GanttExportOptions>",
       "isRequired": false,
@@ -203,12 +147,6 @@
       "type": "EventCallback<IReadOnlyList<GanttFilter>>",
       "isRequired": false,
       "description": "Fires when the user adds/removes filters via the filter panel."
-    },
-    {
-      "name": "OnImport",
-      "type": "EventCallback<IReadOnlyList<GanttColumnMapping>>",
-      "isRequired": false,
-      "description": "Whether the dialog is visible."
     },
     {
       "name": "OnImportCompleted",

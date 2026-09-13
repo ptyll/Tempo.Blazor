@@ -12,41 +12,10 @@
   ],
   "parameters": [
     {
-      "name": "AvailableReactions",
-      "type": "IReadOnlyList<string>",
-      "isRequired": false,
-      "default": "DefaultAvailableReactions",
-      "description": "Available emoji reactions shown by the picker."
-    },
-    {
-      "name": "Blocks",
-      "type": "IReadOnlyList<IPageBlock>?",
-      "isRequired": false,
-      "description": "Currently loaded page blocks. When absent, the component loads them from the block provider."
-    },
-    {
       "name": "EffectivePermission",
       "type": "PageEffectivePermissionDto?",
       "isRequired": false,
       "description": "Effective permission for the current user on this page."
-    },
-    {
-      "name": "OnAIAskPageRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when user picks the AI page summary action."
-    },
-    {
-      "name": "OnAISummarizeRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when user picks \"Page restrictions\"."
-    },
-    {
-      "name": "OnCommentBadgeClicked",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Total unresolved comment count for the page (header badge)."
     },
     {
       "name": "OnCreateTokenRequested",
@@ -55,34 +24,10 @@
       "description": "Called when the user clicks \"Create token\" in the token dropdown. Arg = current search query (may be empty). Return the newly created token (Key, DisplayName, ColorClass) so the editor can insert it automatically, or null if the user cancelled."
     },
     {
-      "name": "OnNavigateToImportedPage",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Raised when user picks the AI page question action."
-    },
-    {
       "name": "OnNavigateToPage",
       "type": "EventCallback<string>",
       "isRequired": false,
       "description": "Raised when the user clicks a child-page link or mention."
-    },
-    {
-      "name": "OnPageDeleted",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when page metadata (IsFullWidth, IsSmallText, IsLocked, IsFavorite) changes."
-    },
-    {
-      "name": "OnPageHistoryRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised after page is moved to trash — parent should navigate away."
-    },
-    {
-      "name": "OnPageInfoRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when user picks \"Page history\"."
     },
     {
       "name": "OnPageUpdated",
@@ -97,23 +42,6 @@
       "description": "Raised after page restrictions are saved."
     },
     {
-      "name": "OnRestrictionsRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when user picks \"Share\"."
-    },
-    {
-      "name": "OnShareRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Raised when user picks \"Page info\"."
-    },
-    {
-      "name": "OnTitleEnterPressed",
-      "type": "EventCallback",
-      "isRequired": false
-    },
-    {
       "name": "Page",
       "type": "INotionPage",
       "isRequired": true,
@@ -121,40 +49,10 @@
       "editorRequired": true
     },
     {
-      "name": "PageId",
-      "type": "Guid",
-      "isRequired": true,
-      "description": "Page identifier for reaction aggregation.",
-      "editorRequired": true
-    },
-    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
       "description": "When true all editing interactions are disabled."
-    },
-    {
-      "name": "ShowRestrictedIndicator",
-      "type": "bool",
-      "isRequired": false
-    },
-    {
-      "name": "UnresolvedCommentCount",
-      "type": "int",
-      "isRequired": false,
-      "description": "Fired when Enter is pressed in the title, signalling to add a new block."
-    },
-    {
-      "name": "Visible",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Shows the panel when true."
-    },
-    {
-      "name": "VisibleChanged",
-      "type": "EventCallback<bool>",
-      "isRequired": false,
-      "description": "Raised when the visibility changes."
     }
   ],
   "subcategory": "Page"

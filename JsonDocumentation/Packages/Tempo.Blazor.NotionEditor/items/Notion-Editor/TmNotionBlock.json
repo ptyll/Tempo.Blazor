@@ -12,20 +12,10 @@
   ],
   "parameters": [
     {
-      "name": "ActiveBlockId",
-      "type": "Guid?",
-      "isRequired": false
-    },
-    {
       "name": "Block",
       "type": "IPageBlock",
       "isRequired": true,
       "editorRequired": true
-    },
-    {
-      "name": "BlockCommentCounts",
-      "type": "IReadOnlyDictionary<string, TmNotionPage.BlockCommentInfo>",
-      "isRequired": true
     },
     {
       "name": "BlockHasUnreadActivity",
@@ -49,13 +39,6 @@
       "type": "int",
       "isRequired": false,
       "description": "Number of resolved-but-unread block comment threads for this block."
-    },
-    {
-      "name": "Blocks",
-      "type": "IReadOnlyList<IPageBlock>",
-      "isRequired": true,
-      "default": "[]",
-      "editorRequired": true
     },
     {
       "name": "BlockThreadCount",
@@ -91,52 +74,10 @@
       "isRequired": false
     },
     {
-      "name": "OnAddBlockAfter",
-      "type": "EventCallback<(string AfterBlockId, BlockType Type, string? InitialHtml)>",
-      "isRequired": false,
-      "description": "Fired when a block requests type conversion (blockId, newType)."
-    },
-    {
-      "name": "OnAddBlockAtEnd",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Fired when a new block should be inserted after the given block (afterBlockId, type, initialHtml)."
-    },
-    {
-      "name": "OnBlockDeleted",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Fired when a block receives focus. Arg is the block ID string."
-    },
-    {
-      "name": "OnBlockDuplicated",
-      "type": "EventCallback<IPageBlock>",
-      "isRequired": false,
-      "description": "Fired when a block's content was saved by the user."
-    },
-    {
-      "name": "OnBlockFocused",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Fired when a block was moved out of this list after a successful external drop."
-    },
-    {
-      "name": "OnBlockUpdated",
-      "type": "EventCallback<IPageBlock>",
-      "isRequired": false,
-      "description": "Fired when a block requests deletion. Arg is the block ID string."
-    },
-    {
       "name": "OnComment",
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised when the user clicks the Comment button in the block handle menu."
-    },
-    {
-      "name": "OnConvertBlock",
-      "type": "EventCallback<(string, BlockType)>",
-      "isRequired": false,
-      "description": "Fired when a block should be duplicated (carries the source block)."
     },
     {
       "name": "OnConvertTo",
@@ -154,18 +95,6 @@
       "isRequired": false
     },
     {
-      "name": "OnExternalBlockDropped",
-      "type": "EventCallback<MoveNotionBlockRequest>",
-      "isRequired": false,
-      "description": "Fired when blocks are reordered via drag-and-drop (sourceIndex, targetIndex)."
-    },
-    {
-      "name": "OnExternalBlockRemoved",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Fired when a block from another list is dropped into this list."
-    },
-    {
       "name": "OnFocused",
       "type": "EventCallback",
       "isRequired": false,
@@ -176,12 +105,6 @@
       "type": "EventCallback<IReadOnlyList<IPageBlock>>",
       "isRequired": false,
       "description": "Raised when a TemplateButton block requests insertion of its template blocks after itself."
-    },
-    {
-      "name": "OnInsertTemplateBlocksAfter",
-      "type": "EventCallback<(string AfterBlockId, IReadOnlyList<IPageBlock> Blocks)>",
-      "isRequired": false,
-      "description": "Fired when a block requests keyboard focus movement within this list."
     },
     {
       "name": "OnMentionMenu",
@@ -208,12 +131,6 @@
       "description": "Raised when '[[' page-link syntax is typed. Args are viewport coords."
     },
     {
-      "name": "OnReorder",
-      "type": "EventCallback<(int, int)>",
-      "isRequired": false,
-      "description": "Per-block comment summary for margin-thread indicators and hover tooltip."
-    },
-    {
       "name": "OnSlashMenu",
       "type": "EventCallback<(string BlockId, double Top, double Left)>",
       "isRequired": false,
@@ -229,12 +146,6 @@
       "name": "OnUpdated",
       "type": "EventCallback<IPageBlock>",
       "isRequired": false
-    },
-    {
-      "name": "ParentBlockId",
-      "type": "Guid?",
-      "isRequired": false,
-      "description": "Page ID owned by this rendered list."
     },
     {
       "name": "ReadOnly",

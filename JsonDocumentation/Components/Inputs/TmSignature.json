@@ -18,35 +18,16 @@
       "description": "Background color of the canvas. When null, the canvas is transparent."
     },
     {
-      "name": "Changed",
-      "type": "EventCallback<TmSignatureCaptureChangedEventArgs>",
-      "isRequired": false,
-      "description": "Callback invoked when the captured signature value changes."
-    },
-    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the wrapper element."
     },
     {
-      "name": "Confirmed",
-      "type": "EventCallback<TmSignatureCaptureChangedEventArgs>",
-      "isRequired": false,
-      "description": "Whether to show an explicit confirmation button for the current signature."
-    },
-    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,
       "description": "When true, the canvas is read-only and the clear button is hidden."
-    },
-    {
-      "name": "ExportFormat",
-      "type": "TmSignatureCaptureExportFormat",
-      "isRequired": false,
-      "default": "TmSignatureCaptureExportFormat.Svg",
-      "description": "Capture modes shown in the mode selector."
     },
     {
       "name": "Height",
@@ -56,84 +37,11 @@
       "description": "Canvas height in pixels. Default is 200."
     },
     {
-      "name": "Initials",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether the component is disabled."
-    },
-    {
-      "name": "Mode",
-      "type": "TmSignatureCaptureMode",
-      "isRequired": false,
-      "default": "TmSignatureCaptureMode.Draw",
-      "description": "Callback invoked when the signature value or signing metadata changes."
-    },
-    {
-      "name": "ModeChanged",
-      "type": "EventCallback<TmSignatureCaptureMode>",
-      "isRequired": false,
-      "description": "Current capture mode. Defaults to draw mode."
-    },
-    {
-      "name": "Modes",
-      "type": "IReadOnlyList<TmSignatureCaptureMode>?",
-      "isRequired": false,
-      "description": "Callback invoked when the active capture mode changes."
-    },
-    {
-      "name": "OnQrSigningRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Callback invoked when the upload flow should be opened."
-    },
-    {
-      "name": "OnUploadRequested",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Previously saved signature value that can be reused."
-    },
-    {
-      "name": "PreviousValue",
-      "type": "string?",
-      "isRequired": false,
-      "description": "Callback invoked when the current signature is explicitly confirmed."
-    },
-    {
-      "name": "Required",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Export format used when drawing signatures. Defaults to SVG."
-    },
-    {
-      "name": "RequireReason",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Optional SVG background color."
-    },
-    {
       "name": "ShowClearButton",
       "type": "bool",
       "isRequired": false,
       "default": "true",
       "description": "Whether to show the clear button. Default is true."
-    },
-    {
-      "name": "ShowConfirmButton",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to show a QR/mobile signing button."
-    },
-    {
-      "name": "ShowQrSigningButton",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether to show the remember signature checkbox."
-    },
-    {
-      "name": "ShowRememberSignature",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Whether a reason input should be shown."
     },
     {
       "name": "StrokeColor",
@@ -148,13 +56,6 @@
       "isRequired": false,
       "default": "2",
       "description": "Stroke width in pixels. Default is 2."
-    },
-    {
-      "name": "TypedFont",
-      "type": "string",
-      "isRequired": false,
-      "default": "\"script\"",
-      "description": "Whether typed mode should collect initials instead of a full signature."
     },
     {
       "name": "ValueChanged",

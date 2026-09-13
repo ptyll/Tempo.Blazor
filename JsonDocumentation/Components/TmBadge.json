@@ -29,6 +29,12 @@
       "description": "Fill style (Filled / Outline / Subtle). Defaults to Filled."
     },
     {
+      "name": "Style",
+      "type": "BadgeStyle",
+      "isRequired": false,
+      "description": "Alias for BadgeStyle."
+    },
+    {
       "name": "Icon",
       "type": "string?",
       "isRequired": false,
@@ -41,10 +47,22 @@
       "description": "Renders with fully rounded pill shape."
     },
     {
+      "name": "IsPill",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Alias for Pill."
+    },
+    {
       "name": "Dot",
       "type": "bool",
       "isRequired": false,
       "description": "Renders a small status dot before the content."
+    },
+    {
+      "name": "HasDot",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Alias for Dot."
     },
     {
       "name": "Class",
