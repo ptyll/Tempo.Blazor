@@ -752,15 +752,9 @@
   margin: 0;
 }
 
-.tm-modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--tm-space-3);
-  padding: var(--tm-space-4) var(--tm-space-6);
-  border-top: 1px solid var(--tm-border-color);
-  background: var(--tm-bg-surface-secondary);
-}
+/* The .tm-modal* block that used to sit above this comment styled classes no dashboard component
+   renders — dead duplicates of _modal.css that the import order already defeated. _modal.css is
+   the single owner of every .tm-modal* class. */
 
 /* ═══════════════════════════════════════════════════════════════
    Improved Dashboard Menu
