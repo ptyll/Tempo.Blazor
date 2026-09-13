@@ -33,8 +33,38 @@ internal static class CssCascade
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
-    private static readonly Regex RuleBlock =
-        new(@"(?<selector>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.Compiled, Timeout);
+    /// <summary>
+    /// The medium a resolution runs against: viewport width, the reduced-motion preference, and the
+    /// output medium. A rule wrapped in <c>@media (max-width: 768px)</c> is not "a rule that is
+    /// sometimes true" — it is a rule that does not exist at 1440 px, and a resolver that flattens
+    /// it to unconditional reports a winner no user ever sees.
+    /// </summary>
+    /// <param name="WidthPx">
+    /// Viewport width. Null means "the caller did not say", which makes every width-conditioned rule
+    /// UNDECIDABLE rather than silently on or off — fail-closed, the way pseudo-classes already work.
+    /// </param>
+    public sealed record MediaContext(double? WidthPx = null, bool ReducedMotion = false, string Medium = "screen")
+    {
+        /// <summary>1440 px, screen, full motion — the plain desktop reading every caller got before media was modelled.</summary>
+        public static readonly MediaContext Desktop = new(WidthPx: 1440);
+
+        /// <summary>The default context of <see cref="Resolve"/>: the resting desktop reading.</summary>
+        public static readonly MediaContext Default = Desktop;
+    }
+
+    /// <summary>Applies / does not apply / the model cannot tell — the third value is never "assume false".</summary>
+    internal enum MediaVerdict
+    {
+        Applies,
+        DoesNotApply,
+        Undecidable,
+    }
+
+    /// <summary>
+    /// One parsed rule: its selector list, its declaration body, and the media condition it sits
+    /// under (<c>null</c> when unconditional, the joined conditions when nested).
+    /// </summary>
+    internal sealed record ParsedRule(string Selector, string Body, string? MediaCondition);
 
     /// <summary>
     /// One element of the modelled tree: its tag, the classes it carries, and — for the last element of
@@ -86,13 +116,22 @@ internal static class CssCascade
     /// rule from being mistaken for the resting colour, which is exactly how the sort indicator was
     /// mis-measured in Fáze 14.
     /// </param>
+    /// <param name="media">
+    /// The medium the resolution runs against; defaults to <see cref="MediaContext.Desktop"/>. A rule
+    /// inside <c>@media (max-width: 768px)</c> does not apply there — before this parameter existed the
+    /// parser could not even SEE the condition, so a mobile-only override could silently win a desktop
+    /// measurement. A condition the model cannot decide is reported through <c>Unmodelled</c>, never
+    /// assumed false.
+    /// </param>
     public static Winner Resolve(
         string css,
         IReadOnlyList<Element> chain,
         string property,
-        IReadOnlySet<string>? activeStates = null)
+        IReadOnlySet<string>? activeStates = null,
+        MediaContext? media = null)
     {
         activeStates ??= new HashSet<string>(StringComparer.Ordinal);
+        media ??= MediaContext.Default;
 
         var target = ShorthandOf.TryGetValue(property, out var mapping) ? mapping : default;
         var unmodelled = new List<string>();
@@ -101,13 +140,20 @@ internal static class CssCascade
         string? source = null;
         var best = (Id: -1, Class: -1, Type: -1);
 
-        foreach (Match rule in RuleBlock.Matches(ThemeCss.StripComments(css)))
+        foreach (var rule in ParseRules(ThemeCss.StripComments(css)))
         {
-            var body = rule.Groups["body"].Value;
-            var declared = DeclarationValue(body, property);
+            var mediaVerdict = rule.MediaCondition is null
+                ? MediaVerdict.Applies
+                : EvaluateMedia(rule.MediaCondition, media);
+            if (mediaVerdict == MediaVerdict.DoesNotApply)
+            {
+                continue;
+            }
+
+            var declared = DeclarationValue(rule.Body, property);
             if (declared is null && target.Shorthand is not null)
             {
-                var shorthand = DeclarationValue(body, target.Shorthand);
+                var shorthand = DeclarationValue(rule.Body, target.Shorthand);
                 declared = shorthand is null ? null : target.Extract(shorthand);
             }
 
@@ -116,12 +162,16 @@ internal static class CssCascade
                 continue;
             }
 
-            foreach (var part in ThemeCss.SelectorParts(rule.Groups["selector"].Value))
+            foreach (var part in ThemeCss.SelectorParts(rule.Selector))
             {
                 var verdict = Match(part, chain, activeStates);
-                if (verdict.Unmodelled)
+                if (verdict.Unmodelled
+                    || (mediaVerdict == MediaVerdict.Undecidable && verdict.Specificity is not null))
                 {
-                    unmodelled.Add(part);
+                    // A matching selector under an undecidable condition is a MAYBE-winner — the
+                    // answer is untrustworthy, and "probably fine" is how a flattened probe ships a hole.
+                    unmodelled.Add(
+                        rule.MediaCondition is null ? part : $"{part}  [@media {rule.MediaCondition}]");
                     continue;
                 }
 
@@ -151,9 +201,10 @@ internal static class CssCascade
         string css,
         IReadOnlyList<Element> chain,
         string property,
-        IReadOnlySet<string>? activeStates = null)
+        IReadOnlySet<string>? activeStates = null,
+        MediaContext? media = null)
     {
-        var resolved = Resolve(css, chain, property, activeStates);
+        var resolved = Resolve(css, chain, property, activeStates, media);
 
         resolved.Unmodelled.Should().BeEmpty(
             "selektor, který sonda neumí přečíst, je NEMĚŘITELNÝ — nesmí se počítat mezi „nematchuje“");
@@ -366,7 +417,8 @@ internal static class CssCascade
     public static double EffectiveOpacity(
         string css,
         IReadOnlyList<Element> chain,
-        IReadOnlySet<string>? activeStates = null)
+        IReadOnlySet<string>? activeStates = null,
+        MediaContext? media = null)
     {
         // The BOXES an opacity can sit on, outermost first: every ancestor, then the element itself, and
         // only then its pseudo-element. Walking the chain as given would skip the element's own opacity
@@ -388,7 +440,7 @@ internal static class CssCascade
         var product = 1.0;
         foreach (var box in boxes)
         {
-            var resolved = Resolve(css, box, "opacity", activeStates);
+            var resolved = Resolve(css, box, "opacity", activeStates, media);
 
             resolved.Unmodelled.Should().BeEmpty(
                 "průhlednost prvku, kterou sonda neumí přečíst, je NEMĚŘITELNÁ, ne 1");
@@ -443,5 +495,284 @@ internal static class CssCascade
         }
 
         return parts.Skip(1).All(element.Classes.Contains);
+    }
+
+    // ── Structural parsing ────────────────────────────────────────
+    // A regex like [^{}]+\{[^{}]*\} flattens @media: it cannot see that a rule sits inside a
+    // condition, so a mobile-only override is read as unconditional — and wins desktop
+    // measurements it should never reach. The walk below tracks the at-rule stack instead.
+
+    /// <summary>
+    /// Every style rule of a stylesheet in source order, with the media condition it sits under.
+    /// <c>@media</c> blocks are entered and their condition recorded; <c>@supports</c> blocks are
+    /// entered and recorded as undecidable; <c>@keyframes</c>, <c>@font-face</c> and other at-rules
+    /// whose inner blocks are not selectors are skipped entirely.
+    /// </summary>
+    internal static IReadOnlyList<ParsedRule> ParseRules(string css)
+    {
+        var rules = new List<ParsedRule>();
+        ParseInto(css, media: null, rules);
+        return rules;
+    }
+
+    private static void ParseInto(string css, string? media, List<ParsedRule> rules)
+    {
+        var cursor = 0;
+        while (cursor < css.Length)
+        {
+            var open = css.IndexOf('{', cursor);
+            if (open < 0)
+            {
+                return;
+            }
+
+            var header = css[cursor..open].Trim();
+            var close = MatchingBrace(css, open);
+            var body = css[(open + 1)..close];
+
+            if (header.Length == 0)
+            {
+                // A stray "{…}" with no header is not a rule; skip it rather than invent a selector.
+            }
+            else if (header.StartsWith('@'))
+            {
+                if (header.StartsWith("@media", StringComparison.OrdinalIgnoreCase))
+                {
+                    var condition = header["@media".Length..].Trim();
+                    ParseInto(body, media is null ? condition : media + " and " + condition, rules);
+                }
+                else if (header.StartsWith("@supports", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Inner blocks ARE selectors, gated on a feature the model cannot evaluate —
+                    // recorded as their own undecidable condition rather than dropped.
+                    ParseInto(body, media is null ? header : media + " and " + header, rules);
+                }
+
+                // @keyframes, @font-face, @page, @charset, …: inner blocks are not element rules.
+            }
+            else
+            {
+                rules.Add(new ParsedRule(header, body, media));
+            }
+
+            cursor = close + 1;
+        }
+    }
+
+    private static int MatchingBrace(string css, int open)
+    {
+        var depth = 0;
+        for (var i = open; i < css.Length; i++)
+        {
+            if (css[i] == '{')
+            {
+                depth++;
+            }
+            else if (css[i] == '}' && --depth == 0)
+            {
+                return i;
+            }
+        }
+
+        return css.Length; // unbalanced input — consume the rest, the selector check will fail loudly
+    }
+
+    // ── Media conditions ──────────────────────────────────────────
+
+    /// <summary>The structured form of one media alternative: ranges and prefs a context answers.</summary>
+    private sealed record MediaQuery(
+        double MinWidth,
+        double MaxWidth,
+        string? Medium,
+        bool? ReducedMotion,
+        bool Undecidable)
+    {
+        public static readonly MediaQuery Any = new(0, double.MaxValue, null, null, false);
+    }
+
+    /// <summary>
+    /// Whether a media condition holds in <paramref name="context"/>. Any clause the model cannot
+    /// parse or the context cannot answer makes the whole condition UNDECIDABLE — never assumed
+    /// false, so a rule behind it is reported unmodelled rather than silently skipped.
+    /// </summary>
+    internal static MediaVerdict EvaluateMedia(string condition, MediaContext context)
+    {
+        var alternatives = ParseMedia(condition);
+        if (alternatives.Count == 0)
+        {
+            return MediaVerdict.Undecidable;
+        }
+
+        var sawUndecidable = false;
+        foreach (var alternative in alternatives)
+        {
+            var verdict = EvaluateAlternative(alternative, context);
+            if (verdict == MediaVerdict.Applies)
+            {
+                return MediaVerdict.Applies;
+            }
+
+            sawUndecidable |= verdict == MediaVerdict.Undecidable;
+        }
+
+        return sawUndecidable ? MediaVerdict.Undecidable : MediaVerdict.DoesNotApply;
+    }
+
+    /// <summary>
+    /// Whether two media conditions can hold AT THE SAME TIME — the question the class-ownership
+    /// sweep asks when two bare-class rules disagree. Conditions that cannot be proven disjoint
+    /// (an unparseable clause, an unmodelled feature) are reported overlapping: a missed collision
+    /// is the failure this sweep exists to prevent.
+    /// </summary>
+    internal static bool MediaCanOverlap(string? first, string? second)
+    {
+        if (first is null || second is null)
+        {
+            return true; // an unconditional rule competes with everything
+        }
+
+        var a = ParseMedia(first);
+        var b = ParseMedia(second);
+        if (a.Any(q => q.Undecidable) || b.Any(q => q.Undecidable) || a.Count == 0 || b.Count == 0)
+        {
+            return true;
+        }
+
+        return a.Any(qa => b.Any(qb => AlternativesOverlap(qa, qb)));
+    }
+
+    private static bool AlternativesOverlap(MediaQuery a, MediaQuery b)
+    {
+        var mediumsCompatible =
+            a.Medium is null || b.Medium is null || string.Equals(a.Medium, b.Medium, StringComparison.Ordinal);
+        var widthsOverlap = Math.Max(a.MinWidth, b.MinWidth) <= Math.Min(a.MaxWidth, b.MaxWidth);
+        var motionCompatible = a.ReducedMotion is null || b.ReducedMotion is null || a.ReducedMotion == b.ReducedMotion;
+        return mediumsCompatible && widthsOverlap && motionCompatible;
+    }
+
+    private static MediaVerdict EvaluateAlternative(MediaQuery query, MediaContext context)
+    {
+        if (query.Undecidable)
+        {
+            return MediaVerdict.Undecidable;
+        }
+
+        if (query.Medium is not null && !string.Equals(query.Medium, context.Medium, StringComparison.Ordinal))
+        {
+            return MediaVerdict.DoesNotApply;
+        }
+
+        if (query.MinWidth > 0 || query.MaxWidth < double.MaxValue)
+        {
+            if (context.WidthPx is null)
+            {
+                return MediaVerdict.Undecidable;
+            }
+
+            if (context.WidthPx < query.MinWidth || context.WidthPx > query.MaxWidth)
+            {
+                return MediaVerdict.DoesNotApply;
+            }
+        }
+
+        if (query.ReducedMotion is not null && query.ReducedMotion != context.ReducedMotion)
+        {
+            return MediaVerdict.DoesNotApply;
+        }
+
+        return MediaVerdict.Applies;
+    }
+
+    /// <summary>
+    /// Parses a media condition into one <see cref="MediaQuery"/> per comma-separated alternative.
+    /// Modelled clauses: <c>screen</c>/<c>print</c>/<c>all</c>, <c>(min-width: Npx)</c>,
+    /// <c>(max-width: Npx)</c>, <c>(prefers-reduced-motion: …)</c>, joined by <c>and</c>. Anything
+    /// else — <c>not</c>, range syntax, unmodelled features — yields an Undecidable alternative.
+    /// </summary>
+    private static IReadOnlyList<MediaQuery> ParseMedia(string condition)
+    {
+        var queries = new List<MediaQuery>();
+        foreach (var raw in condition.Split(','))
+        {
+            queries.Add(ParseAlternative(raw.Trim()));
+        }
+
+        return queries;
+    }
+
+    private static MediaQuery ParseAlternative(string alternative)
+    {
+        if (alternative.StartsWith("not ", StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaQuery.Any with { Undecidable = true }; // negation is not modelled
+        }
+
+        var query = MediaQuery.Any;
+        foreach (var rawClause in Regex.Split(
+                     alternative, @"\band\b", RegexOptions.IgnoreCase, Timeout))
+        {
+            var clause = rawClause.Trim();
+            if (clause.StartsWith("only ", StringComparison.OrdinalIgnoreCase))
+            {
+                clause = clause["only ".Length..].Trim();
+            }
+
+            if (clause.Length == 0)
+            {
+                continue;
+            }
+
+            if (!clause.StartsWith('('))
+            {
+                // A bare medium name: "screen", "print", "all". Anything else is not a medium this
+                // model can place, which is undecidable rather than a silent no-match.
+                query = clause.ToLowerInvariant() switch
+                {
+                    "all" => query,
+                    "screen" or "print" => query with { Medium = clause.ToLowerInvariant() },
+                    _ => query with { Undecidable = true },
+                };
+                continue;
+            }
+
+            var inner = clause.Trim('(', ')');
+            var colon = inner.IndexOf(':', StringComparison.Ordinal);
+            var feature = (colon < 0 ? inner : inner[..colon]).Trim().ToLowerInvariant();
+            var value = colon < 0 ? string.Empty : inner[(colon + 1)..].Trim();
+
+            switch (feature)
+            {
+                case "max-width":
+                case "min-width":
+                    if (!double.TryParse(value.TrimEnd('p', 'x').Trim(), NumberStyles.Float,
+                            CultureInfo.InvariantCulture, out var px)
+                        || !value.EndsWith("px", StringComparison.Ordinal))
+                    {
+                        query = query with { Undecidable = true };
+                    }
+                    else if (feature == "max-width")
+                    {
+                        query = query with { MaxWidth = Math.Min(query.MaxWidth, px) };
+                    }
+                    else
+                    {
+                        query = query with { MinWidth = Math.Max(query.MinWidth, px) };
+                    }
+
+                    break;
+                case "prefers-reduced-motion":
+                    query = value.Equals("reduce", StringComparison.OrdinalIgnoreCase)
+                        ? query with { ReducedMotion = true }
+                        : value.Equals("no-preference", StringComparison.OrdinalIgnoreCase)
+                            ? query with { ReducedMotion = false }
+                            : query with { Undecidable = true };
+                    break;
+                default:
+                    query = query with { Undecidable = true };
+                    break;
+            }
+        }
+
+        return query;
     }
 }

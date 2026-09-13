@@ -8,29 +8,38 @@ namespace Tempo.Blazor.Tests.Theme;
 /// classes, the population is DERIVED — every literal <c>tm-*</c> class token component markup emits
 /// must have a <c>.class</c> rule in a library stylesheet, or be named in the frozen exception list.
 /// <para>
-/// Sources of the population:
+/// Sources of the population — one SCOPE per shipped component package:
 /// <list type="bullet">
 /// <item><c>src/Tempo.Blazor/**/*.razor</c> — literal tokens inside <c>class="…"</c> attributes,
 ///   Razor and HTML comments stripped (a commented-out class is not emitted);</item>
 /// <item><c>src/Tempo.Blazor/**/*.razor.cs</c> — <c>"tm-…"</c> string literals, the way
-///   <c>classes.Add("…")</c> builds the same attribute in code.</item>
+///   <c>classes.Add("…")</c> builds the same attribute in code;</item>
+/// <item>the same two sources under <c>src/Tempo.Blazor.Signing</c> and
+///   <c>src/Tempo.Blazor.NotionEditor</c> — sibling packages whose markup a host renders with the
+///   core stylesheet loaded.</item>
 /// </list>
-/// A token ending in <c>-</c> is a dynamic suffix (<c>tm-form-row--cols-{n}</c>) — statically
-/// unverifiable and skipped on purpose; the stem it shares with its siblings is usually covered.
+/// A token ending in <c>-</c>, or one immediately followed by <c>@</c> or <c>{</c>, is a dynamic
+/// suffix (<c>tm-form-row--cols-{n}</c>, <c>tm-notion-heading--h{level}</c>) — statically
+/// unverifiable and skipped on purpose. A token preceded by <c>-</c> is not a class at all:
+/// <c>"var(--tm-color-primary)"</c> and <c>"--tm-gantt-task-color: {x}"</c> literals produced five
+/// phantom "classes" in the first version of this sweep, which is why the check exists.
 /// </para>
 /// <para>
-/// Coverage means a <c>.name</c> selector in <c>wwwroot/css/**/*.css</c> OR in a scoped
-/// <c>*.razor.css</c> — both are real styling, the second ships via <c>{assembly}.styles.css</c>.
-/// A class whose rule lives in the shared <c>wwwroot/css</c> tree must additionally appear in
-/// <c>tempo-blazor.bundled.css</c>, or a host reading the bundle would never see it.
+/// Coverage means a <c>.name</c> selector in the scope's <c>wwwroot/css/**/*.css</c>, in a scoped
+/// <c>*.razor.css</c> (ships via <c>{assembly}.styles.css</c>), or — for the two satellite packages,
+/// which project-reference the core — in the CORE <c>wwwroot/css</c> tree: a Signing markup class
+/// like <c>tm-btn</c> is styled by the stylesheet Signing's package depends on. A class whose rule
+/// lives in the core shared tree must additionally appear in <c>tempo-blazor.bundled.css</c>, or a
+/// host reading the bundle would never see it.
 /// </para>
 /// <para>
-/// <see cref="UnstyledMarkupClasses"/> is the 156-item inventory of what markup emits without a
-/// rule on 2.8.26: semantic modifiers that style nothing by design (<c>tm-modal--center</c> is the
-/// DEFAULT position — there is nothing to declare), structural hooks styled through their parent
+/// <see cref="UnstyledMarkupClasses"/> (and its Signing/NotionEditor counterparts) is the inventory
+/// of what markup emits without a rule on 2.8.26 — 151 in core, 52 in Signing, 44 in NotionEditor:
+/// semantic modifiers that style nothing by design (<c>tm-modal--center</c> is the DEFAULT position
+/// — there is nothing to declare), structural hooks styled through their parent
 /// (<c>tm-sidebar-nav-list</c> inside <c>.tm-sidebar-nav</c>), and dead utility references
 /// (<c>tm-mb-4</c>, <c>tm-button--ghost</c>) kept on the markup for consumers. Like
-/// <c>UnconstrainedClassOwnershipTests.RecordedCollisions</c>, it is an inventory, not a budget:
+/// <c>UnconstrainedClassOwnershipTests.RecordedCollisions</c>, each is an inventory, not a budget:
 /// an entry whose markup is removed must be struck off, and a class markup gains without a rule
 /// must be added here BEFORE it ships.
 /// </para>
@@ -52,9 +61,9 @@ public sealed class MarkupClassCoverageTests
         new(@"\.(tm-[a-zA-Z][\w-]*)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
-    /// The 156 classes markup emits with no rule anywhere in the library's stylesheets on 2.8.26,
-    /// each named. None of these is a promise that they SHOULD stay unstyled — they are RECORDED so
-    /// the guard can fail on a 157th.
+    /// The 151 classes core markup emits with no rule anywhere in the library's stylesheets on
+    /// 2.8.26, each named. None of these is a promise that they SHOULD stay unstyled — they are
+    /// RECORDED so the guard can fail on a 152nd.
     /// </summary>
     private static readonly string[] UnstyledMarkupClasses =
     [
@@ -83,10 +92,6 @@ public sealed class MarkupClassCoverageTests
         "tm-chat__thread-input",
         "tm-chip__label",
         "tm-color-gradient-hue-fill",
-        "tm-color-neutral-200",
-        "tm-color-neutral-500",
-        "tm-color-neutral-900",
-        "tm-color-primary",
         "tm-comment-cancel-btn",
         "tm-comment-delete-btn",
         "tm-comment-edit-btn",
@@ -124,7 +129,6 @@ public sealed class MarkupClassCoverageTests
         "tm-filter-chip-value",
         "tm-form-group",
         "tm-gantt-portfolio__project-name",
-        "tm-gantt-task-color",
         "tm-gantt-task-panel__attachment-item",
         "tm-gantt-task-panel__attachment-link",
         "tm-gantt-task-panel__attachment-list",
@@ -216,42 +220,200 @@ public sealed class MarkupClassCoverageTests
         "tm-view-error",
     ];
 
+    /// <summary>
+    /// The 52 classes Signing markup emits with no rule in Signing's stylesheets OR the core's on
+    /// 2.8.26 — Signing project-references the core package, so a core-owned class
+    /// (<c>tm-btn</c>) is covered, and only what remains unstyled after BOTH trees are read lands
+    /// here.
+    /// </summary>
+    private static readonly string[] UnstyledSigningMarkupClasses =
+    [
+        "tm-audit-trail-viewer__localization",
+        "tm-comment-composer__button--secondary",
+        "tm-comment-composer__mention-name",
+        "tm-condition-builder--invalid",
+        "tm-document-comments-panel__thread-mention",
+        "tm-document-page-viewer--with-toolbar",
+        "tm-document-page-viewer__comment-toggle",
+        "tm-document-page-viewer__fit-page",
+        "tm-document-page-viewer__fit-width",
+        "tm-document-page-viewer__next-page",
+        "tm-document-page-viewer__previous-page",
+        "tm-document-page-viewer__zoom-in",
+        "tm-document-page-viewer__zoom-out",
+        "tm-pdf-template-designer__bulk-actions",
+        "tm-pdf-template-designer__continuous",
+        "tm-pdf-template-designer__copy-field",
+        "tm-pdf-template-designer__copy-selection",
+        "tm-pdf-template-designer__delete-field",
+        "tm-pdf-template-designer__delete-selection",
+        "tm-pdf-template-designer__detect-menu",
+        "tm-pdf-template-designer__fit-page",
+        "tm-pdf-template-designer__fit-width",
+        "tm-pdf-template-designer__next-page",
+        "tm-pdf-template-designer__paste-field",
+        "tm-pdf-template-designer__previous-page",
+        "tm-pdf-template-designer__single-page",
+        "tm-pdf-template-designer__zoom-in",
+        "tm-pdf-template-designer__zoom-out",
+        "tm-recipient-role-editor--invalid",
+        "tm-signing-attachment-step",
+        "tm-signing-choice-step",
+        "tm-signing-choice-step__checkbox",
+        "tm-signing-choice-step__option--single",
+        "tm-signing-choice-step__radio",
+        "tm-signing-date-step",
+        "tm-signing-external-step",
+        "tm-signing-field",
+        "tm-signing-field-editor-panel--empty",
+        "tm-signing-field-editor-panel__localization",
+        "tm-signing-field-editor-panel__options",
+        "tm-signing-field-editor-panel__prefillable",
+        "tm-signing-field-editor-panel__readonly",
+        "tm-signing-field-editor-panel__required",
+        "tm-signing-field-editor-panel__signature-id",
+        "tm-signing-field-editor-panel__stamp-logo",
+        "tm-signing-form-runner--accessibility",
+        "tm-signing-form-runner__mobile-panel--collapsed",
+        "tm-signing-number-step",
+        "tm-signing-phone-step",
+        "tm-signing-step-shell--invalid",
+        "tm-signing-step-shell--required",
+        "tm-signing-text-step",
+    ];
+
+    /// <summary>
+    /// The 44 classes NotionEditor markup emits with no rule in NotionEditor's stylesheets (shared
+    /// or scoped) OR the core's on 2.8.26. The <c>tm-dbc*</c> database-cell family and
+    /// <c>tm-notification-bell*</c> are deliberately absent — they are core-owned and core-styled.
+    /// </summary>
+    private static readonly string[] UnstyledNotionMarkupClasses =
+    [
+        "tm-cbl__field--compact",
+        "tm-cbl__state--prompt",
+        "tm-child-page__icon",
+        "tm-db__panel--fields",
+        "tm-ndv__block--after",
+        "tm-ndv__empty",
+        "tm-ndv__pane--after",
+        "tm-notion-analytics-panel",
+        "tm-notion-blog-panel",
+        "tm-notion-diagram-edit-modal__missing",
+        "tm-notion-editable--readonly",
+        "tm-notion-editor--single-page",
+        "tm-notion-inline-toolbar__btn--color",
+        "tm-notion-inline-toolbar__turn-icon",
+        "tm-notion-media-upload-zone--audio",
+        "tm-notion-media-upload-zone--diagram",
+        "tm-notion-media-upload-zone--file",
+        "tm-notion-media-upload-zone--image",
+        "tm-notion-media-upload-zone--pdf",
+        "tm-notion-media-upload-zone--spreadsheet",
+        "tm-notion-media-upload-zone--video",
+        "tm-notion-media-upload-zone--wireframe",
+        "tm-notion-notifications",
+        "tm-notion-presentation-toggle",
+        "tm-notion-reading-exit",
+        "tm-notion-reading-toggle",
+        "tm-notion-shell-panel__close",
+        "tm-notion-skeleton--rect",
+        "tm-notion-spreadsheet-block__missing",
+        "tm-notion-spreadsheet-edit-modal__btn--discard",
+        "tm-notion-spreadsheet-edit-modal__missing",
+        "tm-notion-topbar__shortcuts",
+        "tm-notion-wireframe-edit-modal__missing",
+        "tm-npsd__status--disabled",
+        "tm-nsf",
+        "tm-nsr",
+        "tm-page-info__created",
+        "tm-page-info__last-edited",
+        "tm-page-info__reading-time",
+        "tm-page-info__views",
+        "tm-page-info__words",
+        "tm-page-reactions__pill-count",
+        "tm-work-item-picker__label",
+        "tm-work-item__meta-item",
+    ];
+
+    /// <summary>
+    /// One shipped component package as the sweep sees it: where its markup lives, which frozen
+    /// inventory records its unstyled classes, and the population counts that prove the sweep read
+    /// the whole tree. <paramref name="InheritsCoreCss"/> marks packages that project-reference
+    /// <c>Tempo.Blazor</c>: their markup is rendered by a host that has the core stylesheet loaded,
+    /// so a core-owned class is coverage, not a gap.
+    /// </summary>
+    private sealed record Scope(
+        string Name,
+        string ProjectDirectory,
+        string[] UnstyledClasses,
+        int MinRazorFiles,
+        int MinMarkupClasses,
+        bool InheritsCoreCss);
+
+    private static readonly Scope[] Scopes =
+    [
+        new Scope("Tempo.Blazor", "Tempo.Blazor", UnstyledMarkupClasses,
+            MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false),
+        new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
+            MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true),
+        new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
+            MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true),
+    ];
+
     [Fact]
-    public void EveryMarkupClass_HasARule_OrIsRecordedUnstyled()
+    public void EveryCoreMarkupClass_HasARule_OrIsRecordedUnstyled() =>
+        AssertScopeCovered(Scopes[0]);
+
+    [Fact]
+    public void EverySigningMarkupClass_HasARule_OrIsRecordedUnstyled() =>
+        AssertScopeCovered(Scopes[1]);
+
+    [Fact]
+    public void EveryNotionEditorMarkupClass_HasARule_OrIsRecordedUnstyled() =>
+        AssertScopeCovered(Scopes[2]);
+
+    private static void AssertScopeCovered(Scope scope)
     {
-        var uncovered = MarkupClasses()
-            .Where(c => !AllSourceSelectors().Contains(c))
+        var selectors = AllSourceSelectors(scope);
+        var uncovered = MarkupClasses(scope)
+            .Where(c => !selectors.Contains(c))
             .Order(StringComparer.Ordinal)
             .ToList();
 
         uncovered.Should().BeEquivalentTo(
-            UnstyledMarkupClasses,
-            "každá třída, kterou markup emituje, má pravidlo ve stylesheetu, nebo je jmenovitě " +
-            "zapsaná v UnstyledMarkupClasses — nová třída bez pravidla sem patří dřív, než se dostane " +
-            "ke konzumentovi. Změna oproti záznamu: {0}",
-            string.Join(" | ", uncovered.Except(UnstyledMarkupClasses, StringComparer.Ordinal)));
+            scope.UnstyledClasses,
+            "každá třída, kterou markup balíčku {0} emituje, má pravidlo ve stylesheetu, nebo je " +
+            "jmenovitě zapsaná v jeho inventáři — nová třída bez pravidla tam patří dřív, než se " +
+            "dostane ke konzumentovi. Změna oproti záznamu: {1}",
+            scope.Name,
+            string.Join(" | ", uncovered.Except(scope.UnstyledClasses, StringComparer.Ordinal)));
     }
 
     /// <summary>
-    /// The reverse direction: a recorded exception whose class is no longer emitted must be struck
-    /// off — a list that only ever grows stops describing the code.
+    /// The reverse direction, per scope: a recorded exception whose class is no longer emitted must
+    /// be struck off — a list that only ever grows stops describing the code.
     /// </summary>
     [Fact]
     public void EveryRecordedUnstyledClass_IsStillEmitted()
     {
-        var emitted = MarkupClasses();
+        foreach (var scope in Scopes)
+        {
+            var emitted = MarkupClasses(scope);
 
-        UnstyledMarkupClasses
-            .Where(recorded => !emitted.Contains(recorded))
-            .Should().BeEmpty(
-                "třídu, kterou markup přestal emitovat, ze seznamu škrtni — jinak seznam přestane " +
-                "popisovat kód a začne popisovat historii");
+            scope.UnstyledClasses
+                .Where(recorded => !emitted.Contains(recorded))
+                .Should().BeEmpty(
+                    "třídu, kterou markup balíčku {0} přestal emitovat, ze seznamu škrtni — jinak " +
+                    "seznam přestane popisovat kód a začne popisovat historii",
+                    scope.Name);
+        }
     }
 
     /// <summary>
     /// A class styled by the shared tree must be styled for a bundle host too: the bundle is a
     /// build artifact of the same sources, and a class missing from it is missing from the page.
     /// Scoped razor.css classes are exempt by design — they ship via {assembly}.styles.css.
+    /// Only the CORE package ships a committed bundle; the satellites load their manifests.
     /// </summary>
     [Fact]
     public void SharedCssClasses_AreInTheShippedBundle()
@@ -259,7 +421,7 @@ public sealed class MarkupClassCoverageTests
         var bundleSelectors = SelectorsIn(File.ReadAllText(Path.Combine(CssRoot(), "tempo-blazor.bundled.css")));
         var sharedSelectors = SharedSourceSelectors();
 
-        var markup = MarkupClasses();
+        var markup = MarkupClasses(Scopes[0]);
         var missing = markup
             .Where(c => sharedSelectors.Contains(c) && !bundleSelectors.Contains(c))
             .Order(StringComparer.Ordinal)
@@ -272,19 +434,26 @@ public sealed class MarkupClassCoverageTests
     }
 
     /// <summary>
-    /// The population denominator, asserted: 195 razor + 51 razor.cs files yielding 2 145 literal
-    /// classes on 2.8.26. A sweep that silently reads half the tree reports "nothing missing" with
-    /// perfect confidence — the count is how you know it looked.
+    /// The population denominators, asserted per scope: 195 razor + 51 razor.cs files yielding
+    /// ~2 134 literal classes in core, 30 razor files / ~430 classes in Signing, 130 razor /
+    /// ~1 995 classes in NotionEditor on 2.8.26. A sweep that silently reads half a tree reports
+    /// "nothing missing" with perfect confidence — the count is how you know it looked.
     /// </summary>
     [Fact]
     public void TheSweepReadsTheWholeMarkupPopulation()
     {
-        RazorFiles().Should().HaveCountGreaterThanOrEqualTo(
-            190,
-            "src/Tempo.Blazor má ~195 .razor souborů; menší číslo znamená, že sonda čte jinou složku");
-        MarkupClasses().Should().HaveCountGreaterThanOrEqualTo(
-            2000,
-            "markup emituje ~2 145 literálových tm-* tříd; desetina toho znamená, že se extraktor rozbil");
+        foreach (var scope in Scopes)
+        {
+            RazorFiles(scope).Should().HaveCountGreaterThanOrEqualTo(
+                scope.MinRazorFiles,
+                "{0} má ~{1} .razor souborů; menší číslo znamená, že sonda čte jinou složku",
+                scope.Name, scope.MinRazorFiles);
+            MarkupClasses(scope).Should().HaveCountGreaterThanOrEqualTo(
+                scope.MinMarkupClasses,
+                "markup balíčku {0} emituje ~{1} literálových tm-* tříd; desetina toho znamená, " +
+                "že se extraktor rozbil",
+                scope.Name, scope.MinMarkupClasses);
+        }
     }
 
     /// <summary>
@@ -299,14 +468,16 @@ public sealed class MarkupClassCoverageTests
             Enumerable.Empty<string>());
 
         emitted.Should().Contain("tm-pagination-size").And.Contain("tm-invented-never-styled");
-        AllSourceSelectors().Contains("tm-pagination-size").Should().BeTrue();
-        AllSourceSelectors().Contains("tm-invented-never-styled").Should().BeFalse();
+        AllSourceSelectors(Scopes[0]).Contains("tm-pagination-size").Should().BeTrue();
+        AllSourceSelectors(Scopes[0]).Contains("tm-invented-never-styled").Should().BeFalse();
     }
 
     /// <summary>
     /// Comments are not markup and a dynamic suffix is not a class: a token inside a Razor or HTML
     /// comment must not be extracted, and <c>tm-form-row--cols-</c> + expression must not become a
-    /// phantom class named <c>tm-form-row--cols</c>.
+    /// phantom class named <c>tm-form-row--cols</c>. The same for the other two dynamic shapes:
+    /// <c>tm-notion-heading--h@(Level)</c> ends in a letter, and <c>tm-toc__item--level{n}</c> in
+    /// interpolated code sits directly before a <c>{</c>.
     /// </summary>
     [Fact]
     public void TheExtractor_IgnoresCommentsAndDynamicSuffixes()
@@ -317,14 +488,41 @@ public sealed class MarkupClassCoverageTests
                 @* class="tm-commented-out-razor" *@
                 <!-- class="tm-commented-out-html" -->
                 <div class="tm-form-row tm-form-row--cols-@Cols"></div>
+                <h2 class="tm-notion-heading tm-notion-heading--h@(Level)"></h2>
                 """
             ],
-            Enumerable.Empty<string>());
+            ["return $\"tm-toc__item tm-toc__item--level{entry.Level}\";"]);
 
         emitted.Should().NotContain("tm-commented-out-razor").And.NotContain("tm-commented-out-html");
         emitted.Should().NotContain("tm-form-row--cols",
             "dynamická přípona není třída — tm-form-row--cols-{n} nelze staticky ověřit");
-        emitted.Should().Contain("tm-form-row");
+        emitted.Should().NotContain("tm-notion-heading--h",
+            "tm-notion-heading--h@(Level) emituje h1..h6 — stem bez čísla není třída");
+        emitted.Should().NotContain("tm-toc__item--level");
+        emitted.Should().Contain("tm-form-row").And.Contain("tm-notion-heading").And.Contain("tm-toc__item");
+    }
+
+    /// <summary>
+    /// A CSS variable reference is not a class: <c>"var(--tm-color-primary)"</c> and
+    /// <c>"--tm-gantt-task-color: {x}"</c> in code-behind produced five phantom "classes" in the
+    /// first version of this sweep — tokens whose name starts after a <c>-</c> are variables, not
+    /// markup output.
+    /// </summary>
+    [Fact]
+    public void TheExtractor_IgnoresVariableReferences()
+    {
+        var emitted = ExtractMarkupClasses(
+            Enumerable.Empty<string>(),
+            [
+                """
+                list.Add(new LegendItem(label, "var(--tm-color-primary)"));
+                return $"--tm-gantt-task-color: {color};";
+                classes.Add("tm-real-class");
+                """
+            ]);
+
+        emitted.Should().NotContain("tm-color-primary").And.NotContain("tm-gantt-task-color");
+        emitted.Should().Contain("tm-real-class");
     }
 
     // ── Detail guards carried over from OrphanClassCssContractTests ──
@@ -403,18 +601,18 @@ public sealed class MarkupClassCoverageTests
 
     // ── Extraction ────────────────────────────────────────────────
 
-    private static HashSet<string> MarkupClasses() =>
-        ExtractMarkupClasses(RazorMarkup(), CodeBehindFiles());
+    private static HashSet<string> MarkupClasses(Scope scope) =>
+        ExtractMarkupClasses(RazorMarkup(scope), CodeBehindFiles(scope));
 
-    private static IEnumerable<string> RazorMarkup() =>
-        RazorFiles().Select(File.ReadAllText);
+    private static IEnumerable<string> RazorMarkup(Scope scope) =>
+        RazorFiles(scope).Select(File.ReadAllText);
 
-    private static IEnumerable<string> CodeBehindFiles() =>
-        Directory.EnumerateFiles(ComponentRoot(), "*.razor.cs", SearchOption.AllDirectories)
+    private static IEnumerable<string> CodeBehindFiles(Scope scope) =>
+        Directory.EnumerateFiles(ProjectRoot(scope), "*.razor.cs", SearchOption.AllDirectories)
             .Select(File.ReadAllText);
 
-    private static List<string> RazorFiles() =>
-        Directory.EnumerateFiles(ComponentRoot(), "*.razor", SearchOption.AllDirectories).ToList();
+    private static List<string> RazorFiles(Scope scope) =>
+        Directory.EnumerateFiles(ProjectRoot(scope), "*.razor", SearchOption.AllDirectories).ToList();
 
     private static HashSet<string> ExtractMarkupClasses(
         IEnumerable<string> razorDocuments,
@@ -442,16 +640,35 @@ public sealed class MarkupClassCoverageTests
         return names;
     }
 
-    /// <summary>Records complete tm-* tokens; a token ending in '-' is a dynamic suffix, not a class.</summary>
+    /// <summary>
+    /// Records complete tm-* tokens. Three shapes are NOT classes: a token ending in <c>-</c> or
+    /// immediately followed by <c>@</c>/<c>{</c> is a dynamic-suffix stem (<c>tm-form-row--cols-</c>,
+    /// <c>tm-notion-heading--h@(Level)</c>, <c>tm-toc__item--level{n}</c>); a token preceded by
+    /// <c>-</c> is a CSS variable name inside a literal (<c>"var(--tm-color-primary)"</c>), never a
+    /// class attribute.
+    /// </summary>
     private static void AddTokens(string text, HashSet<string> names)
     {
         foreach (Match token in TmToken.Matches(text))
         {
             var value = token.Value;
-            if (!value.EndsWith('-'))
+            if (token.Index > 0 && text[token.Index - 1] == '-')
             {
-                names.Add(value);
+                continue; // "--tm-…" is a custom property, not a class
             }
+
+            if (value.EndsWith('-'))
+            {
+                continue;
+            }
+
+            var after = token.Index + value.Length;
+            if (after < text.Length && (text[after] == '@' || text[after] == '{'))
+            {
+                continue; // an expression extends the stem — the emitted name is not statically known
+            }
+
+            names.Add(value);
         }
     }
 
@@ -465,23 +682,46 @@ public sealed class MarkupClassCoverageTests
 
     // ── CSS selector inventories ──────────────────────────────────
 
-    /// <summary>Selectors in the shared tree + every scoped razor.css — all real styling.</summary>
-    private static HashSet<string> AllSourceSelectors()
+    /// <summary>
+    /// Selectors that can reach the scope's markup: its shared tree + its scoped razor.css — and,
+    /// for the satellite packages that project-reference the core, the CORE tree and core scoped
+    /// styles too (a Signing host loads Tempo.Blazor.styles.css through the app's scoped bundle).
+    /// </summary>
+    private static HashSet<string> AllSourceSelectors(Scope scope)
     {
-        var selectors = SharedSourceSelectors();
-        foreach (var file in Directory.EnumerateFiles(ComponentRoot(), "*.razor.css", SearchOption.AllDirectories))
+        var selectors = SharedSourceSelectors(scope);
+        CollectScopedStyles(ProjectRoot(scope), selectors);
+
+        if (scope.InheritsCoreCss)
         {
-            selectors.UnionWith(SelectorsIn(File.ReadAllText(file)));
+            foreach (var file in Directory.EnumerateFiles(CssRoot(), "*.css", SearchOption.AllDirectories))
+            {
+                selectors.UnionWith(SelectorsIn(File.ReadAllText(file)));
+            }
+
+            CollectScopedStyles(
+                Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor"), selectors);
         }
 
         return selectors;
     }
 
-    /// <summary>Selectors in the shipped shared tree only — what the bundle is built from.</summary>
-    private static HashSet<string> SharedSourceSelectors()
+    private static void CollectScopedStyles(string projectRoot, HashSet<string> selectors)
+    {
+        foreach (var file in Directory.EnumerateFiles(projectRoot, "*.razor.css", SearchOption.AllDirectories))
+        {
+            selectors.UnionWith(SelectorsIn(File.ReadAllText(file)));
+        }
+    }
+
+    /// <summary>Selectors in the scope's shipped shared tree — what a bundle or manifest is built from.</summary>
+    private static HashSet<string> SharedSourceSelectors(Scope? scope = null)
     {
         var selectors = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var file in Directory.EnumerateFiles(CssRoot(), "*.css", SearchOption.AllDirectories))
+        var root = scope is null
+            ? CssRoot()
+            : Path.Combine(FindRepositoryRoot(), "src", scope.ProjectDirectory, "wwwroot", "css");
+        foreach (var file in Directory.EnumerateFiles(root, "*.css", SearchOption.AllDirectories))
         {
             selectors.UnionWith(SelectorsIn(File.ReadAllText(file)));
         }
@@ -533,8 +773,8 @@ public sealed class MarkupClassCoverageTests
     private static string CssRoot() =>
         Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor", "wwwroot", "css");
 
-    private static string ComponentRoot() =>
-        Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor");
+    private static string ProjectRoot(Scope scope) =>
+        Path.Combine(FindRepositoryRoot(), "src", scope.ProjectDirectory);
 
     private static string FindRepositoryRoot()
     {
