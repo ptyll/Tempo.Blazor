@@ -2121,7 +2121,10 @@ public class TmDocumentEditorTests : LocalizationTestBase
             cut.Find("[data-testid='document-mini-toolbar']").Should().NotBeNull());
         cut.Find("[data-testid='document-mini-bold']").Click();
 
-        HasCanvasCommand("bold").Should().BeTrue();
+        // RunFloatingSelectionRegistryCommandAsync yields on InvokeAsync(StateHasChanged) before
+        // ExecuteAsync, so the execCommand invocation lands after Click() returns — wait for it
+        // (same convention as the undo asserts above) instead of racing the dispatcher hop.
+        cut.WaitForAssertion(() => HasCanvasCommand("bold").Should().BeTrue());
 
         await NotifyCanvasMiniToolbarAsync(cut, new WysiwygMiniToolbarRequest
         {
