@@ -644,25 +644,10 @@
   background: var(--tm-bg-surface-secondary);
   border-bottom: 1px solid var(--tm-border-color);
 }
-.tm-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--tm-space-1);
-  padding: var(--tm-space-1) var(--tm-space-2);
-  background: var(--tm-color-primary-subtle);
-  color: var(--tm-color-primary-text);
-  border-radius: var(--tm-radius-md);
-  font-size: var(--tm-font-size-sm);
-}
-.tm-filter-chip button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: inherit;
-  padding: 0;
-  font-size: var(--tm-font-size-lg);
-  line-height: 1;
-}
+/* .tm-filter-chip rules used to sit here, meant for chips inside .tm-data-table-filters-bar — but
+   nothing renders that bar, so the bare class only leaked onto TmFilterChip globally, where it lost
+   every shared property to _filter-chip.css anyway (imported later). Dead and harmful as a
+   class-ownership collision: the canonical declarations live in _filter-chip.css. */
 
 /* ═══════════════════════════════════════════════════════════════
    TmViewManager (Enhanced)
