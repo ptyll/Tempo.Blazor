@@ -752,26 +752,6 @@
   margin: 0;
 }
 
-.tm-modal-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  background: transparent;
-  border: none;
-  border-radius: var(--tm-radius-md);
-  color: var(--tm-text-secondary);
-  cursor: pointer;
-  transition: all var(--tm-transition-fast);
-  font-size: var(--tm-font-size-xl);
-}
-
-.tm-modal-close:hover {
-  background: var(--tm-bg-muted);
-  color: var(--tm-text-primary);
-}
-
 .tm-modal-footer {
   display: flex;
   align-items: center;
