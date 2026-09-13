@@ -34,11 +34,16 @@ namespace Tempo.Blazor.Tests.Theme;
 /// </para>
 /// <para>
 /// <see cref="UnstyledMarkupClasses"/> (and its Signing/NotionEditor counterparts) is the inventory
-/// of what markup emits without a rule on 2.8.26 — 151 in core, 52 in Signing, 44 in NotionEditor:
+/// of what markup emits without a rule on 2.8.26 — 148 in core, 52 in Signing, 44 in NotionEditor:
 /// semantic modifiers that style nothing by design (<c>tm-modal--center</c> is the DEFAULT position
 /// — there is nothing to declare), structural hooks styled through their parent
 /// (<c>tm-sidebar-nav-list</c> inside <c>.tm-sidebar-nav</c>), and dead utility references
-/// (<c>tm-mb-4</c>, <c>tm-button--ghost</c>) kept on the markup for consumers. Like
+/// (<c>tm-mb-4</c>) kept on the markup for consumers. The recording also carried
+/// <c>tm-button</c>/<c>tm-button--ghost</c>/<c>tm-button--sm</c>, which turned out to be not dead
+/// references at all but one live defect — the TmGantt import label, the only visible upload
+/// element in its dialog, emitted classes no stylesheet declares; it now emits
+/// <c>tm-btn tm-btn-ghost tm-btn-sm</c> and the three entries are struck off, which is exactly the
+/// shrink direction <see cref="EveryRecordedUnstyledClass_IsStillEmitted"/> exists to force. Like
 /// <c>UnconstrainedClassOwnershipTests.RecordedCollisions</c>, each is an inventory, not a budget:
 /// an entry whose markup is removed must be struck off, and a class markup gains without a rule
 /// must be added here BEFORE it ships.
@@ -61,9 +66,9 @@ public sealed class MarkupClassCoverageTests
         new(@"\.(tm-[a-zA-Z][\w-]*)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
-    /// The 151 classes core markup emits with no rule anywhere in the library's stylesheets on
+    /// The 148 classes core markup emits with no rule anywhere in the library's stylesheets on
     /// 2.8.26, each named. None of these is a promise that they SHOULD stay unstyled — they are
-    /// RECORDED so the guard can fail on a 152nd.
+    /// RECORDED so the guard can fail on a 149th.
     /// </summary>
     private static readonly string[] UnstyledMarkupClasses =
     [
@@ -79,9 +84,6 @@ public sealed class MarkupClassCoverageTests
         "tm-avatar-image",
         "tm-avatar-overflow",
         "tm-btn-icon",
-        "tm-button",
-        "tm-button--ghost",
-        "tm-button--sm",
         "tm-cal-next",
         "tm-cal-prev",
         "tm-card-header-title",
