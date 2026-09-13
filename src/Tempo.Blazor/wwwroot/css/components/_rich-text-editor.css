@@ -13,15 +13,9 @@
   box-shadow: var(--tm-shadow-focus);
 }
 
-.tm-rte-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--tm-space-1);
-  padding: var(--tm-space-2) var(--tm-space-3);
-  background: var(--tm-bg-muted);
-  border-bottom: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md) var(--tm-radius-md) 0 0;
-}
+/* .tm-rte-toolbar's bare rule used to sit here — an older copy of _editor-toolbar.css's, which is
+   the toolbar's own stylesheet and is imported later, so this one only ever contested ownership
+   without ever painting. */
 
 .tm-rte-btn {
   display: inline-flex;
