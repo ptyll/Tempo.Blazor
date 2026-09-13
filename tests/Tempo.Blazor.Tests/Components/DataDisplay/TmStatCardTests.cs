@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.DataDisplay;
 
@@ -120,5 +121,60 @@ public class TmStatCardTests : LocalizationTestBase
             .Add(c => c.SubValueColor, "tm-text-success"));
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*SubValueColor*");
+    }
+
+    /// <summary>
+    /// ed256446: <c>SubValueColor</c> must WIN over the base <c>.tm-stat-subvalue</c> colour, resolved
+    /// the way a browser resolves it — through the shipped bundle, not by hoping a consumer rule lands
+    /// later in source order. The base declaration names the custom property with the secondary token
+    /// as fallback, and the component wires the parameter into that property on the element itself.
+    /// </summary>
+    /// <remarks>
+    /// Mutation: reverting the declaration to <c>color: var(--tm-text-secondary)</c> makes the winner
+    /// the plain token and this test goes red, because the painted colour then equals the base.
+    /// </remarks>
+    [Fact]
+    public void TmStatCard_SubValueColor_Wins_Over_The_Base_Rule()
+    {
+        var cut = Render<TmStatCard>(p => p
+            .Add(c => c.Title, "Revenue")
+            .Add(c => c.Value, "$5,000")
+            .Add(c => c.SubValue, "+12%")
+            .Add(c => c.SubValueColor, "var(--tm-color-success-text)"));
+
+        var span = cut.Find(".tm-stat-subvalue");
+        (span.GetAttribute("style") ?? string.Empty).Should().Contain(
+            "--tm-stat-subvalue-color: var(--tm-color-success-text)",
+            "the parameter has to reach the element's own custom property — a class cannot promise "
+            + "a colour wins, because specificity and source order decide that elsewhere");
+
+        var winner = CssCascade.Winning(
+            ThemeCss.BundledCss(),
+            [new CssCascade.Element("div", "tm-stat-card"), new CssCascade.Element("span", "tm-stat-subvalue")],
+            "color");
+
+        var tokens = ThemeCss.TokenGraph(dark: false);
+        tokens["--tm-stat-subvalue-color"] = "var(--tm-color-success-text)";
+
+        var painted = ThemeCss.ResolveColour(winner, tokens);
+        painted.Should().Be(
+            ThemeCss.ResolveColour("var(--tm-color-success-text)", tokens),
+            "SubValueColor vítězí nad základem — element nese vlastní hodnotu custom property, "
+            + "takže fallback na --tm-text-secondary se neuplatní");
+        painted.Should().NotBe(
+            ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens),
+            "jinak parametr maluje stejnou barvou jako základ — přesně vada ed256446");
+    }
+
+    /// <summary>Without <c>SubValueColor</c> the span carries no stray <c>style</c> attribute.</summary>
+    [Fact]
+    public void TmStatCard_No_Style_Attribute_Without_SubValueColor()
+    {
+        var cut = Render<TmStatCard>(p => p
+            .Add(c => c.Title, "Revenue")
+            .Add(c => c.Value, "$5,000")
+            .Add(c => c.SubValue, "+12%"));
+
+        cut.Find(".tm-stat-subvalue").GetAttribute("style").Should().BeNull();
     }
 }

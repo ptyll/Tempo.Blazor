@@ -15,6 +15,13 @@
       "description": "Card label / metric name."
     },
     {
+      "name": "Label",
+      "type": "string",
+      "isRequired": false,
+      "default": "Empty",
+      "description": "Alias for Title."
+    },
+    {
       "name": "Value",
       "type": "string?",
       "isRequired": false,
@@ -30,7 +37,7 @@
       "name": "SubValueColor",
       "type": "string?",
       "isRequired": false,
-      "description": "CSS classes for the SubValue color (e.g. \"text-green-600\"). Only meaningful together with SubValue: the sub-value span is rendered only when SubValue is non-empty, so a colour on its own would never reach the screen. The component THROWS InvalidOperationException for that pair instead of ignoring it."
+      "description": "Colour for the SubValue as a CSS colour value — a var(--tm-*) token reference or a literal like #16a34a. Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves via var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the value therefore always wins over the default colour regardless of consumer stylesheet order. (Before 2.8.26 this parameter took a class name, which no library rule backed — it could not win.) Only meaningful together with SubValue: the component THROWS InvalidOperationException for SubValueColor without SubValue."
     }
   ],
   "cssClasses": [
@@ -42,7 +49,7 @@
   "examples": [
     {
       "title": "Stat card with trend",
-      "code": "<TmStatCard Title=\"Total Revenue\"\n            Value=\"$45,231\"\n            SubValue=\"+12.5% from last month\"\n            SubValueColor=\"text-green-600\" />"
+      "code": "<TmStatCard Title=\"Total Revenue\"\n            Value=\"$45,231\"\n            SubValue=\"+12.5% from last month\"\n            SubValueColor=\"var(--tm-color-success-text)\" />"
     },
     {
       "title": "Simple stat card",

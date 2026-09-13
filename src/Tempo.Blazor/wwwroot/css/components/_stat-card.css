@@ -23,7 +23,9 @@
 .tm-stat-subvalue {
   font-size: var(--tm-font-size-xs);
   font-weight: var(--tm-font-weight-medium);
-  color: var(--tm-text-secondary);
+  /* --tm-stat-subvalue-color is the component's own override channel: TmStatCard sets it inline
+     when SubValueColor is passed, so the parameter beats this default without a specificity race. */
+  color: var(--tm-stat-subvalue-color, var(--tm-text-secondary));
   margin-top: var(--tm-space-1);
 }
 

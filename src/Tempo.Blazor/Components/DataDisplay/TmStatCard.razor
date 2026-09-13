@@ -5,7 +5,8 @@
     <span class="tm-stat-label">@Title</span>
     @if (!string.IsNullOrEmpty(SubValue))
     {
-        <span class="tm-stat-subvalue @SubValueColor">@SubValue</span>
+        <span class="tm-stat-subvalue"
+              style="@(!string.IsNullOrEmpty(SubValueColor) ? $"--tm-stat-subvalue-color: {SubValueColor}" : null)">@SubValue</span>
     }
 </div>
 
@@ -23,7 +24,12 @@
     [Parameter] public string? SubValue { get; set; }
 
     /// <summary>
-    /// CSS classes for the SubValue color (e.g. "text-green-600"). Only meaningful together with
+    /// Colour for the SubValue, as a CSS colour value — a <c>var(--tm-*)</c> token reference or a
+    /// literal like <c>#16a34a</c>. Rendered as the element's own
+    /// <c>--tm-stat-subvalue-color</c> custom property, which the base
+    /// <c>.tm-stat-subvalue</c> rule resolves with <c>var(--tm-stat-subvalue-color,
+    /// var(--tm-text-secondary))</c>: the parameter therefore ALWAYS wins over the default colour,
+    /// no matter where the consumer's stylesheet sits in source order. Only meaningful together with
     /// <see cref="SubValue"/>: without it there is nothing to colour and the card REFUSES to render
     /// (see <see cref="OnParametersSet"/>).
     /// </summary>
