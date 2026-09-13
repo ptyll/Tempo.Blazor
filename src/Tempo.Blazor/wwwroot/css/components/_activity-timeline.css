@@ -66,7 +66,11 @@
   margin-bottom: var(--tm-space-1);
 }
 
-.tm-timeline-author {
+/* TmTimeline and TmActivityTimeline share the .tm-timeline-author class name. Declared bare in
+   both files, one import order silently styled both components — the author's value here is the
+   ACTIVITY timeline's own, so it is scoped under .tm-timeline-item, which only this component's
+   markup renders. _timeline.css keeps the shared name. */
+.tm-timeline-item .tm-timeline-author {
   font-size: var(--tm-font-size-sm);
   font-weight: var(--tm-font-weight-semibold);
   color: var(--tm-text-primary);
