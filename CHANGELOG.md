@@ -10,6 +10,11 @@ tag that names another commit, `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBu
 another tree's artefact this tree's release, and the cure both guards prescribe is the next free
 number.
 
+Convention for the parenthesised ids throughout this section: they name the original
+development-line record each item was tracked under (the D17 register entries and their siblings),
+not a commit of this repository — the landed commits are listed by `git log`, most of them
+carrying the record id in the subject line.
+
 ### Fixed (D17 — the CSS contract items)
 
 - **`.tm-stat-subvalue` could not be coloured by `SubValueColor` (ed256446).** The subvalue painted
@@ -19,11 +24,13 @@ number.
   `style="--tm-stat-subvalue-color: …"` when the parameter is set. Guarded by a bUnit test that
   resolves the cascade through `CssCascade` over `tempo-blazor.bundled.css`.
 
-- **`.tm-btn` carried no size of its own (2bed637e).** Padding and min-height lived only on the
-  `tm-btn-{xs,sm,md,lg}` modifiers, so any button missing the modifier — including markup that sets
-  `.tm-btn` directly — rendered at content height. The base `.tm-btn` now carries the medium values
-  (`padding: var(--tm-btn-padding-md)`, `min-height: var(--tm-input-height-md)`); the four size
-  modifiers are unchanged.
+- **`.tm-btn` carried no size of its own (2bed637e).** Height and horizontal padding lived only on
+  the `tm-btn-{xs,sm,md,lg}` modifiers, so any button missing the modifier — including markup that
+  sets `.tm-btn` directly — rendered at content height. The base `.tm-btn` now carries the medium
+  box outright: `height: var(--tm-input-height-md)` and `padding: 0 var(--tm-space-4)`. It is
+  `height`, not `min-height`, on purpose — a `min-height` would clamp `.tm-btn-xs`/`.tm-btn-sm` up
+  to the medium size without editing a byte of them, while `height` stays overrideable by source
+  order; the four size modifiers are unchanged.
 
 - **The dark theme had no `--tm-text-placeholder` (910c84fe).** `tokens.css` defines it as an alias
   of `--tm-text-tertiary`, but `tokens-dark.css` never overrode it, so dark-mode placeholders
@@ -62,9 +69,22 @@ number.
   package's reachability at discovery time, and confirms the announced version's exact `.nupkg`
   URL with a HEAD request so a network outage cannot dress itself as a version check.
 
-- **Seven timing-based waits in the release gate are state-based (b93a1bd1, 2f46eed2).** Toast
-  timers, search-input debounce, map clustering callbacks, Redis polling, two cache TTL waits and
-  the image inspector's render polling each name their barrier and wait on the state it produces.
+- **Seven timing-based waits in the release gate are state-based (b93a1bd1, 2f46eed2; landed
+  a85cbd1e).** Toast timers, search-input debounce, map clustering callbacks, Redis polling, two
+  cache TTL waits and the image inspector's render polling each name their barrier and wait on the
+  state it produces. Three further flake fixes landed beyond the seven: the mini-toolbar bold
+  assert now waits for the dispatcher hop (f7e5ed48), the text-color toolbar test's pull stub
+  agrees with the pushed colour (6a4e3911), and `TestAssemblyInit` raises bUnit's
+  `DefaultWaitTimeout` from 1 s to 10 s assembly-wide (6b953cda) — the documented knob for
+  contended or slower hardware; the barriers themselves remain state-based, only the patience
+  grew.
+
+- **Three stale claims are corrected, and the toolbar guard now reads `COMPONENTS.md`
+  (ef87ac57).** 2.8.24's tail still described publication as the owner's pending manual step while
+  the package already sat on the feed; both 2.8.16 sections called 2.8.15 "the published package"
+  though the artefact was packed and audited but never pushed; and `COMPONENTS.md` claimed
+  `tm-form-action-bar` keeps `role="toolbar"` where the component renders `role="group"`.
+  `ToolbarRoleGuardTests` now scans `COMPONENTS.md` too, so restoring the stale text goes red.
 
 - **Baseline PNGs moved out of the repository (D4).** Generators under `TM_WRITE_BASELINES=1` write
   to `artifacts/baseline/`; the index holds none; `BaselineWriteSweep` fails closed if a baseline

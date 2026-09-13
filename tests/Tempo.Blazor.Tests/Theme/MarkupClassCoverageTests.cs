@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using Xunit.Abstractions;
 
 namespace Tempo.Blazor.Tests.Theme;
 
@@ -20,7 +21,10 @@ namespace Tempo.Blazor.Tests.Theme;
 /// </list>
 /// A token ending in <c>-</c>, or one immediately followed by <c>@</c> or <c>{</c>, is a dynamic
 /// suffix (<c>tm-form-row--cols-{n}</c>, <c>tm-notion-heading--h{level}</c>) — statically
-/// unverifiable and skipped on purpose. A token preceded by <c>-</c> is not a class at all:
+/// unverifiable, so it is not coverage-checked, but it is not dropped either: each is an
+/// <c>unmeasurable:interpolated-class</c> stem that is collected and COUNTED per scope
+/// (<see cref="TheSweep_CountsEveryUnmeasurableInterpolatedStem"/>). A token preceded by
+/// <c>-</c> is not a class at all:
 /// <c>"var(--tm-color-primary)"</c> and <c>"--tm-gantt-task-color: {x}"</c> literals produced five
 /// phantom "classes" in the first version of this sweep, which is why the check exists.
 /// </para>
@@ -51,6 +55,10 @@ namespace Tempo.Blazor.Tests.Theme;
 /// </summary>
 public sealed class MarkupClassCoverageTests
 {
+    private readonly ITestOutputHelper _output;
+
+    public MarkupClassCoverageTests(ITestOutputHelper output) => _output = output;
+
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly Regex ClassAttribute =
@@ -342,7 +350,9 @@ public sealed class MarkupClassCoverageTests
     /// inventory records its unstyled classes, and the population counts that prove the sweep read
     /// the whole tree. <paramref name="InheritsCoreCss"/> marks packages that project-reference
     /// <c>Tempo.Blazor</c>: their markup is rendered by a host that has the core stylesheet loaded,
-    /// so a core-owned class is coverage, not a gap.
+    /// so a core-owned class is coverage, not a gap. <paramref name="ExpectedUnmeasurableStems"/>
+    /// is the fail-closed count of dynamic-suffix stems the scan must find — the
+    /// <c>unmeasurable:interpolated-class</c> population is checked by exact cardinality.
     /// </summary>
     private sealed record Scope(
         string Name,
@@ -350,16 +360,20 @@ public sealed class MarkupClassCoverageTests
         string[] UnstyledClasses,
         int MinRazorFiles,
         int MinMarkupClasses,
-        bool InheritsCoreCss);
+        bool InheritsCoreCss,
+        int ExpectedUnmeasurableStems);
 
     private static readonly Scope[] Scopes =
     [
         new Scope("Tempo.Blazor", "Tempo.Blazor", UnstyledMarkupClasses,
-            MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false),
+            MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false,
+            ExpectedUnmeasurableStems: 34),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
-            MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true),
+            MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
+            ExpectedUnmeasurableStems: 6),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
-            MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true),
+            MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
+            ExpectedUnmeasurableStems: 17),
     ];
 
     [Fact]
@@ -459,6 +473,37 @@ public sealed class MarkupClassCoverageTests
     }
 
     /// <summary>
+    /// What the sweep cannot measure it still COUNTS. A stem an expression extends
+    /// (<c>tm-form-row--cols-{n}</c>, <c>tm-toc__item--level{…}</c>, <c>tm-notion-heading--h@(…)</c>)
+    /// is an <c>unmeasurable:interpolated-class</c>: its emitted name is not statically known, so it
+    /// is exempt from the coverage assertion — but per spec the stems are collected into their own
+    /// set and counted, not dropped silently. The declared per-scope count must equal the scanned
+    /// one exactly (fail-closed in BOTH directions): a markup change that adds or loses a stem
+    /// shifts the denominator the coverage tests reason about, and a count that can only be
+    /// "at least" would let a real addition pass unremarked.
+    /// </summary>
+    [Fact]
+    public void TheSweep_CountsEveryUnmeasurableInterpolatedStem()
+    {
+        foreach (var scope in Scopes)
+        {
+            var stems = UnmeasurableStems(scope);
+
+            _output.WriteLine(
+                $"[markup-sweep] {scope.Name}: {stems.Count} unmeasurable:interpolated-class "
+                + $"stem(s) — {string.Join(", ", stems.Order(StringComparer.Ordinal))}");
+
+            stems.Should().HaveCount(
+                scope.ExpectedUnmeasurableStems,
+                "každý interpolovaný stem se počítá — deklarovaný počet pro {0} musí odpovídat "
+                + "naskenovanému přesně, jinak se populace, nad kterou coverage testy usuzují, "
+                + "změnila bez povšimnutí. Naskenované stemmy: {1}",
+                scope.Name,
+                string.Join(" | ", stems.Order(StringComparer.Ordinal)));
+        }
+    }
+
+    /// <summary>
     /// Mutation, both directions: an invented class in markup must be reported uncovered, and a
     /// covered class must not be.
     /// </summary>
@@ -467,7 +512,7 @@ public sealed class MarkupClassCoverageTests
     {
         var emitted = ExtractMarkupClasses(
             ["<div class=\"tm-pagination-size tm-invented-never-styled\"></div>"],
-            Enumerable.Empty<string>());
+            Enumerable.Empty<string>()).Classes;
 
         emitted.Should().Contain("tm-pagination-size").And.Contain("tm-invented-never-styled");
         AllSourceSelectors(Scopes[0]).Contains("tm-pagination-size").Should().BeTrue();
@@ -479,12 +524,13 @@ public sealed class MarkupClassCoverageTests
     /// comment must not be extracted, and <c>tm-form-row--cols-</c> + expression must not become a
     /// phantom class named <c>tm-form-row--cols</c>. The same for the other two dynamic shapes:
     /// <c>tm-notion-heading--h@(Level)</c> ends in a letter, and <c>tm-toc__item--level{n}</c> in
-    /// interpolated code sits directly before a <c>{</c>.
+    /// interpolated code sits directly before a <c>{</c>. All three stems are nonetheless COUNTED —
+    /// they land in <see cref="Extraction.UnmeasurableStems"/>, not nowhere.
     /// </summary>
     [Fact]
     public void TheExtractor_IgnoresCommentsAndDynamicSuffixes()
     {
-        var emitted = ExtractMarkupClasses(
+        var extraction = ExtractMarkupClasses(
             [
                 """
                 @* class="tm-commented-out-razor" *@
@@ -495,6 +541,7 @@ public sealed class MarkupClassCoverageTests
             ],
             ["return $\"tm-toc__item tm-toc__item--level{entry.Level}\";"]);
 
+        var emitted = extraction.Classes;
         emitted.Should().NotContain("tm-commented-out-razor").And.NotContain("tm-commented-out-html");
         emitted.Should().NotContain("tm-form-row--cols",
             "dynamická přípona není třída — tm-form-row--cols-{n} nelze staticky ověřit");
@@ -502,6 +549,10 @@ public sealed class MarkupClassCoverageTests
             "tm-notion-heading--h@(Level) emituje h1..h6 — stem bez čísla není třída");
         emitted.Should().NotContain("tm-toc__item--level");
         emitted.Should().Contain("tm-form-row").And.Contain("tm-notion-heading").And.Contain("tm-toc__item");
+
+        extraction.UnmeasurableStems.Should().BeEquivalentTo(
+            ["tm-form-row--cols-", "tm-notion-heading--h", "tm-toc__item--level"],
+            "interpolované stemmy nejsou třídy, ale počítají se — nesmí zmizet z evidence");
     }
 
     /// <summary>
@@ -513,7 +564,7 @@ public sealed class MarkupClassCoverageTests
     [Fact]
     public void TheExtractor_IgnoresVariableReferences()
     {
-        var emitted = ExtractMarkupClasses(
+        var extraction = ExtractMarkupClasses(
             Enumerable.Empty<string>(),
             [
                 """
@@ -523,8 +574,10 @@ public sealed class MarkupClassCoverageTests
                 """
             ]);
 
-        emitted.Should().NotContain("tm-color-primary").And.NotContain("tm-gantt-task-color");
-        emitted.Should().Contain("tm-real-class");
+        extraction.Classes.Should().NotContain("tm-color-primary").And.NotContain("tm-gantt-task-color");
+        extraction.Classes.Should().Contain("tm-real-class");
+        extraction.UnmeasurableStems.Should().BeEmpty(
+            "reference na proměnnou není ani stem — '--tm-…' se nepočítá vůbec");
     }
 
     // ── Detail guards carried over from OrphanClassCssContractTests ──
@@ -603,8 +656,19 @@ public sealed class MarkupClassCoverageTests
 
     // ── Extraction ────────────────────────────────────────────────
 
+    /// <summary>
+    /// What one extraction pass yields: <paramref name="Classes"/> are the literal
+    /// <c>tm-*</c> tokens markup provably emits (the coverage population), and
+    /// <paramref name="UnmeasurableStems"/> are the dynamic-suffix stems an expression extends —
+    /// <c>unmeasurable:interpolated-class</c>, counted but not coverage-checked.
+    /// </summary>
+    private sealed record Extraction(HashSet<string> Classes, HashSet<string> UnmeasurableStems);
+
     private static HashSet<string> MarkupClasses(Scope scope) =>
-        ExtractMarkupClasses(RazorMarkup(scope), CodeBehindFiles(scope));
+        ExtractMarkupClasses(RazorMarkup(scope), CodeBehindFiles(scope)).Classes;
+
+    private static HashSet<string> UnmeasurableStems(Scope scope) =>
+        ExtractMarkupClasses(RazorMarkup(scope), CodeBehindFiles(scope)).UnmeasurableStems;
 
     private static IEnumerable<string> RazorMarkup(Scope scope) =>
         RazorFiles(scope).Select(File.ReadAllText);
@@ -616,18 +680,19 @@ public sealed class MarkupClassCoverageTests
     private static List<string> RazorFiles(Scope scope) =>
         Directory.EnumerateFiles(ProjectRoot(scope), "*.razor", SearchOption.AllDirectories).ToList();
 
-    private static HashSet<string> ExtractMarkupClasses(
+    private static Extraction ExtractMarkupClasses(
         IEnumerable<string> razorDocuments,
         IEnumerable<string> codeBehindDocuments)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
+        var unmeasurableStems = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var document in razorDocuments)
         {
             var cleaned = StripComments(document);
             foreach (Match attribute in ClassAttribute.Matches(cleaned))
             {
-                AddTokens(attribute.Groups[1].Value, names);
+                AddTokens(attribute.Groups[1].Value, names, unmeasurableStems);
             }
         }
 
@@ -635,21 +700,23 @@ public sealed class MarkupClassCoverageTests
         {
             foreach (Match literal in QuotedLiteral.Matches(document))
             {
-                AddTokens(literal.Groups[1].Value, names);
+                AddTokens(literal.Groups[1].Value, names, unmeasurableStems);
             }
         }
 
-        return names;
+        return new Extraction(names, unmeasurableStems);
     }
 
     /// <summary>
-    /// Records complete tm-* tokens. Three shapes are NOT classes: a token ending in <c>-</c> or
-    /// immediately followed by <c>@</c>/<c>{</c> is a dynamic-suffix stem (<c>tm-form-row--cols-</c>,
-    /// <c>tm-notion-heading--h@(Level)</c>, <c>tm-toc__item--level{n}</c>); a token preceded by
-    /// <c>-</c> is a CSS variable name inside a literal (<c>"var(--tm-color-primary)"</c>), never a
-    /// class attribute.
+    /// Records complete tm-* tokens into <paramref name="names"/>, and dynamic-suffix stems into
+    /// <paramref name="unmeasurableStems"/>. Three shapes are NOT classes: a token ending in
+    /// <c>-</c> or immediately followed by <c>@</c>/<c>{</c> is a dynamic-suffix stem
+    /// (<c>tm-form-row--cols-</c>, <c>tm-notion-heading--h@(Level)</c>,
+    /// <c>tm-toc__item--level{n}</c>) — unmeasurable as a class but still COUNTED; a token preceded
+    /// by <c>-</c> is a CSS variable name inside a literal (<c>"var(--tm-color-primary)"</c>),
+    /// never a class attribute, and lands in neither set.
     /// </summary>
-    private static void AddTokens(string text, HashSet<string> names)
+    private static void AddTokens(string text, HashSet<string> names, HashSet<string> unmeasurableStems)
     {
         foreach (Match token in TmToken.Matches(text))
         {
@@ -659,15 +726,14 @@ public sealed class MarkupClassCoverageTests
                 continue; // "--tm-…" is a custom property, not a class
             }
 
-            if (value.EndsWith('-'))
-            {
-                continue;
-            }
-
             var after = token.Index + value.Length;
-            if (after < text.Length && (text[after] == '@' || text[after] == '{'))
+            if (value.EndsWith('-')
+                || (after < text.Length && (text[after] == '@' || text[after] == '{')))
             {
-                continue; // an expression extends the stem — the emitted name is not statically known
+                // an expression extends the stem — the emitted name is not statically known,
+                // so the stem is counted as unmeasurable:interpolated-class instead of dropped
+                unmeasurableStems.Add(value);
+                continue;
             }
 
             names.Add(value);

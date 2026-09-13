@@ -38,6 +38,15 @@ namespace Tempo.Blazor.E2E;
 /// <see cref="AssertNoBaselinePngsExist"/> OUTSIDE its best-effort teardown loop — that loop
 /// swallows exceptions, so a failure raised inside it would be silent.
 /// </para>
+/// <para>
+/// One limit is named plainly rather than asserted away: when the repository root or git itself
+/// cannot be established — a tarball checkout, a machine without git —
+/// <see cref="CaptureSnapshot"/> disables the sweep, and the only record is the
+/// <c>[baseline-sweep] DISABLED:</c> line in the assembly-init output. A green run on such a
+/// machine therefore means "not measured", never "measured clean". The trade-off is deliberate:
+/// a missing git must not take the whole suite down, and the init output is the one channel a
+/// dev-box run is certain to surface.
+/// </para>
 /// </summary>
 [TestClass]
 public static class BaselineWriteSweep

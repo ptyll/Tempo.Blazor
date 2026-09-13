@@ -173,7 +173,7 @@ catch (Exception ex)
   <!-- There is deliberately NO Clean-time delete of the bundled stylesheet.
        wwwroot\css\tempo-blazor.bundled.css is a TRACKED SOURCE, not a build artefact: five tests reach
        for it at its committed location - four read its content (TmSignatureCaptureTests,
-       CodeEditorWrapStylesheetTests, CssBundleCalcWhitespaceTests, OrphanClassCssContractTests) and
+       CodeEditorWrapStylesheetTests, CssBundleCalcWhitespaceTests, MarkupClassCoverageTests) and
        CssBundlerInputSourceTests asserts that it exists there at all - and
        CssBundleCalcWhitespaceTests asserts on the COMMITTED bundle on purpose. The former
        CleanBundledCss target ran a Delete BeforeTargets="Clean", which made `dotnet clean` leave the

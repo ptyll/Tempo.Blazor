@@ -34,6 +34,7 @@
     "tm-timeline-content",
     "tm-timeline-loading",
     "tm-timeline-empty",
+    "tm-activity-timeline-empty",
     "tm-timeline-comment",
     "tm-timeline-status_change",
     "tm-timeline-assignment",

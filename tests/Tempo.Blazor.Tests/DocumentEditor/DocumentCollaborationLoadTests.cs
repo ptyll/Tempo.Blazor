@@ -169,7 +169,11 @@ public class RedisDocumentCollaborationBackplaneTests
         }
         catch
         {
-            return; // Redis not available on this machine — covered by the in-memory backplane tests.
+            // Catch-all on purpose: ConnectAsync reports "no Redis here" through several exception
+            // shapes (socket refused, connect timeout, handshake failure), and every one of them
+            // means the same thing on a dev box — Redis not available on this machine — not a
+            // product defect; the fan-out path itself is covered by the in-memory backplane tests.
+            return;
         }
 
         await using (backplane)
