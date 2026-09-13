@@ -14,7 +14,8 @@ namespace Tempo.Blazor.Tests.Theme;
 /// IT EXISTS BECAUSE THE OLD DENOMINATOR WAS THE WRONG POPULATION, not because it was unread. The
 /// button sweep answers "does anything else own <c>.tm-btn*</c>" and its answer is complete. Nobody
 /// was asking the same question about every other shared class, and the 2.8.22 changelog claimed the
-/// button sweep covered it. It did not: fifteen further pairs were sitting in the same directory.
+/// button sweep covered it. It did not: fifteen further pairs were sitting in the same directory —
+/// all fifteen fixed in 2.8.26, so <see cref="RecordedCollisions"/> now stands empty.
 /// </para>
 /// <para>
 /// EVERY KNOWN PAIR HAS ITS OWN ROW. A single number ("15 known collisions") would become a threshold
@@ -44,15 +45,13 @@ public class UnconstrainedClassOwnershipTests
     }
 
     /// <summary>
-    /// What the sweep finds on 2.8.23, each pair named. None of these is approved; they are RECORDED so
-    /// the guard can fail on a sixteenth. Their owner and the reason they were not fixed inside a patch
-    /// release are in the plan's remaining tasks — fixing them all is a broad visual change across
-    /// modal, scheduler, timeline, rich-text and form layout, which is not a thing to bundle into a
-    /// release whose subject is three named defects.
+    /// What the sweep found on 2.8.23 was fifteen pairs, each named — none approved, all RECORDED so
+    /// the guard could fail on a sixteenth. 2.8.26 fixed every one of them (filter-chip, form-field,
+    /// six tm-modal*, four tm-rte-*, three tm-timeline-*), so the list is EMPTY: the guard now fails
+    /// on the first new pair that appears, with no grandfathered residue to hide behind.
     /// </summary>
     private static readonly string[] RecordedCollisions =
     [
-        ".tm-timeline-empty _activity-timeline.css|_timeline.css",
     ];
 
     [Fact]
@@ -95,9 +94,14 @@ public class UnconstrainedClassOwnershipTests
         files.Should().HaveCountGreaterThanOrEqualTo(
             139,
             "components/ neslo nikdy pod 139 souborů; menší číslo znamená, že sonda čte jinou složku");
-        Collisions().Should().NotBeEmpty(
-            "sonda, která dnes nenajde nic, by byla zelená i kdyby neuměla číst — dokud existuje " +
-            "zaznamenaná dvojice, musí ji vidět");
+
+        // The positive control moved: while a recorded pair existed, finding it proved the probe
+        // could read. With the list empty, "found nothing" is the correct answer — the probe's
+        // ability to read is proven synthetically by TheSweepSeesADuplicateAndIgnoresAConstrainedOne.
+        Collisions().Should().BeEmpty(
+            "patnáct zaznamenaných dvojic je opraveno — jakékoli další nalezení je nová kolize, " +
+            "která patří do NoNewClassIsOwnedByTwoStylesheets: {0}",
+            string.Join(" | ", Collisions().Select(collision => collision.ToString())));
     }
 
     /// <summary>

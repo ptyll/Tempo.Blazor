@@ -101,4 +101,7 @@
   padding: var(--tm-space-4) 0;
 }
 
-.tm-timeline-empty { padding: var(--tm-space-4) 0; }
+/* The empty state sits outside .tm-timeline-item, so the shared-name fix used for author/content
+   cannot scope it — it gets its own class on the markup instead. tm-timeline-empty stays as the
+   shared base; this file no longer declares that bare name. */
+.tm-activity-timeline-empty { padding: var(--tm-space-4) 0; }

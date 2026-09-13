@@ -43,7 +43,10 @@
     }
     else if (_pager.Items.Count == 0)
     {
-        <div class="tm-timeline-empty">
+        @* tm-activity-timeline-empty carries this component's own padding — the bare
+           tm-timeline-empty name is shared with TmTimeline, so two owners used to race the
+           same declarations. The shared class stays for the common empty-state base. *@
+        <div class="tm-timeline-empty tm-activity-timeline-empty">
             <TmEmptyState Title="@Loc["TmTimeline_Empty"]" />
         </div>
     }
