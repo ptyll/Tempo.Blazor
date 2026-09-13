@@ -8,7 +8,7 @@ namespace Tempo.Blazor.E2E;
 /// After the Phase 0 canvas-only consolidation there is a single rendering engine
 /// (the JavaScript canvas engine), so these baselines capture the live canvas surface
 /// rather than DOM cells. Run with the BaselineGeneration category against a running
-/// WASM demo to (re)generate the PNG baselines under __baseline__/spreadsheet.
+/// WASM demo to (re)generate the PNG baselines under artifacts/baseline/spreadsheet.
 /// </summary>
 [TestClass]
 public partial class SpreadsheetBaselineScreenshots : BaselineGeneratorTestBase
@@ -17,8 +17,7 @@ public partial class SpreadsheetBaselineScreenshots : BaselineGeneratorTestBase
     {
         get
         {
-            var dir = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, "..", "..", "..", "__baseline__", "spreadsheet"));
+            var dir = BaselineOutput.DirectoryFor(null, "spreadsheet");
             Directory.CreateDirectory(dir);
             return dir;
         }

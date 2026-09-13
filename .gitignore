@@ -28,6 +28,9 @@ project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# Baseline PNGs are run artefacts under artifacts/baseline/ — the old committed root must stay empty
+tests/Tempo.Blazor.E2E/__baseline__/
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 

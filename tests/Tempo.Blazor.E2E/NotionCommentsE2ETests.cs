@@ -1780,14 +1780,8 @@ public class NotionCommentsRecoveryE2ETests : NotionE2ETestBase
 
     private async Task<NotionBaselineCapture> CaptureViewportClipBaselineAsync(string area, string state, ILocator region)
     {
-        var outputDir = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            SanitizeBaselinePart(area)));
+        var outputDir = BaselineOutput.DirectoryFor(TestContext, "notion",
+            SanitizeBaselinePart(area));
         Directory.CreateDirectory(outputDir);
 
         var safeState = SanitizeBaselinePart(state);

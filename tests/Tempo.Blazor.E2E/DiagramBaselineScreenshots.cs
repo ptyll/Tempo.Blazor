@@ -31,7 +31,7 @@ public class DiagramBaselineScreenshots : BaselineGeneratorTestBase
     private const string DiagramEditorUrl = "/diagram-editor";
 
     /// <summary>
-    /// Absolutní cesta k <c>tests/Tempo.Blazor.E2E/__baseline__/diagram/</c> spočítaná
+    /// Absolutní cesta k <c>artifacts/baseline/diagram/</c> spočítaná
     /// z <see cref="AppContext.BaseDirectory"/> (typicky
     /// <c>tests/Tempo.Blazor.E2E/bin/Debug/net10.0/</c>).
     /// </summary>
@@ -39,8 +39,7 @@ public class DiagramBaselineScreenshots : BaselineGeneratorTestBase
     {
         get
         {
-            var dir = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, "..", "..", "..", "__baseline__", "diagram"));
+            var dir = BaselineOutput.DirectoryFor(null, "diagram");
             Directory.CreateDirectory(dir);
             return dir;
         }

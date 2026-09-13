@@ -6,7 +6,7 @@ namespace Tempo.Blazor.E2E;
 /// <summary>
 /// Phase 3 baseline screenshots: the auto-filter dropdown, an active-filter state, and the multi-level
 /// sort dialog. Run with the BaselineGeneration category against a running WASM demo to (re)generate
-/// the PNG baselines under __baseline__/spreadsheet.
+/// the PNG baselines under artifacts/baseline/spreadsheet.
 /// </summary>
 public partial class SpreadsheetBaselineScreenshots
 {

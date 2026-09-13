@@ -211,7 +211,7 @@ public class StencilCompositionE2ETests : WasmTestBase
 
     private static string BaselinePath(string area, string state)
     {
-        var dir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "__baseline__", area);
+        var dir = BaselineOutput.DirectoryFor(null, area);
         Directory.CreateDirectory(dir);
         return Path.Combine(dir, $"{state}.png");
     }

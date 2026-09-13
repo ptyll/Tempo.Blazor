@@ -380,14 +380,8 @@ public class NotionPanelBlocksE2ETests : NotionE2ETestBase
 
     private static string GetPanelBaselineDirectory()
     {
-        var dir = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "panel-blocks"));
+        var dir = BaselineOutput.DirectoryFor(null, "notion",
+            "panel-blocks");
         Directory.CreateDirectory(dir);
         return dir;
     }

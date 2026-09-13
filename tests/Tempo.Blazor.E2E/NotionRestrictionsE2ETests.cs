@@ -146,14 +146,8 @@ public sealed class NotionRestrictionsE2ETests : NotionE2ETestBase
 
     private async Task<NotionBaselineCapture> CaptureRestrictionBaselineAsync(IPage page, string state, ILocator region)
     {
-        var outputDir = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "restrictions"));
+        var outputDir = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "restrictions");
         Directory.CreateDirectory(outputDir);
 
         var fullPath = Path.Combine(outputDir, $"{state}.png");
@@ -181,14 +175,8 @@ public sealed class NotionRestrictionsE2ETests : NotionE2ETestBase
 
     private async Task<NotionBaselineCapture> CaptureRestrictionClipBaselineAsync(IPage page, string state, ILocator anchor, double width, double height)
     {
-        var outputDir = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "restrictions"));
+        var outputDir = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "restrictions");
         Directory.CreateDirectory(outputDir);
 
         var fullPath = Path.Combine(outputDir, $"{state}.png");

@@ -123,14 +123,8 @@ public sealed class NotionAuthoringContractE2ETests : WasmTestBase
         await Assertions.Expect(advancedTable.Locator("[style*='rgba']").First)
             .ToBeVisibleAsync();
 
-        var outputDirectory = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "agent-contract"));
+        var outputDirectory = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "agent-contract");
         Directory.CreateDirectory(outputDirectory);
         var screenshotPath = Path.Combine(
             outputDirectory,
@@ -180,14 +174,8 @@ public sealed class NotionAuthoringContractE2ETests : WasmTestBase
         using var seedResponse = await seedHttp.PostAsync(TableSeedEndpoint, null);
         seedResponse.EnsureSuccessStatusCode();
 
-        var outputDirectory = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "release-2.7"));
+        var outputDirectory = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "release-2.7");
         Directory.CreateDirectory(outputDirectory);
 
         var context = await CreateContextAsync();

@@ -64,7 +64,7 @@ public sealed class BaselineGeneratorGateTests
         Assert.AreEqual(
             0,
             unguarded.Count,
-            $"these classes rewrite committed baselines without inheriting "
+            $"these classes rewrite baselines without inheriting "
             + $"{nameof(BaselineGeneratorTestBase)}, so an ordinary `dotnet test` would overwrite "
             + $"them: {string.Join(", ", unguarded)}");
     }

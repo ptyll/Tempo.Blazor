@@ -823,7 +823,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
 
     /// <summary>
     /// Routed through <see cref="BaselineOutput"/>: without TM_WRITE_BASELINES the capture lands in
-    /// TestResults, not on the committed baseline. The redirect is deliberately NOT a skip — the
+    /// TestResults, not under the baseline root. The redirect is deliberately NOT a skip — the
     /// tests around these captures assert behaviour.
     /// </summary>
     private string GetBaselineDirectory(string area) =>

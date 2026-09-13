@@ -122,14 +122,8 @@ public sealed class NotionKrDocxFidelityE2ETests : NotionE2ETestBase
 
     private async Task CaptureAsync(IPage page, string name)
     {
-        var output = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "kr-docx-fidelity"));
+        var output = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "kr-docx-fidelity");
         Directory.CreateDirectory(output);
         var fullPath = Path.Combine(output, $"{name}.png");
         var regionPath = Path.Combine(output, $"{name}.region.png");
@@ -151,14 +145,8 @@ public sealed class NotionKrDocxFidelityE2ETests : NotionE2ETestBase
 
     private async Task CaptureTableAsync(ILocator table, string name)
     {
-        var output = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "kr-docx-fidelity"));
+        var output = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "kr-docx-fidelity");
         Directory.CreateDirectory(output);
         var path = Path.Combine(output, $"{name}.png");
         await table.ScreenshotAsync(new LocatorScreenshotOptions

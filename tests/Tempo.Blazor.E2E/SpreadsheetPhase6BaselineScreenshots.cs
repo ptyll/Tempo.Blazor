@@ -6,9 +6,8 @@ namespace Tempo.Blazor.E2E;
 [TestClass]
 public class SpreadsheetPhase6BaselineScreenshots : BaselineGeneratorTestBase
 {
-    private static readonly string BaselineDir = Path.Combine(
-        Path.GetDirectoryName(typeof(SpreadsheetPhase6BaselineScreenshots).Assembly.Location)!,
-        "..", "..", "__baseline__", "spreadsheet", "phase6");
+    private static readonly string BaselineDir =
+        BaselineOutput.DirectoryFor(null, "spreadsheet", "phase6");
 
     [TestMethod]
     public async Task names_01_manager()

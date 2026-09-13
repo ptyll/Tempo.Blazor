@@ -4,11 +4,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Base for the screenshot GENERATORS — classes whose purpose is to (re)write committed PNG
-/// baselines rather than to assert anything about them.
+/// Base for the screenshot GENERATORS — classes whose purpose is to (re)write the PNG baselines
+/// under <c>artifacts/baseline/</c> rather than to assert anything about them.
 /// <para>
 /// It covers ONE of the two ways a run reaches those PNGs, and not the larger one. Ordinary tests
-/// also write committed baselines as a side effect of asserting something else — the Notion suite
+/// also write baselines as a side effect of asserting something else — the Notion suite
 /// does it for 765 files from 276 call sites — and those must not be skipped, because skipping them
 /// would trade a working-tree problem for a coverage hole. They are handled by redirecting their
 /// destination instead (<see cref="BaselineOutput"/>), and what actually holds the line for BOTH
@@ -46,7 +46,7 @@ public abstract class BaselineGeneratorTestBase : WasmTestBase
     /// <summary>Set to <c>1</c>/<c>true</c>/<c>yes</c> to allow the generators to write.</summary>
     public const string EnvironmentVariable = "TM_WRITE_BASELINES";
 
-    /// <summary>Whether the committed baselines may be overwritten by this run.</summary>
+    /// <summary>Whether the baseline root under <c>artifacts/baseline/</c> may be written by this run.</summary>
     public static bool WritesAllowed
     {
         get
@@ -71,7 +71,7 @@ public abstract class BaselineGeneratorTestBase : WasmTestBase
         {
             Assert.Inconclusive(string.Create(
                 CultureInfo.InvariantCulture,
-                $"Baseline generation is off. This test REWRITES committed PNG baselines, so it "
+                $"Baseline generation is off. This test REWRITES the PNG baselines under artifacts/baseline/, so it "
                 + $"only runs when {EnvironmentVariable} is set to 1/true/yes."));
         }
     }

@@ -65,7 +65,7 @@ public class NotionTableE2ETests : WasmTestBase
 
     private async Task CaptureBaselineAsync(IPage page, string state, ILocator region)
     {
-        var outputDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "__baseline__", "notion", "tables");
+        var outputDir = BaselineOutput.DirectoryFor(TestContext, "notion", "tables");
         outputDir = Path.GetFullPath(outputDir);
         Directory.CreateDirectory(outputDir);
 
@@ -121,7 +121,7 @@ public class NotionTableE2ETests : WasmTestBase
         await region.ScrollIntoViewIfNeededAsync();
         await CaptureBaselineAsync(page, state, region);
 
-        var outputDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "__baseline__", "notion", "tables"));
+        var outputDir = BaselineOutput.DirectoryFor(TestContext, "notion", "tables");
         Assert.IsTrue(File.Exists(Path.Combine(outputDir, $"{state}.png")), $"CF11 full-page baseline should be written for {state}.");
         Assert.IsTrue(File.Exists(Path.Combine(outputDir, $"{state}.region.png")), $"CF11 region baseline should be written for {state}.");
     }

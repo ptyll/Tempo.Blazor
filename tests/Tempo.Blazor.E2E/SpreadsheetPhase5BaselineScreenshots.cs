@@ -7,7 +7,7 @@ namespace Tempo.Blazor.E2E;
 /// Phase 5 baseline screenshots: the data validation dialog (Settings tab), the in-cell
 /// dropdown popover, and the Stop-style error alert. Run with the BaselineGeneration
 /// category against a running WASM demo to (re)generate the PNG baselines under
-/// __baseline__/spreadsheet.
+/// artifacts/baseline/spreadsheet.
 /// </summary>
 public partial class SpreadsheetBaselineScreenshots
 {

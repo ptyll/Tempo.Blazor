@@ -15,8 +15,7 @@ public class DocumentEditorBaselineScreenshots : BaselineGeneratorTestBase
     {
         get
         {
-            var dir = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, "..", "..", "..", "__baseline__", "document-editor"));
+            var dir = BaselineOutput.DirectoryFor(null, "document-editor");
             Directory.CreateDirectory(dir);
             return dir;
         }

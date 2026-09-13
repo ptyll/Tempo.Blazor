@@ -111,14 +111,8 @@ public sealed class NotionAtomicTableAuthoringE2ETests : NotionE2ETestBase
 
     private async Task CaptureAsync(IPage page, ILocator table, string name)
     {
-        var output = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            "atomic-table"));
+        var output = BaselineOutput.DirectoryFor(TestContext, "notion",
+            "atomic-table");
         Directory.CreateDirectory(output);
         var fullPath = Path.Combine(output, $"{name}.png");
         var regionPath = Path.Combine(output, $"{name}.region.png");

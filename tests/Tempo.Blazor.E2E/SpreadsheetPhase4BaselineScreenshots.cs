@@ -6,7 +6,7 @@ namespace Tempo.Blazor.E2E;
 /// <summary>
 /// Phase 4 baseline screenshots: the Remove Duplicates dialog, the Text to Columns step-2 live
 /// preview, and the Paste Special dialog. Run with the BaselineGeneration category against a running
-/// WASM demo to (re)generate the PNG baselines under __baseline__/spreadsheet.
+/// WASM demo to (re)generate the PNG baselines under artifacts/baseline/spreadsheet.
 /// </summary>
 public partial class SpreadsheetBaselineScreenshots
 {

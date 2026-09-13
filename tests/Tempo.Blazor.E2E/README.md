@@ -91,6 +91,22 @@ PlaywrightTestBase (abstract)
         └── InteractiveAutoTests
 ```
 
+## Screenshot baselines
+
+Baseline PNGs are **run artefacts, not source**. Since 2.8.26 the repository holds none:
+`tests/Tempo.Blazor.E2E/__baseline__/` must stay empty, and `BaselineWriteSweep` fails the run if a
+PNG ever appears there — staged, indexed, or merely on disk.
+
+- Ordinary captures write to the run's TestResults directory via `BaselineOutput.DirectoryFor`.
+- Regenerating baselines on purpose writes to `artifacts/baseline/` (gitignored):
+
+```bash
+TM_WRITE_BASELINES=1 dotnet test tests/Tempo.Blazor.E2E \
+    --filter "TestCategory=BaselineGeneration"
+```
+
+- Review or publish the PNGs from `artifacts/baseline/` directly; they are never committed.
+
 ## Adding New Tests
 
 1. Create a new test class inheriting from the appropriate base class:

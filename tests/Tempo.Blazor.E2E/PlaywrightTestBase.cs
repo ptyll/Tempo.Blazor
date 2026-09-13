@@ -127,7 +127,7 @@ public abstract class PlaywrightTestBase
         // Deliberately OUTSIDE the loop above: that loop swallows exceptions so a stuck host cannot
         // block teardown, and a baseline failure raised inside it would be silent. This is the last
         // thing the assembly does, so by now every capture the run made has landed.
-        BaselineWriteSweep.AssertNothingWasOverwritten();
+        BaselineWriteSweep.AssertNoBaselinePngsExist();
     }
 
     /// <summary>

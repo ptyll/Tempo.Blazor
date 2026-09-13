@@ -523,14 +523,8 @@ public class NotionSlashMenuE2ETests : WasmTestBase
 
     private async Task CaptureBaselineAsync(IPage page, string area, string state, ILocator region)
     {
-        var outputDir = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..",
-            "..",
-            "..",
-            "__baseline__",
-            "notion",
-            SanitizePathPart(area)));
+        var outputDir = BaselineOutput.DirectoryFor(TestContext, "notion",
+            SanitizePathPart(area));
         Directory.CreateDirectory(outputDir);
 
         var safeState = SanitizePathPart(state);
