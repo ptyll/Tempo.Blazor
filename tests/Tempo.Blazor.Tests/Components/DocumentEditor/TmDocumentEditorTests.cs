@@ -1132,6 +1132,11 @@ public class TmDocumentEditorTests : LocalizationTestBase
             .Single(component => component.Markup.Contains("document-font-color-trigger", StringComparison.Ordinal));
 
         SetDocumentCanvasExecCommandResult("""{"handled":true,"uiState":{"formatting":{"textColor":"#2563eb","alignment":"left"}}}""");
+        // The mini-toolbar notify armed the 200ms toolbar-sync pull; a real engine would answer it
+        // with the colour already applied, so the fake must too — otherwise the pull repaints the
+        // pre-command state over the pushed one and which snapshot the asserts read is a race
+        // (the same fixture/production disagreement f702ca7f closed for the highlight clear below).
+        SetDocumentCanvasFormattingStateJson("""{"textColor":"#2563eb","alignment":"left"}""");
         await cut.InvokeAsync(() => textColorPicker.Instance.ValueChanged.InvokeAsync("#2563EB"));
 
         var textColorInvocation = SetupDocumentCanvasModule().Invocations
