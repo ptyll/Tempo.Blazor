@@ -72,8 +72,13 @@ number.
 
 - **Component JSON documentation has a freshness guard.** `ComponentDocumentationFreshnessTests`
   reflects over every `Tm*.razor` carrying `[Parameter]`, requires a matching
-  `JsonDocumentation/Components/<Component>.json`, and compares parameter sets — the previously
-  undocumented components are a frozen, itemized set.
+  `JsonDocumentation` overlay entry, and compares parameter sets on both layers — overlays may not
+  name a parameter the component lacks, and the committed `tempo-blazor*.json` bundles must cover
+  every settable parameter and name none that do not exist. Previously undocumented components are
+  a frozen, itemized set (currently empty). Writing the guard exposed two generator bugs that had
+  silently shaped the shipped docs: consecutive `[Parameter]` declaration lines were absorbed as
+  continuation attributes so a run emitted only its last parameter, and the `{name}*.cs`
+  code-behind glob folded neighbouring components' parameters into `TmGantt`'s entry.
 
 ### Expected post-publication shape
 

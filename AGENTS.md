@@ -588,6 +588,22 @@ dotnet test --filter "FullyQualifiedName~TmButtonTests"
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
+## Component JSON Documentation
+
+Machine-readable component docs ship as two layers:
+
+- **Overlays** under `JsonDocumentation/` (`Components/*.json` and `Packages/<PackageId>/items/**/*.json`) are the editable source — human descriptions, examples, cssClasses. Parameter entries there are a curated subset; the merge fills the rest from source.
+- **Bundles** at the repo root (`tempo-blazor*.json`, plus the `tempo-blazor-all.json` aggregate) are the generated output that consumers and the MCP server actually read. They are committed — regenerate them after touching `[Parameter]` surface:
+
+```bash
+dotnet run --project JsonDocumentation/JsonDocumentationGenerator/JsonDocumentationGenerator.csproj -- \
+    JsonDocumentation generate
+```
+
+`ComponentDocumentationFreshnessTests` (`tests/Tempo.Blazor.Tests/Documentation/`) keeps both layers honest: every non-abstract `Tm*` component carrying `[Parameter]` must have an overlay entry (the undocumented set is frozen and may only shrink), overlays may not document parameters that no longer exist, and the committed bundles must cover the full settable parameter surface — so a parameter change without a regeneration fails the test.
+
+Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` splats (`AdditionalAttributes`) are never documented; parameters inherited from a documented base (`TmComponentBase.DataTestId`, `TestIdPrefix`) are attributed to the base's entry, not repeated per component.
+
 ## Language Note
 
 - **Code, XML documentation, and comments**: English
