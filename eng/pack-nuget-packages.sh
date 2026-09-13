@@ -456,7 +456,7 @@ fi
 # WHY NOT MOVE THE BUNDLE OUT OF THE TREE INSTEAD. That was the other candidate: generate into obj/
 # and take it into the package from there, after which no check afterwards would be needed. It was
 # rejected on measurement, not taste. Five test files read that bundle from its committed location
-# (OrphanClassCssContractTests, CodeEditorWrapStylesheetTests, CssBundleCalcWhitespaceTests,
+# (MarkupClassCoverageTests, CodeEditorWrapStylesheetTests, CssBundleCalcWhitespaceTests,
 # CssBundlerInputSourceTests, TmSignatureCaptureTests), and CssBundleCalcWhitespaceTests asserts on
 # the COMMITTED bundle deliberately — its own doc records that the sources were fine all along, so a
 # guard over them would measure a permanently green population. Moving the file to a directory
