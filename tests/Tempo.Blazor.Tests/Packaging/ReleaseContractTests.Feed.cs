@@ -1,7 +1,9 @@
 using FluentAssertions.Execution;
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Tempo.Blazor.Tests.Packaging;
 
@@ -45,12 +47,17 @@ public sealed partial class ReleaseContractTests
     /// order and a signature block, so byte equality of the ARCHIVE is not achievable in general and a
     /// gate resting on it would go red for reasons that have nothing to do with content. What is
     /// compared is the CONTENT ITEMS, and the denominator is derived from the source rather than
-    /// chosen: every file under the package's own <c>src/&lt;project&gt;/wwwroot</c>, which the SDK
-    /// packs to <c>staticwebassets/&lt;relative path&gt;</c>. Measured on 2.8.23 for the lead: 168
-    /// files in the tree, 168 present in the package, 168 byte-identical. A hand-picked list would
-    /// shrink to whichever file somebody once cared about — the <c>MeasuredSites</c> mistake — so the
-    /// count carries a floor and a package entry with no counterpart in the tree is REPORTED rather
-    /// than ignored.
+    /// chosen: every file under the package's own <c>src/&lt;project&gt;/wwwroot</c> which the SDK
+    /// packs to <c>staticwebassets/&lt;relative path&gt;</c> — that is, every file there MINUS the
+    /// ones the project's own csproj declares <c>Pack="false"</c>. The subtraction is not cosmetic:
+    /// on 2.8.26 the DocumentEditor denominator counted 140 files its csproj intentionally never
+    /// packs (<c>*.test.mjs</c>, <c>__tests__</c>, <c>*.md</c>, <c>.gitkeep</c> under
+    /// <c>wwwroot/js</c>) and reported every one of them <c>missing</c> against a package that was
+    /// byte-correct — the artefact was right and the denominator was wrong. Measured on 2.8.23 for
+    /// the lead: 168 files in the tree, 168 present in the package, 168 byte-identical. A
+    /// hand-picked list would shrink to whichever file somebody once cared about — the
+    /// <c>MeasuredSites</c> mistake — so the count carries a floor and a package entry with no
+    /// counterpart in the tree is REPORTED rather than ignored.
     /// </para>
     /// <para>
     /// WHAT THE COMPARISON CANNOT SEE IS REGISTERED, NOT IGNORED: everything under <c>lib/</c> — the
@@ -330,7 +337,8 @@ public sealed partial class ReleaseContractTests
     /// </summary>
     /// <param name="PackageId">The package id this provenance is about — one row per manifest entry.</param>
     /// <param name="Version">The announced version this provenance is about.</param>
-    /// <param name="TreeFileCount">The denominator: files found under the package's <c>wwwroot</c>.</param>
+    /// <param name="TreeFileCount">The denominator: files found under the package's <c>wwwroot</c>
+    /// after the csproj's <c>Pack="false"</c> globs are subtracted — what the SDK actually packs.</param>
     /// <param name="Matching">Items present in both and byte-identical.</param>
     /// <param name="Differing">Items present in both whose bytes differ — the finding.</param>
     /// <param name="Missing">Items the tree builds that the package does not carry.</param>
@@ -365,12 +373,25 @@ public sealed partial class ReleaseContractTests
         /// <summary>Where the compiled assemblies sit — counted, never compared.</summary>
         private const string LibraryRoot = "lib/";
 
+        /// <summary>
+        /// How many <c>Pack="false"</c> globs the project's csproj declared — counted whether or not
+        /// any of them reaches a file under <c>wwwroot</c>, because a population nobody counts is a
+        /// population whose drift nobody sees. Not positional: the record predates the model and the
+        /// sweep is the only place that knows it, so it is set with <c>with</c> where it is measured.
+        /// </summary>
+        internal int PackExcludedPatterns { get; init; }
+
+        /// <summary>How many <c>wwwroot</c> files the globs subtracted from the denominator.</summary>
+        internal int PackExcludedFiles { get; init; }
+
         internal string PackageUrl =>
             $"https://api.nuget.org/v3-flatcontainer/{PackageId.ToLowerInvariant()}/{Version}/"
             + $"{PackageId.ToLowerInvariant()}.{Version}.nupkg";
 
         internal string Report =>
-            $"[Provenance] id={PackageId} version={Version} tree-files={TreeFileCount} matching={Matching.Count} "
+            $"[Provenance] id={PackageId} version={Version} tree-files={TreeFileCount} "
+            + $"pack-excluded-patterns={PackExcludedPatterns} pack-excluded-files={PackExcludedFiles} "
+            + $"matching={Matching.Count} "
             + $"differing={Differing.Count} missing={Missing.Count} extra-in-package={ExtraInPackage.Count} "
             + $"nonreproducible={NonReproducible.Count} "
             + $"elapsed-ms={ElapsedMilliseconds} url={PackageUrl}"
@@ -381,13 +402,18 @@ public sealed partial class ReleaseContractTests
         internal static PackageProvenance Take(string packageId, string version, string projectDirectory)
         {
             var stopwatch = Stopwatch.StartNew();
-            var tree = TreeContent(projectDirectory);
+            var denominator = TreeContent(projectDirectory);
+            var tree = denominator.Files;
 
             try
             {
                 using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
                 var empty = new PackageProvenance(
-                    packageId, version, tree.Count, [], [], [], [], [], 0, null);
+                    packageId, version, tree.Count, [], [], [], [], [], 0, null)
+                {
+                    PackExcludedPatterns = denominator.PackExcludedPatterns,
+                    PackExcludedFiles = denominator.PackExcludedFiles,
+                };
 
                 // THE ARTEFACT IS CONFIRMED BY ITS EXACT URL BEFORE IT IS DOWNLOADED. The index
                 // listing the version and the package object existing are two different states of
@@ -439,14 +465,22 @@ public sealed partial class ReleaseContractTests
                 }
 
                 return Compare(packageId, version, tree, packed, nonReproducible,
-                    stopwatch.ElapsedMilliseconds);
+                    stopwatch.ElapsedMilliseconds) with
+                {
+                    PackExcludedPatterns = denominator.PackExcludedPatterns,
+                    PackExcludedFiles = denominator.PackExcludedFiles,
+                };
             }
             catch (Exception error) when (error is HttpRequestException or TaskCanceledException
                                               or InvalidDataException or IOException)
             {
                 return new PackageProvenance(
                     packageId, version, tree.Count, [], [], [], [], [], stopwatch.ElapsedMilliseconds,
-                    $"{error.GetType().Name}: {error.Message}");
+                    $"{error.GetType().Name}: {error.Message}")
+                {
+                    PackExcludedPatterns = denominator.PackExcludedPatterns,
+                    PackExcludedFiles = denominator.PackExcludedFiles,
+                };
             }
         }
 
@@ -492,33 +526,365 @@ public sealed partial class ReleaseContractTests
                 nonReproducible, elapsedMilliseconds, null);
         }
 
-        /// <summary>Exposes the source-derived denominator so its own guard can measure it.</summary>
-        internal static IReadOnlyDictionary<string, string> TreeContentForTests() =>
-            TreeContent("Tempo.Blazor");
+        /// <summary>
+        /// What the sweep subtracted and what it left. The denominator is a population, so the count
+        /// of exclusion patterns and of files they removed is part of the record — a model that
+        /// changed nothing and a model that read nothing must not produce the same report line.
+        /// </summary>
+        /// <param name="Files"><c>wwwroot</c>-relative path → content hash, <c>Pack="false"</c>
+        /// matches already removed.</param>
+        /// <param name="PackExcludedPatterns"><c>Pack="false"</c> globs the project's csproj
+        /// declared — counted even when none of them reaches a file under <c>wwwroot</c>, because
+        /// "the pattern matched nothing" and "the pattern was never read" must not look alike.</param>
+        /// <param name="PackExcludedFiles"><c>wwwroot</c> files the globs subtracted.</param>
+        internal sealed record TreeDenominator(
+            IReadOnlyDictionary<string, string> Files,
+            int PackExcludedPatterns,
+            int PackExcludedFiles);
 
         /// <summary>
-        /// The denominator, derived from the source tree: every file the SDK packs out of the
-        /// package's own <c>src/&lt;projectDirectory&gt;/wwwroot</c>. Enumerated, never listed by
-        /// hand. A project with no <c>wwwroot</c> yields an empty denominator — a package that is
-        /// all <c>lib/**</c> then reports exactly that, rather than pretending to have been compared.
+        /// One <c>Pack="false"</c> Include glob lifted out of the project's csproj.
+        /// <see cref="UnderWwwroot"/> is null when the pattern's first segment is not
+        /// <c>wwwroot</c> — such a glob can never reach a swept file, yet it is still counted in
+        /// <see cref="TreeDenominator.PackExcludedPatterns"/>: the population of the model stays
+        /// visible even where it bites nothing.
         /// </summary>
-        private static Dictionary<string, string> TreeContent(string projectDirectory)
+        private sealed record PackExclusion(string RawPattern, Regex? UnderWwwroot)
         {
-            var root = Path.Combine(FindRepoRoot(), "src", projectDirectory, "wwwroot");
-            var content = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (!Directory.Exists(root))
-            {
-                return content;
-            }
-
-            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
-            {
-                var relative = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
-                content[relative] = Hash(File.ReadAllBytes(file));
-            }
-
-            return content;
+            internal bool AppliesUnderWwwroot(string wwwrootRelativePath) =>
+                UnderWwwroot?.IsMatch(wwwrootRelativePath) == true;
         }
+
+        /// <summary>
+        /// The denominator, derived from the source tree: every file under the package's own
+        /// <c>src/&lt;projectDirectory&gt;/wwwroot</c> that the SDK actually packs — which is every
+        /// file there MINUS the ones matching a <c>Pack="false"</c> glob in the project's csproj.
+        /// Enumerated, never listed by hand. A project with no <c>wwwroot</c> yields an empty
+        /// denominator — a package that is all <c>lib/**</c> then reports exactly that, rather than
+        /// pretending to have been compared.
+        /// </summary>
+        /// <remarks>
+        /// WHY THE SUBTRACTION EXISTS, measured not imagined: without it the 2.8.26 run reported
+        /// <c>tempo.blazor.documenteditor</c> <c>missing=140</c> — every one a
+        /// <c>*.test.mjs</c>/<c>__tests__</c>/<c>*.md</c>/<c>.gitkeep</c> file the csproj declares
+        /// <c>Pack="false"</c> precisely so it never reaches the package. The artefact was correct
+        /// and the denominator was wrong; a gate that goes red over a correct release teaches its
+        /// readers to bump past it.
+        /// </remarks>
+        internal static TreeDenominator TreeContent(string projectDirectory) =>
+            TreeContentUnder(Path.Combine(FindRepoRoot(), "src", projectDirectory));
+
+        /// <summary>
+        /// The sweep over an arbitrary project directory — the seam
+        /// <c>ProvenanceComparisonTests</c> drives with a synthetic csproj and a synthetic
+        /// <c>wwwroot</c>, so the parse, the glob translation and the subtraction are all exercised
+        /// without touching the real tree.
+        /// </summary>
+        internal static TreeDenominator TreeContentUnder(string projectRoot)
+        {
+            var exclusions = ReadPackExclusions(projectRoot);
+
+            var root = Path.Combine(projectRoot, "wwwroot");
+            var files = new Dictionary<string, string>(StringComparer.Ordinal);
+            var excluded = 0;
+            if (Directory.Exists(root))
+            {
+                foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                {
+                    var relative = Path.GetRelativePath(root, file)
+                        .Replace(Path.DirectorySeparatorChar, '/');
+                    if (exclusions.Any(exclusion => exclusion.AppliesUnderWwwroot(relative)))
+                    {
+                        excluded++;
+                        continue;
+                    }
+
+                    files[relative] = Hash(File.ReadAllBytes(file));
+                }
+            }
+
+            return new TreeDenominator(files, exclusions.Count, excluded);
+        }
+
+        /// <summary>
+        /// The <c>Pack="false"</c> model, read out of the project's csproj as XML: every item
+        /// element carrying <c>Pack</c> is classified — <c>true</c> is not an exclusion,
+        /// <c>false</c> contributes its <c>Include</c> glob(s), and anything else is a value this
+        /// model cannot measure.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// FAIL-CLOSED on every shape the model cannot evaluate. A glob the parser cannot read —
+        /// <c>$(…)</c>/<c>@(…)</c>/<c>%(…)</c>/<c>${…}</c> substitutions, a <c>Condition</c> on the
+        /// item or an ancestor, an <c>Update</c>/<c>Remove</c>/<c>Exclude</c> spec, a partial
+        /// <c>**</c> segment, a rooted or parent-escaping path, an item sitting under something
+        /// other than <c>ItemGroup</c>/<c>Project</c> — throws instead of guessing: an unmeasurable
+        /// exclusion that is silently ignored widens the denominator and reports intentionally
+        /// unpacked files as <c>missing</c>, which is the exact false red this model exists to
+        /// remove. Unmeasurable beats a wrong pass.
+        /// </para>
+        /// <para>
+        /// NAMED GAPS, stated so they are read as limits rather than oversights. (i) The sibling
+        /// <c>&lt;Content Remove="wwwroot\…"&gt;</c> lines that actually de-pack the files are not
+        /// modelled — the <c>Pack="false"</c> items are the declared, readable half of the same set,
+        /// and in every csproj here the two are textually paired. (ii) <c>Update</c>/<c>Remove</c>
+        /// item specs are not expanded — out of the model's scope, and any of them carrying
+        /// <c>Pack="false"</c> throws rather than being skipped. (iii) <c>Pack</c> metadata arriving
+        /// through an imported <c>Directory.Build.props</c>/<c>.targets</c> resolves relative to the
+        /// IMPORTING file's directory — a base this model cannot reproduce — so any
+        /// <c>Pack</c>-bearing element on the import chain between the project and the repository
+        /// root is unmeasurable and throws. Today that chain carries none.
+        /// </para>
+        /// </remarks>
+        private static IReadOnlyList<PackExclusion> ReadPackExclusions(string projectRoot)
+        {
+            var csprojFiles = Directory.Exists(projectRoot)
+                ? Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.TopDirectoryOnly)
+                    .ToList()
+                : [];
+            if (csprojFiles.Count > 1)
+            {
+                throw new InvalidOperationException(
+                    $"{projectRoot} holds {csprojFiles.Count} csproj files — which one packs is "
+                    + "ambiguous, and picking one would let a Pack=\"false\" glob in the unread one "
+                    + "widen the denominator");
+            }
+
+            var exclusions = new List<PackExclusion>();
+            if (csprojFiles.Count == 0)
+            {
+                // A wwwroot without a csproj is the one case where 'no exclusions' is a guess —
+                // the exclusion model cannot be read at all, so the sweep refuses rather than
+                // reports an unmeasured denominator. No wwwroot means nothing to measure and the
+                // empty answer is honest.
+                if (Directory.Exists(Path.Combine(projectRoot, "wwwroot")))
+                {
+                    throw new InvalidOperationException(
+                        $"{projectRoot} has a wwwroot but no csproj — the Pack=\"false\" model "
+                        + "cannot be read, and a denominator swept without it reports intentional "
+                        + "exclusions as missing");
+                }
+
+                return exclusions;
+            }
+
+            var csproj = csprojFiles[0];
+            CollectPackExclusions(XDocument.Load(csproj), csproj, exclusions);
+
+            var repositoryRoot = FindRepoRoot();
+            for (var directory = new DirectoryInfo(projectRoot);
+                 directory is not null
+                 && (string.Equals(directory.FullName, repositoryRoot, StringComparison.Ordinal)
+                     || directory.FullName.StartsWith(
+                         repositoryRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal));
+                 directory = directory.Parent)
+            {
+                foreach (var importedName in new[] { "Directory.Build.props", "Directory.Build.targets" })
+                {
+                    var imported = Path.Combine(directory.FullName, importedName);
+                    if (!File.Exists(imported))
+                    {
+                        continue;
+                    }
+
+                    var bearer = XDocument.Load(imported).Descendants().FirstOrDefault(
+                        element => element.Attributes().Any(
+                            attribute => string.Equals(
+                                attribute.Name.LocalName, "Pack", StringComparison.OrdinalIgnoreCase)));
+                    if (bearer is not null)
+                    {
+                        throw new InvalidOperationException(
+                            $"{imported}: <{bearer.Name.LocalName}> carries Pack metadata — items "
+                            + "from an imported props/targets resolve relative to the importing "
+                            + "file's directory, a base this model cannot reproduce, so the "
+                            + "exclusion set is unmeasurable and the run fails closed");
+                    }
+                }
+            }
+
+            return exclusions;
+        }
+
+        /// <summary>
+        /// Classifies every <c>Pack</c>-bearing element in one project file. Only a plain,
+        /// unconditional <c>Include</c> is measurable; the rest throws. Element and attribute NAMES
+        /// are matched case-insensitively because MSBuild's own are.
+        /// </summary>
+        private static void CollectPackExclusions(
+            XDocument document, string sourcePath, List<PackExclusion> into)
+        {
+            foreach (var element in document.Descendants())
+            {
+                var pack = AttributeNamed(element, "Pack")?.Value;
+                if (pack is null
+                    || string.Equals(pack.Trim(), "true", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var name = element.Name.LocalName;
+                if (!string.Equals(pack.Trim(), "false", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"{sourcePath}: <{name}> Pack=\"{pack}\" is not a literal true/false — "
+                        + "evaluated Pack metadata is a shape this model cannot measure, and an "
+                        + "unmeasurable exclusion must never pass as a wider denominator");
+                }
+
+                if (element.Ancestors().Any(
+                        ancestor => ancestor.Name.LocalName is not ("ItemGroup" or "Project"))
+                    || element.AncestorsAndSelf().Any(
+                        ancestor => AttributeNamed(ancestor, "Condition") is not null))
+                {
+                    throw new InvalidOperationException(
+                        $"{sourcePath}: <{name}> Pack=\"false\" sits under a condition or outside a "
+                        + "plain ItemGroup — whether it fires is build-time state this model does "
+                        + "not run, so the exclusion set is unmeasurable");
+                }
+
+                if (AttributeNamed(element, "Update") is not null
+                    || AttributeNamed(element, "Remove") is not null
+                    || AttributeNamed(element, "Exclude") is not null)
+                {
+                    throw new InvalidOperationException(
+                        $"{sourcePath}: <{name}> Pack=\"false\" carries Update/Remove/Exclude — "
+                        + "the resulting item set is an evaluated one, and evaluating it wrongly "
+                        + "would report intentionally unpacked files as missing (or the reverse)");
+                }
+
+                var include = AttributeNamed(element, "Include")?.Value;
+                if (string.IsNullOrWhiteSpace(include))
+                {
+                    throw new InvalidOperationException(
+                        $"{sourcePath}: <{name}> Pack=\"false\" without Include declares no file "
+                        + "set — a shape the denominator cannot subtract");
+                }
+
+                // MSBuild list syntax: one Include attribute can carry several globs.
+                foreach (var piece in include.Split(';'))
+                {
+                    var pattern = piece.Trim();
+                    if (pattern.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    into.Add(CompilePackExclusion(pattern, sourcePath));
+                }
+            }
+        }
+
+        /// <summary>
+        /// One Include glob → one matcher over <c>wwwroot</c>-relative paths. The glob language is
+        /// MSBuild's own: separators <c>\</c> and <c>/</c> normalize to <c>/</c>, <c>**</c> as a
+        /// WHOLE segment matches zero or more directories, <c>*</c>/<c>?</c> inside a segment never
+        /// cross a separator, and matching is case-insensitive because MSBuild's file matching is.
+        /// Every other shape throws — the caller cannot tell "excluded nothing" from "was not
+        /// understood", so an unreadable pattern is never allowed to pass as one.
+        /// </summary>
+        private static PackExclusion CompilePackExclusion(string rawPattern, string sourcePath)
+        {
+            var pattern = rawPattern.Replace('\\', '/');
+
+            if (pattern.Contains("$(") || pattern.Contains("${")
+                || pattern.Contains("@(") || pattern.Contains("%("))
+            {
+                throw new InvalidOperationException(
+                    $"{sourcePath}: Pack=\"false\" glob '{rawPattern}' carries an MSBuild "
+                    + "substitution — an evaluated pattern is a shape this model cannot measure, "
+                    + "and treating it as literal would both exclude nothing and say nothing");
+            }
+
+            var segments = pattern.Split('/');
+            if (pattern.Contains(':')
+                || segments.Any(segment => segment.Length == 0))
+            {
+                throw new InvalidOperationException(
+                    $"{sourcePath}: Pack=\"false\" glob '{rawPattern}' is rooted, an ADS name or "
+                    + "carries an empty segment — none of them is a project-relative glob this "
+                    + "model can apply");
+            }
+
+            if (segments.Any(segment => segment is "." or ".."))
+            {
+                throw new InvalidOperationException(
+                    $"{sourcePath}: Pack=\"false\" glob '{rawPattern}' walks off the project "
+                    + "directory — the sweep's keys never contain '.' or '..', so a pattern that "
+                    + "does is a shape the matcher cannot express honestly");
+            }
+
+            if (segments.Any(segment => segment != "**" && segment.Contains("**")))
+            {
+                throw new InvalidOperationException(
+                    $"{sourcePath}: Pack=\"false\" glob '{rawPattern}' embeds '**' inside a "
+                    + "segment — MSBuild's own matcher gives that a meaning this translation does "
+                    + "not reproduce, so it fails closed rather than widening silently");
+            }
+
+            // The sweep's keys are relative to wwwroot; a glob whose first segment is not
+            // 'wwwroot' can never reach one. It is still COUNTED — see TreeDenominator.
+            if (segments.Length == 1
+                || !string.Equals(segments[0], "wwwroot", StringComparison.OrdinalIgnoreCase))
+            {
+                return new PackExclusion(rawPattern, null);
+            }
+
+            return new PackExclusion(rawPattern, new Regex(
+                "^" + GlobToRegex(segments[1..]) + "$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
+        }
+
+        /// <summary>
+        /// Glob segments → regex body (no anchors). A mid-pattern <c>**</c> owns the separator that
+        /// follows it — <c>a/**/b</c> compiles to <c>a/(?:[^/]+/)*b</c>, so zero directory levels
+        /// still match — and a trailing <c>**</c> is "anything below".
+        /// </summary>
+        private static string GlobToRegex(IReadOnlyList<string> segments)
+        {
+            var builder = new StringBuilder();
+            var needsSeparator = false;
+            for (var index = 0; index < segments.Count; index++)
+            {
+                var segment = segments[index];
+                if (segment == "**")
+                {
+                    if (needsSeparator)
+                    {
+                        builder.Append('/');
+                    }
+
+                    builder.Append(index == segments.Count - 1 ? ".*" : "(?:[^/]+/)*");
+                    needsSeparator = false;
+                    continue;
+                }
+
+                if (needsSeparator)
+                {
+                    builder.Append('/');
+                }
+
+                foreach (var c in segment)
+                {
+                    builder.Append(c switch
+                    {
+                        '*' => "[^/]*",
+                        '?' => "[^/]",
+                        _ when ".\\+()[]{}^$|".IndexOf(c) >= 0 => "\\" + c,
+                        _ => c.ToString(),
+                    });
+                }
+
+                needsSeparator = true;
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>An XML attribute by name, case-insensitively — MSBuild's attribute names are.</summary>
+        private static XAttribute? AttributeNamed(XElement element, string name) =>
+            element.Attributes().FirstOrDefault(
+                attribute => string.Equals(
+                    attribute.Name.LocalName, name, StringComparison.OrdinalIgnoreCase));
 
         private static string Hash(byte[] bytes) =>
             Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));

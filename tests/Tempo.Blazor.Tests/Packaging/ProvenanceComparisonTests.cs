@@ -203,7 +203,8 @@ public class ProvenanceComparisonTests
     [Fact]
     public void TheDenominatorIsTheWholeWwwroot()
     {
-        var tree = ReleaseContractTests.PackageProvenance.TreeContentForTests();
+        var denominator = ReleaseContractTests.PackageProvenance.TreeContent("Tempo.Blazor");
+        var tree = denominator.Files;
 
         tree.Should().HaveCountGreaterThan(
             120,
@@ -213,6 +214,142 @@ public class ProvenanceComparisonTests
         tree.Should().ContainKey("css/tokens.css");
         tree.Keys.Should().AllSatisfy(key => key.Should().NotContain("\\", "paths are compared in the "
             + "package's separator, so a Windows run must not produce a different denominator"));
+
+        denominator.PackExcludedPatterns.Should().Be(
+            3,
+            "src/Tempo.Blazor/Tempo.Blazor.csproj declares three Pack=false globs — *.test.mjs, "
+            + "__tests__ and *.md under wwwroot/js. They currently match nothing, and 'read and "
+            + "empty' must not look like 'never read'");
+        denominator.PackExcludedFiles.Should().Be(0);
+    }
+
+    /// <summary>
+    /// The denominator is what the SDK packs, not what the directory holds: Pack="false" globs in
+    /// the project's own csproj are subtracted before the comparison. Driven end-to-end over a
+    /// synthetic project so the csproj parse, the glob translation and the subtraction are all
+    /// exercised — without it the 2.8.26 run reported tempo.blazor.documenteditor missing=140,
+    /// every one a file the csproj intentionally never packs.
+    /// </summary>
+    [Fact]
+    public void PackFalseGlobs_AreSubtractedFromTheDenominator_AndCounted()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "provenance-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            WriteTreeFile(root, "wwwroot/js/x/y.test.mjs");            // excluded: **\*.test.mjs
+            WriteTreeFile(root, "wwwroot/js/top.test.mjs");            // excluded: '**' covers ZERO segments
+            WriteTreeFile(root, "wwwroot/js/x/y.mjs");                 // kept: *.test.mjs must not reach y.mjs
+            WriteTreeFile(root, "wwwroot/js/x/__tests__/deep/harness.mjs"); // excluded: __tests__ below depth
+            WriteTreeFile(root, "wwwroot/js/__tests__/top.mjs");       // excluded: __tests__ at depth zero
+            WriteTreeFile(root, "wwwroot/js/x/notes.md");              // excluded: **\*.md
+            WriteTreeFile(root, "wwwroot/js/x/.gitkeep");              // excluded: **\.gitkeep
+            WriteTreeFile(root, "wwwroot/css/app.css");                // kept: outside js/ entirely
+            File.WriteAllText(Path.Combine(root, "Synthetic.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk.Razor">
+                  <ItemGroup>
+                    <None Include="wwwroot\js\**\*.test.mjs" Pack="false" Visible="false" />
+                    <None Include="wwwroot\js\**\__tests__\**" Pack="false" Visible="false" />
+                    <None Include="wwwroot\js\**\*.md" Pack="false" Visible="false" />
+                    <None Include="wwwroot\js\**\.gitkeep" Pack="false" Visible="false" />
+                    <None Include="obj\generated\**\*.tmp" Pack="false" />
+                  </ItemGroup>
+                </Project>
+                """);
+
+            var denominator = ReleaseContractTests.PackageProvenance.TreeContentUnder(root);
+
+            denominator.PackExcludedPatterns.Should().Be(
+                5,
+                "the obj\\ pattern never reaches wwwroot and is STILL counted — the model's "
+                + "population must be visible, or 'matched nothing' and 'was never read' look alike");
+            denominator.PackExcludedFiles.Should().Be(6);
+            denominator.Files.Keys.OrderBy(key => key, StringComparer.Ordinal).Should().Equal(
+                "css/app.css", "js/x/y.mjs");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// A Pack="false" shape the model cannot evaluate must fail closed: an unmeasurable exclusion
+    /// that is silently ignored widens the denominator and reports intentionally unpacked files as
+    /// missing — the exact false red this model exists to remove. Each case throws rather than
+    /// guesses, and the thrown message names the shape it could not read.
+    /// </summary>
+    [Fact]
+    public void APackFalseShapeTheModelCannotEvaluate_Throws_InsteadOfGuessingTheDenominator()
+    {
+        var cases = new (string Shape, string Item)[]
+        {
+            ("a substitution", """<None Include="wwwroot\js\$(Kind)\**\*.mjs" Pack="false" />"""),
+            ("a condition", """<None Include="wwwroot\js\**\*.mjs" Pack="false" Condition="'$(ShipJs)'=='true'" />"""),
+            ("an update", """<None Update="wwwroot\js\**\*.mjs" Pack="false" />"""),
+            ("an exclude", """<None Include="wwwroot\js\**\*.mjs" Exclude="wwwroot\js\keep.mjs" Pack="false" />"""),
+            ("a partial **", """<None Include="wwwroot\js\a**b\*.mjs" Pack="false" />"""),
+            ("an evaluated pack", """<None Include="wwwroot\js\**\*.mjs" Pack="$(ShipJs)" />"""),
+        };
+
+        foreach (var (shape, item) in cases)
+        {
+            var root = Path.Combine(Path.GetTempPath(), "provenance-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                WriteTreeFile(root, "wwwroot/js/x.mjs");
+                File.WriteAllText(Path.Combine(root, "Synthetic.csproj"),
+                    $"<Project><ItemGroup>{item}</ItemGroup></Project>");
+
+                Action act = () => ReleaseContractTests.PackageProvenance.TreeContentUnder(root);
+
+                act.Should().Throw<InvalidOperationException>(
+                    $"{shape} makes the exclusion set depend on evaluation this model does not "
+                    + "run — unmeasurable must fail the run, never pass as a wrong denominator");
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The fix measured on the tree that motivated it: DocumentEditor's csproj subtracts four globs
+    /// — 140 files on 2.8.26 — and the denominator keeps only what the package can carry. The exact
+    /// file count is deliberately not pinned (js sources come and go); what is pinned is that no
+    /// test or placeholder artefact survives the subtraction, because surviving is what 'missing'
+    /// was reporting.
+    /// </summary>
+    [Fact]
+    public void TheDocumentEditorDenominator_DropsItsPackFalseFiles_NotItsPackedOnes()
+    {
+        var denominator = ReleaseContractTests.PackageProvenance.TreeContent(
+            "Tempo.Blazor.DocumentEditor");
+
+        denominator.PackExcludedPatterns.Should().Be(
+            4,
+            "src/Tempo.Blazor.DocumentEditor/Tempo.Blazor.DocumentEditor.csproj declares four "
+            + "Pack=false globs; a fifth has to reach this number, not hide inside it");
+        denominator.PackExcludedFiles.Should().BeGreaterThan(
+            0,
+            "the 2.8.26 package lacked exactly these files and the gate read them as missing=140");
+        denominator.Files.Keys.Should().NotContain(
+            key => key.EndsWith(".test.mjs", StringComparison.Ordinal),
+            "*.test.mjs under wwwroot/js is Pack=false — every one left in the denominator reports "
+            + "missing against a package that correctly never carried it");
+        denominator.Files.Keys.Should().NotContain(key => key.Contains("__tests__/"));
+        denominator.Files.Should().ContainKey(
+            "css/tempo-blazor-document-editor.css",
+            "packed assets must survive the subtraction — an exclusion model that eats the real "
+            + "payload is the same wrong denominator in the other direction");
+    }
+
+    /// <summary>Writes a file into a synthetic project tree, creating its directories.</summary>
+    private static void WriteTreeFile(string root, string relative)
+    {
+        var path = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, relative);
     }
 
     /// <summary>
