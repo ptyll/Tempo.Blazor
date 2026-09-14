@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.8.27 (unreleased)
+
+Test-surface and documentation hardening only — no shipped-component changes since 2.8.26. The
+number had to open anyway: `v2.8.26` is a spent tag naming `ae72ffe0`, and the announce commit is
+conventionally the first commit after the tag — these four landed without it, which is exactly the
+red `AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` is written to refuse.
+
+### Tests & docs
+
+- **`b2aedb6e`** — the sweep treats a dirty starting tree as a failed run rather than reclassifying
+  the outcome DISABLED.
+- **`f3d3c136`** — the wwwroot provenance denominator subtracts csproj `Pack="false"` globs, so the
+  count it divides by is the population the pack actually sees.
+- **`4f0afe7a`**, **`d6eb7a55`** — documentation: the descendant-selector scope limit and the known
+  RTE label residual are declared; the pack-script comment names the renamed
+  `MarkupClassCoverageTests`.
+
 ## 2.8.26 - 2026-09-13
 
 The promised content of this release is EXACTLY the D17 register items (all four groups) plus D2 and
