@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
 
@@ -14,18 +16,25 @@ public class TmSearchInputTests : LocalizationTestBase
     private const int DebounceMs = 60;
 
     /// <summary>
-    /// Polls until <paramref name="condition"/> holds or the timeout expires. ValueChanged does not
-    /// re-render the component when the consumer does not feed Value back, so bUnit's
-    /// WaitForAssertion (which only re-evaluates on renders) cannot be used here.
+    /// Registers a FakeTimeProvider as the component's debounce clock. "The debounce deadline
+    /// has passed" then means <see cref="FakeTimeProvider.Advance"/> crossed it — a timer that
+    /// survived cancellation fires synchronously inside Advance, inside the test, so a missing
+    /// cancellation can no longer hide behind an assertion read too early.
     /// </summary>
-    private static void WaitUntil(Func<bool> condition, int timeoutMs = 2000)
+    private FakeTimeProvider UseFakeClock()
     {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        while (!condition() && DateTime.UtcNow < deadline)
-        {
-            Thread.Sleep(10);
-        }
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        return time;
     }
+
+    /// <summary>
+    /// Drains renderer-dispatched work queued by timer callbacks. A fired debounce callback hops
+    /// to the renderer via InvokeAsync; awaiting a queued no-op behind it guarantees every
+    /// earlier-queued delivery has already run when the assert executes.
+    /// </summary>
+    private static Task DrainDispatcherAsync(IRenderedComponent<TmSearchInput> cut)
+        => cut.InvokeAsync(() => { });
 
     [Fact]
     public void TmSearchInput_Renders_Search_Input()
@@ -112,8 +121,9 @@ public class TmSearchInputTests : LocalizationTestBase
     /// string.Empty forever.
     /// </summary>
     [Fact]
-    public void TmSearchInput_Debounced_Input_Then_Change_Delivers_Once_When_Value_Not_Supplied()
+    public async Task TmSearchInput_Debounced_Input_Then_Change_Delivers_Once_When_Value_Not_Supplied()
     {
+        var time = UseFakeClock();
         var delivered = new ConcurrentQueue<string>();
         var cut = Render<TmSearchInput>(p => p
             .Add(c => c.DebounceMs, DebounceMs)
@@ -124,11 +134,12 @@ public class TmSearchInputTests : LocalizationTestBase
         input.Change("abc");  // blur/Enter for the same edit — delivers immediately
 
         delivered.Should().ContainSingle().Which.Should().Be("abc");
+        cut.Instance.HasPendingDebounce.Should().BeFalse("`change` must disarm the pending debounce");
 
-        // The barrier is the disarmed timer: `change` cancels the pending debounce, so once
-        // HasPendingDebounce reads false no second delivery can arrive. A timer that escaped
-        // cancellation stays armed — and fires inside this wait, taking the delivery count to 2.
-        WaitUntil(() => !cut.Instance.HasPendingDebounce);
+        // The barrier is fake time crossing the deadline: a timer `change` failed to cancel fires
+        // HERE — inside the test, before the assert — and would take the delivery count to 2.
+        time.Advance(TimeSpan.FromMilliseconds(DebounceMs + 1));
+        await DrainDispatcherAsync(cut);
         delivered.Should().ContainSingle().Which.Should().Be("abc");
     }
 
@@ -139,8 +150,9 @@ public class TmSearchInputTests : LocalizationTestBase
     /// consumer again supplies no Value, so a Value-based comparison would not suppress it.
     /// </summary>
     [Fact]
-    public void TmSearchInput_Debounce_Elapsed_Then_Change_Delivers_Once_When_Value_Not_Supplied()
+    public async Task TmSearchInput_Debounce_Elapsed_Then_Change_Delivers_Once_When_Value_Not_Supplied()
     {
+        var time = UseFakeClock();
         var delivered = new ConcurrentQueue<string>();
         var cut = Render<TmSearchInput>(p => p
             .Add(c => c.DebounceMs, DebounceMs)
@@ -149,7 +161,10 @@ public class TmSearchInputTests : LocalizationTestBase
         var input = cut.Find("input");
         input.Input("abc");
 
-        WaitUntil(() => delivered.Count > 0);
+        // The debounce delivers exactly when fake time crosses the deadline — not "within some
+        // wall-clock timeout", so a slow CI box cannot reorder the observation.
+        time.Advance(TimeSpan.FromMilliseconds(DebounceMs + 1));
+        await DrainDispatcherAsync(cut);
         delivered.Should().ContainSingle().Which.Should().Be("abc"); // the debounce delivered
 
         input.Change("abc"); // blur for the same, unchanged text
@@ -159,8 +174,9 @@ public class TmSearchInputTests : LocalizationTestBase
 
     /// <summary>Same edit, same guarantee, with Value supplied — the other five consumers.</summary>
     [Fact]
-    public void TmSearchInput_Debounced_Input_Then_Change_Delivers_Once_When_Value_Supplied()
+    public async Task TmSearchInput_Debounced_Input_Then_Change_Delivers_Once_When_Value_Supplied()
     {
+        var time = UseFakeClock();
         var delivered = new ConcurrentQueue<string>();
         var cut = Render<TmSearchInput>(p => p
             .Add(c => c.Value, string.Empty)
@@ -171,7 +187,9 @@ public class TmSearchInputTests : LocalizationTestBase
         input.Input("abc");
         input.Change("abc");
 
-        WaitUntil(() => !cut.Instance.HasPendingDebounce);
+        cut.Instance.HasPendingDebounce.Should().BeFalse("`change` must disarm the pending debounce");
+        time.Advance(TimeSpan.FromMilliseconds(DebounceMs + 1));
+        await DrainDispatcherAsync(cut);
         delivered.Should().ContainSingle().Which.Should().Be("abc");
     }
 
@@ -207,8 +225,9 @@ public class TmSearchInputTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmSearchInput_Debounced_Input_Alone_Is_Delivered_After_Delay()
+    public async Task TmSearchInput_Debounced_Input_Alone_Is_Delivered_After_Delay()
     {
+        var time = UseFakeClock();
         var delivered = new ConcurrentQueue<string>();
         var cut = Render<TmSearchInput>(p => p
             .Add(c => c.DebounceMs, DebounceMs)
@@ -218,8 +237,11 @@ public class TmSearchInputTests : LocalizationTestBase
 
         delivered.Should().BeEmpty(); // debounced, not synchronous
 
-        WaitUntil(() => delivered.Count > 0);
+        // Not before the deadline, not without it: only Advance crossing the deadline delivers.
+        time.Advance(TimeSpan.FromMilliseconds(DebounceMs + 1));
+        await DrainDispatcherAsync(cut);
         delivered.Should().ContainSingle().Which.Should().Be("abc");
+        cut.Instance.HasPendingDebounce.Should().BeFalse("a fired single-shot timer must disarm itself");
     }
 
     [Fact]
@@ -302,8 +324,9 @@ public class TmSearchInputTests : LocalizationTestBase
 
     /// <summary>A pending debounce carrying the old text must not overwrite an explicit clear.</summary>
     [Fact]
-    public void TmSearchInput_Clear_Cancels_Pending_Debounce()
+    public async Task TmSearchInput_Clear_Cancels_Pending_Debounce()
     {
+        var time = UseFakeClock();
         var delivered = new ConcurrentQueue<string>();
         var cut = Render<TmSearchInput>(p => p
             .Add(c => c.Value, "hello")
@@ -313,9 +336,14 @@ public class TmSearchInputTests : LocalizationTestBase
         cut.Find("input").Input("abc"); // starts the debounce timer
         cut.Find(".tm-search-clear").Click();
 
-        // The clear delivered; the barrier for "the old text can't still arrive" is the cancelled
-        // timer, not a wall-clock margin — an armed leftover would fire inside this wait.
-        WaitUntil(() => !cut.Instance.HasPendingDebounce);
+        // The clear delivered synchronously; the pending debounce must never deliver "abc" after it.
+        delivered.Should().Equal(string.Empty);
+        cut.Instance.HasPendingDebounce.Should().BeFalse("clear must disarm the pending debounce");
+
+        // A timer the clear failed to cancel fires inside this Advance — before the assert —
+        // and would append "abc" behind the empty string. No wall-clock window to hide in.
+        time.Advance(TimeSpan.FromMilliseconds(DebounceMs + 1));
+        await DrainDispatcherAsync(cut);
         delivered.Should().Equal(string.Empty);
     }
 }

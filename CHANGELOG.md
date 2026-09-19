@@ -33,6 +33,22 @@ which is exactly the red
   <TmStatCard SubValueColor="#16a34a" … />
   ```
 
+### Fixed
+
+- **`ToastService` and `TmSearchInput` now run their timers on an injectable `TimeProvider`.**
+  `ToastService` takes `TimeProvider?` as an optional constructor argument — DI injects a
+  registered provider, otherwise it falls back to `TimeProvider.System` — and `TmSearchInput`
+  resolves the same service with the same fallback. Both swapped their ad-hoc timers for
+  `TimeProvider.CreateTimer` (`ITimer`), so a consumer that registers a fake clock gets fully
+  deterministic auto-dismiss and debounce. The change exists for the tests, not for its own
+  sake: the auto-dismiss and debounce-cancellation assertions used to read state *before* the
+  deadline had provably passed — `PendingAutoDismissCount` reads 0 while a still-armed timer can
+  still fire, and `HasPendingDebounce` reads false while a fired callback's renderer hop is still
+  queued. Under a FakeTimeProvider the barrier is `Advance(deadline + 1ms)` instead: a timer that
+  survives cancellation fires synchronously *inside the test*, so a missing `Dispose` or a
+  dropped `ReferenceEquals` guard turns `changeCount` to 2 (or delivers the stale value) before
+  the assertion runs — the exact regressions the wall-clock reads could let through.
+
 ### Tests & docs
 
 - **`b2aedb6e`** — the sweep treats a dirty starting tree as a failed run rather than reclassifying

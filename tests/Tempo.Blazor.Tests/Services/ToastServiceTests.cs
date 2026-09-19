@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Services;
 
@@ -101,51 +102,62 @@ public class ToastServiceTests
     }
 
     // ── Auto-dismiss ──
+    // These tests run on a FakeTimeProvider: "the deadline has passed" is a test-controlled fact
+    // via Advance(duration + 1ms), not a wall-clock race. A timer that survives its cancellation
+    // fires synchronously inside Advance — inside the test, before the assertion — so a missing
+    // Dispose can no longer hide behind a read taken too early.
 
     [Fact]
     public void AutoDismiss_RemovesToastAfterDuration()
     {
-        var svc = new ToastService();
+        var time = new FakeTimeProvider();
+        var svc = new ToastService(time);
         svc.ShowInfo("Auto", duration: 50);
 
         svc.Toasts.Should().HaveCount(1);
 
-        WaitUntil(() => svc.Toasts.Count == 0, timeoutMs: 3000)
-            .Should().BeTrue("the toast should be auto-removed shortly after its 50ms duration elapses");
+        time.Advance(TimeSpan.FromMilliseconds(50 + 1));
+        svc.Toasts.Should().BeEmpty("the auto-dismiss timer fires deterministically once fake time crosses the duration");
     }
 
     [Fact]
     public void AutoDismiss_FiresOnChange_WhenToastAutoRemoved()
     {
-        var svc = new ToastService();
+        var time = new FakeTimeProvider();
+        var svc = new ToastService(time);
         svc.ShowInfo("Auto", duration: 50);
         int callCount = 0;
         svc.OnChange += () => Interlocked.Increment(ref callCount);
 
-        WaitUntil(() => Volatile.Read(ref callCount) > 0, timeoutMs: 3000)
-            .Should().BeTrue("OnChange should fire when the toast auto-removes itself");
+        time.Advance(TimeSpan.FromMilliseconds(50 + 1));
+
+        Volatile.Read(ref callCount).Should().Be(1,
+            "the auto-dismiss Remove raises OnChange exactly once when the timer fires");
     }
 
     [Fact]
     public void AutoDismiss_DurationZeroOrLess_NeverAutoRemoves()
     {
-        var svc = new ToastService();
+        var time = new FakeTimeProvider();
+        var svc = new ToastService(time);
         svc.ShowInfo("Sticky", duration: 0);
         svc.ShowError("AlsoSticky", duration: -1);
 
-        // The barrier is STATE, not elapsed time: a wrongly-scheduled timer would either still sit
-        // armed in the dictionary (a -1 ms timer never fires and never leaves) or have already fired
-        // and taken a toast with it (a 0 ms timer). Both failures are visible right now.
         svc.PendingAutoDismissCount.Should().Be(0,
-            "duration <= 0 must never schedule an auto-dismiss timer — a wrongly armed one either "
-            + "stays armed forever or has already fired, and either way it shows up here");
+            "duration <= 0 must never schedule an auto-dismiss timer");
+
+        // Far past every deadline this library could schedule: a wrongly armed timer (a 0ms
+        // timer fires immediately, a -1ms one is still armed) shows up inside this Advance.
+        time.Advance(TimeSpan.FromMinutes(10));
         svc.Toasts.Should().HaveCount(2, "duration <= 0 means the toast is sticky and must never auto-dismiss");
+        svc.PendingAutoDismissCount.Should().Be(0);
     }
 
     [Fact]
     public void Remove_BeforeTimerFires_CancelsPendingAutoDismiss_NoDoubleRemoveOrException()
     {
-        var svc = new ToastService();
+        var time = new FakeTimeProvider();
+        var svc = new ToastService(time);
         svc.ShowInfo("CancelMe", duration: 150);
         var id = svc.Toasts[0].Id;
 
@@ -156,21 +168,23 @@ public class ToastServiceTests
         act.Should().NotThrow();
         changeCount.Should().Be(1, "the manual Remove should raise OnChange exactly once");
 
-        // The barrier is the cancelled timer leaving the dictionary: a timer still armed is a timer
-        // that can still call Remove again, and it is visible immediately — no wall-clock margin
-        // needed. A firing-then-removed timer is the only shape that could escape this, and it would
-        // have raised the second OnChange the test asserts against below.
         svc.PendingAutoDismissCount.Should().Be(0,
-            "Remove must dispose the pending auto-dismiss timer, not just the toast");
+            "Remove must drop the pending auto-dismiss timer, not just the toast");
 
-        changeCount.Should().Be(1, "the pending auto-dismiss timer must be cancelled by the manual Remove");
+        // The regression this guards: Remove removes the timer from the dictionary but forgets
+        // Dispose — PendingAutoDismissCount already reads 0, yet the still-armed timer fires at
+        // its deadline and re-enters Remove, raising OnChange a second time. Advance makes that
+        // fire HERE, before the count is read — the old wall-clock assertion read it too early.
+        time.Advance(TimeSpan.FromMilliseconds(150 + 1));
+        changeCount.Should().Be(1, "the cancelled auto-dismiss timer must not fire after its deadline");
         svc.Toasts.Should().BeEmpty();
     }
 
     [Fact]
     public void Clear_CancelsAllPendingAutoDismissTimers_NoExceptionsLater()
     {
-        var svc = new ToastService();
+        var time = new FakeTimeProvider();
+        var svc = new ToastService(time);
         svc.ShowInfo("One", duration: 100);
         svc.ShowError("Two", duration: 120);
 
@@ -181,23 +195,12 @@ public class ToastServiceTests
         changeCount.Should().Be(1);
 
         svc.PendingAutoDismissCount.Should().Be(0,
-            "Clear() must cancel every pending auto-dismiss timer — an armed leftover is observable "
-            + "the moment Clear returns, not after a deadline");
+            "Clear() must cancel every pending auto-dismiss timer");
 
+        // Past the later deadline: any timer Clear failed to dispose fires inside this Advance
+        // and would push changeCount above 1 before it is read.
+        time.Advance(TimeSpan.FromMilliseconds(120 + 1));
         changeCount.Should().Be(1, "Clear() must cancel any pending auto-dismiss timers");
         svc.Toasts.Should().BeEmpty();
-    }
-
-    private static bool WaitUntil(Func<bool> condition, int timeoutMs, int pollMs = 10)
-    {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        while (DateTime.UtcNow < deadline)
-        {
-            if (condition())
-                return true;
-            Thread.Sleep(pollMs);
-        }
-
-        return condition();
     }
 }

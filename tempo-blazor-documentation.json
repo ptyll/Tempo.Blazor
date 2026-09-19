@@ -22190,7 +22190,7 @@
       "kind": "Class",
       "category": "Services",
       "namespace": "Tempo.Blazor.Services",
-      "description": "Injectable service for showing toast notifications. Register as Scoped in DI. Use TmToastContainer in layout to render. Toasts with Duration > 0 auto-dismiss on a server-side timer (no JS interop required, works under any Blazor render mode). A duration of 0 (or negative) makes the toast sticky.",
+      "description": "Injectable service for showing toast notifications. Register as Scoped in DI. Use TmToastContainer in layout to render. Toasts with Duration > 0 auto-dismiss on a timer driven by the registered TimeProvider (falls back to TimeProvider.System when none is registered — no JS interop required, works under any Blazor render mode; tests can substitute a FakeTimeProvider). A duration of 0 (or negative) makes the toast sticky.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Services/ToastService.cs",
       "documentationStatus": "merged"

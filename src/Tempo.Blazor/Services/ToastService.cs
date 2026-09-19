@@ -28,16 +28,28 @@ public sealed record ToastInstance
 /// <summary>
 /// Injectable service for showing toast notifications.
 /// Register as Scoped in DI. Use <see cref="TmToastContainer"/> in layout to render.
-/// Toasts with <see cref="ToastInstance.Duration"/> &gt; 0 auto-dismiss on a server-side
-/// timer (no JS interop required, works under any Blazor render mode). A duration of
+/// Toasts with <see cref="ToastInstance.Duration"/> &gt; 0 auto-dismiss on a timer driven by the
+/// registered <see cref="TimeProvider"/> (or <see cref="TimeProvider.System"/> when none is
+/// registered — no JS interop required, works under any Blazor render mode). A duration of
 /// 0 (or negative) makes the toast sticky.
 /// </summary>
 public sealed class ToastService : IDisposable
 {
     private readonly List<ToastInstance> _toasts = [];
-    private readonly Dictionary<string, Timer> _autoDismissTimers = [];
+    private readonly Dictionary<string, ITimer> _autoDismissTimers = [];
+    private readonly TimeProvider _timeProvider;
     private readonly object _lock = new();
     private bool _disposed;
+
+    /// <summary>
+    /// Creates a toast service whose auto-dismiss timers run on <paramref name="timeProvider"/>.
+    /// When the consumer registers a <see cref="TimeProvider"/> in DI it is injected here;
+    /// otherwise the default <c>null</c> falls back to <see cref="TimeProvider.System"/>.
+    /// Tests pass a FakeTimeProvider so "the deadline has passed" is a test-controlled fact,
+    /// not a wall-clock race.
+    /// </summary>
+    public ToastService(TimeProvider? timeProvider = null)
+        => _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>Fired when a new toast is added.</summary>
     public event Action? OnChange;
@@ -114,19 +126,23 @@ public sealed class ToastService : IDisposable
             Severity = severity,
             Message = message,
             Title = title,
-            Duration = duration
+            Duration = duration,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
         lock (_lock)
         {
             _toasts.Add(toast);
             if (duration > 0)
             {
-                // Single-shot timer: fires once after `duration` ms, then never again.
-                // Its callback runs on a thread-pool thread and re-enters via Remove(id),
-                // which takes the same lock and disposes this very timer — safe per
-                // System.Threading.Timer semantics (disposing from within its own callback
-                // does not block or throw).
-                var timer = new Timer(_ => Remove(toast.Id), null, duration, Timeout.Infinite);
+                // Single-shot timer on the injected clock: fires once after `duration` ms, then
+                // never again. Its callback re-enters via Remove(id), which takes the same lock
+                // and disposes this very timer — safe per ITimer semantics (disposing from
+                // within its own callback does not block or throw).
+                var timer = _timeProvider.CreateTimer(
+                    _ => Remove(toast.Id),
+                    null,
+                    TimeSpan.FromMilliseconds(duration),
+                    Timeout.InfiniteTimeSpan);
                 _autoDismissTimers[toast.Id] = timer;
             }
         }

@@ -58,11 +58,23 @@
     /// <summary>Additional attributes to be applied to the input element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>
+    /// Clock driving the debounce timer. Resolved through <see cref="IServiceProvider"/> so a
+    /// consumer that never registers a <see cref="TimeProvider"/> still gets
+    /// <see cref="TimeProvider.System"/> — a bare <c>[Inject] TimeProvider</c> would throw for
+    /// exactly those consumers. Tests register a FakeTimeProvider.
+    /// </summary>
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
     private string InputCssClass =>
         $"tm-input tm-input-search tm-input-with-left-icon{(Disabled ? " tm-input-disabled" : "")}";
 
     // volatile because the test-visible property below is polled off the renderer thread.
-    private volatile System.Timers.Timer? _debounce;
+    private volatile ITimer? _debounce;
     private bool _disposed;
 
     /// <summary>
@@ -125,7 +137,6 @@
     /// <summary>Stops and discards a pending debounce timer so it can no longer deliver.</summary>
     private void CancelDebounce()
     {
-        _debounce?.Stop();
         _debounce?.Dispose();
         _debounce = null;
     }
@@ -137,26 +148,39 @@
         {
             CancelDebounce();
 
-            var timer = new System.Timers.Timer(DebounceMs) { AutoReset = false };
-            timer.Elapsed += async (_, _) =>
-            {
-                if (_disposed) return;
-                // Elapsed runs on a thread-pool thread; hop to the renderer before touching
-                // _lastDispatchedValue or _debounce.
-                await InvokeAsync(() =>
-                {
-                    // A timer that was cancelled (change/clear) after Elapsed already fired must not deliver.
-                    if (_disposed || !ReferenceEquals(_debounce, timer)) return Task.CompletedTask;
-                    return DispatchAsync(value);
-                });
-            };
+            // Single-shot timer on the injected clock. The callback closes over `timer` itself so
+            // the ReferenceEquals check inside can tell "the currently armed timer" apart from
+            // this one — a callback already queued when CancelDebounce ran must not deliver.
+            ITimer? timer = null;
+            timer = Clock.CreateTimer(
+                _ => _ = OnDebounceElapsedAsync(value, timer!),
+                null,
+                TimeSpan.FromMilliseconds(DebounceMs),
+                Timeout.InfiniteTimeSpan);
             _debounce = timer;
-            timer.Start();
         }
         else
         {
             await DispatchAsync(value);
         }
+    }
+
+    private async Task OnDebounceElapsedAsync(string value, ITimer timer)
+    {
+        if (_disposed) return;
+        // The callback runs on a thread-pool thread (TimeProvider.System) or the test thread
+        // advancing a FakeTimeProvider; hop to the renderer before touching
+        // _lastDispatchedValue or _debounce.
+        await InvokeAsync(() =>
+        {
+            // A timer that was cancelled (change/clear) after its callback already fired must not deliver.
+            if (_disposed || !ReferenceEquals(_debounce, timer)) return Task.CompletedTask;
+            // Single-shot: once fired it can never deliver again — disarm it so HasPendingDebounce
+            // reports the truth instead of pointing at a spent timer.
+            _debounce = null;
+            timer.Dispose();
+            return DispatchAsync(value);
+        });
     }
 
     private async Task HandleChangeAsync(ChangeEventArgs e)
@@ -180,7 +204,6 @@
     public void Dispose()
     {
         _disposed = true;
-        _debounce?.Stop();
         _debounce?.Dispose();
         _debounce = null;
     }
