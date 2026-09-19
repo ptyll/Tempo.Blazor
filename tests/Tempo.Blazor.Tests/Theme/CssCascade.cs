@@ -61,10 +61,21 @@ internal static class CssCascade
     }
 
     /// <summary>
-    /// One parsed rule: its selector list, its declaration body, and the media condition it sits
-    /// under (<c>null</c> when unconditional, the joined conditions when nested).
+    /// One parsed rule: its selector list, its declaration body, the media condition it sits under
+    /// (<c>null</c> when unconditional, the joined conditions when nested), and the cascade layer
+    /// it was declared in (<c>null</c> when unlayered — the rank that always wins).
     /// </summary>
-    internal sealed record ParsedRule(string Selector, string Body, string? MediaCondition);
+    /// <param name="LayerRank">
+    /// Position of the rule's <c>@layer</c> in the stylesheet's layer order (0 = first declared).
+    /// Unlayered rules out-rank EVERY layered rule regardless of specificity, so the resolver
+    /// compares this column first.
+    /// </param>
+    internal sealed record ParsedRule(
+        string Selector,
+        string Body,
+        string? MediaCondition,
+        int? LayerRank = null,
+        string? LayerName = null);
 
     /// <summary>
     /// One element of the modelled tree: its tag, the classes it carries, and — for the last element of
@@ -123,12 +134,19 @@ internal static class CssCascade
     /// measurement. A condition the model cannot decide is reported through <c>Unmodelled</c>, never
     /// assumed false.
     /// </param>
+    /// <param name="importResolver">
+    /// Maps an <c>@import</c> target (<c>"tokens.css"</c>, <c>url(…)</c>) to the imported text, so a
+    /// caller can feed the manifest and get the same rules the bundle flattens. An import the
+    /// resolver cannot read — or any import when no resolver is given — is reported through
+    /// <c>Unmodelled</c>, never silently dropped.
+    /// </param>
     public static Winner Resolve(
         string css,
         IReadOnlyList<Element> chain,
         string property,
         IReadOnlySet<string>? activeStates = null,
-        MediaContext? media = null)
+        MediaContext? media = null,
+        Func<string, string?>? importResolver = null)
     {
         activeStates ??= new HashSet<string>(StringComparer.Ordinal);
         media ??= MediaContext.Default;
@@ -136,11 +154,18 @@ internal static class CssCascade
         var target = ShorthandOf.TryGetValue(property, out var mapping) ? mapping : default;
         var unmodelled = new List<string>();
 
+        var outcome = ParseStylesheet(ThemeCss.StripComments(css), importResolver);
+        unmodelled.AddRange(outcome.Unmodelled);
+
         string? winner = null;
         string? source = null;
-        var best = (Id: -1, Class: -1, Type: -1);
+        // Cascade order, compared left to right: an UNLAYERED rule out-ranks every layered rule
+        // (int.MaxValue wins); between two layered rules the LATER-declared layer wins regardless
+        // of specificity — that is what @layer exists to say. Specificity and source order only
+        // ever arbitrate inside one layer.
+        var best = (Layer: -1, Id: -1, Class: -1, Type: -1);
 
-        foreach (var rule in ParseRules(ThemeCss.StripComments(css)))
+        foreach (var rule in outcome.Rules)
         {
             var mediaVerdict = rule.MediaCondition is null
                 ? MediaVerdict.Applies
@@ -162,6 +187,7 @@ internal static class CssCascade
                 continue;
             }
 
+            var layerKey = rule.LayerRank ?? int.MaxValue;
             foreach (var part in ThemeCss.SelectorParts(rule.Selector))
             {
                 var verdict = Match(part, chain, activeStates);
@@ -181,9 +207,11 @@ internal static class CssCascade
                 }
 
                 // Source order breaks a tie, and the loop walks the file top to bottom — so ">=".
-                if (verdict.Specificity.Value.CompareTo(best) >= 0)
+                var candidate = (layerKey, verdict.Specificity.Value.Id,
+                    verdict.Specificity.Value.Class, verdict.Specificity.Value.Type);
+                if (candidate.CompareTo(best) >= 0)
                 {
-                    best = verdict.Specificity.Value;
+                    best = candidate;
                     winner = declared;
                     source = part;
                 }
@@ -202,9 +230,10 @@ internal static class CssCascade
         IReadOnlyList<Element> chain,
         string property,
         IReadOnlySet<string>? activeStates = null,
-        MediaContext? media = null)
+        MediaContext? media = null,
+        Func<string, string?>? importResolver = null)
     {
-        var resolved = Resolve(css, chain, property, activeStates, media);
+        var resolved = Resolve(css, chain, property, activeStates, media, importResolver);
 
         resolved.Unmodelled.Should().BeEmpty(
             "selektor, který sonda neumí přečíst, je NEMĚŘITELNÝ — nesmí se počítat mezi „nematchuje“");
@@ -418,7 +447,8 @@ internal static class CssCascade
         string css,
         IReadOnlyList<Element> chain,
         IReadOnlySet<string>? activeStates = null,
-        MediaContext? media = null)
+        MediaContext? media = null,
+        Func<string, string?>? importResolver = null)
     {
         // The BOXES an opacity can sit on, outermost first: every ancestor, then the element itself, and
         // only then its pseudo-element. Walking the chain as given would skip the element's own opacity
@@ -440,7 +470,7 @@ internal static class CssCascade
         var product = 1.0;
         foreach (var box in boxes)
         {
-            var resolved = Resolve(css, box, "opacity", activeStates, media);
+            var resolved = Resolve(css, box, "opacity", activeStates, media, importResolver);
 
             resolved.Unmodelled.Should().BeEmpty(
                 "průhlednost prvku, kterou sonda neumí přečíst, je NEMĚŘITELNÁ, ne 1");
@@ -501,34 +531,154 @@ internal static class CssCascade
     // A regex like [^{}]+\{[^{}]*\} flattens @media: it cannot see that a rule sits inside a
     // condition, so a mobile-only override is read as unconditional — and wins desktop
     // measurements it should never reach. The walk below tracks the at-rule stack instead.
+    //
+    // Two more failure shapes the flat "{…}" walk shipped, both fail-OPEN:
+    //  • a STATEMENT-form at-rule (@import "x";, @layer a,b;, @charset) carries no block of its
+    //    own, so the text between ';' and the next '{' became the next rule's "header" — and the
+    //    real header following it was swallowed into a skipped @-header. One stray statement ate
+    //    a whole style rule, silently.
+    //  • a rule body containing NESTED blocks (@media or a nested selector inside .a { … }) was
+    //    read as one declaration run — the nested override could neither apply nor be reported.
+    // The scope walker below splits ';'-terminated statements (paren/quote aware) before reading
+    // a header, enters gated at-rules recursively, expands nested selectors against their parent,
+    // and keeps the emission order of declarations and nested blocks exactly where the text put
+    // them — because source order IS the cascade's last tie-breaker.
+
+    /// <summary>What a stylesheet parse produced: the rules it could read, and the constructs it could not.</summary>
+    internal sealed record ParseOutcome(IReadOnlyList<ParsedRule> Rules, IReadOnlyList<string> Unmodelled);
 
     /// <summary>
-    /// Every style rule of a stylesheet in source order, with the media condition it sits under.
-    /// <c>@media</c> blocks are entered and their condition recorded; <c>@supports</c> blocks are
-    /// entered and recorded as undecidable; <c>@keyframes</c>, <c>@font-face</c> and other at-rules
-    /// whose inner blocks are not selectors are skipped entirely.
+    /// Every style rule of a stylesheet in source order, with the media condition and cascade
+    /// layer it sits under. <c>@media</c> blocks are entered and their condition recorded;
+    /// <c>@supports</c> and <c>@container</c> blocks are entered and recorded as undecidable
+    /// conditions; <c>@layer</c> blocks register layer order and tag their rules;
+    /// <c>@keyframes</c>, <c>@font-face</c> and other at-rules whose inner blocks are not element
+    /// rules are skipped entirely.
     /// </summary>
     internal static IReadOnlyList<ParsedRule> ParseRules(string css)
+        => ParseStylesheet(css).Rules;
+
+    /// <summary>
+    /// <see cref="ParseRules"/> plus the constructs the parse could not read: unresolved
+    /// <c>@import</c> targets (or every import when no <paramref name="importResolver"/> is
+    /// given). A probe that cannot see behind an import must say so — skipping it is how a
+    /// manifest-wide hole gets reported as "no collisions found".
+    /// </summary>
+    internal static ParseOutcome ParseStylesheet(string css, Func<string, string?>? importResolver = null)
     {
-        var rules = new List<ParsedRule>();
-        ParseInto(css, media: null, rules);
-        return rules;
+        var state = new ParseState { ImportResolver = importResolver };
+        ParseScope(css, media: null, layerRank: null, layerName: null, parentSelector: null, state);
+        return new ParseOutcome(state.Rules, state.Unmodelled);
     }
 
-    private static void ParseInto(string css, string? media, List<ParsedRule> rules)
+    /// <summary>Mutable context shared by one stylesheet's recursive parse.</summary>
+    private sealed class ParseState
+    {
+        public List<ParsedRule> Rules { get; } = [];
+        public List<string> Unmodelled { get; } = [];
+        public Dictionary<string, int> LayerOrder { get; } = new(StringComparer.Ordinal);
+        public HashSet<string> ResolvedImports { get; } = new(StringComparer.Ordinal);
+        public Func<string, string?>? ImportResolver { get; init; }
+        public int NextLayerRank;
+    }
+
+    /// <summary>
+    /// Walks one scope of stylesheet text. A scope is either the top level
+    /// (<paramref name="parentSelector"/> null — <c>;</c>-terminated chunks are at-rule statements)
+    /// or the body of a style rule (<paramref name="parentSelector"/> set — the same chunks are
+    /// declarations). Nested <c>{…}</c> blocks are entered recursively: gated at-rules re-gate
+    /// and keep the selector context, nested selectors expand against their parent.
+    /// </summary>
+    private static void ParseScope(
+        string css,
+        string? media,
+        int? layerRank,
+        string? layerName,
+        string? parentSelector,
+        ParseState state)
     {
         var cursor = 0;
-        while (cursor < css.Length)
+        var declarations = new System.Text.StringBuilder();
+
+        void FlushDeclarations()
         {
-            var open = css.IndexOf('{', cursor);
-            if (open < 0)
+            if (parentSelector is not null && declarations.Length > 0)
             {
-                return;
+                state.Rules.Add(new ParsedRule(
+                    parentSelector, declarations.ToString(), media, layerRank, layerName));
             }
 
+            declarations.Clear();
+        }
+
+        while (cursor < css.Length)
+        {
+            var boundary = NextBoundary(css, cursor);
+            if (boundary.Kind == BoundaryKind.End)
+            {
+                // The chunk after the last boundary: the final declaration of a rule body, which
+                // CSS does not require to end in ';'. Dropping it would read "{ color: red }" as
+                // an empty rule — the same class of hole as the swallowed statement above.
+                var tail = css[cursor..].Trim();
+                if (parentSelector is not null && tail.Length > 0)
+                {
+                    if (tail.StartsWith('@'))
+                    {
+                        state.Unmodelled.Add($"{parentSelector} — trailing at-rule '{tail}' inside a rule body");
+                    }
+                    else
+                    {
+                        if (declarations.Length > 0)
+                        {
+                            declarations.Append(';');
+                        }
+
+                        declarations.Append(tail);
+                    }
+                }
+
+                break;
+            }
+
+            if (boundary.Kind == BoundaryKind.Statement)
+            {
+                var statement = css[cursor..boundary.Index].Trim();
+                if (parentSelector is null)
+                {
+                    ProcessStatement(statement, media, layerName, state);
+                }
+                else if (statement.Length > 0 && !statement.StartsWith('@'))
+                {
+                    if (declarations.Length > 0)
+                    {
+                        declarations.Append(';');
+                    }
+
+                    declarations.Append(statement);
+                }
+                else if (statement.Length > 0)
+                {
+                    // A '@…;' statement inside a rule body is outside the model — reported, not
+                    // dropped into a fabricated declaration.
+                    state.Unmodelled.Add($"{parentSelector} — '{statement};' inside a rule body");
+                }
+
+                cursor = boundary.Index + 1;
+                continue;
+            }
+
+            // An opening brace: the text since the last boundary is this block's header.
+            var open = boundary.Index;
             var header = css[cursor..open].Trim();
             var close = MatchingBrace(css, open);
             var body = css[(open + 1)..close];
+
+            if (header.Length > 0)
+            {
+                // A nested block interrupts the enclosing rule's declaration run — emit the run
+                // first so emission order stays textual (order IS the last cascade tie-breaker).
+                FlushDeclarations();
+            }
 
             if (header.Length == 0)
             {
@@ -539,42 +689,320 @@ internal static class CssCascade
                 if (header.StartsWith("@media", StringComparison.OrdinalIgnoreCase))
                 {
                     var condition = header["@media".Length..].Trim();
-                    ParseInto(body, media is null ? condition : media + " and " + condition, rules);
+                    ParseScope(body, JoinMedia(media, condition), layerRank, layerName,
+                        parentSelector, state);
                 }
-                else if (header.StartsWith("@supports", StringComparison.OrdinalIgnoreCase))
+                else if (header.StartsWith("@supports", StringComparison.OrdinalIgnoreCase)
+                         || header.StartsWith("@container", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Inner blocks ARE selectors, gated on a feature the model cannot evaluate —
-                    // recorded as their own undecidable condition rather than dropped.
-                    ParseInto(body, media is null ? header : media + " and " + header, rules);
+                    // Inner blocks ARE selectors, gated on a feature/size the model cannot
+                    // evaluate — recorded as their own undecidable condition rather than dropped.
+                    ParseScope(body, JoinMedia(media, header), layerRank, layerName,
+                        parentSelector, state);
+                }
+                else if (header.StartsWith("@layer", StringComparison.OrdinalIgnoreCase))
+                {
+                    var (rank, fullName) = EnterLayer(header["@layer".Length..].Trim(), layerName, state);
+                    ParseScope(body, media, rank, fullName, parentSelector, state);
                 }
 
                 // @keyframes, @font-face, @page, @charset, …: inner blocks are not element rules.
             }
             else
             {
-                rules.Add(new ParsedRule(header, body, media));
+                var effective = parentSelector is null
+                    ? header
+                    : ExpandNestedSelector(parentSelector, header);
+                ParseScope(body, media, layerRank, layerName, effective, state);
             }
 
             cursor = close + 1;
         }
+
+        FlushDeclarations();
     }
 
+    private enum BoundaryKind
+    {
+        Statement,
+        OpenBrace,
+        End,
+    }
+
+    /// <summary>
+    /// The next structural boundary of a scope: a top-level <c>;</c> (statement end), a top-level
+    /// <c>{</c> (block start), or the end of text. Parentheses and quoted strings are skipped —
+    /// a <c>;</c> inside <c>url("a;b")</c> or a <c>{</c> inside <c>content: "{"</c> is data, not
+    /// structure, and counting it is how the flat walk mis-sliced bodies.
+    /// </summary>
+    private static (BoundaryKind Kind, int Index) NextBoundary(string css, int start)
+    {
+        var depth = 0;
+        var quote = '\0';
+        for (var i = start; i < css.Length; i++)
+        {
+            var c = css[i];
+            if (quote != '\0')
+            {
+                if (c == '\\')
+                {
+                    i++;
+                }
+                else if (c == quote)
+                {
+                    quote = '\0';
+                }
+
+                continue;
+            }
+
+            switch (c)
+            {
+                case '"' or '\'':
+                    quote = c;
+                    break;
+                case '(':
+                    depth++;
+                    break;
+                case ')':
+                    depth = Math.Max(0, depth - 1);
+                    break;
+                case ';' when depth == 0:
+                    return (BoundaryKind.Statement, i);
+                case '{' when depth == 0:
+                    return (BoundaryKind.OpenBrace, i);
+            }
+        }
+
+        return (BoundaryKind.End, css.Length);
+    }
+
+    /// <summary>
+    /// A top-level <c>;</c>-terminated statement: <c>@import</c> (resolved through the caller's
+    /// resolver, or reported unmodelled when unreadable), a <c>@layer</c> order statement, or a
+    /// statement the cascade does not carry (<c>@charset</c>, <c>@namespace</c>).
+    /// </summary>
+    private static void ProcessStatement(string statement, string? media, string? layerName, ParseState state)
+    {
+        if (statement.StartsWith("@import", StringComparison.OrdinalIgnoreCase))
+        {
+            ProcessImport(statement, media, state);
+            return;
+        }
+
+        if (statement.StartsWith("@layer", StringComparison.OrdinalIgnoreCase))
+        {
+            // The order statement: @layer a, b, c; — registers positions without declaring rules.
+            foreach (var name in statement["@layer".Length..]
+                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                RegisterLayer(name, layerName, state);
+            }
+        }
+    }
+
+    /// <summary>
+    /// <c>@import &lt;target&gt; [layer|layer(name)] [conditions];</c> — the imported text is parsed
+    /// at this position (import order is cascade order), under the import's own layer clause and
+    /// media tail when present. An import the resolver cannot read is reported, never skipped.
+    /// </summary>
+    private static void ProcessImport(string statement, string? media, ParseState state)
+    {
+        var rest = statement["@import".Length..].Trim();
+        var (target, tail) = ImportTarget(rest);
+        if (target is null)
+        {
+            state.Unmodelled.Add($"{statement} — @import target the model cannot read");
+            return;
+        }
+
+        var (layerName, importMedia) = ImportClauses(tail);
+        var mediaCondition = importMedia is null ? media : JoinMedia(media, importMedia);
+
+        if (state.ImportResolver is null)
+        {
+            state.Unmodelled.Add($"{statement} — @import with no resolver cannot be seen through");
+            return;
+        }
+
+        if (!state.ResolvedImports.Add(target))
+        {
+            return; // already inlined once — an import cycle would otherwise recurse forever
+        }
+
+        var imported = state.ImportResolver(target);
+        if (imported is null)
+        {
+            state.Unmodelled.Add($"{statement} — resolver found no stylesheet for '{target}'");
+            return;
+        }
+
+        var (rank, fullName) = layerName is null
+            ? ((int?)null, (string?)null)
+            : EnterLayer(layerName, null, state);
+        ParseScope(imported, mediaCondition, rank, fullName, parentSelector: null, state);
+    }
+
+    /// <summary>The url/quoted target of an <c>@import</c> plus the clause tail after it.</summary>
+    private static (string? Target, string Tail) ImportTarget(string rest)
+    {
+        if (rest.Length == 0)
+        {
+            return (null, string.Empty);
+        }
+
+        if (rest[0] is '"' or '\'')
+        {
+            var quote = rest[0];
+            var end = rest.IndexOf(quote, 1);
+            return end < 0
+                ? (null, string.Empty)
+                : (rest[1..end], rest[(end + 1)..].Trim());
+        }
+
+        if (rest.StartsWith("url(", StringComparison.OrdinalIgnoreCase))
+        {
+            var close = rest.IndexOf(')');
+            if (close < 0)
+            {
+                return (null, string.Empty);
+            }
+
+            var inner = rest[4..close].Trim().Trim('"', '\'');
+            return (inner, rest[(close + 1)..].Trim());
+        }
+
+        var space = rest.IndexOfAny([' ', '\t']);
+        return space < 0 ? (rest, string.Empty) : (rest[..space], rest[(space + 1)..].Trim());
+    }
+
+    /// <summary>
+    /// The trailing clauses of an <c>@import</c>: an optional <c>layer(name)</c> or bare
+    /// <c>layer</c>, then whatever media/supports condition remains — kept verbatim so
+    /// <see cref="EvaluateMedia"/> decides it (a clause it cannot parse is undecidable, not false).
+    /// </summary>
+    private static (string? LayerName, string? MediaTail) ImportClauses(string tail)
+    {
+        string? layerName = null;
+        if (tail.StartsWith("layer", StringComparison.OrdinalIgnoreCase))
+        {
+            var after = tail["layer".Length..].TrimStart();
+            if (after.StartsWith('('))
+            {
+                var close = after.IndexOf(')', StringComparison.Ordinal);
+                layerName = close < 0 ? after[1..].Trim() : after[1..close].Trim();
+                tail = close < 0 ? string.Empty : after[(close + 1)..].Trim();
+            }
+            else
+            {
+                layerName = string.Empty; // bare `layer` — an anonymous layer at this position
+                tail = after;
+            }
+        }
+
+        return (layerName, tail.Length == 0 ? null : tail);
+    }
+
+    private static string JoinMedia(string? media, string condition)
+        => media is null ? condition : media + " and " + condition;
+
+    /// <summary>
+    /// A layer's rank in declaration order: names register on first use (nested blocks qualify
+    /// their names, <c>@layer a { @layer b {} }</c> is <c>a.b</c>), anonymous layers take the next
+    /// rank where they stand. Higher rank beats lower; every rank loses to unlayered.
+    /// </summary>
+    private static (int Rank, string FullName) EnterLayer(string name, string? parentName, ParseState state)
+    {
+        if (name.Length == 0)
+        {
+            // Anonymous layer (@layer { … }) — ordered where declared, never revisited by name.
+            var full = parentName is null
+                ? $"#anonymous-{state.NextLayerRank}"
+                : $"{parentName}.#anonymous-{state.NextLayerRank}";
+            var anonRank = state.NextLayerRank++;
+            state.LayerOrder[full] = anonRank;
+            return (anonRank, full);
+        }
+
+        var qualified = parentName is null ? name : $"{parentName}.{name}";
+        return (RegisterLayer(qualified, null, state), qualified);
+    }
+
+    private static int RegisterLayer(string fullName, string? parentName, ParseState state)
+    {
+        var key = parentName is null ? fullName : $"{parentName}.{fullName}";
+        if (!state.LayerOrder.TryGetValue(key, out var rank))
+        {
+            rank = state.NextLayerRank++;
+            state.LayerOrder[key] = rank;
+        }
+
+        return rank;
+    }
+
+    /// <summary>
+    /// CSS nesting: a selector inside a rule body addresses descendants or the parent itself —
+    /// <c>&amp;</c> stands for the parent selector, a bare nested selector descends from it.
+    /// Comma lists expand as the cross product (<c>.a, .b</c> containing <c>.c</c> compiles to
+    /// <c>.a .c, .b .c</c>), the way the browser compiles them.
+    /// </summary>
+    private static string ExpandNestedSelector(string parent, string nested)
+    {
+        var expanded = new List<string>();
+        foreach (var parentPart in ThemeCss.SelectorParts(parent))
+        {
+            foreach (var part in ThemeCss.SelectorParts(nested))
+            {
+                expanded.Add(part.IndexOf('&', StringComparison.Ordinal) >= 0
+                    ? part.Replace("&", parentPart, StringComparison.Ordinal)
+                    : parentPart + " " + part);
+            }
+        }
+
+        return string.Join(", ", expanded);
+    }
+
+    /// <summary>
+    /// The <c>}</c> matching an opening brace, with quoted strings skipped — a brace inside
+    /// <c>content: "}"</c> is data. Unbalanced input consumes the rest; the selector check then
+    /// fails loudly downstream.
+    /// </summary>
     private static int MatchingBrace(string css, int open)
     {
         var depth = 0;
+        var quote = '\0';
         for (var i = open; i < css.Length; i++)
         {
-            if (css[i] == '{')
+            var c = css[i];
+            if (quote != '\0')
+            {
+                if (c == '\\')
+                {
+                    i++;
+                }
+                else if (c == quote)
+                {
+                    quote = '\0';
+                }
+
+                continue;
+            }
+
+            if (c is '"' or '\'')
+            {
+                quote = c;
+            }
+            else if (c == '{')
             {
                 depth++;
             }
-            else if (css[i] == '}' && --depth == 0)
+            else if (c == '}' && --depth == 0)
             {
                 return i;
             }
         }
 
-        return css.Length; // unbalanced input — consume the rest, the selector check will fail loudly
+        return css.Length;
     }
 
     // ── Media conditions ──────────────────────────────────────────

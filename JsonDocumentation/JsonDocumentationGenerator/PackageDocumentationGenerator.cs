@@ -573,10 +573,17 @@ internal sealed class PackageDocumentationComposer
         foreach (var componentRoot in config.ComponentRoots)
         {
             var rootPath = Path.Combine(_repoRoot, componentRoot);
-            if (Directory.Exists(rootPath))
+            if (!Directory.Exists(rootPath))
             {
-                generated.AddRange(ComponentDocumentationScanner.Scan(rootPath, _repoRoot, config.PackageId));
+                // A configured component root that does not exist must not degrade to "zero
+                // components" — that is a moved source tree, and silently shipping a package
+                // document with no components is exactly the hole a freshness guard exists to
+                // close. Fail here, where the missing input can still be named.
+                throw new DirectoryNotFoundException(
+                    $"{config.PackageId}: configured component root does not exist: {rootPath}");
             }
+
+            generated.AddRange(ComponentDocumentationScanner.Scan(rootPath, _repoRoot, config.PackageId));
         }
 
         var componentNames = generated
@@ -696,17 +703,19 @@ internal sealed class PackageDocumentationComposer
             var rootPath = Path.Combine(_baseDir, root);
             if (!Directory.Exists(rootPath))
             {
-                continue;
+                // Same rule as the component roots: a configured documentation root that is
+                // missing is a moved tree, not "no overlays" — skipping it would ship a bundle
+                // stripped of every manual description with no error anywhere.
+                throw new DirectoryNotFoundException(
+                    $"{config.PackageId}: configured documentation root does not exist: {rootPath}");
             }
 
             foreach (var file in Directory.GetFiles(rootPath, "*.json", SearchOption.AllDirectories)
                          .OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
             {
-                var node = JsonNode.Parse(File.ReadAllText(file)) as JsonObject;
-                if (node is null)
-                {
-                    continue;
-                }
+                var node = JsonNode.Parse(File.ReadAllText(file)) as JsonObject
+                           ?? throw new InvalidDataException(
+                               $"{config.PackageId}: documentation overlay is not a JSON object: {file}");
 
                 var itemName = node.GetString("itemName");
                 if (string.IsNullOrWhiteSpace(itemName))
@@ -736,16 +745,28 @@ internal sealed class PackageDocumentationComposer
         if (!string.IsNullOrWhiteSpace(config.GettingStartedFile))
         {
             var path = Path.Combine(_baseDir, config.GettingStartedFile);
-            if (File.Exists(path) && JsonNode.Parse(File.ReadAllText(path)) is JsonObject existing)
+            if (!File.Exists(path))
             {
-                var clone = existing.DeepClone().AsObject();
-                if (clone["packages"] is not JsonArray packages || packages.Count < _knownPackages.Count)
-                {
-                    clone["packages"] = BuildKnownPackagesArray(_knownPackages, _repoRoot);
-                }
-
-                return clone;
+                // Configured-but-missing: falling back to generated defaults would silently swap a
+                // hand-written getting-started page for boilerplate — a content regression that
+                // looks like successful output.
+                throw new FileNotFoundException(
+                    $"{config.PackageId}: configured getting-started file does not exist: {path}", path);
             }
+
+            if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject existing)
+            {
+                throw new InvalidDataException(
+                    $"{config.PackageId}: getting-started file is not a JSON object: {path}");
+            }
+
+            var clone = existing.DeepClone().AsObject();
+            if (clone["packages"] is not JsonArray packages || packages.Count < _knownPackages.Count)
+            {
+                clone["packages"] = BuildKnownPackagesArray(_knownPackages, _repoRoot);
+            }
+
+            return clone;
         }
 
         var title = project.PackageId ?? config.PackageId;
@@ -771,14 +792,21 @@ internal sealed class PackageDocumentationComposer
         if (!string.IsNullOrWhiteSpace(config.ExamplesFile))
         {
             var path = Path.Combine(_baseDir, config.ExamplesFile);
-            if (File.Exists(path))
+            if (!File.Exists(path))
             {
-                var node = JsonNode.Parse(File.ReadAllText(path));
-                if (node?["examples"] is JsonArray examples)
-                {
-                    return examples.DeepClone().AsArray();
-                }
+                // Same contract as the getting-started file: a configured examples document that
+                // is absent or malformed must fail, not fall back to package boilerplate.
+                throw new FileNotFoundException(
+                    $"{config.PackageId}: configured examples file does not exist: {path}", path);
             }
+
+            if (JsonNode.Parse(File.ReadAllText(path))?["examples"] is not JsonArray examples)
+            {
+                throw new InvalidDataException(
+                    $"{config.PackageId}: examples file has no \"examples\" array: {path}");
+            }
+
+            return examples.DeepClone().AsArray();
         }
 
         return DefaultExamples.ForPackage(config.PackageId);
@@ -1721,7 +1749,11 @@ internal static class ProjectMetadataReader
     {
         if (!File.Exists(projectPath))
         {
-            return new ProjectMetadata(projectPath);
+            // A configured sourceProject that does not exist produced an EMPTY metadata record —
+            // the generated package document then shipped without title, frameworks or
+            // dependencies and nothing reported the loss. Missing input is an error, not a shape.
+            throw new FileNotFoundException(
+                $"Configured source project does not exist: {projectPath}", projectPath);
         }
 
         var doc = XDocument.Load(projectPath);

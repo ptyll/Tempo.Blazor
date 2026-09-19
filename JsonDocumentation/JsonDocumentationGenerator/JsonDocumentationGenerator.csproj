@@ -8,4 +8,10 @@
     <NoWarn>$(NoWarn);MA0002;MA0006;MA0009;MA0023;MA0048;MA0051;MA0074</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The freshness guard invokes the generator in-process and diffs its output against the
+         committed bundles; the pipeline stays internal, only the test assembly can see it. -->
+    <InternalsVisibleTo Include="Tempo.Blazor.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -41,6 +41,9 @@
     <ProjectReference Include="..\..\src\Tempo.Blazor.Demo.SharedUI\Tempo.Blazor.Demo.SharedUI.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.DataTableXlsx\Tempo.Blazor.DataTableXlsx.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.FluentValidation\Tempo.Blazor.FluentValidation.csproj" />
+    <!-- Referenced so the documentation freshness guard can run the real generator in-process
+         instead of spawning a build that might not exist. -->
+    <ProjectReference Include="..\..\JsonDocumentation\JsonDocumentationGenerator\JsonDocumentationGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>
