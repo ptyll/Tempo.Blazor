@@ -1,11 +1,15 @@
 # Changelog
 
-## 2.8.27 (unreleased)
+## 2.9.0 (unreleased)
 
-Test-surface and documentation hardening only — no shipped-component changes since 2.8.26. The
-number had to open anyway: `v2.8.26` is a spent tag naming `ae72ffe0`, and the announce commit is
-conventionally the first commit after the tag — these four landed without it, which is exactly the
-red `AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` is written to refuse.
+The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
+(`TmStatCard.SubValueColor` no longer accepts CSS class names — see **Breaking / Migration**
+below) on top of the fixes. What was announced as 2.8.27 was test-surface and documentation
+hardening only — no shipped-component changes since 2.8.26 — and moves under this heading
+unchanged. The number had to open anyway: `v2.8.26` is a spent tag naming `ae72ffe0`, and the
+announce commit is conventionally the first commit after the tag — these four landed without it,
+which is exactly the red
+`AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` is written to refuse.
 
 ### Tests & docs
 
