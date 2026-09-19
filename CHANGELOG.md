@@ -11,6 +11,28 @@ announce commit is conventionally the first commit after the tag — these four 
 which is exactly the red
 `AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` is written to refuse.
 
+### Breaking / Migration
+
+- **`TmStatCard.SubValueColor` must now be a CSS colour, not a class name.** The value is written
+  verbatim into an inline `style="--tm-stat-subvalue-color: …"`, so until now *any* string reached
+  the attribute: a class name such as `text-green-600` produced a declaration no browser could
+  resolve (the subvalue silently kept its default colour), and a payload containing `;` could smuggle
+  further declarations into the element. The parameter is now validated before it is emitted —
+  accepted values are `var(--…)` references, hex literals (`#rgb`, `#rgba`, `#rrggbb`,
+  `#rrggbbaa`), `rgb(…)`/`rgba(…)`, `hsl(…)`/`hsla(…)`, `oklch(…)`, `color-mix(…)` and the CSS named
+  colours. Anything else — including every class name — emits **no** `style` and logs a warning
+  through the optionally injected `ILoggerFactory` ("SubValueColor expects a CSS color (2.9.0
+  breaking change: CSS class names are no longer accepted)"). Migration is mechanical:
+
+  ```razor
+  @* before (dead since 2.8.26, warned since 2.9.0) *@
+  <TmStatCard SubValueColor="text-green-600" … />
+  @* after *@
+  <TmStatCard SubValueColor="var(--tm-color-success-text)" … />
+  @* or a literal *@
+  <TmStatCard SubValueColor="#16a34a" … />
+  ```
+
 ### Tests & docs
 
 - **`b2aedb6e`** — the sweep treats a dirty starting tree as a failed run rather than reclassifying

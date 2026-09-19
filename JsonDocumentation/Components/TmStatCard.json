@@ -37,7 +37,7 @@
       "name": "SubValueColor",
       "type": "string?",
       "isRequired": false,
-      "description": "Colour for the SubValue as a CSS colour value — a var(--tm-*) token reference or a literal like #16a34a. Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves via var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the value therefore always wins over the default colour regardless of consumer stylesheet order. (Before 2.8.26 this parameter took a class name, which no library rule backed — it could not win.) Only meaningful together with SubValue: the component THROWS InvalidOperationException for SubValueColor without SubValue."
+      "description": "Colour for the SubValue — must be a CSS colour value: a var(--tm-*) token reference, a hex literal (#16a34a), an rgb/hsl/oklch/color-mix function, or a named colour (seagreen). Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves via var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the value therefore always wins over the default colour regardless of consumer stylesheet order. 2.9.0 BREAKING CHANGE: the value is validated before it reaches the attribute — a CSS class name such as text-green-600 (previously accepted and silently dead) or any payload containing ; { } or url( emits no style and logs a warning through the optionally injected ILoggerFactory. Migration: SubValueColor=\"text-green-600\" → SubValueColor=\"var(--tm-color-success-text)\" or \"#16a34a\". Only meaningful together with SubValue: the component THROWS InvalidOperationException for SubValueColor without SubValue."
     }
   ],
   "cssClasses": [

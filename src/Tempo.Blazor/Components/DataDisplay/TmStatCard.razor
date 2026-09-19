@@ -6,7 +6,7 @@
     @if (!string.IsNullOrEmpty(SubValue))
     {
         <span class="tm-stat-subvalue"
-              style="@(!string.IsNullOrEmpty(SubValueColor) ? $"--tm-stat-subvalue-color: {SubValueColor}" : null)">@SubValue</span>
+              style="@(_validatedSubValueColor is not null ? $"--tm-stat-subvalue-color: {_validatedSubValueColor}" : null)">@SubValue</span>
     }
 </div>
 
@@ -24,8 +24,9 @@
     [Parameter] public string? SubValue { get; set; }
 
     /// <summary>
-    /// Colour for the SubValue, as a CSS colour value — a <c>var(--tm-*)</c> token reference or a
-    /// literal like <c>#16a34a</c>. Rendered as the element's own
+    /// Colour for the SubValue, as a CSS colour value — a <c>var(--tm-*)</c> token reference, a hex
+    /// literal (<c>#16a34a</c>), an <c>rgb</c>/<c>hsl</c>/<c>oklch</c>/<c>color-mix</c> function, or a
+    /// named colour (<c>seagreen</c>). Rendered as the element's own
     /// <c>--tm-stat-subvalue-color</c> custom property, which the base
     /// <c>.tm-stat-subvalue</c> rule resolves with <c>var(--tm-stat-subvalue-color,
     /// var(--tm-text-secondary))</c>: the parameter therefore ALWAYS wins over the default colour,
@@ -33,6 +34,14 @@
     /// <see cref="SubValue"/>: without it there is nothing to colour and the card REFUSES to render
     /// (see <see cref="OnParametersSet"/>).
     /// </summary>
+    /// <remarks>
+    /// 2.9.0 BREAKING CHANGE: the value must be a CSS colour, validated before it reaches the
+    /// attribute — a CSS class name such as <c>text-green-600</c> (previously accepted and silently
+    /// dead) or any payload containing <c>;</c>, <c>{</c>, <c>}</c> or <c>url(</c> emits no
+    /// <c>style</c> and logs a warning through the injected <c>ILoggerFactory</c>. Migration:
+    /// <c>SubValueColor="text-green-600"</c> → <c>SubValueColor="var(--tm-color-success-text)"</c>
+    /// or a literal <c>#16a34a</c>.
+    /// </remarks>
     [Parameter] public string? SubValueColor { get; set; }
 
     /// <summary>
@@ -65,5 +74,7 @@
                 $"(Title=\"{Title}\"). The sub-value span is only rendered when {nameof(SubValue)} is non-empty, so the " +
                 $"colour would never reach the screen. Pass {nameof(SubValue)} as well, or drop {nameof(SubValueColor)}.");
         }
+
+        _validatedSubValueColor = ValidateSubValueColor();
     }
 }

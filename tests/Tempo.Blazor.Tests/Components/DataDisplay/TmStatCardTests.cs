@@ -1,5 +1,7 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Tests.Localization;
 using Tempo.Blazor.Tests.Theme;
@@ -176,5 +178,136 @@ public class TmStatCardTests : LocalizationTestBase
             .Add(c => c.SubValue, "+12%"));
 
         cut.Find(".tm-stat-subvalue").GetAttribute("style").Should().BeNull();
+    }
+
+    /// <summary>
+    /// 2.9.0 breaking change made honest: <c>SubValueColor</c> is interpolated verbatim into an
+    /// inline <c>style</c>, so the component must VALIDATE it as a CSS colour before emitting.
+    /// Every grammar the contract names reaches the attribute — token reference, every hex length,
+    /// the rgb/hsl/oklch/color-mix functions, and the named-colour keywords.
+    /// </summary>
+    [Theory]
+    [InlineData("var(--tm-color-success-text)")]
+    [InlineData("var(--x, green)")]
+    [InlineData("#fff")]
+    [InlineData("#ffff")]
+    [InlineData("#16a34a")]
+    [InlineData("#16a34a80")]
+    [InlineData("rgb(1,2,3)")]
+    [InlineData("rgb(1 2 3 / .5)")]
+    [InlineData("rgba(1,2,3,.5)")]
+    [InlineData("hsl(120,50%,50%)")]
+    [InlineData("hsla(120,50%,50%,.5)")]
+    [InlineData("oklch(0.7 0.15 150)")]
+    [InlineData("oklch(from var(--x) l c h)")]
+    [InlineData("color-mix(in srgb, red 50%, blue)")]
+    [InlineData("green")]
+    [InlineData("rebeccapurple")]
+    [InlineData("currentcolor")]
+    [InlineData("transparent")]
+    public void TmStatCard_SubValueColor_ValidCssColor_ReachesTheStyleAttribute(string color)
+    {
+        var cut = Render<TmStatCard>(p => p
+            .Add(c => c.Title, "Revenue")
+            .Add(c => c.Value, "$5,000")
+            .Add(c => c.SubValue, "+12%")
+            .Add(c => c.SubValueColor, color));
+
+        cut.Find(".tm-stat-subvalue").GetAttribute("style").Should().Be(
+            $"--tm-stat-subvalue-color: {color}",
+            "platná CSS barva se propíše do custom property beze změny");
+    }
+
+    /// <summary>
+    /// The other half of the contract: a value that is not a CSS colour emits NO style and logs a
+    /// warning — the old class-name usage (<c>text-green-600</c>) is exactly this case, and an
+    /// injected payload (<c>; background:url(…)</c>) must never reach the attribute. No throw:
+    /// the caller gets a warning and an uncoloured sub-value, not a crashed render.
+    /// </summary>
+    [Theory]
+    [InlineData("text-green-600")]
+    [InlineData("tm-text-success")]
+    [InlineData("not-a-color")]
+    [InlineData("red; background:url(x)")]
+    [InlineData("red; --tm-stat-subvalue-color: blue")]
+    [InlineData("url(//evil.example/x)")]
+    [InlineData("rgb(1,2,3};x{y")]
+    [InlineData("rgb(1,2,3")]
+    [InlineData("var(")]
+    public void TmStatCard_SubValueColor_InvalidValue_EmitsNoStyleAndLogsWarning(string color)
+    {
+        var factory = new RecordingLoggerFactory();
+        Services.AddSingleton<ILoggerFactory>(factory);
+
+        var cut = Render<TmStatCard>(p => p
+            .Add(c => c.Title, "Revenue")
+            .Add(c => c.Value, "$5,000")
+            .Add(c => c.SubValue, "+12%")
+            .Add(c => c.SubValueColor, color));
+
+        cut.Find(".tm-stat-subvalue").GetAttribute("style").Should().BeNull(
+            "neplatná hodnota nesmí dosáhnout atributu — jinak je injektovaná deklarace zpět ve hře");
+        factory.Entries.Should().Contain(
+            entry => entry.Level == LogLevel.Warning
+                     && entry.Message.Contains("SubValueColor expects a CSS color")
+                     && entry.Message.Contains("CSS class names are no longer accepted"),
+            "neplatná hodnota musí zalogovat warning s textem breaking-change kontraktu, " +
+            $"zaznamenáno: {string.Join(" | ", factory.Entries.Select(e => e.Message))}");
+    }
+
+    /// <summary>
+    /// The warning must fire again when a VALID colour is swapped for an invalid one on re-render —
+    /// the check lives in <c>OnParametersSet</c>, not in a first-render branch.
+    /// </summary>
+    [Fact]
+    public void TmStatCard_SubValueColor_TurnedInvalidOnRerender_DropsTheStyle()
+    {
+        var factory = new RecordingLoggerFactory();
+        Services.AddSingleton<ILoggerFactory>(factory);
+        var cut = Render<TmStatCard>(p => p
+            .Add(c => c.Title, "Revenue")
+            .Add(c => c.Value, "$5,000")
+            .Add(c => c.SubValue, "+12%")
+            .Add(c => c.SubValueColor, "var(--tm-color-success-text)"));
+
+        cut.Render(p => p
+            .Add(c => c.Title, "Revenue")
+            .Add(c => c.Value, "$5,000")
+            .Add(c => c.SubValue, "+12%")
+            .Add(c => c.SubValueColor, "text-green-600"));
+
+        cut.Find(".tm-stat-subvalue").GetAttribute("style").Should().BeNull();
+        factory.Entries.Should().Contain(e => e.Level == LogLevel.Warning);
+    }
+
+    /// <summary>A logger the test owns: records (level, formatted message) so the assertion reads intent, not NSubstitute call-shape.</summary>
+    private sealed class RecordingLoggerFactory : ILoggerFactory
+    {
+        public readonly List<(LogLevel Level, string Message)> Entries = [];
+
+        public ILogger CreateLogger(string categoryName) => new RecordingLogger(Entries);
+
+        public void AddProvider(ILoggerProvider provider)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class RecordingLogger(List<(LogLevel Level, string Message)> entries) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter) =>
+                entries.Add((logLevel, formatter(state, exception)));
+        }
     }
 }
