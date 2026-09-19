@@ -8638,6 +8638,12 @@
               "description": "Whether this column can be sorted by clicking its header."
             },
             {
+              "name": "SortLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the header sort button. Defaults to Title, then to the localized sort fallback — set it when the name should say more than the visible caption (e.g. \"Sort by last name\" while the header reads \"Name\"), or when the caption is not enough to describe the action."
+            },
+            {
               "name": "Title",
               "type": "string",
               "isRequired": false,

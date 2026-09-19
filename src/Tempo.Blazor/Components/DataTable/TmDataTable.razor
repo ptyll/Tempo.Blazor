@@ -222,11 +222,14 @@
                                        no @onclick of its own — its native click bubbles to the <th>, so
                                        Enter, Space and the mouse all take the same single path and a key
                                        can never double-fire a sort the way an explicit keydown handler did.
-                                       When a HeaderTemplate supplies the visible label the button keeps an
-                                       accessible name from the column title (or the localized fallback). *@
+                                       The aria-label is emitted unconditionally: a control's name is a
+                                       guarantee of the markup, not a side effect of which content path
+                                       happened to render. SortLabel wins, then the column Title, then the
+                                       localized action name — so an icon-only header, a templated one and
+                                       a plain-text one all announce something a screen reader can use. *@
                                     <button type="button"
                                             class="tm-th-sort"
-                                            aria-label="@(col.HeaderTemplate is not null ? (col.Title ?? Loc["TmDataTable_SortAscending"]) : null)"
+                                            aria-label="@SortButtonAccessibleName(col)"
                                             aria-keyshortcuts="@(ShowColumnMenu ? "P" : null)">
                                         @if (col.HeaderTemplate is null)
                                         {

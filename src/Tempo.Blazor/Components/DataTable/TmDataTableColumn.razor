@@ -10,6 +10,14 @@
     /// <summary>Column header text.</summary>
     [Parameter] public string Title { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Accessible name of the header sort button. Defaults to <see cref="Title"/>, then to the
+    /// localized sort fallback — set it when the name should say more than the visible caption
+    /// (e.g. "Sort by last name" while the header reads "Name"), or when the caption is not enough
+    /// to describe the action.
+    /// </summary>
+    [Parameter] public string? SortLabel { get; set; }
+
     /// <summary>Field accessor that returns the cell value for a given row item.</summary>
     [Parameter] public Func<TItem, object?> Field { get; set; } = default!;
 

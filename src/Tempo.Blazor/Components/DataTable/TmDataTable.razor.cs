@@ -2190,6 +2190,18 @@ public partial class TmDataTable<TItem> : IDisposable
         return sort.Direction == DataTableSortDirection.Descending ? "descending" : "ascending";
     }
 
+    /// <summary>
+    /// The name the sort button announces. <see cref="TmDataTableColumn{TItem}.SortLabel"/> is the
+    /// consumer's explicit override; the column <c>Title</c> names the button next; and when neither
+    /// exists — an icon-only or untitled templated header — the localized action name is what a
+    /// screen reader gets rather than silence. A button whose only content is an aria-hidden icon
+    /// must never reach the page without a name.
+    /// </summary>
+    private string SortButtonAccessibleName(TmDataTableColumn<TItem> col)
+        => col.SortLabel
+           ?? (string.IsNullOrWhiteSpace(col.Title) ? null : col.Title)
+           ?? Loc["TmDataTable_SortAscending"];
+
     private string GetRowClass(TItem item) => IsSelected(item) ? "tm-row-selected" : string.Empty;
 
     // ── Scroll container helpers ─────────────────────────────────
