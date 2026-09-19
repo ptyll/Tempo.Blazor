@@ -14,6 +14,7 @@
   border-radius: var(--tm-radius-lg);
   box-shadow: var(--tm-shadow-lg);
   margin-top: var(--tm-space-1);
+  padding: var(--tm-space-1) 0;
 }
 
 .tm-rte-mention-user {

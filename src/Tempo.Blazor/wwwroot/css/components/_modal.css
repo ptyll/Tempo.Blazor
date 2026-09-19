@@ -107,6 +107,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--tm-space-4);
+  justify-content: space-between;
   padding: var(--tm-space-6) var(--tm-space-6) var(--tm-space-4);
   border-bottom: 1px solid var(--tm-border-color);
 }
@@ -122,7 +123,7 @@
 }
 
 .tm-modal-title {
-  font-size: var(--tm-font-size-xl);
+  font-size: var(--tm-font-size-lg);
   font-weight: var(--tm-font-weight-semibold);
   color: var(--tm-text-primary);
   margin: 0;
@@ -148,6 +149,7 @@
   color: var(--tm-text-secondary);
   cursor: pointer;
   transition: all var(--tm-transition-fast);
+  font-size: var(--tm-font-size-xl);
 }
 
 .tm-modal-close:hover {
@@ -338,5 +340,14 @@
 
   .tm-dialog-footer .tm-btn {
     width: 100%;
+  }
+}
+
+/* The margin 2.8.25 painted below 768px came from a stray @media rule in _dashboard.css —
+   the only declaration of it anywhere, so it applied despite sitting in a foreign file.
+   Restored here on the owning class (2.9.0 regression fix). */
+@media (max-width: 768px) {
+  .tm-modal {
+    margin: var(--tm-space-4);
   }
 }
