@@ -13,7 +13,8 @@ which is exactly the red
 
 ### Breaking / Migration
 
-- **`TmStatCard.SubValueColor` must now be a CSS colour, not a class name.** The value is written
+- **`TmStatCard.SubValueColor` must now be a CSS colour, not a class name.** Landed as **`0655b971`**.
+  The value is written
   verbatim into an inline `style="--tm-stat-subvalue-color: …"`, so until now *any* string reached
   the attribute: a class name such as `text-green-600` produced a declaration no browser could
   resolve (the subvalue silently kept its default colour), and a payload containing `;` could smuggle
@@ -35,8 +36,34 @@ which is exactly the red
 
 ### Fixed
 
-- **`ToastService` and `TmSearchInput` now run their timers on an injectable `TimeProvider`.**
-  `ToastService` takes `TimeProvider?` as an optional constructor argument — DI injects a
+- **The declarations 2.8.26 deleted as "dead" are back on the owning classes (`eef9ba93`).** The
+  erratum in the 2.8.26 section tells the whole story: five commits — **`9e9e4a54`**,
+  **`cfd691d5`**, **`5ab7fe83`**, **`8125ac19`**, **`a013d24c`** — removed rules whose selectors
+  were dead but whose declarations still painted pixels through descendant selectors, import
+  order and unique properties. What is restored is the *rendered* value: the declarations the
+  dead rules had been winning with are moved onto the owning classes in the owning stylesheets,
+  so the computed style is again the style 2.8.25 painted — without re-introducing a single dead
+  selector. The regression surface is guarded two ways: `CssComputedStyleRegressionTests` resolves the cascade
+  through `CssCascade` over `tempo-blazor.bundled.css` for every restored property, and a
+  Playwright computed-style test reads the same pixels in a real browser — Chromium and Firefox
+  both, because a computed style that only exists in one engine is not a restored style.
+
+- **Every `TmDataTable` sort button announces an accessible name (`ee1ec3df`).** Until now the
+  `<button class="tm-th-sort">` emitted `aria-label` only when the column used a
+  `HeaderTemplate` — a plain titled column got its name "for free" from visible text, and an
+  icon-only or untitled templated header got none at all. The label is now unconditional markup
+  derived as `SortLabel` → `Title` → localized "Sort ascending": `TmDataTableColumn` gains a
+  public `[Parameter] SortLabel` so a consumer can name the action past the visible caption
+  ("Sort by last name" on a "Name" header), and the fallback means no sortable button — on any
+  column, not just the first — ever reaches the page unnamed. Activation is unchanged: the
+  button still has no `@onclick`, Enter/Space/click all take the single native path, and
+  `aria-keyshortcuts="P"` is still advertised exactly when the column menu exists. Component
+  tests cover the precedence on plain, icon-only and templated headers; the E2E pair reads the
+  resolved AX-tree name, the Enter-sort and the hover/`:focus-visible` paint in Chromium and
+  Firefox.
+
+- **`ToastService` and `TmSearchInput` now run their timers on an injectable `TimeProvider`
+  (`aee98c13`).** `ToastService` takes `TimeProvider?` as an optional constructor argument — DI injects a
   registered provider, otherwise it falls back to `TimeProvider.System` — and `TmSearchInput`
   resolves the same service with the same fallback. Both swapped their ad-hoc timers for
   `TimeProvider.CreateTimer` (`ITimer`), so a consumer that registers a fake clock gets fully
@@ -50,6 +77,27 @@ which is exactly the red
   the assertion runs — the exact regressions the wall-clock reads could let through.
 
 ### Tests & docs
+
+- **`107ebfda`** — `CssCascade` stops flattening stylesheets. The regression model now parses the
+  sheet structurally instead of matching flat rules: `@media` conditions are evaluated against a
+  `MediaContext` (a width-dependent condition with no supplied width is undecidable, not false),
+  `@layer` order participates in precedence with unlayered rules beating layered ones, `@import`
+  resolves through an injected resolver, statement-form at-rules are recognised before the next
+  block, CSS nesting and `&` expand as a selector cross-product, and anything the model cannot
+  express — an unsupported combinator, an unknown media feature — is reported fail-closed as
+  `Unmodelled` rather than silently treated as a non-match. The same commit wires
+  `GeneratedDocumentationMatchesCommittedTests`: it runs the real JSON generator in-process into
+  a temporary directory, compares the emitted file set and byte content against the committed
+  `tempo-blazor*.json` (line-ending normalisation only, first differing line reported), and every
+  configured input path of the generator now throws on missing or malformed input instead of
+  falling back to empty.
+
+- **Every commit id this changelog prints inside backticks must resolve.** The new
+  `ChangelogReferencesExistingCommitsTests` extracts each `` `hex` `` / **`hex`** token from this
+  file and runs `git cat-file -e <id>^{commit}` against it — a reference that points at nothing
+  is exactly the dishonesty this release was cut to remove, so the file can no longer print one.
+  Parenthesised ids are untouched: the 2.8.26 convention paragraph declares them development-line
+  record ids, not commit claims, and several correctly resolve to no commit.
 
 - **`b2aedb6e`** — the sweep treats a dirty starting tree as a failed run rather than reclassifying
   the outcome DISABLED.
@@ -73,6 +121,24 @@ Convention for the parenthesised ids throughout this section: they name the orig
 development-line record each item was tracked under (the D17 register entries and their siblings),
 not a commit of this repository — the landed commits are listed by `git log`, most of them
 carrying the record id in the subject line.
+
+### Erratum (corrected in 2.9.0)
+
+Five commits of this release deleted declarations described as "dead" duplicates of an owning
+class, and the description was wrong: the rules were dead as *whole selectors* — no element
+carried the bare class — but their declarations still reached rendered pixels through
+**descendant selectors** (`#page .tm-modal-header` …), **import order** between stylesheets, and
+**unique declarations** the owning rule never wrote. The five commits are **`9e9e4a54`**
+(`.tm-modal-header`), **`cfd691d5`** (`.tm-modal-close`), **`5ab7fe83`** (`.tm-modal` and its
+mobile margin), **`8125ac19`** (`.tm-filter-chip button`) and **`a013d24c`**
+(the mention-dropdown rules). The measured consequence in the shipped 2.8.26 bundle: the modal
+header lost its `justify-content: space-between` and vertical padding, the modal-close and
+filter-chip-remove buttons rendered at different padding and font size than 2.8.25 painted, the
+mention dropdown lost its vertical padding, and a `.tm-modal` below 768 px lost the margin a
+stray `@media` rule in `_dashboard.css` had been the only declaration of. **`eef9ba93`** in 2.9.0
+restores the effective values on the owning classes in the owning stylesheets — the dead
+selectors are not re-introduced — and the release adds a computed-style regression suite plus a
+descendant-selector sweep so the same deletion cannot pass review a second time.
 
 ### Fixed (D17 — the CSS contract items)
 
