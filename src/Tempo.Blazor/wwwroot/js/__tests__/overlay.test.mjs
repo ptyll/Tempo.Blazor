@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolvePlacement } from '../overlay.js';
+import { anchorIntersectsViewport, resolvePlacement } from '../overlay.js';
 
 // Viewport used by all tests unless overridden.
 const VIEW = { viewWidth: 1280, viewHeight: 800 };
@@ -126,4 +126,38 @@ test('margin is respected in room math', () => {
     assert.equal(flipped.side, 'top');
     const kept = resolvePlacement(a, PANEL, opts({ margin: 0, offset: 0 }));
     assert.equal(kept.side, 'bottom');
+});
+
+// ── anchorIntersectsViewport (place() hides the panel when this goes false) ──
+
+test('anchor fully inside the viewport intersects', () => {
+    assert.equal(anchorIntersectsViewport(anchor(), VIEW.viewWidth, VIEW.viewHeight), true);
+});
+
+test('anchor scrolled above the viewport does not intersect', () => {
+    const a = anchor({ top: -200, bottom: -160 });
+    assert.equal(anchorIntersectsViewport(a, VIEW.viewWidth, VIEW.viewHeight), false);
+});
+
+test('anchor scrolled below the viewport does not intersect', () => {
+    const a = anchor({ top: 820, bottom: 860 });
+    assert.equal(anchorIntersectsViewport(a, VIEW.viewWidth, VIEW.viewHeight), false);
+});
+
+test('anchor fully left/right of the viewport does not intersect', () => {
+    const left = anchor({ left: -300, right: -180 });
+    assert.equal(anchorIntersectsViewport(left, VIEW.viewWidth, VIEW.viewHeight), false);
+    const right = anchor({ left: 1300, right: 1420 });
+    assert.equal(anchorIntersectsViewport(right, VIEW.viewWidth, VIEW.viewHeight), false);
+});
+
+test('anchor clipped to a viewport edge still intersects (strict >)', () => {
+    // One pixel still on screen → panel stays visible.
+    const a = anchor({ top: -39, bottom: 1 });
+    assert.equal(anchorIntersectsViewport(a, VIEW.viewWidth, VIEW.viewHeight), true);
+});
+
+test('anchor with a zeroed rect (display:none) does not intersect', () => {
+    const a = anchor({ top: 0, bottom: 0, left: 0, right: 0 });
+    assert.equal(anchorIntersectsViewport(a, VIEW.viewWidth, VIEW.viewHeight), false);
 });

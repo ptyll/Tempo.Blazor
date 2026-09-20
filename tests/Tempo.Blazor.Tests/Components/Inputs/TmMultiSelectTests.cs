@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Inputs;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
@@ -684,5 +685,55 @@ public class TmMultiSelectTests : LocalizationTestBase
         cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
         cut.WaitForAssertion(() =>
             JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+    }
+
+    // ── JS dismissal (overlay.js) ────────────────────────────────────────────
+    // overlay.js owns focus on dismissal now: Escape refocuses the anchor itself, and an outside
+    // pointerdown refocuses it only when the target cannot take focus — a click into another
+    // field must keep the focus it just earned (B1). The Blazor callback therefore never queues
+    // _focusTriggerAfterClose for either reason.
+
+    [Fact]
+    public async Task TmMultiSelect_JsOutsideDismissal_Does_Not_Restore_Focus()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        // Simulate overlay.js's outside-dismissal notification.
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("outside"));
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-multiselect__popup").Should().BeEmpty());
+        // Still just the one focus call from opening — no trigger refocus on the Blazor side.
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TmMultiSelect_JsEscapeDismissal_Does_Not_Restore_Focus_From_Blazor()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value));
+
+        cut.Find(".tm-multiselect").Click();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        // Escape reaches Blazor as the same NotifyDismissedAsync callback; overlay.js already
+        // focused the anchor before invoking it, so the component must not focus a second time.
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-multiselect__popup").Should().BeEmpty());
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1);
     }
 }

@@ -18,6 +18,7 @@
             disabled="@Disabled"
             aria-haspopup="true"
             aria-expanded="@(_isOpen ? "true" : "false")"
+            @ref="_toggleRef"
             @onclick="ToggleDropdown">
         <TmIcon Name="chevron-down" Size="IconSize.Xs" />
     </button>
@@ -25,8 +26,11 @@
     @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
        repositions it on scroll/resize. Bottom + End + 4px keep the historical
-       "under the button row, right edge aligned" look (the old top:100%;right:0;margin-top:4px). *@
-    <TmOverlayPanel Anchor="_rootRef"
+       "under the button row, right edge aligned" look (the old top:100%;right:0;margin-top:4px).
+       The anchor is the TOGGLE button (Align.End keeps the right edge identical to the old root
+       anchor) so overlay.js's Escape focus restore lands on a natively focusable element — the
+       wrapper div cannot take it. *@
+    <TmOverlayPanel Anchor="_toggleRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
                     Placement="OverlayPlacement.Bottom"
@@ -41,6 +45,7 @@
 @code {
     private bool _isOpen;
     private ElementReference _rootRef;
+    private ElementReference _toggleRef;
 
     /// <summary>Text label on the primary button.</summary>
     [Parameter, EditorRequired] public string Text { get; set; } = default!;
@@ -81,8 +86,13 @@
 
     private async Task HandlePrimaryClick()
     {
-        if (!Disabled && !IsLoading)
-            await OnClick.InvokeAsync();
+        if (Disabled || IsLoading)
+            return;
+        // The primary button sits inside the anchor's exemption zone, so an open menu survives
+        // this click unless we close it ourselves — a running primary action must not leave the
+        // menu floating.
+        _isOpen = false;
+        await OnClick.InvokeAsync();
     }
 
     private void ToggleDropdown()

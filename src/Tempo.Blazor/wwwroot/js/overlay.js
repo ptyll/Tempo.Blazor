@@ -28,6 +28,16 @@ const OPEN_CLASS = 'tm-overlay-panel--open';
 const PLACEMENT_ATTR = 'data-tm-placement';
 const FALLBACK_ATTR = 'data-tm-overlay-fallback';
 
+// Elements the browser itself moves focus to on mousedown (mirrors tm-focus-trap.js's list).
+// An outside pointerdown landing anywhere else leaves focus nowhere — or on a node the closing
+// panel is about to destroy — so the anchor takes it back instead.
+const FOCUSABLE = [
+    'a[href]', 'button:not([disabled])', 'textarea:not([disabled])',
+    'input:not([disabled]):not([type="hidden"])', 'select:not([disabled])',
+    'audio[controls]', 'video[controls]', '[contenteditable]:not([contenteditable="false"])',
+    '[tabindex]:not([tabindex="-1"])'
+].join(',');
+
 const tracked = new Map();
 let listenersBound = false;
 let resizeObserver = null;
@@ -102,6 +112,17 @@ export function resolvePlacement(anchor, size, options) {
     return { x, y, side };
 }
 
+// ── Pure visibility math ────────────────────────────────────────────────────
+// True while any part of the anchor rect intersects the viewport. Exported so the Node tests
+// can pin the edges; place() hides the panel when this goes false — a clamped panel hanging
+// off an anchor that scrolled away reads as a detached artifact, not a positioned one.
+export function anchorIntersectsViewport(anchor, viewWidth, viewHeight) {
+    return anchor.bottom > 0
+        && anchor.top < viewHeight
+        && anchor.right > 0
+        && anchor.left < viewWidth;
+}
+
 // ── Fallback containing-block walk (no Popover API) ─────────────────────────
 function establishesContainingBlock(cs) {
     return (
@@ -161,28 +182,43 @@ function place(entry) {
     }
 
     const anchorRect = anchorEl.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
+
+    // Measure the LAYOUT box, not getBoundingClientRect: a transform on the panel's open
+    // animation scales the rect (e.g. .tm-popover__body grows from scale(0.95)) and place()
+    // runs at t≈0 — the mis-measurement would then stick for the panel's whole open life.
+    // offsetWidth/offsetHeight ignore transforms. translate-only openers (tm-fade-in) never
+    // touched the measurement, but they don't mind the switch either.
+    const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
 
     // matchAnchorWidth must feed the ALIGN math too, not just the inline width written below:
     // with align 'end'/'center' the x coordinate is width-dependent, so resolving against the
     // panel's natural width and only then overriding width would land the panel off by the
     // (naturalWidth − anchorWidth) delta.
-    const effectiveWidth = options.matchAnchorWidth ? anchorRect.width : panelRect.width;
+    const effectiveWidth = options.matchAnchorWidth ? anchorRect.width : panelWidth;
+
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+
+    // Anchor scrolled fully out of the viewport: park the panel invisible rather than clamp it
+    // against an edge — it reappears on the next pass once the anchor is back. ('' restores the
+    // stylesheet value; hidePanel's cssText reset already covers the closed path.)
+    panel.style.visibility = anchorIntersectsViewport(anchorRect, viewW, viewH) ? '' : 'hidden';
 
     // Top layer: containing block is the viewport. Fallback: nearest transformed-ish ancestor.
     const block = entry.usesPopover ? null : containingBlockOf(panel);
     const originTop = block ? block.top : 0;
     const originLeft = block ? block.left : 0;
 
-    const result = resolvePlacement(anchorRect, { width: effectiveWidth, height: panelRect.height }, {
+    const result = resolvePlacement(anchorRect, { width: effectiveWidth, height: panelHeight }, {
         placement: options.placement,
         align: options.align,
         offset: options.offset,
         margin: options.margin,
         flip: options.flip,
         shift: options.shift,
-        viewWidth: window.innerWidth,
-        viewHeight: window.innerHeight,
+        viewWidth: viewW,
+        viewHeight: viewH,
     });
 
     panel.style.left = `${Math.round(result.x - originLeft)}px`;
@@ -228,9 +264,65 @@ function schedule() {
 }
 
 // ── Dismissal ───────────────────────────────────────────────────────────────
+
+// The release half of a consumed Escape must not reach host overlays: TmModal, TmDialog and
+// TmKeyboardShortcutsHelp close on keyUP, so the same physical key that just shut the panel
+// would otherwise shut its host a beat later. One suppressor covers a held/repeated Escape —
+// it eats only the first Escape keyup it sees and disarms on window blur (a keyup lost to an
+// alt-tab mid-press must not swallow the NEXT, unrelated Escape).
+let escapeKeyUpSuppressor = null;
+
+function suppressEscapeKeyUp() {
+    if (escapeKeyUpSuppressor) {
+        return;
+    }
+    const disarm = () => {
+        window.removeEventListener('keyup', onKeyUp, { capture: true });
+        window.removeEventListener('blur', disarm);
+        escapeKeyUpSuppressor = null;
+    };
+    const onKeyUp = e => {
+        if (e.key !== 'Escape') {
+            return; // a different key released mid-hold — keep waiting for ours
+        }
+        disarm();
+        e.stopImmediatePropagation();
+    };
+    escapeKeyUpSuppressor = onKeyUp;
+    window.addEventListener('keyup', onKeyUp, { capture: true });
+    window.addEventListener('blur', disarm, { once: true });
+}
+
+// Outside pointerdown: give focus back to the anchor ONLY when the pointerdown target cannot
+// take focus itself. A click into a field/button earns its focus through the browser's own
+// mousedown — pulling it back to the anchor would steal it (B1). For dead-space clicks the
+// browser drops focus to <body> after our capture-phase run, so the restore is deferred past
+// the mousedown and then applies only when focus truly went nowhere (or is still sitting
+// inside the doomed panel).
+function maybeRestoreAnchorFocus(entry, target) {
+    if (target instanceof Element && target.closest(FOCUSABLE)) {
+        return;
+    }
+    const anchorEl = resolveAnchor(entry);
+    if (!anchorEl || typeof anchorEl.focus !== 'function') {
+        return;
+    }
+    setTimeout(() => {
+        const active = document.activeElement;
+        const nowhere = !active
+            || active === document.body
+            || active === document.documentElement
+            || !active.isConnected
+            || entry.panel.contains(active);
+        if (nowhere && anchorEl.isConnected) {
+            anchorEl.focus({ preventScroll: true });
+        }
+    }, 0);
+}
+
 function dismiss(entry, reason) {
     if (entry.dismissed) {
-        return;
+        return false;
     }
     entry.dismissed = true;
     if (reason === 'escape') {
@@ -238,23 +330,34 @@ function dismiss(entry, reason) {
         // removed by the .NET re-render and focus would otherwise drop to <body>.
         const anchorEl = resolveAnchor(entry);
         if (anchorEl && typeof anchorEl.focus === 'function') {
-            anchorEl.focus();
+            anchorEl.focus({ preventScroll: true });
         }
     }
     // .NET flips IsOpen, which re-renders and runs close(key) — the panel element is hidden there,
     // so a slow or swallowed callback can never leave a ghost panel tracked forever.
     Promise.resolve(entry.dotNetRef.invokeMethodAsync('NotifyDismissedAsync', reason))
         .catch(() => { entry.dismissed = false; });
+    return true;
 }
 
 function onKeyDown(e) {
     if (e.key !== 'Escape') {
         return;
     }
-    // Topmost = most recently opened eligible panel.
+    // Topmost = most recently opened eligible panel. Dismissed-but-still-tracked entries (the
+    // .NET re-render hasn't caught up) are skipped so a quick second Escape peels the NEXT layer
+    // instead of leaking through to the host under a still-visible panel.
     for (const entry of [...tracked.values()].reverse()) {
-        if (entry.options.closeOnEscape) {
-            dismiss(entry, 'escape');
+        if (entry.options.closeOnEscape && !entry.dismissed) {
+            if (dismiss(entry, 'escape')) {
+                // One gesture = one layer: the keydown is consumed (preventDefault marks it for
+                // document-level handlers that honour the flag — tm-focus-trap's drawer escape —
+                // and stops every remaining listener including element-level ones), and the
+                // matching keyup is intercepted below for keyup-driven hosts (TmModal/TmDialog).
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                suppressEscapeKeyUp();
+            }
             return;
         }
     }
@@ -262,6 +365,7 @@ function onKeyDown(e) {
 
 function onPointerDown(e) {
     const target = e.target;
+    let topmostDismissed = null;
     for (const entry of [...tracked.values()].reverse()) {
         if (!entry.options.closeOnOutsidePointerDown) {
             continue;
@@ -275,7 +379,12 @@ function onPointerDown(e) {
         if (anchorEl && typeof anchorEl.contains === 'function' && anchorEl.contains(target)) {
             continue;
         }
-        dismiss(entry, 'outside');
+        if (dismiss(entry, 'outside')) {
+            topmostDismissed ??= entry;
+        }
+    }
+    if (topmostDismissed) {
+        maybeRestoreAnchorFocus(topmostDismissed, target);
     }
 }
 

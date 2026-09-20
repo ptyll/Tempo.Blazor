@@ -393,9 +393,10 @@ public partial class TmMultiSelect<TItem, TValue>
     }
 
     /// <summary>
-    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js): focus may be inside the
-    /// popup (filter input, an option, a popup control), and that node is about to be destroyed —
-    /// restore it to the trigger, same as the component's own close paths.
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js). Focus restoration is
+    /// owned by overlay.js itself: Escape refocuses the anchor, while an outside pointerdown
+    /// refocuses it only when the target cannot take focus — a click into another field must keep
+    /// the focus it just earned, so this path must not set <see langword="_focusTriggerAfterClose"/>.
     /// </summary>
     private async Task SetOpenFromJsAsync(bool open)
     {
@@ -403,14 +404,9 @@ public partial class TmMultiSelect<TItem, TValue>
             return;
         _isOpen = open;
         if (!open)
-        {
-            _focusTriggerAfterClose = true;
             await OnClose.InvokeAsync();
-        }
         else
-        {
             await OnOpen.InvokeAsync();
-        }
     }
 
     // ── Filtering ────────────────────────────────────────────────

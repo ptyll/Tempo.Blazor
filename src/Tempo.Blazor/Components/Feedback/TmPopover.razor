@@ -5,9 +5,16 @@
     <div class="tm-popover__trigger"
          @ref="_triggerRef"
          role="button"
+         tabindex="0"
          aria-expanded="@(IsVisible ? "true" : "false")"
-         @onclick="Toggle">
-        @TriggerContent
+         @onclick="Toggle"
+         @onkeydown="HandleTriggerKeyDown">
+        @* Consumer trigger content may contain a native <button> — its bubbled Enter/Space would
+           hit the emulating handler on top of the native click. The keydown fence keeps exactly
+           one activation per press (Escape is unaffected: overlay.js consumes it at the window). *@
+        <span class="tm-popover__trigger-content" @onkeydown:stopPropagation="true">
+            @TriggerContent
+        </span>
     </div>
 
     @* The body is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
@@ -98,6 +105,17 @@
     private async Task Close()
     {
         await SetOpenAsync(false);
+    }
+
+    // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is
+    // a div[role=button], not a native <button>, so the browser never produces
+    // a click for Enter/Space on its own.
+    private async Task HandleTriggerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            await Toggle();
+        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

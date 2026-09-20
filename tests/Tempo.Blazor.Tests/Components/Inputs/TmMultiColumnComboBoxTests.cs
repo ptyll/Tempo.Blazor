@@ -197,6 +197,37 @@ public class TmMultiColumnComboBoxTests : LocalizationTestBase
         cut.Find(".tm-multi-column-combo-box--disabled").Should().NotBeNull();
     }
 
+    // ── ARIA semantics ──────────────────────────────────────────────────────
+    // The panel wraps a filter, a recent list and a create row around the grid —
+    // role=dialog describes that container; role=grid belongs to the <table> alone.
+
+    [Fact]
+    public void TmMultiColumnComboBox_Panel_Role_Is_Dialog_Not_Grid()
+    {
+        var cut = Render<TmMultiColumnComboBox<Product, int>>(p => p
+            .Add(c => c.Data, GetProducts())
+            .Add(c => c.ValueField, p => p.Id)
+            .Add(c => c.TextField, p => p.Name)
+            .Add(c => c.Columns, GetColumns()));
+
+        cut.Find(".tm-multi-column-combo-box__trigger").Click();
+
+        cut.Find(".tm-multi-column-combo-box__dropdown").GetAttribute("role").Should().Be("dialog");
+        cut.Find("table.tm-multi-column-combo-box__grid").GetAttribute("role").Should().Be("grid");
+    }
+
+    [Fact]
+    public void TmMultiColumnComboBox_Trigger_AriaHaspopup_Is_Dialog()
+    {
+        var cut = Render<TmMultiColumnComboBox<Product, int>>(p => p
+            .Add(c => c.Data, GetProducts())
+            .Add(c => c.ValueField, p => p.Id)
+            .Add(c => c.TextField, p => p.Name)
+            .Add(c => c.Columns, GetColumns()));
+
+        cut.Find(".tm-multi-column-combo-box__trigger").GetAttribute("aria-haspopup").Should().Be("dialog");
+    }
+
     [Fact]
     public void TmMultiColumnComboBox_Custom_Class_Applied()
     {

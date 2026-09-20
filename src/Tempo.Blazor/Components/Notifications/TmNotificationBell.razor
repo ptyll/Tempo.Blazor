@@ -10,6 +10,7 @@
             class="tm-notification-bell__button"
             aria-label="@AriaLabelText"
             title="@AriaLabelText"
+            @ref="_buttonRef"
             @onclick="ToggleAsync">
         <TmIcon Name="@IconNames.Bell" Size="IconSize.Sm" />
         @if (UnreadCount > 0)
@@ -20,8 +21,10 @@
 
     @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow/transform can no longer clip it. Bottom + End + 8px replaces the old
-       top:calc(100%+0.5rem);right:0; the fixed 360px width stays in CSS. *@
-    <TmOverlayPanel Anchor="_rootRef"
+       top:calc(100%+0.5rem);right:0; the fixed 360px width stays in CSS. The anchor is the BUTTON
+       (Align.End keeps the dropdown's right edge identical to the old root anchor) so overlay.js's
+       Escape focus restore lands on a natively focusable element — the wrapper div cannot take it. *@
+    <TmOverlayPanel Anchor="_buttonRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenFromJsAsync"
                     Placement="OverlayPlacement.Bottom"
@@ -100,6 +103,7 @@
     private int _serviceUnreadCount;
     private List<TmNotification> _notifications = new();
     private ElementReference _rootRef;
+    private ElementReference _buttonRef;
 
     private int UnreadCount => _serviceUnreadCount;
 

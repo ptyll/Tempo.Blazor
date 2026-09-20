@@ -153,9 +153,37 @@
     </div>
 </section>
 
+<!-- Focus on dismissal -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Focus on dismiss</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            Open the dropdown, then click into the plain field next to it: focus must land in the
+            field and stay there — the closing panel only reclaims focus when an outside click hits
+            something that cannot take it (dead space). Escape still returns focus to the trigger.
+        </p>
+        <div class="flex flex-wrap items-start gap-3">
+            <div class="w-64">
+                <TmMultiSelect TItem="SelectOption<string>" TValue="string"
+                               Items="_focusOptions"
+                               DisplayField="@(o => o.Label)"
+                               ValueField="@(o => o.Value)"
+                               @bind-Values="_focusValues"
+                               Placeholder="Pick items..."
+                               data-testid="overlay-focus-multiselect" />
+            </div>
+            <input type="text" class="tm-input w-64" data-testid="overlay-outside-input"
+                   placeholder="Outside field — click me while the dropdown is open" />
+        </div>
+    </div>
+</section>
+
 @* Scroll room below the edge section: without it the document ends right after the trigger, so
    scrollIntoView({block:'end'}) cannot pin the trigger's bottom edge to the viewport bottom and
-   the flip demo/test would have nothing to prove. *@
+   the flip demo/test would have nothing to prove. It also gives the "anchor scrolled fully out of
+   the viewport → panel hides" behaviour enough travel to demonstrate. *@
 <div style="height: 120vh;" aria-hidden="true"></div>
 
 <style>
@@ -175,6 +203,14 @@
     private bool _modalPanelOpen;
     private bool _edgeOpen;
     private DateOnly? _modalDate;
+    private IReadOnlyList<string> _focusValues = [];
+
+    private static readonly List<SelectOption<string>> _focusOptions =
+    [
+        new("alpha", "Alpha"),
+        new("beta", "Beta"),
+        new("gamma", "Gamma"),
+    ];
 
     private ElementReference _scrollAnchor;
     private ElementReference _modalAnchor;

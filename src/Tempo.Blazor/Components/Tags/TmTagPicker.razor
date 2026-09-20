@@ -17,16 +17,18 @@
         </span>
     }
 
-    @* Open dropdown trigger *@
+    @* Open dropdown trigger — also the panel anchor: it is the natively focusable element
+       overlay.js returns focus to on Escape (the wrapper div cannot take focus). *@
     @if (!Disabled)
     {
-        <button class="tm-tag-picker-trigger" type="button" @onclick="ToggleOpen">+</button>
+        <button class="tm-tag-picker-trigger" type="button" @ref="_triggerRef" @onclick="ToggleOpen">+</button>
     }
 
     @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow/transform can no longer clip it. Bottom + Start + 4px + ConstrainHeight
-       keeps the historical look (top:calc(100%+space-1);left:0;max-height:16rem;overflow:auto). *@
-    <TmOverlayPanel Anchor="_rootRef"
+       against the trigger button replaces the old root-anchored top:calc(100%+space-1);left:0 —
+       the list now opens under the control that opens it. *@
+    <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="@(_isOpen && !Disabled)"
                     IsOpenChanged="SetOpen"
                     Placement="OverlayPlacement.Bottom"
@@ -65,6 +67,7 @@
     private bool _isOpen;
     private string _searchText = string.Empty;
     private ElementReference _rootRef;
+    private ElementReference _triggerRef;
 
     /// <summary>All tags available for selection.</summary>
     [Parameter] public IEnumerable<ITag>? AllTags { get; set; }

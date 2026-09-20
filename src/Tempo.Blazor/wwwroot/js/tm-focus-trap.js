@@ -55,7 +55,10 @@ export function activate(element, id, escapeHandler, closeOnEscape) {
     let escHandler = null;
     if (closeOnEscape && escapeHandler) {
         escHandler = function (e) {
-            if (e.key !== 'Escape') return;
+            // overlay.js consumes an Escape that actually closes a floating panel via
+            // preventDefault (plus stopImmediatePropagation at window capture). Honour the flag so
+            // one gesture still means one layer if ordering ever lets this listener run anyway.
+            if (e.key !== 'Escape' || e.defaultPrevented) return;
             escapeHandler.invokeMethodAsync('HandleFocusTrapEscapeAsync');
         };
         document.addEventListener('keydown', escHandler);

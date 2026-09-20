@@ -9,7 +9,8 @@
          role="combobox"
          tabindex="0"
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
-         aria-haspopup="grid"
+         aria-haspopup="dialog"
+         @ref="_triggerRef"
          @onclick="ToggleAsync">
         @if (MultiSelect)
         {
@@ -60,10 +61,14 @@
     @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow/transform can no longer clip it. Bottom + Start + 4px + MatchAnchorWidth
        replaces the old top:calc(100%+4px);left:0;width:100% (min-width:320px stays in CSS).
+       The anchor is the combobox TRIGGER — a focusable element overlay.js returns focus to on
+       Escape (the wrapper div cannot take it); the trigger spans the root's width, so geometry is
+       unchanged. The panel's role is DIALOG, not grid: it wraps a filter + recent list + create
+       row, not just the <table role="grid"> inside.
        NOTE: this component's styles live in scoped CSS — the dropdown rules still apply because
        the panel is TmOverlayPanel's root element (parent scope) and its content is ChildContent
        rendered in THIS component's scope. *@
-    <TmOverlayPanel Anchor="_rootRef"
+    <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
                     Placement="OverlayPlacement.Bottom"
@@ -71,7 +76,7 @@
                     Offset="4"
                     MatchAnchorWidth="true"
                     ConstrainHeight="true"
-                    Role="grid"
+                    Role="dialog"
                     Class="tm-multi-column-combo-box__dropdown">
             @if (Filterable)
             {

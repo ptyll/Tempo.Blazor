@@ -2302,8 +2302,13 @@ předků (tělo modálu, scrollující sloupec). `overlay.js` ho pozicuje vůči
 (`Placement`), příčné zarovnání (`Align`), u okraje viewportu překlopí na opačnou stranu
 (`Flip`, jen když je přísně lepší) a dosune ji do viditelné plochy (`Shift`), sleduje scroll
 (window i vnitřní kontejnery) a resize. Vyřešenou stranu nese atribut `data-tm-placement`
-(čte ho např. šipka TmPopover). Zavírá na Escape (fokus se vrátí na kotvu) a na pointerdown
-mimo panel i kotvu; programové zavření (`IsOpen` → `false`, `CloseAsync`) `OnDismissed`
+(čte ho např. šipka TmPopover). Když kotva odscrolluje celá mimo viewport, panel se schová
+(`visibility: hidden`) a po návratu kotvy zase ukáže. Zavírá na Escape — jedno gesto zavře jen
+nejvrchnější panel (keydown se consumuje a patřičný keyup polkne, takže hostující TmModal či
+TmDialog pod ním zůstane) a fokus se vrátí na kotvu — proto kotvu pokládejte na fokusovatelný
+prvek (trigger), ne na wrapper. Pointerdown mimo panel i kotvu zavře taky; fokus vrátí na kotvu
+jen tehdy, když cíl kliknutí sám fokus vzít neumí — klik do jiného pole si fokus nechá.
+Programové zavření (`IsOpen` → `false`, `CloseAsync`) `OnDismissed`
 nevyvolává. Kde Popover API chybí, spadne na `position: fixed` s výpočtem containing blocku —
 na panelu je pak `data-tm-overlay-fallback`. Obsah se renderuje jen dokud je panel otevřený.
 

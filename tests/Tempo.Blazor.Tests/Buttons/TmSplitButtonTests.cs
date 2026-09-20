@@ -97,6 +97,27 @@ public class TmSplitButtonTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SplitButton_PrimaryClick_Closes_Open_Menu()
+    {
+        // The primary button sits inside the panel anchor's exemption zone, so outside-dismissal
+        // never sees the click — an open menu must still close when the action runs.
+        bool clicked = false;
+        var cut = Render<TmSplitButton>(p => p
+            .Add(x => x.Text, "Save")
+            .Add(x => x.OnClick, EventCallback.Factory.Create(this, () => clicked = true))
+            .AddChildContent("<button role='menuitem'>Draft</button>"));
+
+        cut.Find(".tm-split-button__toggle").Click();
+        cut.Find("[role='menu']").Should().NotBeNull();
+
+        cut.Find(".tm-split-button__primary").Click();
+
+        clicked.Should().BeTrue();
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.Find(".tm-split-button__toggle").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
     public void SplitButton_Escape_ClosesDropdown()
     {
         var cut = Render<TmSplitButton>(p => p

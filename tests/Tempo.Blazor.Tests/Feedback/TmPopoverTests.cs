@@ -132,6 +132,59 @@ public class TmPopoverTests : LocalizationTestBase
         cut.FindAll(".tm-popover__body").Should().HaveCount(1);
     }
 
+    // ── Keyboard activation (non-native focusable) ──────────────────────────
+    // The trigger is a div[role=button] — tabindex makes it reachable and the
+    // Enter/Space emulation replaces the native click it can never produce.
+
+    [Fact]
+    public void Popover_Trigger_Is_Keyboard_Reachable()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        var trigger = cut.Find(".tm-popover__trigger");
+        trigger.GetAttribute("role").Should().Be("button");
+        trigger.GetAttribute("tabindex").Should().Be("0");
+    }
+
+    [Fact]
+    public void Popover_Trigger_Enter_Toggles()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        cut.Find(".tm-popover__trigger").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.FindAll(".tm-popover__body").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Popover_Trigger_Space_Toggles()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        cut.Find(".tm-popover__trigger").KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-popover__body").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Popover_Trigger_Native_Child_Keydown_Is_Fenced()
+    {
+        // A native <button> inside TriggerContent produces its own click — the keydown must
+        // never reach the emulating trigger handler on top of it (the fence makes the keydown
+        // unhandled, surfacing as MissingEventHandlerException in bUnit).
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button class='inner-btn'>Open</button>"))
+            .AddChildContent("Content"));
+
+        var inner = cut.Find(".inner-btn");
+        var act = () => inner.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>();
+    }
+
     [Fact]
     public void Popover_CustomClass_IsApplied()
     {

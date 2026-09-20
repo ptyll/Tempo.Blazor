@@ -255,6 +255,103 @@ public class OverlayPanelE2ETests : WasmTestBase
     }
 
     /// <summary>
+    /// B1: an outside click that lands on a focusable field must keep the focus it just earned —
+    /// the closing panel only reclaims focus for clicks on dead space. The regression pulled
+    /// focus back to the dropdown's trigger on every dismissal.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_OutsideClick_IntoFocusableField_KeepsFocusOnField()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        var trigger = page.Locator("[data-testid='overlay-focus-multiselect'] .tm-multiselect");
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await trigger.ClickAsync();
+
+        var panel = page.Locator("[data-testid='overlay-focus-multiselect'] .tm-overlay-panel");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Click into the plain input next to the dropdown — outside both panel and anchor.
+        var field = page.GetByTestId("overlay-outside-input");
+        await field.ClickAsync();
+
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+
+        // Focus must sit on the field, not back on the multiselect trigger.
+        var activeTestId = await page.EvaluateAsync<string>(
+            "() => document.activeElement ? document.activeElement.getAttribute('data-testid') : 'none'");
+        Assert.AreEqual("overlay-outside-input", activeTestId,
+            "the clicked field must own focus after the outside dismissal");
+    }
+
+    /// <summary>
+    /// N1: one Escape gesture closes exactly one layer. The datepicker panel shuts on keydown;
+    /// the host TmModal closes on keyup — overlay.js must swallow that keyup, or the same key
+    /// would close the modal a beat later. A second Escape still closes the modal.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_Escape_InModal_ClosesPanelButNotModal()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-modal").ClickAsync();
+        var modalBody = page.Locator(".tm-modal-body");
+        await modalBody.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var trigger = page.Locator("[data-testid='overlay-datepicker'] .tm-date-picker-trigger");
+        await trigger.ClickAsync();
+
+        var panel = page.Locator(".tm-date-picker-popup");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // One gesture: the panel goes, the modal stays.
+        await page.Keyboard.PressAsync("Escape");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        Assert.IsTrue(await page.Locator(".tm-modal").CountAsync() == 1,
+            "the modal must survive the Escape that closed its datepicker panel");
+
+        // The suppressor is one-shot: the next Escape is a fresh gesture and still closes the modal.
+        await page.Keyboard.PressAsync("Escape");
+        await page.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+    }
+
+    /// <summary>
+    /// N3: once the anchor leaves the viewport entirely, the panel parks hidden instead of
+    /// clamping to an edge; it reappears when the anchor is scrolled back in.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_Hides_WhenAnchorScrollsFullyOutOfViewport()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        var trigger = page.GetByTestId("overlay-open-edge");
+        await trigger.ScrollIntoViewIfNeededAsync();
+        var initialScrollY = await page.EvaluateAsync<double>("() => window.scrollY");
+
+        await trigger.ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-edge");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // The page carries 120vh of scroll room below the trigger — scroll to the bottom so the
+        // anchor leaves the viewport through the top edge.
+        await page.EvaluateAsync("() => window.scrollTo(0, document.documentElement.scrollHeight)");
+        await page.WaitForTimeoutAsync(200); // placement runs on requestAnimationFrame
+
+        var visibility = await panel.EvaluateAsync<string>(
+            "el => getComputedStyle(el).visibility");
+        Assert.AreEqual("hidden", visibility,
+            "panel must hide while its anchor is fully outside the viewport");
+
+        // And it must come back when the anchor returns.
+        await page.EvaluateAsync($"() => window.scrollTo(0, {initialScrollY})");
+        await page.WaitForTimeoutAsync(200);
+        visibility = await panel.EvaluateAsync<string>(
+            "el => getComputedStyle(el).visibility");
+        Assert.AreEqual("visible", visibility,
+            "panel must reappear once its anchor is back inside the viewport");
+    }
+
+    /// <summary>
     /// Firefox leg: the Popover API is supported since Firefox 125, so the identical top-layer
     /// contract must hold there. PlaywrightTestBase runs Chromium only, so this test owns a
     /// dedicated Playwright + Firefox pair.

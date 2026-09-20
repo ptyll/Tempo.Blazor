@@ -127,6 +127,26 @@ which is exactly the red
 
 ### Fixed
 
+- **`TmOverlayPanel` post-migration rework (Fáze 18 review).** One Escape gesture no longer
+  closes two layers: `overlay.js` consumes the keydown (preventDefault +
+  stopImmediatePropagation) once it has actually dismissed a panel and swallows the matching
+  keyup at the window, so the keyup-driven `TmModal`/`TmDialog` underneath survives — and the
+  suppressor disarms on blur so a lost keyup cannot eat the next Escape. Outside dismissal now
+  distinguishes targets: a pointerdown into a focusable element keeps the focus the browser just
+  gave it (the trigger-refocus regression that stole focus from the clicked field is gone),
+  while a click on dead space still returns focus to the anchor once the doomed panel is gone.
+  Placement measures the panel's layout box (`offsetWidth`/`offsetHeight`) instead of the
+  transform-scaled bounding rect, so `TmPopover`'s `scale(0.95)` opening animation can no longer
+  bake a 5 % measurement error into the resolved coordinates, and a panel whose anchor scrolled
+  fully out of the viewport parks `visibility:hidden` instead of clamping to an edge. Escape
+  focus restore now lands on real focusables: `TmNotificationBell`, `TmSplitButton`,
+  `TmTagPicker` and `TmMultiColumnComboBox` anchor their panels to the trigger control rather
+  than the unfocusable wrapper (Align.End/Start geometry preserved). `TmSplitButton`'s primary
+  click closes an open menu, `TmMultiColumnComboBox`'s panel carries `role="dialog"` (the grid
+  role belongs to the inner table), and `TmPopover`'s `div[role=button]` trigger is
+  keyboard-reachable (`tabindex="0"` + Enter/Space emulation, with the consumer-content keydown
+  fence the convention requires).
+
 - **`TmGanttImportDialog`'s file chooser is keyboard-operable.** The upload affordance was a
   `<label for>` styled as a button pointing at a `display:none` `InputFile` — pointer users could
   click it, but a `<label>` can never receive keyboard focus, so Enter/Space had no path to the
@@ -261,7 +281,10 @@ which is exactly the red
   byte-identical. The rule "a variant may never tie its base" is pinned by
   `UnconstrainedClassOwnershipTests` over a frozen pair list with mutation Facts, and
   `CssComputedStyleRegressionTests` resolves the shipped bundle through `CssCascade` with
-  reversed source order to prove the winner survives a reorder.
+  reversed source order to prove the winner survives a reorder. **Migration note:** hand-written
+  markup carrying a bare modifier (`class="tm-btn-primary"`) without its base class no longer
+  receives styling — every modifier now requires the base (`tm-btn tm-btn-primary`) on the same
+  element.
 
 - **Floating panels can no longer be clipped, displaced, or painted over (Fáze 18.2).** The
   date-picker-inside-a-modal defect was the visible tip: the calendar rendered as an absolutely
@@ -281,7 +304,10 @@ which is exactly the red
   per-component keyboard maps, and `TmColorPicker`'s pending-value-until-apply semantics. The
   pure-CSS hover surfaces (`TmMenu` submenus, `TmTooltip`) and the RTE mention/token completers
   were intentionally not migrated: their trigger/anchoring model differs enough that the move is
-  a redesign, not a panel swap. bUnit covers the primitive and every migrated component (9990
+  a redesign, not a panel swap. **Declared residual gap:** a `TmMenu` submenu inside an
+  overcrowded (vertically scrolling) `TmSidebar` can still be clipped by the scroll container —
+  that is the submenu redesign the exclusion records, not a defect this release claims to fix.
+  bUnit covers the primitive and every migrated component (9990
   tests), `overlay.test.mjs` covers the placement math DOM-free (16 tests), and
   `OverlayPanelE2ETests` measures the real browser in Chromium *and* Firefox: popover state,
   overflow escape, inner-scroll tracking, the edge flip, painting above a modal, and a date

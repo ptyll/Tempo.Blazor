@@ -12,6 +12,7 @@ public partial class TmMultiColumnComboBox<TItem, TValue>
 {
     private bool _isOpen;
     private ElementReference _rootRef;
+    private ElementReference _triggerRef;
     private string _filterText = string.Empty;
     private readonly List<MultiColumnComboBoxColumn<TItem>> _columns = [];
     private IReadOnlyList<TItem> _filteredItems = [];
