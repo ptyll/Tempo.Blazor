@@ -2057,7 +2057,7 @@ Vyskakovací panel s libovolným obsahem.
 | `tm-popover` | Root |
 | `tm-popover--top` / `--bottom` / `--left` / `--right` | Pozice |
 | `tm-popover__trigger` | Trigger element |
-| `tm-popover__body` / `__body--open` | Tělo |
+| `tm-popover__body` | Tělo |
 | `tm-popover__arrow` | Šipka |
 
 #### Parametry
