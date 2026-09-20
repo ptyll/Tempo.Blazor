@@ -300,4 +300,92 @@ public class TmDataTablePaginationTests : LocalizationTestBase
         cut.FindAll("tbody tr").Count.Should()
             .Be(50, "a controlled PageSize sizes the pager's page, and there is no pager here");
     }
+
+    // ── ShowResultSummary ─────────────────────────────────────────
+    //
+    // The released component only prints the item count inside the paging footer, so a table
+    // without a pager (ShowPagination=false, grouping, one page, non-paging scroll) states nothing
+    // — and a reader cannot tell whether the table ended or silently truncated. The tri-state:
+    // null keeps that behaviour, true prints the line whenever the pager is not already doing it,
+    // false suppresses it everywhere.
+
+    [Fact]
+    public void DataTable_ShowResultSummary_Default_KeepsTheFooterOnlyBehaviour()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowPagination, false));
+
+        cut.FindAll("[data-testid='pagination-summary']").Should().BeEmpty(
+            "null must preserve the released behaviour — no summary outside the pager");
+    }
+
+    [Fact]
+    public void DataTable_ShowResultSummary_True_PrintsTheCount_WithoutAPager()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowPagination, false)
+            .Add(c => c.ShowResultSummary, true));
+
+        // Every row is rendered, so the honest range is the whole set — "1–10 of 50" would
+        // describe a slice nobody made.
+        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("1–50 of 50");
+    }
+
+    [Fact]
+    public void DataTable_ShowResultSummary_True_PrintsTheCount_OnASinglePage()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(5))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowResultSummary, true));
+
+        cut.FindAll(".tm-pagination").Should().BeEmpty("one page renders no pager");
+        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("1–5 of 5");
+    }
+
+    [Fact]
+    public void DataTable_ShowResultSummary_True_DoesNotDuplicateTheRange_WhenThePagerRenders()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowResultSummary, true));
+
+        cut.FindAll("[data-testid='pagination-summary']").Should().ContainSingle(
+            "the pager's own summary slot already prints the range — a second line would state it twice");
+    }
+
+    [Fact]
+    public void DataTable_ShowResultSummary_False_SuppressesTheSummary_EvenInsideThePager()
+    {
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowResultSummary, false));
+
+        cut.FindAll(".tm-pagination").Should().NotBeEmpty("the pager itself still renders");
+        cut.FindAll("[data-testid='pagination-summary']").Should().BeEmpty();
+        cut.FindAll("[data-testid='pagination-info']").Should().BeEmpty(
+            "placement stays Summary, so suppressing the table's slot leaves no range anywhere");
+    }
+
+    [Fact]
+    public void DataTable_ShowResultSummary_True_HonoursPaginationInfoTemplate()
+    {
+        RenderFragment<DataTablePaginationInfo> template = info => builder =>
+            builder.AddContent(0, $"{info.StartItem}-{info.EndItem} / {info.TotalCount} rows");
+
+        var cut = Render<TmDataTable<PagePerson>>(p => p
+            .Add(c => c.Items, MakePeople(50))
+            .Add(c => c.DefaultPageSize, 10)
+            .Add(c => c.ShowPagination, false)
+            .Add(c => c.ShowResultSummary, true)
+            .Add(c => c.PaginationInfoTemplate, template));
+
+        cut.Find("[data-testid='pagination-summary']").TextContent.Trim().Should().Be("1-50 / 50 rows");
+    }
 }

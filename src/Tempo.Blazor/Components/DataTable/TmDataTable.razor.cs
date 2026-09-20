@@ -629,6 +629,18 @@ public partial class TmDataTable<TItem> : IDisposable
     [Parameter] public DataTablePaginationInfoPlacement PaginationInfoPlacement { get; set; }
         = DataTablePaginationInfoPlacement.Summary;
 
+    /// <summary>
+    /// Whether the "showing X–Y of Z" result line renders when the pager does not. The released
+    /// component only ever prints the count inside the paging footer, so with
+    /// <see cref="ShowPagination"/> off, a non-paging <see cref="ScrollMode"/>, grouping, or a single
+    /// page a reader (or a screen reader) gets no way to tell the table ended rather than truncated.
+    /// Null (the default) keeps that behaviour exactly; <c>true</c> renders the summary whenever the
+    /// pager itself is not already printing it; <c>false</c> suppresses the summary everywhere —
+    /// including the footer slot a rendered pager would otherwise give it. Honours
+    /// <see cref="PaginationInfoTemplate"/>.
+    /// </summary>
+    [Parameter] public bool? ShowResultSummary { get; set; }
+
     /// <summary>Current paging state as handed to <see cref="PaginationInfoTemplate"/>.</summary>
     private DataTablePaginationInfo CurrentPaginationInfo => new(
         CurrentPage: _currentPage,
@@ -637,6 +649,27 @@ public partial class TmDataTable<TItem> : IDisposable
         TotalCount: _totalCount,
         StartItem: _totalCount == 0 ? 0 : ((_currentPage - 1) * _pageSize) + 1,
         EndItem: Math.Min(_currentPage * _pageSize, _totalCount));
+
+    /// <summary>
+    /// The paging state the standalone summary reports. When the pager is not slicing the rows,
+    /// everything in <c>_totalCount</c> is on the page, so the honest range is 1–total — reporting
+    /// "1–25 of 500" under <c>ShowPagination="false"</c> would describe a slice nobody rendered.
+    /// </summary>
+    private DataTablePaginationInfo ResultSummaryInfo => PagerRenders
+        ? CurrentPaginationInfo
+        : new DataTablePaginationInfo(
+            CurrentPage: 1,
+            TotalPages: 1,
+            PageSize: _totalCount,
+            TotalCount: _totalCount,
+            StartItem: _totalCount == 0 ? 0 : 1,
+            EndItem: _totalCount);
+
+    /// <summary>The single condition the paging footer's visibility is decided by.</summary>
+    private bool PagerRenders =>
+        ShowPagination && _totalPages > 1
+        && ScrollMode == DataTableScrollMode.Pagination
+        && _groupByColumns.Count == 0;
 
     /// <summary>
     /// Optional view persistence provider. When set, enables saved views and (by default) the external filter builder.

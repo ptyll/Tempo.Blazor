@@ -8314,6 +8314,12 @@
           "description": "When true, shows the TmPagination bar when more than one page exists. Default: true. When false, a client-side table (Items) renders every item it was handed rather than the first page — the pager is the only element that reaches pages 2..N, so hiding it and still slicing would leave the remaining rows in no element at all. Server-side paging through DataProvider is unaffected: there the page is chosen by the provider."
         },
         {
+          "name": "ShowResultSummary",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "Whether the \"showing X–Y of Z\" result line renders when the pager does not. Null (default) keeps the released behaviour — the count exists only inside the paging footer, at PaginationInfoPlacement. True renders the summary (data-testid \"pagination-summary\", honouring PaginationInfoTemplate) whenever the pager is not already printing it — with ShowPagination=false, grouping, a single page, or a non-paging ScrollMode the line reports the full range 1–TotalCount, because without a slicing pager that is the range the reader sees. False suppresses the summary everywhere, including the footer's Summary slot."
+        },
+        {
           "name": "ShowSearch",
           "type": "bool",
           "isRequired": false,

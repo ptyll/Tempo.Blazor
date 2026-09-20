@@ -125,6 +125,12 @@
       "description": "Which of the two item-range labels in the paging footer is rendered, so the count is not printed twice. Summary (default) uses the table's own summary on the left of the footer, which is the placement that honours PaginationInfoTemplate; Pagination moves the range into the TmPagination bar itself; None shows page controls only."
     },
     {
+      "name": "ShowResultSummary",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Whether the \"showing X–Y of Z\" result line renders when the pager does not. Null (default) keeps the released behaviour — the count exists only inside the paging footer, at PaginationInfoPlacement. True renders the summary (data-testid \"pagination-summary\", honouring PaginationInfoTemplate) whenever the pager is not already printing it — with ShowPagination=false, grouping, a single page, or a non-paging ScrollMode the line reports the full range 1–TotalCount, because without a slicing pager that is the range the reader sees. False suppresses the summary everywhere, including the footer's Summary slot."
+    },
+    {
       "name": "ViewProvider",
       "type": "IDataTableViewProvider?",
       "isRequired": false,

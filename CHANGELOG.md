@@ -64,6 +64,17 @@ which is exactly the red
   If a page genuinely wants no current section ever, that is the case the register deferred: feed
   `ActiveId` from your own state instead of relying on the removed switch.
 
+### Added
+
+- **`TmDataTable.ShowResultSummary` (`bool?`).** The item count used to exist only inside the
+  paging footer, so a table without a pager — `ShowPagination="false"`, grouping, a single page,
+  a non-paging `ScrollMode` — printed nothing, and a reader (or a screen reader) could not tell
+  the table ended rather than truncated. `null` (the default) keeps that behaviour byte-for-byte;
+  `true` renders the `pagination-summary` line whenever the pager is not already printing it,
+  reporting the honest full range (`1–N of N`, since without a slicing pager every row is on the
+  page); `false` suppresses the summary everywhere, including the footer's Summary slot.
+  `PaginationInfoTemplate` is honoured in the standalone line.
+
 ### Fixed
 
 - **`TmGanttImportDialog`'s file chooser is keyboard-operable.** The upload affordance was a

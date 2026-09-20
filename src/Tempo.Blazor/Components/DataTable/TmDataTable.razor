@@ -525,12 +525,14 @@
         </table>
     </div>
     @* ── Pagination ───────────────────────────────────────────── *@
-    @if (ShowPagination && _totalPages > 1 && ScrollMode == DataTableScrollMode.Pagination && _groupByColumns.Count == 0)
+    @if (PagerRenders)
     {
         <div class="tm-pagination-container" data-testid="@TestId("pagination-container")">
             @* Left: Info — rendered only when this is the chosen placement, so the range is not
-               printed twice (the pagination bar below can state it instead). *@
-            @if (PaginationInfoPlacement == DataTablePaginationInfoPlacement.Summary)
+               printed twice (the pagination bar below can state it instead). ShowResultSummary=false
+               suppresses even this slot; with placement=Pagination the TmPagination below prints the
+               range itself, so the line still exists exactly once. *@
+            @if (PaginationInfoPlacement == DataTablePaginationInfoPlacement.Summary && ShowResultSummary != false)
             {
                 <div class="tm-pagination-info" data-testid="@TestId("pagination-summary")">
                     @if (PaginationInfoTemplate is not null)
@@ -557,6 +559,21 @@
                               OnPageChange="GoToPageAsync"
                               OnPageSizeChange="ChangePageSizeAsync" />
             </div>
+        </div>
+    }
+    else if (ShowResultSummary == true)
+    {
+        @* No pager to carry the count — print it on its own. ResultSummaryInfo reports 1–total,
+           because without a slicing pager that is the range the reader actually sees. *@
+        <div class="tm-pagination-info" data-testid="@TestId("pagination-summary")">
+            @if (PaginationInfoTemplate is not null)
+            {
+                @PaginationInfoTemplate(ResultSummaryInfo)
+            }
+            else
+            {
+                @Loc["TmDataTable_ShowingItems", ResultSummaryInfo.StartItem, ResultSummaryInfo.EndItem, _totalCount]
+            }
         </div>
     }
 </div>
