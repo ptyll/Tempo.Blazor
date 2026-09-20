@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentAssertions;
 
 namespace Tempo.Blazor.Tests.Theme;
@@ -88,6 +89,154 @@ public sealed class TokenContrastTests
                 dark ? "dark" : "light",
                 ThemeCss.Ratio(declared, "var(--tm-bg-surface)", dark));
         }
+    }
+
+    /// <summary>
+    /// Application gap register B: <c>.tm-btn-danger</c> and <c>.tm-badge-danger.tm-badge-filled</c>
+    /// paint WHITE ink on <c>--tm-color-danger</c>, and the old #ef4444 measured 3,76:1 — under the
+    /// 4,5:1 AA asks of text. The token moved one step darker (#dc2626 → 4,83:1, hover #b91c1c →
+    /// 6,47:1). Dark is deliberately NOT darkened: it keeps the light #f87171 under
+    /// <c>--tm-text-inverse</c> ink. The test measures the pair the elements actually render, in the
+    /// theme they render it in.
+    /// </summary>
+    [Fact]
+    public void DangerTokens_KeepTheirInkAtAa_InTheThemeEachPaints()
+    {
+        var light = ThemeCss.TokenGraph(dark: false);
+        light["--tm-color-danger"].Should().Be("#dc2626",
+            "gap register B: red-500 #ef4444 put white ink at 3,76:1 — the fill must be the "
+            + "darker step the application proved (4,83:1)");
+        light["--tm-color-danger-hover"].Should().Be("#b91c1c",
+            "the hover step must keep white ink ≥4,5:1 as well (measured 6,47:1)");
+
+        ThemeCss.Ratio("var(--tm-color-danger)", "var(--tm-color-white)", dark: false)
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "white ink on the light danger fill must hold AA — measured {0:0.00}:1",
+                ThemeCss.Ratio("var(--tm-color-danger)", "var(--tm-color-white)", dark: false));
+        ThemeCss.Ratio("var(--tm-color-danger-hover)", "var(--tm-color-white)", dark: false)
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "white ink on the light danger hover must hold AA — measured {0:0.00}:1",
+                ThemeCss.Ratio("var(--tm-color-danger-hover)", "var(--tm-color-white)", dark: false));
+
+        // Dark keeps the BRIGHT accent under dark ink — darkening it would sink the pair.
+        ThemeCss.Ratio("var(--tm-text-inverse)", "var(--tm-color-danger)", dark: true)
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "dark ink on the dark danger fill must hold AA — measured {0:0.00}:1",
+                ThemeCss.Ratio("var(--tm-text-inverse)", "var(--tm-color-danger)", dark: true));
+    }
+
+    /// <summary>
+    /// Application gap register C: filled success/warning/info badges painted white ink on the
+    /// semantic accents — 2,28 / 2,15 / 2,43:1 in light, all under AA. They now fill from
+    /// <c>--tm-color-*-strong</c> (the 700-steps: 5,02 / 5,02 / 5,36:1 in light); dark re-points
+    /// those tokens to the brightened accents and swaps the ink to <c>--tm-text-inverse</c>. The
+    /// test reads the background AND the ink from the real rules in <c>_badge.css</c> — the light
+    /// ink from the base rule, the dark ink from the dark override — so a drift in either half of
+    /// either theme's pair goes red.
+    /// </summary>
+    [Fact]
+    public void FilledBadges_KeepAaContrast_InBothThemes()
+    {
+        foreach (var style in new[] { "success", "warning", "info" })
+        {
+            var background = ThemeCss.Property("_badge.css", $".tm-badge-{style}.tm-badge-filled", "background");
+            var inkLight = ThemeCss.Property("_badge.css", $".tm-badge-{style}.tm-badge-filled", "color");
+            var inkDark = ThemeCss.Property("_badge.css",
+                $"[data-theme=\"dark\"] .tm-badge-{style}.tm-badge-filled", "color");
+
+            ThemeCss.Ratio(inkLight, background, dark: false).Should().BeGreaterThanOrEqualTo(4.5,
+                "{0}: ink {1} on fill {2} must hold AA in light — measured {3:0.00}:1",
+                style, inkLight, background,
+                ThemeCss.Ratio(inkLight, background, dark: false));
+            ThemeCss.Ratio(inkDark, background, dark: true).Should().BeGreaterThanOrEqualTo(4.5,
+                "{0}: ink {1} on fill {2} must hold AA in dark — measured {3:0.00}:1",
+                style, inkDark, background,
+                ThemeCss.Ratio(inkDark, background, dark: true));
+        }
+    }
+
+    /// <summary>
+    /// Application gap register D: the alpha-composited primary tokens were literals in Tempo blue,
+    /// so repointing the primary scale left the focus ring, the subtle wash and the soft border
+    /// behind. They now derive via relative colour syntax — light reads primary-500, dark reads
+    /// primary-500 for the wash and primary-400 (the dark primary step) for border and ring. The
+    /// assertions pin the DECLARED expressions: a revert to a literal fails on the string, a wrong
+    /// source step fails on it too.
+    /// </summary>
+    [Fact]
+    public void FocusTokens_DeriveFromThePrimaryScale_InBothThemes()
+    {
+        var light = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        var dark = ThemeCss.Declarations(ThemeCss.CssPath("tokens-dark.css"));
+
+        light["--tm-shadow-focus"].Should().Be(
+            "0 0 0 3px rgb(from var(--tm-color-primary-500) r g b / 0.4)",
+            "the light ring must derive from the 500 step — a literal stays Tempo blue on rebrand");
+        light["--tm-shadow-focus-danger"].Should().Be(
+            "0 0 0 3px rgb(from var(--tm-color-danger) r g b / 0.3)",
+            "the danger ring must derive from the danger token — same defect class");
+
+        dark["--tm-color-primary-subtle"].Should().Be(
+            "rgb(from var(--tm-color-primary-500) r g b / 0.15)",
+            "the dark subtle wash must derive from the 500 step, not a blue literal");
+        dark["--tm-color-primary-soft-border"].Should().Be(
+            "rgb(from var(--tm-color-primary-400) r g b / 0.3)",
+            "the dark soft border must derive from the dark primary step (400), not a blue literal");
+        dark["--tm-shadow-focus"].Should().Be(
+            "0 0 0 3px rgb(from var(--tm-color-primary-400) r g b / 0.5)",
+            "the dark ring must derive from the dark primary step (400), not a blue literal");
+    }
+
+    /// <summary>
+    /// The same register item, proven at the graph level instead of the string level: replacing
+    /// <c>--tm-color-primary-500</c> must alter the computed focus-ring colour (light), and
+    /// replacing <c>--tm-color-primary-400</c> must alter the dark one.
+    /// </summary>
+    [Fact]
+    public void RepointingTheScaleStep_ChangesTheComputedFocusColour()
+    {
+        var tokens = ThemeCss.TokenGraph(dark: false);
+        var declared = ThemeCss.TokenGraph(dark: false)["--tm-shadow-focus"];
+        var original = ThemeCss.ResolveColour(declared, tokens);
+
+        tokens["--tm-color-primary-500"] = "#6366f1";
+        ThemeCss.ResolveColour(declared, tokens).Should().Be("#6366f1",
+            "a primary-500 rebrand must repaint the focus ring — the literal never did");
+        original.Should().Be("#3b82f6", "sanity: the default ring hue is primary-500");
+
+        var darkTokens = ThemeCss.TokenGraph(dark: true);
+        var darkDeclared = darkTokens["--tm-shadow-focus"];
+        ThemeCss.ResolveColour(darkDeclared, darkTokens).Should().Be("#60a5fa",
+            "sanity: the default dark ring hue is the dark primary step (primary-400)");
+        darkTokens["--tm-color-primary-400"] = "#818cf8";
+        ThemeCss.ResolveColour(darkDeclared, darkTokens).Should().Be("#818cf8",
+            "a primary-400 rebrand must repaint the dark focus ring — the literal never did");
+    }
+
+    /// <summary>
+    /// <c>--tm-color-primary-500-rgb</c> cannot derive in CSS (no syntax extracts channels from a
+    /// colour), so what keeps it honest is this invariant: in light it names the channels of
+    /// <c>--tm-color-primary-500</c>, in dark the channels of the dark primary step
+    /// (<c>--tm-color-primary</c> → primary-400). A rebrand that moves the step but forgets the
+    /// triplet goes red here instead of desaturating somebody's alpha-composited fills.
+    /// </summary>
+    [Fact]
+    public void PrimaryRgbTriplet_TracksTheScaleStep_ItShadows()
+    {
+        static string ChannelsOf(string hex) =>
+            string.Join(", ", Enumerable.Range(0, 3)
+                .Select(i => int.Parse(hex.TrimStart('#').Substring(i * 2, 2),
+                    NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+
+        var light = ThemeCss.TokenGraph(dark: false);
+        light["--tm-color-primary-500-rgb"].Should().Be(
+            ChannelsOf(ThemeCss.ResolveColour("var(--tm-color-primary-500)", light)),
+            "the light triplet must be the channels of primary-500");
+
+        var dark = ThemeCss.TokenGraph(dark: true);
+        dark["--tm-color-primary-500-rgb"].Should().Be(
+            ChannelsOf(ThemeCss.ResolveColour("var(--tm-color-primary)", dark)),
+            "the dark triplet must be the channels of the dark primary step (primary-400)");
     }
 
     /// <summary>

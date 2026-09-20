@@ -24,7 +24,10 @@
   --tm-color-primary-active:   var(--tm-color-primary-800);
   --tm-color-primary-subtle:   var(--tm-color-primary-50);
   --tm-color-primary-text:     var(--tm-color-primary-800);
-  /* RGB channels of --tm-color-primary-500, for rgba() alpha compositing. */
+  /* RGB channels of --tm-color-primary-500, for rgba() alpha compositing. A custom property
+     cannot extract channels from a hex colour, so the triplet is declared alongside — and
+     TokenContrastTests pins that it stays the channels of the step it shadows. In dark this
+     token is re-pointed to the dark primary step (primary-400), see tokens-dark.css. */
   --tm-color-primary-500-rgb:  59, 130, 246;
 
   /* Secondary (gray) */
@@ -32,9 +35,12 @@
   --tm-color-secondary-hover:  #4b5563;
   --tm-color-secondary-subtle: #f9fafb;
 
-  /* Danger */
-  --tm-color-danger:           #ef4444;
-  --tm-color-danger-hover:     #dc2626;
+  /* Danger — one step darker than red-500, because Tempo paints WHITE text on this fill
+     (.tm-btn-danger, .tm-badge-danger.tm-badge-filled): #ef4444 measured 3,76:1, under the
+     4,5:1 AA asks of text. #dc2626 gives 4,83:1, the hover step 6,47:1. Dark is untouched:
+     tokens-dark.css keeps the light #f87171 under --tm-text-inverse ink (~7,5:1). */
+  --tm-color-danger:           #dc2626;
+  --tm-color-danger-hover:     #b91c1c;
   --tm-color-danger-subtle:    #fef2f2;
   --tm-color-danger-text:      #991b1b;
 
@@ -55,6 +61,16 @@
   --tm-color-info-hover:       #0891b2;
   --tm-color-info-subtle:      #ecfeff;
   --tm-color-info-text:        #164e63;
+
+  /* Filled-badge fills — the 700-step of each accent, darker than the semantic colour on
+     purpose: white text on #22c55e / #f59e0b / #06b6d4 measures 2,28 / 2,15 / 2,43:1 (all
+     under AA), on these it measures 5,02 / 5,02 / 5,36:1. Separate tokens, not a darker
+     --tm-color-warning, because the semantic token also fills .tm-btn-warning under DARK
+     text — darkening it would trade the badge fix for a button regression. Dark re-points
+     them to the brightened accents in tokens-dark.css, where the badge wears dark ink. */
+  --tm-color-success-strong:   #15803d;
+  --tm-color-warning-strong:   #b45309;
+  --tm-color-info-strong:      #0e7490;
 
   /* Soft badge border colors */
   --tm-color-primary-soft-border: var(--tm-color-primary-200);
@@ -190,8 +206,12 @@
   --tm-shadow-md:           0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
   --tm-shadow-lg:           0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
   --tm-shadow-xl:           0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
-  --tm-shadow-focus:        0 0 0 3px rgba(59,130,246,0.4);
-  --tm-shadow-focus-danger: 0 0 0 3px rgba(239,68,68,0.3);
+  /* Focus rings DERIVE from the scale step via relative colour syntax — a consumer who
+     repoints --tm-color-primary-500 (or --tm-color-danger) repaints the ring too; the old
+     literal rgba() stayed Tempo blue on every rebrand. Both render the same values as the
+     literals they replace: rgba(59,130,246,.4) and rgba(220,38,38,.3). */
+  --tm-shadow-focus:        0 0 0 3px rgb(from var(--tm-color-primary-500) r g b / 0.4);
+  --tm-shadow-focus-danger: 0 0 0 3px rgb(from var(--tm-color-danger) r g b / 0.3);
 
   /* ── Transitions ────────────────────────────────────────────── */
   --tm-transition-fast:   100ms ease;

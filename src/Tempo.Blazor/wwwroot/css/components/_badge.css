@@ -23,13 +23,20 @@
 .tm-badge-md { font-size: var(--tm-font-size-xs); padding: 0.25rem 0.5rem; }
 .tm-badge-lg { font-size: var(--tm-font-size-sm); padding: 0.25rem 0.625rem; }
 
-/* Badge variants — filled */
-.tm-badge-default.tm-badge-filled   { background: var(--tm-color-gray-100); color: var(--tm-color-gray-700); }
-.tm-badge-primary.tm-badge-filled   { background: var(--tm-color-primary);  color: var(--tm-color-white); }
-.tm-badge-success.tm-badge-filled   { background: var(--tm-color-success);  color: var(--tm-color-white); }
-.tm-badge-warning.tm-badge-filled   { background: var(--tm-color-warning);  color: var(--tm-color-white); }
-.tm-badge-danger.tm-badge-filled    { background: var(--tm-color-danger);   color: var(--tm-color-white); }
-.tm-badge-info.tm-badge-filled      { background: var(--tm-color-info);     color: var(--tm-color-white); }
+/* Badge variants — filled.
+   Success/warning/info fill from the *-strong tokens, not the semantic accents: the
+   semantic steps measured 2,28 / 2,15 / 2,43:1 under the white ink below (all under AA's
+   4,5:1), while --tm-color-*-strong hold 5,02 / 5,02 / 5,36:1. The semantic tokens stay
+   untouched because they also serve non-fill roles — .tm-btn-warning paints DARK text on
+   --tm-color-warning, where the darker step would sink under AA in the other direction.
+   In dark, tokens-dark.css re-points the strong tokens to the brightened accents and the
+   dark rule below swaps the ink to --tm-text-inverse. */
+.tm-badge-default.tm-badge-filled   { background: var(--tm-color-gray-100);        color: var(--tm-color-gray-700); }
+.tm-badge-primary.tm-badge-filled   { background: var(--tm-color-primary);         color: var(--tm-color-white); }
+.tm-badge-success.tm-badge-filled   { background: var(--tm-color-success-strong);  color: var(--tm-color-white); }
+.tm-badge-warning.tm-badge-filled   { background: var(--tm-color-warning-strong);  color: var(--tm-color-white); }
+.tm-badge-danger.tm-badge-filled    { background: var(--tm-color-danger);          color: var(--tm-color-white); }
+.tm-badge-info.tm-badge-filled      { background: var(--tm-color-info-strong);     color: var(--tm-color-white); }
 
 /* Badge variants — subtle (soft tint). Class is tm-badge-subtle to match the emitted class
    (BadgeStyle.Subtle); the previous tm-badge-soft selector matched nothing, leaving subtle badges

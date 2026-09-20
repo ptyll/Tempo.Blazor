@@ -61,7 +61,14 @@
   --tm-color-primary:        var(--tm-color-primary-400);
   --tm-color-primary-hover:  var(--tm-color-primary-300);
   --tm-color-primary-text:   var(--tm-color-primary-300);
-  --tm-color-primary-subtle: rgba(59, 130, 246, 0.15);
+  /* The alpha-composited primary tokens DERIVE from the scale (relative colour syntax):
+     a consumer repointing primary-500/primary-400 repaints these too — the literals they
+     replace (59,130,246/.15 and, below, 96,165,250/.3) stayed Tempo blue on every rebrand.
+     The subtle wash tracks the 500 step, the border and ring the dark primary step (400). */
+  --tm-color-primary-subtle: rgb(from var(--tm-color-primary-500) r g b / 0.15);
+  /* Channels of the DARK primary step (--tm-color-primary → primary-400), not of the
+     light 500 — the name is the consumer-facing contract, the value is theme-relative.
+     Pinned by TokenContrastTests. */
   --tm-color-primary-500-rgb: 96, 165, 250;
 
   /* Semantic colors — brighter on dark */
@@ -85,8 +92,15 @@
   --tm-color-info-subtle:    rgba(6, 182, 212, 0.15);
   --tm-color-info-text:      #7dd3fc;
 
+  /* Filled-badge fills re-point to the brightened dark accents: the badge wears DARK ink
+     (--tm-text-inverse) on them, so the darker light-theme steps would put dark on dark.
+     var() keeps tokens-dark.css the one source of each accent's value. */
+  --tm-color-success-strong: var(--tm-color-success);
+  --tm-color-warning-strong: var(--tm-color-warning);
+  --tm-color-info-strong:    var(--tm-color-info);
+
   /* Soft badge borders — toned down for dark */
-  --tm-color-primary-soft-border: rgba(96, 165, 250, 0.3);
+  --tm-color-primary-soft-border: rgb(from var(--tm-color-primary-400) r g b / 0.3);
   --tm-color-success-soft-border: rgba(74, 222, 128, 0.3);
   --tm-color-warning-soft-border: rgba(251, 191, 36, 0.3);
   --tm-color-danger-soft-border:  rgba(248, 113, 113, 0.3);
@@ -130,7 +144,9 @@
   --tm-shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
   --tm-shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --tm-shadow-xl:  0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
-  --tm-shadow-focus: 0 0 0 3px rgba(96, 165, 250, 0.5);
+  /* Derived like the light ring (tokens.css), but off the dark primary step: renders
+     rgba(96,165,250,.5) by default and follows a primary-400 rebrand. */
+  --tm-shadow-focus: 0 0 0 3px rgb(from var(--tm-color-primary-400) r g b / 0.5);
 
   /* Charts — slightly stronger area fill on dark surfaces */
   --tm-chart-area-fill-opacity: 0.3;

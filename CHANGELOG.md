@@ -177,6 +177,39 @@ which is exactly the red
   dropped `ReferenceEquals` guard turns `changeCount` to 2 (or delivers the stale value) before
   the assertion runs — the exact regressions the wall-clock reads could let through.
 
+### Changed — token defaults
+
+- **`--tm-color-danger` moves one step darker in the light theme** (`#ef4444` → `#dc2626`,
+  hover `#dc2626` → `#b91c1c`). Tempo paints *white* ink on this fill (`.tm-btn-danger`,
+  `.tm-badge-danger.tm-badge-filled`) and red-500 measured **3,76:1** — under the 4,5:1 WCAG
+  asks of text. The new steps measure **4,83:1** and **6,47:1**. The dark theme is deliberately
+  untouched: it keeps the light #f87171 under `--tm-text-inverse` ink (~7,5:1), which a
+  darkening would have sunk. `--tm-shadow-focus-danger` derives from the token now
+  (`rgb(from var(--tm-color-danger) r g b / 0.3)`), so it follows the new value — and a
+  consumer's rebrand — instead of freezing the old one.
+  (`TokenContrastTests` measures the real pair in each theme.)
+
+- **Filled success/warning/info badges fill from new `--tm-color-*-strong` tokens**
+  (`#15803d` / `#b45309` / `#0e7490` — the 700-steps). White ink on the semantic accents
+  measured **2,28 / 2,15 / 2,43:1** in light — all under AA; on the strong steps it measures
+  **5,02 / 5,02 / 5,36:1**. These are *separate* tokens rather than darker semantic ones
+  because `--tm-color-warning` also fills `.tm-btn-warning` under *dark* text, where the same
+  darkening would drop that pair *below* AA — the application's own analysis caught that
+  blast radius. Dark re-points the strong tokens to the brightened accents, where the badge
+  wears `--tm-text-inverse` ink. If your theme relied on `--tm-color-success` reaching the
+  filled badge, repoint `--tm-color-success-strong` alongside it.
+  (`FilledBadges_KeepAaContrast_InBothThemes` reads the rules out of `_badge.css`.)
+
+- **The alpha-composited primary tokens derive from the scale now** instead of shipping Tempo
+  blue literals: `--tm-shadow-focus` is `rgb(from var(--tm-color-primary-500) r g b / 0.4)`
+  (dark: primary-400 at 0.5), dark `--tm-color-primary-subtle` is primary-500 at 0.15, dark
+  `--tm-color-primary-soft-border` is primary-400 at 0.3. Default rendering is byte-identical
+  to the literals they replace; what changed is that repointing `--tm-color-primary-500` (or
+  `-400` in dark) repaints the ring — proven at the graph level in tests and in a real browser
+  by `FocusTokenDerivationE2ETests`. `--tm-color-primary-500-rgb` stays a manual triplet —
+  CSS cannot extract channels from a colour — with a new guard pinning that it names the
+  channels of the step it shadows in each theme.
+
 ### Tests & docs
 
 - **`107ebfda`** (freshness guard reworked **`ec990b9c`**) — `CssCascade` stops flattening stylesheets. The regression model now parses the

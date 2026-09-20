@@ -14,8 +14,9 @@ public class NumberInputDarkModeE2ETests : WasmTestBase
 {
     private const string FeedbackPage = "/feedback";
 
-    /// <summary>--tm-color-danger: #ef4444 in the light theme, lightened to #f87171 in the dark one.</summary>
-    private const string LightDanger = "rgb(239, 68, 68)";
+    /// <summary>--tm-color-danger: #dc2626 in the light theme (one step darker than red-500 so the
+    /// white ink Tempo paints on it keeps AA), lightened to #f87171 in the dark one.</summary>
+    private const string LightDanger = "rgb(220, 38, 38)";
     private const string DarkDanger = "rgb(248, 113, 113)";
 
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
