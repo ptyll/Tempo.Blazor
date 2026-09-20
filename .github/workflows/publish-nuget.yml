@@ -20,6 +20,14 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # The release gate's bUnit wait budget. TestAssemblyInit defaults it to 2 s — a number
+    # measured on a developer machine under parallel load — and shared ubuntu-latest runners
+    # (2–4 vCPU) red the gate on WaitFor*/state timeouts that are nobody's assertion. 10 s is
+    # the budget this ran with before the tightening. Job-level, not per-step: the two test
+    # lanes differ in exactly the ambient culture, and two step-level values could drift
+    # apart — ReleaseGateFilterTests requires this on every job that runs `dotnet test`.
+    env:
+      TEMPO_BUNIT_WAIT_SECONDS: "10"
     services:
       smtp4dev:
         image: rnwood/smtp4dev:latest

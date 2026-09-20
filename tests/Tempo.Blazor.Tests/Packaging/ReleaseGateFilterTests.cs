@@ -91,6 +91,13 @@ public sealed class ReleaseGateFilterTests
 
                 using (new AssertionScope())
                 {
+                    UnrecognizedClauses(filter)
+                        .Should().BeEmpty(
+                            $"every &-separated clause in a CI filter in {relative} must be a "
+                            + "FullyQualifiedName!~<name> exclusion; a positive ~ scope, a "
+                            + "different property or operator, or a malformed clause is invisible "
+                            + "to the named-exception comparison and therefore a silent hole");
+
                     exclusions.Except(NamedExceptions, StringComparer.Ordinal)
                         .OrderBy(name => name, StringComparer.Ordinal)
                         .Should().BeEmpty(
@@ -502,6 +509,111 @@ public sealed class ReleaseGateFilterTests
     }
 
     /// <summary>
+    /// Every job that runs the release gate sets <c>TEMPO_BUNIT_WAIT_SECONDS</c> — the CI
+    /// override of the 2 s default <c>TestAssemblyInit</c> was tightened to.
+    /// <para>
+    /// WHY IT NEEDS A GUARD: the variable is a runtime knob with no caller to grep for — a
+    /// workflow that does not set it produces no error anywhere, it just runs the gate on a
+    /// budget measured on a developer machine. Shared ubuntu-latest runners are 2–4 vCPU, and
+    /// every full-suite red of the 2.8.26 gate was a WaitFor*/state timeout under exactly that
+    /// contention, never a product assertion.
+    /// </para>
+    /// <para>
+    /// WHY JOB-LEVEL (or workflow-level) env:, and not a per-step one: the two test lanes differ
+    /// in exactly one variable — the ambient culture — and a budget spelled on each Test step is
+    /// two values that can drift to two numbers, which is the same class of hole as two filters.
+    /// A job-level mapping reaches both lanes at once, so they cannot diverge. The publish job
+    /// runs no tests, so it is not in the population at all.
+    /// </para>
+    /// <para>
+    /// THE POPULATION IS ASSERTED, same as its siblings: a segmentation that found no job with
+    /// <c>dotnet test</c> would report an empty offender list out of an empty list.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void BothPublishWorkflows_SetTheBunitWaitBudgetOnEveryJobThatRunsTests()
+    {
+        foreach (string relative in WorkflowRelativePaths)
+        {
+            IReadOnlyList<string> offenders =
+                JobsRunningTestsWithoutTheWaitBudget(ReadWorkflowCode(relative), out int jobsRunningTests);
+
+            using (new AssertionScope())
+            {
+                jobsRunningTests.Should().BeGreaterThanOrEqualTo(
+                    1,
+                    $"{relative} must run the release gate in at least one job; an empty population "
+                    + "here means the segmentation lost the lane and the offender list is silence, "
+                    + "not evidence");
+
+                offenders.Should().BeEmpty(
+                    $"{relative} must set TEMPO_BUNIT_WAIT_SECONDS with a value in the env: of "
+                    + "every job running dotnet test — or in the workflow-level env: that reaches "
+                    + "them all. Without it the gate runs the 2 s default measured on a developer "
+                    + "machine, and shared ubuntu-latest reds it on WaitFor* timeouts that are "
+                    + "nobody's assertion");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mutation over the wait-budget guard, in every direction that matters: deleting the key,
+    /// commenting it out, and carrying it on a job that runs no tests must each be named — and
+    /// the workflow-level env: must satisfy the lane job, because GitHub merges it into all of
+    /// them.
+    /// </summary>
+    [Fact]
+    public void TheWaitBudgetGuard_DetectsItsLoss_AndHonoursTheWorkflowLevelEnv()
+    {
+        string healthy = ReadWorkflowCode(WorkflowRelativePaths[0]);
+
+        using (new AssertionScope())
+        {
+            JobsRunningTestsWithoutTheWaitBudget(healthy, out _).Should().BeEmpty(
+                "the positive control: with the budget in place the guard has to be green, or "
+                + "the reds below say nothing");
+
+            string deleted = healthy.Replace(
+                "      TEMPO_BUNIT_WAIT_SECONDS: \"10\"\n", "", StringComparison.Ordinal);
+            deleted.Should().NotBe(healthy, "the mutation must actually change the text");
+            JobsRunningTestsWithoutTheWaitBudget(deleted, out _).Should().BeEquivalentTo(
+                ["build-and-test"],
+                "deleting the key must name the lane job — and ONLY it: the publish job runs no "
+                + "tests and must not be in the population");
+
+            JobsRunningTestsWithoutTheWaitBudget(
+                    StripYamlComments(CommentOutLinesContaining(healthy, "TEMPO_BUNIT_WAIT_SECONDS")),
+                    out _)
+                .Should().Contain(
+                    "build-and-test",
+                    "a commented-out env line exports nothing — the 'delete the code, keep the "
+                    + "prose' hole the sibling guards already name");
+
+            string movedToPublish = deleted.Replace(
+                "  publish:\n",
+                "  publish:\n    env:\n      TEMPO_BUNIT_WAIT_SECONDS: \"10\"\n",
+                StringComparison.Ordinal);
+            movedToPublish.Should().NotBe(deleted, "the mutation must actually change the text");
+            JobsRunningTestsWithoutTheWaitBudget(movedToPublish, out _).Should().Contain(
+                "build-and-test",
+                "the budget on the publish job reaches no test step — presence in the FILE is "
+                + "not placement where the gate runs");
+
+            // The honest counter-arm: publish-nuget.yml really carries a workflow-level env:
+            // (NUGET_SOURCE), so moving the budget there is not a constructed shape — GitHub
+            // merges it into every job and the lanes are covered.
+            string viaWorkflowEnv = deleted.Replace(
+                "\nenv:\n",
+                "\nenv:\n  TEMPO_BUNIT_WAIT_SECONDS: \"10\"\n",
+                StringComparison.Ordinal);
+            viaWorkflowEnv.Should().NotBe(deleted, "the mutation must actually change the text");
+            JobsRunningTestsWithoutTheWaitBudget(viaWorkflowEnv, out _).Should().BeEmpty(
+                "a workflow-level env: reaches every job, so the budget set there covers the "
+                + "lanes — refusing it would be a red nobody could fix");
+        }
+    }
+
+    /// <summary>
     /// The version-agreement script still compares the two numbers, and still refuses what it cannot
     /// read.
     /// <para>
@@ -615,6 +727,65 @@ public sealed class ReleaseGateFilterTests
 
         EvaluateDrift("")
             .Should().NotBeEmpty("an empty filter is not 'no exceptions', it is an unreadable gate");
+    }
+
+    /// <summary>
+    /// Mutation over clause SHAPES. The first version of <see cref="ParseExclusions"/> kept only
+    /// the clauses spelled exactly <c>FullyQualifiedName!~</c> and dropped every other one
+    /// silently, so all of the filters below read as "E2E excluded, nothing else said" while the
+    /// gate quietly ran something else. Each shape must now be named — and the whitespace arm is
+    /// asserted in BOTH directions, because a reader that refuses <c>!~</c> with spaces around it
+    /// would call a working exclusion malformed while the runner honours it.
+    /// </summary>
+    [Fact]
+    public void TheGuard_DetectsAClauseThatIsNotAnExclusion()
+    {
+        using (new AssertionScope())
+        {
+            EvaluateDrift(
+                    "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName~Tempo.Blazor.Tests.Packaging")
+                .Should().Contain(
+                    "FullyQualifiedName~Tempo.Blazor.Tests.Packaging",
+                    "a positive ~ scope narrows the gate to ONLY the matching tests — the widest "
+                    + "silent hole of all, and the old StartsWith reader dropped it on the floor");
+
+            EvaluateDrift("FullyQualifiedName!~Tempo.Blazor.E2E&Name!~Foo")
+                .Should().Contain(
+                    "Name!~Foo",
+                    "a different property excludes what the exception register never named; the "
+                    + "old reader saw no FullyQualifiedName!~ prefix and reported nothing");
+
+            EvaluateDrift("FullyQualifiedName!~Tempo.Blazor.E2E&Category=Y")
+                .Should().Contain(
+                    "Category=Y",
+                    "a different operator does whatever the runner makes of it; unrecognised is "
+                    + "the only honest answer");
+
+            // The whitespace arm, BOTH directions: vstest's tokenizer skips spaces around the
+            // operator, so `FullyQualifiedName !~ E2E` IS an exclusion — of E2E, which is not a
+            // named exception and which leaves the real one missing.
+            EvaluateDrift("FullyQualifiedName !~ E2E")
+                .Should().BeEquivalentTo(
+                    ["E2E", "Tempo.Blazor.E2E"],
+                    "the space-spelled clause must be READ as an exclusion of 'E2E' — reported as "
+                    + "not a named exception, with Tempo.Blazor.E2E then missing; a reader that "
+                    + "kept only the exact 'FullyQualifiedName!~' prefix would drop this clause "
+                    + "and report only the missing name");
+
+            EvaluateDrift("FullyQualifiedName !~ Tempo.Blazor.E2E")
+                .Should().BeEmpty(
+                    "and the SAME clause around the real exception is no drift at all: whitespace "
+                    + "around !~ is the identical exclusion to the runner, so refusing it would be "
+                    + "a red nobody could fix — the textual-identity comparison between the two "
+                    + "files is what keeps the lanes spelled alike, not this one");
+
+            // The clause-level trim: the filter is a single token of YAML, but a stray space at
+            // either end must not make a healthy filter unreadable.
+            EvaluateDrift("  FullyQualifiedName!~Tempo.Blazor.E2E  ")
+                .Should().BeEmpty(
+                    "padding around the whole filter is not a clause shape; a reader that did not "
+                    + "trim would report a healthy gate as malformed");
+        }
     }
 
     /// <summary>
@@ -839,6 +1010,74 @@ public sealed class ReleaseGateFilterTests
     }
 
     /// <summary>
+    /// The assignment spelling of the wait budget inside an <c>env:</c> block — key, colon, and a
+    /// NON-EMPTY value. A bare <c>TEMPO_BUNIT_WAIT_SECONDS:</c> with nothing after the colon is
+    /// not a setting: GitHub exports it as the empty string, <c>TestAssemblyInit</c> ignores
+    /// zero-length values, and the job silently runs the 2 s default the variable exists to
+    /// override.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex WaitBudgetIsSetHere = new(
+        @"TEMPO_BUNIT_WAIT_SECONDS[ \t]*:[ \t]*\S");
+
+    /// <summary>
+    /// The body of a job-level <c>env:</c> mapping inside a job segment — the region whose keys
+    /// the job exports to every step — or an empty string when the job has none. Mirrors
+    /// <see cref="WorkflowLevelEnvBlock"/>: cut from <c>^    env:$</c> at the job-key indent to
+    /// the next line at that indent or less, so a STEP-level <c>env:</c> (deeper) is deliberately
+    /// not in this block — the guard requires one value shared by both lanes, and a per-step
+    /// spelling is two values that can drift.
+    /// </summary>
+    internal static string JobLevelEnvBlock(string jobBody)
+    {
+        var envKey = System.Text.RegularExpressions.Regex.Match(jobBody, @"^    env:[ \t]*$",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        if (!envKey.Success)
+        {
+            return string.Empty;
+        }
+
+        string tail = jobBody[(envKey.Index + envKey.Length)..];
+        var nextJobKey = System.Text.RegularExpressions.Regex.Match(tail, @"^ {0,4}\S",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        return nextJobKey.Success ? tail[..nextJobKey.Index] : tail;
+    }
+
+    /// <summary>
+    /// Names of the jobs that run <c>dotnet test</c> without the bUnit wait budget set — the
+    /// population <see cref="BothPublishWorkflows_SetTheBunitWaitBudgetOnEveryJobThatRunsTests"/>
+    /// asserts on.
+    /// <para>
+    /// A WORKFLOW-LEVEL <c>env:</c> COUNTS FOR EVERY JOB, the same rule
+    /// <see cref="JobsWhereLocalePrecedesABuild"/> applies for locales and for the same reason:
+    /// GitHub merges it into all of them, so it is read once here rather than once per segment.
+    /// </para>
+    /// </summary>
+    internal static IReadOnlyList<string> JobsRunningTestsWithoutTheWaitBudget(
+        string workflowCode, out int jobsRunningTests)
+    {
+        bool budgetAboveEveryJob = WaitBudgetIsSetHere.IsMatch(WorkflowLevelEnvBlock(workflowCode));
+        List<string> offenders = [];
+        jobsRunningTests = 0;
+
+        foreach ((string name, string body) in JobSegments(workflowCode))
+        {
+            if (!body.Contains("dotnet test", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            jobsRunningTests++;
+            if (!budgetAboveEveryJob && !WaitBudgetIsSetHere.IsMatch(JobLevelEnvBlock(body)))
+            {
+                offenders.Add(name);
+            }
+        }
+
+        return offenders;
+    }
+
+    /// <summary>
     /// A workflow with its comment lines removed — the projection every reader in this class shares.
     /// <para>
     /// WHY IT EXISTS, measured rather than argued: with the whole second lane commented out (each of
@@ -884,6 +1123,7 @@ public sealed class ReleaseGateFilterTests
     {
         IReadOnlyList<string> exclusions = ParseExclusions(filter);
         List<string> drift = [];
+        drift.AddRange(UnrecognizedClauses(filter));
         drift.AddRange(exclusions.Except(NamedExceptions, StringComparer.Ordinal));
         drift.AddRange(NamedExceptions.Except(exclusions, StringComparer.Ordinal));
         if (string.IsNullOrWhiteSpace(filter))
@@ -894,6 +1134,41 @@ public sealed class ReleaseGateFilterTests
         return drift;
     }
 
+    /// <summary>
+    /// The ONE clause shape the release gate may carry: <c>FullyQualifiedName!~&lt;name&gt;</c>.
+    /// Whitespace around the operator is TOLERATED because the vstest tokenizer skips it —
+    /// <c>FullyQualifiedName !~ X</c> IS the same exclusion to the runner, and a reader keyed on
+    /// the exact string would report it as malformed while the gate silently honours it (the
+    /// silent hole this rework closes). The captured name is a single non-whitespace token; a
+    /// name with a space inside is not a name but a syntax error, so it lands in
+    /// <see cref="UnrecognizedClauses"/> instead.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex ExclusionClauseShape = new(
+        @"^FullyQualifiedName\s*!~\s*(?<name>\S+)\s*$");
+
+    /// <summary>
+    /// The filter split on <c>&amp;</c> into trimmed clauses. vstest also understands <c>|</c>
+    /// and parentheses, but none of those may appear in the gate — a clause containing them
+    /// fails <see cref="ExclusionClauseShape"/> and lands in <see cref="UnrecognizedClauses"/>
+    /// rather than being silently dropped.
+    /// </summary>
+    private static IReadOnlyList<string> FilterClauses(string filter) =>
+        [.. filter
+            .Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(clause => clause.Trim())];
+
+    /// <summary>
+    /// Every clause that is NOT a <c>FullyQualifiedName!~&lt;name&gt;</c> exclusion. Each is
+    /// drift on its own: a positive <c>~</c> scope narrows the gate to only the matching tests,
+    /// a different property or operator excludes what the register never named, and a malformed
+    /// clause does whatever the runner makes of it — all invisible to the named-exception
+    /// comparison, which is the silent hole the first version of this guard had.
+    /// </summary>
+    internal static IReadOnlyList<string> UnrecognizedClauses(string filter) =>
+        string.IsNullOrWhiteSpace(filter)
+            ? []
+            : [.. FilterClauses(filter).Where(clause => !ExclusionClauseShape.IsMatch(clause))];
+
     internal static IReadOnlyList<string> ParseExclusions(string filter)
     {
         if (string.IsNullOrWhiteSpace(filter))
@@ -901,11 +1176,10 @@ public sealed class ReleaseGateFilterTests
             return [];
         }
 
-        return [.. filter
-            .Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(clause => clause.Trim())
-            .Where(clause => clause.StartsWith("FullyQualifiedName!~", StringComparison.Ordinal))
-            .Select(clause => clause["FullyQualifiedName!~".Length..])];
+        return [.. FilterClauses(filter)
+            .Select(clause => ExclusionClauseShape.Match(clause))
+            .Where(match => match.Success)
+            .Select(match => match.Groups["name"].Value)];
     }
 
     /// <summary>
