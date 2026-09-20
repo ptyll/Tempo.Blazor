@@ -654,8 +654,9 @@ window.tmNotionEditor = (function () {
             const start = r.startOffset;
             const end = r.endOffset;
             const rect = mark.getBoundingClientRect();
-            const top = rect.top + window.scrollY;
-            const left = rect.left + window.scrollX;
+            // Text-comment panel is position:fixed → viewport coords (no scroll offsets).
+            const top = rect.top;
+            const left = rect.left;
             dotNetRef.invokeMethodAsync(callbackName, actualBlockId, commentId, text, start, end, top, left)
                 .catch(() => {});
         }
@@ -699,8 +700,9 @@ window.tmNotionEditor = (function () {
             const rect = mark.getBoundingClientRect();
             const commentId = mark.dataset.commentId || '';
             const blockId   = mark.dataset.blockId || '';
-            const top       = rect.top + window.scrollY;
-            const left      = rect.left + window.scrollX;
+            // Text-comment panel is position:fixed → viewport coords (no scroll offsets).
+            const top       = rect.top;
+            const left      = rect.left;
             _pageDotNetRef.invokeMethodAsync('OnTextCommentMarkClicked', commentId, blockId, top, left)
                 .catch(() => {});
         });
@@ -933,9 +935,13 @@ window.tmNotionEditor = (function () {
             rect = span.getBoundingClientRect();
             span.parentNode?.removeChild(span);
         }
+        // getBoundingClientRect() is already viewport-relative. The slash / mention /
+        // page-link / token menus are position:fixed, so they must receive viewport
+        // coordinates — adding window.scrollY/scrollX pushed them below the fold
+        // whenever the host page scrolled the window.
         return {
-            top:  rect.bottom + window.scrollY,
-            left: rect.left   + window.scrollX
+            top:  rect.bottom,
+            left: rect.left
         };
     }
 
