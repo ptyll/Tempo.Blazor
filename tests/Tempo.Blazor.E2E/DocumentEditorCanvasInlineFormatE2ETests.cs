@@ -335,6 +335,9 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
     private static async Task SetTempoColorPickerAsync(IPage page, string selector, string value)
     {
         var picker = page.Locator(selector);
+        // overlay.js parks the top-layer panel with visibility:hidden while its anchor does not
+        // intersect the viewport — a raw JS click never scrolls, so bring the trigger in view first.
+        await picker.Locator(".tm-color-picker-trigger").ScrollIntoViewIfNeededAsync();
         await picker.Locator(".tm-color-picker-trigger").EvaluateAsync("trigger => trigger.click()");
         await Assertions.Expect(picker.Locator(".tm-color-picker-dropdown")).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await Assertions.Expect(picker.Locator(".tm-color-picker-apply")).ToBeVisibleAsync(new() { Timeout = 5_000 });

@@ -734,7 +734,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     // host enables suggestion mode on the canvas engine, drive the engine's track-changes — every edit then
     // becomes a reviewable revision (a suggestion), with no continuous C# mirror. No-op (== _trackChangesEnabled)
     // when suggestions are not enabled, so the explicit track-changes toggle and existing tests are unaffected.
-    private bool CanvasEngineTracksChanges => _trackChangesEnabled || RequiresTrackedEditing || (UsingCanvasEngine && _suggestionsEnabled);
+    // NOTE: no `UsingCanvasEngine` guard here — this property is only ever read for the
+    // TmDocumentCanvasEngineHost element, and UsingCanvasEngine is @ref-based (false on the very first
+    // render), which used to boot the engine with trackChanges.enabled=false forever (B4 regression).
+    private bool CanvasEngineTracksChanges => _trackChangesEnabled || RequiresTrackedEditing || _suggestionsEnabled;
 
     // B4 Slice 2: in canvas suggestion mode the proposed edits ARE the engine's revisions (Slice 1). Surface
     // them in the suggestion panel by mapping the live revision list to suggestions, and review them through

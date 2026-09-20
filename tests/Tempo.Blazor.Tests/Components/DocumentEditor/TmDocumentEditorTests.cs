@@ -2555,6 +2555,30 @@ public class TmDocumentEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SuggestionMode_BootsCanvasEngineWithTrackChangesEnabled()
+    {
+        // B4 regression guard: CanvasEngineTracksChanges used to include `UsingCanvasEngine`, which is
+        // @ref-based and therefore false on the very first render — the engine booted with
+        // trackChanges.enabled=false and suggestion mode never produced revisions. Assert on the
+        // actual mount optionsJson (the only surface the engine ever reads the flag from).
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.SuggestionProvider, new InMemoryDocumentSuggestionProvider())
+                      .Add(p => p.SuggestionsEnabled, true));
+
+        cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
+        var mountArgs = SetupDocumentCanvasModule().Invocations["mount"].Last().Arguments;
+        var optionsJson = Assert.IsType<string>(mountArgs[3]);
+        using var options = JsonDocument.Parse(optionsJson);
+        options.RootElement.GetProperty("trackChanges").GetProperty("enabled").GetBoolean()
+            .Should().BeTrue("canvas suggestion mode must boot the engine with trackChanges.enabled=true");
+    }
+
+    [Fact]
     public async Task Collaboration_RemoteRevisionUpdateRefreshesPanelWithoutReplacingCanvasHost()
     {
         var provider = new InMemoryDocumentEditorProvider();
