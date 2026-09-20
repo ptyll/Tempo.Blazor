@@ -11,6 +11,13 @@
     cursor: pointer;
 }
 
+/* Keydown-propagation fence only (see TmPopover.razor): the span exists so a native <button>
+   inside TriggerContent does not double-activate the emulating trigger — it must not form a
+   layout box of its own. */
+.tm-popover__trigger-content {
+    display: contents;
+}
+
 /* The body is a TmOverlayPanel: position:fixed + popover="manual" come from _overlay-panel.css
    and overlay.js writes top/left in viewport coordinates — no absolute-position rules live here
    any more. The RESOLVED side (post-flip) arrives on data-tm-placement and drives the arrow. */

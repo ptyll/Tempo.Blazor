@@ -54,6 +54,7 @@
     "tm-popover--left",
     "tm-popover--right",
     "tm-popover__trigger",
+    "tm-popover__trigger-content",
     "tm-popover__body",
     "tm-popover__body--open",
     "tm-popover__arrow"

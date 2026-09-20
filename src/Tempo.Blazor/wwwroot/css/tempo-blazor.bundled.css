@@ -1899,6 +1899,7 @@ to{background-position:0 0;}
 }
 .tm-popover{display:inline-flex;}
 .tm-popover__trigger{display:inline-flex;cursor:pointer;}
+.tm-popover__trigger-content{display:contents;}
 .tm-popover__body{min-width:200px;padding:0.75rem 1rem;background-color:var(--tm-color-surface,#fff);border:1px solid var(--tm-border-color);border-radius:var(--tm-radius-lg);box-shadow:0 8px 24px rgba(0,0,0,0.12);animation:tm-popover-in 0.15s ease;}
 @keyframes tm-popover-in{from{opacity:0;transform:scale(0.95);}
 to{opacity:1;transform:scale(1);}
