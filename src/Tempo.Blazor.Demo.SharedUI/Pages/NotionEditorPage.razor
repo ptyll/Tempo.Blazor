@@ -160,16 +160,34 @@
     @if (_currentPage != null)
     {
         <div style="height: 420px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface);">
-            <TmNotionEditor DataProvider="@DataProvider"
-                            AggregateProvider="@AggregateProvider"
-                            MentionProvider="@MentionProvider"
-                            FileProvider="@FileProvider"
-                            TokenProvider="@TokenProvider"
-                            AllowedBlockTypes="@_singlePageAllowedBlocks"
-                            SinglePageMode="true"
-                            InitialPageId="@_currentPage.Id.ToString()"
-                            OnPageNavigationRequested="@HandleSinglePageNavigationRequested"
-                            Class="h-full" />
+            @if (_singlePageEditorLoaded)
+            {
+                <TmNotionEditor DataProvider="@DataProvider"
+                                AggregateProvider="@AggregateProvider"
+                                MentionProvider="@MentionProvider"
+                                FileProvider="@FileProvider"
+                                TokenProvider="@TokenProvider"
+                                AllowedBlockTypes="@_singlePageAllowedBlocks"
+                                SinglePageMode="true"
+                                InitialPageId="@_currentPage.Id.ToString()"
+                                OnPageNavigationRequested="@HandleSinglePageNavigationRequested"
+                                Class="h-full" />
+            }
+            else
+            {
+                @* Mounted on demand: a second live editor on the same page shares block ids and global
+                   notion-editor.js handlers (document.querySelector + capture-phase keydown) with the
+                   full editor above, so eager-mounting it breaks every page-wide locator on this page. *@
+                <div class="h-full flex flex-col items-center justify-center gap-3 text-slate-500 dark:text-slate-400">
+                    <p class="text-sm">The single-page editor is mounted on demand.</p>
+                    <button type="button"
+                            class="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white transition-colors"
+                            data-testid="notion-single-page-load"
+                            @onclick="() => _singlePageEditorLoaded = true">
+                        Load single-page editor
+                    </button>
+                </div>
+            }
         </div>
         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Allowed blocks: paragraph, headings, lists, to-dos, quote, callout, code, divider, image, table.
@@ -908,6 +926,7 @@
     // ── Single-page mode demo ────────────────────────────────────────────────
 
     private string? _singlePageNavMessage;
+    private bool _singlePageEditorLoaded;
 
     private static readonly IReadOnlySet<BlockType> _singlePageAllowedBlocks = new HashSet<BlockType>
     {

@@ -36,6 +36,10 @@ public class NotionSinglePageModeE2ETests : WasmTestBase
 
         var section = page.Locator("[data-testid='notion-single-page-demo']");
         await section.ScrollIntoViewIfNeededAsync();
+        // The demo mounts the second editor on demand — a second live TmNotionEditor on the same page
+        // shares block ids and the global notion-editor.js handlers with the full editor, which breaks
+        // every page-wide locator the rest of the suite relies on.
+        await section.Locator("[data-testid='notion-single-page-load']").ClickAsync();
         var editor = section.Locator(".tm-notion-editor").First;
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
         // wait for the page content to load inside the single-page editor

@@ -421,7 +421,7 @@
                                          OnHighlightedIndexChanged="SetTokenInsertHighlight" />
                 </section>
             }
-            <main class="tm-document-editor__surface" aria-label="@Loc["TmDocumentEditor_DocumentSurfaceLabel"]">
+            <section class="tm-document-editor__surface" aria-label="@Loc["TmDocumentEditor_DocumentSurfaceLabel"]">
                 <article class="tm-document-editor__page-surface" aria-label="@Loc["TmDocumentEditor_PageLabel"]">
                     <header class="tm-document-editor__page-header">
                         <h2 class="tm-document-editor__document-title">@DocumentTitle</h2>
@@ -673,7 +673,7 @@
                         }
                     <TmDocumentCollaborationCursorOverlay Cursors="@_remoteCursors" />
                 </article>
-            </main>
+            </section>
 
             <TmDocumentSidePanel @ref="_sidePanel"
                                  IsOpen="@_sidePanelOpen"

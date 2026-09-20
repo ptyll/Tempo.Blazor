@@ -168,6 +168,26 @@ public class TmDocumentEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Render_DoesNotEmitMainLandmark()
+    {
+        // A <main> landmark must be unique per page and is owned by the host layout. The editor is a
+        // component that can be embedded inside any shell (the demo renders it inside MainLayout's
+        // <main>), so it must mark its surface as a named region — not a second <main>, which makes
+        // strict-mode locators (and AT landmark navigation) see two mains.
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='document-canvas-engine-host']").Should().NotBeNull());
+        cut.FindAll("main").Should().BeEmpty("the host layout owns the single <main> landmark");
+        var surface = cut.Find("section.tm-document-editor__surface");
+        surface.GetAttribute("aria-label").Should().Be("Document surface");
+    }
+
+    [Fact]
     public void SidePanel_RendersUnifiedTabsAndSwitchesContent()
     {
         var activeTab = DocumentSidePanelTab.Comments;
