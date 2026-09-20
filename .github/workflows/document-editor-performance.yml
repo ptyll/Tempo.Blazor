@@ -33,6 +33,11 @@ jobs:
           dotnet build tests/Tempo.Blazor.Tests/Tempo.Blazor.Tests.csproj --no-restore --configuration Release
 
       - name: Run performance baseline tests
+        env:
+          # Same assembly, same flake class as the publish workflows (Fáze 19): the shared-runner
+          # box can stall a bUnit render continuation past the tuned 2 s default, so CI keeps the
+          # 10 s budget. See TestAssemblyInit / TEMPO_BUNIT_WAIT_SECONDS.
+          TEMPO_BUNIT_WAIT_SECONDS: "10"
         run: |
           dotnet test tests/Tempo.Blazor.Tests/Tempo.Blazor.Tests.csproj \
             --no-build \

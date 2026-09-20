@@ -24,6 +24,7 @@ public class OverlayPanelE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Smoke")]
     public async Task Overlay_OpensAsPopover_InTopLayer_BelowTrigger()
     {
         var page = await OpenOverlayPageAsync();
@@ -88,6 +89,7 @@ public class OverlayPanelE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [TestCategory("Smoke")]
     public async Task Overlay_FlipsAbove_WhenNoRoomBelow()
     {
         var page = await OpenOverlayPageAsync();
@@ -290,6 +292,7 @@ public class OverlayPanelE2ETests : WasmTestBase
     /// would close the modal a beat later. A second Escape still closes the modal.
     /// </summary>
     [TestMethod]
+    [TestCategory("Smoke")]
     public async Task Overlay_Escape_InModal_ClosesPanelButNotModal()
     {
         var page = await OpenOverlayPageAsync();
