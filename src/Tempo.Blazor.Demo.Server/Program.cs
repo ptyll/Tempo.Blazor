@@ -4,6 +4,7 @@ using Tempo.Blazor.Demo.SharedUI.Services;
 using Tempo.Blazor.Demo.Validators;
 using Tempo.Blazor.DocumentEditor.Services;
 using Tempo.Blazor.FluentValidation;
+using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Abstractions.WorkItems;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -52,9 +53,17 @@ builder.Services.AddScoped<DemoNotionMediaLibraryProvider>();
 builder.Services.AddScoped<DemoNotionFileProvider>();
 builder.Services.AddScoped<DemoNotionTokenProvider>();
 builder.Services.AddScoped<DemoNotionAIProvider>();
+builder.Services.AddScoped<DemoNotionTaskProvider>();
 builder.Services.AddScoped<DemoNotionReactionProvider>();
 builder.Services.AddScoped<DemoNotionAnalyticsProvider>();
 builder.Services.AddScoped<DemoNotionPagePropertiesProvider>();
+builder.Services.AddScoped<DemoNotionTemplateProvider>();
+builder.Services.AddScoped<DemoNotionSpaceProvider>();
+builder.Services.AddScoped<DemoNotionBlogProvider>();
+builder.Services.AddScoped<DemoNotionWatchProvider>();
+builder.Services.AddScoped<DemoNotionPermissionProvider>();
+builder.Services.AddScoped<DemoNotionPublicShareProvider>();
+builder.Services.AddScoped<DemoNotionAuditProvider>();
 builder.Services.AddScoped<DemoSmartLinkProvider>();
 builder.Services.AddScoped<DemoNotionDatabaseProvider>();
 builder.Services.AddTmWorkItemProvider<DemoWorkItemProvider>();
@@ -64,11 +73,21 @@ builder.Services.AddScoped<ITmWorkItemProvider>(sp => sp.GetRequiredService<Demo
 builder.Services.AddScoped<MockNotionDatabaseProvider>();
 builder.Services.AddScoped<MockNotionCommentProvider>();
 builder.Services.AddScoped<MockNotionHistoryProvider>();
+builder.Services.AddScoped<DemoNotionHistoryProvider>();
 builder.Services.AddScoped<MockNotionMentionProvider>();
 builder.Services.AddScoped<MockNotionSearchProvider>();
 builder.Services.AddScoped<MockNotionWireframeDocumentProvider>();
 builder.Services.AddScoped<MockNotionDiagramDocumentProvider>();
 builder.Services.AddScoped<ApiSpreadsheetDocumentProvider>();
+builder.Services.AddScoped<ApiWireframeDocumentProvider>();
+builder.Services.AddScoped<ApiDiagramDocumentProvider>();
+builder.Services.AddScoped<Tempo.Blazor.DocumentLibrary.ITempoDocumentLibraryProvider, ApiTempoDocumentLibraryProvider>();
+builder.Services.AddScoped<Tempo.Blazor.DocumentLibrary.ITempoDocumentChangeNotifier>(sp =>
+{
+    var baseUri = sp.GetRequiredService<IHttpClientFactory>().CreateClient("DemoApi").BaseAddress!.ToString().TrimEnd('/');
+    return new Tempo.Blazor.DocumentLibrary.Collaboration.SignalRTempoDocumentChangeNotifier($"{baseUri}/hubs/document-library");
+});
+builder.Services.AddScoped<DemoNotionImportExportProvider>();
 
 // Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
 builder.Services.AddTempoBlazor();
@@ -85,6 +104,8 @@ builder.Services.AddTempoBlazorNotionEditor();
 builder.Services.AddTempoBlazorSigning();
 builder.Services.AddTempoBlazorReporting();
 builder.Services.AddInMemoryNotifications();
+builder.Services.AddScoped<DemoNotionNotificationService>();
+builder.Services.AddScoped<ITmNotificationService>(sp => sp.GetRequiredService<DemoNotionNotificationService>());
 builder.Services.AddScoped<DemoReportEmbeddingSourceFactory>();
 
 // Register Dashboard services
