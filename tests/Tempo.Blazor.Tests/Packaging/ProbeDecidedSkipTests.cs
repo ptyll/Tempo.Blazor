@@ -143,6 +143,7 @@ public sealed class ProbeDecidedSkipTests
                          typeof(ReleaseContractTests.FeedReachableFactAttribute),
                          typeof(BashScriptFactAttribute),
                          typeof(BashScriptFeedReachableFactAttribute),
+                         typeof(FullCloneFactAttribute),
                      })
             {
                 attributeType.Should().BeDerivedFrom<ProbeDecidedFactAttribute>(

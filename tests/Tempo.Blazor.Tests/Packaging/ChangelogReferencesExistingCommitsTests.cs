@@ -18,6 +18,17 @@ namespace Tempo.Blazor.Tests.Packaging;
 /// convention: a hex-looking token that resolves to no commit may appear ONLY inside
 /// parentheses, never bare and never in backticks — so a typo'd "landed de4dbeef" cannot pose
 /// as a commit claim either.
+/// <para>
+/// BOTH MEMBERS RUN UNDER <see cref="FullCloneFactAttribute"/>, because the instrument they share
+/// — <c>git cat-file</c> — cannot distinguish "no such commit" from "the clone does not carry it".
+/// On a shallow clone the publish workflows' default <c>fetch-depth: 1</c> produced exit 128 on
+/// every id beyond the boundary — a red about the clone, measured in CI — so the checkouts now
+/// fetch <c>fetch-depth: 0</c>, and anywhere else the clone is shallow, carries no <c>.git</c>, or
+/// has no <c>git</c>, the member reports a named skip instead of that red. What is deliberately NOT
+/// behind the skip: a <c>cat-file</c> 128 on a full clone — there the clone can answer, so a miss
+/// is the guard's ordinary failure, which is also the tripwire that keeps a swapped-back
+/// <c>[Fact]</c> red rather than silently green.
+/// </para>
 /// </summary>
 public class ChangelogReferencesExistingCommitsTests
 {
@@ -25,7 +36,7 @@ public class ChangelogReferencesExistingCommitsTests
     private static readonly Regex BareHex = new(@"\b[0-9a-fA-F]{7,40}\b", RegexOptions.Compiled);
     private static readonly Regex ContainsDigit = new(@"\d", RegexOptions.Compiled);
 
-    [Fact]
+    [FullCloneFact]
     public void BacktickedCommitIds_AllResolveAsCommits()
     {
         var changelog = ReadChangelog();
@@ -44,7 +55,7 @@ public class ChangelogReferencesExistingCommitsTests
             + "of this repository: {0}", string.Join(", ", unresolved));
     }
 
-    [Fact]
+    [FullCloneFact]
     public void NonCommitHexIds_ExistOnlyAsParenthesisedRecordIds()
     {
         var changelog = ReadChangelog();

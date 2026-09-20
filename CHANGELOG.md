@@ -119,6 +119,15 @@ which is exactly the red
   Parenthesised ids are untouched: the 2.8.26 convention paragraph declares them development-line
   record ids, not commit claims, and several correctly resolve to no commit.
 
+- **That guard is no longer blind in CI, and no longer red where it cannot see.** Both publish
+  workflows' checkouts now fetch `fetch-depth: 0` — the default depth 1 carried no commit beyond
+  HEAD, so `git cat-file -e` read exit 128 on every id this file cites and turned the
+  `build-and-test` gate red over the clone, not the changelog. The same fetch carries every tag,
+  which also makes `AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked` live on
+  branch pushes rather than vacuous. In a shallow clone, a tree without `.git`, or on a machine
+  without `git`, the test reports a named skip (`FullCloneFactAttribute`) instead of a red about
+  the clone; on a full clone a 128 is still a failure, never a skip.
+
 - **`a85cbd1e`** — production code changed for the tests' sake, declared: `ToastService` exposes
   `internal PendingAutoDismissCount` (and serialises Show/Remove/Clear through a lock) so an
   armed or un-cancelled auto-dismiss timer is visible the moment the call returns;

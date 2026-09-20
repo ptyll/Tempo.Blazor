@@ -222,29 +222,31 @@ public sealed partial class ReleaseContractTests
     /// </para>
     /// <para>
     /// WHAT A GREEN DOES NOT PROVE, stated because the gap is real and cheap to over-read. It sees the
-    /// tags in THIS ref store. <c>actions/checkout@v4</c> fetches at depth 1 and does not fetch tags, so
-    /// on a push to main the CI run has no tags to find and this passes without having looked at
-    /// anything — which is why the line printed on every run names how many tags were visible, so a zero
-    /// says so instead of hiding inside a green. It also says nothing about nuget.org: a number can be
-    /// published without a tag ever existing, and only a feed lookup answers that.
+    /// tags in THIS ref store — which in the publish workflows is now ALL of them: the checkouts fetch
+    /// <c>fetch-depth: 0</c> (added for <see cref="ChangelogReferencesExistingCommitsTests"/>, whose
+    /// <c>cat-file</c> reads 128 on every commit beyond a depth-1 boundary), and the same fetch
+    /// carries every tag. So on a push to main this guard is LIVE rather than vacuous: announcing a
+    /// number whose tag already names another commit — the spent-number case, e.g. a main push still
+    /// announcing the version the last tag shipped — is red in CI now, by design. The line printed on
+    /// every run still names how many tags were visible, so a clone that lost them says so instead of
+    /// hiding inside a green. It also says nothing about nuget.org: a number can be published without
+    /// a tag ever existing, and only a feed lookup answers that.
     /// </para>
     /// <para>
-    /// AND THE OTHER CI LANE CANNOT GO RED EITHER, WHICH IS A SECOND REASON AND NOT THE SAME ONE. On a
-    /// tag push the publish workflows take the version they ship FROM the tag
+    /// AND THE OTHER CI LANE STILL CANNOT GO RED, WHICH IS A DIFFERENT REASON AND NOT THE REMOVED ONE.
+    /// On a tag push the publish workflows take the version they ship FROM the tag
     /// (<c>${GITHUB_REF#refs/tags/v}</c>), and <c>eng/verify-announced-version.sh</c> refuses a tag
     /// that disagrees with the changelog — so the subject of the comparison below, <c>v{announced}</c>,
     /// IS the pushed tag, and the pushed tag names this very HEAD. The check holds by construction
     /// there. MEASURED 2026-08-21 over three ref stores with the same binary and the same HEAD: a full
     /// clone with the changelog announcing an already-tagged number went RED
     /// (<c>tag-commit=714093ce…</c>, <c>visible-tags=77</c>); a <c>--depth 1 --no-tags</c> clone shaped
-    /// like <c>actions/checkout@v4</c> went GREEN over the identical changelog
+    /// like the old <c>actions/checkout@v4</c> went GREEN over the identical changelog
     /// (<c>tag-commit=(no such tag)</c>, <c>visible-tags=0</c>); and a tag-push shape with
     /// <c>v2.8.20</c> at HEAD and all 78 tags visible went GREEN with <c>tag-commit == head</c>. The
-    /// third cell is why <c>fetch-tags: true</c> is not the treatment: it removes the vacuity and
-    /// leaves the tautology, i.e. it changes how informed the step looks without changing what it can
-    /// detect. THIS GUARD'S PLACE IS THE LOCAL RUN BEFORE A RELEASE, over a clone whose ref store has
-    /// both sides of the comparison; the same limit is written into both publish workflows next to
-    /// their test step, because that is where somebody reads a green and concludes it was checked.
+    /// second cell is the green <c>fetch-depth: 0</c> removed; the third is the one no fetch depth
+    /// touches. The same current state is written into both publish workflows next to their test
+    /// step, because that is where somebody reads a green and concludes what was checked.
     /// </para>
     /// </summary>
     [Fact]

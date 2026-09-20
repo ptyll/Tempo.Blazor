@@ -27,8 +27,17 @@ jobs:
           - 2525:25
           - 5000:80
     steps:
+      # fetch-depth: 0 — the release gate below contains two guards that ask git about objects
+      # beyond HEAD: ChangelogReferencesExistingCommitsTests runs `git cat-file -e <id>^{commit}`
+      # over every commit id the changelog cites, which reads exit 128 on all of them at the
+      # default depth 1 (measured red build-and-test — this line is what ends it), and the tag
+      # guard described under the Test step compares `v<announced>` against a tag store a
+      # depth-1 fetch does not carry. The publish job's checkout carries the same depth so both
+      # jobs see the same ref store.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDKs
         uses: actions/setup-dotnet@v4
@@ -85,27 +94,27 @@ jobs:
       # publish-nuget-org.yml AND to the second lane below — ReleaseGateFilterTests enforces every
       # occurrence in both files, not just the first one.
       #
-      # WHAT THIS GATE DOES NOT COVER — THE TAG GUARD, written here because a green gate is otherwise
-      # read as covering everything the suite contains.
+      # THE TAG GUARD IN THIS GATE — written here because a green gate is otherwise read as covering
+      # everything the suite contains, and because what `fetch-depth: 0` above changed is easy to
+      # over- or under-read.
       # `ReleaseContractTests.AnnouncedVersion_IsEitherUntagged_OrItsTagNamesTheCommitBeingPacked`
-      # compares the announced version against the tag of that name. IT CANNOT GO RED ON ANY CI LANE
-      # OF THIS WORKFLOW, for two independent reasons, and removing one leaves the other:
-      #   * on a branch push, `actions/checkout@v4` fetches no tags, so the lookup finds nothing —
-      #     and "no such tag" is that guard's PASSING value. It is VACUOUS. Measured 2026-08-21 by
+      # compares the announced version against the tag of that name.
+      #   * ON A BRANCH PUSH THE GUARD IS NOW LIVE — it was not while the checkout ran at depth 1.
+      #     A shallow fetch carries no tags, so the lookup found nothing and reported "no such tag",
+      #     which is that guard's PASSING value: the green was VACUOUS. Measured 2026-08-21 by
       #     running the guard itself over a `git clone --depth 1 --no-tags` of this repository with
       #     the changelog announcing an already-tagged number: RED in a full clone
       #     (`tag-commit=714093ce…`, `visible-tags=77`), GREEN in the CI-shaped one
       #     (`tag-commit=(no such tag)`, `visible-tags=0`). Same binary, same HEAD, same changelog;
-      #     the ref store was the only variable.
-      #   * on a tag push, the version being published is taken FROM the tag (see "Set version"), and
-      #     the step below refuses a tag that disagrees with the changelog — so the guard's subject
-      #     `v<announced>` IS the pushed tag, which names this very HEAD. It is TAUTOLOGICAL. Measured
-      #     in the same clone with `v2.8.20` created at HEAD and all 78 tags visible: GREEN, with
-      #     `tag-commit == head`.
-      # `fetch-tags: true` is therefore NOT the treatment: it would remove the first reason and leave
-      # the second, changing how informed this step looks without changing what it can detect.
-      # ITS PLACE IS THE LOCAL RUN BEFORE A RELEASE — `dotnet test` on a machine holding a full clone,
-      # where the ref store carries every v2.8.* tag and the comparison has both sides.
+      #     the ref store was the only variable. With `fetch-depth: 0` every tag is in the store, so
+      #     announcing a number whose tag already names ANOTHER commit — a spent number, e.g. a main
+      #     push that still announces the version the last tag shipped — is red HERE now, by design,
+      #     and the treatment is a bump, never a retag.
+      #   * ON A TAG PUSH THE GUARD IS STILL TAUTOLOGICAL, which no fetch-depth changes: the version
+      #     being published is taken FROM the tag (see "Set version"), and the step below refuses a
+      #     tag that disagrees with the changelog — so the guard's subject `v<announced>` IS the
+      #     pushed tag, which names this very HEAD. Measured in the same clone with `v2.8.20`
+      #     created at HEAD and all 78 tags visible: GREEN, with `tag-commit == head`.
       # AND THE OVERLAPPING FEED GUARD IS WEAKER HERE THAN IN publish-nuget-org.yml, so it is not a
       # substitute: `AnnouncedVersion_OnTheFeed_CarriesWhatThisTreeBuilds` and the refusal in
       # eng/pack-nuget-packages.sh both ask NUGET.ORG, which is not the feed this workflow pushes to.
@@ -180,8 +189,13 @@ jobs:
       contents: read
 
     steps:
+      # fetch-depth: 0 — same reason as the build-and-test checkout above: the full ref store is
+      # what the suite's git-facing guards are written against, and the pack script stamps each
+      # package with `git rev-parse HEAD`.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET SDKs
         uses: actions/setup-dotnet@v4
