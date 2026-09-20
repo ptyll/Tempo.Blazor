@@ -1999,6 +1999,7 @@ public abstract class LocalizationTestBase : BunitContext
         // Phase 2
         ["TmGantt_WBS"] = "WBS",
         ["TmGantt_CascadeSort"] = "Sort by date",
+        ["TmGantt_ChooseFile"] = "Choose file",
         ["TmGantt_BulkSelected"] = "selected",
         ["TmGantt_BulkMarkDone"] = "Mark done",
         ["TmGantt_BulkMarkInProgress"] = "Mark in progress",
@@ -5162,6 +5163,7 @@ public abstract class LocalizationTestBase : BunitContext
         // Phase 2
         ["TmGantt_WBS"] = "WBS",
         ["TmGantt_CascadeSort"] = "Seřadit dle data",
+        ["TmGantt_ChooseFile"] = "Vybrat soubor",
         ["TmGantt_BulkSelected"] = "vybráno",
         ["TmGantt_BulkMarkDone"] = "Označit hotové",
         ["TmGantt_BulkMarkInProgress"] = "Označit rozpracované",

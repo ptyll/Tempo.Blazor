@@ -2453,6 +2453,7 @@
   "TmGantt_BulkSelected": "vybráno",
   "TmGantt_CalendarView": "Kalendář",
   "TmGantt_CascadeSort": "Seřadit dle data",
+  "TmGantt_ChooseFile": "Vybrat soubor",
   "TmGantt_CircularDependency": "Zjištěna cyklická závislost",
   "TmGantt_ClearFilters": "Vymazat všechny filtry",
   "TmGantt_CollapseAll": "Sbalit vše",

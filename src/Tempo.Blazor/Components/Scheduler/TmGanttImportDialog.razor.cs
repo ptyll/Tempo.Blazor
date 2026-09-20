@@ -1,14 +1,19 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Components.Scheduler;
 
 /// <summary>Dialog for importing tasks from Excel, MS Project XML, or JIRA.</summary>
-public partial class TmGanttImportDialog
+public partial class TmGanttImportDialog : IAsyncDisposable
 {
+    private const string ModulePath = "./_content/Tempo.Blazor/Components/Scheduler/TmGanttImportDialog.razor.js";
+
     private enum ImportTab { Excel, Mpp, Jira }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     private ImportTab _tab = ImportTab.Excel;
     private string? _selectedFileName;
@@ -18,6 +23,8 @@ public partial class TmGanttImportDialog
     private string _jiraProject = string.Empty;
     private string? _errorMessage;
     private bool _isImporting;
+    private ElementReference _fileInputWrap;
+    private IJSObjectReference? _filePickerModule;
 
     /// <summary>Whether the dialog is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
@@ -36,6 +43,34 @@ public partial class TmGanttImportDialog
         _selectedFile = e.File;
         _selectedFileName = e.File.Name;
         _errorMessage = null;
+    }
+
+    /// <summary>
+    /// Opens the native file chooser by clicking the visually hidden <see cref="InputFile"/> inside
+    /// the button's user gesture — so Enter, Space and pointer activation all reach the chooser.
+    /// The module is imported lazily on first use: the dialog renders before JS interop is
+    /// available on prerender, and importing here keeps the chooser inside the same activation.
+    /// </summary>
+    private async Task OpenFilePickerAsync()
+    {
+        _filePickerModule ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+        await _filePickerModule.InvokeVoidAsync("openFilePicker", _fileInputWrap);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_filePickerModule is not null)
+            {
+                await _filePickerModule.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit already gone.
+        }
     }
 
     private async Task ImportAsync()

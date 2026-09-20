@@ -1307,8 +1307,27 @@
     gap: 8px;
 }
 
+/* The wrapper exists only to hand JS an ElementReference — display:contents keeps it out of the
+   flex column's slot accounting so the empty box adds no gap. */
+.tm-gantt__import-file-input-wrap {
+    display: contents;
+}
+
+/* Visually hidden but still present: the chooser button clicks this input programmatically
+   (openFilePicker in TmGanttImportDialog.razor.js) inside the same user gesture. display:none was
+   replaced by the standard sr-only geometry so the click works identically in every engine; the
+   input itself is aria-hidden + tabindex=-1, so it never reaches AT or the tab order. */
 .tm-gantt__import-file-input {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
 .tm-gantt__import-file-name {

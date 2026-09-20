@@ -2448,6 +2448,7 @@
   "TmGantt_BulkSelected": "sélectionné(s)",
   "TmGantt_CalendarView": "Calendrier",
   "TmGantt_CascadeSort": "Trier par date",
+  "TmGantt_ChooseFile": "Choisir un fichier",
   "TmGantt_CircularDependency": "Dépendance circulaire détectée",
   "TmGantt_ClearFilters": "Effacer tous les filtres",
   "TmGantt_CollapseAll": "Tout réduire",

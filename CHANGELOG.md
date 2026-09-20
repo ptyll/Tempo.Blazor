@@ -36,6 +36,18 @@ which is exactly the red
 
 ### Fixed
 
+- **`TmGanttImportDialog`'s file chooser is keyboard-operable.** The upload affordance was a
+  `<label for>` styled as a button pointing at a `display:none` `InputFile` — pointer users could
+  click it, but a `<label>` can never receive keyboard focus, so Enter/Space had no path to the
+  chooser at all. The label is now a real `TmButton` (Secondary, Sm, localized
+  `TmGantt_ChooseFile`) whose click calls `openFilePicker` in the collocated
+  `TmGanttImportDialog.razor.js` module, which calls `input.click()` on the hidden `InputFile`
+  inside the same user gesture. The input stays in the DOM visually hidden (sr-only geometry, not
+  `display:none`) with `aria-hidden` + `tabindex="-1"` so it never reaches the a11y tree or the
+  tab order. bUnit verifies the module invocation and that no `<label>` remains; Playwright tabs
+  to the button and opens the chooser with both Enter and Space via `WaitForFileChooserAsync`,
+  with a focus screenshot under `__screenshots__/`.
+
 - **Every picker label is now programmatically associated with its control.** All six
   `.tm-picker-label` pickers previously rendered a bare `<label>` with neither `for` nor a wrapped
   control — it named nothing, and assistive tech never announced it. Trigger pickers

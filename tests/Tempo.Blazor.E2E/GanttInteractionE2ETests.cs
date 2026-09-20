@@ -196,5 +196,52 @@ public class GanttInteractionE2ETests : WasmTestBase
         await TakeScreenshotAsync(page, "gantt_zoom_buttons");
     }
 
+    [TestMethod]
+    [Description("Gantt import dialog: the file chooser is a real button — Tab focuses it, Enter and Space both open the native file chooser")]
+    public async Task Gantt_ImportDialog_FileChooser_KeyboardAccessible()
+    {
+        var page = await CreatePageAsync();
+        await page.GotoAsync($"{BaseUrl}/gantt");
+        await WaitForAppReadyAsync(page);
+
+        var gantt = page.Locator(".tm-gantt").First;
+        await gantt.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await gantt.Locator("button[data-testid='gantt-import-btn']").ClickAsync();
+
+        var dialog = page.Locator(".tm-gantt__import-dialog");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var chooseBtn = dialog.Locator("[data-testid='import-choose-file']");
+        await Expect(chooseBtn).ToBeVisibleAsync();
+
+        // Tab forward until the chooser button owns focus — it must be reachable by keyboard.
+        for (var i = 0; i < 16; i++)
+        {
+            var activeTestId = await page.EvaluateAsync<string>(
+                "() => document.activeElement?.getAttribute('data-testid') ?? ''");
+            if (activeTestId == "import-choose-file") break;
+            await page.Keyboard.PressAsync("Tab");
+        }
+        await Expect(chooseBtn).ToBeFocusedAsync();
+        await TakeScreenshotAsync(page, "gantt_import_choose_file_focus");
+
+        // Enter opens the native file chooser.
+        var chooserByEnter = await page.RunAndWaitForFileChooserAsync(
+            () => page.Keyboard.PressAsync("Enter"),
+            new PageRunAndWaitForFileChooserOptions { Timeout = 10000 });
+        Assert.IsNotNull(chooserByEnter, "Enter on the choose-file button must open the file chooser");
+
+        // Space opens it too (button activation on keyup).
+        var chooserBySpace = await page.RunAndWaitForFileChooserAsync(
+            () => page.Keyboard.PressAsync("Space"),
+            new PageRunAndWaitForFileChooserOptions { Timeout = 10000 });
+        Assert.IsNotNull(chooserBySpace, "Space on the choose-file button must open the file chooser");
+
+        // The hidden input is visually hidden (not display:none) and out of the a11y tree.
+        var input = dialog.Locator("input.tm-gantt__import-file-input");
+        Assert.AreEqual("true", await input.GetAttributeAsync("aria-hidden"));
+        Assert.AreEqual("-1", await input.GetAttributeAsync("tabindex"));
+    }
+
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
 }
