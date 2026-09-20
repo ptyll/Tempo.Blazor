@@ -65,6 +65,22 @@ which is exactly the red
   six pickers and the attribute split; axe-core on `/pickers` asserts zero `button-name`
   violations and a real-browser test clicks the label and reads `document.activeElement`.
 
+- **The five rich-text-editor dialogs now share one form-group stylesheet.** The scaffolding class
+  `.tm-rte-form-group` was declared bare in both `_link-dialog.css` (space-4 group offset, space-2
+  label offset) and `_image-dialog.css` (space-3 / space-1), so the manifest's import order — not
+  anyone's intent — silently picked the image values for all five dialogs, and the link dialog's
+  declared spacing never painted. The shared rules now live once in the new
+  `_rte-dialog-shared.css`, scoped under the `tm-rte-dialog` host class every dialog root carries
+  next to its own. The label offset is a single `--tm-space-1` for all five — the value users
+  already saw (image's declaration won every tie) and the same label→control gap the design system
+  uses in `.tm-form-field` and `.tm-input-wrapper`, so the change renders zero new pixels. The
+  group offset keeps the painted status quo as well: the shared default is `--tm-space-3`, while
+  the link dialog keeps its deliberate `--tm-space-4` through its own scoped rule, imported after
+  the shared sheet so it still wins inside its own dialog. `CssComputedStyleRegressionTests`
+  resolves the label margin in both dialogs to the same token and pins the two group offsets;
+  the `UnconstrainedClassOwnershipTests` inventory lost its two `tm-rte-form-group`/`label` rows
+  because the collision no longer exists.
+
 - **The declarations 2.8.26 deleted as "dead" are back on the owning classes (`eef9ba93`).** The
   erratum in the 2.8.26 section tells the whole story: five commits — **`9e9e4a54`**,
   **`cfd691d5`**, **`5ab7fe83`**, **`8125ac19`**, **`a013d24c`** — removed rules whose selectors

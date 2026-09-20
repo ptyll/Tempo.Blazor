@@ -56,17 +56,10 @@
   background: var(--tm-bg-muted);
 }
 
-.tm-rte-form-group {
-  margin-bottom: var(--tm-space-3);
-}
-
-.tm-rte-form-group label {
-  display: block;
-  font-size: var(--tm-font-size-sm);
-  font-weight: var(--tm-font-weight-medium);
-  color: var(--tm-text-secondary);
-  margin-bottom: var(--tm-space-1);
-}
+/* The shared .tm-rte-form-group scaffolding (group offset space-3, label offset space-1,
+   last-child collapse) lives once in _rte-dialog-shared.css, scoped under .tm-rte-dialog —
+   the bare rules this file used to declare raced _link-dialog.css's copies for all five
+   dialogs and silently won every one of them on import order. */
 
 .tm-rte-image-url-input,
 .tm-rte-image-alt-input {

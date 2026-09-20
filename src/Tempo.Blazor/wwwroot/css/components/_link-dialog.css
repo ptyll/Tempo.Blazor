@@ -76,21 +76,12 @@
 /* This class is shared scaffolding across every rte dialog, but this declaration is the LINK
    dialog's own value. As a bare rule it raced _image-dialog.css's copy for all five dialogs and
    lost on import order — the link dialog painted space-3 despite asking for space-4. Scoped under
-   the dialog's root class it owns exactly its own markup again. */
+   the dialog's root class it owns exactly its own markup again: it is imported after the shared
+   default in _rte-dialog-shared.css (.tm-rte-dialog .tm-rte-form-group, space-3) at equal
+   specificity, so it still wins inside this dialog. The generic label/last-child spacing now
+   lives once in _rte-dialog-shared.css. */
 .tm-rte-link-dialog .tm-rte-form-group {
   margin-bottom: var(--tm-space-4);
-}
-
-.tm-rte-form-group:last-child {
-  margin-bottom: 0;
-}
-
-.tm-rte-form-group label {
-  display: block;
-  margin-bottom: var(--tm-space-2);
-  font-size: var(--tm-font-size-sm);
-  font-weight: var(--tm-font-weight-medium);
-  color: var(--tm-text-secondary);
 }
 
 .tm-rte-link-url-input,

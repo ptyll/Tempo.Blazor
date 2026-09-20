@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════════════════════════
+   RTE Dialogs - shared .tm-rte-form-group scaffolding
+   ═══════════════════════════════════════════════════════════════
+   All five rich-text-editor dialogs (link, image, table, video, find/replace) carry
+   .tm-rte-dialog on their root next to their own class, so these rules apply only
+   inside dialog markup. They replace the bare .tm-rte-form-group rules that were
+   declared twice — _link-dialog.css asked for space-4/space-2, _image-dialog.css for
+   space-3/space-1 — and the manifest import order silently picked image's values for
+   ALL five dialogs, so the link dialog's declared spacing never painted.
+
+   Label offset is now ONE value for every dialog: --tm-space-1. That is the value all
+   five dialogs have rendered since the rules existed (the image file's declaration
+   always won the equal-specificity tie), and it is the same label→control gap the
+   design system uses everywhere else (.tm-form-field and .tm-input-wrapper both use
+   gap: var(--tm-space-1)) — so the shared declaration changes zero rendered pixels.
+
+   Group offset keeps the painted status quo too: --tm-space-3 is what image, table,
+   video and find/replace render today. The link dialog keeps its own scoped rule
+   (.tm-rte-link-dialog .tm-rte-form-group, --tm-space-4, restored in fcd14fb3), which
+   is imported AFTER this sheet at equal specificity and therefore still wins inside
+   the link dialog — the deliberate wider spacing stays deliberate. */
+
+.tm-rte-dialog .tm-rte-form-group {
+  margin-bottom: var(--tm-space-3);
+}
+
+.tm-rte-dialog .tm-rte-form-group:last-child {
+  margin-bottom: 0;
+}
+
+.tm-rte-dialog .tm-rte-form-group label {
+  display: block;
+  margin-bottom: var(--tm-space-1);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-secondary);
+}

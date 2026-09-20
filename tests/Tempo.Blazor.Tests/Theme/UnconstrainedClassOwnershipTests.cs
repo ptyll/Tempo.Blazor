@@ -33,10 +33,11 @@ namespace Tempo.Blazor.Tests.Theme;
 /// ancestor chains fight when they share at least one compound — and they declare the same
 /// property differently. Equal specificity is a TIE the manifest order decides; unequal is an
 /// OVERRIDE in which the losing file's declaration never paints. Both are findings, and the
-/// recorded list below names each one: the <c>.tm-rte-form-group label</c> residual the old
-/// paragraph already disclosed (margin-bottom <c>--tm-space-2</c> vs <c>--tm-space-1</c>, image
-/// value wins in all five RTE dialogs — UX review of 2.8.26, ~4px, cosmetic, owner ptyll) plus the
-/// pairs the extended model surfaced for the first time.
+/// recorded list below names each one: the <c>.tm-rte-form-group</c> / <c>label</c> pair the old
+/// paragraph disclosed (margin-bottom <c>--tm-space-2</c> vs <c>--tm-space-1</c>, image value won
+/// in all five RTE dialogs) was fixed in 2.9.0 by the shared <c>_rte-dialog-shared.css</c> sheet
+/// and the <c>.tm-rte-dialog</c> host class — plus the pairs the extended model surfaced for the
+/// first time.
 /// </para>
 /// <para>
 /// SCOPE LIMIT, STILL DECLARED: a selector carrying a combinator other than descendant/child
@@ -155,15 +156,8 @@ public class UnconstrainedClassOwnershipTests
         // the only region .tm-rte-btn renders), and the placeholder text is claimed by the base
         // stylesheet and both skins.
         ".tm-rte-btn Tempo.Blazor/_editor-toolbar.css|Tempo.Blazor/_rich-text-editor.css",
-        ".tm-rte-form-group Tempo.Blazor/_image-dialog.css|Tempo.Blazor/_link-dialog.css",
         ".tm-rte-placeholder Tempo.Blazor/_rich-editor-full.css|Tempo.Blazor/_rich-text-editor.css",
         ".tm-rte-placeholder Tempo.Blazor/_rich-editor-simple.css|Tempo.Blazor/_rich-text-editor.css",
-
-        // The residual the old scope-limit paragraph already disclosed: .tm-rte-form-group label
-        // is claimed by both dialog stylesheets at equal specificity, and the manifest order makes
-        // the image-dialog value (margin-bottom --tm-space-1, 4px) win in all five RTE dialogs
-        // including the link one (UX review of 2.8.26; ~4px, cosmetic, owner ptyll).
-        "label Tempo.Blazor/_image-dialog.css|Tempo.Blazor/_link-dialog.css",
 
         // The calendar view reskins the shared day/grid classes inside its own day-cells — an
         // intentional Override the bare _calendar-grid.css declarations always lose there.

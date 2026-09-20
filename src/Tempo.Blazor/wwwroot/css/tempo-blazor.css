@@ -140,6 +140,11 @@
 @import "components/_rich-editor-full.css";
 @import "components/_markdown-editor.css";
 @import "components/_cells.css";
+/* Shared .tm-rte-form-group scaffolding must precede the dialog sheets: the link
+   dialog's scoped .tm-rte-link-dialog .tm-rte-form-group keeps winning its own
+   space-4 group offset only because it is imported after this equal-specificity
+   default. */
+@import "components/_rte-dialog-shared.css";
 @import "components/_link-dialog.css";
 @import "components/_image-dialog.css";
 @import "components/_table-dialog.css";

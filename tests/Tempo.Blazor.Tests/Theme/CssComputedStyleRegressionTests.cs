@@ -74,6 +74,32 @@ public sealed class CssComputedStyleRegressionTests
     private static readonly IReadOnlyList<CssCascade.Element> MentionDropdownChain =
         [new CssCascade.Element("div", "tm-rte-mention-dropdown")];
 
+    private static readonly IReadOnlyList<CssCascade.Element> LinkDialogLabelChain =
+    [
+        new CssCascade.Element("div", "tm-rte-link-dialog", "tm-rte-dialog"),
+        new CssCascade.Element("div", "tm-rte-form-group"),
+        new CssCascade.Element("label"),
+    ];
+
+    private static readonly IReadOnlyList<CssCascade.Element> ImageDialogLabelChain =
+    [
+        new CssCascade.Element("div", "tm-rte-image-dialog", "tm-rte-dialog"),
+        new CssCascade.Element("div", "tm-rte-form-group"),
+        new CssCascade.Element("label"),
+    ];
+
+    private static readonly IReadOnlyList<CssCascade.Element> LinkDialogFormGroupChain =
+    [
+        new CssCascade.Element("div", "tm-rte-link-dialog", "tm-rte-dialog"),
+        new CssCascade.Element("div", "tm-rte-form-group"),
+    ];
+
+    private static readonly IReadOnlyList<CssCascade.Element> ImageDialogFormGroupChain =
+    [
+        new CssCascade.Element("div", "tm-rte-image-dialog", "tm-rte-dialog"),
+        new CssCascade.Element("div", "tm-rte-form-group"),
+    ];
+
     [Fact]
     public void ModalTitle_PaintsAtTheSizeTheRemovedDescendantPinned()
     {
@@ -132,5 +158,42 @@ public sealed class CssComputedStyleRegressionTests
                 "živý MentionAutocomplete používá stejnou třídu jako mrtvá implementace v " +
                 "_rich-text-editor.css; její padding: var(--tm-space-1) 0 byl jediný, takže platil — " +
                 "a dropdown bez něj slepí položky k okrajům");
+    }
+
+    /// <summary>
+    /// 17.3: the shared <c>_rte-dialog-shared.css</c> owns the form-group scaffolding of all five
+    /// RTE dialogs through the <c>.tm-rte-dialog</c> host class. The label offset is ONE value —
+    /// <c>--tm-space-1</c>, what every dialog painted anyway (the image file's bare rule always won
+    /// the equal-specificity import race against the link file's space-2) and the same label→control
+    /// gap the design system uses elsewhere (<c>.tm-form-field</c>, <c>.tm-input-wrapper</c>).
+    /// </summary>
+    [Fact]
+    public void RteDialogLabels_PaintTheSharedOffsetInLinkAndImageDialogs()
+    {
+        CssCascade.Winning(Bundle, LinkDialogLabelChain, "margin-bottom")
+            .Should().Be("var(--tm-space-1)",
+                "label offset is owned once by _rte-dialog-shared.css under .tm-rte-dialog — " +
+                "the link dialog's space-2 declaration never painted (import order), space-1 is " +
+                "the value users see and the design system's canonical label gap");
+        CssCascade.Winning(Bundle, ImageDialogLabelChain, "margin-bottom")
+            .Should().Be("var(--tm-space-1)",
+                "stejná hodnota v obou dialozích — to je celý smysl sdíleného stylesheetu");
+    }
+
+    /// <summary>
+    /// The group offset keeps the painted status quo per dialog: the link dialog's own scoped rule
+    /// (space-4, restored in fcd14fb3) is imported after the shared sheet at equal specificity and
+    /// still wins inside its own dialog; the other four paint the shared space-3 default.
+    /// </summary>
+    [Fact]
+    public void RteDialogFormGroups_KeepTheirDeliberateOffsets()
+    {
+        CssCascade.Winning(Bundle, LinkDialogFormGroupChain, "margin-bottom")
+            .Should().Be("var(--tm-space-4)",
+                "vlastnické pravidlo .tm-rte-link-dialog .tm-rte-form-group je v bundle za sdíleným " +
+                "_rte-dialog-shared.css při stejné specificitě — uvnitř link dialogu dál vítězí space-4");
+        CssCascade.Winning(Bundle, ImageDialogFormGroupChain, "margin-bottom")
+            .Should().Be("var(--tm-space-3)",
+                "image/table/video/find-replace malují sdílený základ space-3, jako dosud");
     }
 }
