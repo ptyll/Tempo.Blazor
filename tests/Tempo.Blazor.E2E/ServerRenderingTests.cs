@@ -100,24 +100,28 @@ public class ServerRenderingTests : ServerTestBase
     {
         var page = await CreatePageAsync();
 
-        // Check initial state
-        var body = page.Locator("body");
-        var initialHasDark = await body.EvaluateAsync<bool>("el => el.classList.contains('dark')");
+        // The ThemeService-driven dark flag lands on the layout root element via data-theme
+        // (MainLayout renders class="… dark …" + data-theme="dark"), not on <body>.
+        var initialTheme = await ThemeAttributeAsync(page);
 
         // Toggle dark mode
         await ToggleDarkModeAsync(page);
 
         // Verify theme changed
-        var hasDarkAfterToggle = await body.EvaluateAsync<bool>("el => el.classList.contains('dark')");
-        Assert.AreNotEqual(initialHasDark, hasDarkAfterToggle, "Dark mode should have toggled");
+        var themeAfterToggle = await ThemeAttributeAsync(page);
+        Assert.AreNotEqual(initialTheme, themeAfterToggle, "Dark mode should have toggled");
 
         // Toggle back
         await ToggleDarkModeAsync(page);
-        var hasDarkAfterSecondToggle = await body.EvaluateAsync<bool>("el => el.classList.contains('dark')");
-        Assert.AreEqual(initialHasDark, hasDarkAfterSecondToggle, "Dark mode should have toggled back");
+        var themeAfterSecondToggle = await ThemeAttributeAsync(page);
+        Assert.AreEqual(initialTheme, themeAfterSecondToggle, "Dark mode should have toggled back");
 
         await TakeScreenshotAsync(page, "dark_mode_test");
     }
+
+    private static Task<string?> ThemeAttributeAsync(IPage page)
+        => page.EvaluateAsync<string?>(
+            "() => document.querySelector('[data-theme]')?.getAttribute('data-theme') ?? null");
 
     [TestMethod]
     [Description("Verify localization switch works - Czech language")]

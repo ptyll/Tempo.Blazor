@@ -33,8 +33,10 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
     {
         var page = await CreatePageAsync();
 
-        // Wait for WASM to boot (blazor.webassembly.js should be loaded)
-        await page.WaitForSelectorAsync("script[src*='blazor.webassembly.js']", new PageWaitForSelectorOptions
+        // Wait for the Blazor runtime script — InteractiveAuto hosts serve _framework/blazor.web.js
+        // (which boots blazor.server.js first and dotnet.* once the WASM leg is cached), never a
+        // literal blazor.webassembly.js, so match the _framework loader family.
+        await page.WaitForSelectorAsync("script[src*='_framework/blazor']", new PageWaitForSelectorOptions
         {
             Timeout = 10000
         });

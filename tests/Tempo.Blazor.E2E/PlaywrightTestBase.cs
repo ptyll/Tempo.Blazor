@@ -305,11 +305,13 @@ public abstract class PlaywrightTestBase
     }
 
     /// <summary>
-    /// Clicks on a navigation menu item by its text.
+    /// Clicks on a navigation menu item by its text. The match must target the nav <b>anchor</b> —
+    /// a bare <c>nav:has-text(...)</c> resolves to the whole nav container (it contains every item's
+    /// text), so clicking it lands on whatever link happens to sit at its midpoint.
     /// </summary>
     protected async Task NavigateToPageAsync(IPage page, string menuText)
     {
-        var menuItem = page.Locator($"nav:has-text('{menuText}'), a:has-text('{menuText}'), button:has-text('{menuText}')").First;
+        var menuItem = page.Locator($"nav a:has-text('{menuText}'), nav button:has-text('{menuText}'), a:has-text('{menuText}'), button:has-text('{menuText}')").First;
         await menuItem.ClickAsync();
         await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
     }
@@ -328,19 +330,19 @@ public abstract class PlaywrightTestBase
     }
 
     /// <summary>
-    /// Switches language to the specified culture.
+    /// Switches language to the specified culture. The demo switcher is a pair of buttons
+    /// (<c>[data-testid='language-switcher-{culture}']</c>) that set localStorage and force a
+    /// full reload — not a select element.
     /// </summary>
     protected async Task SwitchLanguageAsync(IPage page, string culture)
     {
-        // Find language switcher
-        var langSwitcher = page.Locator("[data-testid='language-switcher'], select[name='culture']").First;
-        await langSwitcher.ClickAsync();
+        var button = page.Locator($"[data-testid='language-switcher-{culture}']").First;
+        await button.ClickAsync();
 
-        // Select the culture
-        var option = page.Locator($"option[value='{culture}']").First;
-        await option.ClickAsync();
-
-        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        // SetCultureAsync force-loads the page — wait for the reload to finish and the app to
+        // be interactive again rather than racing the first paint.
+        await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+        await WaitForAppReadyAsync(page);
     }
 
     /// <summary>
@@ -349,7 +351,11 @@ public abstract class PlaywrightTestBase
     protected async Task<long> GetHeapSizeAsync(IPage page)
     {
         var metrics = await page.EvaluateAsync<Dictionary<string, object>>("() => { return { usedJSHeapSize: performance.memory?.usedJSHeapSize || 0 }; }");
-        return Convert.ToInt64(metrics["usedJSHeapSize"]);
+        // performance.memory is Chromium-only and can be absent mid-navigation on InteractiveAuto —
+        // treat a missing key as 0 instead of crashing the leak probe.
+        return metrics is not null && metrics.TryGetValue("usedJSHeapSize", out var heap)
+            ? Convert.ToInt64(heap)
+            : 0;
     }
 
     private static async Task EnsureDemoHostsAsync(TestContext context)

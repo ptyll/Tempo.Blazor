@@ -96,6 +96,31 @@ builder.Services.AddTempoFluentValidation(typeof(PersonFormValidator).Assembly);
 
 var app = builder.Build();
 
+// The WASM demo reads the persisted culture from localStorage; a server host cannot see it, so
+// LanguageSwitcher also writes a tm-demo-culture cookie. Apply it here (single-user demo — setting
+// the process defaults is fine) so the Server leg honours the language switch too.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Cookies.TryGetValue("tm-demo-culture", out var cultureName)
+        && !string.IsNullOrWhiteSpace(cultureName))
+    {
+        try
+        {
+            var culture = new System.Globalization.CultureInfo(cultureName);
+            System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+            System.Globalization.CultureInfo.CurrentUICulture = culture;
+        }
+        catch (System.Globalization.CultureNotFoundException)
+        {
+            // Unknown cookie value — keep the default culture.
+        }
+    }
+
+    await next();
+});
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
