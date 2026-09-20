@@ -56,7 +56,30 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
         var pdfPath = await ExportPdfThroughToolbarAsync(page);
         var pdf = await File.ReadAllBytesAsync(pdfPath);
         Encoding.ASCII.GetString(pdf, 0, Math.Min(pdf.Length, 8)).Should().StartWith("%PDF");
-        Encoding.UTF8.GetString(pdf).Should().Contain(marker);
+
+        // The Skia PDF backend embeds text as subset glyph ids inside compressed content
+        // streams plus a ToUnicode CMap, so a raw UTF-8 byte scan can never find the marker.
+        // Extract the real text layer through PDF.js — the same probe DocumentEditorPdfExportE2ETests
+        // uses — and assert the typed marker survives into selectable/searchable text.
+        var pdfBase64 = Convert.ToBase64String(pdf);
+        var pdfText = await page.EvaluateAsync<string>(
+            """
+            async base64 => {
+                const pdfjs = await import('/_content/Tempo.Blazor.PdfViewer/js/pdf.min.mjs');
+                pdfjs.GlobalWorkerOptions.workerSrc = '/_content/Tempo.Blazor.PdfViewer/js/pdf.worker.min.mjs';
+                const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+                const doc = await pdfjs.getDocument({ data: bytes }).promise;
+                const parts = [];
+                for (let p = 1; p <= doc.numPages; p++) {
+                    const pdfPage = await doc.getPage(p);
+                    const content = await pdfPage.getTextContent();
+                    parts.push(content.items.map(i => i.str).join(' '));
+                }
+                return parts.join(' ');
+            }
+            """,
+            pdfBase64);
+        pdfText.Should().Contain(marker, "the typed marker must survive into the PDF text layer");
 
         await ImportDocxThroughToolbarAsync(page, docxPath);
         await WaitForA11yTextAsync(page, marker);
