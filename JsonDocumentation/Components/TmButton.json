@@ -2,7 +2,7 @@
   "itemName": "TmButton",
   "kind": "Component",
   "category": "Buttons",
-  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button.",
+  "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button. Since 2.9.0 the Default variant draws its border from --tm-border-color-control (was --tm-border-color), keeping the control boundary above the 3:1 WCAG 1.4.11 minimum against --tm-bg-surface in both themes.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
   ],

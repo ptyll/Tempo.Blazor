@@ -506,7 +506,8 @@
           "description": "Override design tokens in your app CSS to customize the theme globally.",
           "example": ":root {\n  /* Change primary color to indigo */\n  --tm-color-primary-500: #6366f1;\n  --tm-color-primary-600: #4f46e5;\n  --tm-color-primary-700: #4338ca;\n  --tm-color-primary: var(--tm-color-primary-500);\n  --tm-color-primary-hover: var(--tm-color-primary-600);\n  --tm-color-primary-active: var(--tm-color-primary-700);\n\n  /* Change default border radius */\n  --tm-radius-md: 0.5rem;\n\n  /* Change default font */\n  --tm-font-sans: 'Inter', system-ui, sans-serif;\n}"
         }
-      }
+      },
+      "reducedMotion": "Since 2.9.0 the @media (prefers-reduced-motion: reduce) block in animations.css enumerates only Tempo-owned animated classes instead of the previous universal * / *::before / *::after selector, so host-page elements are no longer touched. The 0.01ms duration is kept deliberately (transitionend/animationend still fire). The universal box-sizing reset in base.css remains an intentional document reset."
     },
     "localization": {
       "description": "Tempo.Blazor supports localization via the ITmLocalizer interface (namespace Tempo.Blazor.Localization, defined in Tempo.Blazor.Abstractions). All built-in component UI strings (button labels, tooltips, placeholders, validation messages, aria-labels, etc.) go through this interface. The library ships with 500+ localization keys covering all components.",
@@ -2514,7 +2515,7 @@
       "kind": "Component",
       "category": "Buttons",
       "namespace": "Tempo.Blazor.Components.Buttons",
-      "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button.",
+      "description": "General-purpose button component with multiple visual variants (Primary, Secondary, Ghost, Danger, Outline, OutlineSecondary, Warning, OutlineWarning, Link, Default), sizes (Xs, Sm, Md, Lg), optional icon, loading state with spinner, and full-width block mode. The base .tm-btn rule carries the medium height and padding (2.8.26), so a missing size class still yields a 38 px button. Since 2.9.0 the Default variant draws its border from --tm-border-color-control (was --tm-border-color), keeping the control boundary above the 3:1 WCAG 1.4.11 minimum against --tm-bg-surface in both themes.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Buttons/TmButton.razor",
       "documentationStatus": "merged",
@@ -11807,7 +11808,7 @@
       "kind": "Component",
       "category": "Forms",
       "namespace": "Tempo.Blazor.Components.Forms",
-      "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator.",
+      "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator. Since 2.9.0 Required is forwarded to the inner input (required + aria-required), and the success icon/tm-input-valid appears only after the EditContext ran a validation pass (OnValidationRequested/OnValidationStateChanged) with no messages for the field — a field that was merely typed into no longer paints as valid.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Forms/TmValidatedField.razor",
       "documentationStatus": "merged",
@@ -24197,6 +24198,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_rich-text-editor.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_rte-dialog-shared.css",
       "kind": "Css"
     },
     {

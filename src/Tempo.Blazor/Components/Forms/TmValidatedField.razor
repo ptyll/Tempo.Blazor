@@ -22,6 +22,7 @@
         ValueChanged="@ValueChanged"
         Placeholder="@Placeholder"
         Type="@Type"
+        Required="@Required"
         Error="@ErrorMessage"
         ShowValidationIcons="true"
         IsValid="@IsValid"
@@ -100,28 +101,58 @@
         }
     }
     
-    private bool? IsValid => string.IsNullOrEmpty(Value) 
-        ? null 
-        : string.IsNullOrEmpty(ErrorMessage);
-    
+    private bool _validationRan;
+
+    // "Valid" means the field PASSED validation, not that it contains text: the green frame and
+    // check icon must not appear on a field nobody validated (application gap register #10). We
+    // therefore report true only once the EditContext ran a validation pass (OnValidationRequested
+    // or OnValidationStateChanged — either marks a pass having happened) and this field has no
+    // messages. Without an EditContext there is no validation at all, so the field stays neutral.
+    private bool? IsValid
+    {
+        get
+        {
+            if (EditContext == null)
+            {
+                return null;
+            }
+
+            if (EditContext.GetValidationMessages(FieldIdentifier).Any())
+            {
+                return false;
+            }
+
+            return _validationRan ? true : null;
+        }
+    }
+
     protected override void OnInitialized()
     {
         if (EditContext != null)
         {
             EditContext.OnValidationStateChanged += HandleValidationStateChanged;
+            EditContext.OnValidationRequested += HandleValidationRequested;
         }
     }
-    
+
     private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
     {
+        _validationRan = true;
         InvokeAsync(StateHasChanged);
     }
-    
+
+    private void HandleValidationRequested(object? sender, ValidationRequestedEventArgs e)
+    {
+        _validationRan = true;
+        InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         if (EditContext != null)
         {
             EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+            EditContext.OnValidationRequested -= HandleValidationRequested;
         }
     }
 }

@@ -2,6 +2,14 @@
    Tempo.Blazor — Reset & Base Styles
    ═══════════════════════════════════════════════════════════════ */
 
+/* Universal box-sizing is an intentional DOCUMENT RESET, kept universal on purpose
+   (gap register #9 concerns motion-affecting declarations, not this): the page author's
+   idiom — also shipped by normalize.css and every CSS framework — is that border-box
+   applies to the whole document, and Tempo's own markup contains bare elements (input,
+   label, button) that carry no tm-* class and would lose the reset under a narrowed
+   selector. The reduced-motion reset in animations.css is deliberately NOT kept this
+   way: its duration-only declarations would manufacture transitions on host elements,
+   so it enumerates Tempo-owned animated classes instead. */
 *, *::before, *::after {
   box-sizing: border-box;
 }

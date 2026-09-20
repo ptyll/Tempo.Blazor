@@ -398,7 +398,8 @@
         "description": "Override design tokens in your app CSS to customize the theme globally.",
         "example": ":root {\n  /* Change primary color to indigo */\n  --tm-color-primary-500: #6366f1;\n  --tm-color-primary-600: #4f46e5;\n  --tm-color-primary-700: #4338ca;\n  --tm-color-primary: var(--tm-color-primary-500);\n  --tm-color-primary-hover: var(--tm-color-primary-600);\n  --tm-color-primary-active: var(--tm-color-primary-700);\n\n  /* Change default border radius */\n  --tm-radius-md: 0.5rem;\n\n  /* Change default font */\n  --tm-font-sans: 'Inter', system-ui, sans-serif;\n}"
       }
-    }
+    },
+    "reducedMotion": "Since 2.9.0 the @media (prefers-reduced-motion: reduce) block in animations.css enumerates only Tempo-owned animated classes instead of the previous universal * / *::before / *::after selector, so host-page elements are no longer touched. The 0.01ms duration is kept deliberately (transitionend/animationend still fire). The universal box-sizing reset in base.css remains an intentional document reset."
   },
   "localization": {
     "description": "Tempo.Blazor supports localization via the ITmLocalizer interface (namespace Tempo.Blazor.Localization, defined in Tempo.Blazor.Abstractions). All built-in component UI strings (button labels, tooltips, placeholders, validation messages, aria-labels, etc.) go through this interface. The library ships with 500+ localization keys covering all components.",

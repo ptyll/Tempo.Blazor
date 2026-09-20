@@ -63,6 +63,34 @@ public sealed class TokenContrastTests
     }
 
     /// <summary>
+    /// Application gap register #11: <c>.tm-btn-default</c> painted its border from the decorative
+    /// <c>--tm-border-color</c> — 1,24:1 light / 1,41:1 dark against <c>--tm-bg-surface</c>, under
+    /// the 3:1 a control boundary needs. The declaration now reads
+    /// <c>--tm-border-color-control</c> (4,83:1 / 5,71:1), the same fix
+    /// <c>.tm-btn-outline-secondary</c> got in 2.8.17. The test reads the DECLARED value out of
+    /// <c>_button.css</c> and then measures it — a revert to the decorative token fails on the
+    /// value, a token re-tune fails on the ratio.
+    /// </summary>
+    [Fact]
+    public void DefaultButtonBorder_IsAControlToken_AndKeepsThreeToOne()
+    {
+        var declared = ThemeCss.Property("_button.css", ".tm-btn-default", "border-color");
+
+        declared.Should().Be("var(--tm-border-color-control)",
+            "dekorační --tm-border-color měřil 1,24:1/1,41:1 — pod prahem 3:1 pro hranici " +
+            "ovládacího prvku; kontrolní token je tentýž fix jako .tm-btn-outline-secondary v 2.8.17");
+
+        foreach (var dark in new[] { false, true })
+        {
+            ThemeCss.Ratio(declared, "var(--tm-bg-surface)", dark).Should().BeGreaterThanOrEqualTo(
+                3.0,
+                "hranice .tm-btn-default na --tm-bg-surface ({0}) musí držet 3:1 — změřeno {1:0.00}:1",
+                dark ? "dark" : "light",
+                ThemeCss.Ratio(declared, "var(--tm-bg-surface)", dark));
+        }
+    }
+
+    /// <summary>
     /// The mutation: a placeholder tone that only passes in light must go red in dark. #64748b —
     /// the step this defect actually painted before the fix — measures 3,07:1 on the dark surface,
     /// so a regression to it is caught by the same arithmetic the pair list uses.
