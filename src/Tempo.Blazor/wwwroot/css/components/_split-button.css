@@ -49,14 +49,12 @@
 }
 
 /* ── Dropdown ──────────────────────────────────────────── */
+/* The dropdown is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left (Bottom + End + 4px replaces the old top:100%;right:0;margin-top).
+   The margin-top is gone so it cannot double the JS offset. */
 .tm-split-button__dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: var(--tm-z-dropdown, 1020);
     min-width: 10rem;
     padding: 0.25rem;
-    margin-top: 0.25rem;
     background-color: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);

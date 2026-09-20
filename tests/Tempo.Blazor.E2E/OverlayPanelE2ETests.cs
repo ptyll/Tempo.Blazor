@@ -1,0 +1,296 @@
+using Microsoft.Playwright;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Tempo.Blazor.E2E;
+
+/// <summary>
+/// E2E coverage for the Phase 18.2 TmOverlayPanel primitive on the /overlay demo page:
+/// top-layer popover semantics, flip/shift inside the viewport, scroll tracking, escape from an
+/// overflow container, dismissal gestures, and one Firefox leg (the Popover API ships in
+/// Firefox ≥125, so the same top-layer behavior must hold there).
+/// </summary>
+[TestClass]
+public class OverlayPanelE2ETests : WasmTestBase
+{
+    private const string PageUrl = "https://localhost:7106/overlay";
+
+    private async Task<IPage> OpenOverlayPageAsync()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(PageUrl);
+        await WaitForAppReadyAsync(page);
+        return page;
+    }
+
+    [TestMethod]
+    public async Task Overlay_OpensAsPopover_InTopLayer_BelowTrigger()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-bottom").ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-bottom");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // The panel is a live top-layer popover and reports its resolved side.
+        Assert.IsTrue(await panel.EvaluateAsync<bool>("el => el.matches(':popover-open')"));
+        Assert.AreEqual("bottom", await panel.GetAttributeAsync("data-tm-placement"));
+
+        // Anchored directly under the trigger.
+        var anchorBox = await page.GetByTestId("overlay-open-bottom").BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(anchorBox);
+        Assert.IsNotNull(panelBox);
+        Assert.IsTrue(panelBox!.Y >= anchorBox!.Y + anchorBox.Height,
+            $"panel top {panelBox.Y} should sit at/below anchor bottom {anchorBox.Y + anchorBox.Height}");
+    }
+
+    [TestMethod]
+    public async Task Overlay_EscapesOverflowContainer()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-scroll").ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-scroll");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var boxBounds = await page.GetByTestId("overlay-scroll-box").BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(boxBounds);
+        Assert.IsNotNull(panelBox);
+
+        // The panel is placed to the RIGHT of the trigger — i.e. outside the scroll box's right
+        // edge. A clipped descendant could never paint there.
+        Assert.IsTrue(panelBox!.X + panelBox.Width > boxBounds!.X + boxBounds.Width - 1,
+            $"panel {panelBox.X}..{panelBox.X + panelBox.Width} should escape the scroll box right edge {boxBounds.X + boxBounds.Width}");
+    }
+
+    [TestMethod]
+    public async Task Overlay_TracksAnchorOnInnerScroll()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-scroll").ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-scroll");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var before = await panel.BoundingBoxAsync();
+
+        await page.GetByTestId("overlay-scroll-box").EvaluateAsync("el => el.scrollTop += 60");
+        // Placement runs on requestAnimationFrame — give it two frames.
+        await page.WaitForTimeoutAsync(150);
+
+        var after = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(before);
+        Assert.IsNotNull(after);
+        Assert.IsTrue(after!.Y < before!.Y - 30,
+            $"panel should track the anchor upward on inner scroll (before {before.Y}, after {after.Y})");
+    }
+
+    [TestMethod]
+    public async Task Overlay_FlipsAbove_WhenNoRoomBelow()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        var trigger = page.GetByTestId("overlay-open-edge");
+        // Pin the trigger's bottom edge to the viewport bottom: zero room below, so a bottom
+        // placement must flip to top. scroll-behavior:smooth animates the jump, so wait for the
+        // scroll to actually finish instead of a fixed timeout.
+        await trigger.EvaluateAsync("el => el.scrollIntoView({ block: 'end' })");
+        // scroll-behavior:smooth animates the jump; wait until the trigger's bottom edge actually
+        // lands on the viewport bottom (±2px) before clicking — otherwise the click races the
+        // animation and the panel is placed against a mid-scroll rect.
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+                const el = document.querySelector('[data-testid="overlay-open-edge"]');
+                return el && Math.abs(el.getBoundingClientRect().bottom - window.innerHeight) <= 2;
+            }
+            """,
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10_000 });
+
+        await trigger.ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-edge");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        Assert.AreEqual("top", await panel.GetAttributeAsync("data-tm-placement"));
+
+        var anchorBox = await trigger.BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(anchorBox);
+        Assert.IsNotNull(panelBox);
+        Assert.IsTrue(panelBox!.Y + panelBox.Height <= anchorBox!.Y + 1,
+            $"flipped panel should end at/above anchor top (panel bottom {panelBox.Y + panelBox.Height}, anchor top {anchorBox.Y})");
+        Assert.IsTrue(panelBox.X >= 0 && panelBox.X + panelBox.Width <= 1281,
+            "panel should stay inside the viewport horizontally");
+    }
+
+    [TestMethod]
+    public async Task Overlay_Escape_Closes()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-bottom").ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-bottom");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        await page.Keyboard.PressAsync("Escape");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+    }
+
+    [TestMethod]
+    public async Task Overlay_OutsidePointerDown_Closes()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-bottom").ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-bottom");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Click the page heading — outside panel and trigger.
+        await page.Locator("h1").First.ClickAsync();
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+    }
+
+    [TestMethod]
+    public async Task Overlay_InsideModal_PaintsAboveModal()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-modal").ClickAsync();
+        var modalTrigger = page.GetByTestId("overlay-open-in-modal");
+        await modalTrigger.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await modalTrigger.ClickAsync();
+
+        var panel = page.GetByTestId("overlay-panel-modal");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // The pixel at the panel's centre must belong to the panel — not to the modal overlay or
+        // the page behind it. elementFromPoint answers exactly that. The rect is measured inside
+        // the page so a non-finite box (a panel that never got placed) reports what it saw instead
+        // of surfacing as a marshalling error.
+        var hit = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const panel = document.querySelector('[data-testid="overlay-panel-modal"]');
+                if (!panel) return 'no-panel';
+                const r = panel.getBoundingClientRect();
+                if (!Number.isFinite(r.left) || !Number.isFinite(r.top) || r.width <= 0 || r.height <= 0)
+                    return `bad-rect:${r.left},${r.top} ${r.width}x${r.height}`;
+                const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return el && panel.contains(el)
+                    ? 'hit'
+                    : `miss:${el ? el.tagName + '.' + String(el.className) : 'null'}`;
+            }
+            """);
+        Assert.AreEqual("hit", hit,
+            "elementFromPoint over the panel should hit the panel itself (top layer above modal)");
+    }
+
+    [TestMethod]
+    public async Task Overlay_DatePicker_InModal_FlipsAbove_AndStaysInsideViewport()
+    {
+        // The original defect (18.2): a date field at the end of a scrolling modal body opened its
+        // calendar below the fold — clipped by the modal's overflow and mispositioned against the
+        // transformed .tm-modal box.
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-modal").ClickAsync();
+        var modalBody = page.Locator(".tm-modal-body");
+        await modalBody.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Scroll the field to the bottom of the modal body, then open the calendar.
+        var trigger = page.Locator("[data-testid='overlay-datepicker'] .tm-date-picker-trigger");
+        await trigger.EvaluateAsync("el => el.scrollIntoView({ block: 'end' })");
+        await page.WaitForTimeoutAsync(150);
+        await trigger.ClickAsync();
+
+        var panel = page.Locator(".tm-date-picker-popup");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        Assert.AreEqual("top", await panel.GetAttributeAsync("data-tm-placement"));
+
+        var triggerBox = await trigger.BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(triggerBox);
+        Assert.IsNotNull(panelBox);
+        // Entirely inside the viewport.
+        Assert.IsTrue(panelBox!.X >= 0 && panelBox.Y >= 0
+            && panelBox.X + panelBox.Width <= 1281 && panelBox.Y + panelBox.Height <= 721,
+            $"flipped calendar must paint fully inside the viewport, got {panelBox.X},{panelBox.Y} {panelBox.Width}x{panelBox.Height}");
+        // Above the trigger.
+        Assert.IsTrue(panelBox.Y + panelBox.Height <= triggerBox!.Y + 1,
+            $"flipped calendar bottom {panelBox.Y + panelBox.Height} should sit at/above trigger top {triggerBox.Y}");
+    }
+
+    [TestMethod]
+    public async Task Overlay_DatePicker_InModal_TracksTriggerOnModalScroll()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-modal").ClickAsync();
+        var modalBody = page.Locator(".tm-modal-body");
+        await modalBody.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var trigger = page.Locator("[data-testid='overlay-datepicker'] .tm-date-picker-trigger");
+        await trigger.EvaluateAsync("el => el.scrollIntoView({ block: 'end' })");
+        await page.WaitForTimeoutAsync(150);
+        await trigger.ClickAsync();
+
+        var panel = page.Locator(".tm-date-picker-popup");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Scroll the modal body back up a bit — the trigger moves with it and the panel must
+        // follow on the next animation frame (the defect let the panel float off the anchor).
+        await modalBody.EvaluateAsync("el => el.scrollTop -= 80");
+        await page.WaitForTimeoutAsync(150);
+
+        var triggerBox = await trigger.BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(triggerBox);
+        Assert.IsNotNull(panelBox);
+        Assert.IsTrue(Math.Abs(panelBox!.Y + panelBox.Height - triggerBox!.Y) <= 8,
+            $"panel should keep hugging the trigger after modal scroll (panel bottom {panelBox.Y + panelBox.Height}, trigger top {triggerBox.Y})");
+    }
+
+    /// <summary>
+    /// Firefox leg: the Popover API is supported since Firefox 125, so the identical top-layer
+    /// contract must hold there. PlaywrightTestBase runs Chromium only, so this test owns a
+    /// dedicated Playwright + Firefox pair.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_Firefox_OpensAsPopover_AndDismisses()
+    {
+        using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+        await using var browser = await playwright.Firefox.LaunchAsync(new BrowserTypeLaunchOptions
+        {
+            Headless = !TestContext.Properties.Contains("Headless") || TestContext.Properties["Headless"]?.ToString() != "false",
+        });
+        var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1280, Height = 720 },
+            IgnoreHTTPSErrors = true,
+        });
+        try
+        {
+            var page = await context.NewPageAsync();
+            await page.GotoAsync(PageUrl);
+            await WaitForAppReadyAsync(page);
+
+            await page.GetByTestId("overlay-open-bottom").ClickAsync();
+            var panel = page.GetByTestId("overlay-panel-bottom");
+            await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            Assert.IsTrue(await panel.EvaluateAsync<bool>("el => el.matches(':popover-open')"));
+            Assert.AreEqual("bottom", await panel.GetAttributeAsync("data-tm-placement"));
+
+            await page.Keyboard.PressAsync("Escape");
+            await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        }
+        finally
+        {
+            await context.CloseAsync();
+        }
+    }
+}

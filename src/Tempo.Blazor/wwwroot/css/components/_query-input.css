@@ -85,13 +85,11 @@
 }
 
 /* ── Suggestion dropdown ── */
+/* The <ul> rides inside a TmOverlayPanel (popover="manual" → browser top layer): overlay.js owns
+   position:fixed + top/left/width (Bottom + Start + 2px + MatchAnchorWidth replaces the old
+   top:calc(100%+2px);left:0;right:0;z-index:20). */
 
 .tm-query-input__dropdown {
-    position: absolute;
-    top: calc(100% + 2px);
-    left: 0;
-    right: 0;
-    z-index: 20;
     margin: 0;
     padding: var(--tm-space-1, 0.25rem);
     list-style: none;

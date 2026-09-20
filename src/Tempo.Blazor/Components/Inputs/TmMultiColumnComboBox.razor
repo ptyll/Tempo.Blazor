@@ -4,7 +4,7 @@
 @typeparam TValue
 @inject ITmLocalizer Loc
 
-<div class="tm-multi-column-combo-box @(Disabled ? "tm-multi-column-combo-box--disabled" : "") @Class" @attributes="AdditionalAttributes">
+<div @ref="_rootRef" class="tm-multi-column-combo-box @(Disabled ? "tm-multi-column-combo-box--disabled" : "") @Class" @attributes="AdditionalAttributes">
     <div class="tm-multi-column-combo-box__trigger"
          role="combobox"
          tabindex="0"
@@ -57,9 +57,22 @@
         <TmIcon Name="chevron-down" Class="tm-multi-column-combo-box__arrow" />
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-multi-column-combo-box__dropdown">
+    @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow/transform can no longer clip it. Bottom + Start + 4px + MatchAnchorWidth
+       replaces the old top:calc(100%+4px);left:0;width:100% (min-width:320px stays in CSS).
+       NOTE: this component's styles live in scoped CSS — the dropdown rules still apply because
+       the panel is TmOverlayPanel's root element (parent scope) and its content is ChildContent
+       rendered in THIS component's scope. *@
+    <TmOverlayPanel Anchor="_rootRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    MatchAnchorWidth="true"
+                    ConstrainHeight="true"
+                    Role="grid"
+                    Class="tm-multi-column-combo-box__dropdown">
             @if (Filterable)
             {
                 <div class="tm-multi-column-combo-box__filter">
@@ -128,6 +141,5 @@
                     @(string.Format(Loc["TmMultiColumnComboBox_CreateNew"], _filterText))
                 </div>
             }
-        </div>
-    }
+    </TmOverlayPanel>
 </div>

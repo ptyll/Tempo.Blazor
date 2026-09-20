@@ -1,0 +1,39 @@
+/* ═══════════════════════════════════════════════════════
+   TmOverlayPanel — anchored floating panel (Popover API / top layer)
+   ═══════════════════════════════════════════════════════ */
+
+/* The element carries popover="manual": while closed the UA hides it, and showPopover() moves it
+   to the top layer — above every z-index stacking context and outside every ancestor's
+   overflow/transform clipping.
+
+   The UA popover defaults (position:fixed; inset:0; margin:auto; border; padding) are reset:
+   overlay.js positions the panel with top/left in viewport coordinates.
+
+   display:none is kept on the CLOSED state via :not(--open) instead of relying on the UA
+   :popover-open rules so the fallback path (browsers without the Popover API) hides the element
+   too — there [popover] is just an unknown attribute. The script adds --open in BOTH paths. */
+.tm-overlay-panel {
+    position: fixed;
+    inset: auto;
+    top: 0;
+    left: 0;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+    z-index: var(--tm-z-overlay, 1060);
+}
+
+.tm-overlay-panel:not(.tm-overlay-panel--open) {
+    display: none;
+}
+
+.tm-overlay-panel.tm-overlay-panel--open {
+    display: block;
+}

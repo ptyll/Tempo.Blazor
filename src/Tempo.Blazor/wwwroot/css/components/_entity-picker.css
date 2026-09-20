@@ -52,12 +52,10 @@
 }
 
 /* ── Dropdown ──────────────────────────────────────────── */
+/* The dropdown is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left/width (Bottom + Start + 4px + MatchAnchorWidth replaces
+   top:calc(100%+4px);left:0;right:0). The panel lands in the browser top layer. */
 .tm-entity-picker__dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    z-index: var(--tm-z-dropdown, 800);
     max-height: 240px;
     overflow-y: auto;
     background-color: var(--tm-bg-surface);

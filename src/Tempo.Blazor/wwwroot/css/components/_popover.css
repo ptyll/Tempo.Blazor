@@ -3,7 +3,6 @@
    ═══════════════════════════════════════════════════════ */
 
 .tm-popover {
-    position: relative;
     display: inline-flex;
 }
 
@@ -12,26 +11,31 @@
     cursor: pointer;
 }
 
+/* The body is a TmOverlayPanel: position:fixed + popover="manual" come from _overlay-panel.css
+   and overlay.js writes top/left in viewport coordinates — no absolute-position rules live here
+   any more. The RESOLVED side (post-flip) arrives on data-tm-placement and drives the arrow. */
 .tm-popover__body {
-    position: absolute;
-    z-index: var(--tm-z-dropdown, 900);
     min-width: 200px;
     padding: 0.75rem 1rem;
     background-color: var(--tm-color-surface, #fff);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(0.95);
-    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    /* animation, not transition: the panel is display:none while closed, and a transition cannot
+       start from display:none — an animation restarts whenever the element gains a box. */
+    animation: tm-popover-in 0.15s ease;
 }
 
-.tm-popover__body--open {
-    opacity: 1;
-    visibility: visible;
-    transform: scale(1);
+@keyframes tm-popover-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
+
+/* transform-origin tracks the resolved side so the scale-in grows AWAY from the anchor. */
+.tm-popover__body[data-tm-placement="bottom"] { transform-origin: top center; }
+.tm-popover__body[data-tm-placement="top"] { transform-origin: bottom center; }
+.tm-popover__body[data-tm-placement="left"] { transform-origin: center right; }
+.tm-popover__body[data-tm-placement="right"] { transform-origin: center left; }
 
 /* ── Arrow ─────────────────────────────────────────────── */
 .tm-popover__arrow {
@@ -43,18 +47,8 @@
     transform: rotate(45deg);
 }
 
-/* ── Bottom position ───────────────────────────────────── */
-.tm-popover--bottom .tm-popover__body {
-    top: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%) scale(0.95);
-}
-
-.tm-popover--bottom .tm-popover__body--open {
-    transform: translateX(-50%) scale(1);
-}
-
-.tm-popover--bottom .tm-popover__arrow {
+/* Arrow sits on the edge facing the anchor — i.e. opposite the resolved placement side. */
+.tm-popover__body[data-tm-placement="bottom"] .tm-popover__arrow {
     top: -6px;
     left: 50%;
     margin-left: -5px;
@@ -62,18 +56,7 @@
     border-bottom: none;
 }
 
-/* ── Top position ──────────────────────────────────────── */
-.tm-popover--top .tm-popover__body {
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%) scale(0.95);
-}
-
-.tm-popover--top .tm-popover__body--open {
-    transform: translateX(-50%) scale(1);
-}
-
-.tm-popover--top .tm-popover__arrow {
+.tm-popover__body[data-tm-placement="top"] .tm-popover__arrow {
     bottom: -6px;
     left: 50%;
     margin-left: -5px;
@@ -81,18 +64,7 @@
     border-top: none;
 }
 
-/* ── Left position ─────────────────────────────────────── */
-.tm-popover--left .tm-popover__body {
-    right: calc(100% + 8px);
-    top: 50%;
-    transform: translateY(-50%) scale(0.95);
-}
-
-.tm-popover--left .tm-popover__body--open {
-    transform: translateY(-50%) scale(1);
-}
-
-.tm-popover--left .tm-popover__arrow {
+.tm-popover__body[data-tm-placement="left"] .tm-popover__arrow {
     right: -6px;
     top: 50%;
     margin-top: -5px;
@@ -100,18 +72,7 @@
     border-bottom: none;
 }
 
-/* ── Right position ────────────────────────────────────── */
-.tm-popover--right .tm-popover__body {
-    left: calc(100% + 8px);
-    top: 50%;
-    transform: translateY(-50%) scale(0.95);
-}
-
-.tm-popover--right .tm-popover__body--open {
-    transform: translateY(-50%) scale(1);
-}
-
-.tm-popover--right .tm-popover__arrow {
+.tm-popover__body[data-tm-placement="right"] .tm-popover__arrow {
     left: -6px;
     top: 50%;
     margin-top: -5px;
@@ -132,6 +93,6 @@
    ═══════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
     .tm-popover__body {
-        transition: none;
+        animation: none;
     }
 }

@@ -74,9 +74,11 @@ public sealed class MarkupClassCoverageTests
         new(@"\.(tm-[a-zA-Z][\w-]*)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
-    /// The 148 classes core markup emits with no rule anywhere in the library's stylesheets on
-    /// 2.8.26, each named. None of these is a promise that they SHOULD stay unstyled — they are
-    /// RECORDED so the guard can fail on a 149th.
+    /// The 147 classes core markup emits with no rule anywhere in the library's stylesheets —
+    /// the 2.8.26 inventory held 148 and <c>tm-dropdown-wrapper</c> left it in 18.2, when the
+    /// overlay migration gave it a real <c>position: relative</c> rule in _dropdown.css.
+    /// Each remaining entry is named. None of these is a promise that they SHOULD stay unstyled —
+    /// they are RECORDED so the guard can fail on a 148th.
     /// </summary>
     private static readonly string[] UnstyledMarkupClasses =
     [
@@ -128,7 +130,6 @@ public sealed class MarkupClassCoverageTests
         "tm-dod-new-folder-confirm",
         "tm-dod-rename-confirm",
         "tm-dropdown-trigger",
-        "tm-dropdown-wrapper",
         "tm-entity-picker__recent-item",
         "tm-export-options-section",
         "tm-fab__item-label",

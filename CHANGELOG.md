@@ -103,6 +103,28 @@ which is exactly the red
   all three resource sets), which paints a tooltip for the pointer user and lands in the
   accessible description for a control whose name comes from `aria-label`.
 
+- **`TmOverlayPanel` — a shared floating-layer primitive built on the HTML Popover API.** Every
+  floating surface in the library (dropdown, date-picker calendar, context menu, notification
+  bell, color picker, query suggestions…) used to re-implement the same four problems — where to
+  put the box, when to flip it, how to keep it glued to its anchor while scrolls run, and how to
+  dismiss it — and each re-implementation lost against a modal's `overflow`, a transformed
+  ancestor, or a sibling stacking context somewhere. `TmOverlayPanel` renders `popover="manual"`
+  and `showPopover()` puts the element into the browser **top layer**: it paints above every
+  z-index stacking context (structurally, not via a bigger `z-index`) and its containing block is
+  the viewport, so no ancestor can clip it or shift its coordinates. The collocated
+  `wwwroot/js/overlay.js` engine positions the panel in viewport coordinates with
+  `Placement` (`Top`/`Bottom`/`Left`/`Right`), `Align` (`Start`/`Center`/`End`), `Offset`,
+  `ViewportMargin`, `Flip` (moves to the opposite side only when the preferred side lacks room
+  *and* the other side is strictly better), `Shift` (cross-axis clamp inside the margin),
+  `MatchAnchorWidth` and `ConstrainHeight`; it repositions on window *and* ancestor scroll and on
+  resize through a shared `requestAnimationFrame` pass, dismisses on `Escape` (returning focus to
+  the trigger) and on outside pointer-down, and cleans every listener on close/dispose. Where the
+  Popover API is missing, the same engine falls back to `position: fixed` and walks ancestors to
+  find the transformed containing block, mirroring the old per-component math. The resolved side
+  is exposed on `data-tm-placement` so consumers (e.g. `TmPopover`'s arrow) can react. All
+  fifteen floating components now delegate to it (see **Fixed** below), and the `/overlay` demo
+  page exercises placements, overflow escape, modal stacking and the viewport-edge flip.
+
 ### Fixed
 
 - **`TmGanttImportDialog`'s file chooser is keyboard-operable.** The upload affordance was a
@@ -228,6 +250,42 @@ which is exactly the red
   survives cancellation fires synchronously *inside the test*, so a missing `Dispose` or a
   dropped `ReferenceEquals` guard turns `changeCount` to 2 (or delivers the stale value) before
   the assertion runs — the exact regressions the wall-clock reads could let through.
+
+- **Variant and modifier classes no longer depend on stylesheet order (`c67cd2cc`, Fáze 18.1).**
+  The application triage measured modifier rules (`tm-btn-primary`, `tm-btn-sm`,
+  `tm-input-with-left-icon`…) tying their base class at (0,1,0) — the manifest's import order,
+  not specificity, decided the winner, so a reorder or a late-loaded sheet silently flipped
+  rendered declarations. Every measured pair is now a compound selector
+  (`.tm-btn.tm-btn-primary` at (0,2,0) beats a bare `.tm-btn` regardless of order; same for the
+  input icon/validation modifiers and `TmScrollSpyNav`'s `--active`), with declarations
+  byte-identical. The rule "a variant may never tie its base" is pinned by
+  `UnconstrainedClassOwnershipTests` over a frozen pair list with mutation Facts, and
+  `CssComputedStyleRegressionTests` resolves the shipped bundle through `CssCascade` with
+  reversed source order to prove the winner survives a reorder.
+
+- **Floating panels can no longer be clipped, displaced, or painted over (Fáze 18.2).** The
+  date-picker-inside-a-modal defect was the visible tip: the calendar rendered as an absolutely
+  positioned descendant of the modal body, so `overflow-y:auto` clipped it below the fold, the
+  modal's `transform: scale(...)` entry made it the panel's containing block (wrong coordinate
+  origin), and none of it followed the trigger when the modal body scrolled. The same defect
+  class lived in every component that floated markup — each with its own Escape/outside-click/
+  reposition code. All of them now render through `TmOverlayPanel` (see **Added** above): the
+  panel lives in the browser top layer where no ancestor `overflow`/`transform`/stacking context
+  can reach it, the shared engine flips it above the trigger when the space below runs out,
+  shifts it inside the viewport margin, and re-anchors it on every scroll — window or inner —
+  and resize. Migrated: `TmPopover`, `TmDropdown`, `TmFilterableDropdown`, `TmContextMenu`,
+  `TmSplitButton`, `TmDatePicker`, `TmDateRangePicker`, `TmDateTimePicker`, `TmMultiSelect`,
+  `TmTagPicker`, `TmEntityPicker`, `TmNotificationBell`, `TmColorPicker`,
+  `TmMultiColumnComboBox`, `TmQueryInput`, and `TmDataTable`'s floating surfaces. Behavior that
+  was already correct is preserved verbatim — dropdown width matching, `listbox`/`dialog` roles,
+  per-component keyboard maps, and `TmColorPicker`'s pending-value-until-apply semantics. The
+  pure-CSS hover surfaces (`TmMenu` submenus, `TmTooltip`) and the RTE mention/token completers
+  were intentionally not migrated: their trigger/anchoring model differs enough that the move is
+  a redesign, not a panel swap. bUnit covers the primitive and every migrated component (9990
+  tests), `overlay.test.mjs` covers the placement math DOM-free (16 tests), and
+  `OverlayPanelE2ETests` measures the real browser in Chromium *and* Firefox: popover state,
+  overflow escape, inner-scroll tracking, the edge flip, painting above a modal, and a date
+  picker flipping inside a scrolling modal body and tracking its trigger while it scrolls.
 
 ### Changed — token defaults
 

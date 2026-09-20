@@ -19,11 +19,10 @@
 .tm-date-range-trigger:hover:not(:disabled) { border-color: var(--tm-color-primary); }
 .tm-date-range-trigger:focus { outline: none; border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
 
+/* The popup is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left (Bottom + Start + 4px replaces the old top:calc(100%+space-1);left:0).
+   The panel lands in the browser top layer, so a modal's overflow/transform cannot clip it. */
 .tm-date-range-popup {
-  position: absolute;
-  top: calc(100% + var(--tm-space-1));
-  left: 0;
-  z-index: var(--tm-z-dropdown);
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);

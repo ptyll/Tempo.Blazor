@@ -38,15 +38,12 @@
 }
 .tm-filterable-dropdown-clear:hover { color: var(--tm-color-danger); }
 
+/* The menu is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left/width (Bottom + Start + 4px + MatchAnchorWidth replaces
+   top:calc(100%+space-1);left:0;right:0). The panel lands in the browser top layer, which is
+   above EVERY z-index context — so the earlier "--tm-z-popover so the menu paints above
+   --tm-z-sticky FormActionBar chrome" problem is solved structurally, not by a bigger z-index. */
 .tm-filterable-dropdown-menu {
-  position: absolute;
-  top: calc(100% + var(--tm-space-1));
-  left: 0;
-  right: 0;
-  /* --tm-z-popover, not --tm-z-dropdown: an OPEN menu is a transient popup and must paint above sticky/floating
-     chrome (TmFormActionBar --tm-z-sticky) — at --tm-z-dropdown (1000 < sticky 1020) a menu opened near the page
-     bottom was covered by the floating action bar and its items were mouse-unreachable (keyboard still worked). */
-  z-index: var(--tm-z-popover, 1030);
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-md);

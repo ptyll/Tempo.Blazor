@@ -74,13 +74,12 @@
     transform: rotate(180deg);
 }
 
-/* Dropdown */
+/* Dropdown — a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left/width (Bottom + Start + 4px + MatchAnchorWidth replaces
+   top:calc(100%+4px);left:0;width:100%). The panel lands in the browser top layer.
+   These rules still apply: the panel div is TmOverlayPanel's root element, which carries this
+   component's CSS-isolation scope attribute. */
 .tm-multi-column-combo-box__dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 50;
-    width: 100%;
     min-width: 320px;
     background: var(--tm-surface, #ffffff);
     border: 1px solid var(--tm-border-color, #d1d5db);

@@ -1,7 +1,9 @@
 @namespace Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Overlay
 
 <div class="tm-context-menu-wrapper @Class" @onkeydown="HandleKeyDown" @attributes="AdditionalAttributes">
     <div class="tm-context-menu__trigger"
+         @ref="_triggerRef"
          role="button"
          tabindex="0"
          aria-haspopup="menu"
@@ -11,18 +13,32 @@
         @Trigger
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-context-menu" role="menu">
-            <CascadingValue Value="this" IsFixed="true">
-                @ChildContent
-            </CascadingValue>
-        </div>
-    }
+    @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow (modal body, scrolling region) can no longer clip it, and overlay.js
+       repositions it on scroll/resize, flipping when the space below runs out. Bottom + End +
+       4px keep the historical "under the trigger, right edge aligned" look. *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Offset="4"
+                    Role="menu"
+                    Class="tm-context-menu">
+        <CascadingValue Value="this" IsFixed="true">
+            @ChildContent
+        </CascadingValue>
+    </TmOverlayPanel>
 </div>
 
 @code {
     private bool _isOpen;
+    private ElementReference _triggerRef;
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
+    }
 
     /// <summary>The trigger element that opens the menu.</summary>
     [Parameter] public RenderFragment? Trigger { get; set; }

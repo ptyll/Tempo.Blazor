@@ -1,0 +1,139 @@
+{
+  "itemName": "TmOverlayPanel",
+  "kind": "Component",
+  "category": "Overlay",
+  "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Overlay"
+  ],
+  "parameters": [
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls)."
+    },
+    {
+      "name": "Anchor",
+      "type": "ElementReference",
+      "isRequired": false,
+      "description": "The element the panel positions itself against. When unset, overlay.js falls back to the panel's previous element sibling — the natural trigger-then-panel layout."
+    },
+    {
+      "name": "Placement",
+      "type": "OverlayPlacement",
+      "isRequired": false,
+      "default": "Bottom",
+      "description": "Preferred side of the anchor the panel opens on (Bottom, Top, Left, Right)."
+    },
+    {
+      "name": "Align",
+      "type": "OverlayAlign",
+      "isRequired": false,
+      "default": "Start",
+      "description": "Cross-axis alignment against the anchor (Start, Center, End)."
+    },
+    {
+      "name": "Offset",
+      "type": "int",
+      "isRequired": false,
+      "default": "4",
+      "description": "Gap in pixels between anchor and panel on the resolved side."
+    },
+    {
+      "name": "ViewportMargin",
+      "type": "int",
+      "isRequired": false,
+      "default": "8",
+      "description": "Minimum distance in pixels the panel keeps from the viewport edges."
+    },
+    {
+      "name": "Flip",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Flip to the opposite side when the preferred side does not have enough room."
+    },
+    {
+      "name": "Shift",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Slide the panel along the cross axis so it stays inside the viewport."
+    },
+    {
+      "name": "MatchAnchorWidth",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Stretch the panel to the anchor's width (dropdown/select menus)."
+    },
+    {
+      "name": "ConstrainHeight",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Cap the panel height at the room available on the resolved side (honouring a smaller CSS max-height) and let it scroll."
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Close when Escape is pressed while the panel is open; focus returns to the anchor."
+    },
+    {
+      "name": "CloseOnOutsidePointerDown",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Close when a pointerdown lands outside both the panel and the anchor."
+    },
+    {
+      "name": "IsOpen",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Controlled open state. When null the panel tracks its own internal state."
+    },
+    {
+      "name": "IsOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires when the open state should change (two-way bindable)."
+    },
+    {
+      "name": "OnDismissed",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\" or \"outside\". Programmatic closes do not raise it."
+    },
+    {
+      "name": "Role",
+      "type": "string?",
+      "isRequired": false,
+      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Panel content. Rendered only while the panel is open."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the panel element — components pass their own panel class here."
+    }
+  ],
+  "cssClasses": [
+    "tm-overlay-panel",
+    "tm-overlay-panel--open"
+  ],
+  "examples": [
+    {
+      "title": "Anchored panel",
+      "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
+    }
+  ]
+}

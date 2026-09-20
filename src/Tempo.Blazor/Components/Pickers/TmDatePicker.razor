@@ -17,6 +17,7 @@
 
     <div class="tm-date-picker-input-row">
         <button type="button"
+                @ref="_triggerRef"
                 id="@_triggerId"
                 class="tm-date-picker-trigger"
                 disabled="@Disabled"
@@ -52,26 +53,36 @@
         }
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-date-picker-popup" role="dialog" aria-modal="true">
-            <TmCalendarGrid DisplayYear="@_displayYear"
-                            DisplayMonth="@_displayMonth"
-                            SelectedDate="@Value"
-                            MinDate="@MinDate"
-                            MaxDate="@MaxDate"
-                            OnDateSelected="OnDateSelected"
-                            OnNavigate="OnNavigate" />
+    @* The calendar popup is a TmOverlayPanel: popover="manual" puts it in the browser top layer,
+       so a modal's overflow/transform can no longer clip it (the original defect — a date field
+       near the end of a scrolling modal body opened its calendar below the fold), and overlay.js
+       flips it above the trigger when the space below runs out. Bottom + Start + 4px keeps the
+       historical "under the trigger, left-aligned" look (the old top:calc(100%+space-1);left:0). *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    Role="dialog"
+                    Class="tm-date-picker-popup"
+                    aria-modal="true">
+        <TmCalendarGrid DisplayYear="@_displayYear"
+                        DisplayMonth="@_displayMonth"
+                        SelectedDate="@Value"
+                        MinDate="@MinDate"
+                        MaxDate="@MaxDate"
+                        OnDateSelected="OnDateSelected"
+                        OnNavigate="OnNavigate" />
 
-            <div class="tm-date-picker-footer">
-                <button type="button"
-                        class="tm-link-button tm-date-today-btn"
-                        @onclick="SelectToday">
-                    @Loc["TmDatePicker_Today"]
-                </button>
-            </div>
+        <div class="tm-date-picker-footer">
+            <button type="button"
+                    class="tm-link-button tm-date-today-btn"
+                    @onclick="SelectToday">
+                @Loc["TmDatePicker_Today"]
+            </button>
         </div>
-    }
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -88,6 +99,7 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
+    private ElementReference _triggerRef;
     private int  _displayYear  = DateTime.Today.Year;
     private int  _displayMonth = DateTime.Today.Month;
 
@@ -130,6 +142,11 @@
     private void ToggleCalendar()
     {
         if (!Disabled) _isOpen = !_isOpen;
+    }
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
     }
 
     private async Task OnDateSelected(DateOnly d)

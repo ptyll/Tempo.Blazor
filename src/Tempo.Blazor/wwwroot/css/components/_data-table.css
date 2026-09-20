@@ -62,11 +62,10 @@
   display: inline-flex;
 }
 
-.tm-data-table__export-control .tm-dropdown-menu {
-  top: calc(100% + var(--tm-space-1));
-  right: 0;
-  left: auto;
-}
+/* The export menu used to be re-positioned here (top:calc(100%+space-1); right:0; left:auto).
+   Since Phase 18.2 the menu is a TmOverlayPanel placed by overlay.js — the equivalent geometry
+   is declared on the component as Align="End" Offset="4", so no CSS override is needed (and an
+   inline style would beat it anyway). */
 
 /* ═══════════════════════════════════════════════════════════════
    Selection bar

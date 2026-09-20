@@ -1,22 +1,17 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Inputs;
 
-public partial class TmColorPicker : IAsyncDisposable
+public partial class TmColorPicker
 {
     private bool _isOpen;
     private bool _focusTriggerAfterOpen;
     private bool _focusTriggerAfterClose;
-    private bool _escapeHandlerRegistered;
     private string? _pendingValue;
     private ElementReference _rootElement;
     private ElementReference _triggerElement;
-    private DotNetObjectReference<TmColorPicker>? _dotNetRef;
-
-    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     /// <summary>The current color value.</summary>
     [Parameter] public string? Value { get; set; }
@@ -103,13 +98,6 @@ public partial class TmColorPicker : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_escapeHandlerRegistered)
-        {
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("tmColorPicker.registerEscape", _rootElement, _dotNetRef);
-            _escapeHandlerRegistered = true;
-        }
-
         if (_focusTriggerAfterOpen)
         {
             _focusTriggerAfterOpen = false;
@@ -120,11 +108,6 @@ public partial class TmColorPicker : IAsyncDisposable
         {
             _focusTriggerAfterClose = false;
             await _triggerElement.FocusAsync(preventScroll: true);
-        }
-
-        if (_isOpen)
-        {
-            await JSRuntime.InvokeVoidAsync("tmColorPicker.adjustDropdownPosition", _rootElement);
         }
     }
 
@@ -177,6 +160,10 @@ public partial class TmColorPicker : IAsyncDisposable
         }
     }
 
+    // Escape keydown anywhere inside the component still closes without applying — overlay.js's
+    // document-level listener normally wins this race (it is the tracked panel), but this handler
+    // keeps the keyboard contract working when JS has not loaded, and CloseWithoutApplyingAsync is
+    // idempotent when both paths fire.
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {
         if (Disabled)
@@ -190,20 +177,27 @@ public partial class TmColorPicker : IAsyncDisposable
         }
     }
 
-    [JSInvokable]
-    public async Task CloseFromGlobalEscapeAsync()
-        => await CloseFromGlobalAsync(restoreFocus: true);
-
-    [JSInvokable]
-    public async Task CloseFromGlobalAsync(bool restoreFocus)
+    /// <summary>
+    /// JS-driven close from TmOverlayPanel (Escape or outside pointerdown from overlay.js). Both
+    /// gestures close without applying the pending value — what the retired tmColorPicker engine
+    /// did. Focus restore on Escape is handled by overlay.js itself (it focuses the anchor before
+    /// notifying .NET), so the Blazor side never re-focuses here.
+    /// </summary>
+    private async Task OnPanelOpenChangedAsync(bool open)
     {
-        if (!_isOpen)
+        if (open == _isOpen)
         {
             return;
         }
 
-        await CloseWithoutApplyingAsync(restoreFocus);
-        await InvokeAsync(StateHasChanged);
+        if (open)
+        {
+            await ToggleDropdownAsync();
+        }
+        else
+        {
+            await CloseWithoutApplyingAsync(restoreFocus: false);
+        }
     }
 
     private Task CancelAsync()
@@ -224,31 +218,4 @@ public partial class TmColorPicker : IAsyncDisposable
 
     private static bool IsActivationKey(string? key)
         => key is "Enter" or " " or "Space" or "Spacebar";
-
-    private async Task UnregisterEscapeHandlerAsync()
-    {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("tmColorPicker.unregister", _rootElement);
-        }
-        catch (JSDisconnectedException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
-        }
-
-        _escapeHandlerRegistered = false;
-    }
-
-    /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_escapeHandlerRegistered)
-        {
-            await UnregisterEscapeHandlerAsync();
-        }
-
-        _dotNetRef?.Dispose();
-    }
 }

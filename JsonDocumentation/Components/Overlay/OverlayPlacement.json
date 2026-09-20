@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Overlay",
+  "namespace": "Tempo.Blazor.Components.Overlay",
+  "description": "Preferred side of the anchor a TmOverlayPanel opens on (Bottom, Top, Left, Right).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Overlay/OverlayEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "OverlayPlacement"
+}

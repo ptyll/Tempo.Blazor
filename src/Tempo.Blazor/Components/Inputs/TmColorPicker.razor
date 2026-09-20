@@ -27,9 +27,19 @@
         <TmIcon Name="chevron-down" Class="tm-color-picker-trigger-icon" />
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-color-picker-dropdown">
+    @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow/transform can no longer clip it, and overlay.js repositions it on
+       scroll/resize and shifts it inside the viewport — replacing the per-component
+       tmColorPicker.registerEscape/adjustDropdownPosition engine this component used to carry.
+       Bottom + Start + 4px keeps the old top:calc(100%+4px);left:0 geometry. *@
+    <TmOverlayPanel Anchor="_triggerElement"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="OnPanelOpenChangedAsync"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    Role="dialog"
+                    Class="tm-color-picker-dropdown">
             <TmFlatColorPicker Value="@_pendingValue"
                                ValueChanged="OnFlatValueChangedAsync"
                                Format="Format"
@@ -60,6 +70,5 @@
                     </TmButton>
                 </div>
             }
-        </div>
-    }
+    </TmOverlayPanel>
 </div>

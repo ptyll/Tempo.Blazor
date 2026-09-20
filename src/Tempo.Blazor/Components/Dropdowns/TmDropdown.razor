@@ -1,9 +1,11 @@
 @namespace Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Overlay
 @using Microsoft.AspNetCore.Components.Web
 
 <div class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @onkeydown="HandleKeyDownAsync" @attributes="AdditionalAttributes">
     <button type="button"
+            @ref="_triggerRef"
             class="tm-dropdown-trigger"
             aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
             aria-haspopup="true"
@@ -16,14 +18,21 @@
         <TmIcon Name="@((_isOpen ? IconNames.ChevronUp : IconNames.ChevronDown))" Size="IconSize.Sm" />
     </button>
 
-    @if (_isOpen)
-    {
-        <div class="tm-dropdown-menu" role="menu">
-            <CascadingValue Value="this">
-                @ChildContent
-            </CascadingValue>
-        </div>
-    }
+    @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
+       repositions it on scroll/resize, flipping above the trigger when there is no room below. *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="Placement"
+                    Align="Align"
+                    Offset="Offset"
+                    Role="menu"
+                    Class="tm-dropdown-menu">
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -39,6 +48,15 @@
     /// <summary>Menu content — typically TmDropdownItem elements.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>Preferred side of the trigger the menu opens on. Default Bottom.</summary>
+    [Parameter] public OverlayPlacement Placement { get; set; } = OverlayPlacement.Bottom;
+
+    /// <summary>Cross-axis alignment of the menu against the trigger. Default Start.</summary>
+    [Parameter] public OverlayAlign Align { get; set; } = OverlayAlign.Start;
+
+    /// <summary>Gap in pixels between trigger and menu. Default 4.</summary>
+    [Parameter] public int Offset { get; set; } = 4;
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -50,11 +68,17 @@
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
+    private ElementReference _triggerRef;
 
     private void Toggle()
     {
         if (Disabled) return;
         _isOpen = !_isOpen;
+    }
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
     }
 
     /// <summary>Called by TmDropdownItem when an item is selected.</summary>

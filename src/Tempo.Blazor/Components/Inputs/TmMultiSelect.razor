@@ -113,13 +113,23 @@
         </div>
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-multiselect__popup"
-             id="@(Id + "-listbox")"
-             role="listbox"
-             aria-multiselectable="true"
-             @onkeydown="HandleKeyDownAsync">
+    @* The popup is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow/transform can no longer clip it, and overlay.js repositions it on
+       scroll/resize and flips it above the trigger when the space below runs out.
+       Bottom + Start + 4px + MatchAnchorWidth replaces the old top:calc(100%+space-1);left:0;right:0. *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpenFromJsAsync"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    MatchAnchorWidth="true"
+                    ConstrainHeight="true"
+                    Id="@(Id + "-listbox")"
+                    Role="listbox"
+                    Class="tm-multiselect__popup"
+                    aria-multiselectable="true"
+                    @onkeydown="HandleKeyDownAsync">
 
             @if (HeaderTemplate is not null)
             {
@@ -226,8 +236,7 @@
                     }
                 </div>
             }
-        </div>
-    }
+    </TmOverlayPanel>
 
     @if (!string.IsNullOrEmpty(Error))
     {

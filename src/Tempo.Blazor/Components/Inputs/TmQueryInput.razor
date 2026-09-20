@@ -11,7 +11,7 @@
         <label class="tm-query-input__label" for="@_inputId">@Label</label>
     }
 
-    <div class="tm-query-input__field">
+    <div class="tm-query-input__field" @ref="_fieldRef">
 
         @* Error-underline overlay: a monospace-aligned mirror of the text with transparent glyphs,
            so only the wavy underline on error ranges shows behind the real input text. No JS measurement. *@
@@ -54,8 +54,18 @@
                @onblur="HandleBlur"
                @onkeydown="HandleKeyDownAsync" />
 
-        @if (_isOpen)
-        {
+        @* The suggestion dropdown rides a TmOverlayPanel: popover="manual" puts it in the browser
+           top layer, so an ancestor's overflow/transform can no longer clip it. Bottom + Start +
+           2px + MatchAnchorWidth replaces the old top:calc(100%+2px);left:0;right:0. The visual
+           <ul> keeps its class/id/role inside the transparent positioned panel wrapper. *@
+        <TmOverlayPanel Anchor="_fieldRef"
+                        IsOpen="_isOpen"
+                        IsOpenChanged="SetOpen"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Offset="2"
+                        MatchAnchorWidth="true"
+                        ConstrainHeight="true">
             <ul class="tm-query-input__dropdown" role="listbox" id="@_listboxId">
                 @if (_isLoading)
                 {
@@ -93,7 +103,7 @@
                     }
                 }
             </ul>
-        }
+        </TmOverlayPanel>
     </div>
 </div>
 
@@ -140,7 +150,11 @@
 
     private ElementReference _inputRef;
     private bool _isOpen;
+    private ElementReference _fieldRef;
     private bool _isLoading;
+
+    /// <summary>JS-driven dismissal (Escape or outside pointerdown from overlay.js).</summary>
+    private void SetOpen(bool open) => _isOpen = open;
     private bool _hasError;
     private List<QuerySuggestion> _suggestions = [];
     private int _selectedIndex = -1;

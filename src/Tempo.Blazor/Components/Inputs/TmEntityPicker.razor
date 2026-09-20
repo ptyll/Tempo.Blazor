@@ -8,7 +8,7 @@
         <label class="tm-input-label">@Label</label>
     }
 
-    <div class="tm-entity-picker @(Disabled ? "tm-entity-picker--disabled" : "") @(MultiSelect ? "tm-entity-picker--multi" : "")">
+    <div @ref="_rootRef" class="tm-entity-picker @(Disabled ? "tm-entity-picker--disabled" : "") @(MultiSelect ? "tm-entity-picker--multi" : "")">
         @if (MultiSelect && SelectedValues.Count > 0)
         {
             <div class="tm-entity-picker__chips">
@@ -58,57 +58,66 @@
             }
         </div>
 
-        @if (_showDropdown)
-        {
-            <div class="tm-entity-picker__dropdown" role="listbox">
-                @if (RecentVisible)
-                {
-                    <div class="tm-entity-picker__recent">
-                        <div class="tm-entity-picker__group-label">@Loc["TmEntityPicker_Recent"]</div>
-                        @foreach (var item in _recentItems)
-                        {
-                            var recentValue = ValueSelector(item);
-                            <div class="tm-entity-picker__option tm-entity-picker__recent-item @(IsSelected(recentValue) ? "tm-entity-picker__option--selected" : "")"
-                                 role="option"
-                                 aria-selected="@(IsSelected(recentValue) ? "true" : "false")"
-                                 @onclick="@(() => SelectItem(item))"
-                                 @onclick:preventDefault="true">
-                                @DisplaySelector(item)
-                            </div>
-                        }
-                    </div>
-                }
+        @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+           ancestor's overflow/transform can no longer clip it. Bottom + Start + 4px +
+           MatchAnchorWidth replaces the old top:calc(100%+4px);left:0;right:0. *@
+        <TmOverlayPanel Anchor="_rootRef"
+                        IsOpen="_showDropdown"
+                        IsOpenChanged="SetShowDropdown"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Offset="4"
+                        MatchAnchorWidth="true"
+                        ConstrainHeight="true"
+                        Role="listbox"
+                        Class="tm-entity-picker__dropdown">
+            @if (RecentVisible)
+            {
+                <div class="tm-entity-picker__recent">
+                    <div class="tm-entity-picker__group-label">@Loc["TmEntityPicker_Recent"]</div>
+                    @foreach (var item in _recentItems)
+                    {
+                        var recentValue = ValueSelector(item);
+                        <div class="tm-entity-picker__option tm-entity-picker__recent-item @(IsSelected(recentValue) ? "tm-entity-picker__option--selected" : "")"
+                             role="option"
+                             aria-selected="@(IsSelected(recentValue) ? "true" : "false")"
+                             @onclick="@(() => SelectItem(item))"
+                             @onclick:preventDefault="true">
+                            @DisplaySelector(item)
+                        </div>
+                    }
+                </div>
+            }
 
-                @foreach (var item in _results)
-                {
-                    var itemValue = ValueSelector(item);
-                    <div class="tm-entity-picker__option @(IsSelected(itemValue) ? "tm-entity-picker__option--selected" : "")"
-                         role="option"
-                         aria-selected="@(IsSelected(itemValue) ? "true" : "false")"
-                         @onclick="@(() => SelectItem(item))"
-                         @onclick:preventDefault="true">
-                        @DisplaySelector(item)
-                    </div>
-                }
+            @foreach (var item in _results)
+            {
+                var itemValue = ValueSelector(item);
+                <div class="tm-entity-picker__option @(IsSelected(itemValue) ? "tm-entity-picker__option--selected" : "")"
+                     role="option"
+                     aria-selected="@(IsSelected(itemValue) ? "true" : "false")"
+                     @onclick="@(() => SelectItem(item))"
+                     @onclick:preventDefault="true">
+                    @DisplaySelector(item)
+                </div>
+            }
 
-                @if (ShowCreateOption)
-                {
-                    <div class="tm-entity-picker__create"
-                         role="option"
-                         @onclick="CreateNewItemAsync"
-                         @onclick:preventDefault="true">
-                        @(string.Format(Loc["TmEntityPicker_CreateNew"], _searchText))
-                    </div>
-                }
+            @if (ShowCreateOption)
+            {
+                <div class="tm-entity-picker__create"
+                     role="option"
+                     @onclick="CreateNewItemAsync"
+                     @onclick:preventDefault="true">
+                    @(string.Format(Loc["TmEntityPicker_CreateNew"], _searchText))
+                </div>
+            }
 
-                @if (!HasAnyOptions && !_isLoading)
-                {
-                    <div class="tm-entity-picker__no-results">
-                        @Loc["TmEntityPicker_NoResults"]
-                    </div>
-                }
-            </div>
-        }
+            @if (!HasAnyOptions && !_isLoading)
+            {
+                <div class="tm-entity-picker__no-results">
+                    @Loc["TmEntityPicker_NoResults"]
+                </div>
+            }
+        </TmOverlayPanel>
     </div>
 
     @if (!string.IsNullOrEmpty(Error))
@@ -121,6 +130,7 @@
     private string _searchText = "";
     private bool _showDropdown;
     private bool _isLoading;
+    private ElementReference _rootRef;
     private List<TItem> _results = [];
     private List<TItem> _recentItems = [];
     private readonly List<TItem> _cache = [];
@@ -370,6 +380,9 @@
             InvokeAsync(StateHasChanged);
         });
     }
+
+    /// <summary>JS-driven dismissal (Escape or outside pointerdown from overlay.js).</summary>
+    private void SetShowDropdown(bool open) => _showDropdown = open;
 
     private void CacheItem(TItem item)
     {

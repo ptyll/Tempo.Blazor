@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Tags
 @using Tempo.Blazor.Interfaces
 
-<div class="tm-tag-picker @(Disabled ? "tm-tag-picker-disabled" : "") @Class" @attributes="AdditionalAttributes">
+<div @ref="_rootRef" class="tm-tag-picker @(Disabled ? "tm-tag-picker-disabled" : "") @Class" @attributes="AdditionalAttributes">
     @* Selected tag chips *@
     @foreach (var tag in SelectedTagSet)
     {
@@ -23,40 +23,48 @@
         <button class="tm-tag-picker-trigger" type="button" @onclick="ToggleOpen">+</button>
     }
 
-    @* Dropdown *@
-    @if (_isOpen && !Disabled)
-    {
-        <div class="tm-tag-picker-dropdown">
-            @if (AllowCreate)
-            {
-                <input class="tm-tag-picker-search"
-                       value="@_searchText"
-                       @oninput="e => _searchText = e.Value?.ToString() ?? string.Empty"
-                       placeholder="@Loc["TmTagPicker_Search"]" />
-            }
+    @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow/transform can no longer clip it. Bottom + Start + 4px + ConstrainHeight
+       keeps the historical look (top:calc(100%+space-1);left:0;max-height:16rem;overflow:auto). *@
+    <TmOverlayPanel Anchor="_rootRef"
+                    IsOpen="@(_isOpen && !Disabled)"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    ConstrainHeight="true"
+                    Role="listbox"
+                    Class="tm-tag-picker-dropdown">
+        @if (AllowCreate)
+        {
+            <input class="tm-tag-picker-search"
+                   value="@_searchText"
+                   @oninput="e => _searchText = e.Value?.ToString() ?? string.Empty"
+                   placeholder="@Loc["TmTagPicker_Search"]" />
+        }
 
-            @foreach (var tag in AvailableTags)
-            {
-                var t = tag;
-                <div class="tm-tag-option" @onclick="() => AddTagAsync(t)">
-                    <span class="tm-tag-dot" style="background-color: @t.Color"></span>
-                    @t.Name
-                </div>
-            }
+        @foreach (var tag in AvailableTags)
+        {
+            var t = tag;
+            <div class="tm-tag-option" @onclick="() => AddTagAsync(t)">
+                <span class="tm-tag-dot" style="background-color: @t.Color"></span>
+                @t.Name
+            </div>
+        }
 
-            @if (AllowCreate && !string.IsNullOrWhiteSpace(_searchText) && !TagExists(_searchText))
-            {
-                <div class="tm-tag-create-option" @onclick="CreateTagAsync">
-                    @Loc["TmTagPicker_CreateNew", _searchText]
-                </div>
-            }
-        </div>
-    }
+        @if (AllowCreate && !string.IsNullOrWhiteSpace(_searchText) && !TagExists(_searchText))
+        {
+            <div class="tm-tag-create-option" @onclick="CreateTagAsync">
+                @Loc["TmTagPicker_CreateNew", _searchText]
+            </div>
+        }
+    </TmOverlayPanel>
 </div>
 
 @code {
     private bool _isOpen;
     private string _searchText = string.Empty;
+    private ElementReference _rootRef;
 
     /// <summary>All tags available for selection.</summary>
     [Parameter] public IEnumerable<ITag>? AllTags { get; set; }
@@ -96,6 +104,8 @@
             .Any(t => t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     private void ToggleOpen() => _isOpen = !_isOpen;
+
+    private void SetOpen(bool open) => _isOpen = open;
 
     private Task AddTagAsync(ITag tag)
     {

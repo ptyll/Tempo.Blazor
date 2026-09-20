@@ -1,24 +1,38 @@
 @namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Overlay
 
 <div class="tm-popover tm-popover--@PositionCss @Class" @attributes="AdditionalAttributes" @onkeydown="HandleKeyDown">
     <div class="tm-popover__trigger"
+         @ref="_triggerRef"
          role="button"
          aria-expanded="@(IsVisible ? "true" : "false")"
          @onclick="Toggle">
         @TriggerContent
     </div>
 
-    <div class="tm-popover__body @(IsVisible ? "tm-popover__body--open" : "")">
+    @* The body is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
+       repositions it on scroll/resize, flipping sides when the preferred one has no room. The
+       resolved side lands on data-tm-placement, which the arrow CSS reads. *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="IsVisible"
+                    IsOpenChanged="SetOpenAsync"
+                    Placement="@PanelPlacement"
+                    Align="OverlayAlign.Center"
+                    Offset="8"
+                    CloseOnOutsidePointerDown="CloseOnClickOutside"
+                    Class="tm-popover__body tm-popover__body--open">
         @if (ShowArrow)
         {
             <div class="tm-popover__arrow"></div>
         }
         @ChildContent
-    </div>
+    </TmOverlayPanel>
 </div>
 
 @code {
     private bool _internalOpen;
+    private ElementReference _triggerRef;
 
     /// <summary>Trigger content.</summary>
     [Parameter, EditorRequired] public RenderFragment TriggerContent { get; set; } = default!;
@@ -26,7 +40,7 @@
     /// <summary>Popover body content.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>Position relative to trigger.</summary>
+    /// <summary>Preferred position relative to trigger — the panel flips to the opposite side when there is no room.</summary>
     [Parameter] public PopoverPosition Position { get; set; } = PopoverPosition.Bottom;
 
     /// <summary>Controlled open state.</summary>
@@ -56,28 +70,34 @@
         _ => "bottom"
     };
 
-    private async Task Toggle()
+    private OverlayPlacement PanelPlacement => Position switch
+    {
+        PopoverPosition.Top => OverlayPlacement.Top,
+        PopoverPosition.Left => OverlayPlacement.Left,
+        PopoverPosition.Right => OverlayPlacement.Right,
+        _ => OverlayPlacement.Bottom
+    };
+
+    private async Task SetOpenAsync(bool open)
     {
         if (IsOpen.HasValue)
         {
-            await IsOpenChanged.InvokeAsync(!IsOpen.Value);
+            await IsOpenChanged.InvokeAsync(open);
         }
         else
         {
-            _internalOpen = !_internalOpen;
+            _internalOpen = open;
         }
+    }
+
+    private async Task Toggle()
+    {
+        await SetOpenAsync(!IsVisible);
     }
 
     private async Task Close()
     {
-        if (IsOpen.HasValue)
-        {
-            await IsOpenChanged.InvokeAsync(false);
-        }
-        else
-        {
-            _internalOpen = false;
-        }
+        await SetOpenAsync(false);
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

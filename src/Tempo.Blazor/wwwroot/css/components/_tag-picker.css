@@ -47,11 +47,11 @@
 }
 .tm-tag-picker-trigger:hover { border-color: var(--tm-color-primary); color: var(--tm-color-primary); }
 
+/* The dropdown is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left (Bottom + Start + 4px replaces top:calc(100%+space-1);left:0). The
+   panel lands in the browser top layer; ConstrainHeight caps the height to the free side room
+   (the CSS max-height stays as the outer bound). */
 .tm-tag-picker-dropdown {
-  position: absolute;
-  top: calc(100% + var(--tm-space-1));
-  left: 0;
-  z-index: var(--tm-z-dropdown);
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-md);

@@ -9,6 +9,7 @@
 
     <div class="tm-date-range-input-row">
         <button type="button"
+                @ref="_triggerRef"
                 id="@_triggerId"
                 class="tm-date-range-trigger"
                 disabled="@Disabled"
@@ -41,25 +42,35 @@
         }
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-date-range-popup" role="dialog" aria-modal="true">
-            @if (ShowPresets && EffectivePresets.Count > 0)
-            {
-                <div class="tm-date-range-presets">
-                    @foreach (var preset in EffectivePresets)
-                    {
-                        var p = preset;
-                        <button type="button"
-                                class="tm-date-range-preset-btn"
-                                @onclick="() => ApplyPreset(p)">
-                            @p.Label
-                        </button>
-                    }
-                </div>
-            }
+    @* The range popup is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so
+       a modal's overflow/transform can no longer clip it, and overlay.js flips it above the
+       trigger when the space below runs out. Bottom + Start + 4px keeps the historical
+       "under the trigger, left-aligned" look (the old top:calc(100%+space-1);left:0). *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    Role="dialog"
+                    Class="tm-date-range-popup"
+                    aria-modal="true">
+        @if (ShowPresets && EffectivePresets.Count > 0)
+        {
+            <div class="tm-date-range-presets">
+                @foreach (var preset in EffectivePresets)
+                {
+                    var p = preset;
+                    <button type="button"
+                            class="tm-date-range-preset-btn"
+                            @onclick="() => ApplyPreset(p)">
+                        @p.Label
+                    </button>
+                }
+            </div>
+        }
 
-            <div class="tm-date-range-calendars">
+        <div class="tm-date-range-calendars">
                 <!-- Left calendar: start month -->
                 <TmCalendarGrid DisplayYear="@_leftYear"
                                 DisplayMonth="@_leftMonth"
@@ -94,8 +105,7 @@
                     @Loc["TmDateRangePicker_Done"]
                 </button>
             </div>
-        </div>
-    }
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -113,6 +123,7 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool      _isOpen;
+    private ElementReference _triggerRef;
     private readonly string _labelId   = $"tm-date-range-label-{Guid.NewGuid():N}";
     private readonly string _triggerId = $"tm-date-range-trigger-{Guid.NewGuid():N}";
     private readonly string _valueId   = $"tm-date-range-value-{Guid.NewGuid():N}";
@@ -207,6 +218,11 @@
     private void ClosePopup()
     {
         _isOpen = false;
+    }
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
     }
 
     private async Task OnLeftDaySelected(DateOnly d) => await HandleDaySelected(d);

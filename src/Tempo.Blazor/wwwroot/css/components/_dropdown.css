@@ -1,7 +1,10 @@
-.tm-dropdown { position: relative; display: inline-flex; }
+/* The component has always rendered .tm-dropdown-wrapper — the old .tm-dropdown selector never
+   matched anything, so this also fixes a dead rule. */
+.tm-dropdown-wrapper { position: relative; display: inline-flex; }
+
+/* The menu is a TmOverlayPanel: position:fixed + popover="manual" + z-index come from
+   _overlay-panel.css and overlay.js writes top/left — no absolute-position declarations here. */
 .tm-dropdown-menu {
-  position: absolute;
-  z-index: var(--tm-z-dropdown);
   min-width: 10rem;
   background-color: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);

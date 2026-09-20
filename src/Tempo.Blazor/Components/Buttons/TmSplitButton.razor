@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "") @Class" @attributes="AdditionalAttributes">
+<div @ref="_rootRef" class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "") @Class" @onkeydown="HandleKeyDown" @attributes="AdditionalAttributes">
     <button type="button"
             class="tm-split-button__primary"
             disabled="@Disabled"
@@ -22,16 +22,25 @@
         <TmIcon Name="chevron-down" Size="IconSize.Xs" />
     </button>
 
-    @if (_isOpen)
-    {
-        <div class="tm-split-button__dropdown" role="menu" @onkeydown="HandleKeyDown">
-            @ChildContent
-        </div>
-    }
+    @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
+       repositions it on scroll/resize. Bottom + End + 4px keep the historical
+       "under the button row, right edge aligned" look (the old top:100%;right:0;margin-top:4px). *@
+    <TmOverlayPanel Anchor="_rootRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Offset="4"
+                    Role="menu"
+                    Class="tm-split-button__dropdown">
+        @ChildContent
+    </TmOverlayPanel>
 </div>
 
 @code {
     private bool _isOpen;
+    private ElementReference _rootRef;
 
     /// <summary>Text label on the primary button.</summary>
     [Parameter, EditorRequired] public string Text { get; set; } = default!;
@@ -80,6 +89,11 @@
     {
         if (!Disabled)
             _isOpen = !_isOpen;
+    }
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
     }
 
     private void HandleKeyDown(KeyboardEventArgs e)

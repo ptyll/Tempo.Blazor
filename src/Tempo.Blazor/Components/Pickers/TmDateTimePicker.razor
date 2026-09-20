@@ -13,6 +13,7 @@
         <div class="tm-datetime-date-section">
             <div class="tm-date-picker-input-row">
                 <button type="button"
+                        @ref="_triggerRef"
                         id="@EffectiveTriggerId"
                         class="tm-date-picker-trigger"
                         disabled="@Disabled"
@@ -46,18 +47,27 @@
                 }
             </div>
 
-            @if (_isOpen)
-            {
-                <div class="tm-date-picker-popup" role="dialog" aria-modal="true">
-                    <TmCalendarGrid DisplayYear="@_displayYear"
-                                    DisplayMonth="@_displayMonth"
-                                    SelectedDate="@_date"
-                                    MinDate="@(_minDate)"
-                                    MaxDate="@(_maxDate)"
-                                    OnDateSelected="OnDateSelected"
-                                    OnNavigate="OnNavigate" />
-                </div>
-            }
+            @* The calendar popup is a TmOverlayPanel: popover="manual" puts it in the browser top
+               layer, so a modal's overflow/transform can no longer clip it, and overlay.js flips
+               it above the trigger when the space below runs out. Bottom + Start + 4px keeps the
+               historical "under the trigger, left-aligned" look. *@
+            <TmOverlayPanel Anchor="_triggerRef"
+                            IsOpen="_isOpen"
+                            IsOpenChanged="SetOpen"
+                            Placement="OverlayPlacement.Bottom"
+                            Align="OverlayAlign.Start"
+                            Offset="4"
+                            Role="dialog"
+                            Class="tm-date-picker-popup"
+                            aria-modal="true">
+                <TmCalendarGrid DisplayYear="@_displayYear"
+                                DisplayMonth="@_displayMonth"
+                                SelectedDate="@_date"
+                                MinDate="@(_minDate)"
+                                MaxDate="@(_maxDate)"
+                                OnDateSelected="OnDateSelected"
+                                OnNavigate="OnNavigate" />
+            </TmOverlayPanel>
         </div>
 
         <!-- Time section: composite input, labelled via role=group + label `for` on first segment -->
@@ -126,6 +136,7 @@
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     private bool      _isOpen;
+    private ElementReference _triggerRef;
     private int       _displayYear  = DateTime.Today.Year;
     private int       _displayMonth = DateTime.Today.Month;
     private DateOnly? _date;
@@ -170,6 +181,11 @@
     private void ToggleCalendar()
     {
         if (!Disabled) _isOpen = !_isOpen;
+    }
+
+    private void SetOpen(bool open)
+    {
+        _isOpen = open;
     }
 
     private async Task OnDateSelected(DateOnly d)

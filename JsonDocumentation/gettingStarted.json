@@ -402,7 +402,15 @@
         "example": ":root {\n  /* Change primary color to indigo */\n  --tm-color-primary-500: #6366f1;\n  --tm-color-primary-600: #4f46e5;\n  --tm-color-primary-700: #4338ca;\n  --tm-color-primary: var(--tm-color-primary-500);\n  --tm-color-primary-hover: var(--tm-color-primary-600);\n  --tm-color-primary-active: var(--tm-color-primary-700);\n\n  /* Change default border radius */\n  --tm-radius-md: 0.5rem;\n\n  /* Change default font */\n  --tm-font-sans: 'Inter', system-ui, sans-serif;\n}"
       }
     },
-    "reducedMotion": "Since 2.9.0 the @media (prefers-reduced-motion: reduce) block in animations.css enumerates only Tempo-owned animated classes instead of the previous universal * / *::before / *::after selector, so host-page elements are no longer touched. The 0.01ms duration is kept deliberately (transitionend/animationend still fire). The universal box-sizing reset in base.css remains an intentional document reset."
+    "reducedMotion": "Since 2.9.0 the @media (prefers-reduced-motion: reduce) block in animations.css enumerates only Tempo-owned animated classes instead of the previous universal * / *::before / *::after selector, so host-page elements are no longer touched. The 0.01ms duration is kept deliberately (transitionend/animationend still fire). The universal box-sizing reset in base.css remains an intentional document reset.",
+    "floatingPanels": {
+      "description": "Anchored floating panels (TmPopover body, TmDropdown menu, TmContextMenu menu, and any custom use of TmOverlayPanel) are rendered with popover=\"manual\" and opened via the HTML Popover API, which places them in the browser top layer.",
+      "topLayer": "A top-layer element paints above every in-page stacking context and escapes ancestor overflow/transform clipping (modals, scroll regions). z-index on page content cannot cover it, and z-index between top-layer elements follows their top-layer order, not the --tm-z-* scale.",
+      "fallback": "Where the Popover API is unavailable, overlay.js falls back to position:fixed with containing-block detection (transformed ancestors become the positioning root) and the panel uses --tm-z-overlay (1060).",
+      "zIndexScale": "The --tm-z-* token scale (--tm-z-dropdown 1000, --tm-z-sticky 1020, --tm-z-popover 1030, --tm-z-drawer 1035/1036, --tm-z-modal 1040, --tm-z-overlay 1060, --tm-z-toast 1080, --tm-z-tooltip 1090) still governs non-top-layer overlays: modal/drawer backdrops, toasts, sticky chrome, and the fallback path.",
+      "positioning": "overlay.js resolves Placement (Top/Bottom/Left/Right) + Align (Start/Center/End), flips to the opposite side when the preferred side lacks room, shifts the panel inside the viewport margin, and repositions on scroll/resize via requestAnimationFrame.",
+      "dismissal": "Escape (topmost panel) and outside pointerdown (panel and anchor exempt) dismiss via IsOpenChanged/OnDismissed."
+    }
   },
   "localization": {
     "description": "Tempo.Blazor supports localization via the ITmLocalizer interface (namespace Tempo.Blazor.Localization, defined in Tempo.Blazor.Abstractions). All built-in component UI strings (button labels, tooltips, placeholders, validation messages, aria-labels, etc.) go through this interface. The library ships with 500+ localization keys covering all components.",

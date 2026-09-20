@@ -37,9 +37,21 @@
         }
     </div>
 
-    @if (_isOpen)
-    {
-        <div class="tm-filterable-dropdown-menu" role="listbox" @onkeydown="HandleKeyDownAsync">
+    @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer — above
+       --tm-z-sticky chrome (the FormActionBar cover defect this component's z-index workaround
+       documented) and outside every ancestor's overflow/transform clipping. Bottom + Start +
+       4px + MatchAnchorWidth replaces the old top:calc(100%+space-1);left:0;right:0. *@
+    <TmOverlayPanel Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpenFromJs"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    MatchAnchorWidth="true"
+                    ConstrainHeight="true"
+                    Role="listbox"
+                    Class="tm-filterable-dropdown-menu"
+                    @onkeydown="HandleKeyDownAsync">
             <div class="tm-filterable-dropdown-filter">
                 <input type="text"
                        class="tm-filterable-dropdown-filter-input"
@@ -91,8 +103,7 @@
                     }
                 }
             }
-        </div>
-    }
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -168,6 +179,20 @@
     private ElementReference _triggerRef;
     private bool _focusFilterPending;
     private bool _focusTriggerAfterClose;
+
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js): focus may be inside the
+    /// popup (the filter input), and that node is about to be destroyed — restore it to the
+    /// trigger, same as the component's own close paths.
+    /// </summary>
+    private void SetOpenFromJs(bool open)
+    {
+        if (open == _isOpen)
+            return;
+        _isOpen = open;
+        if (!open)
+            _focusTriggerAfterClose = true;
+    }
 
     private async Task ToggleAsync()
     {

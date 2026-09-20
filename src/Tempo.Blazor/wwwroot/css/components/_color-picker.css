@@ -58,11 +58,11 @@
     flex-shrink: 0;
 }
 
+/* The dropdown is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left (Bottom + Start + 4px keeps the old geometry) and shifts it inside
+   the viewport — replacing the retired tmColorPicker.adjustDropdownPosition transform hack. The
+   panel lands in the browser top layer. */
 .tm-color-picker-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: var(--tm-z-dropdown);
     box-shadow: var(--tm-shadow-lg);
     border-radius: var(--tm-radius-md);
     overflow: hidden;

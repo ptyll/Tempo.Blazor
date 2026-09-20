@@ -1,0 +1,182 @@
+@page "/overlay"
+<PageTitle>Overlay Panel – Tempo.Blazor</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Overlay Panel</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">TmOverlayPanel</code>
+        is the shared floating-panel primitive: <code>popover="manual"</code> puts the panel in the browser
+        <em>top layer</em>, so no ancestor <code>overflow</code>, <code>transform</code> or <code>z-index</code>
+        context can clip or cover it. <code>overlay.js</code> anchors it, flips it when the preferred side has
+        no room, shifts it inside the viewport, and repositions on scroll/resize. Escape and outside
+        pointerdown dismiss it.
+    </p>
+</div>
+
+<!-- Placements -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Placements &amp; Alignment</h2>
+    </div>
+    <div class="showcase-card">
+        <div class="flex flex-wrap gap-3">
+            @foreach (var placement in Enum.GetValues<OverlayPlacement>())
+            {
+                var p = placement;
+                <div>
+                    <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm"
+                            data-testid="@($"overlay-open-{p.ToString().ToLowerInvariant()}")"
+                            @onclick="() => _placementOpen = _placementOpen == p ? null : p">
+                        @p
+                    </button>
+                    @* No Anchor set: overlay.js falls back to the panel's previous element sibling —
+                       the button. *@
+                    <TmOverlayPanel IsOpen="@(_placementOpen == p)"
+                                    IsOpenChanged="@(v => { if (!v) _placementOpen = null; })"
+                                    Placement="p"
+                                    Class="overlay-demo-panel"
+                                    DataTestId="@($"overlay-panel-{p.ToString().ToLowerInvariant()}")">
+                        <div class="p-3 text-sm">@p panel</div>
+                    </TmOverlayPanel>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Inside an overflow container -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Inside overflow:auto</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Clipping scenario</span>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            The card below has <code>overflow: auto</code> and a fixed height — a plain
+            <code>position:absolute</code> panel would be clipped by its bounds. The top-layer panel is not.
+            Scroll the card while the panel is open: it tracks the trigger.
+        </p>
+        <div class="h-40 w-64 overflow-auto rounded-lg border border-slate-200 dark:border-slate-700 p-4" data-testid="overlay-scroll-box">
+            <div style="height: 480px;">
+                <div class="mt-24">
+                    <button type="button" @ref="_scrollAnchor" class="tm-btn tm-btn-primary tm-btn-sm"
+                            data-testid="overlay-open-scroll"
+                            @onclick="() => _scrollOpen = !_scrollOpen">
+                        Toggle panel
+                    </button>
+                    @* Right placement on a deliberately narrow box: the panel has to paint BEYOND
+                       the box's right padding edge — the thing overflow:auto would clip if the
+                       panel were a normal positioned descendant. *@
+                    <TmOverlayPanel Anchor="_scrollAnchor"
+                                    IsOpen="_scrollOpen"
+                                    IsOpenChanged="@(v => _scrollOpen = v)"
+                                    Placement="OverlayPlacement.Right"
+                                    Class="overlay-demo-panel"
+                                    DataTestId="overlay-panel-scroll">
+                        <div class="p-3 text-sm whitespace-nowrap">Escapes the scroll box</div>
+                    </TmOverlayPanel>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Inside a modal (transformed ancestor) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Inside a modal</h2>
+    </div>
+    <div class="showcase-card">
+        <TmButton Variant="ButtonVariant.Primary" OnClick="() => _modalOpen = true" data-testid="overlay-open-modal">
+            Open modal
+        </TmButton>
+        <TmModal Show="_modalOpen" Title="Overlay inside modal" OnClose="() => _modalOpen = false">
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                The modal animates in with a transform — a containing block for fixed descendants.
+                The popover panel escapes it entirely through the top layer.
+            </p>
+            <button type="button" @ref="_modalAnchor" class="tm-btn tm-btn-secondary tm-btn-sm"
+                    data-testid="overlay-open-in-modal"
+                    @onclick="() => _modalPanelOpen = !_modalPanelOpen">
+                Toggle panel
+            </button>
+            <TmOverlayPanel Anchor="_modalAnchor"
+                            IsOpen="_modalPanelOpen"
+                            IsOpenChanged="@(v => _modalPanelOpen = v)"
+                            Class="overlay-demo-panel"
+                            DataTestId="overlay-panel-modal">
+                <div class="p-3 text-sm">Panel above the modal chrome</div>
+            </TmOverlayPanel>
+
+            @* The original defect: a date field near the end of a scrolling modal body opened its
+               calendar below the fold (the absolute popup was clipped by the modal's overflow and
+               positioned against the transformed .tm-modal box). The migrated popup now lands in
+               the top layer and flips above the trigger. *@
+            <div style="height: 420px;" aria-hidden="true"></div>
+            <div class="mb-3">
+                @* data-testid as a literal attribute: TmDatePicker has no DataTestId parameter, so
+                   DataTestId="…" would splat a datatestid attribute nothing can select. *@
+                <TmDatePicker @bind-Value="_modalDate"
+                              Label="Date near the modal's bottom edge"
+                              data-testid="overlay-datepicker" />
+            </div>
+        </TmModal>
+    </div>
+</section>
+
+<!-- Near the viewport edge (flip) -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Viewport edge — flip</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            Scroll this page so the trigger sits near the bottom edge, then open the panel: it flips
+            above the trigger instead of overflowing the viewport.
+        </p>
+        <div class="flex justify-end">
+            <button type="button" @ref="_edgeAnchor" class="tm-btn tm-btn-secondary tm-btn-sm"
+                    data-testid="overlay-open-edge"
+                    @onclick="() => _edgeOpen = !_edgeOpen">
+                Open near edge
+            </button>
+            <TmOverlayPanel Anchor="_edgeAnchor"
+                            IsOpen="_edgeOpen"
+                            IsOpenChanged="@(v => _edgeOpen = v)"
+                            Placement="OverlayPlacement.Bottom"
+                            Align="OverlayAlign.End"
+                            Class="overlay-demo-panel"
+                            DataTestId="overlay-panel-edge">
+                <div class="p-3 text-sm">Flipped panel — resolved side is on <code>data-tm-placement</code></div>
+            </TmOverlayPanel>
+        </div>
+    </div>
+</section>
+
+@* Scroll room below the edge section: without it the document ends right after the trigger, so
+   scrollIntoView({block:'end'}) cannot pin the trigger's bottom edge to the viewport bottom and
+   the flip demo/test would have nothing to prove. *@
+<div style="height: 120vh;" aria-hidden="true"></div>
+
+<style>
+    .overlay-demo-panel {
+        background-color: var(--tm-bg-surface);
+        border: 1px solid var(--tm-border-color);
+        border-radius: var(--tm-radius-lg);
+        box-shadow: var(--tm-shadow-lg);
+        min-width: 10rem;
+    }
+</style>
+
+@code {
+    private OverlayPlacement? _placementOpen;
+    private bool _scrollOpen;
+    private bool _modalOpen;
+    private bool _modalPanelOpen;
+    private bool _edgeOpen;
+    private DateOnly? _modalDate;
+
+    private ElementReference _scrollAnchor;
+    private ElementReference _modalAnchor;
+    private ElementReference _edgeAnchor;
+}

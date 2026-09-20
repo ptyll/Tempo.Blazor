@@ -392,6 +392,27 @@ public partial class TmMultiSelect<TItem, TValue>
         await OnClose.InvokeAsync();
     }
 
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js): focus may be inside the
+    /// popup (filter input, an option, a popup control), and that node is about to be destroyed —
+    /// restore it to the trigger, same as the component's own close paths.
+    /// </summary>
+    private async Task SetOpenFromJsAsync(bool open)
+    {
+        if (open == _isOpen)
+            return;
+        _isOpen = open;
+        if (!open)
+        {
+            _focusTriggerAfterClose = true;
+            await OnClose.InvokeAsync();
+        }
+        else
+        {
+            await OnOpen.InvokeAsync();
+        }
+    }
+
     // ── Filtering ────────────────────────────────────────────────
 
     private async Task HandleFilterInputAsync(ChangeEventArgs e)

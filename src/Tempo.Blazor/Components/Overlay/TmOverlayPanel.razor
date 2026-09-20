@@ -1,0 +1,222 @@
+@namespace Tempo.Blazor.Components.Overlay
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* The panel element itself is rendered only while open: an open top-layer popover whose element
+   is detached is automatically hidden by the browser, so closing never needs hidePopover() on a
+   dead node — and consumers' "menu absent while closed" markup contracts keep holding. *@
+@if (IsVisible)
+{
+    <div @ref="_panelRef"
+         id="@Id"
+         class="tm-overlay-panel @Class"
+         popover="manual"
+         role="@Role"
+         data-testid="@RootTestId("tm-overlay-panel")"
+         @attributes="AdditionalAttributes">
+        @ChildContent
+    </div>
+}
+
+@code {
+    private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
+
+    private readonly string _key = $"tm-overlay-{Guid.NewGuid():n}";
+    private ElementReference _panelRef;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<TmOverlayPanel>? _dotNetRef;
+    private bool _jsOpen;
+    private bool _internalOpen;
+    private string? _openOptionsSignature;
+
+    /// <summary>
+    /// Id of the rendered panel element. Defaults to a generated value; supply one when the anchor
+    /// should reference it (e.g. via <c>aria-controls</c>).
+    /// </summary>
+    [Parameter] public string Id { get; set; } = $"tm-overlay-panel-{Guid.NewGuid():n}";
+
+    /// <summary>
+    /// The element the panel positions itself against. When unset (default
+    /// <see cref="ElementReference"/>) overlay.js falls back to the panel's previous element
+    /// sibling — the natural trigger-then-panel layout every built-in consumer uses.
+    /// </summary>
+    [Parameter] public ElementReference Anchor { get; set; }
+
+    /// <summary>Preferred side of <see cref="Anchor"/> the panel opens on. Default <see cref="OverlayPlacement.Bottom"/>.</summary>
+    [Parameter] public OverlayPlacement Placement { get; set; } = OverlayPlacement.Bottom;
+
+    /// <summary>Cross-axis alignment against <see cref="Anchor"/>. Default <see cref="OverlayAlign.Start"/>.</summary>
+    [Parameter] public OverlayAlign Align { get; set; } = OverlayAlign.Start;
+
+    /// <summary>Gap in pixels between anchor and panel on the resolved side. Default 4.</summary>
+    [Parameter] public int Offset { get; set; } = 4;
+
+    /// <summary>Minimum distance in pixels the panel keeps from the viewport edges. Default 8.</summary>
+    [Parameter] public int ViewportMargin { get; set; } = 8;
+
+    /// <summary>Flip to the opposite side when the preferred side does not have enough room. Default true.</summary>
+    [Parameter] public bool Flip { get; set; } = true;
+
+    /// <summary>Slide the panel along the cross axis so it stays inside the viewport. Default true.</summary>
+    [Parameter] public bool Shift { get; set; } = true;
+
+    /// <summary>Stretch the panel to the anchor's width (dropdown/select menus). Default false.</summary>
+    [Parameter] public bool MatchAnchorWidth { get; set; }
+
+    /// <summary>
+    /// Cap the panel height at the room available on the resolved side (the script writes an inline
+    /// <c>max-height</c>, honouring a smaller CSS cap when one exists) and let it scroll. Default false.
+    /// </summary>
+    [Parameter] public bool ConstrainHeight { get; set; }
+
+    /// <summary>Close when Escape is pressed while the panel is open. Default true.</summary>
+    [Parameter] public bool CloseOnEscape { get; set; } = true;
+
+    /// <summary>
+    /// Close when a <c>pointerdown</c> lands outside both the panel and the anchor. Default true.
+    /// The anchor is exempt so clicking the trigger toggles instead of close-then-reopen races.
+    /// </summary>
+    [Parameter] public bool CloseOnOutsidePointerDown { get; set; } = true;
+
+    /// <summary>Controlled open state. When null the panel tracks its own internal state.</summary>
+    [Parameter] public bool? IsOpen { get; set; }
+
+    /// <summary>Fires when the open state should change (two-way bindable).</summary>
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>
+    /// Fires when the panel is dismissed by a user gesture rather than by the consumer:
+    /// <c>"escape"</c> or <c>"outside"</c>. Programmatic closes (<see cref="CloseAsync"/>,
+    /// <see cref="IsOpen"/> turning false) do not raise it — the consumer already knows.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnDismissed { get; set; }
+
+    /// <summary>ARIA role of the panel — typically <c>menu</c>, <c>listbox</c>, <c>dialog</c> or <c>tooltip</c>.</summary>
+    [Parameter] public string? Role { get; set; }
+
+    /// <summary>Panel content. Rendered only while the panel is open.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class(es) for the panel element — components pass their own panel class here.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the panel element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsVisible => IsOpen ?? _internalOpen;
+
+    /// <summary>Opens the panel (fires <see cref="IsOpenChanged"/> in controlled mode).</summary>
+    public Task SetOpenAsync(bool open) => ApplyOpenAsync(open, dismissed: false, reason: null);
+
+    /// <summary>Closes the panel (fires <see cref="IsOpenChanged"/> in controlled mode).</summary>
+    public Task CloseAsync() => ApplyOpenAsync(false, dismissed: false, reason: null);
+
+    /// <summary>
+    /// Called by overlay.js when a dismissal gesture (Escape, outside pointerdown) or a native
+    /// <c>hidePopover</c> closes the panel.
+    /// </summary>
+    [JSInvokable]
+    public Task NotifyDismissedAsync(string reason) => ApplyOpenAsync(false, dismissed: true, reason);
+
+    private async Task ApplyOpenAsync(bool open, bool dismissed, string? reason)
+    {
+        if (IsOpen.HasValue)
+        {
+            await IsOpenChanged.InvokeAsync(open);
+        }
+        else
+        {
+            _internalOpen = open;
+        }
+
+        if (dismissed && OnDismissed.HasDelegate)
+        {
+            await OnDismissed.InvokeAsync(reason);
+        }
+
+        // Uncontrolled mode mutates _internalOpen without a parent re-render, and the
+        // JS-invoked dismissal path must marshal back onto the renderer either way.
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string OptionsSignature() => string.Join('|',
+        Placement.ToString(), Align.ToString(), Offset, ViewportMargin,
+        Flip, Shift, MatchAnchorWidth, ConstrainHeight, CloseOnEscape, CloseOnOutsidePointerDown);
+
+    private object BuildOptions() => new
+    {
+        placement = Placement.ToString().ToLowerInvariant(),
+        align = Align.ToString().ToLowerInvariant(),
+        offset = Offset,
+        margin = ViewportMargin,
+        flip = Flip,
+        shift = Shift,
+        matchAnchorWidth = MatchAnchorWidth,
+        constrainHeight = ConstrainHeight,
+        closeOnEscape = CloseOnEscape,
+        closeOnOutsidePointerDown = CloseOnOutsidePointerDown,
+    };
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible)
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+
+            // A default ElementReference cannot be serialized to JS — pass null and let overlay.js
+            // fall back to the panel's previous element sibling.
+            var anchor = Anchor.Id is not null ? Anchor : (ElementReference?)null;
+
+            var signature = OptionsSignature();
+            if (!_jsOpen)
+            {
+                _jsOpen = true;
+                _openOptionsSignature = signature;
+                await _module.InvokeVoidAsync("open", _key, _panelRef, anchor, _dotNetRef, BuildOptions());
+            }
+            else if (_openOptionsSignature != signature)
+            {
+                _openOptionsSignature = signature;
+                await _module.InvokeVoidAsync("update", _key, anchor, BuildOptions());
+            }
+        }
+        else if (_jsOpen && _module is not null)
+        {
+            // Release BY KEY, not by element reference: a closing panel can already be detached by the
+            // time this runs and Blazor resolves an ElementReference through a document query — a
+            // detached element resolves to null, so passing it would silently release nothing and
+            // leave the entry (and the shared scroll listener) behind.
+            _jsOpen = false;
+            _openOptionsSignature = null;
+            await _module.InvokeVoidAsync("close", _key);
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null)
+            {
+                if (_jsOpen)
+                {
+                    _jsOpen = false;
+                    await _module.InvokeVoidAsync("close", _key);
+                }
+
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit already gone.
+        }
+
+        _dotNetRef?.Dispose();
+    }
+}

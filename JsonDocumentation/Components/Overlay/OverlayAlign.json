@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Overlay",
+  "namespace": "Tempo.Blazor.Components.Overlay",
+  "description": "Cross-axis alignment of a TmOverlayPanel against its anchor (Start, Center, End).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Overlay/OverlayEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "OverlayAlign"
+}

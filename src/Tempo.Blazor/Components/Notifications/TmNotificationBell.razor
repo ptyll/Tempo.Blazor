@@ -18,9 +18,17 @@
         }
     </button>
 
-    @if (_isOpen)
-    {
-        <div class="tm-notification-bell__dropdown">
+    @* The dropdown is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
+       ancestor's overflow/transform can no longer clip it. Bottom + End + 8px replaces the old
+       top:calc(100%+0.5rem);right:0; the fixed 360px width stays in CSS. *@
+    <TmOverlayPanel Anchor="_rootRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpenFromJsAsync"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Offset="8"
+                    Role="dialog"
+                    Class="tm-notification-bell__dropdown">
             <div class="tm-notification-bell__header">
                 <span class="tm-notification-bell__title">@Loc["TmNotificationBell_AriaLabel"]</span>
                 <div class="tm-notification-bell__actions">
@@ -73,8 +81,7 @@
                     <div class="tm-notification-bell__empty">@Loc["TmNotificationBell_NoNotifications"]</div>
                 }
             </div>
-        </div>
-    }
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -125,6 +132,27 @@
     {
         _isOpen = !_isOpen;
         if (_isOpen)
+        {
+            _hasNew = false;
+            await LoadNotificationsAsync();
+        }
+        else
+        {
+            _showOnlyUnread = false;
+        }
+        await OnDropdownOpenChanged.InvokeAsync(_isOpen);
+    }
+
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js) — same state effects as
+    /// the toggle path (reset the unread-only filter, notify OnDropdownOpenChanged).
+    /// </summary>
+    private async Task SetOpenFromJsAsync(bool open)
+    {
+        if (open == _isOpen)
+            return;
+        _isOpen = open;
+        if (open)
         {
             _hasNew = false;
             await LoadNotificationsAsync();

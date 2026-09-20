@@ -53,17 +53,16 @@
 }
 
 /* Dropdown */
+/* The dropdown is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
+   overlay.js writes top/left (Bottom + End + 8px replaces top:calc(100%+0.5rem);right:0). The
+   panel lands in the browser top layer. */
 .tm-notification-bell__dropdown {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
     width: 360px;
     max-width: calc(100vw - 2rem);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     box-shadow: var(--tm-shadow-lg);
-    z-index: var(--tm-z-dropdown, 1000);
     overflow: hidden;
     display: flex;
     flex-direction: column;

@@ -11,6 +11,7 @@ namespace Tempo.Blazor.Components.Inputs;
 public partial class TmMultiColumnComboBox<TItem, TValue>
 {
     private bool _isOpen;
+    private ElementReference _rootRef;
     private string _filterText = string.Empty;
     private readonly List<MultiColumnComboBoxColumn<TItem>> _columns = [];
     private IReadOnlyList<TItem> _filteredItems = [];
@@ -109,6 +110,9 @@ public partial class TmMultiColumnComboBox<TItem, TValue>
             }
         }
     }
+
+    /// <summary>JS-driven dismissal (Escape or outside pointerdown from overlay.js).</summary>
+    private void SetOpen(bool open) => _isOpen = open;
 
     private async Task SelectItemAsync(TItem item)
     {
