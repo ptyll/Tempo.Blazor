@@ -48,11 +48,23 @@
     outline-offset: -2px;
 }
 
-.tm-scroll-spy-nav__link--active {
+/* The active link compounds base+modifier AND scopes to the side-rail: the bare
+   .tm-scroll-spy-nav__link--active measured as a (0,1,0) tie against .tm-scroll-spy-nav__link
+   (the application's rendered-CSS probe, E2E-0038), so source order — not the selector — picked
+   the winner. The nav root always emits a variant class, so scoping changes which elements match
+   only for a breadcrumb link (which the breadcrumb block below owns anyway). */
+.tm-scroll-spy-nav--siderail .tm-scroll-spy-nav__link.tm-scroll-spy-nav__link--active {
     background: var(--tm-color-primary-subtle);
     color: var(--tm-color-primary);
     border-left-color: var(--tm-color-primary);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+/* A HOVERED active link keeps the gray wash it paints today: the unscoped --active used to lose
+   to .tm-scroll-spy-nav__link:hover (0,2,0) > (0,1,0), so the hover colour showed through. The
+   compound now out-ranks that rule — without this explicit hover form the pixel would change. */
+.tm-scroll-spy-nav--siderail .tm-scroll-spy-nav__link.tm-scroll-spy-nav__link--active:hover {
+    background: var(--tm-color-gray-100);
 }
 
 .tm-scroll-spy-nav__label {
@@ -85,7 +97,13 @@
     border-radius: 0;
 }
 
-.tm-scroll-spy-nav--breadcrumb .tm-scroll-spy-nav__link--active {
+/* Compound base+modifier: the breadcrumb-scoped active rule used to tie the breadcrumb-scoped
+   base at (0,2,0) and win only by file order. color/font-weight move here from the deleted
+   unscoped --active rule — a breadcrumb link no longer matches it (its root is --breadcrumb),
+   so this rule must carry the whole active paint itself. */
+.tm-scroll-spy-nav--breadcrumb .tm-scroll-spy-nav__link.tm-scroll-spy-nav__link--active {
     background: none;
     border-bottom-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-semibold);
 }

@@ -543,4 +543,644 @@ public class UnconstrainedClassOwnershipTests
 
         return collisions;
     }
+
+    /* ═══════════════ Fáze 18.1 — základ | modifikátor na TÉMŽ elementu ═══════════════
+
+       The pairs below are NOT a scan result — they are the application's frozen measurement
+       (datoveschrankyV2 `RenderedCssGuardTests.TempoOwnedTiePairs`, findings E2E-0038,
+       `tempo-gap-register.md`): a base class and a modifier that markup ALWAYS emits on the same
+       element, both declaring the same property at the same specificity, so the manifest order —
+       not the author — picked the winner. The fix is the compound selector
+       (`.tm-btn.tm-btn-ghost`), and this sweep is its guard: for every recorded pair, EVERY claim
+       whose subject carries the modifier class must strictly out-rank EVERY claim whose subject is
+       the bare base, on every property they share — hover/focus/disabled spellings included,
+       because a state on the subject is still a claim on the subject.
+
+       Two details keep the sweep honest:
+       - a base claim that excludes the modifier BY NAME (`:not(.tm-page-btn-active)`) can never
+         apply to the modified element, so it is skipped by name — not by threshold;
+       - `:where()` contributes ZERO specificity: a modifier wrapped in it silently loses its
+         compound — the mutation test exercises exactly that shape.
+
+       DENOMINATOR, from a different source than the probe: the ten rows transcribe the eleven
+       entries the application's triage assigns to Fáze 18.1 — skupina A (7) + skupina B (2, one
+       class pair measured in two ancestor contexts: side-rail and `--breadcrumb`) + the two
+       `.tm-btn|.tm-btn-{md,sm}` pairs 2.8.26 added. Deliberately absent:
+       - `.tm-btn|.tm-btn-outline`, `.tm-btn|.tm-column-picker-toggle`,
+         `.tm-page-btn|.tm-page-btn-active` — assigned to Fáze 22.4. Outline and the column-picker
+         toggle are COUPLED: the toggle wears `tm-btn tm-btn-outline` and its colour beats the
+         outline's by order today — compounding `.tm-btn-outline` alone would repaint it;
+       - `.tm-input|.text-lg` — the other side is an APPLICATION utility the host wants to win
+         (tempo-gap-register #16); the fix is a Tempo size-variant API or a markup rewrite, not a
+         specificity compound. */
+
+    /// <summary>One selector part as a base|modifier claim — the subject's required and excluded
+    /// classes, the ancestors scoping it, its specificity, media condition, and declarations.</summary>
+    private sealed record ModifierClaim(
+        string Selector,
+        string Stylesheet,
+        IReadOnlySet<string> SubjectClasses,
+        IReadOnlySet<string> SubjectExcludes,
+        IReadOnlySet<string> Ancestors,
+        (int Id, int Class, int Type) Specificity,
+        string? Media,
+        IReadOnlyDictionary<string, bool> Props); // property → !important
+
+    /// <summary>
+    /// The measured pairs, transcribed — the sweep's denominator comes from the frozen list in the
+    /// application guard, not from anything this scan derives.
+    /// </summary>
+    private static readonly (string Base, string Modifier)[] RecordedModifierPairs =
+    [
+        // Skupina A — základ + varianta/velikost na TÉMŽ elementu (7 dvojic) + md/sm z 2.8.26.
+        ("tm-btn", "tm-btn-ghost"),
+        ("tm-btn", "tm-btn-outline-secondary"),
+        ("tm-btn", "tm-btn-primary"),
+        ("tm-btn", "tm-btn-secondary"),
+        ("tm-btn", "tm-btn-md"),
+        ("tm-btn", "tm-btn-sm"),
+        ("tm-input", "tm-input-with-left-icon"),
+        ("tm-input", "tm-input-with-right-icon"),
+        ("tm-input", "tm-textarea"),
+        // Skupina B — jedna dvojice tříd, naměřená ve dvou kontextech (siderail i breadcrumb).
+        ("tm-scroll-spy-nav__link", "tm-scroll-spy-nav__link--active"),
+    ];
+
+    [Fact]
+    public void EveryRecordedModifier_OutranksItsBaseOnEverySharedProperty()
+    {
+        var violations = ModifierViolations(ModifierClaims(), RecordedModifierPairs);
+
+        violations.Should().BeEmpty(
+            "modifikátor musí nad základem vítězit SELEKTOREM — při shodné specificitě rozhoduje "
+            + "pořadí importů v manifestu, a to je přesně remíza, kterou aplikace naměřila. "
+            + "Nalezeno:\n{0}", string.Join("\n", violations));
+    }
+
+    /// <summary>
+    /// The fail-closed denominator: every recorded pair must still HAVE both sides claimed in the
+    /// corpus and at least one property the two sides contest — otherwise the sweep measured
+    /// nothing for that pair and the green above is an empty population, not a proof.
+    /// </summary>
+    [Fact]
+    public void EveryRecordedModifierPair_StillHasBothSidesMeasured()
+    {
+        var claims = ModifierClaims();
+        var missing = new List<string>();
+        foreach (var (b, m) in RecordedModifierPairs)
+        {
+            var bases = claims.Count(c => c.SubjectClasses.Count == 1 && c.SubjectClasses.Contains(b));
+            var modifiers = claims.Count(c => c.SubjectClasses.Contains(m));
+            if (bases == 0)
+            {
+                missing.Add($"{b}|{m}: žádné pravidlo nenárokuje základ .{b}");
+            }
+
+            if (modifiers == 0)
+            {
+                missing.Add($"{b}|{m}: žádné pravidlo nenárokuje modifikátor .{m}");
+            }
+
+            if (bases > 0 && modifiers > 0 && ModifierContests(claims, b, m).Count == 0)
+            {
+                missing.Add($"{b}|{m}: žádná sdílená vlastnost — sonda dvojici nikdy neměřila");
+            }
+        }
+
+        missing.Should().BeEmpty(
+            "zamrazená dvojice, které jedna strana zmizela z korpusu, se ze seznamu ŠKRTÁ — "
+            + "prázdná populace není důkaz opravy:\n{0}", string.Join("\n", missing));
+    }
+
+    /// <summary>
+    /// Mutation, both directions: the bare modifier must be flagged (that is the measured defect),
+    /// the compound must pass, and every documented edge must behave the way the model promises —
+    /// a base rule with a pseudo-class STILL contests (a state is a claim), while a base rule that
+    /// excludes the modifier by `:not()` cannot. A modifier wrapped in `:where()` loses its
+    /// compound specificity, which is exactly why the sweep must read it.
+    /// </summary>
+    [Fact]
+    public void TheModifierSweep_FlagsTheBareForm_AndAcceptsTheCompound()
+    {
+        var claims = new List<ModifierClaim>();
+
+        // RED side of the pair: the bare modifier ties the bare base — the Fáze-18.1 defect itself.
+        CollectModifierClaims("t.css", ".tm-w { color: red; } .tm-w-mod { color: blue; }", claims);
+        ModifierViolations(claims, [("tm-w", "tm-w-mod")]).Should().ContainSingle(
+            "holý modifikátor (0,1,0) proti základu (0,1,0) je remíza — přesně tvar, který sonda měří");
+
+        // GREEN: the compound modifier wins by structure, in any file order.
+        claims.Clear();
+        CollectModifierClaims("t.css", ".tm-w.tm-w-mod { color: blue; } .tm-w { color: red; }", claims);
+        ModifierViolations(claims, [("tm-w", "tm-w-mod")]).Should().BeEmpty(
+            "kompozitní selektor (0,2,0) vítězí i když stojí PŘED základem");
+
+        // A base claim carrying a state still contests — :hover is a condition on the same owner.
+        claims.Clear();
+        CollectModifierClaims(
+            "t.css",
+            ".tm-w { color: red; } .tm-w:hover { color: gray; } .tm-w.tm-w-mod { color: blue; }",
+            claims);
+        ModifierViolations(claims, [("tm-w", "tm-w-mod")]).Should().ContainSingle(
+            ".tm-w:hover (0,2,0) a .tm-w.tm-w-mod (0,2,0) se na hoverovaném modifikovaném prvku "
+            + "potkávají — stavová forma základu remízu neřeší");
+
+        // …but a base claim that excludes the modifier by name never applies to it.
+        claims.Clear();
+        CollectModifierClaims(
+            "t.css",
+            ".tm-w { color: red; } .tm-w:hover:not(.tm-w-mod) { color: gray; } .tm-w.tm-w-mod { color: blue; }",
+            claims);
+        ModifierViolations(claims, [("tm-w", "tm-w-mod")]).Should().BeEmpty(
+            ":not(.tm-w-mod) prvek nesoucí modifikátor nikdy netrefí — ta dvojice nesoupeří");
+
+        // :where() drops the wrapped classes to zero specificity — a modifier written
+        // .tm-w:where(.tm-w-mod) is the bare tie in disguise and must be flagged.
+        claims.Clear();
+        CollectModifierClaims(
+            "t.css", ".tm-w { color: red; } .tm-w:where(.tm-w-mod) { color: blue; }", claims);
+        ModifierViolations(claims, [("tm-w", "tm-w-mod")]).Should().ContainSingle(
+            ":where() vezme modifikátoru jeho specificitu — sweep to musí číst, ne překousnout");
+
+        // Disjoint ancestor regions cannot fight: the modifier scoped to .tm-zone-a never meets a
+        // base rule scoped to .tm-zone-b — but it still must beat the UNSCOPED base.
+        claims.Clear();
+        CollectModifierClaims(
+            "t.css",
+            ".tm-w { color: red; } .tm-zone-a .tm-w.tm-w-mod { color: blue; } .tm-zone-b .tm-w { color: green; }",
+            claims);
+        ModifierViolations(claims, [("tm-w", "tm-w-mod")]).Should().BeEmpty(
+            "oblasti .tm-zone-a a .tm-zone-b jsou disjunktní — a neomezený základ (0,1,0) prohrává");
+    }
+
+    /// <summary>
+    /// One (modifier claim × base claim) contest the sweep evaluates for a pair — recorded so the
+    /// population fact can prove the pair was actually measured, not just listed.
+    /// </summary>
+    private sealed record ModifierContest(ModifierClaim Modifier, ModifierClaim Base, List<string> SharedProps);
+
+    /// <summary>Every contest a recorded pair produces, already filtered to shared declarations.</summary>
+    private static List<ModifierContest> ModifierContests(
+        IReadOnlyList<ModifierClaim> claims, string b, string m)
+    {
+        var contests = new List<ModifierContest>();
+        foreach (var mod in claims)
+        {
+            if (!mod.SubjectClasses.Contains(m) || mod.SubjectExcludes.Contains(b))
+            {
+                continue;
+            }
+
+            foreach (var bas in claims)
+            {
+                // The base side claims exactly the base class — a compound like .tm-btn.tm-btn-ghost
+                // is the modifier's own claim, not a second base.
+                if (bas.SubjectClasses.Count != 1 || !bas.SubjectClasses.Contains(b)
+                    || bas.SubjectExcludes.Contains(m))
+                {
+                    continue;
+                }
+
+                if (!RegionsCanFight(mod.Ancestors, bas.Ancestors)
+                    || !CssCascade.MediaCanOverlap(mod.Media, bas.Media))
+                {
+                    continue;
+                }
+
+                var modProps = ExpandDeclarations(mod.Props);
+                var baseProps = ExpandDeclarations(bas.Props);
+                var shared = modProps.Keys.Intersect(baseProps.Keys, StringComparer.Ordinal)
+                    .Order(StringComparer.Ordinal).ToList();
+                if (shared.Count > 0)
+                {
+                    contests.Add(new ModifierContest(mod, bas, shared));
+                }
+            }
+        }
+
+        return contests;
+    }
+
+    private static List<string> ModifierViolations(
+        IReadOnlyList<ModifierClaim> claims,
+        IEnumerable<(string Base, string Modifier)> pairs)
+    {
+        var violations = new List<string>();
+        foreach (var (b, m) in pairs)
+        {
+            foreach (var contest in ModifierContests(claims, b, m))
+            {
+                var modProps = ExpandDeclarations(contest.Modifier.Props);
+                var baseProps = ExpandDeclarations(contest.Base.Props);
+                foreach (var prop in contest.SharedProps)
+                {
+                    // A declaration the modifier marks !important wins by importance — never a tie;
+                    // a base !important against a normal modifier is the opposite defect, named so.
+                    var modImportant = modProps[prop];
+                    var baseImportant = baseProps[prop];
+                    var modifierWins = modImportant == baseImportant
+                        ? contest.Modifier.Specificity.CompareTo(contest.Base.Specificity) > 0
+                        : modImportant;
+                    if (!modifierWins)
+                    {
+                        violations.Add(string.Create(CultureInfo.InvariantCulture,
+                            $"{b}|{m} [{prop}]: {contest.Modifier.Selector} "
+                            + $"({FormatSpec(contest.Modifier.Specificity)}) v {contest.Modifier.Stylesheet} "
+                            + $"× {contest.Base.Selector} ({FormatSpec(contest.Base.Specificity)}) "
+                            + $"v {contest.Base.Stylesheet}"));
+                    }
+                }
+            }
+        }
+
+        return violations;
+    }
+
+    private static string FormatSpec((int Id, int Class, int Type) spec) =>
+        string.Create(CultureInfo.InvariantCulture, $"{spec.Id},{spec.Class},{spec.Type}");
+
+    /// <summary>
+    /// The declarations of one claim with shorthands expanded to the longhands they set and logical
+    /// properties normalised to their physical names — the same two shapes the application probe
+    /// measures (<c>padding</c> vs <c>padding-left</c>, <c>margin-inline-start</c> vs
+    /// <c>margin-left</c>). Values stay unexpanded: the sweep answers WHETHER the two sides contest
+    /// a property, never which value wins.
+    /// </summary>
+    private static Dictionary<string, bool> ExpandDeclarations(IReadOnlyDictionary<string, bool> props)
+    {
+        var expanded = new Dictionary<string, bool>(StringComparer.Ordinal);
+        foreach (var (name, important) in props)
+        {
+            var physical = PhysicalName(name);
+            expanded[physical] = important;
+            if (ShorthandLonghands.TryGetValue(physical, out var longhands))
+            {
+                foreach (var longhand in longhands)
+                {
+                    expanded[longhand] = important;
+                }
+            }
+        }
+
+        return expanded;
+    }
+
+    /// <summary>The longhands a shorthand also writes — the mirror image of CssCascade.ShorthandOf.</summary>
+    private static readonly Dictionary<string, string[]> ShorthandLonghands = new(StringComparer.Ordinal)
+    {
+        ["border"] = ["border-width", "border-color"],
+        ["border-top"] = ["border-top-width", "border-top-color"],
+        ["border-right"] = ["border-right-width", "border-right-color"],
+        ["border-bottom"] = ["border-bottom-width", "border-bottom-color"],
+        ["border-left"] = ["border-left-width", "border-left-color"],
+        ["padding"] = ["padding-top", "padding-right", "padding-bottom", "padding-left"],
+        ["margin"] = ["margin-top", "margin-right", "margin-bottom", "margin-left"],
+        ["background"] = ["background-color"],
+    };
+
+    /// <summary>Logical property names folded onto the physical pixel they paint.</summary>
+    private static string PhysicalName(string property) => property switch
+    {
+        "padding-block-start" or "padding-top" => "padding-top",
+        "padding-block-end" or "padding-bottom" => "padding-bottom",
+        "padding-inline-start" or "padding-left" => "padding-left",
+        "padding-inline-end" or "padding-right" => "padding-right",
+        "margin-block-start" or "margin-top" => "margin-top",
+        "margin-block-end" or "margin-bottom" => "margin-bottom",
+        "margin-inline-start" or "margin-left" => "margin-left",
+        "margin-inline-end" or "margin-right" => "margin-right",
+        "border-block-start-color" or "border-top-color" => "border-top-color",
+        "border-block-end-color" or "border-bottom-color" => "border-bottom-color",
+        "border-inline-start-color" or "border-left-color" => "border-left-color",
+        "border-inline-end-color" or "border-right-color" => "border-right-color",
+        "inline-size" or "width" => "width",
+        "block-size" or "height" => "height",
+        "min-inline-size" or "min-width" => "min-width",
+        "min-block-size" or "min-height" => "min-height",
+        "max-inline-size" or "max-width" => "max-width",
+        "max-block-size" or "max-height" => "max-height",
+        _ => property,
+    };
+
+    /// <summary>All claims of one stylesheet and all <c>*.razor.css</c> scoped sheets — the scoped
+    /// selectors gain a uniform <c>[b-*]</c> at build time, so comparisons inside them stay faithful.</summary>
+    private static List<ModifierClaim> ModifierClaims()
+    {
+        var claims = new List<ModifierClaim>();
+        var root = ThemeCss.RepositoryRoot().FullName;
+        foreach (var project in ComponentCssProjects)
+        {
+            var dir = Path.Combine(root, "src", project, "wwwroot", "css", "components");
+            if (!Directory.Exists(dir))
+            {
+                continue;
+            }
+
+            foreach (var file in Directory.EnumerateFiles(dir, "*.css").Order(StringComparer.Ordinal))
+            {
+                CollectModifierClaims($"{project}/{Path.GetFileName(file)}", File.ReadAllText(file), claims);
+            }
+        }
+
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(root, "src"), "*.razor.css", SearchOption.AllDirectories)
+                     .Order(StringComparer.Ordinal))
+        {
+            var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
+            CollectModifierClaims($"scoped:{relative}", File.ReadAllText(file), claims);
+        }
+
+        return claims;
+    }
+
+    private static void CollectModifierClaims(
+        string stylesheet, string css, List<ModifierClaim> claims)
+    {
+        foreach (var rule in CssCascade.ParseRules(ThemeCss.StripComments(css)))
+        {
+            var props = new Dictionary<string, bool>(StringComparer.Ordinal);
+            foreach (var declaration in rule.Body.Split(';'))
+            {
+                var separator = declaration.IndexOf(':', StringComparison.Ordinal);
+                if (separator > 0)
+                {
+                    var value = ThemeCss.Normalise(declaration[(separator + 1)..]);
+                    props[declaration[..separator].Trim()] =
+                        value.EndsWith("!important", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            foreach (var part in ThemeCss.SelectorParts(rule.Selector))
+            {
+                var claim = TryModifierClaim(part, stylesheet, rule.MediaCondition, props);
+                if (claim is not null)
+                {
+                    claims.Add(claim);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The base|modifier claim one selector part makes, or null when the selector is outside the
+    /// model — the same rejections the ownership sweep makes (attributes, ids, <c>*</c>,
+    /// non-descendant combinators), plus pseudo-elements on the subject (a <c>::before</c> is a
+    /// different box, not the element). Pseudo-classes on the subject are kept: a state is still a
+    /// claim, and only a <c>:not(…)</c> argument can exclude the modifier by name.
+    /// </summary>
+    private static ModifierClaim? TryModifierClaim(
+        string selector, string stylesheet, string? media, IReadOnlyDictionary<string, bool> props)
+    {
+        if (selector.IndexOfAny(['+', '~', '#', '[', '*']) >= 0)
+        {
+            return null;
+        }
+
+        var compounds = selector.Split([' ', '>'], StringSplitOptions.RemoveEmptyEntries);
+        if (compounds.Length == 0)
+        {
+            return null;
+        }
+
+        // A functional pseudo sliced mid-argument leaves an unbalanced compound — unreadable, never
+        // silently "not a claim".
+        if (compounds.Any(c => c.Count(ch => ch == '(') != c.Count(ch => ch == ')')))
+        {
+            return null;
+        }
+
+        var subject = ParseSubjectCompound(compounds[^1]);
+        if (subject is null)
+        {
+            return null;
+        }
+
+        var ancestors = new HashSet<string>(StringComparer.Ordinal);
+        var classSpec = subject.Value.ClassSpec;
+        var typeSpec = subject.Value.TypeSpec;
+        for (var i = 0; i < compounds.Length - 1; i++)
+        {
+            // Ancestors feed only the region-overlap check, so what matters is WHICH classes they
+            // name — including ones inside :where()/:not() (conservative: they still mark a region).
+            foreach (Match match in AncestorClass.Matches(compounds[i]))
+            {
+                ancestors.Add("." + match.Groups[1].Value);
+            }
+
+            var (ancestorClass, ancestorType) = CompoundSpecificity(compounds[i]);
+            classSpec += ancestorClass;
+            typeSpec += ancestorType;
+        }
+
+        return new ModifierClaim(
+            selector, stylesheet, subject.Value.Classes, subject.Value.Excludes,
+            ancestors, (0, classSpec, typeSpec), media, props);
+    }
+
+    private static readonly Regex AncestorClass =
+        new(@"\.([a-zA-Z][\w-]*)", RegexOptions.Compiled, Timeout);
+
+    /// <summary>Specificity of one compound the way the cascade counts it: <c>:where(…)</c>
+    /// contributes nothing, <c>:not(…)</c>/<c>:is(…)</c> contribute their strongest argument.</summary>
+    private static (int Class, int Type) CompoundSpecificity(string compound)
+    {
+        var classCount = 0;
+        var typeCount = 0;
+        var i = 0;
+        while (i < compound.Length)
+        {
+            if (compound[i] == '.')
+            {
+                classCount++;
+                i += ReadIdentifier(compound, i + 1) + 1;
+            }
+            else if (compound[i] == ':')
+            {
+                if (i + 1 < compound.Length && compound[i + 1] == ':')
+                {
+                    // Pseudo-element — contributes a type-level hit.
+                    typeCount++;
+                    i += ReadIdentifier(compound, i + 2) + 2;
+                    continue;
+                }
+
+                var pseudoName = compound.Substring(i + 1, ReadIdentifier(compound, i + 1));
+                i += pseudoName.Length + 1;
+                if (i < compound.Length && compound[i] == '(')
+                {
+                    var close = BalancedClose(compound, i);
+                    if (close < 0)
+                    {
+                        break;
+                    }
+
+                    var argument = compound[(i + 1)..close];
+                    i = close + 1;
+                    if (pseudoName is "not" or "is" or "has" or "matches")
+                    {
+                        // The most specific argument decides — commas split alternatives.
+                        classCount += argument.Split(',')
+                            .Max(part => CompoundSpecificity(part.Trim()).Class
+                                         + CompoundSpecificity(part.Trim()).Type);
+                    }
+
+                    // :where() and plain functional pseudos contribute the argument or one hit —
+                    // for :where() zero, for the rest the single pseudo itself.
+                    if (pseudoName is not ("where" or "not" or "is" or "has" or "matches"))
+                    {
+                        classCount++;
+                    }
+                }
+                else
+                {
+                    classCount++;
+                }
+            }
+            else
+            {
+                // Leading type selector — everything else has been rejected upstream.
+                typeCount += ReadIdentifier(compound, i) > 0 ? 1 : 0;
+                i += Math.Max(ReadIdentifier(compound, i), 1);
+            }
+        }
+
+        return (classCount, typeCount);
+    }
+
+    private static int ReadIdentifier(string text, int start)
+    {
+        var i = start;
+        while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] is '-' or '_'))
+        {
+            i++;
+        }
+
+        return i - start;
+    }
+
+    /// <summary>The <c>)</c> matching the <c>(</c> at <paramref name="open"/>, or -1 when unbalanced.</summary>
+    private static int BalancedClose(string text, int open)
+    {
+        var depth = 0;
+        for (var i = open; i < text.Length; i++)
+        {
+            if (text[i] == '(')
+            {
+                depth++;
+            }
+            else if (text[i] == ')' && --depth == 0)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// The subject compound of a modifier-sweep claim: the classes the element must carry —
+    /// including ones inside <c>:where(…)</c>/<c>:is(…)</c>, which still SELECT even though they add
+    /// no specificity — and the classes its <c>:not(…)</c> arguments exclude. Returns null for a
+    /// compound the model cannot read (a pseudo-element subject, an empty functional argument).
+    /// </summary>
+    private static (HashSet<string> Classes, HashSet<string> Excludes, int ClassSpec, int TypeSpec)?
+        ParseSubjectCompound(string compound)
+    {
+        var classes = new HashSet<string>(StringComparer.Ordinal);
+        var excludes = new HashSet<string>(StringComparer.Ordinal);
+        var classSpec = 0;
+        var typeSpec = 0;
+        var i = 0;
+
+        var tagLength = ReadIdentifier(compound, 0);
+        if (tagLength > 0)
+        {
+            typeSpec++;
+            i = tagLength;
+        }
+
+        while (i < compound.Length)
+        {
+            if (compound[i] == '.')
+            {
+                var length = ReadIdentifier(compound, i + 1);
+                if (length == 0)
+                {
+                    return null;
+                }
+
+                classes.Add(compound.Substring(i + 1, length));
+                classSpec++;
+                i += length + 1;
+            }
+            else if (compound[i] == ':')
+            {
+                if (i + 1 < compound.Length && compound[i + 1] == ':')
+                {
+                    // A pseudo-element is a different box — not a claim on the element itself.
+                    return null;
+                }
+
+                var nameLength = ReadIdentifier(compound, i + 1);
+                if (nameLength == 0)
+                {
+                    return null;
+                }
+
+                var name = compound.Substring(i + 1, nameLength);
+                i += nameLength + 1;
+
+                if (i < compound.Length && compound[i] == '(')
+                {
+                    var close = BalancedClose(compound, i);
+                    if (close < 0)
+                    {
+                        return null;
+                    }
+
+                    var argument = compound[(i + 1)..close];
+                    i = close + 1;
+                    if (name is "where" or "is" or "matches" or "has")
+                    {
+                        foreach (var innerClass in AncestorClass.Matches(argument)
+                                     .Select(match => match.Groups[1].Value))
+                        {
+                            classes.Add(innerClass);
+                        }
+
+                        if (name is not "where")
+                        {
+                            classSpec += argument.Split(',')
+                                .Max(part => part.Count(ch => ch == '.') + part.Count(ch => ch == ':'));
+                        }
+                    }
+                    else if (name == "not")
+                    {
+                        foreach (var excluded in AncestorClass.Matches(argument)
+                                     .Select(match => match.Groups[1].Value))
+                        {
+                            excludes.Add(excluded);
+                        }
+
+                        classSpec += argument.Split(',')
+                            .Max(part => part.Count(ch => ch == '.') + part.Count(ch => ch == ':'));
+                    }
+                    else
+                    {
+                        // A functional pseudo the model does not name still counts itself.
+                        classSpec++;
+                    }
+                }
+                else
+                {
+                    classSpec++;
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        return (classes, excludes, classSpec, typeSpec);
+    }
 }

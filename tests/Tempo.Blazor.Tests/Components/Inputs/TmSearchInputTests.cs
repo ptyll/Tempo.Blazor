@@ -50,6 +50,23 @@ public class TmSearchInputTests : LocalizationTestBase
         cut.FindAll(".tm-icon").Should().NotBeEmpty();
     }
 
+    /// <summary>
+    /// The search input carries BOTH icon modifiers the measured `.tm-input|tm-input-with-*-icon`
+    /// pairs are about — left for the search icon, right for the clear button — on the same element
+    /// as `tm-input` (Fáze 18.1: the compound `.tm-input.tm-input-with-*-icon` only reaches markup
+    /// that keeps emitting them together).
+    /// </summary>
+    [Fact]
+    public void TmSearchInput_CarriesBaseAndBothIconModifiers_OnTheSameInput()
+    {
+        var cut = Render<TmSearchInput>();
+
+        cut.Find("input").ClassList.Should()
+            .Contain("tm-input")
+            .And.Contain("tm-input-with-left-icon")
+            .And.Contain("tm-input-with-right-icon");
+    }
+
     [Fact]
     public void TmSearchInput_Default_Placeholder()
     {

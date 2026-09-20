@@ -23,6 +23,21 @@ public class TmTextAreaTests : LocalizationTestBase
         cut.Find("textarea").ClassList.Should().Contain("tm-input");
     }
 
+    /// <summary>
+    /// Fáze 18.1 fixes the measured `.tm-input|.tm-textarea` cascade tie with the compound
+    /// <c>.tm-input.tm-textarea</c> — a selector that only reaches a textarea carrying BOTH
+    /// classes. This pins the markup contract it relies on.
+    /// </summary>
+    [Fact]
+    public void TmTextArea_CarriesBaseAndModifier_OnTheSameElement()
+    {
+        var cut = Render<TmTextArea>();
+
+        cut.Find("textarea").ClassList.Should()
+            .Contain("tm-input")
+            .And.Contain("tm-textarea");
+    }
+
     [Fact]
     public void TmTextArea_Default_Rows_Is_3()
     {

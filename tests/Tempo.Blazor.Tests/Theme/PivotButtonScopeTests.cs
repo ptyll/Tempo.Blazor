@@ -111,8 +111,9 @@ public class PivotButtonScopeTests
 
         winner.Unmodelled.Should().BeEmpty();
         winner.Source.Should().Be(
-            ".tm-btn-outline-secondary",
-            "vítězem musí být pravidlo varianty, ne zkratka `border` jiné komponenty");
+            ".tm-btn.tm-btn-outline-secondary",
+            "vítězem musí být pravidlo varianty, ne zkratka `border` jiné komponenty — Fáze 18.1 "
+            + "jej nese jako kompozit, takže vítězí selektorem, ne pořadím");
         winner.Value.Should().Be("var(--tm-border-color-control)");
     }
 
@@ -161,7 +162,8 @@ public class PivotButtonScopeTests
         var winner = CssCascade.Resolve(ThemeCss.BundledCss(), OutlineSecondaryButton, "padding");
 
         winner.Unmodelled.Should().BeEmpty();
-        winner.Source.Should().Be(".tm-btn-md");
+        winner.Source.Should().Be(".tm-btn.tm-btn-md",
+            "velikostní třída se od Fáze 18.1 nese jako kompozit — vítězí selektorem, ne pořadím");
     }
 
     // ── Mutation: the reader has to see the defect if it comes back ──
@@ -169,6 +171,9 @@ public class PivotButtonScopeTests
     /// <summary>
     /// The negative control. Without it the cascade guards would pass on a reader that simply never
     /// finds a later rule — a probe that cannot see the defect is not measuring the defect.
+    /// Since Fáze 18.1 a bare `.tm-btn` can no longer out-vote the compound variant on a CONTESTED
+    /// property — that is the fix asserting itself — so the control reads the override where it
+    /// still must land: on a plain `.tm-btn` element, and on a property no variant declares.
     /// </summary>
     [Fact]
     public void TheCascadeReader_SeesAGlobalButtonOverrideWhenOneIsPresent()
@@ -176,11 +181,17 @@ public class PivotButtonScopeTests
         var mutated = ThemeCss.BundledCss()
                       + ".tm-btn{gap:var(--tm-space-1);border:1px solid transparent;}";
 
-        var winner = CssCascade.Resolve(mutated, OutlineSecondaryButton, "border-color");
-
-        winner.Source.Should().Be(".tm-btn");
-        winner.Value.Should().Be("transparent");
+        var plain = CssCascade.Resolve(mutated, [new CssCascade.Element("button", "tm-btn")], "border-color");
+        plain.Source.Should().Be(".tm-btn",
+            "pozdní holý .tm-btn na OBYČEJNÉM tlačítku pořád přebíjí — čtečka ho musí vidět");
+        plain.Value.Should().Be("transparent");
         CssCascade.Resolve(mutated, OutlineSecondaryButton, "gap").Value.Should().Be("var(--tm-space-1)");
+
+        var variant = CssCascade.Resolve(mutated, OutlineSecondaryButton, "border-color");
+        variant.Source.Should().Be(".tm-btn.tm-btn-outline-secondary",
+            "na variantě kompozit (0,2,0) poráží holý základ (0,1,0) i když přijde později — "
+            + "přesně remíza, kterou aplikace naměřila");
+        variant.Value.Should().Be("var(--tm-border-color-control)");
     }
 
     /// <summary>

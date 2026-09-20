@@ -121,6 +121,30 @@ public class TmTextInputTests : LocalizationTestBase
         cut.FindAll(".tm-icon").Should().NotBeEmpty();
     }
 
+    /// <summary>
+    /// Fáze 18.1 fixes the measured `.tm-input|.tm-input-with-left-icon` cascade tie with the
+    /// compound <c>.tm-input.tm-input-with-left-icon</c> — a selector that only reaches an input
+    /// carrying BOTH classes. This pins the markup contract it relies on.
+    /// </summary>
+    [Fact]
+    public void TmTextInput_LeftIcon_CarriesBaseAndModifier_OnTheSameInput()
+    {
+        var cut = Render<TmTextInput>(p => p.Add(c => c.LeftIcon, "search"));
+
+        cut.Find("input").ClassList.Should()
+            .Contain("tm-input")
+            .And.Contain("tm-input-with-left-icon");
+    }
+
+    [Fact]
+    public void TmTextInput_NoLeftIcon_OmitsTheModifier()
+    {
+        var cut = Render<TmTextInput>();
+
+        var classes = cut.Find("input").ClassList;
+        classes.Should().Contain("tm-input").And.NotContain("tm-input-with-left-icon");
+    }
+
     [Fact]
     public void TmTextInput_No_Icon_By_Default()
     {

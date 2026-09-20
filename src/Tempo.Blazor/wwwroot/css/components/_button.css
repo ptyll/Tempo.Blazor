@@ -36,17 +36,26 @@
   pointer-events: none;
 }
 
-/* Sizes */
-.tm-btn-xs { height: var(--tm-input-height-xs); padding: 0 var(--tm-space-2);   font-size: var(--tm-font-size-xs); }
-.tm-btn-sm { height: var(--tm-input-height-sm); padding: 0 var(--tm-space-3);   font-size: var(--tm-font-size-sm); }
-.tm-btn-md { height: var(--tm-input-height-md); padding: 0 var(--tm-space-4);   font-size: var(--tm-font-size-sm); }
-.tm-btn-lg { height: var(--tm-input-height-lg); padding: 0 var(--tm-space-5);   font-size: var(--tm-font-size-md); }
+/* Sizes — the size modifier compounds onto .tm-btn: markup always emits both classes on the same
+   button, and the compound (0,2,0) makes the modifier win by SELECTOR, not by the manifest order —
+   the application's rendered-CSS probe measured .tm-btn|.tm-btn-sm and .tm-btn|.tm-btn-md as ties
+   (E2E-0038). xs/lg are compounded with them so the size family follows one rule. */
+.tm-btn.tm-btn-xs { height: var(--tm-input-height-xs); padding: 0 var(--tm-space-2);   font-size: var(--tm-font-size-xs); }
+.tm-btn.tm-btn-sm { height: var(--tm-input-height-sm); padding: 0 var(--tm-space-3);   font-size: var(--tm-font-size-sm); }
+.tm-btn.tm-btn-md { height: var(--tm-input-height-md); padding: 0 var(--tm-space-4);   font-size: var(--tm-font-size-sm); }
+.tm-btn.tm-btn-lg { height: var(--tm-input-height-lg); padding: 0 var(--tm-space-5);   font-size: var(--tm-font-size-md); }
 
 /* Block */
 .tm-btn-block { width: 100%; }
 
-/* Variants */
-.tm-btn-primary {
+/* Variants — the four the probe measured (primary/secondary/outline-secondary/ghost) compound
+   onto .tm-btn for the same reason the sizes do: the variant must win by selector, not by import
+   order. Their :hover/:active forms carry the same compound so the whole family follows one rule.
+   .tm-btn-outline and .tm-btn-danger deliberately stay bare: outline is assigned to Fáze 22.4
+   (the column-picker toggle wears it and wins on colour by order today — compounding it here
+   would repaint the toggle), and danger must stay below [data-theme="dark"] .tm-btn-danger,
+   which precedes it. */
+.tm-btn.tm-btn-primary {
   background-color: var(--tm-color-primary);
   border-color: var(--tm-color-primary);
   /* Ink on a primary fill goes through the token, not through a hardcoded white plus a per-component
@@ -54,11 +63,11 @@
      BOTH theming APIs at once. Light is unchanged (--tm-text-inverse is white there). */
   color: var(--tm-color-on-primary);
 }
-.tm-btn-primary:hover:not(:disabled) {
+.tm-btn.tm-btn-primary:hover:not(:disabled) {
   background-color: var(--tm-color-primary-hover);
   border-color: var(--tm-color-primary-hover);
 }
-.tm-btn-primary:active:not(:disabled) {
+.tm-btn.tm-btn-primary:active:not(:disabled) {
   background-color: var(--tm-color-primary-active);
 }
 /* .tm-btn-primary no longer needs a dark block: it takes --tm-color-on-primary, which the token file
@@ -71,30 +80,30 @@
   color: var(--tm-text-inverse);
 }
 
-.tm-btn-secondary {
+.tm-btn.tm-btn-secondary {
   background-color: var(--tm-bg-surface);
   border-color: var(--tm-border-color);
   color: var(--tm-text-primary);
 }
-.tm-btn-secondary:hover:not(:disabled) {
+.tm-btn.tm-btn-secondary:hover:not(:disabled) {
   background-color: var(--tm-color-gray-50);
 }
 
-.tm-btn-outline-secondary {
+.tm-btn.tm-btn-outline-secondary {
   background-color: transparent;
   border-color: var(--tm-border-color-control);
   color: var(--tm-text-primary);
 }
-.tm-btn-outline-secondary:hover:not(:disabled) {
+.tm-btn.tm-btn-outline-secondary:hover:not(:disabled) {
   background-color: var(--tm-color-gray-50);
 }
 
-.tm-btn-ghost {
+.tm-btn.tm-btn-ghost {
   background-color: transparent;
   border-color: transparent;
   color: var(--tm-text-primary);
 }
-.tm-btn-ghost:hover:not(:disabled) {
+.tm-btn.tm-btn-ghost:hover:not(:disabled) {
   background-color: var(--tm-color-gray-100);
 }
 

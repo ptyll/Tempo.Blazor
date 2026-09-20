@@ -254,4 +254,49 @@ public class TmScrollSpyNavTests : LocalizationTestBase
 
         cut.Find(".tm-scroll-spy-nav").ClassList.Should().Contain("tm-scroll-spy-nav--breadcrumb");
     }
+
+    /// <summary>
+    /// The scoped CSS fixes the measured `.tm-scroll-spy-nav__link|--active` cascade tie with the
+    /// compound <c>.tm-scroll-spy-nav__link.tm-scroll-spy-nav__link--active</c> — a selector that
+    /// only reaches an element carrying BOTH classes. This pins the markup contract the compound
+    /// relies on, in both variants (Fáze 18.1).
+    /// </summary>
+    [Theory]
+    [InlineData(ScrollSpyNavVariant.SideRail)]
+    [InlineData(ScrollSpyNavVariant.Breadcrumb)]
+    public void ScrollSpyNav_ActiveLink_CarriesBaseAndModifier_OnTheSameElement(ScrollSpyNavVariant variant)
+    {
+        var cut = Render<TmScrollSpyNav>(p => p
+            .Add(x => x.Items, Items)
+            .Add(x => x.Variant, variant)
+            .Add(x => x.ActiveId, "details"));
+
+        var active = cut.Find("[data-testid='tm-scroll-spy-nav-details']");
+        active.ClassList.Should().Contain("tm-scroll-spy-nav__link")
+            .And.Contain("tm-scroll-spy-nav__link--active");
+
+        var inactive = cut.Find("[data-testid='tm-scroll-spy-nav-intro']");
+        inactive.ClassList.Should().Contain("tm-scroll-spy-nav__link")
+            .And.NotContain("tm-scroll-spy-nav__link--active");
+    }
+
+    /// <summary>
+    /// The scoped selectors the active state wins against are variant-scoped —
+    /// <c>.tm-scroll-spy-nav--siderail …</c> / <c>.tm-scroll-spy-nav--breadcrumb …</c> — so the nav
+    /// root must always carry the variant class, for every variant the enum offers.
+    /// </summary>
+    [Fact]
+    public void ScrollSpyNav_Root_AlwaysCarriesAVariantClass()
+    {
+        foreach (var variant in Enum.GetValues<ScrollSpyNavVariant>())
+        {
+            var cut = Render<TmScrollSpyNav>(p => p
+                .Add(x => x.Items, Items)
+                .Add(x => x.Variant, variant));
+
+            var classes = cut.Find(".tm-scroll-spy-nav").ClassList;
+            classes.Should().Contain(c => c.StartsWith("tm-scroll-spy-nav--"),
+                "scoped aktivní pravidla se opírají o variantní třídu kořene — bez ní nechytí");
+        }
+    }
 }

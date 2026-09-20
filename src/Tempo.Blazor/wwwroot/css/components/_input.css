@@ -58,8 +58,10 @@
   box-shadow: var(--tm-shadow-focus-danger) !important;
 }
 
-/* Validation icons */
-.tm-input-with-validation-icon {
+/* Validation icons — padding modifiers compound onto .tm-input for the same reason the measured
+   .tm-input|.tm-input-with-*-icon pairs do: markup always emits both classes on the same input,
+   and the compound (0,2,0) makes the modifier win by SELECTOR, not by the manifest order. */
+.tm-input.tm-input-with-validation-icon {
   padding-right: 2.25rem;
 }
 .tm-input-validation-icon {
@@ -90,8 +92,8 @@
   -webkit-appearance: none;
   appearance: none;
 }
-.tm-input-with-left-icon  { padding-left: 2.25rem; }
-.tm-input-with-right-icon { padding-right: 2.25rem; }
+.tm-input.tm-input-with-left-icon  { padding-left: 2.25rem; }
+.tm-input.tm-input-with-right-icon { padding-right: 2.25rem; }
 .tm-input-left-icon,
 .tm-input-right-icon {
   position: absolute;
@@ -171,8 +173,9 @@
   box-shadow: var(--tm-shadow-focus);
 }
 
-/* TextArea */
-.tm-textarea {
+/* TextArea — .tm-textarea is always emitted alongside .tm-input (TmTextArea.razor), so it
+   compounds: it must beat the base's height/padding by selector, not by this file's order. */
+.tm-input.tm-textarea {
   resize: vertical;
   height: auto;
   min-height: 5rem;

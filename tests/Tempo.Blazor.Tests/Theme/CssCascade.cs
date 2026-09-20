@@ -114,6 +114,21 @@ internal static class CssCascade
         {
             ["border-color"] = ("border", BorderColourFromShorthand),
             ["border-width"] = ("border", value => value.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()),
+            // Fáze 18.1: the modifier/base ties are contested on these longhands — a shorthand
+            // declaration must therefore be readable as the longhand it sets, or a probe that only
+            // reads `padding-left` cannot see `.tm-input`'s `padding: 0 var(--tm-space-3)` claim.
+            ["padding-top"] = ("padding", value => BoxSide(value, Side.Top)),
+            ["padding-right"] = ("padding", value => BoxSide(value, Side.Right)),
+            ["padding-bottom"] = ("padding", value => BoxSide(value, Side.Bottom)),
+            ["padding-left"] = ("padding", value => BoxSide(value, Side.Left)),
+            ["border-top-color"] = ("border-top", BorderColourFromShorthand),
+            ["border-right-color"] = ("border-right", BorderColourFromShorthand),
+            ["border-bottom-color"] = ("border-bottom", BorderColourFromShorthand),
+            ["border-left-color"] = ("border-left", BorderColourFromShorthand),
+            // `background: <colour>` also sets background-color (and resets the rest); the measured
+            // pairs only ever need the colour component — a non-colour first layer reports as no
+            // colour rather than a guess.
+            ["background-color"] = ("background", BackgroundColourFromShorthand),
         };
 
     /// <summary>
@@ -292,6 +307,88 @@ internal static class CssCascade
         || token.StartsWith("var(--tm-border-width", StringComparison.Ordinal)
         || token.StartsWith("calc(", StringComparison.Ordinal);
 
+    private enum Side
+    {
+        Top,
+        Right,
+        Bottom,
+        Left,
+    }
+
+    /// <summary>
+    /// One side of a <c>padding</c>/<c>margin</c> shorthand: 1 value is all sides, 2 are
+    /// vertical/horizontal, 3 are top/horizontal/bottom, 4 are top/right/bottom/left.
+    /// </summary>
+    private static string? BoxSide(string value, Side side)
+    {
+        var tokens = SplitTopLevel(value);
+        return tokens.Count switch
+        {
+            1 => tokens[0],
+            2 => side is Side.Top or Side.Bottom ? tokens[0] : tokens[1],
+            3 => side switch
+            {
+                Side.Top => tokens[0],
+                Side.Bottom => tokens[2],
+                _ => tokens[1],
+            },
+            >= 4 => side switch
+            {
+                Side.Top => tokens[0],
+                Side.Right => tokens[1],
+                Side.Bottom => tokens[2],
+                _ => tokens[3],
+            },
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// The colour component of a <c>background</c> shorthand's first layer: the token that is not a
+    /// position, size, repeat, attachment, origin, clip or <c>url(…)</c>/gradient image. A layer that
+    /// names no colour reports <c>none</c> for the image part — which the longhand reads as
+    /// transparent — rather than a fabricated colour.
+    /// </summary>
+    private static string? BackgroundColourFromShorthand(string value)
+    {
+        // Only the first layer matters to the guards that exist today; a second layer's presence is
+        // still honoured because SplitOnTopLevelComma keeps the list intact.
+        var (firstLayer, _) = ThemeCss.SplitOnTopLevelComma(value);
+        foreach (var token in SplitTopLevel(firstLayer))
+        {
+            var lowered = token.ToLowerInvariant();
+            if (lowered is "none" or "fixed" or "scroll" or "local"
+                or "border-box" or "padding-box" or "content-box"
+                or "no-repeat" or "repeat" or "repeat-x" or "repeat-y" or "space" or "round"
+                or "cover" or "contain" or "auto"
+                or "left" or "right" or "top" or "bottom" or "center")
+            {
+                continue;
+            }
+
+            if (lowered.StartsWith("url(", StringComparison.Ordinal)
+                || lowered.StartsWith("linear-gradient(", StringComparison.Ordinal)
+                || lowered.StartsWith("radial-gradient(", StringComparison.Ordinal)
+                || lowered.StartsWith("conic-gradient(", StringComparison.Ordinal)
+                || lowered.StartsWith("image(", StringComparison.Ordinal)
+                || lowered == "/")
+            {
+                continue;
+            }
+
+            // A bare length inside background is a position, not a colour.
+            if (Regex.IsMatch(lowered, @"^-?[\d.]+%?$", RegexOptions.None, Timeout)
+                || Regex.IsMatch(lowered, @"^-?[\d.]+(px|rem|em|pt|vh|vw)$", RegexOptions.None, Timeout))
+            {
+                continue;
+            }
+
+            return token;
+        }
+
+        return "transparent";
+    }
+
     private static bool IsBorderStyle(string token) =>
         token is "none" or "hidden" or "dotted" or "dashed" or "solid" or "double"
             or "groove" or "ridge" or "inset" or "outset";
@@ -369,6 +466,15 @@ internal static class CssCascade
         var compounds = selector.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var rightmost = compounds[^1];
 
+        // A functional pseudo whose argument contains a space (:where(.a .b)) is sliced mid-parens by
+        // the split above; a compound with unbalanced parens proves that happened. The selector cannot
+        // be sliced at all, so it is unreadable — never silently "not matching".
+        if (compounds.Any(compound => compound.Count(character => character == '(')
+                                      != compound.Count(character => character == ')')))
+        {
+            return Verdict.Unreadable;
+        }
+
         // An id or an attribute ON THE SUBJECT is a decided non-match: the elements this model describes
         // carry a tag and classes and nothing else, so `#foo` and `td[colspan]` cannot select them.
         if (rightmost.IndexOfAny(['[', '#']) >= 0)
@@ -388,35 +494,183 @@ internal static class CssCascade
             return CouldBeSubject(rightmost, chain[^1], activeStates) ? Verdict.Unreadable : Verdict.NoMatch;
         }
 
-        if (!CompoundMatches(rightmost, chain[^1], activeStates))
+        var subjectVerdict = CompoundMatches(rightmost, chain[^1], activeStates);
+        if (subjectVerdict == MatchVerdict.Fails)
         {
             return Verdict.NoMatch;
+        }
+
+        if (subjectVerdict == MatchVerdict.Unknown)
+        {
+            return Verdict.Unreadable;
         }
 
         var ancestorIndex = chain.Count - 2;
         for (var i = compounds.Length - 2; i >= 0; i--)
         {
-            while (ancestorIndex >= 0 && !CompoundMatches(compounds[i], chain[ancestorIndex], activeStates))
+            var matched = false;
+            var sawUnknown = false;
+            while (ancestorIndex >= 0)
             {
+                var ancestorVerdict = CompoundMatches(compounds[i], chain[ancestorIndex], activeStates);
+                if (ancestorVerdict == MatchVerdict.Matches)
+                {
+                    matched = true;
+                    break;
+                }
+
+                // A construct the model cannot read (:has(), :nth-child(), …) on this ancestor
+                // neither matches nor rules out — keep walking: a further ancestor may still
+                // match, and only when none does is the selector undecidable → Unreadable.
+                sawUnknown |= ancestorVerdict == MatchVerdict.Unknown;
                 ancestorIndex--;
             }
 
-            if (ancestorIndex < 0)
+            if (!matched)
             {
-                return Verdict.NoMatch;
+                return sawUnknown ? Verdict.Unreadable : Verdict.NoMatch;
             }
 
             ancestorIndex--;
         }
 
-        var classCount = compounds.Sum(compound => compound.Count(character => character == '.'))
-                         + compounds.Sum(CountPseudoClasses);
-        var typeCount = compounds.Count(compound => !compound.StartsWith('.') && !compound.StartsWith(':'));
+        // Specificity of a compound counts its NON-where part: :where(…) matches but adds zero
+        // specificity, which is exactly why a base declaration moved under :where loses to any
+        // single-class utility. :not()/:is() contribute their strongest argument — not the
+        // functional name itself.
+        var classCount = compounds.Sum(compound => CompoundSpecificity(compound).Class);
+        var typeCount = compounds.Sum(compound => CompoundSpecificity(compound).Type);
         return new Verdict((0, classCount, typeCount), Unmodelled: false);
     }
 
-    private static int CountPseudoClasses(string compound) =>
-        compound.Count(character => character == ':');
+    /// <summary>
+    /// Specificity of one compound the way css-cascade counts it: classes, attributes and
+    /// pseudo-classes at class level; the tag and pseudo-elements at type level;
+    /// <c>:where(…)</c> contributes nothing; <c>:not()</c>/<c>:is()</c>/<c>:matches()</c>/<c>:has()</c>
+    /// contribute their STRONGEST argument (the functional name itself never counts). Anything the
+    /// walker cannot read still counts one hit at class level — the balanced-parens guard upstream
+    /// has already refused genuinely malformed input.
+    /// </summary>
+    private static (int Class, int Type) CompoundSpecificity(string compound)
+    {
+        var classCount = 0;
+        var typeCount = 0;
+        var i = 0;
+        while (i < compound.Length)
+        {
+            if (compound[i] == '.')
+            {
+                classCount++;
+                i += 1 + IdentifierLength(compound, i + 1);
+            }
+            else if (compound[i] == '[')
+            {
+                classCount++;
+                var bracketClose = compound.IndexOf(']', i + 1);
+                i = bracketClose < 0 ? compound.Length : bracketClose + 1;
+            }
+            else if (compound[i] == ':')
+            {
+                if (i + 1 < compound.Length && compound[i + 1] == ':')
+                {
+                    // Pseudo-element — a box of its own: one type-level hit.
+                    typeCount++;
+                    i += 2 + IdentifierLength(compound, i + 2);
+                    continue;
+                }
+
+                var nameLength = IdentifierLength(compound, i + 1);
+                var afterName = i + 1 + nameLength;
+                if (afterName < compound.Length && compound[afterName] == '(')
+                {
+                    var close = BalancedParenClose(compound, afterName);
+                    if (close < 0)
+                    {
+                        classCount++;
+                        i = afterName + 1;
+                        continue;
+                    }
+
+                    var argument = compound[(afterName + 1)..close];
+                    var name = compound.Substring(i + 1, nameLength);
+                    i = close + 1;
+                    if (name is "where")
+                    {
+                        continue;
+                    }
+
+                    if (name is "not" or "is" or "matches" or "has")
+                    {
+                        // The specificity of the STRONGEST argument decides.
+                        var best = (Class: 0, Type: 0);
+                        foreach (var part in argument.Split(','))
+                        {
+                            var inner = CompoundSpecificity(part.Trim());
+                            if (inner.Class > best.Class || (inner.Class == best.Class && inner.Type > best.Type))
+                            {
+                                best = inner;
+                            }
+                        }
+
+                        classCount += best.Class;
+                        typeCount += best.Type;
+                    }
+                    else
+                    {
+                        // A functional pseudo the model does not name still counts itself once.
+                        classCount++;
+                    }
+                }
+                else
+                {
+                    classCount++;
+                    i = afterName;
+                }
+            }
+            else
+            {
+                var length = IdentifierLength(compound, i);
+                if (length > 0)
+                {
+                    typeCount++;
+                }
+
+                i += Math.Max(length, 1);
+            }
+        }
+
+        return (classCount, typeCount);
+    }
+
+    private static int IdentifierLength(string text, int start)
+    {
+        var i = start;
+        while (i < text.Length && (char.IsLetterOrDigit(text[i]) || text[i] is '-' or '_'))
+        {
+            i++;
+        }
+
+        return i - start;
+    }
+
+    /// <summary>The <c>)</c> matching the <c>(</c> at <paramref name="open"/>, or -1 when unbalanced.</summary>
+    private static int BalancedParenClose(string text, int open)
+    {
+        var depth = 0;
+        for (var i = open; i < text.Length; i++)
+        {
+            if (text[i] == '(')
+            {
+                depth++;
+            }
+            else if (text[i] == ')' && --depth == 0)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 
     /// <summary>The <c>::name</c> of a selector, or null when it addresses an element rather than a box.</summary>
     private static string? PseudoElementOf(string selector)
@@ -493,14 +747,86 @@ internal static class CssCascade
     /// <c>*</c> can, so an empty remainder answers YES — the opposite of what "nothing left to compare"
     /// would suggest, and the difference between reporting an unknown and hiding one.
     /// </summary>
+    /// <summary>Three-valued compound match — Unknown means a construct the model cannot read
+    /// (a functional pseudo it does not name) decided nothing either way; <see cref="Match"/>
+    /// reports it as Unreadable rather than silently "not matching".</summary>
+    private enum MatchVerdict { Matches, Fails, Unknown }
+
     private static bool CouldBeSubject(string compound, Element element, IReadOnlySet<string> activeStates)
     {
         var stripped = compound.Replace("*", string.Empty, StringComparison.Ordinal);
-        return stripped.Length == 0 || CompoundMatches(stripped, element, activeStates);
+        return stripped.Length == 0 || CompoundMatches(stripped, element, activeStates) != MatchVerdict.Fails;
     }
 
-    private static bool CompoundMatches(string compound, Element element, IReadOnlySet<string> activeStates)
+    private static MatchVerdict CompoundMatches(string compound, Element element, IReadOnlySet<string> activeStates)
     {
+        // Functional pseudo-classes are lifted out of the compound first — each answers for
+        // itself: :where()/:is()/:matches() want at least one inner compound to match, :not()
+        // wants NONE of them to. A name the model does not carry (:has(), :nth-child(), :lang()…)
+        // decides nothing, so the compound reports Unknown — which Match surfaces as Unreadable.
+        // The balanced-parens guard in Match has already refused arguments sliced mid-parens, so
+        // an inner part here is always a compound.
+        var functionals = new List<(string Name, string Argument)>();
+        var remainder = new System.Text.StringBuilder(compound.Length);
+        for (var i = 0; i < compound.Length; i++)
+        {
+            if (compound[i] == ':' && (i + 1 >= compound.Length || compound[i + 1] != ':'))
+            {
+                var nameStart = i + 1;
+                var nameEnd = nameStart;
+                while (nameEnd < compound.Length
+                       && (char.IsLetterOrDigit(compound[nameEnd]) || compound[nameEnd] == '-'))
+                {
+                    nameEnd++;
+                }
+
+                if (nameEnd > nameStart && nameEnd < compound.Length && compound[nameEnd] == '(')
+                {
+                    var close = BalancedParenClose(compound, nameEnd);
+                    if (close >= 0)
+                    {
+                        functionals.Add((compound[nameStart..nameEnd], compound[(nameEnd + 1)..close]));
+                        i = close;
+                        continue;
+                    }
+                }
+            }
+
+            remainder.Append(compound[i]);
+        }
+
+        compound = remainder.ToString();
+
+        var functionalVerdict = MatchVerdict.Matches;
+        foreach (var (name, argument) in functionals)
+        {
+            var inner = argument.Split(',')
+                .Select(part => CompoundMatches(part.Trim(), element, activeStates))
+                .ToList();
+            var verdict = name switch
+            {
+                "where" or "is" or "matches" =>
+                    inner.Any(v => v == MatchVerdict.Matches) ? MatchVerdict.Matches
+                        : inner.Any(v => v == MatchVerdict.Unknown) ? MatchVerdict.Unknown
+                        : MatchVerdict.Fails,
+                "not" =>
+                    inner.Any(v => v == MatchVerdict.Matches) ? MatchVerdict.Fails
+                        : inner.Any(v => v == MatchVerdict.Unknown) ? MatchVerdict.Unknown
+                        : MatchVerdict.Matches,
+                _ => MatchVerdict.Unknown,
+            };
+
+            if (verdict == MatchVerdict.Fails)
+            {
+                return MatchVerdict.Fails;
+            }
+
+            if (verdict == MatchVerdict.Unknown)
+            {
+                functionalVerdict = MatchVerdict.Unknown;
+            }
+        }
+
         var pseudoStart = compound.IndexOf(':', StringComparison.Ordinal);
         var pseudos = new List<string>();
         if (pseudoStart >= 0)
@@ -515,16 +841,21 @@ internal static class CssCascade
 
         if (pseudos.Exists(pseudo => !activeStates.Contains(pseudo)))
         {
-            return false;
+            return MatchVerdict.Fails;
         }
 
         var parts = compound.Split('.');
         if (parts[0].Length > 0 && !parts[0].Equals(element.Tag, StringComparison.OrdinalIgnoreCase))
         {
-            return false;
+            return MatchVerdict.Fails;
         }
 
-        return parts.Skip(1).All(element.Classes.Contains);
+        if (!parts.Skip(1).All(element.Classes.Contains))
+        {
+            return MatchVerdict.Fails;
+        }
+
+        return functionalVerdict;
     }
 
     // ── Structural parsing ────────────────────────────────────────

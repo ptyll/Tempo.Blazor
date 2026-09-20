@@ -469,4 +469,38 @@ public class TmButtonTests : LocalizationTestBase
 
         cut.Find("button").ClassList.Should().Contain("tm-btn");
     }
+
+    /// <summary>
+    /// Fáze 18.1 fixes the measured base|modifier cascade ties with compound selectors
+    /// (<c>.tm-btn.tm-btn-ghost</c>, <c>.tm-btn.tm-btn-sm</c>) — which only reach an element
+    /// carrying BOTH classes. This pins the markup contract the compounds rely on: base, variant
+    /// and size on the SAME element, for every variant and size the enums offer.
+    /// </summary>
+    [Fact]
+    public void TmButton_EmitsBase_Variant_And_Size_OnTheSameElement()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Variant, ButtonVariant.Ghost)
+            .Add(c => c.Size, ButtonSize.Sm)
+            .AddChildContent("Click"));
+
+        cut.Find("button").ClassList.Should()
+            .Contain("tm-btn")
+            .And.Contain("tm-btn-ghost")
+            .And.Contain("tm-btn-sm");
+    }
+
+    [Theory]
+    [InlineData(ButtonVariant.Primary, "tm-btn-primary")]
+    [InlineData(ButtonVariant.Secondary, "tm-btn-secondary")]
+    [InlineData(ButtonVariant.OutlineSecondary, "tm-btn-outline-secondary")]
+    public void TmButton_RecordedVariants_AlwaysCarryTmBtn(ButtonVariant variant, string modifier)
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Variant, variant)
+            .AddChildContent("Click"));
+
+        var classes = cut.Find("button").ClassList;
+        classes.Should().Contain("tm-btn").And.Contain(modifier);
+    }
 }
