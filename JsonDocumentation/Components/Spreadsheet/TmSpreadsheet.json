@@ -86,6 +86,25 @@
       "type": "EventCallback<SpreadsheetDownloadEventArgs>",
       "isRequired": false,
       "description": "Fires when the workbook is downloaded."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes to apply to the root element."
+    },
+    {
+      "name": "InitialWorkbook",
+      "type": "SpreadsheetWorkbook?",
+      "isRequired": false,
+      "description": "Pre-populates the spreadsheet with an existing workbook on first render. Subsequent parameter changes are ignored — read the Workbook property to get the current state after editing."
+    },
+    {
+      "name": "Mode",
+      "type": "SpreadsheetMode",
+      "isRequired": false,
+      "default": "SpreadsheetMode.Full",
+      "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
     }
   ],
   "cssClasses": [

@@ -189,7 +189,7 @@
                                 @ondragstart="() => OnColumnDragStart(col.Key)"
                                 @ondragend="OnColumnDragEnd"
                                 @onkeydown="e => HandleHeaderKeyDownAsync(e, col)"
-                                @onclick="e => SortByAsync(col, e.ShiftKey)">
+                                @onclick="e => SortByAsync(col, HeaderClickRequestsMultiSort(e))">
                                 @if (col.HeaderTemplate is not null)
                                 {
                                     @* The consumer's own controls live in here, and keydown BUBBLES: without
@@ -224,9 +224,12 @@
                                        can never double-fire a sort the way an explicit keydown handler did.
                                        The aria-label is emitted unconditionally: a control's name is a
                                        guarantee of the markup, not a side effect of which content path
-                                       happened to render. SortLabel wins, then the column Title, then the
-                                       localized action name — so an icon-only header, a templated one and
-                                       a plain-text one all announce something a screen reader can use. *@
+                                       happened to render. It announces "Sort by {header}" PLUS the state
+                                       the next activation reaches — ascending / descending / cleared —
+                                       so the spoken name tracks the same tri-state cycle activation walks.
+                                       The header text is the column Title, then SortLabel; a templated
+                                       header with neither fails fast in DEBUG and falls back to a
+                                       localized positional name in RELEASE. *@
                                     <button type="button"
                                             class="tm-th-sort"
                                             aria-label="@SortButtonAccessibleName(col)"

@@ -8639,7 +8639,7 @@
           "name": "SortLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "Accessible name of the header sort button. Defaults to Title, then to the localized sort fallback — set it when the name should say more than the visible caption (e.g. \"Sort by last name\" while the header reads \"Name\"), or when the caption is not enough to describe the action."
+          "description": "The subject the header sort button's accessible name announces — the {0} inside \"Sort by {0} — {next action}\". Defaults to Title; set it on a templated or icon-only header whose caption is not text (a templated header with neither Title nor SortLabel throws in DEBUG and falls back to a localized positional name in RELEASE)."
         },
         {
           "name": "Title",
@@ -22482,6 +22482,25 @@
           "type": "EventCallback<SpreadsheetDownloadEventArgs>",
           "isRequired": false,
           "description": "Fires when the workbook is downloaded."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes to apply to the root element."
+        },
+        {
+          "name": "InitialWorkbook",
+          "type": "SpreadsheetWorkbook?",
+          "isRequired": false,
+          "description": "Pre-populates the spreadsheet with an existing workbook on first render. Subsequent parameter changes are ignored — read the Workbook property to get the current state after editing."
+        },
+        {
+          "name": "Mode",
+          "type": "SpreadsheetMode",
+          "isRequired": false,
+          "default": "SpreadsheetMode.Full",
+          "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
         }
       ],
       "cssClasses": [

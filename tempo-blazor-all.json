@@ -8641,7 +8641,7 @@
               "name": "SortLabel",
               "type": "string?",
               "isRequired": false,
-              "description": "Accessible name of the header sort button. Defaults to Title, then to the localized sort fallback — set it when the name should say more than the visible caption (e.g. \"Sort by last name\" while the header reads \"Name\"), or when the caption is not enough to describe the action."
+              "description": "The subject the header sort button's accessible name announces — the {0} inside \"Sort by {0} — {next action}\". Defaults to Title; set it on a templated or icon-only header whose caption is not text (a templated header with neither Title nor SortLabel throws in DEBUG and falls back to a localized positional name in RELEASE)."
             },
             {
               "name": "Title",
@@ -22484,6 +22484,25 @@
               "type": "EventCallback<SpreadsheetDownloadEventArgs>",
               "isRequired": false,
               "description": "Fires when the workbook is downloaded."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes to apply to the root element."
+            },
+            {
+              "name": "InitialWorkbook",
+              "type": "SpreadsheetWorkbook?",
+              "isRequired": false,
+              "description": "Pre-populates the spreadsheet with an existing workbook on first render. Subsequent parameter changes are ignored — read the Workbook property to get the current state after editing."
+            },
+            {
+              "name": "Mode",
+              "type": "SpreadsheetMode",
+              "isRequired": false,
+              "default": "SpreadsheetMode.Full",
+              "description": "Controls the display and interaction mode of the spreadsheet. Defaults to Full."
             }
           ],
           "cssClasses": [
@@ -43384,71 +43403,6 @@
           ]
         },
         {
-          "itemName": "TmDocumentCoreEngineHost",
-          "kind": "Component",
-          "category": "Document Editor",
-          "description": "Blazor host that wraps the JavaScript-owned core (text) document engine. Renders the editor surface, exposes an imperative handle once the engine is ready, and forwards engine events to .NET: debounced model changes for autosave, object selection, text operations for collaboration, and context-menu requests.",
-          "packageId": "Tempo.Blazor.DocumentEditor",
-          "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentCoreEngineHost.razor",
-          "documentationStatus": "generated",
-          "requiredImports": [
-            "@using Tempo.Blazor.Components.DocumentEditor"
-          ],
-          "parameters": [
-            {
-              "name": "AriaLabel",
-              "type": "string",
-              "isRequired": false,
-              "default": "\"Document editor\"",
-              "description": "The document to render/edit with the core engine."
-            },
-            {
-              "name": "ChangeDebounceMs",
-              "type": "int",
-              "isRequired": false,
-              "default": "800",
-              "description": "Raised once the engine has mounted (the handle exists) — wire collaboration here (R.5.22)."
-            },
-            {
-              "name": "OnContextMenu",
-              "type": "EventCallback<CoreContextMenuRequest>",
-              "isRequired": false,
-              "description": "Raised (JS→.NET, debounced) when the engine's model changes — drives autosave (R.5.3)."
-            },
-            {
-              "name": "OnModelChanged",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Raised (JS→.NET) when an image object is selected/deselected in the engine."
-            },
-            {
-              "name": "OnObjectSelected",
-              "type": "EventCallback<CoreObjectSelection?>",
-              "isRequired": false,
-              "description": "Page geometry passed to the engine layout."
-            },
-            {
-              "name": "OnOperation",
-              "type": "EventCallback<CoreOperation>",
-              "isRequired": false,
-              "description": "Raised (JS→.NET) on right-click — carries the engine context + viewport position (R.5.23)."
-            },
-            {
-              "name": "OnReady",
-              "type": "EventCallback<TmDocumentCoreEngineHost>",
-              "isRequired": false,
-              "description": "Raised (JS→.NET) when a local edit produces a text operation — broadcast for collaboration (R.5.22)."
-            },
-            {
-              "name": "PageSettings",
-              "type": "DocumentPageSettings?",
-              "isRequired": false,
-              "description": "Accessible label for the editor surface."
-            }
-          ]
-        },
-        {
           "itemName": "TmDocumentDiffViewer",
           "kind": "Component",
           "category": "Document Editor",
@@ -46288,291 +46242,6 @@
           ]
         },
         {
-          "itemName": "TmDocumentWysiwygHost",
-          "kind": "Component",
-          "category": "Document Editor",
-          "description": "Blazor host that wraps the JavaScript-owned WYSIWYG editing surface of the document editor. Renders the editable page and bridges the JS runtime and .NET across a wide event surface: dirty/save and undo/redo state, selection and formatting state, page metrics, comments, revisions and suggestions, image upload and validation, zoom, ruler, track changes, and runtime recovery.",
-          "packageId": "Tempo.Blazor.DocumentEditor",
-          "namespace": "Tempo.Blazor.Components.DocumentEditor",
-          "sourcePath": "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentWysiwygHost.razor",
-          "documentationStatus": "generated",
-          "requiredImports": [
-            "@using Tempo.Blazor.Components.DocumentEditor"
-          ],
-          "parameters": [
-            {
-              "name": "AccessibilityAnnouncementChanged",
-              "type": "EventCallback<string>",
-              "isRequired": false,
-              "description": "Raised when the JS-owned dirty/save state changes."
-            },
-            {
-              "name": "ActiveHeadingChanged",
-              "type": "EventCallback<string?>",
-              "isRequired": false,
-              "description": "Fired when the WYSIWYG runtime reports page metrics."
-            },
-            {
-              "name": "AllowOfflineClipboardImages",
-              "type": "bool",
-              "isRequired": false,
-              "description": "Image validation options used by upload and clipboard image flows."
-            },
-            {
-              "name": "Author",
-              "type": "DocumentEditorAuthor?",
-              "isRequired": false,
-              "description": "Optional mention provider for document mention autocomplete."
-            },
-            {
-              "name": "CommentsChanged",
-              "type": "EventCallback<IReadOnlyList<DocumentComment>>",
-              "isRequired": false,
-              "description": "Raised when the JS-owned runtime revision list changes."
-            },
-            {
-              "name": "CommentSelected",
-              "type": "EventCallback<string>",
-              "isRequired": false,
-              "description": "Raised when the JS-owned runtime comment list changes."
-            },
-            {
-              "name": "DirtyStateChanged",
-              "type": "EventCallback<WysiwygDirtyState>",
-              "isRequired": false,
-              "description": "Raised when the JS-owned undo/redo stack state changes."
-            },
-            {
-              "name": "DocumentPatchGenerated",
-              "type": "EventCallback<WysiwygPatch>",
-              "isRequired": false,
-              "description": "How tracked changes should be displayed in the JS-owned surface."
-            },
-            {
-              "name": "DocumentSelectionChanged",
-              "type": "EventCallback<WysiwygSelectionSnapshot?>",
-              "isRequired": false,
-              "description": "Raised when the JS engine reports a new document snapshot (e.g. after explicit save or export)."
-            },
-            {
-              "name": "DocumentSnapshotChanged",
-              "type": "EventCallback<DocumentEditorDocument>",
-              "isRequired": false,
-              "description": "Raised when the JS engine generates a patch that should be applied to the document."
-            },
-            {
-              "name": "FontFamilies",
-              "type": "IReadOnlyList<DocumentFontFamily>",
-              "isRequired": false,
-              "default": "[]",
-              "description": "Current editing author used for JS-owned runtime revisions."
-            },
-            {
-              "name": "FormattingStateChanged",
-              "type": "EventCallback<WysiwygFormattingState>",
-              "isRequired": false,
-              "description": "Raised when the JS engine shows or hides the inline mini toolbar."
-            },
-            {
-              "name": "ImageAssetOptions",
-              "type": "IReadOnlyList<DocumentImageAsset>",
-              "isRequired": false,
-              "default": "[]",
-              "description": "Optional image provider for upload and clipboard flows."
-            },
-            {
-              "name": "ImageProvider",
-              "type": "IDocumentImageProvider?",
-              "isRequired": false,
-              "description": "Optional image URL resolver for provider-managed assets."
-            },
-            {
-              "name": "ImageUploadStateChanged",
-              "type": "EventCallback<bool>",
-              "isRequired": false,
-              "description": "Raised when the JS editor surface owns a keyboard shortcut that must run through the command registry."
-            },
-            {
-              "name": "ImageUrlResolver",
-              "type": "IDocumentImageUrlResolver?",
-              "isRequired": false,
-              "description": "Host-controlled permissions for the current user."
-            },
-            {
-              "name": "ImageValidation",
-              "type": "DocumentImageValidationOptions",
-              "isRequired": true,
-              "description": "Provider-managed image assets available for direct insertion or replacement."
-            },
-            {
-              "name": "KeyboardCommandRequested",
-              "type": "EventCallback<string>",
-              "isRequired": false,
-              "description": "Raised when the user requests save via keyboard."
-            },
-            {
-              "name": "MentionProvider",
-              "type": "ITmPeopleProvider?",
-              "isRequired": false,
-              "description": "Optional token provider for document token autocomplete."
-            },
-            {
-              "name": "MiniToolbarChanged",
-              "type": "EventCallback<WysiwygMiniToolbarRequest?>",
-              "isRequired": false,
-              "description": "Raised when the JS engine requests a table context menu."
-            },
-            {
-              "name": "PageMetricsChanged",
-              "type": "EventCallback<WysiwygPageMetrics>",
-              "isRequired": false,
-              "description": "Fired when the JS watchdog reports recovery telemetry or debug detail."
-            },
-            {
-              "name": "Permissions",
-              "type": "DocumentEditorPermissions",
-              "isRequired": true,
-              "description": "Whether the surface is read-only."
-            },
-            {
-              "name": "ReadOnly",
-              "type": "bool",
-              "isRequired": false,
-              "description": "Document snapshot to render in the WYSIWYG surface."
-            },
-            {
-              "name": "RedoRequested",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Raised when the user requests undo via keyboard."
-            },
-            {
-              "name": "ReviewDisplayMode",
-              "type": "DocumentReviewDisplayMode",
-              "isRequired": false,
-              "default": "DocumentReviewDisplayMode.AllMarkup",
-              "description": "Whether live track-changes decorations are enabled in the JS-owned surface."
-            },
-            {
-              "name": "RevisionReviewRequested",
-              "type": "EventCallback<WysiwygRevisionReviewRequest>",
-              "isRequired": false,
-              "description": "Raised when the JS runtime publishes canonical formatting state for the current selection."
-            },
-            {
-              "name": "RevisionsChanged",
-              "type": "EventCallback<IReadOnlyList<DocumentRevision>>",
-              "isRequired": false,
-              "description": "Raised when the JS-owned inline revision UI requests accept or reject."
-            },
-            {
-              "name": "RevisionSelected",
-              "type": "EventCallback<string>",
-              "isRequired": false,
-              "description": "Raised when the user selects a comment anchor inside the JS-owned surface."
-            },
-            {
-              "name": "RuntimeDraftStateJson",
-              "type": "string?",
-              "isRequired": false,
-              "description": "Raised when the JS-owned editor has an accessibility status announcement."
-            },
-            {
-              "name": "RuntimeRecovered",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Fired when an image upload starts (true) or finishes (false)."
-            },
-            {
-              "name": "RuntimeRecoveryDetailChanged",
-              "type": "EventCallback<WysiwygRuntimeRecoveryDetail>",
-              "isRequired": false,
-              "description": "Fired when the JS watchdog fails to recover the runtime after an error."
-            },
-            {
-              "name": "RuntimeRecoveryFailed",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Fired when the JS watchdog successfully recovers the runtime after an error."
-            },
-            {
-              "name": "SaveRequested",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Raised when the user requests redo via keyboard."
-            },
-            {
-              "name": "ShowRuler",
-              "type": "bool",
-              "isRequired": false,
-              "default": "true",
-              "description": "Font families allowed by the host editor."
-            },
-            {
-              "name": "Suggestions",
-              "type": "IReadOnlyList<DocumentSuggestion>",
-              "isRequired": false,
-              "default": "[]",
-              "description": "Whether page-width zoom mode is active."
-            },
-            {
-              "name": "TableContextMenuRequested",
-              "type": "EventCallback<WysiwygTableContextMenuRequest>",
-              "isRequired": false,
-              "description": "Raised when the JS engine requests a text context menu."
-            },
-            {
-              "name": "TextContextMenuRequested",
-              "type": "EventCallback<WysiwygTextContextMenuRequest>",
-              "isRequired": false,
-              "description": "Raised when the JS engine reports selection change."
-            },
-            {
-              "name": "TokenProvider",
-              "type": "ITokenDataProvider?",
-              "isRequired": false,
-              "description": "Whether clipboard images can be kept as local draft assets when no image provider is available."
-            },
-            {
-              "name": "TrackChangesEnabled",
-              "type": "bool",
-              "isRequired": false,
-              "description": "Pending provider-backed suggestions to decorate in the WYSIWYG surface."
-            },
-            {
-              "name": "TransactionCommitted",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Raised when the user selects a revision marker inside the JS-owned surface."
-            },
-            {
-              "name": "UndoRequested",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Serialized JS-owned offline runtime state to restore after loading an offline draft."
-            },
-            {
-              "name": "UndoStateChanged",
-              "type": "EventCallback<WysiwygUndoState>",
-              "isRequired": false,
-              "description": "Raised when a typing transaction is committed."
-            },
-            {
-              "name": "ZoomPageWidth",
-              "type": "bool",
-              "isRequired": false,
-              "description": "Current page zoom percentage."
-            },
-            {
-              "name": "ZoomPercent",
-              "type": "int",
-              "isRequired": false,
-              "default": "100",
-              "description": "Whether the page ruler should be visible."
-            }
-          ]
-        },
-        {
           "itemName": "IndexedDbDocumentOfflineStore",
           "kind": "Class",
           "category": "Services",
@@ -48807,8 +48476,8 @@
         }
       ],
       "summary": {
-        "itemCount": 221,
-        "manualItemCount": 221,
+        "itemCount": 219,
+        "manualItemCount": 219,
         "generatedItemCount": 216,
         "generatedOnlyItemCount": 0,
         "componentCount": 35,
@@ -110213,8 +109882,8 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3164,
-    "manualItemCount": 3158,
+    "itemCount": 3162,
+    "manualItemCount": 3156,
     "generatedOnlyItemCount": 6,
     "componentCount": 465,
     "publicApiTypeCount": 2644

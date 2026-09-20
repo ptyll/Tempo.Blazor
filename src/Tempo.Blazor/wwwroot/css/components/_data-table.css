@@ -155,13 +155,23 @@
   cursor: pointer;
   user-select: none;
 }
-.tm-th-sort:hover { color: var(--tm-text-primary); }
+/* `:hover` must not repaint the label: the button's colour is the th's colour, so on a sorted
+   column the primary-text accent survives the pointer instead of being overridden back to the
+   plain header ink — and on an unsorted one `.tm-col-sortable:hover` still reaches it through
+   `inherit`. A hover that flips a sorted label back to secondary ink reads as "the sort state
+   disappeared under the mouse", which is the bug this rule used to be. */
+.tm-th-sort:hover { color: inherit; }
 /* The sorted label carries `.tm-data-table th` in its selector on purpose. As a bare
    `.tm-col-sorted-asc` it was (0,1,0) against the (0,1,1) of `.tm-data-table th { color: … }`, so it
    lost at every source order and the sorted header was painted in the ordinary header colour — the
-   rule read like a promise and applied to nothing. */
+   rule read like a promise and applied to nothing. The descendant rule below repeats the same
+   colour ON the button: the th-level rule alone only reaches it via `inherit`, and any button-level
+   state rule (`:hover`, `:focus-visible`) out-specifies inheritance — the direct declaration is what
+   makes the sorted accent un-losable. */
 .tm-data-table th.tm-col-sorted-asc,
 .tm-data-table th.tm-col-sorted-desc { color: var(--tm-color-primary-text); }
+.tm-data-table th.tm-col-sorted-asc .tm-th-sort,
+.tm-data-table th.tm-col-sorted-desc .tm-th-sort { color: var(--tm-color-primary-text); }
 
 /* Sort icon.
    NO OPACITY. It used to be `opacity: .4` here with `opacity: 1` on the active pseudo-element, which
@@ -260,12 +270,21 @@
    turns an element into a control owns that element's focus indicator. */
 .tm-data-table th:focus-visible,
 .tm-data-table tbody tr:focus-visible,
-.tm-col-pin-btn:focus-visible,
-.tm-th-sort:focus-visible {
+.tm-col-pin-btn:focus-visible {
   outline: 2px solid var(--tm-color-primary, #3b82f6);
   outline-offset: -2px;
 }
-.tm-th-sort:focus-visible { color: var(--tm-text-primary); }
+/* The sort button's ring is drawn OUTSIDE the box, not over the text: `outline-offset: -2px`
+   painted the stroke inward, where it crossed glyphs on a tight inline-flex label. Positive offset
+   puts the ring on the element's own border-radius, so the indicator is a frame around the control
+   rather than a line through it. `color: inherit` keeps the sorted column's accent under focus the
+   same way `:hover` does — focus must not repaint the label back to the resting ink. */
+.tm-th-sort:focus-visible {
+  outline: 2px solid var(--tm-color-primary, #3b82f6);
+  outline-offset: 2px;
+  border-radius: var(--tm-radius-sm, 3px);
+  color: inherit;
+}
 
 /* Column resize handle */
 .tm-col-resize-handle {

@@ -11,10 +11,10 @@
     [Parameter] public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Accessible name of the header sort button. Defaults to <see cref="Title"/>, then to the
-    /// localized sort fallback — set it when the name should say more than the visible caption
-    /// (e.g. "Sort by last name" while the header reads "Name"), or when the caption is not enough
-    /// to describe the action.
+    /// The subject the header sort button's accessible name announces — the {0} inside
+    /// "Sort by {0} — {next action}". Defaults to <see cref="Title"/>; set it on a templated or
+    /// icon-only header whose caption is not text (a templated header with neither Title nor
+    /// SortLabel throws in DEBUG and falls back to a localized positional name in RELEASE).
     /// </summary>
     [Parameter] public string? SortLabel { get; set; }
 

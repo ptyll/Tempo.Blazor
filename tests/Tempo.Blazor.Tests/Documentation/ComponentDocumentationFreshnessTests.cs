@@ -17,30 +17,42 @@ namespace Tempo.Blazor.Tests.Documentation;
 /// </para>
 /// <para>
 /// The population is derived by reflection — the same view a consumer gets — over every
-/// <c>Tempo.*.dll</c> the test project references: every non-abstract <c>IComponent</c> whose name
-/// starts with <c>Tm</c> and which carries at least one <see cref="ParameterAttribute"/> property
-/// (declared or inherited) must either have a <c>kind: "Component"</c> JSON entry or be named in
-/// <see cref="UndocumentedComponents"/> — a frozen, itemized set that can only shrink by writing the
-/// documentation, never grow by adding a component and staying silent.
+/// <c>Tempo.*.dll</c> the test project references: every non-abstract, visible type derived from
+/// <see cref="ComponentBase"/> is a component the library ships. The contract is EXACT: the set of
+/// reflected component names must equal the set of <c>kind: "Component"</c> item names in the JSON,
+/// modulo <see cref="UndocumentedComponents"/> — a frozen, itemized set that can only shrink by
+/// writing the documentation, never grow by adding a component and staying silent. A documented
+/// component that does not exist is a stale overlay and fails the same way a missing one does.
+/// </para>
+/// <para>
+/// Nothing here is allowed to fail quietly: an assembly that will not load, a types listing that
+/// comes back partial, and a JSON file that will not parse are all test failures, not skips —
+/// each of them is exactly the hole a freshness guard exists to close.
 /// </para>
 /// <para>
 /// Parameter sets are compared on both layers of the documentation model: overlay entries may not
 /// name a parameter the component does not have (a stale name merges into the shipped bundle
-/// verbatim), and the committed <c>tempo-blazor*.json</c> bundles must cover every settable
-/// parameter while naming none that do not exist — so a source change without a regeneration, or a
-/// stale overlay entry, both fail here.
+/// verbatim), and each committed <c>tempo-blazor*.json</c> bundle must cover every settable
+/// parameter of every component it carries — PER FILE, because a parameter missing from the one
+/// bundle a consumer reads is not covered by a different bundle happening to name it — while
+/// naming none that do not exist. A source change without a regeneration, or a stale overlay
+/// entry, both fail here.
 /// </para>
 /// </summary>
 public class ComponentDocumentationFreshnessTests
 {
     /// <summary>
-    /// Components that ship <c>[Parameter]</c> surface but have no component JSON yet. The set is
-    /// frozen: a component may leave it only by gaining documentation, and no component may enter
-    /// it — a new component without documentation fails the population test below.
+    /// Components that ship on the public surface but have no <c>kind: "Component"</c> JSON entry.
+    /// The set is frozen: a component may leave it only by gaining documentation, and no component
+    /// may enter it — a new component without documentation fails the population test below.
     /// </summary>
     private static readonly HashSet<string> UndocumentedComponents = new(StringComparer.Ordinal)
     {
-        // __FROZEN_SET__
+        // FluentValidationValidator is a real component (ComponentBase, public, one [Parameter]),
+        // but it lives in a .cs file, so the generator classifies it as a "Class" API item, not a
+        // Component — the merge keeps the generated kind and no overlay can promote it. It is
+        // documented in JsonDocumentation/Packages/Tempo.Blazor.FluentValidation/items/ as a Class.
+        "FluentValidationValidator",
     };
 
     private static readonly HashSet<string> NonLibraryAssemblies = new(StringComparer.Ordinal)
@@ -96,17 +108,21 @@ public class ComponentDocumentationFreshnessTests
             {
                 assemblies.Add(Assembly.LoadFrom(file));
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // A package dll that will not load in the test host carries no usable component
-                // surface anyway — the manifest sweep, not this guard, owns reachability.
+                // A package dll that will not load leaves its component surface unverifiable — the
+                // guard cannot see what the docs must cover. That is a failure of the population,
+                // not a reason to grade a partial one as complete.
+                throw new InvalidOperationException(
+                    $"library assembly '{name}' failed to load in the test host — its components are " +
+                    "invisible to the documentation guard, so this is a failure, not a skip", e);
             }
         }
 
         return assemblies;
     }
 
-    private static IEnumerable<Type> LoadableTypes(Assembly assembly)
+    private static IReadOnlyList<Type> LoadableTypes(Assembly assembly)
     {
         try
         {
@@ -114,21 +130,30 @@ public class ComponentDocumentationFreshnessTests
         }
         catch (ReflectionTypeLoadException e)
         {
-            return e.Types.Where(t => t is not null)!;
+            // A partial type list is a silently smaller population — exactly what the exact-match
+            // contract exists to catch, so surface it as a failure with the loader's own reasons
+            // rather than grading the truncated view.
+            var reasons = e.LoaderExceptions
+                .Where(x => x is not null)
+                .Select(x => x!.Message)
+                .Distinct(StringComparer.Ordinal)
+                .Take(5);
+            throw new InvalidOperationException(
+                $"assembly '{assembly.GetName().Name}' loaded only part of its types " +
+                $"({e.Types.Count(t => t is null)} invisible): {string.Join("; ", reasons)}", e);
         }
     }
 
     /// <summary>
-    /// The guard's denominator: non-abstract <c>Tm*</c> components with at least one
-    /// <c>[Parameter]</c> anywhere on their public surface.
+    /// The guard's denominator: every non-abstract, consumer-visible <see cref="ComponentBase"/>
+    /// descendant in the library assemblies — the precise list of components a consumer can render,
+    /// which is exactly the list the JSON documentation must name.
     /// </summary>
     private static List<ComponentEntry> ComponentPopulation()
         => LibraryAssemblies()
             .SelectMany(LoadableTypes)
-            .Where(t => t is { IsAbstract: false }
-                        && typeof(IComponent).IsAssignableFrom(t)
-                        && BaseName(t.Name).StartsWith("Tm", StringComparison.Ordinal)
-                        && ReflectedParameters(t).Length > 0)
+            .Where(t => t is { IsAbstract: false, IsVisible: true }
+                        && typeof(ComponentBase).IsAssignableFrom(t))
             .GroupBy(t => BaseName(t.Name), StringComparer.Ordinal)
             .Select(g => new ComponentEntry(g.Key, g.OrderBy(t => t.FullName, StringComparer.Ordinal).ToArray()))
             .OrderBy(e => e.Name, StringComparer.Ordinal)
@@ -152,9 +177,11 @@ public class ComponentDocumentationFreshnessTests
                 using var parsed = JsonDocument.Parse(File.ReadAllText(file));
                 document = parsed.RootElement.Clone();
             }
-            catch (JsonException)
+            catch (JsonException e)
             {
-                continue;
+                // A doc file that does not parse is a broken doc, not a missing one — say so.
+                throw new InvalidOperationException(
+                    $"documentation file is not valid JSON: {file}", e);
             }
 
             if (!document.TryGetProperty("kind", out var kind) || kind.GetString() != "Component"
@@ -215,9 +242,10 @@ public class ComponentDocumentationFreshnessTests
                     names.Add(name);
                 }
             }
-            catch (JsonException)
+            catch (JsonException e)
             {
-                // not a doc item
+                throw new InvalidOperationException(
+                    $"documentation file is not valid JSON: {file}", e);
             }
         }
 
@@ -242,34 +270,30 @@ public class ComponentDocumentationFreshnessTests
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToArray();
 
+    /// <summary>
+    /// The guard's denominator is the documentation list itself: every visible
+    /// <see cref="ComponentBase"/> descendant must be named in the JSON, and every
+    /// <c>kind: "Component"</c> name in the JSON must be a component that exists. There is no
+    /// floor and no direction the check can silently shrink in — a reflection scan that sees
+    /// nothing, a deleted component whose overlay survived, and a documented name with no type
+    /// all fail here, by name.
+    /// </summary>
     [Fact]
-    public void Population_Is_Large_Enough_To_Be_The_Real_One()
+    public void Population_Is_Exactly_The_Documented_Component_List()
     {
-        // A reflection failure that silently yields a handful of types must fail loudly: the guard
-        // is only as good as its denominator. ~290 Tm* components ship today; the floor is set far
-        // below on purpose — it exists to catch "the scan saw nothing", not to ratchet growth.
-        ComponentPopulation().Should().HaveCountGreaterThanOrEqualTo(150,
-            "a denominator this small means the scan found no assemblies, not that the library shrank");
-    }
+        var population = ComponentPopulation().Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+        var documented = ComponentDocs().Keys;
 
-    [Fact]
-    public void Every_Component_With_Parameters_Is_Documented_Or_Frozen()
-    {
-        var docs = ComponentDocs();
-        var undocumented = ComponentPopulation()
-            .Where(c => !docs.ContainsKey(c.Name))
-            .Select(c => c.Name)
-            .ToHashSet(StringComparer.Ordinal);
+        var undocumented = population.Except(documented).OrderBy(n => n, StringComparer.Ordinal).ToList();
+        var phantom = documented.Except(population).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-        var unlisted = undocumented.Except(UndocumentedComponents).OrderBy(n => n).ToList();
-        var stale = UndocumentedComponents.Except(undocumented).OrderBy(n => n).ToList();
-
-        unlisted.Should().BeEmpty(
-            "these components ship [Parameter] surface with no JsonDocumentation entry — document them; "
-            + "the frozen set may only shrink, never grow: " + string.Join(", ", unlisted));
-        stale.Should().BeEmpty(
-            "these names are frozen as undocumented but are documented now — remove them from the set: "
-            + string.Join(", ", stale));
+        undocumented.Should().BeEquivalentTo(UndocumentedComponents.OrderBy(n => n, StringComparer.Ordinal),
+            "the set of components without a kind:\"Component\" JSON entry is frozen and itemized — " +
+            "a new undocumented component must be documented (the set never grows), and a member that " +
+            "is documented now must leave it (the set only shrinks)");
+        phantom.Should().BeEmpty(
+            "a kind:\"Component\" entry for a type that no longer exists is a stale overlay promising " +
+            "an API nothing ships — delete it: " + string.Join(", ", phantom.Take(20)));
     }
 
     [Fact]
@@ -296,9 +320,10 @@ public class ComponentDocumentationFreshnessTests
 
     /// <summary>
     /// The shipped per-package bundles (<c>tempo-blazor*.json</c>) are what a consumer actually
-    /// reads. For every component in the population the bundle entry must name every parameter
-    /// declared on the component — a name absent there means the bundle is stale relative to the
-    /// source (regenerate it) or the parameter is genuinely undocumented.
+    /// reads. Coverage is asserted PER FILE: every bundle that carries a component entry must name
+    /// every parameter declared on that component — a gap filled only inside a different bundle is
+    /// still a gap in the file the consumer opened. A population component absent from every bundle
+    /// fails the same way.
     /// <para>
     /// The expected set excludes <c>[Parameter(CaptureUnmatchedValues)]</c> properties (the
     /// generator's own convention skips the <c>@attributes</c> splat) and parameters declared on a
@@ -313,58 +338,97 @@ public class ComponentDocumentationFreshnessTests
         var documentedTypes = DocumentedTypeNames();
 
         var missing = ComponentPopulation()
+            .Where(c => !UndocumentedComponents.Contains(c.Name))
             .SelectMany(c =>
             {
                 var expected = ExpectedParameters(c, documentedTypes);
-                if (!bundles.TryGetValue(c.Name, out var entry))
+                var carriers = bundles
+                    .Where(kv => kv.Value.ContainsKey(c.Name))
+                    .Select(kv => kv.Key)
+                    .ToList();
+                if (carriers.Count == 0)
                 {
-                    return expected.Select(name => $"{c.Name}.{name} — component has no bundle entry at all");
+                    return expected.Select(name =>
+                        $"{c.Name}.{name} — component has no kind:\"Component\" entry in any tempo-*.json bundle");
                 }
 
-                return expected
-                    .Where(name => !entry.Parameters.Contains(name))
-                    .Select(name => $"{c.Name}.{name}");
+                return carriers.SelectMany(file =>
+                {
+                    var entry = bundles[file][c.Name];
+                    return expected
+                        .Where(name => !entry.Parameters.Contains(name))
+                        .Select(name => $"{file}: {c.Name}.{name}");
+                });
             })
             .OrderBy(s => s, StringComparer.Ordinal)
             .ToList();
 
         missing.Should().BeEmpty(
-            "parameters a consumer can set must appear in the shipped bundle — regenerate "
-            + "tempo-blazor*.json after changing [Parameter] surface: " + string.Join(", ", missing.Take(20)));
+            "a parameter a consumer can set must appear in every bundle file that carries the "
+            + "component — regenerate tempo-blazor*.json after changing [Parameter] surface: "
+            + string.Join(", ", missing.Take(20)));
     }
 
     [Fact]
     public void Bundle_Documents_No_Phantom_Parameters()
     {
         var bundles = BundleDocs();
+        var population = ComponentPopulation().ToDictionary(c => c.Name, StringComparer.Ordinal);
 
-        var phantom = ComponentPopulation()
-            .Where(c => bundles.TryGetValue(c.Name, out _))
-            .SelectMany(c =>
-            {
-                var real = ReflectedParameters(c).ToHashSet(StringComparer.Ordinal);
-                return bundles[c.Name].Parameters
-                    .Where(name => !real.Contains(name))
-                    .Select(name => $"{c.Name}.{name}");
-            })
+        var phantom = bundles
+            .SelectMany(kv => kv.Value
+                .Where(item => population.ContainsKey(item.Key))
+                .SelectMany(item =>
+                {
+                    var real = ReflectedParameters(population[item.Key]).ToHashSet(StringComparer.Ordinal);
+                    return item.Value.Parameters
+                        .Where(name => !real.Contains(name))
+                        .Select(name => $"{kv.Key}: {item.Key}.{name}");
+                }))
             .OrderBy(s => s, StringComparer.Ordinal)
             .ToList();
 
         phantom.Should().BeEmpty(
-            "the shipped bundle names a parameter the component does not have — stale overlay or stale "
-            + "bundle: " + string.Join(", ", phantom.Take(20)));
+            "a bundle file naming a parameter the component does not have is a stale overlay or a "
+            + "stale bundle — the file name is in each entry: " + string.Join(", ", phantom.Take(20)));
     }
 
     /// <summary>
-    /// Every <c>kind: "Component"</c> item inside the committed <c>tempo-blazor*.json</c> bundles at
-    /// the repository root, keyed by <c>itemName</c>. The aggregate document nests items under
+    /// The other direction of the per-file contract: a <c>kind: "Component"</c> item inside a
+    /// shipped bundle whose name no <see cref="ComponentBase"/> descendant answers to is a phantom —
+    /// the surviving overlay of a deleted component, shipped to consumers as if it still existed.
+    /// </summary>
+    [Fact]
+    public void Bundle_Contains_No_Phantom_Components()
+    {
+        var bundles = BundleDocs();
+        var population = ComponentPopulation().Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+
+        var phantom = bundles
+            .SelectMany(kv => kv.Value.Keys
+                .Where(name => !population.Contains(name))
+                .Select(name => $"{kv.Key}: {name}"))
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+        phantom.Should().BeEmpty(
+            "a bundle entry for a component that does not exist is a stale doc shipped to consumers — "
+            + "delete the orphan overlay and regenerate: " + string.Join(", ", phantom.Take(20)));
+    }
+
+    /// <summary>
+    /// Every <c>kind: "Component"</c> item inside each committed <c>tempo-blazor*.json</c> bundle at
+    /// the repository root, keyed by file name and then by <c>itemName</c>. Assertions run per file —
+    /// merging the bundles into one map would let an entry that is complete in one file launder the
+    /// same entry being incomplete in another. The aggregate document nests items under
     /// <c>packages[].items</c>, so the search is recursive rather than top-level.
     /// </summary>
-    private static Dictionary<string, DocEntry> BundleDocs()
+    private static IReadOnlyDictionary<string, Dictionary<string, DocEntry>> BundleDocs()
     {
         var root = ThemeCss.RepositoryRoot().FullName;
-        var docs = new Dictionary<string, DocEntry>(StringComparer.Ordinal);
-        foreach (var file in Directory.GetFiles(root, "tempo-*.json", SearchOption.TopDirectoryOnly))
+        var docs = new Dictionary<string, Dictionary<string, DocEntry>>(StringComparer.Ordinal);
+        foreach (var file in Directory.GetFiles(root, "tempo-*.json", SearchOption.TopDirectoryOnly)
+                     .OrderBy(f => f, StringComparer.Ordinal))
         {
             JsonElement document;
             try
@@ -372,12 +436,15 @@ public class ComponentDocumentationFreshnessTests
                 using var parsed = JsonDocument.Parse(File.ReadAllText(file));
                 document = parsed.RootElement.Clone();
             }
-            catch (JsonException)
+            catch (JsonException e)
             {
-                continue;
+                throw new InvalidOperationException(
+                    $"committed bundle is not valid JSON: {Path.GetFileName(file)}", e);
             }
 
-            CollectComponentItems(document, file, docs);
+            var fileDocs = new Dictionary<string, DocEntry>(StringComparer.Ordinal);
+            CollectComponentItems(document, file, fileDocs);
+            docs[Path.GetFileName(file)] = fileDocs;
         }
 
         return docs;

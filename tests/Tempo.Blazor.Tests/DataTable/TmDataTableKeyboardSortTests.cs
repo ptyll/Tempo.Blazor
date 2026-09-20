@@ -210,6 +210,63 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
     }
 
     /// <summary>
+    /// Firefox measured: a button's keyboard-synthesized <c>click</c> arrives with
+    /// <c>shiftKey=false</c> even when Shift was held for the Enter — Chromium copies the key's
+    /// modifiers into the click, Firefox does not. The header's keydown therefore records the
+    /// modifier, and a click with <c>detail == 0</c> — the marker of a keyboard-originated click —
+    /// resolves the recorded state instead of the event's.
+    /// </summary>
+    [Fact]
+    public void ShiftEnter_InAnEngineThatStripsClickModifiers_StillMultiSorts()
+    {
+        var cut = RenderTable(secondColumn: true);
+
+        cut.FindAll("button.tm-th-sort")[0].Click(); // plain → Name asc
+
+        // Fresh lookups after every render — a sorted table re-renders and the handler ids the
+        // bubbled dispatch resolves belong to the new render tree.
+        cut.FindAll("button.tm-th-sort")[1].KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+        // The click Firefox synthesizes for that Enter: keyboard detail, every modifier cleared.
+        cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
+
+        cut.FindAll("th[data-sortable='true']")
+           .Select(h => h.GetAttribute("aria-sort"))
+           .Should().Equal(new[] { "ascending", "ascending" },
+               "Shift+Enter must multi-sort even where the engine strips modifiers off the " +
+               "synthesized click — the keydown's Shift state is the truthful one");
+    }
+
+    /// <summary>
+    /// The counterpart of the recording: a plain keyboard activation whose keydown carried no
+    /// Shift must not pick up a modifier a previous gesture left behind — the flag is consumed
+    /// by the click it armed.
+    /// </summary>
+    [Fact]
+    public void APlainEnter_AfterAShiftedOne_DoesNotKeepTheModifier()
+    {
+        var cut = RenderTable(secondColumn: true);
+
+        cut.FindAll("button.tm-th-sort")[0].Click();
+
+        cut.FindAll("button.tm-th-sort")[1].KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+        cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
+        cut.FindAll("th[data-sortable='true']")
+           .Select(h => h.GetAttribute("aria-sort"))
+           .Should().Equal(new[] { "ascending", "ascending" });
+
+        // A plain Enter on the first column must become the single-column sort — a stale Shift
+        // would keep the second column sorted (and multi-sort would cycle it to descending).
+        cut.FindAll("button.tm-th-sort")[0].KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = false });
+        cut.FindAll("button.tm-th-sort")[0].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
+
+        cut.FindAll("th[data-sortable='true']")
+           .Select(h => h.GetAttribute("aria-sort"))
+           .Should().Equal(new[] { "ascending", "none" },
+               "plain Enter after Shift+Enter is a single-column sort — the recorded modifier is " +
+               "consumed by the click it armed, not inherited by the next one");
+    }
+
+    /// <summary>
     /// Clicking the header outside the button still sorts — the mouse path is unchanged; the button
     /// added the keyboard one.
     /// </summary>

@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.DataTable;
+using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.DataTable;
@@ -10,19 +11,14 @@ namespace Tempo.Blazor.Tests.DataTable;
 /// The accessible-name contract of the <c>.tm-th-sort</c> button.
 /// <para>
 /// WCAG 4.1.2: every control must have a name a screen reader can announce — and a sort button's
-/// name cannot be the sort ICON, because the icon span is <c>aria-hidden</c>. Up to 2.8.26 the
-/// button named itself only on the paths that happened to have text: a column with a plain
-/// <c>Title</c> was named by its content, and a templated header fell back to
-/// <c>aria-label = Title ?? "Sort ascending"</c>. The combination nobody covered was the
-/// title-LESS icon-only header — <c>PropertyName</c> set, no <c>Title</c>, no template — whose
-/// button contained only aria-hidden spans and announced NOTHING.
-/// </para>
-/// <para>
-/// The name is now emitted as an explicit <c>aria-label</c> on every render — derived as
-/// <c>SortLabel ?? Title ?? "Sort ascending"</c> — so the guarantee lives in the markup rather
-/// than in the luck of whether the button happens to hold visible text. <c>SortLabel</c> exists
-/// for the consumer who wants the name to say more than the column caption (e.g. "Sort by last
-/// name" while the visible label stays "Name").
+/// name cannot be the sort ICON, because the icon span is <c>aria-hidden</c>. The name is now
+/// emitted as an explicit <c>aria-label</c> on every render, in two parts:
+/// <c>"Sort by {header} — {next action}"</c>. The header is the column <c>Title</c>, else
+/// <c>SortLabel</c>, else — RELEASE only — the localized positional name
+/// <c>"Column {n}"</c>; a templated header with neither is a developer error and throws in DEBUG.
+/// The next action is the state the SAME tri-state cycle the click/Enter path walks reaches next:
+/// none → ascending → descending → cleared — so the button never announces "sort ascending" on a
+/// press that sorts descending.
 /// </para>
 /// </summary>
 public class TmDataTableSortButtonNameTests : LocalizationTestBase
@@ -32,10 +28,18 @@ public class TmDataTableSortButtonNameTests : LocalizationTestBase
     private static readonly List<Person> People = [new("Alice"), new("Bob")];
 
     private IRenderedComponent<TmDataTable<Person>> RenderTable(
-        Action<Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder> configureColumn)
+        Action<Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder> configureColumn,
+        string? defaultSortColumn = null,
+        DataTableSortDirection defaultSortDirection = DataTableSortDirection.Ascending)
         => Render<TmDataTable<Person>>(p =>
         {
             p.Add(c => c.Items, People);
+            if (defaultSortColumn is not null)
+            {
+                p.Add(c => c.DefaultSortColumn, defaultSortColumn);
+                p.Add(c => c.DefaultSortDirection, defaultSortDirection);
+            }
+
             p.AddChildContent(b =>
             {
                 b.OpenComponent<TmDataTableColumn<Person>>(0);
@@ -46,7 +50,7 @@ public class TmDataTableSortButtonNameTests : LocalizationTestBase
         });
 
     [Fact]
-    public void ASortButton_Names_Itself_From_The_Column_Title()
+    public void ASortButton_Announces_SortBy_Title_And_The_Next_Ascending()
     {
         var cut = RenderTable(b =>
         {
@@ -54,81 +58,195 @@ public class TmDataTableSortButtonNameTests : LocalizationTestBase
             b.AddAttribute(2, "Sortable", true);
         });
 
-        cut.Find("button.tm-th-sort").GetAttribute("aria-label").Should().Be("Name",
-            "viditelný text JE jméno — ale garance má stát v markupu, ne v náhodě obsahu");
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Name — Sort ascending",
+                "the name is 'Sort by {header} — {next action}': an unsorted column's next " +
+                "activation sorts ascending");
     }
 
     [Fact]
-    public void AnIconOnlySortableHeader_Still_Has_An_Accessible_Name()
-    {
-        // PropertyName carries the column key; no Title, no template. Before 2.9.0 this button
-        // contained ONLY aria-hidden spans — a real <button> that announced nothing.
-        var cut = RenderTable(b =>
-        {
-            b.AddAttribute(1, "PropertyName", "Name");
-            b.AddAttribute(2, "Sortable", true);
-        });
-
-        cut.Find("button.tm-th-sort").GetAttribute("aria-label").Should().Be("Sort ascending",
-            "tlačítko, jehož jediný obsah je skrytá ikona, musí nést jméno v aria-label");
-    }
-
-    [Fact]
-    public void AHeaderTemplate_Keeps_The_Title_As_The_Button_Name()
+    public void AColumnSortedAscending_Announces_SortDescending_As_The_Next_Action()
     {
         var cut = RenderTable(b =>
         {
             b.AddAttribute(1, "Title", "Name");
             b.AddAttribute(2, "Sortable", true);
-            b.AddAttribute(3, "HeaderTemplate",
-                (RenderFragment)(hb => hb.AddContent(0, "filter ui")));
-        });
+        }, defaultSortColumn: "Name");
 
-        cut.Find("button.tm-th-sort").GetAttribute("aria-label").Should().Be("Name",
-            "templatovaná hlavička nemá viditelný text — jméno jí dává Title");
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Name — Sort descending",
+                "the next activation on an ascending column sorts descending — the name must " +
+                "track the cycle, not stay a static 'sort ascending'");
     }
 
     [Fact]
-    public void AHeaderTemplate_Without_A_Title_Falls_Back_To_The_Localized_Name()
+    public void AColumnSortedDescending_Announces_ClearSort_As_The_Next_Action()
     {
         var cut = RenderTable(b =>
         {
-            b.AddAttribute(1, "PropertyName", "Name");
+            b.AddAttribute(1, "Title", "Name");
             b.AddAttribute(2, "Sortable", true);
-            b.AddAttribute(3, "HeaderTemplate",
-                (RenderFragment)(hb => hb.AddContent(0, "filter ui")));
-        });
+        }, defaultSortColumn: "Name", defaultSortDirection: DataTableSortDirection.Descending);
 
-        cut.Find("button.tm-th-sort").GetAttribute("aria-label").Should().Be("Sort ascending",
-            "bez Title je posledním zdrojem jména lokalizovaná akce, ne prázdný atribut");
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Name — Clear sort",
+                "the third step of the cycle clears the sort — the name says so");
     }
 
     [Fact]
-    public void SortLabel_Overrides_The_Derived_Name()
+    public void The_Next_Action_In_The_Name_Tracks_The_Sort_Cycle()
+    {
+        var cut = RenderTable(b =>
+        {
+            b.AddAttribute(1, "Title", "Name");
+            b.AddAttribute(2, "Sortable", true);
+        });
+        var header = cut.Find("th[data-sortable='true']");
+        var button = cut.Find("button.tm-th-sort");
+
+        header.Click(); // → ascending
+        button.GetAttribute("aria-label").Should().Be("Sort by Name — Sort descending");
+
+        header.Click(); // → descending
+        button.GetAttribute("aria-label").Should().Be("Sort by Name — Clear sort");
+
+        header.Click(); // → cleared
+        button.GetAttribute("aria-label").Should().Be("Sort by Name — Sort ascending");
+    }
+
+    [Fact]
+    public void Title_Wins_As_The_Subject_When_SortLabel_Is_Also_Set()
     {
         var cut = RenderTable(b =>
         {
             b.AddAttribute(1, "Title", "Name");
             b.AddAttribute(2, "PropertyName", "Name");
             b.AddAttribute(3, "Sortable", true);
-            b.AddAttribute(4, "SortLabel", "Sort by last name");
+            b.AddAttribute(4, "SortLabel", "last name");
         });
 
-        cut.Find("button.tm-th-sort").GetAttribute("aria-label").Should().Be("Sort by last name",
-            "SortLabel je explicitní slib consumerovi — má přednost před Title");
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Name — Sort ascending",
+                "the visible caption is what a sighted user points at — the name says the same " +
+                "subject; SortLabel is the replacement for a column that has no Title");
     }
 
     [Fact]
-    public void SortLabel_Also_Wins_When_The_Title_Is_Empty()
+    public void SortLabel_Is_The_Subject_When_There_Is_No_Title()
     {
         var cut = RenderTable(b =>
         {
             b.AddAttribute(1, "PropertyName", "Name");
             b.AddAttribute(2, "Sortable", true);
-            b.AddAttribute(3, "SortLabel", "Sort people");
+            b.AddAttribute(3, "SortLabel", "last name");
         });
 
-        cut.Find("button.tm-th-sort").GetAttribute("aria-label").Should().Be("Sort people");
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by last name — Sort ascending",
+                "SortLabel exists exactly for the column whose header is not plain text");
+    }
+
+    [Fact]
+    public void AHeaderTemplate_Keeps_The_Title_As_The_Subject()
+    {
+        var cut = RenderTable(b =>
+        {
+            b.AddAttribute(1, "Title", "Name");
+            b.AddAttribute(2, "Sortable", true);
+            b.AddAttribute(3, "HeaderTemplate",
+                (RenderFragment)(hb => hb.AddContent(0, "filter ui")));
+        });
+
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Name — Sort ascending",
+                "the template replaced the caption visually — the name still names the column");
+    }
+
+    [Fact]
+    public void AHeaderTemplate_Without_Title_Uses_SortLabel()
+    {
+        var cut = RenderTable(b =>
+        {
+            b.AddAttribute(1, "PropertyName", "Name");
+            b.AddAttribute(2, "Sortable", true);
+            b.AddAttribute(3, "SortLabel", "last name");
+            b.AddAttribute(4, "HeaderTemplate",
+                (RenderFragment)(hb => hb.AddContent(0, "filter ui")));
+        });
+
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by last name — Sort ascending");
+    }
+
+    [Fact]
+    public void AHeaderTemplate_Without_Title_Or_SortLabel_Is_A_Developer_Error()
+    {
+        // A template consumed the caption and supplied nothing to name the button — in DEBUG that
+        // is thrown, in RELEASE the button degrades to the localized positional name. Both halves
+        // are compiled; which one runs is the build configuration.
+        var render = () => RenderTable(b =>
+        {
+            b.AddAttribute(1, "PropertyName", "Name");
+            b.AddAttribute(2, "Sortable", true);
+            b.AddAttribute(3, "HeaderTemplate",
+                (RenderFragment)(hb => hb.AddContent(0, "filter ui")));
+        });
+
+#if DEBUG
+        render.Should().Throw<InvalidOperationException>(
+            "a templated sortable header with no Title and no SortLabel leaves the button " +
+            "unnamable — DEBUG refuses to ship the unnamed control");
+#else
+        using var cut = render();
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Column 1 — Sort ascending",
+                "RELEASE degrades to the positional name rather than crash a published page");
+#endif
+    }
+
+    [Fact]
+    public void AnIconOnlySortableHeader_Names_Itself_By_Position()
+    {
+        // PropertyName carries the column key; no Title, no template, no SortLabel.
+        var cut = RenderTable(b =>
+        {
+            b.AddAttribute(1, "PropertyName", "Name");
+            b.AddAttribute(2, "Sortable", true);
+        });
+
+        cut.Find("button.tm-th-sort").GetAttribute("aria-label")
+            .Should().Be("Sort by Column 1 — Sort ascending",
+                "a header with no text at all still gets a localized positional name");
+    }
+
+    [Fact]
+    public void The_Positional_Fallback_Uses_The_Column_Index()
+    {
+        var cut = Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.Items, People);
+            p.AddChildContent(b =>
+            {
+                b.OpenComponent<TmDataTableColumn<Person>>(0);
+                b.AddAttribute(1, "Title", "Name");
+                b.AddAttribute(2, "Sortable", true);
+                b.AddAttribute(3, "Field", (Func<Person, object?>)(x => x.Name));
+                b.CloseComponent();
+
+                b.OpenComponent<TmDataTableColumn<Person>>(4);
+                b.AddAttribute(5, "PropertyName", "Name2");
+                b.AddAttribute(6, "Sortable", true);
+                b.AddAttribute(7, "Field", (Func<Person, object?>)(x => x.Name));
+                b.CloseComponent();
+            });
+        });
+
+        var buttons = cut.FindAll("button.tm-th-sort");
+        buttons.Should().HaveCount(2);
+        buttons[0].GetAttribute("aria-label").Should().Be("Sort by Name — Sort ascending");
+        buttons[1].GetAttribute("aria-label").Should().Be("Sort by Column 2 — Sort ascending",
+            "the fallback names the column by its position, so two unnamed headers still get " +
+            "distinct names");
     }
 
     [Fact]
@@ -146,7 +264,7 @@ public class TmDataTableSortButtonNameTests : LocalizationTestBase
                 b.CloseComponent();
 
                 b.OpenComponent<TmDataTableColumn<Person>>(4);
-                b.AddAttribute(5, "PropertyName", "Name");
+                b.AddAttribute(5, "PropertyName", "Name2");
                 b.AddAttribute(6, "Sortable", true);
                 b.AddAttribute(7, "Field", (Func<Person, object?>)(x => x.Name));
                 b.CloseComponent();
@@ -156,6 +274,6 @@ public class TmDataTableSortButtonNameTests : LocalizationTestBase
         var buttons = cut.FindAll("button.tm-th-sort");
         buttons.Should().HaveCount(2);
         buttons.Should().AllSatisfy(button => button.GetAttribute("aria-label").Should().NotBeNullOrEmpty(
-            "záruka platí pro každý sort button, ne jen pro ten, který se testuje"));
+            "the guarantee holds for every sort button, not only the one under test"));
     }
 }

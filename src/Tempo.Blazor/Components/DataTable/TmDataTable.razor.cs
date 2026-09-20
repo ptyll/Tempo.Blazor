@@ -2070,6 +2070,22 @@ public partial class TmDataTable<TItem> : IDisposable
     }
 
     /// <summary>
+    /// The Shift state of the keydown that initiated the in-flight keyboard activation. Captured
+    /// on the way through the header because the event the sort decision reads — the click —
+    /// cannot be trusted to carry it.
+    /// </summary>
+    /// <remarks>
+    /// Measured: Firefox dispatches a button's keyboard-synthesized <c>click</c> with
+    /// <c>shiftKey=false</c> even when Shift was held for the Enter — Chromium copies the key's
+    /// modifiers into the click, Firefox does not. The <c>keydown</c> reports Shift correctly in
+    /// both engines, so it is recorded here and consulted for clicks with <c>detail == 0</c>
+    /// (keyboard-originated). The flag is consumed by that click; a fresh keydown always
+    /// overwrites it, and a real mouse click (<c>detail &gt;= 1</c>) ignores it entirely — the
+    /// event's own <c>shiftKey</c> is authoritative there.
+    /// </remarks>
+    private bool _activationKeyShift;
+
+    /// <summary>
     /// The <c>&lt;th&gt;</c>'s own key handler exists for ONE shortcut now: P for the pin. Activation is
     /// deliberately NOT handled here — a sortable header's activatable element is the
     /// <c>.tm-th-sort</c> button inside it, where Enter and Space produce a native <c>click</c> that
@@ -2108,12 +2124,37 @@ public partial class TmDataTable<TItem> : IDisposable
     /// </remarks>
     private Task HandleHeaderKeyDownAsync(KeyboardEventArgs e, TmDataTableColumn<TItem> col)
     {
+        // Record the modifier state for the activation keys that synthesize a click on the sort
+        // button (Enter fires click on keydown, Space on keyup — both bubble through here first).
+        if (e.Key is "Enter" or " ")
+        {
+            _activationKeyShift = e.ShiftKey;
+        }
+
         if (ShowColumnMenu && (e.Key is "p" or "P"))
         {
             return CyclePinAsync(col);
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Whether this header click is a multi-sort gesture. A pointer click answers its own
+    /// <c>shiftKey</c>; a keyboard-originated click (<c>detail == 0</c>) consults the Shift state
+    /// recorded by the keydown that produced it, because Firefox ships such clicks with every
+    /// modifier cleared (see <see cref="_activationKeyShift"/>).
+    /// </summary>
+    private bool HeaderClickRequestsMultiSort(MouseEventArgs e)
+    {
+        if (e.Detail != 0)
+        {
+            return e.ShiftKey;
+        }
+
+        var shift = _activationKeyShift;
+        _activationKeyShift = false;
+        return shift || e.ShiftKey;
     }
 
     /// <summary>
@@ -2191,16 +2232,65 @@ public partial class TmDataTable<TItem> : IDisposable
     }
 
     /// <summary>
-    /// The name the sort button announces. <see cref="TmDataTableColumn{TItem}.SortLabel"/> is the
-    /// consumer's explicit override; the column <c>Title</c> names the button next; and when neither
-    /// exists — an icon-only or untitled templated header — the localized action name is what a
-    /// screen reader gets rather than silence. A button whose only content is an aria-hidden icon
-    /// must never reach the page without a name.
+    /// The name the sort button announces: "Sort by {headerText} — {next action}". The header text
+    /// is the column <c>Title</c> — the caption the user sees — with
+    /// <see cref="TmDataTableColumn{TItem}.SortLabel"/> as the consumer's replacement for a column
+    /// that has none. When neither exists the header must be a <c>HeaderTemplate</c>: that
+    /// combination is a developer error — the template replaced the caption, so nothing names the
+    /// button — and in DEBUG it throws rather than ship an unnamed control. In RELEASE the button
+    /// falls back to a localized positional name ("Column {n}") because a published app serves the
+    /// reader it has, not the one it should have had.
     /// </summary>
+    /// <remarks>
+    /// The second half of the name is the state the NEXT activation reaches — the same tri-state
+    /// cycle <c>SortByAsync</c> walks (none → ascending → descending → none), so the name never
+    /// announces "sort ascending" while the next press sorts descending.
+    /// </remarks>
     private string SortButtonAccessibleName(TmDataTableColumn<TItem> col)
-        => col.SortLabel
-           ?? (string.IsNullOrWhiteSpace(col.Title) ? null : col.Title)
-           ?? Loc["TmDataTable_SortAscending"];
+        => Loc["TmDataTable_SortBy", SortButtonHeaderText(col), Loc[NextSortActionKey(col)]];
+
+    /// <summary>The subject inside "Sort by {0}": <c>Title</c> wins, then <c>SortLabel</c>.</summary>
+    private string SortButtonHeaderText(TmDataTableColumn<TItem> col)
+    {
+        if (!string.IsNullOrWhiteSpace(col.Title))
+        {
+            return col.Title;
+        }
+
+        if (!string.IsNullOrWhiteSpace(col.SortLabel))
+        {
+            return col.SortLabel!;
+        }
+
+#if DEBUG
+        if (col.HeaderTemplate is not null)
+        {
+            throw new InvalidOperationException(
+                $"TmDataTable column '{col.Key}' renders a HeaderTemplate but supplies neither Title " +
+                "nor SortLabel — the sort button would announce a bare column number. Set Title or " +
+                "SortLabel so the control has a real name.");
+        }
+#endif
+
+        // No caption to name: the localized positional fallback. (A HeaderTemplate in this state
+        // is the DEBUG throw above; a plain header with no Title renders an empty caption either
+        // way, and the button still owes the reader a name.)
+        return Loc["TmDataTable_SortColumn", _visibleColumns.IndexOf(col) + 1];
+    }
+
+    /// <summary>The resource key of the state the next activation on this column reaches.</summary>
+    private string NextSortActionKey(TmDataTableColumn<TItem> col)
+    {
+        var sort = GetColumnSort(col.Key);
+        if (sort is null)
+        {
+            return "TmDataTable_SortAscending";
+        }
+
+        return sort.Direction == DataTableSortDirection.Ascending
+            ? "TmDataTable_SortDescending"
+            : "TmDataTable_ClearSort";
+    }
 
     private string GetRowClass(TItem item) => IsSelected(item) ? "tm-row-selected" : string.Empty;
 
