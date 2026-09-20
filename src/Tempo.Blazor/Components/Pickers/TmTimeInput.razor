@@ -2,6 +2,7 @@
 
 <div class="tm-time-input @(Disabled ? "tm-time-input--disabled" : "")">
     <input type="number"
+           id="@InputId"
            class="tm-time-seg tm-time-seg--hours"
            min="0" max="23"
            value="@_hours"
@@ -36,6 +37,8 @@
     [Parameter] public bool       Disabled     { get; set; }
     [Parameter] public TimeOnly?  MinTime      { get; set; }
     [Parameter] public TimeOnly?  MaxTime      { get; set; }
+    /// <summary>Optional id applied to the hours segment so a parent <c>&lt;label for&gt;</c> can target it.</summary>
+    [Parameter] public string?    InputId      { get; set; }
 
     private string _hours   = "00";
     private string _minutes = "00";

@@ -3,16 +3,22 @@
 <div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "")"
      data-required="@(Required ? "true" : null)"
      aria-disabled="@(IsOutOfRange ? "true" : null)"
-     @attributes="AdditionalAttributes">
+     @attributes="RootAttributes">
 
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-picker-label">@Label</label>
+        <label id="@_labelId" class="tm-picker-label" for="@_inputId">@Label</label>
     }
 
-    <div class="tm-time-picker-body">
+    @* Composite control (hours/minutes/seconds + clear): the label's `for` targets the first
+       segment, and the body is a named group so assistive tech announces "{label}, group". *@
+    <div class="tm-time-picker-body"
+         role="group"
+         aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+         @attributes="AriaAttributes">
         <TmTimeInput Value="@Value"
                      ValueChanged="OnTimeChanged"
+                     InputId="@_inputId"
                      ShowSeconds="@ShowSeconds"
                      Disabled="@Disabled"
                      MinTime="@MinTime"
@@ -50,10 +56,28 @@
     [Parameter] public string?    Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    private readonly string _labelId = $"tm-time-picker-label-{Guid.NewGuid():N}";
+    private readonly string _inputId = $"tm-time-picker-input-{Guid.NewGuid():N}";
+
     private bool IsOutOfRange =>
         Value.HasValue &&
         ((MinTime.HasValue && Value.Value < MinTime.Value) ||
          (MaxTime.HasValue && Value.Value > MaxTime.Value));
+
+    /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
+    private IReadOnlyDictionary<string, object>? AriaAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+    private IReadOnlyDictionary<string, object>? RootAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     private async Task OnTimeChanged(TimeOnly? t) => await ValueChanged.InvokeAsync(t);
 

@@ -1,9 +1,11 @@
 @namespace Tempo.Blazor.Components.Pickers
 
-<div class="tm-datetime-picker @Class @(IsOutOfRange ? "tm-datetime-picker--invalid" : "")" @attributes="AdditionalAttributes">
+<div class="tm-datetime-picker @Class @(IsOutOfRange ? "tm-datetime-picker--invalid" : "")" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-picker-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+        <label id="@_labelId"
+               class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
+               for="@EffectiveTriggerId">@Label</label>
     }
 
     <div class="tm-datetime-picker-body">
@@ -11,20 +13,25 @@
         <div class="tm-datetime-date-section">
             <div class="tm-date-picker-input-row">
                 <button type="button"
+                        id="@EffectiveTriggerId"
                         class="tm-date-picker-trigger"
                         disabled="@Disabled"
                         aria-haspopup="true"
                         aria-expanded="@_isOpen"
                         aria-required="@(Required ? "true" : null)"
+                        aria-labelledby="@TriggerLabelledBy"
+                        @attributes="AriaAttributes"
                         @onclick="ToggleCalendar">
-                    @if (_date.HasValue)
-                    {
-                        @_date.Value.ToString(DateFormat)
-                    }
-                    else
-                    {
-                        <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDateTimePicker_Placeholder"])</span>
-                    }
+                    <span id="@_valueId">
+                        @if (_date.HasValue)
+                        {
+                            @_date.Value.ToString(DateFormat)
+                        }
+                        else
+                        {
+                            <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDateTimePicker_Placeholder"])</span>
+                        }
+                    </span>
                     <span class="tm-date-picker-icon" aria-hidden="true"></span>
                 </button>
 
@@ -53,14 +60,17 @@
             }
         </div>
 
-        <!-- Time section -->
-        <div class="tm-datetime-time-section">
+        <!-- Time section: composite input, labelled via role=group + label `for` on first segment -->
+        <div class="tm-datetime-time-section"
+             role="group"
+             aria-labelledby="@(string.IsNullOrEmpty(TimeLabel) ? null : _timeLabelId)">
             @if (!string.IsNullOrEmpty(TimeLabel))
             {
-                <label class="tm-picker-label">@TimeLabel</label>
+                <label id="@_timeLabelId" class="tm-picker-label" for="@_timeInputId">@TimeLabel</label>
             }
             <TmTimeInput Value="@_time"
                          ValueChanged="OnTimeChanged"
+                         InputId="@_timeInputId"
                          ShowSeconds="@ShowSeconds"
                          Disabled="@Disabled"
                          MinTime="@_minTime"
@@ -83,8 +93,37 @@
     [Parameter] public string?    Label        { get; set; }
     /// <summary>Optional label rendered above the time (HH:mm) sub-field. Null = no label (backward compatible).</summary>
     [Parameter] public string?    TimeLabel    { get; set; }
+    /// <summary>Optional explicit id for the date trigger so a parent component's label can target it.</summary>
+    [Parameter] public string?    TriggerId    { get; set; }
     [Parameter] public string?    Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private readonly string _labelId      = $"tm-datetime-label-{Guid.NewGuid():N}";
+    private readonly string _triggerId    = $"tm-datetime-trigger-{Guid.NewGuid():N}";
+    private readonly string _valueId      = $"tm-datetime-value-{Guid.NewGuid():N}";
+    private readonly string _timeLabelId  = $"tm-datetime-time-label-{Guid.NewGuid():N}";
+    private readonly string _timeInputId  = $"tm-datetime-time-input-{Guid.NewGuid():N}";
+
+    private string EffectiveTriggerId => TriggerId ?? _triggerId;
+
+    /// <summary>Accessible name = label + shown value/placeholder; falls back to the value alone.</summary>
+    private string TriggerLabelledBy =>
+        string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
+
+    /// <summary>Consumer <c>aria-*</c> attributes target the date trigger; everything else the root.</summary>
+    private IReadOnlyDictionary<string, object>? AriaAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+    private IReadOnlyDictionary<string, object>? RootAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     private bool      _isOpen;
     private int       _displayYear  = DateTime.Today.Year;

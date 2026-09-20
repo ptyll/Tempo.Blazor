@@ -1,16 +1,21 @@
 @namespace Tempo.Blazor.Components.Pickers
 
-<div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")" @attributes="AdditionalAttributes">
+<div class="tm-time-range-picker @Class @(IsInvalid ? "tm-time-range--invalid" : "")" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-picker-label">@Label</label>
+        <label id="@_labelId" class="tm-picker-label" for="@_startInputId">@Label</label>
     }
 
-    <div class="tm-time-range-body">
+    @* Composite control: `for` targets the start-hours segment; the body is a named group. *@
+    <div class="tm-time-range-body"
+         role="group"
+         aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+         @attributes="AriaAttributes">
         <div class="tm-time-range-section tm-time-range-from">
             <span class="tm-time-range-label">@Loc["TmTimeRangePicker_From"]</span>
             <TmTimeInput Value="@Value.Start"
                          ValueChanged="OnStartChanged"
+                         InputId="@_startInputId"
                          ShowSeconds="@ShowSeconds"
                          Disabled="@Disabled" />
         </div>
@@ -61,8 +66,26 @@
     [Parameter] public string? Class          { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    private readonly string _labelId      = $"tm-time-range-label-{Guid.NewGuid():N}";
+    private readonly string _startInputId = $"tm-time-range-start-{Guid.NewGuid():N}";
+
     private bool IsInvalid =>
         Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;
+
+    /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
+    private IReadOnlyDictionary<string, object>? AriaAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+    private IReadOnlyDictionary<string, object>? RootAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     private async Task OnStartChanged(TimeOnly? t)
         => await ValueChanged.InvokeAsync((t, Value.End));

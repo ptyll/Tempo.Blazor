@@ -1,27 +1,32 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Models
 
-<div class="tm-date-range-picker @Class" @attributes="AdditionalAttributes">
+<div class="tm-date-range-picker @Class" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-picker-label">@Label</label>
+        <label id="@_labelId" class="tm-picker-label" for="@_triggerId">@Label</label>
     }
 
     <div class="tm-date-range-input-row">
         <button type="button"
+                id="@_triggerId"
                 class="tm-date-range-trigger"
                 disabled="@Disabled"
                 aria-haspopup="true"
                 aria-expanded="@_isOpen"
+                aria-labelledby="@TriggerLabelledBy"
+                @attributes="AriaAttributes"
                 @onclick="TogglePopup">
-            @if (Value.Start.HasValue || Value.End.HasValue)
-            {
-                <span>@FormatRange()</span>
-            }
-            else
-            {
-                <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDateRangePicker_From"])</span>
-            }
+            <span id="@_valueId">
+                @if (Value.Start.HasValue || Value.End.HasValue)
+                {
+                    @FormatRange()
+                }
+                else
+                {
+                    <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDateRangePicker_From"])</span>
+                }
+            </span>
             <span class="tm-date-picker-icon" aria-hidden="true">&#128197;</span>
         </button>
 
@@ -108,6 +113,9 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool      _isOpen;
+    private readonly string _labelId   = $"tm-date-range-label-{Guid.NewGuid():N}";
+    private readonly string _triggerId = $"tm-date-range-trigger-{Guid.NewGuid():N}";
+    private readonly string _valueId   = $"tm-date-range-value-{Guid.NewGuid():N}";
     private int       _leftYear, _leftMonth, _rightYear, _rightMonth;
     private DateOnly? _hoverDate;
     // Selection state: first click = start, second = end
@@ -117,6 +125,28 @@
     private DateOnly? _selectionEnd;
     // Tracks the last Value we received from the parent to detect external changes
     private (DateOnly? Start, DateOnly? End) _lastReceivedValue = (null, null);
+
+    /// <summary>
+    /// Accessible name = label + shown value/placeholder; without a <see cref="Label"/> the value
+    /// span alone names the trigger, identical to its text content.
+    /// </summary>
+    private string TriggerLabelledBy =>
+        string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
+
+    /// <summary>Consumer <c>aria-*</c> attributes target the trigger; everything else the root.</summary>
+    private IReadOnlyDictionary<string, object>? AriaAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+    private IReadOnlyDictionary<string, object>? RootAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     private IReadOnlyList<DateRangePreset> EffectivePresets => Presets ?? DefaultPresets;
     private static readonly IReadOnlyList<DateRangePreset> DefaultPresets =

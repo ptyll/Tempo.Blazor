@@ -36,6 +36,23 @@ which is exactly the red
 
 ### Fixed
 
+- **Every picker label is now programmatically associated with its control.** All six
+  `.tm-picker-label` pickers previously rendered a bare `<label>` with neither `for` nor a wrapped
+  control — it named nothing, and assistive tech never announced it. Trigger pickers
+  (`TmDatePicker`, `TmDateRangePicker`, `TmDateTimePicker`'s date field) now render
+  `<label id for="{triggerId}">`, the trigger carries `aria-labelledby="{labelId} {valueId}"`
+  so its announced name is the label followed by the shown value or placeholder, and clicking the
+  label natively focuses and opens the trigger. Composite pickers (`TmTimePicker`,
+  `TmTimeRangePicker`, `TmDateTimeRangePicker`, `TmDateTimePicker`'s time section) have no single
+  labelable element, so their `for` targets the first segment (`TmTimeInput` gained an `InputId`
+  parameter for this; `TmDateTimePicker` gained `TriggerId` so a parent label can reach the
+  nested trigger) and the input body is a `role="group"` named by `aria-labelledby` — the W3C
+  pattern for multi-field controls. `aria-*` entries in `AdditionalAttributes` are now splatted
+  onto the trigger (or the named group) instead of the wrapper div; `data-*` and other attributes
+  stay on the root, where test ids live. bUnit covers the `for`/`aria-labelledby` wiring for all
+  six pickers and the attribute split; axe-core on `/pickers` asserts zero `button-name`
+  violations and a real-browser test clicks the label and reads `document.activeElement`.
+
 - **The declarations 2.8.26 deleted as "dead" are back on the owning classes (`eef9ba93`).** The
   erratum in the 2.8.26 section tells the whole story: five commits — **`9e9e4a54`**,
   **`cfd691d5`**, **`5ab7fe83`**, **`8125ac19`**, **`a013d24c`** — removed rules whose selectors

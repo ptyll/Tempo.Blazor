@@ -1,18 +1,27 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Models
 
-<div class="tm-datetime-range-picker @Class @(IsInvalid ? "tm-datetime-range--invalid" : "")" @attributes="AdditionalAttributes">
+<div class="tm-datetime-range-picker @Class @(IsInvalid ? "tm-datetime-range--invalid" : "")" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-picker-label">@Label</label>
+        <label id="@_labelId" class="tm-picker-label" for="@_startTriggerId">@Label</label>
     }
 
-    <div class="tm-datetime-range-body">
+    @* Composite of two TmDateTimePickers: the label's `for` targets the start picker's trigger
+       (via its TriggerId pass-through); the body is a named group and each section is a named
+       sub-group so assistive tech announces "Label > Start|End > trigger". *@
+    <div class="tm-datetime-range-body"
+         role="group"
+         aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+         @attributes="AriaAttributes">
         <!-- Start -->
-        <div class="tm-datetime-range-section tm-datetime-range-start">
-            <span class="tm-datetime-range-label">@Loc["TmDateTimeRangePicker_StartLabel"]</span>
+        <div class="tm-datetime-range-section tm-datetime-range-start"
+             role="group"
+             aria-labelledby="@_startLabelId">
+            <span id="@_startLabelId" class="tm-datetime-range-label">@Loc["TmDateTimeRangePicker_StartLabel"]</span>
             <TmDateTimePicker Value="@Value.Start"
                               ValueChanged="OnStartChanged"
+                              TriggerId="@_startTriggerId"
                               MinValue="@MinValue"
                               MaxValue="@Value.End"
                               ShowSeconds="@ShowSeconds"
@@ -23,8 +32,10 @@
         <span class="tm-datetime-range-sep" aria-hidden="true">–</span>
 
         <!-- End -->
-        <div class="tm-datetime-range-section tm-datetime-range-end">
-            <span class="tm-datetime-range-label">@Loc["TmDateTimeRangePicker_EndLabel"]</span>
+        <div class="tm-datetime-range-section tm-datetime-range-end"
+             role="group"
+             aria-labelledby="@_endLabelId">
+            <span id="@_endLabelId" class="tm-datetime-range-label">@Loc["TmDateTimeRangePicker_EndLabel"]</span>
             <TmDateTimePicker Value="@Value.End"
                               ValueChanged="OnEndChanged"
                               MinValue="@Value.Start"
@@ -63,8 +74,28 @@
     [Parameter] public string? Class        { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    private readonly string _labelId        = $"tm-datetime-range-label-{Guid.NewGuid():N}";
+    private readonly string _startLabelId   = $"tm-datetime-range-start-label-{Guid.NewGuid():N}";
+    private readonly string _endLabelId     = $"tm-datetime-range-end-label-{Guid.NewGuid():N}";
+    private readonly string _startTriggerId = $"tm-datetime-range-start-trigger-{Guid.NewGuid():N}";
+
     private bool IsInvalid =>
         Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;
+
+    /// <summary>Consumer <c>aria-*</c> attributes target the input group; everything else the root.</summary>
+    private IReadOnlyDictionary<string, object>? AriaAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+    private IReadOnlyDictionary<string, object>? RootAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     private async Task OnStartChanged(DateTime? dt)
         => await ValueChanged.InvokeAsync((dt, Value.End));

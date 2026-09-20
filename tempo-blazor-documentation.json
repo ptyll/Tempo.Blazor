@@ -18921,6 +18921,12 @@
           "description": "Optional label rendered above the time (HH:mm) sub-field. Null = no label (backward compatible)."
         },
         {
+          "name": "TriggerId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional explicit id for the date trigger so a parent component's label can target it."
+        },
+        {
           "name": "Value",
           "type": "DateTime?",
           "isRequired": false
@@ -19102,6 +19108,12 @@
           "name": "Disabled",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "InputId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional id applied to the hours segment so a parent <label for> can target it."
         },
         {
           "name": "MaxTime",

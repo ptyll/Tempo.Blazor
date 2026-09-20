@@ -36,6 +36,11 @@
       "name": "MaxTime",
       "type": "TimeOnly?",
       "isRequired": false
+    },
+    {
+      "name": "InputId",
+      "type": "string?",
+      "isRequired": false
     }
   ],
   "cssClasses": [

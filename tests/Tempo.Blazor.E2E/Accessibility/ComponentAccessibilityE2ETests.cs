@@ -54,6 +54,57 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
             new object[] { selector, impacts, exclude ?? Array.Empty<string>() });
     }
 
+    // Variant of AxeViolationsAsync that scans EVERY element matching `selector` (the base helper
+    // only ever scans the first match — picker demos spread across several .demo-section blocks).
+    private static async Task<string[]> AxeViolationsAllAsync(IPage page, string selector, string[] impacts, string[]? exclude = null)
+    {
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = AxeCdn });
+        return await page.EvaluateAsync<string[]>(
+            """
+            async ([selector, impacts, exclude]) => {
+                const hosts = Array.from(document.querySelectorAll(selector));
+                const isChrome = (target) => {
+                    if (!exclude.length) return false;
+                    const el = document.querySelector(target[target.length - 1]);
+                    return el && exclude.some(sel => el.matches(sel) || el.closest(sel));
+                };
+                const out = [];
+                for (const host of hosts) {
+                    const result = await axe.run(host, {
+                        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                        resultTypes: ['violations']
+                    });
+                    for (const v of result.violations) {
+                        if (!impacts.includes(v.impact)) continue;
+                        const nodes = v.nodes.filter(n => !isChrome(n.target));
+                        if (nodes.length > 0)
+                            out.push(`${v.impact}: ${v.id} - ${v.help} (${nodes.map(n => n.target.join(' ')).join('; ')})`);
+                    }
+                }
+                return out;
+            }
+            """,
+            new object[] { selector, impacts, exclude ?? Array.Empty<string>() });
+    }
+
+    // Same axe scan as AxeViolationsAsync but filtered by RULE ID (e.g. "button-name") rather than
+    // impact, so a test can assert a specific rule is clean even when other debt exists on the page.
+    private static async Task<string[]> AxeRuleViolationsAsync(IPage page, string selector, string[] ruleIds)
+    {
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = AxeCdn });
+        return await page.EvaluateAsync<string[]>(
+            """
+            async ([selector, ruleIds]) => {
+                const host = document.querySelector(selector) || document.body;
+                const result = await axe.run(host, { resultTypes: ['violations'] });
+                return result.violations
+                    .filter(v => ruleIds.includes(v.id))
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).join('; ')})`);
+            }
+            """,
+            new object[] { selector, ruleIds });
+    }
+
     private static readonly string[] CriticalOnly = ["critical"];
     private static readonly string[] CriticalOrSerious = ["critical", "serious"];
 
@@ -139,6 +190,57 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
         var focusReturned = await page.EvaluateAsync<bool>(
             "() => document.activeElement?.closest('[data-testid]')?.getAttribute('data-testid') === 'open-basic-modal'");
         Assert.IsTrue(focusReturned, "Focus should return to the modal trigger after close.");
+    }
+
+    // ── Picker labels (N21 sweep) ───────────────────────────────────────────────────────────────
+    // Every .tm-picker-label is bound to its trigger: `for` → trigger id, and the trigger's
+    // aria-labelledby is "{label} {shown-value}". Composite pickers (TmTimePicker/TmTimeRangePicker/
+    // TmDateTimeRangePicker) expose a named role="group" instead and the label's `for` targets the
+    // first segment/trigger inside. The axe assertions below pin the externally-observable contract.
+
+    [TestMethod]
+    public async Task Pickers_Axe_TriggerButtons_HaveAccessibleNames()
+    {
+        var page = await OpenAsync("/pickers");
+        await page.Locator(".tm-date-picker-trigger").First
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await SaveScreenshotAsync(page, "pickers");
+
+        // Zero button-name violations anywhere on the picker demo page.
+        var buttonName = await AxeRuleViolationsAsync(page, "main", ["button-name"]);
+        Assert.AreEqual(0, buttonName.Length,
+            "button-name violations:" + Environment.NewLine + string.Join(Environment.NewLine, buttonName));
+
+        // And every picker demo section (the ones containing a .tm-picker-label) stays free of
+        // critical/serious violations in both themes. Other sections on this page (filter builder,
+        // tag picker, file widgets) are unrelated demos with their own test coverage.
+        const string pickerSections = "section.demo-section:has(.tm-picker-label)";
+        var light = await AxeViolationsAllAsync(page, pickerSections, CriticalOrSerious, ["h2", "h3"]);
+        Assert.AreEqual(0, light.Length, "LIGHT:" + Environment.NewLine + string.Join(Environment.NewLine, light));
+
+        await SetDarkAsync(page);
+        await SaveScreenshotAsync(page, "pickers-dark");
+        var dark = await AxeViolationsAllAsync(page, pickerSections, CriticalOrSerious, ["h2", "h3"]);
+        Assert.AreEqual(0, dark.Length, "DARK:" + Environment.NewLine + string.Join(Environment.NewLine, dark));
+    }
+
+    [TestMethod]
+    public async Task Pickers_ClickingLabel_FocusesTrigger()
+    {
+        var page = await OpenAsync("/pickers");
+        await page.Locator("label.tm-picker-label").First
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        // Click the DATE picker's label → the native label/for association activates the trigger.
+        var dateSection = page.Locator("section.demo-section", new PageLocatorOptions { Has = page.Locator(".tm-date-picker-trigger") }).First;
+        var label = dateSection.Locator("label.tm-picker-label").First;
+        var triggerId = await dateSection.Locator(".tm-date-picker-trigger").First.GetAttributeAsync("id");
+        Assert.IsFalse(string.IsNullOrEmpty(triggerId), "trigger must carry an id for the label to target");
+
+        await label.ClickAsync();
+
+        var focusedId = await page.EvaluateAsync<string>("() => document.activeElement?.id ?? ''");
+        Assert.AreEqual(triggerId, focusedId, "clicking the label must move focus to the trigger");
     }
 
     // ── Dark-theme broadening (this phase) ──────────────────────────────────────────────────────

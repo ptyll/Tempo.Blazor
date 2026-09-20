@@ -64,6 +64,16 @@
       "isRequired": false
     },
     {
+      "name": "TimeLabel",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "TriggerId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false

@@ -1,28 +1,41 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Components.Icons
 
-<div class="tm-date-picker @Class" @onkeydown="OnKeyDown" @attributes="AdditionalAttributes">
+@* The label belongs to the TRIGGER, not to the wrapper: a bare <label> with neither `for` nor a
+   wrapped control names nothing, so the button had to be named by luck of its content. The label gets
+   `for` (native click → focus+activate the trigger) and the trigger gets `aria-labelledby` pointing
+   at BOTH the label and the displayed value, so the announced name is "{label}, {value-or-placeholder}".
+   `aria-*` keys in AdditionalAttributes are splatted onto the trigger (the element assistive tech
+   names and operates); `data-*` and everything else stays on the root, where test ids live. *@
+<div class="tm-date-picker @Class" @onkeydown="OnKeyDown" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-picker-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+        <label id="@_labelId"
+               class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
+               for="@_triggerId">@Label</label>
     }
 
     <div class="tm-date-picker-input-row">
         <button type="button"
+                id="@_triggerId"
                 class="tm-date-picker-trigger"
                 disabled="@Disabled"
                 aria-haspopup="true"
                 aria-expanded="@_isOpen"
                 aria-required="@(Required ? "true" : null)"
+                aria-labelledby="@TriggerLabelledBy"
+                @attributes="AriaAttributes"
                 @onclick="ToggleCalendar">
-            @if (Value.HasValue)
-            {
-                @Value.Value.ToString(DateFormat)
-            }
-            else
-            {
-                <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDatePicker_Placeholder"])</span>
-            }
+            <span id="@_valueId">
+                @if (Value.HasValue)
+                {
+                    @Value.Value.ToString(DateFormat)
+                }
+                else
+                {
+                    <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDatePicker_Placeholder"])</span>
+                }
+            </span>
             <span class="tm-date-picker-icon" aria-hidden="true">
                 <TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" />
             </span>
@@ -77,6 +90,33 @@
     private bool _isOpen;
     private int  _displayYear  = DateTime.Today.Year;
     private int  _displayMonth = DateTime.Today.Month;
+
+    private readonly string _labelId   = $"tm-date-picker-label-{Guid.NewGuid():N}";
+    private readonly string _triggerId = $"tm-date-picker-trigger-{Guid.NewGuid():N}";
+    private readonly string _valueId   = $"tm-date-picker-value-{Guid.NewGuid():N}";
+
+    /// <summary>
+    /// The trigger's accessible name is the label followed by the shown value (or placeholder). With
+    /// no <see cref="Label"/> the value span alone names the button — identical to the text content,
+    /// so nothing regresses when the consumer renders the picker unlabelled.
+    /// </summary>
+    private string TriggerLabelledBy =>
+        string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
+
+    /// <summary>Consumer <c>aria-*</c> attributes target the trigger; everything else the root.</summary>
+    private IReadOnlyDictionary<string, object>? AriaAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+    private IReadOnlyDictionary<string, object>? RootAttributes =>
+        AdditionalAttributes is null
+            ? null
+            : AdditionalAttributes
+                .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
     protected override void OnParametersSet()
     {
