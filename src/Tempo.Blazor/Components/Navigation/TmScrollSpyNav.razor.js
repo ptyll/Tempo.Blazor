@@ -9,7 +9,6 @@
 let dotnet = null;
 let ids = [];
 let offset = 120;
-let selectFirstByDefault = true;
 let last = null;
 let handler = null;
 let target = null;
@@ -23,10 +22,9 @@ function rootTop() {
 
 function compute() {
     const top = rootTop();
-    // With selectFirstByDefault the first section owns the space above every heading, which is what a
-    // reader sitting at the top of the page expects. Without it nothing is current until a section's top
-    // has genuinely passed the offset.
-    let current = selectFirstByDefault && ids.length ? ids[0] : null;
+    // The first section owns the space above every heading — what a reader sitting at the top of the
+    // page expects.
+    let current = ids.length ? ids[0] : null;
     for (const id of ids) {
         const el = document.getElementById(id);
         if (el && el.getBoundingClientRect().top - top <= offset) {
@@ -48,11 +46,10 @@ function detach() {
     rootElement = null;
 }
 
-export function observe(dotnetRef, sectionIds, scrollOffset, scrollRootSelector, autoSelectFirstItem) {
+export function observe(dotnetRef, sectionIds, scrollOffset, scrollRootSelector) {
     dotnet = dotnetRef;
     ids = sectionIds || [];
     offset = scrollOffset || 120;
-    selectFirstByDefault = autoSelectFirstItem !== false;
     last = null;
 
     detach();
@@ -73,7 +70,6 @@ export function unobserve() {
     dotnet = null;
     ids = [];
     last = null;
-    selectFirstByDefault = true;
 }
 
 export function scrollTo(id) {

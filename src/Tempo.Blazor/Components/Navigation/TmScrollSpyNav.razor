@@ -42,7 +42,7 @@
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmScrollSpyNav>? _self;
     private string[] _observedIds = [];
-    private (int ScrollOffset, string? ScrollContainerSelector, bool AutoSelectFirstItem) _observedSettings;
+    private (int ScrollOffset, string? ScrollContainerSelector) _observedSettings;
 
     /// <summary>Sections to list. Only items with <c>IsVisible == true</c> render, ordered by <c>Order</c>.</summary>
     [Parameter] public IReadOnlyList<ScrollSpyNavItem> Items { get; set; } = [];
@@ -73,15 +73,6 @@
     /// the top of the container rather than from the top of the viewport.
     /// </summary>
     [Parameter] public string? ScrollContainerSelector { get; set; }
-
-    /// <summary>
-    /// Whether the first visible item is active before anything selects one. Default <c>true</c>, the
-    /// released behaviour. Set it to <c>false</c> when nothing should be marked current until the user
-    /// clicks or scrolls into a section — with scroll-spy off, the default otherwise leaves
-    /// <c>aria-current="true"</c> stuck on the first section and going stale as the reader scrolls.
-    /// Prefer this over feeding in an empty <see cref="ActiveId"/>, which is not a valid section id.
-    /// </summary>
-    [Parameter] public bool AutoSelectFirstItem { get; set; } = true;
 
     /// <summary>Layout variant.</summary>
     [Parameter] public ScrollSpyNavVariant Variant { get; set; } = ScrollSpyNavVariant.SideRail;
@@ -117,7 +108,7 @@
         {
             _active = ActiveId;
         }
-        else if (_active is null && AutoSelectFirstItem)
+        else if (_active is null)
         {
             _active = VisibleItems.FirstOrDefault()?.Id;
         }
@@ -143,13 +134,13 @@
 
             // Re-observe on anything the JS side was handed, not just the ids: a shell that resolves its
             // scrolling column late (or swaps it) would otherwise keep a listener on the old root forever.
-            var settings = (ScrollOffset, ScrollContainerSelector, AutoSelectFirstItem);
+            var settings = (ScrollOffset, ScrollContainerSelector);
             if (!ids.SequenceEqual(_observedIds, StringComparer.Ordinal) || settings != _observedSettings)
             {
                 _observedIds = ids;
                 _observedSettings = settings;
                 await _module.InvokeVoidAsync(
-                    "observe", _self, ids, ScrollOffset, ScrollContainerSelector, AutoSelectFirstItem);
+                    "observe", _self, ids, ScrollOffset, ScrollContainerSelector);
             }
         }
         else if (_observedIds.Length > 0)

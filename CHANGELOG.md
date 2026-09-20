@@ -51,6 +51,19 @@ which is exactly the red
   framework ships, and Tempo's own markup contains bare elements that would lose it under a
   narrowed selector.
 
+- **`TmScrollSpyNav.AutoSelectFirstItem` is removed.** The parameter existed so a page could keep
+  *nothing* current until the user acts — a workaround for scroll-spy silently never firing on shells
+  whose content scrolls in its own `overflow-y` column (no window scroll event). That defect has a
+  real fix since 2.8.x (`ScrollContainerSelector` points the observer at the actual scroller), and the
+  application's gap register records the parameter as *unused API*: nobody opted out, because the
+  working observation behaviour made the stale-highlight problem disappear on its own. The component
+  now always treats the first visible item as current until a click or a scroll names another — the
+  released default. **Migration:** delete the argument. If you set it to `false` because
+  `aria-current` went stale on a long page, the stale highlight was the window-listener defect —
+  enable `EnableScrollSpy` with `ScrollContainerSelector` aimed at the column that actually scrolls.
+  If a page genuinely wants no current section ever, that is the case the register deferred: feed
+  `ActiveId` from your own state instead of relying on the removed switch.
+
 ### Fixed
 
 - **`TmGanttImportDialog`'s file chooser is keyboard-operable.** The upload affordance was a

@@ -182,47 +182,6 @@ public class TmScrollSpyNavTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// With scroll-spy off nothing keeps the highlight honest, so the default marks the first section
-    /// current and it stays there however far the reader scrolls. Opting out has to be possible from
-    /// inside the component — an empty <c>ActiveId</c> is not a section id and only looks like one.
-    /// </summary>
-    [Fact]
-    public void ScrollSpyNav_AutoSelectFirstItemFalse_LeavesNothingCurrent()
-    {
-        var cut = Render<TmScrollSpyNav>(p => p
-            .Add(x => x.Items, Items)
-            .Add(x => x.AutoSelectFirstItem, false));
-
-        cut.FindAll("[aria-current='true']").Should().BeEmpty();
-        cut.FindAll("[data-active='true']").Should().BeEmpty();
-        cut.Find("[data-testid='tm-scroll-spy-nav-intro']").GetAttribute("aria-current").Should().Be("false");
-    }
-
-    [Fact]
-    public async Task ScrollSpyNav_AutoSelectFirstItemFalse_StillHighlightsAfterClick()
-    {
-        var cut = Render<TmScrollSpyNav>(p => p
-            .Add(x => x.Items, Items)
-            .Add(x => x.AutoSelectFirstItem, false));
-
-        await cut.Find("[data-testid='tm-scroll-spy-nav-details']").ClickAsync(new());
-
-        cut.Find("[data-testid='tm-scroll-spy-nav-details']").GetAttribute("aria-current").Should().Be("true");
-        cut.FindAll("[aria-current='true']").Should().HaveCount(1);
-    }
-
-    [Fact]
-    public void ScrollSpyNav_AutoSelectFirstItemFalse_DoesNotOverrideAnExplicitActiveId()
-    {
-        var cut = Render<TmScrollSpyNav>(p => p
-            .Add(x => x.Items, Items)
-            .Add(x => x.AutoSelectFirstItem, false)
-            .Add(x => x.ActiveId, "summary"));
-
-        cut.Find("[data-testid='tm-scroll-spy-nav-summary']").GetAttribute("aria-current").Should().Be("true");
-    }
-
-    /// <summary>
     /// A shell that scrolls its own content column raises no scroll event on the window, so the released
     /// listener never fires. The selector for that column has to reach the JS side.
     /// </summary>
@@ -236,14 +195,12 @@ public class TmScrollSpyNavTests : LocalizationTestBase
             .Add(x => x.Items, Items)
             .Add(x => x.EnableScrollSpy, true)
             .Add(x => x.ScrollOffset, 200)
-            .Add(x => x.ScrollContainerSelector, "[data-testid='main-content']")
-            .Add(x => x.AutoSelectFirstItem, false));
+            .Add(x => x.ScrollContainerSelector, "[data-testid='main-content']"));
 
         var observe = module.Invocations.Single(invocation => invocation.Identifier == "observe");
-        observe.Arguments.Should().HaveCount(5);
+        observe.Arguments.Should().HaveCount(4);
         observe.Arguments[2].Should().Be(200);
         observe.Arguments[3].Should().Be("[data-testid='main-content']");
-        observe.Arguments[4].Should().Be(false);
     }
 
     [Fact]
@@ -257,8 +214,8 @@ public class TmScrollSpyNavTests : LocalizationTestBase
             .Add(x => x.EnableScrollSpy, true));
 
         var observe = module.Invocations.Single(invocation => invocation.Identifier == "observe");
+        observe.Arguments.Should().HaveCount(4);
         observe.Arguments[3].Should().BeNull();
-        observe.Arguments[4].Should().Be(true);
     }
 
     /// <summary>

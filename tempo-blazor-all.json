@@ -18145,13 +18145,6 @@
               "description": "Fires whenever the active section changes, whether by click or scroll-spy."
             },
             {
-              "name": "AutoSelectFirstItem",
-              "type": "bool",
-              "isRequired": false,
-              "default": "true",
-              "description": "Whether the first visible item is active before anything selects one. Default true, the released behaviour. Set it to false when nothing should be marked current until the user clicks or scrolls into a section — with scroll-spy off, the default otherwise leaves aria-current=\"true\" stuck on the first section and going stale as the reader scrolls. Prefer this over feeding in an empty ActiveId, which is not a valid section id."
-            },
-            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
