@@ -38,6 +38,7 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
         // literal blazor.webassembly.js, so match the _framework loader family.
         await page.WaitForSelectorAsync("script[src*='_framework/blazor']", new PageWaitForSelectorOptions
         {
+            State = WaitForSelectorState.Attached, // <script> elements have no box — never "visible"
             Timeout = 10000
         });
 
