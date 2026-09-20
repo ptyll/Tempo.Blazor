@@ -8,7 +8,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// Asserts who/when/which report/parameters/outcome are persisted and that filtered queries work.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class EfReportAuditLogMsSqlTests
+public sealed class EfReportAuditLogMsSqlTests : IClassFixture<MsSqlTestDatabase>
 {
     private readonly MsSqlTestDatabase _db;
 

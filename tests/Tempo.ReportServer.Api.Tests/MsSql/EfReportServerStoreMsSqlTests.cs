@@ -9,7 +9,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// persisted rows in the catalog tables.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class EfReportServerStoreMsSqlTests
+public sealed class EfReportServerStoreMsSqlTests : IClassFixture<MsSqlTestDatabase>
 {
     private readonly MsSqlTestDatabase _db;
 

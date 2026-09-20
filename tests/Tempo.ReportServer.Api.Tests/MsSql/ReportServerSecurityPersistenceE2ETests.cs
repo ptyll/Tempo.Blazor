@@ -26,7 +26,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// here. This test covers the server + database legs of the E2E flow deterministically.
 /// </remarks>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class ReportServerSecurityPersistenceE2ETests
+public sealed class ReportServerSecurityPersistenceE2ETests : IClassFixture<MsSqlTestDatabase>
 {
     private const string TenantId = "tenant-e2e";
 

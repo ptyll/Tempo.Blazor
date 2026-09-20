@@ -29,8 +29,8 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// database is byte-identical after the whole suite — that is the acceptance criterion of the run
 /// itself (<c>git status --porcelain</c> after suite and pack identical to before, with no hand-run
 /// restore), and a unit test has no pack to observe. And it says nothing about the lanes the CI
-/// filter excludes, <c>Tempo.Blazor.E2E</c> and <c>Tempo.ReportServer.Api.Tests.MsSql</c>, whose
-/// tracked-file footprint nobody has counted.
+/// filter excludes — <c>Tempo.Blazor.E2E</c> (since Fáze 19 the MsSql lane runs inside the gate
+/// over a Testcontainers SQL Server) — whose tracked-file footprint nobody has counted.
 /// </para>
 /// </summary>
 public sealed class DemoDatabaseRedirectTests : IClassFixture<WebApplicationFactory<Program>>

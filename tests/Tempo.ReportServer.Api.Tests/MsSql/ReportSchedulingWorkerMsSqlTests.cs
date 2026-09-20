@@ -13,7 +13,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// channel, driving the processor with an explicit UTC instant so timing is deterministic.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class ReportSchedulingWorkerMsSqlTests
+public sealed class ReportSchedulingWorkerMsSqlTests : IClassFixture<MsSqlTestDatabase>
 {
     private static readonly DateTimeOffset Friday0700 = DateTimeOffset.Parse("2026-07-17T07:00:00Z");
 

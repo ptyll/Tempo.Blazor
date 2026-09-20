@@ -13,7 +13,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// specification (<c>ReportServerF10ApiTests</c>) asserts, and that the operations land as real rows.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class ReportServerCatalogMsSqlContractTests
+public sealed class ReportServerCatalogMsSqlContractTests : IClassFixture<MsSqlTestDatabase>
 {
     private readonly MsSqlTestDatabase _db;
 

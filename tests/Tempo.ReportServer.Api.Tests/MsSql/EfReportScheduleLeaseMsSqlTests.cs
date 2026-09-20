@@ -13,7 +13,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// schedule, exactly one must win, and a crashed worker's expired lease must become re-claimable.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class EfReportScheduleLeaseMsSqlTests
+public sealed class EfReportScheduleLeaseMsSqlTests : IClassFixture<MsSqlTestDatabase>
 {
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-07-17T08:05:00Z");
 

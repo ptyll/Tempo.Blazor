@@ -60,9 +60,9 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// THE LIMIT, STATED AS WHAT WAS AND WAS NOT MEASURED. For the suite CI actually runs — Release with
 /// the publish workflows' filter — the count of tracked files a run leaves modified was measured and
 /// is ZERO: <c>git status --porcelain</c> after the full suite AND after a pack is byte-for-byte the
-/// status from before them, with no hand-run restore. That measurement does NOT extend to the two
-/// lanes that filter excludes, <c>Tempo.Blazor.E2E</c> and <c>Tempo.ReportServer.Api.Tests.MsSql</c>;
-/// for those, nobody has counted. Three known cases were never a denominator, and one measured zero
+/// status from before them, with no hand-run restore. That measurement does NOT extend to the
+/// lane the filter excludes — <c>Tempo.Blazor.E2E</c> (since Fáze 19 the MsSql lane runs inside
+/// the gate over a Testcontainers SQL Server); for it, nobody has counted. Three known cases were never a denominator, and one measured zero
 /// over a filtered population is not one either. The guard that turns this file's half from a hope
 /// into a measurement is <c>DemoDatabaseRedirectTests</c>, which reads the path back out of a booted
 /// host.

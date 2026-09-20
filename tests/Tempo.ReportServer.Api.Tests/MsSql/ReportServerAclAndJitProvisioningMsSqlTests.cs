@@ -11,7 +11,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// inheritance (<see cref="EfReportFolderPermissionStore"/> + <see cref="ReportPermissionResolver"/>).
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class ReportServerAclAndJitProvisioningMsSqlTests : IAsyncLifetime
+public sealed class ReportServerAclAndJitProvisioningMsSqlTests : IAsyncLifetime, IClassFixture<MsSqlTestDatabase>
 {
     private const string Tenant = "tenant-acl";
     private readonly MsSqlTestDatabase _database;

@@ -21,9 +21,11 @@ namespace Tempo.Blazor.Tests.Packaging;
 /// </summary>
 /// <remarks>
 /// Fáze 12: Demo.Api including the two smtp4dev tests IS in the gate (CI starts smtp4dev).
-/// <c>Tempo.Blazor.E2E</c> and <c>Tempo.ReportServer.Api.Tests.MsSql</c> stay out until their
-/// cancellation conditions fire. The full solution suite is not the gate — see
-/// <c>DEC-TEMPO-RELEASE-GATE</c>.
+/// Fáze 19: <c>Tempo.ReportServer.Api.Tests.MsSql</c> is in the gate too — without
+/// <c>REPORTSERVER_TEST_CONNECTION</c> the suite starts its own SQL Server container via
+/// Testcontainers (<c>MsSqlContainerFixture</c>), and ubuntu-latest runners carry Docker.
+/// <c>Tempo.Blazor.E2E</c> stays out until its cancellation condition fires. The full solution
+/// suite is not the gate — see <c>DEC-TEMPO-RELEASE-GATE</c>.
 /// </remarks>
 public sealed class ReleaseGateFilterTests
 {
@@ -41,7 +43,6 @@ public sealed class ReleaseGateFilterTests
     internal static readonly string[] NamedExceptions =
     [
         "Tempo.Blazor.E2E",
-        "Tempo.ReportServer.Api.Tests.MsSql",
     ];
 
     /// <summary>
@@ -587,21 +588,30 @@ public sealed class ReleaseGateFilterTests
 
     /// <summary>
     /// Mutation: the comparison above is green on the healthy files. Feed it the two shapes
-    /// that used to be the gate (Smtp4Dev still excluded, MsSql dropped) and both must be named.
+    /// that used to be the gate (Smtp4Dev still excluded, E2E dropped) and both must be named —
+    /// and the MsSql clause that was a named exception until Fáze 19 must now read as a hole.
     /// </summary>
     [Fact]
     public void TheGuard_DetectsASilentExclusionAndADroppedException()
     {
         EvaluateDrift(
                 "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Smtp4Dev&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql")
-            .Should().Contain(
-                "Smtp4Dev",
-                "putting Smtp4Dev back into the filter must be visible; otherwise the 2/206 hole returns");
+            .Should().BeEquivalentTo(
+                ["Smtp4Dev", "Tempo.ReportServer.Api.Tests.MsSql"],
+                "putting Smtp4Dev back must be visible, and so must re-excluding MsSql — since "
+                + "Fáze 19 the suite brings its own SQL Server container, so the clause is again "
+                + "a silent hole in the gate, not an exception");
 
         EvaluateDrift("FullyQualifiedName!~Tempo.Blazor.E2E")
+            .Should().BeEmpty(
+                "the healthy filter: E2E is the only remaining named exception and nothing else "
+                + "may be drift");
+
+        EvaluateDrift("FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql")
             .Should().Contain(
-                "Tempo.ReportServer.Api.Tests.MsSql",
-                "dropping the MsSql exclusion without SQL Server in CI is a permanently red gate");
+                "Tempo.Blazor.E2E",
+                "dropping the E2E exclusion while it is still a named exception is a permanently "
+                + "red gate — Playwright over the demo hosts has no cancellation condition yet");
 
         EvaluateDrift("")
             .Should().NotBeEmpty("an empty filter is not 'no exceptions', it is an unreadable gate");

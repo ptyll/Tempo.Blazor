@@ -15,7 +15,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// crashed node's expired lease must let the job be re-claimed and rendered — exactly once overall.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class EfReportRenderJobQueueMsSqlTests
+public sealed class EfReportRenderJobQueueMsSqlTests : IClassFixture<MsSqlTestDatabase>
 {
     private readonly MsSqlTestDatabase _db;
 

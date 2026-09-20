@@ -83,12 +83,14 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 
-      # Named exceptions of the release gate (DEC-TEMPO-RELEASE-GATE, Fáze 12):
+      # Named exceptions of the release gate (DEC-TEMPO-RELEASE-GATE):
       #   Tempo.Blazor.E2E — Playwright over the demo hosts; measured separately, not a gate
       #     until the run finishes green with a recorded duration.
-      #   Tempo.ReportServer.Api.Tests.MsSql — needs localhost\SQLEXPRESS or
-      #     REPORTSERVER_TEST_CONNECTION (see MsSqlTestDatabase.cs). Decision: do not fix;
-      #     owner ptyll. Pattern is anchored on the namespace, not a bare substring.
+      #   Tempo.ReportServer.Api.Tests.MsSql is IN the gate since Fáze 19: without
+      #     REPORTSERVER_TEST_CONNECTION the suite starts its own
+      #     mcr.microsoft.com/mssql/server:2022-latest container via Testcontainers
+      #     (MsSqlContainerFixture; ubuntu-latest runners carry Docker). Re-adding a
+      #     FullyQualifiedName!~ clause for it is a silent hole — ReleaseGateFilterTests names it.
       # Smtp4Dev is NOT an exception: the two Demo.Api tests are in the gate and CI starts
       # smtp4dev as a job service (ports 2525/5000). Keep this filter identical to
       # publish-nuget-org.yml AND to the second lane below — ReleaseGateFilterTests enforces every
@@ -132,7 +134,7 @@ jobs:
       # and is NOT evidence that the release failed — THE TREATMENT IS A BUMP, NOT A RE-RUN, because
       # the number is spent and the artefacts under it are immutable.
       - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
+        run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E"
 
       # A SECOND LANE OVER THE SAME BINARIES, DIFFERING IN EXACTLY ONE VARIABLE: the ambient culture.
       #
@@ -176,7 +178,7 @@ jobs:
           LC_ALL: cs_CZ.UTF-8
         run: |
           echo "[locale-lane] LANG=$LANG LC_ALL=$LC_ALL"
-          dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E&FullyQualifiedName!~Tempo.ReportServer.Api.Tests.MsSql"
+          dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E"
 
   publish:
     needs: build-and-test

@@ -9,7 +9,7 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// only the key hash is stored (never the plain text) and that expiration/revocation are enforced.
 /// </summary>
 [Collection(MsSqlTestCollection.Name)]
-public sealed class EfReportApiKeyStoreMsSqlTests
+public sealed class EfReportApiKeyStoreMsSqlTests : IClassFixture<MsSqlTestDatabase>
 {
     private readonly MsSqlTestDatabase _db;
 
