@@ -166,6 +166,25 @@ public class WireframeOperationToolsTests
     }
 
     [Fact]
+    public void Engine_AddElement_UnknownType_SuggestsDidYouMean()
+    {
+        // Same did-you-mean contract as WireframeValidationEngine: a near-miss type names the
+        // closest catalog entry so agents self-correct without a schema lookup round-trip.
+        var doc = new WireframeDocument(); doc.EnsureActivePage();
+        var known = KnownType();
+
+        var result = WireframeOperationEngine.Apply(
+            doc,
+            $"[{{\"op\":\"addElement\",\"type\":\"{known}X\",\"w\":100,\"h\":40}}]",
+            Registry());
+
+        result.Success.Should().BeFalse();
+        var error = result.Errors.Should().ContainSingle().Which;
+        error.Should().Contain("Did you mean").And.Contain(known);
+        doc.Elements.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Engine_AddElement_WithRole_ResolvesTypeAndStoresRole()
     {
         var doc = new WireframeDocument();

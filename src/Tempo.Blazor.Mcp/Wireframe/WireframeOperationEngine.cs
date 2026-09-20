@@ -612,7 +612,12 @@ public static class WireframeOperationEngine
             schema = registry?.GetSchema(type, scope, targetPackIds);
             if (registry is not null && schema is null)
             {
-                return $"component type '{type}' is not available in target packs.";
+                // Mirror the validation engine: a near-miss type gets a did-you-mean hint so an agent
+                // can fix the op without a schema round-trip.
+                var suggestion = WireframeCatalog.SuggestType(registry, type, scope, targetPackIds);
+                return suggestion is null
+                    ? $"component type '{type}' is not available in target packs ({DescribeTargetPacks(targetPackIds)})."
+                    : $"component type '{type}' is not available in target packs. Did you mean '{suggestion}'?";
             }
         }
 
