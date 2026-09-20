@@ -19,6 +19,10 @@
     <!-- Fáze 17 (C3): exercise the SQL-Server-backed IDistributedCache token-store sharing. -->
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="10.0.9" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <!-- Stejný pár verzí jako Tempo.ReportServer.Api.Tests: přímý pin nad tranzitivní závislostí
+         Testcontainers.MsSql kvůli SSH.NET 2025.1.0 GHSA-q939-rpr3-3284 (NU1903). -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+    <PackageReference Include="Testcontainers.MsSql" Version="4.12.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="xunit" Version="2.9.3" />

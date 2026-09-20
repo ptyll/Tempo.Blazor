@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Caching.SqlServer;
@@ -79,30 +78,32 @@ public sealed class DistributedCacheReportServerTokenStoreTests
         instanceB.Get("subject-1").Should().BeNull("a remove on one instance is seen by the others");
     }
 
+}
+
+/// <summary>
+/// The SQL-Server-backed leg of the <see cref="DistributedCacheReportServerTokenStore"/> contract —
+/// split into its own class so the <see cref="SqlServerCacheFixture"/> container cost (and the
+/// "Docker required" failure mode) lands only on the test that needs a real server, while the
+/// in-memory tests above stay free of both.
+/// </summary>
+public sealed class DistributedCacheReportServerTokenStoreSqlTests : IClassFixture<SqlServerCacheFixture>
+{
+    private readonly SqlServerCacheFixture _fixture;
+
+    /// <summary>Initializes a new instance over the shared SQL Server cache fixture.</summary>
+    public DistributedCacheReportServerTokenStoreSqlTests(SqlServerCacheFixture fixture)
+        => _fixture = fixture;
+
     /// <summary>
     /// Cross-instance sharing through a real SQL-Server-backed <see cref="IDistributedCache"/>
-    /// (<c>AddDistributedSqlServerCache</c>), the production scale-out backing. Mirrors the MSSQL
-    /// integration approach used elsewhere in the report server: it creates its own database and the
-    /// cache table (as <c>dotnet sql-cache create</c> would), then proves that a token saved through one
-    /// <see cref="SqlServerCache"/> instance is read back — and its removal seen — through a second,
-    /// independent instance over the same table. Skipped (returns) when no SQL Server is reachable.
+    /// (<c>AddDistributedSqlServerCache</c>), the production scale-out backing: a token saved
+    /// through one <see cref="SqlServerCache"/> instance is read back — and its removal seen —
+    /// through a second, independent instance over the same table. Fails loudly ("Docker
+    /// required") when no SQL Server is reachable — a missing service is a red, never a skip.
     /// </summary>
     [Fact]
-    public async Task TwoStoresOverSqlServerCache_ShareTokens_AcrossInstances()
+    public void TwoStoresOverSqlServerCache_ShareTokens_AcrossInstances()
     {
-        const string database = "TempoReportServerWebTests";
-        var masterConnection = Environment.GetEnvironmentVariable("REPORTSERVER_TEST_CONNECTION") is { Length: > 0 } fromEnv
-            ? fromEnv
-            : $"Server=localhost\\SQLEXPRESS;Database=master;Integrated Security=true;TrustServerCertificate=true;";
-
-        var (ready, cacheConnectionString) = await TryPrepareSqlCacheTableAsync(masterConnection, database);
-        if (!ready)
-        {
-            // No SQL Server available in this environment — gate out (the in-memory tests above still
-            // prove the sharing contract deterministically).
-            return;
-        }
-
         static IDistributedCache NewSqlCache(string connectionString)
             => new SqlServerCache(Options.Create(new SqlServerCacheOptions
             {
@@ -111,8 +112,8 @@ public sealed class DistributedCacheReportServerTokenStoreTests
                 TableName = "TokenCache",
             }));
 
-        var instanceA = new DistributedCacheReportServerTokenStore(NewSqlCache(cacheConnectionString));
-        var instanceB = new DistributedCacheReportServerTokenStore(NewSqlCache(cacheConnectionString));
+        var instanceA = new DistributedCacheReportServerTokenStore(NewSqlCache(_fixture.CacheConnectionString));
+        var instanceB = new DistributedCacheReportServerTokenStore(NewSqlCache(_fixture.CacheConnectionString));
         var subject = $"subject-{Guid.NewGuid():N}";
 
         instanceA.Set(subject, new ReportServerTokenSet("sql-access", "sql-refresh", DateTimeOffset.UtcNow.AddMinutes(5)));
@@ -124,44 +125,5 @@ public sealed class DistributedCacheReportServerTokenStoreTests
 
         instanceA.Remove(subject);
         instanceB.Get(subject).Should().BeNull("a remove on instance A is seen by instance B through SQL Server");
-    }
-
-    private static async Task<(bool Ready, string CacheConnectionString)> TryPrepareSqlCacheTableAsync(string masterConnectionString, string database)
-    {
-        var cacheConnectionString = new SqlConnectionStringBuilder(masterConnectionString) { InitialCatalog = database }.ConnectionString;
-        try
-        {
-            await using (var master = new SqlConnection(masterConnectionString))
-            {
-                await master.OpenAsync();
-                await using var createDb = master.CreateCommand();
-                createDb.CommandText = $"IF DB_ID('{database}') IS NULL CREATE DATABASE [{database}];";
-                await createDb.ExecuteNonQueryAsync();
-            }
-
-            await using var db = new SqlConnection(cacheConnectionString);
-            await db.OpenAsync();
-            await using var createTable = db.CreateCommand();
-            // The schema `dotnet sql-cache create` produces for a Microsoft.Extensions.Caching.SqlServer table.
-            createTable.CommandText = """
-                IF OBJECT_ID('dbo.TokenCache', 'U') IS NULL
-                BEGIN
-                    CREATE TABLE [dbo].[TokenCache](
-                        [Id] [nvarchar](449) COLLATE SQL_Latin1_General_CP1_CS_AS NOT NULL,
-                        [Value] [varbinary](max) NOT NULL,
-                        [ExpiresAtTime] [datetimeoffset](7) NOT NULL,
-                        [SlidingExpirationInSeconds] [bigint] NULL,
-                        [AbsoluteExpiration] [datetimeoffset](7) NULL,
-                        CONSTRAINT [pk_TokenCache_Id] PRIMARY KEY CLUSTERED ([Id] ASC));
-                    CREATE NONCLUSTERED INDEX [Index_TokenCache_ExpiresAtTime] ON [dbo].[TokenCache]([ExpiresAtTime] ASC);
-                END
-                """;
-            await createTable.ExecuteNonQueryAsync();
-            return (true, cacheConnectionString);
-        }
-        catch (SqlException)
-        {
-            return (false, cacheConnectionString);
-        }
     }
 }
