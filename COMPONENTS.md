@@ -2494,7 +2494,7 @@ Sekční in-page navigace s volitelným scroll-spy sledováním aktivní sekce. 
 | `tm-scroll-spy-nav__link--active` | Aktivní položka |
 | `tm-scroll-spy-nav__label` | Výchozí text položky (když není `ItemTemplate`) |
 
-Aktivní položka má vždy `aria-current="true"` i `data-active="true"` (ostatní explicitně `"false"`). S `AutoSelectFirstItem="false"` nemusí být aktivní žádná — pak mají `"false"` všechny.
+Aktivní položka má vždy `aria-current="true"` i `data-active="true"` (ostatní explicitně `"false"`). Dokud klik nebo scroll-spy neurčí jinou, je aktivní první viditelná položka. Stránka, která nechce žádnou aktuální sekci, drží `ActiveId` ve vlastním stavu — hodnota, která není `id` žádné položky, nechá `"false"` všem.
 
 #### Parametry
 
@@ -2508,7 +2508,6 @@ Aktivní položka má vždy `aria-current="true"` i `data-active="true"` (ostatn
 | `EnableScrollSpy` | `bool` | `false` | Zapne pasivní scroll listener sledující aktivní sekci |
 | `ScrollOffset` | `int` | `120` | Práh (px) od horního okraje pro scroll-spy |
 | `ScrollContainerSelector` | `string?` | `null` | CSS selektor prvku, který sekcemi skutečně roluje. `null` poslouchá na `window` — což platí jen když roluje samotná stránka; shell s obsahem v `overflow-y: auto` sloupci na window scroll event nikdy nevyvolá a scroll-spy tiše nefunguje. S kontejnerem se `ScrollOffset` měří od jeho horního okraje, ne od okraje viewportu. Selektor, který nic nenajde, spadne zpět na `window` |
-| `AutoSelectFirstItem` | `bool` | `true` | Je-li první viditelná položka aktivní, dokud něco jiného aktivní nenastaví. `false` = dokud uživatel neklikne nebo neodroluje do sekce, není aktivní NIC. Používej to místo prázdného `ActiveId` — prázdný řetězec není `id` sekce |
 | `Variant` | `ScrollSpyNavVariant` | `SideRail` | `SideRail` (svislý, sticky) nebo `Breadcrumb` (vodorovný pruh) |
 | `Title` | `string?` | `null` | Nadpis panelu (jen SideRail) |
 | `Class` | `string?` | `null` | Další CSS třídy |
@@ -3110,7 +3109,7 @@ Textový vstup s automatickou integrací do EditContext pro validaci. Podporuje 
 | `Label` | `string?` | `null` | Popisek |
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `Type` | `string` | `"text"` | HTML typ vstupu |
-| `Required` | `bool` | `false` | Povinné pole (hvězdička) |
+| `Required` | `bool` | `false` | Povinné pole — hvězdička u popisku a od 2.9.0 i propis na vnitřní `<input>` jako `required` + `aria-required` (dřív se propsalo jen do hvězdičky) |
 | `HelpText` | `string?` | `null` | Pomocný text |
 | `Id` | `string` | auto | HTML id |
 | `LeftIcon` | `string?` | `null` | Ikona vlevo |
@@ -3132,6 +3131,12 @@ Textový vstup s automatickou integrací do EditContext pro validaci. Podporuje 
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy předané do vnitřního inputu |
 
 > **Automaticky z EditContext** (nelze nastavit ručně): `Error`, `IsValid`, `ShowValidationIcons`
+
+`IsValid` znamená „pole prošlo validací bez chyb" — zelený rámeček a ikona se ukážou až po reálném
+validačním průchodu `EditContextu` (`OnValidationRequested` / `OnValidationStateChanged`), ve kterém
+pole nemá žádné zprávy; pole, do kterého se jen psalo, se za validní neprohlásí. Do 2.9.0 stačilo,
+že pole obsahovalo text, takže se za validní tvářilo i pole, které nikdo nevalidoval. Bez
+`EditContextu` (mimo `EditForm`) zůstává pole neutrální pořád — není co validovat.
 
 #### Příklady
 
@@ -3497,6 +3502,7 @@ Kompletní datová tabulka s řazením, filtrováním, stránkováním, grouping
 | `PaginationAttributes` | `Dictionary<string, object>?` | `null` | Atributy splatnuté na kořen vestavěné `TmPagination` |
 | `PaginationInfoTemplate` | `RenderFragment<DataTablePaginationInfo>?` | `null` | Nahradí vestavěný text „zobrazeno X–Y z Z" vlastním (platí pro placement `Summary`) |
 | `PaginationInfoPlacement` | `DataTablePaginationInfoPlacement` | `Summary` | Kde se vypíše rozsah položek: `Summary` (souhrn tabulky vlevo), `Pagination` (uvnitř lišty stránkování), `None` |
+| `ShowResultSummary` | `bool?` | `null` | Zda se řádek „zobrazeno X–Y z Z" vykreslí, když ho netiskne pager. `null` = dosavadní chování (počet existuje jen v patičce stránkování, podle `PaginationInfoPlacement`); `true` vykreslí souhrn (`data-testid="pagination-summary"`, respektuje `PaginationInfoTemplate`) i bez pageru — u `ShowPagination="false"`, groupingu, jediné stránky nebo nepaginovaného `ScrollMode` hlásí plný rozsah `1–TotalCount`, protože bez krájecího pageru je to rozsah, který čtenář vidí; `false` potlačí souhrn všude, včetně slotu `Summary` v patičce |
 | `ScrollMode` | `DataTableScrollMode` | `Pagination` | `Pagination` / `Virtualized` |
 | `ShowGrouping` | `bool` | `false` | Povolit grouping |
 | `OnRowClick` | `EventCallback<TItem>` | — | Klik na řádek |
@@ -3535,6 +3541,9 @@ Rozsah položek vypisuje **právě jedno** místo, které vybírá `PaginationIn
 tabulky (`pagination-summary`, výchozí — jen ten respektuje `PaginationInfoTemplate`), nebo vlastní
 popisek lišty stránkování (`pagination-info`), nebo žádné. V DOM tedy vždy existuje jen `data-testid`
 zvoleného místa. Do 2.8.8 se renderovala obě naráz a počet záznamů byl v patičce dvakrát vedle sebe.
+Když pager neběží vůbec (`ShowPagination="false"`, grouping, jediná stránka, nepaginovaný
+`ScrollMode`), nesdělí počet nikdo — od 2.9.0 to řeší `ShowResultSummary="true"`, které vykreslí
+tentýž `pagination-summary` řádek samostatně; v DOM je i tak nejvýše jednou.
 
 #### TmDataTableColumn\<TItem\>
 
@@ -5215,7 +5224,7 @@ Sticky/plovoucí panel akcí pro dlouhé formuláře. Vlevo obsah (`ChildContent
 | Třída | Popis |
 |-------|-------|
 | `tm-form-action-bar` | Kořenový kontejner (`role="group"`) |
-| `tm-form-action-bar--static` / `--sticky-top` / `--floating-bottom` | Varianta pozice |
+| `tm-form-action-bar--static` / `--sticky-top` / `--floating-bottom` / `--floating-bottom-md` | Varianta pozice (`--floating-bottom-md` plovoucí až od 768 px, pod ním statická v toku dokumentu) |
 | `tm-form-action-bar--show-on-scroll` | Skryto, dokud scroll nepřekročí práh |
 | `tm-form-action-bar--visible` | Přidáno JS listenerem po překročení prahu |
 | `tm-form-action-bar__inner` | Vnitřní řádek (max-width, centrováno) |
@@ -5231,12 +5240,13 @@ Sticky/plovoucí panel akcí pro dlouhé formuláře. Vlevo obsah (`ChildContent
 |----------|---------|-------|
 | `--tm-form-action-bar-inset-inline-start` | `0` | Odsazení plovoucí lišty zleva. Shell s pevnou boční navigací jí tudy předá její šířku (`--tm-form-action-bar-inset-inline-start: 18.5rem`), místo aby přebíjel `left` z aplikačního CSS — takový override musí přebít i `[b-*]` atribut izolovaného CSS a při pouhé remíze specificity prohraje |
 | `--tm-form-action-bar-inset-inline-end` | `0` | Totéž zprava |
+| `--tm-form-action-bar-reserve-block-size` | `calc(var(--tm-input-height-md) + 4 * var(--tm-space-2) + 2px + env(safe-area-inset-bottom, 0px))` | Rezerva místa pod plovoucí lištou — `position: fixed` do toku dokumentu nepřispívá, takže hostitel stránce přidá `padding-block-end: var(--tm-form-action-bar-reserve-block-size)`, jinak lišta překryje konec formuláře. Hodnotu publikuje knihovna odvozenou z tokenů samotné lišty; pod 768 px se sama přepočítá na dvouřádkovou výšku a u `FloatingBottomFromMd` se pod tou hranicí přes `:root:has(…)` vynuluje — pod breakpointem není co rezervovat |
 
 #### Parametry
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Position` | `FormActionBarPosition` | `Static` | `Static`, `StickyTop`, nebo `FloatingBottom` |
+| `Position` | `FormActionBarPosition` | `Static` | `Static`, `StickyTop`, `FloatingBottom` nebo `FloatingBottomFromMd` — responzivní režim: pod hranicí `md` (768 px) statický v toku dokumentu, od `md` plovoucí fixnutý ke spodku viewportu. Media query žije ve scoped stylu komponenty (host by ji musel přebíjet přes `[b-*]` scope atribut) a rezerva `--tm-form-action-bar-reserve-block-size` se pod breakpointem sama vypíná |
 | `ShowOnScroll` | `bool` | `false` | Funkční odhalení po scrollu přes práh (reálný listener) |
 | `PrimaryActions` | `RenderFragment?` | `null` | Primární akce (např. Uložit), zcela vpravo |
 | `SecondaryActions` | `RenderFragment?` | `null` | Sekundární akce (např. Zrušit) |
@@ -5274,6 +5284,18 @@ Sticky/plovoucí panel akcí pro dlouhé formuláře. Vlevo obsah (`ChildContent
         <TmButton Variant="ButtonVariant.Primary" OnClick="SaveAsync">Uložit změny</TmButton>
     </PrimaryActions>
 </TmFormActionBar>
+
+@* Responsivní: pod 768 px statický v toku dokumentu, od 768 px plovoucí dole *@
+<TmFormActionBar Position="FormActionBarPosition.FloatingBottomFromMd" AriaLabel="Akce stránky">
+    <SecondaryActions>
+        <TmButton Variant="ButtonVariant.Secondary" OnClick="CancelAsync">Zrušit</TmButton>
+    </SecondaryActions>
+    <PrimaryActions>
+        <TmButton Variant="ButtonVariant.Primary" OnClick="SaveAsync">Uložit</TmButton>
+    </PrimaryActions>
+</TmFormActionBar>
+@* Pod plovoucí lištou nech stránce místo — pod `md` token sám čte 0:
+   .my-form-page { padding-block-end: var(--tm-form-action-bar-reserve-block-size); } *@
 ```
 
 ---
