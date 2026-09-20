@@ -210,6 +210,36 @@ public class TmDataTableHeaderAccessibilityTests : LocalizationTestBase
         => RenderTable(showColumnMenu: false).Find("button.tm-th-sort")
             .GetAttribute("aria-keyshortcuts").Should().BeNull();
 
+    // ── Shift+Enter multi-sort must be discoverable (N145) ─────────
+
+    /// <summary>
+    /// Shift+Enter (and Shift+click) multi-sorts — it appends the column to the sort chain
+    /// instead of replacing it — but nothing in the rendered markup said so: the sort icon shows
+    /// the state, the aria-label names the action, and the modifier gesture existed only for the
+    /// user who already knew it. A <c>title</c> is the discoverability surface: it paints a
+    /// tooltip for the pointer user and lands in the accessible description for a control whose
+    /// name comes from <c>aria-label</c>.
+    /// </summary>
+    [Fact]
+    public void TheSortButton_CarriesALocalizedMultiSortHint()
+        => RenderTable().Find("button.tm-th-sort").GetAttribute("title").Should().Be(
+            "Shift+Enter or Shift+click adds this column to the sort order",
+            "the gesture is real and always on — the hint must be on every sortable header, "
+            + "not only where a second sort is already active");
+
+    [Fact]
+    public void TheSortButton_MultiSortHint_IsLocalized()
+    {
+        UseCzechLocalization();
+
+        var cut = RenderTable();
+
+        cut.Find("button.tm-th-sort").GetAttribute("title").Should().Contain(
+            "Shift+Enter",
+            "the Czech hint names the same keys — a hardcoded English title would leak "
+            + "through the localization contract");
+    }
+
     // ── The shortcut must not reach a consumer's own controls ─────
 
     /// <summary>

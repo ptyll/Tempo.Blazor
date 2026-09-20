@@ -920,6 +920,7 @@
   "TmDataTable_LastPage": "Last page",
   "TmDataTable_Loading": "Loading data...",
   "TmDataTable_ManageViews": "Manage views",
+  "TmDataTable_MultiSortHint": "Shift+Enter or Shift+click adds this column to the sort order",
   "TmDataTable_NoResults": "No results found",
   "TmDataTable_PageSize": "Items per page",
   "TmDataTable_Pagination": "{0}–{1} of {2}",

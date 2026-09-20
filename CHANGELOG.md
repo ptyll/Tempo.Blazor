@@ -75,6 +75,13 @@ which is exactly the red
   page); `false` suppresses the summary everywhere, including the footer's Summary slot.
   `PaginationInfoTemplate` is honoured in the standalone line.
 
+- **The sort button's multi-sort gesture is discoverable.** Shift+Enter (and Shift+click) has
+  appended the column to the sort chain for a while — the state icon showed the result and the
+  `aria-label` named the next action, but the *modifier* existed only for the user who already
+  knew it. `.tm-th-sort` now carries a localized `title` (new key `TmDataTable_MultiSortHint` in
+  all three resource sets), which paints a tooltip for the pointer user and lands in the
+  accessible description for a control whose name comes from `aria-label`.
+
 ### Fixed
 
 - **`TmGanttImportDialog`'s file chooser is keyboard-operable.** The upload affordance was a

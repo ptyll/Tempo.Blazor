@@ -919,6 +919,7 @@
   "TmDataTable_LastPage": "Poslední stránka",
   "TmDataTable_Loading": "Načítání dat...",
   "TmDataTable_ManageViews": "Spravovat pohledy",
+  "TmDataTable_MultiSortHint": "Shift+Enter nebo Shift+kliknutí přidá tento sloupec do řazení",
   "TmDataTable_NoResults": "Žádné výsledky",
   "TmDataTable_PageSize": "Položek na stránku",
   "TmDataTable_Pagination": "{0}–{1} z {2}",

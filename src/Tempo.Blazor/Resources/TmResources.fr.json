@@ -920,6 +920,7 @@
   "TmDataTable_LastPage": "Dernière page",
   "TmDataTable_Loading": "Chargement des données...",
   "TmDataTable_ManageViews": "Gérer les vues",
+  "TmDataTable_MultiSortHint": "Maj+Entrée ou Maj+clic ajoute cette colonne au tri",
   "TmDataTable_NoResults": "Aucun résultat",
   "TmDataTable_PageSize": "Éléments par page",
   "TmDataTable_Pagination": "{0}–{1} sur {2}",
