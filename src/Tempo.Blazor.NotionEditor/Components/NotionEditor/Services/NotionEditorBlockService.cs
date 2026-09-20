@@ -441,6 +441,14 @@ public sealed class NotionEditorBlockService : INotionEditorBlockService
             mutable[index] = NotionCanonicalBlockBridge.ToSnapshot(converted);
             snapshot.Blocks = mutable;
             CascadeChildren(snapshot, source, newType);
+            if (newType == BlockType.Table)
+            {
+                // A freshly converted table must start with its two seed rows (the source text in
+                // the first cell) or the rendered <tbody> is empty — see SlashMenu_ParagraphToTable.
+                snapshot.Blocks = snapshot.Blocks
+                    .Concat(CreateTableRowSnapshots(converted, TextOf(source.Content, currentHtml)))
+                    .ToList();
+            }
             return snapshot;
         });
         return NotionCanonicalBlockBridge.ToViewBlock(
@@ -732,6 +740,51 @@ public sealed class NotionEditorBlockService : INotionEditorBlockService
         }
         NormalizeOrders(snapshot, source.ParentBlockId);
     }
+
+    /// <summary>
+    /// Builds the two seed rows every freshly converted table needs. The source text goes into the
+    /// first cell of the first row so converting a paragraph to a table is a promotion, not a reset.
+    /// Mirrors <c>MockNotionBlockStore.EnsureTableRows</c> for the aggregate-backed path.
+    /// </summary>
+    private static IEnumerable<NotionBlockSnapshot> CreateTableRowSnapshots(
+        IPageBlock table,
+        string headerText)
+    {
+        var columnCount = table.Content is ITableBlockContent { ColumnCount: > 0 } content
+            ? content.ColumnCount
+            : 3;
+
+        for (var rowIndex = 0; rowIndex < 2; rowIndex++)
+        {
+            var cells = Enumerable
+                .Range(0, columnCount)
+                .Select(_ => new NotionTableCell { Html = string.Empty })
+                .ToList();
+            if (rowIndex == 0 && !string.IsNullOrEmpty(headerText))
+            {
+                cells[0] = new NotionTableCell { Html = headerText };
+            }
+
+            yield return NotionCanonicalBlockBridge.ToSnapshot(new PageBlock
+            {
+                Id            = Guid.NewGuid(),
+                PageId        = table.PageId,
+                ParentBlockId = table.Id,
+                Type          = BlockType.TableRow,
+                Order         = rowIndex,
+                Content       = new TableRowBlockContent { RichCells = cells },
+                CreatedAt     = DateTime.UtcNow,
+                LastEditedAt  = DateTime.UtcNow
+            });
+        }
+    }
+
+    private static string TextOf(IBlockContent source, string? currentHtml = null) => currentHtml ?? source switch
+    {
+        ITextBlockContent text => text.Html,
+        ICodeBlockContent code => code.Code,
+        _ => string.Empty
+    };
 
     private static bool CanHoldChildren(BlockType type) => type
         is BlockType.Toggle

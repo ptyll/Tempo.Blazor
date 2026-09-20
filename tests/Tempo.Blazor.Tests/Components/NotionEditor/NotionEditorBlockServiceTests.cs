@@ -178,6 +178,30 @@ public sealed class NotionEditorBlockServiceTests
             .Html.Should().Be("remote");
     }
 
+    [Fact]
+    public async Task ConvertParagraphToTable_CreatesTwoRowsWithSourceTextInFirstCell()
+    {
+        var pageId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var paragraph = Block(pageId, Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), null, 0, "header cell");
+        var provider = new FakeNotionAggregateProvider([Snapshot(pageId, paragraph)]);
+        var service = new NotionEditorBlockService(provider);
+
+        var converted = await service.ConvertBlockTypeAsync(paragraph.Id.ToString("D"), BlockType.Table);
+
+        converted.Type.Should().Be(BlockType.Table);
+        var rows = provider.GetSnapshot(pageId).Blocks
+            .Where(block => block.ParentBlockId == converted.Id && block.Type == BlockType.TableRow)
+            .OrderBy(block => block.Order)
+            .ToList();
+        rows.Should().HaveCount(2, "a converted table starts with exactly two rows");
+
+        // The paragraph text must land in the first cell of the first row, not be dropped.
+        var firstRow = NotionCanonicalBlockBridge.ToViewBlock(provider.GetSnapshot(pageId), rows[0]);
+        var firstRowCells = ((ITableRowBlockContent)firstRow.Content).RichCells;
+        firstRowCells.Should().NotBeEmpty();
+        firstRowCells[0].Html.Should().Contain("header cell");
+    }
+
     private static NotionPageSnapshot Snapshot(
         Guid pageId,
         params NotionBlockSnapshot[] blocks)
