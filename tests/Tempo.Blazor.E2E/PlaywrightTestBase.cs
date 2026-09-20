@@ -384,6 +384,26 @@ public abstract class PlaywrightTestBase
                 ["https://localhost:7106", "http://localhost:5010"],
                 TimeSpan.FromSeconds(180));
 
+            // Server and InteractiveAuto demo hosts: the ServerTestBase (:7107) and
+            // InteractiveAutoTestBase (:7108) lanes previously assumed a developer had these running
+            // by hand, so a bare `dotnet test` run failed every one of their tests in CreatePageAsync.
+            // Self-host them the same way as the two lanes above.
+            await EnsureHostAsync(
+                context,
+                "Demo Server",
+                Path.Combine(repoRoot, "src", "Tempo.Blazor.Demo.Server", "Tempo.Blazor.Demo.Server.csproj"),
+                "Tempo.Blazor.Demo.Server",
+                ["https://localhost:7107"],
+                TimeSpan.FromSeconds(120));
+
+            await EnsureHostAsync(
+                context,
+                "Demo InteractiveAuto",
+                Path.Combine(repoRoot, "src", "Tempo.Blazor.Demo.InteractiveAuto", "Tempo.Blazor.Demo.InteractiveAuto", "Tempo.Blazor.Demo.InteractiveAuto.csproj"),
+                "Tempo.Blazor.Demo.InteractiveAuto",
+                ["https://localhost:7108"],
+                TimeSpan.FromSeconds(120));
+
             _demoHostsInitialized = true;
         }
         finally
