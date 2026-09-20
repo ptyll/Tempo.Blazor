@@ -79,16 +79,20 @@
 .tm-input-validation-error {
   color: var(--tm-color-danger);
 }
-.tm-input-disabled, .tm-input[disabled] {
+/* disabled/readonly/search compound onto .tm-input for the same reason the icon modifiers do:
+   every emitter (TmTextInput, TmTextArea, TmSearchInput) puts both classes on the same element,
+   so the modifier wins by selector, not by this file's order. The [disabled] attribute form is
+   (0,2,0) already. */
+.tm-input.tm-input-disabled, .tm-input[disabled] {
   background-color: var(--tm-color-gray-50);
   color: var(--tm-text-disabled);
   cursor: not-allowed;
 }
-.tm-input-readonly {
+.tm-input.tm-input-readonly {
   background-color: var(--tm-bg-surface-secondary);
   cursor: default;
 }
-.tm-input-search {
+.tm-input.tm-input-search {
   -webkit-appearance: none;
   appearance: none;
 }

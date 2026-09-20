@@ -141,7 +141,10 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    // Anchor.Id is part of the signature so swapping the anchor mid-open re-pushes it through
+    // update() — a bare options signature would leave the panel tracking the old element.
     private string OptionsSignature() => string.Join('|',
+        Anchor.Id ?? "-",
         Placement.ToString(), Align.ToString(), Offset, ViewportMargin,
         Flip, Shift, MatchAnchorWidth, ConstrainHeight, CloseOnEscape, CloseOnOutsidePointerDown);
 

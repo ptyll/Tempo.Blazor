@@ -45,16 +45,21 @@
 .tm-btn.tm-btn-md { height: var(--tm-input-height-md); padding: 0 var(--tm-space-4);   font-size: var(--tm-font-size-sm); }
 .tm-btn.tm-btn-lg { height: var(--tm-input-height-lg); padding: 0 var(--tm-space-5);   font-size: var(--tm-font-size-md); }
 
-/* Block */
-.tm-btn-block { width: 100%; }
+/* Block — markup always emits it next to .tm-btn (TmButton.Block, TmViewManager), so it
+   compounds like every other same-element modifier. */
+.tm-btn.tm-btn-block { width: 100%; }
 
 /* Variants — the four the probe measured (primary/secondary/outline-secondary/ghost) compound
    onto .tm-btn for the same reason the sizes do: the variant must win by selector, not by import
    order. Their :hover/:active forms carry the same compound so the whole family follows one rule.
-   .tm-btn-outline and .tm-btn-danger deliberately stay bare: outline is assigned to Fáze 22.4
-   (the column-picker toggle wears it and wins on colour by order today — compounding it here
-   would repaint the toggle), and danger must stay below [data-theme="dark"] .tm-btn-danger,
-   which precedes it. */
+   The remaining variants compound too — TmButton emits variant and size on the same element and
+   nothing else claims these names — with one visible consequence: tm-btn-link's height:auto and
+   padding:0 now win over a size compound as well, so a Link button with an explicit Size keeps
+   the inline look the variant declares (previously the size class painted the button box).
+   Only .tm-btn-outline and .tm-btn-danger deliberately stay bare: outline is assigned to
+   Fáze 22.4 (the column-picker toggle wears it and wins on colour by order today — compounding
+   it here would repaint the toggle), and danger must stay below [data-theme="dark"]
+   .tm-btn-danger, which precedes it. */
 .tm-btn.tm-btn-primary {
   background-color: var(--tm-color-primary);
   border-color: var(--tm-color-primary);
@@ -119,16 +124,16 @@
   box-shadow: var(--tm-shadow-focus-danger);
 }
 
-.tm-btn-warning {
+.tm-btn.tm-btn-warning {
   background-color: var(--tm-color-warning);
   border-color: var(--tm-color-warning);
   color: #111827;
 }
-.tm-btn-warning:hover:not(:disabled) {
+.tm-btn.tm-btn-warning:hover:not(:disabled) {
   background-color: var(--tm-color-warning-hover);
   border-color: var(--tm-color-warning-hover);
 }
-.tm-btn-warning:focus-visible {
+.tm-btn.tm-btn-warning:focus-visible {
   box-shadow: var(--tm-shadow-focus);
 }
 
@@ -141,16 +146,16 @@
   background-color: var(--tm-color-primary-subtle);
 }
 
-.tm-btn-outline-warning {
+.tm-btn.tm-btn-outline-warning {
   background-color: transparent;
   border-color: var(--tm-color-warning);
   color: var(--tm-color-warning-text);
 }
-.tm-btn-outline-warning:hover:not(:disabled) {
+.tm-btn.tm-btn-outline-warning:hover:not(:disabled) {
   background-color: var(--tm-color-warning-subtle);
 }
 
-.tm-btn-link {
+.tm-btn.tm-btn-link {
   background-color: transparent;
   border-color: transparent;
   color: var(--tm-color-primary);
@@ -159,7 +164,7 @@
   padding: 0;
   height: auto;
 }
-.tm-btn-link:hover:not(:disabled) {
+.tm-btn.tm-btn-link:hover:not(:disabled) {
   color: var(--tm-color-primary-hover);
 }
 
@@ -187,11 +192,11 @@
    1.24:1 light / 1.41:1 dark against --tm-bg-surface — under the 3:1 a control border
    needs (application gap register #11). The control token measures 4.83:1 / 5.71:1,
    the same fix .tm-btn-outline-secondary got in 2.8.17. */
-.tm-btn-default {
+.tm-btn.tm-btn-default {
   background-color: var(--tm-bg-surface);
   border-color: var(--tm-border-color-control);
   color: var(--tm-text-primary);
 }
-.tm-btn-default:hover:not(:disabled) {
+.tm-btn.tm-btn-default:hover:not(:disabled) {
   background-color: var(--tm-color-gray-50);
 }

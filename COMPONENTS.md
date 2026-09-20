@@ -12,45 +12,32 @@ Kompletní přehled všech komponent knihovny Tempo.Blazor, jejich parametrů, p
 4. [Přepínače a checkboxy](#přepínače-a-checkboxy) — TmCheckbox, TmToggle, TmRadioGroup, TmRadio
 5. [Datové zobrazení (Data Display)](#datové-zobrazení) — TmBadge, TmCard, TmAccordion, TmChip, TmChipGroup, TmChangeDiff, TmEmptyState, TmStatCard, TmKanbanBoard, TmMultiViewList
 6. [Zpětná vazba (Feedback)](#zpětná-vazba) — TmAlert, TmModal, TmDialog, TmTooltip, TmSpinner, TmPopover, TmToastContainer, TmNotificationBell, TmProgressBar, TmSkeleton
-7. [Navigace](#navigace) — TmTabs, TmTabPanel, TmContextMenu, TmNavigationGuard, TmScrollSpyNav
-8. [Ikony a avatary](#ikony-a-avatary) — TmIcon, TmAvatar, TmAvatarGroup
-9. [Pickery (datum, čas)](#pickery) — TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmDateTimeRangePicker, TmTimePicker, TmTimeInput, TmTimeRangePicker, TmCalendarView
-10. [Formuláře a validace](#formuláře-a-validace) — TmFormField, TmValidatedField, TmValidationSummary, TmFormValidationMessage, TmInlineEdit, TmFormSection, TmFormRow, TmDynamicFormRenderer
-11. [DataTable](#datatable) — TmDataTable, TmDataTableColumn, TmPagination, TmColumnPicker, TmViewManager, TmFilterBuilder, TmFilterChip, TmBulkActionBar
-12. [Layout](#layout) — TmDrawer, TmSidebar, TmTopBar, TmBreadcrumbs, TmCommandPalette, TmSection, TmKeyboardShortcutsHelp
-13. [Soubory a přílohy](#soubory-a-přílohy) — TmFileDropZone, TmAttachmentManager
-14. [Galerie](#galerie) — TmImageGallery, TmLightbox
-15. [Import/Export](#importexport) — TmExportOptions, TmImportWizard, TmImportPreview
-16. [Grafy](#grafy) — TmChart
-17. [Tagy](#tagy) — TmTagPicker
-18. [Timeline](#timeline) — TmTimeline
-19. [Toolbar](#toolbar) — TmToolbar, TmToolbarButton, TmToolbarDivider, TmFormActionBar
-20. [TreeView](#treeview) — TmTreeView
-21. [Scheduler](#scheduler) — TmScheduler
-22. [Dashboard](#dashboard) — TmDashboard
-23. [Workflow](#workflow) — TmStepper, TmWorkflowDesignerCanvas, TmWorkflowPropertiesPanel, TmWorkflowToolbox, TmWorkflowMinimap
-24. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple, TokenAutocomplete
-25. [Podpisové komponenty](#podpisové-komponenty) — TmDocumentPageViewer, TmSigningFieldOverlay, TmSignatureCapture, TmConditionBuilder, TmFormulaBuilder, TmRecipientRoleEditor, TmSigningFieldEditorPanel, TmPdfTemplateDesigner, signing steps, TmSigningFormRunner, TmSigningCompletionPanel, TmSubmissionStatusTimeline, TmShareLinkPanel, TmPdfSignatureVerification, TmAuditTrailViewer
-26. [Validace formulářů - kompletní příklady](#validace-formulářů---kompletní-příklady)
-12. [Spreadsheet](#spreadsheet) — TmSpreadsheet
-13. [Layout](#layout) — TmDrawer, TmSidebar, TmTopBar, TmBreadcrumbs, TmCommandPalette, TmSection, TmKeyboardShortcutsHelp
-14. [Soubory a přílohy](#soubory-a-přílohy) — TmFileDropZone, TmAttachmentManager, TmPdfViewer
-15. [Galerie](#galerie) — TmImageGallery, TmLightbox
-16. [Import/Export](#importexport) — TmExportOptions, TmImportWizard, TmImportPreview
-17. [Grafy](#grafy) — TmChart, TmStockChart, TmSparkline, TmGauge
-18. [Tagy](#tagy) — TmTagPicker
-19. [Timeline](#timeline) — TmTimeline
-20. [Toolbar](#toolbar) — TmToolbar, TmToolbarButton, TmToolbarDivider, TmFormActionBar
-21. [TreeView](#treeview) — TmTreeView
-22. [Scheduler](#scheduler) — TmScheduler
-23. [Dashboard](#dashboard) — TmDashboard
-24. [Workflow](#workflow) — TmStepper, TmWorkflowDesignerCanvas, TmWorkflowPropertiesPanel, TmWorkflowToolbox, TmWorkflowMinimap
-25. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple, TokenAutocomplete
-26. [AI Tools](#ai-tools) — TmAIPrompt
-27. [Chat](#chat) — TmChat
-28. [Knihovna dokumentů](#knihovna-dokumentů-document-library) — ITempoDocumentLibraryProvider, TmDocumentOpenDialog, ITempoDocumentChangeNotifier, NotionEditor insert-existing, MCP
-29. [Reporting](#reporting) — TmReportViewer, TmReportParameterPanel, TmReportExplorer, TmReportDesigner
+7. [Overlay](#overlay) — TmOverlayPanel
+8. [Navigace](#navigace) — TmTabs, TmTabPanel, TmContextMenu, TmNavigationGuard, TmScrollSpyNav
+9. [Ikony a avatary](#ikony-a-avatary) — TmIcon, TmAvatar, TmAvatarGroup
+10. [Pickery (datum, čas)](#pickery) — TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmDateTimeRangePicker, TmTimePicker, TmTimeInput, TmTimeRangePicker, TmCalendarView
+11. [Formuláře a validace](#formuláře-a-validace) — TmFormField, TmValidatedField, TmValidationSummary, TmFormValidationMessage, TmInlineEdit, TmFormSection, TmFormRow, TmDynamicFormRenderer
+12. [DataTable](#datatable) — TmDataTable, TmDataTableColumn, TmPagination, TmColumnPicker, TmViewManager, TmFilterBuilder, TmFilterChip, TmBulkActionBar
+13. [Spreadsheet](#spreadsheet) — TmSpreadsheet
+14. [Layout](#layout) — TmDrawer, TmSidebar, TmTopBar, TmBreadcrumbs, TmCommandPalette, TmSection, TmKeyboardShortcutsHelp
+15. [Soubory a přílohy](#soubory-a-přílohy) — TmFileDropZone, TmAttachmentManager, TmPdfViewer
+16. [Galerie](#galerie) — TmImageGallery, TmLightbox
+17. [Import/Export](#importexport) — TmExportOptions, TmImportWizard, TmImportPreview
+18. [Grafy](#grafy) — TmChart, TmStockChart, TmSparkline, TmGauge
+19. [Tagy](#tagy) — TmTagPicker
+20. [Timeline](#timeline) — TmTimeline
+21. [Toolbar](#toolbar) — TmToolbar, TmToolbarButton, TmToolbarDivider, TmFormActionBar
+22. [TreeView](#treeview) — TmTreeView
+23. [Scheduler](#scheduler) — TmScheduler
+24. [Dashboard](#dashboard) — TmDashboard
+25. [Workflow](#workflow) — TmStepper, TmWorkflowDesignerCanvas, TmWorkflowPropertiesPanel, TmWorkflowToolbox, TmWorkflowMinimap
+26. [Activity](#activity-komentáře-přílohy-rich-editor) — TmActivityLog, TmActivityComments, TmActivityAttachments, TmActivityTimeline, TmRichEditorFull, TmRichEditorSimple, TokenAutocomplete
+27. [AI Tools](#ai-tools) — TmAIPrompt
+28. [Podpisové komponenty](#podpisové-komponenty) — TmDocumentPageViewer, TmSigningFieldOverlay, TmSignatureCapture, TmConditionBuilder, TmFormulaBuilder, TmRecipientRoleEditor, TmSigningFieldEditorPanel, TmPdfTemplateDesigner, signing steps, TmSigningFormRunner, TmSigningCompletionPanel, TmSubmissionStatusTimeline, TmShareLinkPanel, TmPdfSignatureVerification, TmAuditTrailViewer
+29. [Chat](#chat) — TmChat
 30. [Validace formulářů - kompletní příklady](#validace-formulářů---kompletní-příklady)
+31. [Knihovna dokumentů](#knihovna-dokumentů-document-library) — ITempoDocumentLibraryProvider, TmDocumentOpenDialog, ITempoDocumentChangeNotifier, NotionEditor insert-existing, MCP
+32. [Reporting](#reporting) — TmReportViewer, TmReportParameterPanel, TmReportExplorer, TmReportDesigner
 
 ---
 
@@ -942,8 +929,15 @@ Rozbalovací menu s položkami.
 | `OnSelect` | `EventCallback<string>` | — | Událost výběru (hodnota TmDropdownItem) |
 | `ChildContent` | `RenderFragment` | — | TmDropdownItem děti |
 | `Disabled` | `bool` | `false` | Zakáže dropdown |
+| `Placement` | `OverlayPlacement` | `Bottom` | Preferovaná strana triggeru pro menu (`Top`, `Bottom`, `Left`, `Right`) — bez místa překlopí |
+| `Align` | `OverlayAlign` | `Start` | Zarovnání menu vůči triggeru na příčné ose (`Start`, `Center`, `End`) |
+| `Offset` | `int` | `4` | Mezera (px) mezi triggerem a menu |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
+
+Menu je `TmOverlayPanel` — `popover="manual"` ho drží v top layer prohlížeče, takže ho neořeže
+`overflow`/`transform` předka (tělo modálu, scrollující sloupec) a při scrollu/resize se
+pozicuje znovu. Viz [TmOverlayPanel](#tmoverlaypanel).
 
 #### Příklady
 
@@ -2286,6 +2280,82 @@ Placeholder načítání (skeleton loader).
 
 @* Skeleton pro obrázek *@
 <TmSkeleton Variant="SkeletonVariant.Rect" Width="100%" Height="200px" />
+```
+
+---
+
+## Overlay
+
+### TmOverlayPanel
+
+Kotvená plovoucí plocha — sdílené primitivum, na kterém stojí plovoucí plochy knihovny:
+TmPopover, TmDropdown, TmFilterableDropdown, TmContextMenu, TmSplitButton, TmDatePicker,
+TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker,
+TmNotificationBell, TmColorPicker, TmMultiColumnComboBox a popupy TmQueryInput. Je to veřejné
+API, ale primárně slouží jako společný základ — pro běžné potřeby sáhněte po konkrétní
+komponentě, TmOverlayPanel použijte pro vlastní plovoucí plochu, kterou nic z výše uvedeného
+nekryje.
+
+Panel se renderuje s `popover="manual"` a otevírá přes HTML Popover API — skončí v top layer
+prohlížeče, tedy nad každým z-index stacking kontextem a mimo ořez `overflow`/`transform`
+předků (tělo modálu, scrollující sloupec). `overlay.js` ho pozicuje vůči `Anchor`: volí stranu
+(`Placement`), příčné zarovnání (`Align`), u okraje viewportu překlopí na opačnou stranu
+(`Flip`, jen když je přísně lepší) a dosune ji do viditelné plochy (`Shift`), sleduje scroll
+(window i vnitřní kontejnery) a resize. Vyřešenou stranu nese atribut `data-tm-placement`
+(čte ho např. šipka TmPopover). Zavírá na Escape (fokus se vrátí na kotvu) a na pointerdown
+mimo panel i kotvu; programové zavření (`IsOpen` → `false`, `CloseAsync`) `OnDismissed`
+nevyvolává. Kde Popover API chybí, spadne na `position: fixed` s výpočtem containing blocku —
+na panelu je pak `data-tm-overlay-fallback`. Obsah se renderuje jen dokud je panel otevřený.
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-overlay-panel` | Panel (element v top layer) |
+| `tm-overlay-panel--open` | Otevřený stav — přidává overlay.js |
+
+#### Parametry
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Id` | `string` | generované | Id panelu — nastavte, když na něj má kotva odkazovat (např. `aria-controls`) |
+| `Anchor` | `ElementReference` | — | Prvek, vůči kterému se panel pozicuje; bez něj overlay.js použije předchozí sourozenecký element panelu (typické rozložení trigger→panel) |
+| `Placement` | `OverlayPlacement` | `Bottom` | Preferovaná strana kotvy (`Top`, `Bottom`, `Left`, `Right`) |
+| `Align` | `OverlayAlign` | `Start` | Zarovnání na příčné ose (`Start`, `Center`, `End`) |
+| `Offset` | `int` | `4` | Mezera (px) mezi kotvou a panelem na vyřešené straně |
+| `ViewportMargin` | `int` | `8` | Minimální odstup (px) od okrajů viewportu |
+| `Flip` | `bool` | `true` | Překlopit na opačnou stranu, když preferovaná nemá místo |
+| `Shift` | `bool` | `true` | Dosunout panel po příčné ose, aby zůstal ve viewportu |
+| `MatchAnchorWidth` | `bool` | `false` | Roztáhnout panel na šířku kotvy (dropdown/select menu) |
+| `ConstrainHeight` | `bool` | `false` | Omezit výšku na volné místo na vyřešené straně (respektuje menší CSS `max-height`) a nechat rolovat |
+| `CloseOnEscape` | `bool` | `true` | Zavřít na Escape za otevřeného panelu; fokus se vrátí na kotvu |
+| `CloseOnOutsidePointerDown` | `bool` | `true` | Zavřít pointerdownem mimo panel i kotvu |
+| `IsOpen` | `bool?` | `null` | Řízený stav; `null` = panel si drží vlastní interní stav |
+| `IsOpenChanged` | `EventCallback<bool>` | — | Změna stavu (two-way bind) |
+| `OnDismissed` | `EventCallback<string>` | — | Zavření uživatelským gestem — `"escape"` nebo `"outside"`; programové zavření ho nevolá |
+| `Role` | `string?` | `null` | ARIA role panelu — typicky `menu`, `listbox`, `dialog` nebo `tooltip` |
+| `ChildContent` | `RenderFragment?` | `null` | Obsah panelu — renderuje se jen za otevřeného |
+| `Class` | `string?` | `null` | Další CSS třídy — komponenty sem předávají vlastní třídu panelu |
+| `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy na elementu panelu |
+
+#### Příklady
+
+```razor
+<button @ref="_trigger" @onclick="() => _open = !_open">Detail</button>
+
+<TmOverlayPanel Anchor="_trigger"
+                IsOpen="_open"
+                IsOpenChanged="v => _open = v"
+                Placement="OverlayPlacement.Bottom"
+                Align="OverlayAlign.Start"
+                Role="dialog">
+    <p>Panel plave nad modály, overflow kontejnery a transformovanými předky.</p>
+</TmOverlayPanel>
+
+@code {
+    private ElementReference _trigger;
+    private bool _open;
+}
 ```
 
 ---

@@ -75,7 +75,7 @@ public sealed class TokenContrastTests
     [Fact]
     public void DefaultButtonBorder_IsAControlToken_AndKeepsThreeToOne()
     {
-        var declared = ThemeCss.Property("_button.css", ".tm-btn-default", "border-color");
+        var declared = ThemeCss.Property("_button.css", ".tm-btn.tm-btn-default", "border-color");
 
         declared.Should().Be("var(--tm-border-color-control)",
             "dekorační --tm-border-color měřil 1,24:1/1,41:1 — pod prahem 3:1 pro hranici " +

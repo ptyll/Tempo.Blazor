@@ -479,7 +479,10 @@ public partial class TmMultiSelect<TItem, TValue>
         var items = GetVisibleItems().ToList();
         switch (e.Key)
         {
-            case "Escape":
+            // `when _isOpen`: overlay.js dismisses on Escape too (window, capture) and its
+            // NotifyDismissedAsync lands through IsOpenChanged — an unconditional case could
+            // invoke OnClose a second time for the same gesture once _isOpen is already false.
+            case "Escape" when _isOpen:
                 _isOpen = false;
                 // Keydown inside the popup means focus was inside it (filter
                 // input or a popup control) — it is destroyed now, restore.

@@ -191,6 +191,10 @@ function place(entry) {
 
     if (options.matchAnchorWidth) {
         panel.style.width = `${anchorRect.width}px`;
+    } else {
+        // The option may have flipped off while the panel is open (update()) — the inline width
+        // written by an earlier pass would otherwise survive as a stale override of the CSS class.
+        panel.style.width = '';
     }
 
     if (options.constrainHeight && (result.side === 'bottom' || result.side === 'top')) {
@@ -201,6 +205,11 @@ function place(entry) {
         const cap = Number.isNaN(cssCap) ? room : Math.min(room, cssCap);
         panel.style.maxHeight = `${Math.max(cap, 0)}px`;
         panel.style.overflowY = 'auto';
+    } else {
+        // Same staleness class as width: constrainHeight toggled off (or a left/right side, where
+        // height capping does not apply) must not keep the previous pass's inline cap.
+        panel.style.maxHeight = '';
+        panel.style.overflowY = '';
     }
 }
 

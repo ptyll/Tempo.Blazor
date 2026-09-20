@@ -27,7 +27,7 @@ public class TmPopoverTests : LocalizationTestBase
             .Add(x => x.TriggerContent, b => b.AddContent(0, "<button>Open</button>"))
             .AddChildContent("Popover body"));
 
-        cut.FindAll(".tm-popover__body--open").Should().BeEmpty();
+        cut.FindAll(".tm-popover__body").Should().BeEmpty();
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class TmPopoverTests : LocalizationTestBase
 
         cut.Find(".tm-popover__trigger").Click();
 
-        cut.FindAll(".tm-popover__body--open").Should().HaveCount(1);
+        cut.FindAll(".tm-popover__body").Should().HaveCount(1);
     }
 
     [Fact]
@@ -62,10 +62,10 @@ public class TmPopoverTests : LocalizationTestBase
             .AddChildContent("Content"));
 
         cut.Find(".tm-popover__trigger").Click();
-        cut.FindAll(".tm-popover__body--open").Should().HaveCount(1);
+        cut.FindAll(".tm-popover__body").Should().HaveCount(1);
 
         cut.Find(".tm-popover").KeyDown(new KeyboardEventArgs { Key = "Escape" });
-        cut.FindAll(".tm-popover__body--open").Should().BeEmpty();
+        cut.FindAll(".tm-popover__body").Should().BeEmpty();
     }
 
     [Theory]
@@ -129,7 +129,7 @@ public class TmPopoverTests : LocalizationTestBase
             .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
             .AddChildContent("Content"));
 
-        cut.FindAll(".tm-popover__body--open").Should().HaveCount(1);
+        cut.FindAll(".tm-popover__body").Should().HaveCount(1);
     }
 
     [Fact]
