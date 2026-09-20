@@ -37,6 +37,32 @@
         calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
 }
 
+/* RESPONSIVNÍ REŽIM (gap registr #13): statická v toku dokumentu pod `md`, plovoucí dole od
+   `md` nahoru. Media query MUSÍ žít tady, ve scoped stylu — hostitel by "pod staticky, nad
+   plovoucí" vyjádřil jedině přepsáním, které musí přebít specifičnost scope atributu `[b-*]`
+   a prohrává kaskádu, když ji jen dorovná.
+
+   Deklarace jsou STEJNÉ jako u `--floating-bottom` výše — pečlivě druhá kopie, ne odkaz:
+   pravidlo nemůže sdílet selector list s trvalou variantou, protože tahle plovou jen od
+   768 px. Paritu hlídá FormActionBarCss_FloatingBottomFromMd_SharesTheFloatingContract.
+
+   Hranice 768 px je JEDNO číslo ve vlastnictví knihovny: tentýž okraj z druhé strany používá
+   `@media (max-width: 767.98px)` v tokens.css, kde `:root:has(tahle třída)` vynuluje
+   `--tm-form-action-bar-reserve-block-size` — pod breakpointem není co rezervovat, takže
+   rezerva se vypne SPOLU s plovoucím režimem a nesmí zůstat jako mrtvé místo. */
+@media (min-width: 768px) {
+    .tm-form-action-bar--floating-bottom-md {
+        position: fixed;
+        width: auto;
+        inset-inline-end: var(--tm-form-action-bar-inset-inline-end, 0);
+        bottom: 0;
+        inset-inline-start: var(--tm-form-action-bar-inset-inline-start, 0);
+        z-index: var(--tm-form-action-bar-z-index, var(--tm-z-sticky));
+        padding: var(--tm-space-2) clamp(var(--tm-space-3), 2vw, var(--tm-space-6))
+            calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 .tm-form-action-bar--show-on-scroll {
     opacity: 0;
     transform: translateY(0.5rem);

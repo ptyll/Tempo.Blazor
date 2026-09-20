@@ -2,7 +2,7 @@
   "kind": "Enum",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.Toolbar",
-  "description": "Placement mode for a TmFormActionBar: rendered in normal document flow, stuck to the top of the scroll container, or fixed to the bottom of the viewport.",
+  "description": "Placement mode for a TmFormActionBar: rendered in normal document flow, stuck to the top of the scroll container, or fixed to the bottom of the viewport — optionally only from the md (768px) boundary up.",
   "packageId": "Tempo.Blazor",
   "sourcePath": "src/Tempo.Blazor/Components/Toolbar/FormActionBarPosition.cs",
   "documentationStatus": "generated",
@@ -21,6 +21,11 @@
       "name": "FloatingBottom",
       "kind": "Field",
       "description": "Fix to the bottom of the viewport."
+    },
+    {
+      "name": "FloatingBottomFromMd",
+      "kind": "Field",
+      "description": "Responsive mode: normal document flow below the md boundary (768px), fixed to the bottom of the viewport from md up. The media query lives in the component's scoped stylesheet, and --tm-form-action-bar-reserve-block-size resolves to zero below the same boundary, so a host page that pads by the token leaves no dead space on mobile."
     }
   ],
   "itemName": "FormActionBarPosition"

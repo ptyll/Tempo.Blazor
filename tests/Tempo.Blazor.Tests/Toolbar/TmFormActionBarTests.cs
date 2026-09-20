@@ -50,7 +50,8 @@ public class TmFormActionBarTests : LocalizationTestBase
         foreach (var selector in new[]
                  {
                      ".tm-form-action-bar--sticky-top",
-                     ".tm-form-action-bar--floating-bottom"
+                     ".tm-form-action-bar--floating-bottom",
+                     ".tm-form-action-bar--floating-bottom-md"
                  })
         {
             SelectorBlock(css, selector).Should().Contain(
@@ -304,14 +305,17 @@ public class TmFormActionBarTests : LocalizationTestBase
 
         var declarations = tokens.Split("--tm-form-action-bar-reserve-block-size:")
             .Skip(1)
-            .Select(part => part[..part.IndexOf(';', StringComparison.Ordinal)])
+            .Select(part => part[..part.IndexOf(';', StringComparison.Ordinal)].Trim())
             .ToList();
 
         declarations.Should().HaveCount(
-            2,
-            "desktopová hodnota a varianta pod 768 px, kde se lišta láme do sloupce");
+            3,
+            "desktopová hodnota, dvouřadová varianta pod 768 px a nulová varianta pod 768 px "
+            + "pro FloatingBottomFromMd, kde lišta leží v toku dokumentu");
 
-        foreach (var declaration in declarations)
+        var sized = declarations.Where(d => d != "0").ToList();
+        sized.Should().HaveCount(2, "dvě deklarace nesou výšku lišty, třetí rezervu VYPNULÁ");
+        foreach (var declaration in sized)
         {
             declaration.Should().Contain("var(--tm-input-height-md)");
             declaration.Should().Contain("var(--tm-space-2)");
@@ -320,10 +324,112 @@ public class TmFormActionBarTests : LocalizationTestBase
                 "jediné holé číslo smí být rámeček 1px na každé straně — všechno ostatní jde z tokenů");
         }
 
+        declarations.Should().Contain(
+            "0",
+            "pod breakpointem je responzivní lišta statická — rezerva se vypíná S REŽIMEM, "
+            + "jinak pod breakpointem zůstane mrtvé místo (gap registr #13)");
+
         tokens.Should().Contain(
             "@media (max-width: 767.98px)",
             "media query musí být vedle bloku :root, ne v něm — vnořená není platné CSS "
             + "a proměnná by tiše zůstala na desktopové hodnotě");
+    }
+
+    /// <summary>
+    /// Responzivní režim renderuje vlastní třídu — nesmí si půjčovat
+    /// <c>--floating-bottom</c>, protože ta plovoucí deklarace platí VŠUDE a pod `md` by
+    /// držela statickou lištu přišroubovanou na viewport.
+    /// </summary>
+    [Fact]
+    public void FormActionBar_FloatingBottomFromMd_HasResponsiveClass_NotTheAlwaysFloatingOne()
+    {
+        var cut = Render<TmFormActionBar>(p => p.Add(
+            x => x.Position, FormActionBarPosition.FloatingBottomFromMd));
+
+        var classes = cut.Find(".tm-form-action-bar").ClassList;
+        classes.Should().Contain("tm-form-action-bar--floating-bottom-md");
+        classes.Should().NotContain(
+            "tm-form-action-bar--floating-bottom",
+            "ta třída plovoucí kontrakt aplikuje bez media query — pod md by barva zůstala fixed");
+    }
+
+    /// <summary>
+    /// Responzivní varianta nese STEJNÝ plovoucí kontrakt jako trvalá — ale jen uvnitř
+    /// <c>@media (min-width: 768px)</c>. Drift mezi oběma bloky by znamenal, že se responzivní
+    /// lišta nad breakpointem chová jinak než trvale plovoucí — potichu, protože obě cesty
+    /// deklarace kopírují.
+    /// </summary>
+    [Fact]
+    public void FormActionBarCss_FloatingBottomFromMd_SharesTheFloatingContract_AboveMdOnly()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor", "Components", "Toolbar", "TmFormActionBar.razor.css"));
+
+        var responsive = SelectorBlock(css, ".tm-form-action-bar--floating-bottom-md");
+        // SelectorBlock hledá "selektor + ' {'" — "--floating-bottom {" trefí jen trvalou
+        // variantu, responzivní končí "-md {".
+        var always = SelectorBlock(css, ".tm-form-action-bar--floating-bottom");
+
+        // Stejná sada deklarací — jediný rozdíl smí být médium, ne obsah.
+        foreach (var declaration in new[]
+                 {
+                     "position: fixed;",
+                     "width: auto;",
+                     "inset-inline-end: var(--tm-form-action-bar-inset-inline-end, 0);",
+                     "bottom: 0;",
+                     "inset-inline-start: var(--tm-form-action-bar-inset-inline-start, 0);",
+                     "z-index: var(--tm-form-action-bar-z-index, var(--tm-z-sticky));",
+                 })
+        {
+            responsive.Should().Contain(declaration);
+            always.Should().Contain(declaration);
+        }
+
+        // A pravidlo sedí UVNITŘ media query od 768 px nahoru — bez ní by třída plovala všude.
+        SelectorBlock(
+                MediaBlock(css, "@media (min-width: 768px)"),
+                ".tm-form-action-bar--floating-bottom-md")
+            .Should().Contain(
+                "position: fixed;",
+                "deklarace musí být uvnitř @media (min-width: 768px), jinak lišta plovoucí i pod md");
+
+        // A jinde už žádný blok pro třídu není — mimo media query by pod breakpointem platil
+        // jakýkoli plovoucí předpis z něj.
+        var occurrences = css.Split(".tm-form-action-bar--floating-bottom-md {").Length - 1;
+        occurrences.Should().Be(
+            1,
+            "jediná deklarace responzivní třídy je ta media-gated — druhá kopie mimo ni by "
+            + "buď plovala pod breakpointem, nebo by přebíjela kontrakt bez testu");
+    }
+
+    /// <summary>
+    /// Rezerva a režim jsou JEDNA knihovní hranice: pod breakpointem rezervu vypíná
+    /// <c>:has(.tm-form-action-bar--floating-bottom-md)</c> na <c>:root</c>, nad breakpointem
+    /// lištu přepne do <c>position: fixed</c> media query ve scoped stylu. Čísla
+    /// <c>767.98px</c> a <c>768px</c> jsou dvě strany TÉHOŽ okraje — kdyby se rozešly
+    /// (třeba 640 px v jednom souboru), vznikl by pás, kde lišta pluje bez rezervy, nebo
+    /// stojí v toku a rezerva nechává mrtvé místo.
+    /// </summary>
+    [Fact]
+    public void Tokens_FormActionBarReserve_ZeroesBelowTheSameBoundaryTheModeUses()
+    {
+        var tokens = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "tokens.css"));
+        var css = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor", "Components", "Toolbar", "TmFormActionBar.razor.css"));
+
+        // Vynulování sedí UVNITŘ téže media query jako dvouřadová rezerva: max-width: 767.98px.
+        SelectorBlock(
+                MediaBlock(tokens, "@media (max-width: 767.98px)"),
+                ":root:has(.tm-form-action-bar--floating-bottom-md)")
+            .Should().Contain(
+                "--tm-form-action-bar-reserve-block-size: 0;",
+                "statická lišta v toku nemá co rezervovat — rezerva se vypíná s režimem, "
+                + "a to pod tou samou hranicí, jinak jsou to dvě čísla, která se mohou rozejít");
+
+        css.Should().Contain(
+            "@media (min-width: 768px)",
+            "767.98 px pod a 768 px nad je TENTÝŽ okraj — breakpoint rezervy a režimu je jedno číslo");
     }
 
     /// <summary>Text of the first declaration block whose selector line starts with <paramref name="selector"/>.</summary>
@@ -336,6 +442,33 @@ public class TmFormActionBarTests : LocalizationTestBase
         end.Should().BeGreaterThan(start);
 
         return css[start..end];
+    }
+
+    /// <summary>Inner text of the first <paramref name="mediaQuery"/> block (brace-matched).</summary>
+    private static string MediaBlock(string css, string mediaQuery)
+    {
+        var start = css.IndexOf(mediaQuery + " {", StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, "the CSS must still declare {0}", mediaQuery);
+
+        var openBrace = css.IndexOf('{', start);
+        var depth = 0;
+        for (var i = openBrace; i < css.Length; i++)
+        {
+            if (css[i] == '{')
+            {
+                depth++;
+            }
+            else if (css[i] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return css[(openBrace + 1)..i];
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"Unbalanced braces after {mediaQuery}.");
     }
 
     private static string FindRepositoryRoot()

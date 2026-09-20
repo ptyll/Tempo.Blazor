@@ -21419,14 +21419,14 @@
       ]
     },
     {
+      "itemName": "INotionIdempotentAggregateProvider",
       "kind": "Interface",
       "category": "Notion Editor",
       "namespace": "Tempo.Blazor.NotionEditor.Interfaces",
       "description": "Extends aggregate persistence with a durable, atomic idempotent execution boundary.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Interfaces/INotionIdempotentAggregateProvider.cs",
-      "documentationStatus": "generated",
-      "itemName": "INotionIdempotentAggregateProvider"
+      "documentationStatus": "merged"
     },
     {
       "itemName": "INotionImportExportProvider",
@@ -23209,34 +23209,34 @@
       ]
     },
     {
+      "itemName": "NotionIdempotentExecutionRequest",
       "kind": "Class",
       "category": "Notion Editor",
       "namespace": "Tempo.Blazor.NotionEditor.Models",
       "description": "Provider-neutral metadata for one idempotent aggregate operation.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
-      "documentationStatus": "generated",
-      "itemName": "NotionIdempotentExecutionRequest"
+      "documentationStatus": "merged"
     },
     {
+      "itemName": "NotionIdempotentExecutionResult",
       "kind": "Class",
       "category": "Notion Editor",
       "namespace": "Tempo.Blazor.NotionEditor.Models",
       "description": "Provider result containing an opaque authoring response when available.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
-      "documentationStatus": "generated",
-      "itemName": "NotionIdempotentExecutionResult"
+      "documentationStatus": "merged"
     },
     {
+      "itemName": "NotionIdempotentExecutionStatus",
       "kind": "Enum",
       "category": "Notion Editor",
       "namespace": "Tempo.Blazor.NotionEditor.Models",
       "description": "Outcome of a provider-level idempotent aggregate execution.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
-      "documentationStatus": "generated",
-      "itemName": "NotionIdempotentExecutionStatus"
+      "documentationStatus": "merged"
     },
     {
       "itemName": "NotionImportFormat",
@@ -35929,9 +35929,9 @@
   "libraryExamples": [],
   "summary": {
     "itemCount": 1472,
-    "manualItemCount": 1468,
+    "manualItemCount": 1472,
     "generatedItemCount": 1455,
-    "generatedOnlyItemCount": 4,
+    "generatedOnlyItemCount": 0,
     "componentCount": 0,
     "publicApiTypeCount": 1455
   }

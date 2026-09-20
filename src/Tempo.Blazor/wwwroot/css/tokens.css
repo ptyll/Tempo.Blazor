@@ -351,4 +351,16 @@
         calc(2 * var(--tm-input-height-md) + var(--tm-space-3) + 4 * var(--tm-space-2) + 2px
              + env(safe-area-inset-bottom, 0px));
   }
+
+  /* FloatingBottomFromMd (gap registr #13) drží lištu pod tímto okrajem V TOKU dokumentu —
+     plovoucí je až od `@media (min-width: 768px)` v TmFormActionBar.razor.css. Pod breakpointem
+     tedy nepřekrývá nic a rezervovat se nemá co: `:has()` na třídu, kterou komponenta sama
+     vyrenderuje, vynuluje token S REŽIMEM. Hostitel čte pořád jen
+     `--tm-form-action-bar-reserve-block-size`; rozhodnutí, kolik rezervy je třeba, udělá
+     třída na liště a JEDNA knihovní hranice — ne dvě čísla ve dvou repozitářích, která by se
+     mohla rozejít. Stránka, která by pod 768 px míchala trvale plovoucí lištu s responzivní,
+     dostane pro tu trvalou rezervu 0 — režimy se na jednu stránku kombinovat nemají. */
+  :root:has(.tm-form-action-bar--floating-bottom-md) {
+    --tm-form-action-bar-reserve-block-size: 0;
+  }
 }

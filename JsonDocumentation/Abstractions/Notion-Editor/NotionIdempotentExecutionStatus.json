@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Notion Editor",
+  "namespace": "Tempo.Blazor.NotionEditor.Models",
+  "description": "Outcome of a provider-level idempotent aggregate execution.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "NotionIdempotentExecutionStatus"
+}

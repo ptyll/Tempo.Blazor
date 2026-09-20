@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "Notion Editor",
+  "namespace": "Tempo.Blazor.NotionEditor.Interfaces",
+  "description": "Extends aggregate persistence with a durable, atomic idempotent execution boundary.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Interfaces/INotionIdempotentAggregateProvider.cs",
+  "documentationStatus": "generated",
+  "itemName": "INotionIdempotentAggregateProvider"
+}

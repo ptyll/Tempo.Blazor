@@ -4334,14 +4334,14 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "DataTablePaginationInfoPlacement",
           "kind": "Enum",
           "category": "Components",
           "namespace": "Tempo.Blazor.Components.DataTable",
           "description": "Which element renders the \"showing X–Y of Z\" item range in a TmDataTable{TItem} paging footer.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
-          "documentationStatus": "generated",
-          "itemName": "DataTablePaginationInfoPlacement"
+          "documentationStatus": "merged"
         },
         {
           "itemName": "DataTableScrollMode",
@@ -4678,7 +4678,7 @@
           "kind": "Enum",
           "category": "Components",
           "namespace": "Tempo.Blazor.Components.Toolbar",
-          "description": "Placement mode for a TmFormActionBar: rendered in normal document flow, stuck to the top of the scroll container, or fixed to the bottom of the viewport.",
+          "description": "Placement mode for a TmFormActionBar: rendered in normal document flow, stuck to the top of the scroll container, or fixed to the bottom of the viewport — optionally only from the md (768px) boundary up.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Toolbar/FormActionBarPosition.cs",
           "documentationStatus": "merged",
@@ -4697,18 +4697,23 @@
               "name": "FloatingBottom",
               "kind": "Field",
               "description": "Fix to the bottom of the viewport."
+            },
+            {
+              "name": "FloatingBottomFromMd",
+              "kind": "Field",
+              "description": "Responsive mode: normal document flow below the md boundary (768px), fixed to the bottom of the viewport from md up. The media query lives in the component's scoped stylesheet, and --tm-form-action-bar-reserve-block-size resolves to zero below the same boundary, so a host page that pads by the token leaves no dead space on mobile."
             }
           ]
         },
         {
+          "itemName": "FormActionBarStatusSeverity",
           "kind": "Enum",
           "category": "Components",
           "namespace": "Tempo.Blazor.Components.Toolbar",
           "description": "Meaning of the content in the Status slot.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Toolbar/FormActionBarStatusSeverity.cs",
-          "documentationStatus": "generated",
-          "itemName": "FormActionBarStatusSeverity"
+          "documentationStatus": "merged"
         },
         {
           "itemName": "GanttDropPosition",
@@ -22824,7 +22829,7 @@
           "kind": "Component",
           "category": "Toolbar",
           "namespace": "Tempo.Blazor.Components.Toolbar",
-          "description": "Sticky/floating action bar for long forms. Groups start content and a status slot on the left with primary, secondary, and danger action slots on the right, inside a max-width-centered, responsive row. Position can be Static, StickyTop, or FloatingBottom, and ShowOnScroll arms a functional passive scroll listener that reveals the bar once the page scrolls past a threshold.",
+          "description": "Sticky/floating action bar for long forms. Groups start content and a status slot on the left with primary, secondary, and danger action slots on the right, inside a max-width-centered, responsive row. Position can be Static, StickyTop, FloatingBottom, or FloatingBottomFromMd (static in flow below the 768px md boundary, floating at the viewport bottom from md up — the responsive mode owns its media query inside the scoped stylesheet and collapses --tm-form-action-bar-reserve-block-size to zero below the same boundary, so the reserve never lingers as dead space on mobile). ShowOnScroll arms a functional passive scroll listener that reveals the bar once the page scrolls past a threshold.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmFormActionBar.razor",
           "documentationStatus": "merged",
@@ -22867,7 +22872,7 @@
               "type": "FormActionBarPosition",
               "isRequired": false,
               "default": "FormActionBarPosition.Static",
-              "description": "Placement mode: Static (normal flow), StickyTop, or FloatingBottom."
+              "description": "Placement mode: Static (normal flow), StickyTop, FloatingBottom, or FloatingBottomFromMd (responsive: static below 768px, floating at the viewport bottom from 768px up; the host reserve token --tm-form-action-bar-reserve-block-size resolves to zero below the same boundary)."
             },
             {
               "name": "PrimaryActions",
@@ -22914,6 +22919,7 @@
             "tm-form-action-bar--static",
             "tm-form-action-bar--sticky-top",
             "tm-form-action-bar--floating-bottom",
+            "tm-form-action-bar--floating-bottom-md",
             "tm-form-action-bar--show-on-scroll",
             "tm-form-action-bar--visible",
             "tm-form-action-bar__inner",
@@ -22933,6 +22939,10 @@
             {
               "title": "Floating-bottom bar that reveals on scroll",
               "code": "<TmFormActionBar Position=\"FormActionBarPosition.FloatingBottom\" ShowOnScroll=\"true\">\n    <PrimaryActions>\n        <TmButton Variant=\"ButtonVariant.Primary\" OnClick=\"Save\">Save changes</TmButton>\n    </PrimaryActions>\n</TmFormActionBar>"
+            },
+            {
+              "title": "Responsive bar: static below md, floating from md up",
+              "code": "<TmFormActionBar Position=\"FormActionBarPosition.FloatingBottomFromMd\" AriaLabel=\"Page actions\">\n    <SecondaryActions>\n        <TmButton Variant=\"ButtonVariant.Secondary\" OnClick=\"Cancel\">Cancel</TmButton>\n    </SecondaryActions>\n    <PrimaryActions>\n        <TmButton Variant=\"ButtonVariant.Primary\" OnClick=\"Save\">Save</TmButton>\n    </PrimaryActions>\n</TmFormActionBar>\n@* Leave room under the floating bar; the token reads 0 below md automatically:\n   .my-form-page { padding-block-end: var(--tm-form-action-bar-reserve-block-size); } *@"
             },
             {
               "title": "Static bar with a live status announcement",
@@ -24475,9 +24485,9 @@
       ],
       "summary": {
         "itemCount": 342,
-        "manualItemCount": 340,
+        "manualItemCount": 342,
         "generatedItemCount": 334,
-        "generatedOnlyItemCount": 2,
+        "generatedOnlyItemCount": 0,
         "componentCount": 194,
         "publicApiTypeCount": 140
       }
@@ -81336,14 +81346,14 @@
           ]
         },
         {
+          "itemName": "INotionIdempotentAggregateProvider",
           "kind": "Interface",
           "category": "Notion Editor",
           "namespace": "Tempo.Blazor.NotionEditor.Interfaces",
           "description": "Extends aggregate persistence with a durable, atomic idempotent execution boundary.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Interfaces/INotionIdempotentAggregateProvider.cs",
-          "documentationStatus": "generated",
-          "itemName": "INotionIdempotentAggregateProvider"
+          "documentationStatus": "merged"
         },
         {
           "itemName": "INotionImportExportProvider",
@@ -83126,34 +83136,34 @@
           ]
         },
         {
+          "itemName": "NotionIdempotentExecutionRequest",
           "kind": "Class",
           "category": "Notion Editor",
           "namespace": "Tempo.Blazor.NotionEditor.Models",
           "description": "Provider-neutral metadata for one idempotent aggregate operation.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
-          "documentationStatus": "generated",
-          "itemName": "NotionIdempotentExecutionRequest"
+          "documentationStatus": "merged"
         },
         {
+          "itemName": "NotionIdempotentExecutionResult",
           "kind": "Class",
           "category": "Notion Editor",
           "namespace": "Tempo.Blazor.NotionEditor.Models",
           "description": "Provider result containing an opaque authoring response when available.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
-          "documentationStatus": "generated",
-          "itemName": "NotionIdempotentExecutionResult"
+          "documentationStatus": "merged"
         },
         {
+          "itemName": "NotionIdempotentExecutionStatus",
           "kind": "Enum",
           "category": "Notion Editor",
           "namespace": "Tempo.Blazor.NotionEditor.Models",
           "description": "Outcome of a provider-level idempotent aggregate execution.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
-          "documentationStatus": "generated",
-          "itemName": "NotionIdempotentExecutionStatus"
+          "documentationStatus": "merged"
         },
         {
           "itemName": "NotionImportFormat",
@@ -95846,9 +95856,9 @@
       "libraryExamples": [],
       "summary": {
         "itemCount": 1472,
-        "manualItemCount": 1468,
+        "manualItemCount": 1472,
         "generatedItemCount": 1455,
-        "generatedOnlyItemCount": 4,
+        "generatedOnlyItemCount": 0,
         "componentCount": 0,
         "publicApiTypeCount": 1455
       }
@@ -109902,8 +109912,8 @@
   "summary": {
     "packageCount": 26,
     "itemCount": 3162,
-    "manualItemCount": 3156,
-    "generatedOnlyItemCount": 6,
+    "manualItemCount": 3162,
+    "generatedOnlyItemCount": 0,
     "componentCount": 465,
     "publicApiTypeCount": 2644
   }

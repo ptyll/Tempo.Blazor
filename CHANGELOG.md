@@ -75,6 +75,27 @@ which is exactly the red
   page); `false` suppresses the summary everywhere, including the footer's Summary slot.
   `PaginationInfoTemplate` is honoured in the standalone line.
 
+- **`FormActionBarPosition.FloatingBottomFromMd` — the responsive placement the application gap
+  register (#13) asked the library to own.** `FloatingBottom` pins the bar to the viewport at
+  every width: on a phone it clips the viewport height it shares with the content (twice over
+  once the actions wrap into the `column` layout) and `position: fixed` keeps it painted over
+  the open mobile navigation, which only the `--tm-form-action-bar-z-index` z-ordering could
+  soften — a deliberate cover, not a mode switch. A host could not express "static below,
+  floating above" itself: the floating rule lives in `TmFormActionBar.razor.css` behind the
+  `[b-*]` scope attribute, so an application media query would have had to out-specify that and
+  re-verify the override after every upgrade. `FloatingBottomFromMd` renders
+  `tm-form-action-bar--floating-bottom-md`, which carries the floating contract verbatim inside
+  `@media (min-width: 768px)` — the same edge the column wrap already uses — while below the
+  boundary the bar is plain document flow. The reserve follows *with it* and on the *same*
+  number: inside the existing `@media (max-width: 767.98px)` in `tokens.css`, the new
+  `:root:has(.tm-form-action-bar--floating-bottom-md)` gate collapses
+  `--tm-form-action-bar-reserve-block-size` to `0`, so a host that already pads its page by the
+  token stops reserving the moment the bar stops overlaying — no dead space to measure, no
+  second breakpoint for two repositories to keep in step. `FloatingBottom` keeps its
+  every-width contract untouched. The mode rides on the demo's `/toolbar-forms` page and is
+  measured in a real browser by `FormActionBarResponsiveE2ETests` at 390×844 (static + zero
+  reserve) and 1440×900 (fixed + positive reserve + content clear of the bar).
+
 - **The sort button's multi-sort gesture is discoverable.** Shift+Enter (and Shift+click) has
   appended the column to the sort chain for a while — the state icon showed the result and the
   `aria-label` named the next action, but the *modifier* existed only for the user who already

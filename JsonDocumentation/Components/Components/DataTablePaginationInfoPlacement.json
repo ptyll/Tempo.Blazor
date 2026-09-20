@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataTable",
+  "description": "Which element renders the \"showing X–Y of Z\" item range in a TmDataTable{TItem} paging footer.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "DataTablePaginationInfoPlacement"
+}

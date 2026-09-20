@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Toolbar",
+  "description": "Meaning of the content in the Status slot.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Toolbar/FormActionBarStatusSeverity.cs",
+  "documentationStatus": "generated",
+  "itemName": "FormActionBarStatusSeverity"
+}

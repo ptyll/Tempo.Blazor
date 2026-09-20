@@ -57,7 +57,11 @@
     private IJSObjectReference? _module;
     private bool _listenerRegistered;
 
-    /// <summary>Placement mode. Defaults to normal document flow.</summary>
+    /// <summary>
+    /// Placement mode. Defaults to normal document flow. Use
+    /// <see cref="FormActionBarPosition.FloatingBottomFromMd"/> for the responsive mode that is
+    /// static below the md boundary and floats at the viewport bottom from md up.
+    /// </summary>
     [Parameter] public FormActionBarPosition Position { get; set; } = FormActionBarPosition.Static;
 
     /// <summary>
@@ -123,6 +127,7 @@
             {
                 FormActionBarPosition.StickyTop => "tm-form-action-bar--sticky-top",
                 FormActionBarPosition.FloatingBottom => "tm-form-action-bar--floating-bottom",
+                FormActionBarPosition.FloatingBottomFromMd => "tm-form-action-bar--floating-bottom-md",
                 _ => "tm-form-action-bar--static"
             };
 

@@ -1,0 +1,15 @@
+/* Demo of the FloatingBottomFromMd contract: the page reserves room under the bar through the
+   token the library publishes. Below 768px the token itself resolves to 0 while a
+   floating-bottom-md bar exists (tokens.css), so the spacer costs nothing on mobile. */
+.toolbar-forms-fab-reserve {
+    block-size: var(--tm-form-action-bar-reserve-block-size);
+}
+
+/* The demo shell has a fixed 18.5rem sidebar from lg up (MainLayout lg:ml-[18.5rem]); the bar
+   must not slide underneath it. The inset is the sanctioned host variable — the library owns
+   the 768px position breakpoint, the host owns how wide its own chrome is. */
+@media (min-width: 1024px) {
+    .toolbar-forms-fab-host {
+        --tm-form-action-bar-inset-inline-start: 18.5rem;
+    }
+}

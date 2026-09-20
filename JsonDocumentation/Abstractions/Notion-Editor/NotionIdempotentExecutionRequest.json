@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Notion Editor",
+  "namespace": "Tempo.Blazor.NotionEditor.Models",
+  "description": "Provider-neutral metadata for one idempotent aggregate operation.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Models/NotionIdempotencyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "NotionIdempotentExecutionRequest"
+}

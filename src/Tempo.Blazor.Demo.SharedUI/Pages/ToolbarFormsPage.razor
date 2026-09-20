@@ -130,6 +130,71 @@
     </div>
 </section>
 
+<!-- Form Action Bar -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Form Action Bar</h2>
+    </div>
+
+    <div class="space-y-6">
+        <div class="showcase-card">
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">Static — normal document flow</h3>
+            </div>
+            <TmFormActionBar AriaLabel="Form actions" Position="FormActionBarPosition.Static">
+                <ChildContent>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Invoice #4821</span>
+                </ChildContent>
+                <SecondaryActions>
+                    <TmButton Variant="ButtonVariant.Secondary">Cancel</TmButton>
+                </SecondaryActions>
+                <PrimaryActions>
+                    <TmButton Variant="ButtonVariant.Primary">Save</TmButton>
+                </PrimaryActions>
+            </TmFormActionBar>
+        </div>
+
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                FloatingBottomFromMd — responsive mode
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400">
+                The bar at the bottom of this page uses
+                <code class="text-xs">Position="FormActionBarPosition.FloatingBottomFromMd"</code>:
+                below 768px it sits in normal document flow (try narrowing the window — it docks
+                into the page instead of overlaying it), and from 768px up it floats at the
+                viewport bottom. The page leaves room for it through
+                <code class="text-xs">--tm-form-action-bar-reserve-block-size</code>, which the
+                library collapses to zero below the same boundary, so no dead space remains on
+                mobile.
+            </p>
+        </div>
+    </div>
+</section>
+
+@* The bar floats above page content from md up, so the page keeps a reserve under it. Below
+   md the token resolves to 0 (the bar is in flow and covers nothing), so this spacer costs
+   no space on mobile — that is the library-owned coupling the gap register asked for. *@
+<div class="toolbar-forms-fab-reserve" aria-hidden="true"></div>
+
+<div class="toolbar-forms-fab-host">
+    <TmFormActionBar TestId="demo-fab-responsive" AriaLabel="Page actions"
+                     Position="FormActionBarPosition.FloatingBottomFromMd">
+        <ChildContent>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Invoice #4821</span>
+        </ChildContent>
+        <Status>
+            <span class="text-xs">Draft</span>
+        </Status>
+        <SecondaryActions>
+            <TmButton Variant="ButtonVariant.Secondary">Discard</TmButton>
+        </SecondaryActions>
+        <PrimaryActions>
+            <TmButton Variant="ButtonVariant.Primary">Save invoice</TmButton>
+        </PrimaryActions>
+    </TmFormActionBar>
+</div>
+
 @code {
     private string? _log;
 
