@@ -48,19 +48,39 @@ which is exactly the red
   Playwright computed-style test reads the same pixels in a real browser — Chromium and Firefox
   both, because a computed style that only exists in one engine is not a restored style.
 
-- **Every `TmDataTable` sort button announces an accessible name (`ee1ec3df`).** Until now the
-  `<button class="tm-th-sort">` emitted `aria-label` only when the column used a
-  `HeaderTemplate` — a plain titled column got its name "for free" from visible text, and an
-  icon-only or untitled templated header got none at all. The label is now unconditional markup
-  derived as `SortLabel` → `Title` → localized "Sort ascending": `TmDataTableColumn` gains a
-  public `[Parameter] SortLabel` so a consumer can name the action past the visible caption
-  ("Sort by last name" on a "Name" header), and the fallback means no sortable button — on any
-  column, not just the first — ever reaches the page unnamed. Activation is unchanged: the
-  button still has no `@onclick`, Enter/Space/click all take the single native path, and
-  `aria-keyshortcuts="P"` is still advertised exactly when the column menu exists. Component
-  tests cover the precedence on plain, icon-only and templated headers; the E2E pair reads the
-  resolved AX-tree name, the Enter-sort and the hover/`:focus-visible` paint in Chromium and
-  Firefox.
+- **Every `TmDataTable` sort button announces an accessible name that tracks the sort cycle
+  (`ee1ec3df`, reworked `ec990b9c`).** Until now the `<button class="tm-th-sort">` emitted `aria-label` only when the
+  column used a `HeaderTemplate` — and that label was a static "Sort ascending", so a column
+  whose next press sorts descending announced the wrong action, and an untitled templated header
+  got no name at all. The label is now unconditional markup of the form
+  "Sort by {header} — {next action}": the header is the column `Title`, then the new
+  `TmDataTableColumn.SortLabel` parameter (a consumer's replacement for a caption that is not
+  plain text — a templated header with neither is a developer error that throws in DEBUG and
+  falls back to a localized "Column {n}" in RELEASE), and the action is the state the NEXT
+  activation reaches — ascending / descending / cleared — following the same tri-state cycle the
+  click walks. Activation is unchanged: the button still has no `@onclick`, Enter/Space/click all
+  take the single native path, and `aria-keyshortcuts="P"` is still advertised exactly when the
+  column menu exists. Component tests cover every state and fallback; the E2E pair reads the
+  resolved AX-tree name, Enter and Shift+Enter multi-sort, header drag into the group zone and
+  the hover/`:focus-visible` paint in Chromium and Firefox — the Shift+Enter run caught and fixed
+  a real engine difference, where Firefox ships a button's keyboard-synthesized click with the
+  modifiers cleared.
+
+- **`TmGanttImportDialog`'s upload label now emits real button classes (`f72e1fb8`).** The label —
+  the only visible upload element in the import dialog, its `InputFile` is `display:none` —
+  carried `tm-button` / `tm-button--ghost` / `tm-button--sm`, three class names no stylesheet in
+  the library declares, so the upload affordance rendered unstyled. It now emits
+  `tm-btn tm-btn-ghost tm-btn-sm`, which `_button.css` actually styles. The fix landed in the
+  post-tag window without a changelog line; it is declared here.
+
+- **`TmTimeline`'s content line-height changed from 1.75 to 1.5 in 2.8.26 (`b8413898`).** The
+  same scoping fix the D17 items needed — `_activity-timeline.css`'s `.tm-timeline-content` was
+  scoped under `.tm-timeline-item` — had an undeclared visual consequence on a *different*
+  component: the activity component's relaxed line-height had been silently styling TmTimeline's
+  content too, and once the selector stopped matching, TmTimeline's own `--tm-line-height-normal`
+  finally painted. The new value is the authored one; the regression is that nobody declared the
+  shift at release time — declared now, and the same erratum class as the deletions above:
+  a selector shared across components is a shared stylesheet, not a private one.
 
 - **`ToastService` and `TmSearchInput` now run their timers on an injectable `TimeProvider`
   (`aee98c13`).** `ToastService` takes `TimeProvider?` as an optional constructor argument — DI injects a
@@ -78,7 +98,7 @@ which is exactly the red
 
 ### Tests & docs
 
-- **`107ebfda`** — `CssCascade` stops flattening stylesheets. The regression model now parses the
+- **`107ebfda`** (freshness guard reworked **`ec990b9c`**) — `CssCascade` stops flattening stylesheets. The regression model now parses the
   sheet structurally instead of matching flat rules: `@media` conditions are evaluated against a
   `MediaContext` (a width-dependent condition with no supplied width is undecidable, not false),
   `@layer` order participates in precedence with unlayered rules beating layered ones, `@import`
@@ -98,6 +118,19 @@ which is exactly the red
   is exactly the dishonesty this release was cut to remove, so the file can no longer print one.
   Parenthesised ids are untouched: the 2.8.26 convention paragraph declares them development-line
   record ids, not commit claims, and several correctly resolve to no commit.
+
+- **`a85cbd1e`** — production code changed for the tests' sake, declared: `ToastService` exposes
+  `internal PendingAutoDismissCount` (and serialises Show/Remove/Clear through a lock) so an
+  armed or un-cancelled auto-dismiss timer is visible the moment the call returns;
+  `TmSearchInput._debounce` is now `volatile` behind `internal HasPendingDebounce`, so "the
+  pending debounce must not deliver" waits until the timer is actually disarmed; and `TmMap`
+  counts scheduled debounce→load chains as `internal PendingDataRequests`, so "no further
+  provider call" waits until every armed, cancelled or in-flight chain has settled. Each replaced
+  a fixed-margin wall-clock read a loaded machine could outrun in both directions.
+
+- **`6b953cda`** — the bUnit default wait budget moved assembly-wide from 1 s to 10 s: the waits
+  were correct and the machine was slow, so the margin moved rather than the assertions. Whether
+  the wider budget retires the flake class is the measurement step 19.2 exists to report.
 
 - **`b2aedb6e`** — the sweep treats a dirty starting tree as a failed run rather than reclassifying
   the outcome DISABLED.
@@ -139,6 +172,12 @@ stray `@media` rule in `_dashboard.css` had been the only declaration of. **`eef
 restores the effective values on the owning classes in the owning stylesheets — the dead
 selectors are not re-introduced — and the release adds a computed-style regression suite plus a
 descendant-selector sweep so the same deletion cannot pass review a second time.
+
+Visual changes not declared at release time — see 2.9.0: beyond the deletions above, this release
+also silently changed `TmTimeline`'s content line-height from 1.75 to 1.5 (**`b8413898`** scoped
+`_activity-timeline.css`'s `.tm-timeline-content` under `.tm-timeline-item`, which stopped the
+activity component's relaxed value from painting TmTimeline and let TmTimeline's own
+`--tm-line-height-normal` through).
 
 ### Fixed (D17 — the CSS contract items)
 
