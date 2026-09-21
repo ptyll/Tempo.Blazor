@@ -200,7 +200,7 @@ public class SpreadsheetBlockE2ETests : WasmTestBase
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
 
         // The Spreadsheet item should be visible in the menu
-        var spreadsheetItem = page.Locator(".tm-notion-slash-item").Filter(new LocatorFilterOptions
+        var spreadsheetItem = page.Locator(".tm-notion-slash__item").Filter(new LocatorFilterOptions
         {
             HasText = "Spreadsheet"
         }).First;

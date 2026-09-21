@@ -829,7 +829,11 @@ public class NotionCommentsE2ETests : WasmTestBase
 
     private async Task OpenTextCommentPanelAsync(IPage page)
     {
-        var firstEditable = page.Locator(".tm-notion-editable").First;
+        // Target a paragraph editable — the page title/description are .tm-notion-editable too
+        // but have no [data-notion-block] ancestor, so a text-anchor comment cannot resolve a
+        // BlockId (TmCommentAnchor.TextRange would throw and the panel shows "Could not send").
+        var firstEditable = page.Locator(".tm-notion-paragraph.tm-notion-editable").First;
+        await firstEditable.ScrollIntoViewIfNeededAsync();
         await firstEditable.ClickAsync();
         await firstEditable.EvaluateAsync("el => { el.focus(); document.execCommand('selectAll', false, null); }");
         var toolbar = page.Locator(".tm-notion-inline-toolbar").First;
