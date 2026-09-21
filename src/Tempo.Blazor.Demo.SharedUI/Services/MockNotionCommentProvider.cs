@@ -381,6 +381,14 @@ public class MockNotionCommentProvider :
 
         foreach (var entry in thread.Entries)
             NormalizeEntry(entry, thread.Id);
+
+        // Auto-subscribe each entry's author so a commenter follows their own thread
+        // (matches Notion semantics: posting a comment subscribes you to replies).
+        // New threads created via AddBlockCommentAsync/AddTextAnchorCommentAsync went
+        // through here without this, leaving the author unwatched.
+        foreach (var entry in thread.Entries)
+            if (!string.IsNullOrWhiteSpace(entry.Author.Id) && !thread.SubscribedUserIds.Contains(entry.Author.Id))
+                thread.SubscribedUserIds.Add(entry.Author.Id);
     }
 
     private static void NormalizeEntry(TmCommentEntry entry, string threadId)

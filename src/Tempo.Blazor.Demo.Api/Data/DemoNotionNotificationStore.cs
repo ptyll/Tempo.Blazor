@@ -33,10 +33,13 @@ public sealed class DemoNotionNotificationStore : ITmNotificationService
         return Task.FromResult(Clone(normalized));
     }
 
+    // The demo exposes a single shared notification feed: the viewer (bell) sees every
+    // notification the demo generates, regardless of which demo user it is addressed to.
+    // Recipient routing is still recorded on each notification for display purposes.
     public Task MarkAsReadAsync(string notificationId, string userId, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        if (_notifications.TryGetValue(userId, out var list))
+        foreach (var list in AllLists())
         {
             lock (list)
             {
@@ -55,7 +58,7 @@ public sealed class DemoNotionNotificationStore : ITmNotificationService
     public Task MarkAllAsReadAsync(string userId, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        if (_notifications.TryGetValue(userId, out var list))
+        foreach (var list in AllLists())
         {
             lock (list)
             {
@@ -79,23 +82,31 @@ public sealed class DemoNotionNotificationStore : ITmNotificationService
     public Task<int> GetUnreadCountAsync(string userId, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        if (!_notifications.TryGetValue(userId, out var list))
-            return Task.FromResult(0);
-
-        lock (list)
+        var count = 0;
+        foreach (var list in AllLists())
         {
-            return Task.FromResult(list.Count(n => !n.IsRead));
+            lock (list)
+            {
+                count += list.Count(n => !n.IsRead);
+            }
         }
+
+        return Task.FromResult(count);
     }
 
     public IReadOnlyList<TmNotification> GetNotifications(TmNotificationQuery query)
     {
-        if (!_notifications.TryGetValue(query.RecipientUserId, out var list))
-            return [];
-
-        lock (list)
+        var all = new List<TmNotification>();
+        foreach (var list in AllLists())
         {
-            IEnumerable<TmNotification> result = list;
+            lock (list)
+            {
+                all.AddRange(list);
+            }
+        }
+
+        {
+            IEnumerable<TmNotification> result = all.OrderByDescending(n => n.CreatedAt);
             if (!query.IncludeRead)
                 result = result.Where(notification => !notification.IsRead);
             if (query.EntityRef is { } entityRef)
@@ -123,6 +134,11 @@ public sealed class DemoNotionNotificationStore : ITmNotificationService
         _notifications.Clear();
         OnChanged?.Invoke();
     }
+
+    // Snapshot of every per-recipient bucket. Reads/marks aggregate across all of them so
+    // the demo's single viewer sees the whole generated feed (mentions addressed to other
+    // demo users, watch notifications, direct publishes, …).
+    private IEnumerable<List<TmNotification>> AllLists() => _notifications.Values.ToArray();
 
     private static TmNotification Normalize(TmNotification notification)
     {
