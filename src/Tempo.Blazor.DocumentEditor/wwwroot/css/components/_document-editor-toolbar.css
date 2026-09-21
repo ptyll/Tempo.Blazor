@@ -377,11 +377,11 @@
     display: inline-flex;
 }
 
-.tm-document-editor__ribbon:has(.tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open),
-.tm-document-editor__ribbon-groups:has(.tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open),
-.tm-document-editor__ribbon-group:has(.tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open) {
-    overflow: visible;
-}
+/* Overflow must NOT flip to visible while a picker is open: the ribbon groups element is a
+   horizontal scroller (overflow-x:auto), and changing overflow destroys the scroll container —
+   scrollLeft silently resets to 0, the trigger snaps out of the viewport and overlay.js hides the
+   freshly opened panel (anchorIntersectsViewport). TmOverlayPanel renders in the browser top layer,
+   so ancestor overflow cannot clip the dropdown any more — the old un-clipping hack is obsolete. */
 
 .tm-document-editor__ribbon:has(.tm-document-editor__ribbon-tempo-color-picker.tm-color-picker--open) {
     z-index: calc(var(--tm-document-z-floating-ui, var(--tm-z-popover, 1000)) + 30);
