@@ -299,7 +299,11 @@ public abstract class PlaywrightTestBase
         var screenshot = await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Type = ScreenshotType.Png,
-            FullPage = true
+            FullPage = true,
+            // Screenshot captures bypass the default action timeout — a stalled renderer/GPU
+            // would otherwise hang the whole shard with no failure reported (seen on
+            // DiagramEdge Phase3 under load).
+            Timeout = 60_000
         });
 
         var path = Path.Combine(TestContext.TestResultsDirectory ?? ".", $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
