@@ -129,6 +129,21 @@
     right:  auto;
 }
 
+/* Invisible bridge spanning the 4px gap back to the trigger item. The pseudo-element
+   belongs to the submenu (a DOM descendant of the trigger), so the pointer stays
+   "inside" the trigger's hover region while crossing the gap — without it the brief
+   moment in the gap fires @onmouseleave and the submenu closes before the pointer
+   reaches it (shows up as "element was detached" in Playwright / vanishing submenu
+   for real users). */
+.tm-notion-ctx-sub--right::before {
+    content:   '';
+    position:  absolute;
+    top:       0;
+    bottom:    0;
+    left:      -4px;
+    width:     4px;
+}
+
 /* ── Turn into label ──────────────────────────────────────────── */
 
 .tm-notion-ctx__turn-label {
