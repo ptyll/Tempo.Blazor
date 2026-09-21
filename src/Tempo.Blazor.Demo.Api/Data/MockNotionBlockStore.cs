@@ -829,25 +829,28 @@ public sealed class Eb1BaselineRenderer
     {
         RemoveBlocksForPages(MockNotionDataStore.Page1Id);
 
-        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000002"), MockNotionDataStore.Page1Id, BlockType.BulletList, 0, new ListBlockContent
-        {
-            Html = "EB2 bullet parent item",
-            IndentLevel = 0
-        });
-        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000003"), MockNotionDataStore.Page1Id, BlockType.BulletList, 1, new ListBlockContent
+        // The 1→2→3 chain comes first so the standalone item below it can legally Tab-indent
+        // through the levels — a list item may sit at most one level deeper than the item above
+        // it, and the first block of a page has nothing to nest under at all.
+        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000003"), MockNotionDataStore.Page1Id, BlockType.BulletList, 0, new ListBlockContent
         {
             Html = "EB2 bullet child item",
             IndentLevel = 1
         });
-        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000004"), MockNotionDataStore.Page1Id, BlockType.BulletList, 2, new ListBlockContent
+        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000004"), MockNotionDataStore.Page1Id, BlockType.BulletList, 1, new ListBlockContent
         {
             Html = "EB2 bullet grandchild item",
             IndentLevel = 2
         });
-        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000005"), MockNotionDataStore.Page1Id, BlockType.BulletList, 3, new ListBlockContent
+        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000005"), MockNotionDataStore.Page1Id, BlockType.BulletList, 2, new ListBlockContent
         {
             Html = "EB2 bullet third-level item",
             IndentLevel = 3
+        });
+        AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000002"), MockNotionDataStore.Page1Id, BlockType.BulletList, 3, new ListBlockContent
+        {
+            Html = "EB2 bullet parent item",
+            IndentLevel = 0
         });
         AddTo(Guid.Parse("eb200000-0000-0000-0000-000000000006"), MockNotionDataStore.Page1Id, BlockType.BulletList, 4, new ListBlockContent
         {

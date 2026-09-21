@@ -16,7 +16,7 @@ public class MockNotionMentionProvider : TmPeopleProviderBase
         new() { Id = "linus", UserName = "linus", DisplayName = "Linus Torvalds", AvatarUrl = "https://i.pravatar.cc/150?u=linus", Email = "linus@demo.com" },
         new() { Id = "margaret", UserName = "margaret", DisplayName = "Margaret Hamilton", AvatarUrl = "https://i.pravatar.cc/150?u=margaret", Email = "margaret@demo.com" },
         new() { Id = "alan", UserName = "alan", DisplayName = "Alan Turing", AvatarUrl = "https://i.pravatar.cc/150?u=alan", Email = "alan@demo.com" },
-        new() { Id = "zaneta", UserName = "zaneta", DisplayName = "Zaneta Cerna", Email = "zaneta.cerna@demo.com" },
+        new() { Id = "zaneta", UserName = "zaneta", DisplayName = "Žaneta Černá", Email = "zaneta.cerna@demo.com" },
         new() { Id = "bob", UserName = "bob", DisplayName = "Bob Smith", AvatarUrl = "https://i.pravatar.cc/150?u=bob", Email = "bob@demo.com" },
         new() { Id = "charlie", UserName = "charlie", DisplayName = "Charlie Brown", Email = "charlie@demo.com" },
         new() { Id = "diana", UserName = "diana", DisplayName = "Diana Prince", AvatarUrl = "https://i.pravatar.cc/150?u=diana", Email = "diana@demo.com" },
