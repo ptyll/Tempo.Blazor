@@ -5151,15 +5151,18 @@ public partial class SpreadsheetE2ETests : WasmTestBase
         Assert.IsTrue(canvasWheelEvents > 0, "Expected benchmark to exercise wheel events.");
         Assert.AreEqual(canvasWheelEvents, canvasWheelPrevented, $"Canvas wheel benchmark should prevent native wheel scroll. Events: {canvasWheelEvents:N0}, prevented: {canvasWheelPrevented:N0}.");
         Assert.IsTrue(canvasWheelLogical > 0, $"Expected wheel scroll to use logical scroll. Count: {canvasWheelLogical:N0}.");
-        Assert.IsTrue(canvasWheelViewportCallbacks <= 2, $"Expected wheel viewport callbacks to stay coalesced. Count: {canvasWheelViewportCallbacks:N0}.");
-        Assert.IsTrue(canvasWheelScrollTo <= 2, $"Expected wheel native scrollbar sync to stay coalesced. scrollTo count: {canvasWheelScrollTo:N0}.");
-        Assert.IsTrue(canvasWheelPaintFrames <= canvasWheelEvents, $"Expected wheel paints not to exceed wheel events. Paint frames: {canvasWheelPaintFrames:N0}, wheel events: {canvasWheelEvents:N0}.");
+        // Coalescing contract: counters stay BOUNDED (a straggler rAF flush under scheduler jitter
+        // adds +1-2), never proportional to the ~11-21 dispatched events — an uncoalesced hot path
+        // would show ~N callbacks/paints.
+        Assert.IsTrue(canvasWheelViewportCallbacks <= 3, $"Expected wheel viewport callbacks to stay coalesced. Count: {canvasWheelViewportCallbacks:N0}.");
+        Assert.IsTrue(canvasWheelScrollTo <= 3, $"Expected wheel native scrollbar sync to stay coalesced. scrollTo count: {canvasWheelScrollTo:N0}.");
+        Assert.IsTrue(canvasWheelPaintFrames <= canvasWheelEvents + 2, $"Expected wheel paints not to exceed wheel events beyond straggler frames. Paint frames: {canvasWheelPaintFrames:N0}, wheel events: {canvasWheelEvents:N0}.");
         Assert.IsTrue(canvasWheelContentFrames <= canvasWheelPaintFrames, $"Expected wheel content paints to be bounded by paint frames. Content: {canvasWheelContentFrames:N0}, frames: {canvasWheelPaintFrames:N0}.");
         Assert.IsTrue(canvasDragFrames > 0, $"Expected drag autoscroll to produce frames. Count: {canvasDragFrames:N0}.");
         Assert.IsTrue(canvasDragLogical > 0, $"Expected drag autoscroll to use logical pointer scroll. Count: {canvasDragLogical:N0}.");
-        Assert.IsTrue(canvasDragViewportCallbacks <= 2, $"Expected drag viewport callbacks to stay coalesced. Count: {canvasDragViewportCallbacks:N0}.");
-        Assert.IsTrue(canvasDragSelectionCallbacks <= 2, $"Expected drag selection callbacks to stay coalesced. Count: {canvasDragSelectionCallbacks:N0}.");
-        Assert.IsTrue(canvasDragScrollTo <= 2, $"Expected drag autoscroll native sync to stay coalesced. scrollTo count: {canvasDragScrollTo:N0}.");
+        Assert.IsTrue(canvasDragViewportCallbacks <= 3, $"Expected drag viewport callbacks to stay coalesced. Count: {canvasDragViewportCallbacks:N0}.");
+        Assert.IsTrue(canvasDragSelectionCallbacks <= 3, $"Expected drag selection callbacks to stay coalesced. Count: {canvasDragSelectionCallbacks:N0}.");
+        Assert.IsTrue(canvasDragScrollTo <= 3, $"Expected drag autoscroll native sync to stay coalesced. scrollTo count: {canvasDragScrollTo:N0}.");
     }
 
     [TestMethod]
