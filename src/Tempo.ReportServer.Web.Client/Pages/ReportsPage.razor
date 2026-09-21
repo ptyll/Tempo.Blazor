@@ -3,6 +3,7 @@
 @inject NavigationManager Navigation
 @inject IPortalIdentity Session
 @inject ITempoReportServerClient Client
+@inject DemoReportSourceFactory SourceFactory
 
 <ReportServerShell Title="@Loc["ReportServer_Nav_Reports"]" ActiveSection="reports">
     <div class="rs-page rs-page--explorer" data-testid="f12-explorer-page">
@@ -83,8 +84,12 @@
 
         if (selectDefaultFolder)
         {
-            _currentFolderPath = _reportItems.Count > 0
-                ? _reportItems[0].FolderPath
+            // Land on the folder of the most recently updated report. The pre-cutover page opened
+            // /finance — that was simply the freshest seed's folder; ordering by UpdatedAt keeps the
+            // same contract for any catalog (demo or real Api) without hardcoding a demo path.
+            var freshest = reports.OrderByDescending(report => report.UpdatedAt).FirstOrDefault();
+            _currentFolderPath = freshest is not null && pathByFolderId.TryGetValue(freshest.FolderId, out var freshPath)
+                ? freshPath
                 : folders.Count > 0
                     ? folders[0].Path
                     : ReportServerCatalogMapper.RootFolderPath;
@@ -98,7 +103,12 @@
         => _viewMode = viewMode;
 
     private void OpenReport(ReportExplorerReportItem report)
-        => Navigation.NavigateTo(report.Path);
+        // Hand-authored demo reports carry their sample parameters in the deep link, so the viewer
+        // opens pre-filtered exactly like the pre-cutover self-contained demo did. Reports that come
+        // from a real catalog (or the Api) keep the plain path — their declared defaults apply instead.
+        => Navigation.NavigateTo(SourceFactory.IsKnownDemoReport(report.Id)
+            ? $"{report.Path}?Region=EU&MinimumTotal=0&IncludeClosed=true"
+            : report.Path);
 
     private void OpenNewReport()
         => _showNewReport = true;

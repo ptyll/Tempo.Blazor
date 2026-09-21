@@ -70,12 +70,21 @@ public static class CommonServiceCollectionExtensions
         // origin by definition. The client is constructed in the *consuming* scope, so it safely
         // resolves that scope's IAccessTokenProvider (ServerAccessTokenProvider on the host,
         // WasmAccessTokenProvider in the browser) and attaches the bearer per request via
-        // ApiClientBase. Registered only when configured so the self-contained demo keeps running.
+        // ApiClientBase.
+        //
+        // When "Api:BaseUrl" is NOT configured the host runs in the self-contained demo mode:
+        // DemoTempoReportServerClient serves the same ITempoReportServerClient surface from the
+        // seeded in-memory stores, so the catalog/favorites/run-history pages keep working without
+        // the Api — on both render legs (the WASM leg reads Api:BaseUrl from wwwroot/appsettings.json).
         var apiBaseUrl = configuration["Api:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(apiBaseUrl))
         {
             services.AddHttpClient<ITempoReportServerClient, TempoReportServerClient>(
                 client => client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute));
+        }
+        else
+        {
+            services.AddSingleton<ITempoReportServerClient, DemoTempoReportServerClient>();
         }
 
         return services;

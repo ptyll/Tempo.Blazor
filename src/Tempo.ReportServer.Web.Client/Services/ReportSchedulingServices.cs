@@ -369,6 +369,15 @@ public sealed class ReportScheduleStore
         }
     }
 
+    /// <summary>Deletes a schedule (no-op when the id is unknown).</summary>
+    public void DeleteSchedule(string tenantId, string scheduleId)
+    {
+        lock (_gate)
+        {
+            _schedules.Remove(Key(tenantId, scheduleId));
+        }
+    }
+
     /// <summary>Lists subscriptions for a tenant and user.</summary>
     public IReadOnlyList<ReportSubscription> ListSubscriptions(string tenantId, string userId)
     {

@@ -46,7 +46,10 @@ public sealed class ReportsPageTests : ReportServerWebTestBase
 
             cut.Find("[data-testid='tm-report-open-sales-register']").Click();
 
-            navigation.Uri.Should().EndWith("/reports/Finance/sales-register");
+            // Hand-authored demo reports carry their sample parameters in the deep link, so the viewer
+            // opens pre-filtered — same contract as the pre-cutover self-contained demo.
+            navigation.Uri.Should().EndWith(
+                "/reports/Finance/sales-register?Region=EU&MinimumTotal=0&IncludeClosed=true");
         }
     }
 

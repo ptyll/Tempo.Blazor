@@ -1,8 +1,8 @@
 {
   "phase": "F17",
   "testName": "F17_ForeignApplication_RendersEmbeddedAndRemoteReportViewer",
-  "baseUrl": "http://127.0.0.1:37395",
-  "reportServerUrl": "http://127.0.0.1:34269",
+  "baseUrl": "http://127.0.0.1:33921",
+  "reportServerUrl": "http://127.0.0.1:34651",
   "screenshots": [
     "01-embedded-local-engine.png",
     "02-remote-report-server-api.png"
@@ -12,7 +12,7 @@
     "height": 560,
     "pixelCount": 425600,
     "nonTransparentPixels": 425600,
-    "distinctColorCount": 211,
+    "distinctColorCount": 172,
     "minX": 0,
     "minY": 0,
     "maxX": 759,
@@ -24,7 +24,7 @@
     "height": 620,
     "pixelCount": 471200,
     "nonTransparentPixels": 471200,
-    "distinctColorCount": 212,
+    "distinctColorCount": 185,
     "minX": 0,
     "minY": 0,
     "maxX": 759,
@@ -35,7 +35,7 @@
   "uxReview": "The page keeps the embedded and remote connection controls visible above a single full-width report viewer, with no competing hero treatment and with the report canvas as the primary visual artifact.",
   "diagnostics": [
     "console.warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation",
-    "console.info: [2026-06-22T12:08:13.277Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:37395/_blazor\u0027.",
-    "console.info: [2026-06-22T12:08:13.304Z] Information: WebSocket connected to ws://127.0.0.1:37395/_blazor?id=QpRaunNdsOtE4kV6hUQSKg."
+    "console.info: [2026-09-21T09:21:37.256Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:33921/_blazor\u0027.",
+    "console.info: [2026-09-21T09:21:37.351Z] Information: WebSocket connected to ws://127.0.0.1:33921/_blazor?id=-R_7be1ddu-_l90SKWlPcg."
   ]
 }

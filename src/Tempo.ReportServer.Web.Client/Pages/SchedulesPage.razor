@@ -2,6 +2,8 @@
 @page "/admin/schedules"
 @inject IPortalIdentity Session
 @inject ITempoReportServerClient Client
+@inject ReportScheduleWorker Worker
+@inject ReportEmailOutbox Outbox
 
 <ReportServerShell Title="@Loc["ReportServer_Nav_Schedules"]" ActiveSection="schedules">
     <div class="rs-page" data-testid="f16-schedules-page">
@@ -86,6 +88,19 @@
                                     @onclick="() => ToggleScheduleAsync(schedule)">
                                 @(schedule.IsEnabled ? Loc["ReportServer_Schedules_Disable"] : Loc["ReportServer_Schedules_Enable"])
                             </button>
+                            @* Demo-mode run-now: the in-memory client shares ReportScheduleStore with the
+                               worker, so this renders + delivers through the smtp4dev outbox. Hidden when
+                               the portal talks to a real Api (no run-now endpoint exists there). *@
+                            @if (_isDemoMode)
+                            {
+                                <button type="button"
+                                        class="rs-text-button"
+                                        disabled="@(!schedule.IsEnabled || _runningScheduleId is not null)"
+                                        data-testid="@($"run-schedule-{schedule.ScheduleId}")"
+                                        @onclick="() => RunScheduleNowAsync(schedule.ScheduleId)">
+                                    @Loc["ReportServer_Schedules_RunNow"]
+                                </button>
+                            }
                         </article>
                     }
                 </div>
@@ -130,12 +145,59 @@
                 </div>
             }
         </section>
+
+        @* Self-contained demo evidence panel: the smtp4dev outbox the delivery service records into.
+           Only meaningful when the in-memory demo client is active (Api:BaseUrl empty). *@
+        @if (_isDemoMode)
+        {
+            <section class="rs-panel rs-table-panel" data-testid="schedule-outbox">
+                <div class="rs-revision__header">
+                    <div>
+                        <h3>@Loc["ReportServer_Schedules_OutboxTitle"]</h3>
+                        <span>@Loc["ReportServer_Schedules_OutboxTransport", Smtp4DevEmailSender.Transport]</span>
+                    </div>
+                    <span class="rs-status">@Loc["ReportServer_Schedules_OutboxCount", Outbox.Messages.Count]</span>
+                </div>
+                @if (Outbox.Messages.Count == 0)
+                {
+                    <div class="rs-empty rs-empty--compact">
+                        <TmIcon Name="@IconNames.Mail" Size="IconSize.Md" />
+                        <strong>@Loc["ReportServer_Schedules_OutboxEmptyTitle"]</strong>
+                        <span>@Loc["ReportServer_Schedules_OutboxEmptyHint"]</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="rs-revisions">
+                        @foreach (var message in Outbox.Messages.Take(5))
+                        {
+                            <article class="rs-revision rs-outbox-item">
+                                <div class="rs-revision__header">
+                                    <div>
+                                        <strong>@message.Message.Subject</strong>
+                                        <span>@string.Join(", ", message.Message.To)</span>
+                                    </div>
+                                    <span class="rs-status rs-status--ok">@message.Message.Transport</span>
+                                </div>
+                                <div class="rs-param-chips">
+                                    @foreach (var attachment in message.Attachments)
+                                    {
+                                        <span>@attachment.FileName (@attachment.Bytes.Length bytes)</span>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        }
     </div>
 </ReportServerShell>
 
 @code {
     private string _name = "Executive dashboard digest";
-    private string _reportId = string.Empty;
+    // Pre-cutover demo default: the seeded dashboard fixture produces sales-dashboard.pdf.
+    private string _reportId = "sales-dashboard";
     private string _cron = "0 8 * * 1";
     private string _format = nameof(ReportScheduleFormat.Pdf);
     private string _email = "finance@example.test";
@@ -144,13 +206,36 @@
     private IReadOnlyList<ReportSummaryDto> _reports = [];
     private IReadOnlyList<ReportScheduleDto> _schedules = [];
     private List<ReportScheduleRunDto> _runs = [];
+    private string? _runningScheduleId;
+
+    // True when the self-contained demo client serves the portal (Api:BaseUrl not configured) — the
+    // run-now button and smtp4dev outbox only exist in that mode; a real Api has no run-now endpoint.
+    private bool _isDemoMode;
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
     {
+        _isDemoMode = Client is DemoTempoReportServerClient;
         _reports = await Client.SearchReportsAsync(new ReportSearchRequestDto { TenantId = Session.CurrentTenantId });
-        _reportId = _reports.Count > 0 ? _reports[0].ReportId : string.Empty;
+        if (!_reports.Any(report => string.Equals(report.ReportId, _reportId, StringComparison.Ordinal)))
+        {
+            _reportId = _reports.Count > 0 ? _reports[0].ReportId : string.Empty;
+        }
         await ReloadSchedulesAsync();
+    }
+
+    private async Task RunScheduleNowAsync(string scheduleId)
+    {
+        _runningScheduleId = scheduleId;
+        try
+        {
+            await Worker.RunScheduleNowAsync(Session.CurrentTenantId, scheduleId);
+            await ReloadSchedulesAsync();
+        }
+        finally
+        {
+            _runningScheduleId = null;
+        }
     }
 
     private void HandleNameInput(ChangeEventArgs args)

@@ -185,6 +185,10 @@ public sealed class ReportingF17EmbeddingE2ETests
             };
             startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
             startInfo.Environment["DOTNET_ENVIRONMENT"] = "Development";
+            // Api:BaseUrl stays empty in the shipped appsettings → the portal runs self-contained:
+            // ITempoReportServerClient resolves to the in-memory DemoTempoReportServerClient, so no
+            // external Report Server Api is needed for catalog/favorites/schedules pages.
+            startInfo.Environment["ReportServer__BaseUrl"] = $"http://127.0.0.1:{port}";
             var process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException($"Could not start dotnet run for {name}.");
             var host = new DotnetWebAppHost(name, process, port);
