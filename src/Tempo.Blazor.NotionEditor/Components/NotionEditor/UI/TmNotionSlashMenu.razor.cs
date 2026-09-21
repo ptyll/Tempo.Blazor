@@ -45,6 +45,7 @@ public partial class TmNotionSlashMenu : TmComponentBase
     private bool     _wasVisible;
     private bool     _needsFocus;
     private bool     _hoverEnabled;
+    private DateTime _openedUtc;
 
     private List<BlockType> _recentlyUsed = [];
     private List<(SlashMenuCategory Category, List<SlashMenuItem> Items)> _groups = [];
@@ -68,6 +69,7 @@ public partial class TmNotionSlashMenu : TmComponentBase
             _query         = string.Empty;
             _selectedIndex = 0;
             _hoverEnabled  = false;
+            _openedUtc     = DateTime.UtcNow;
             _top           = Top;
             _left          = Left;
             _needsFocus    = true;
@@ -168,9 +170,13 @@ public partial class TmNotionSlashMenu : TmComponentBase
 
     private void OnItemMouseEnter(int index)
     {
-        // Ignore a resting cursor sitting over the menu at open — only honor hover selection
-        // after the pointer has actually moved over the list (EnableHoverSelection).
-        if (!_hoverEnabled)
+        // Ignore a resting cursor sitting over the menu at open — a stale pointer position must
+        // not steal the default selection. Honor hover selection once the pointer has actually
+        // moved over the list (EnableHoverSelection) or once the menu has been open long enough
+        // that any enter is a deliberate hover (mount-time enters fire within a frame or two;
+        // note mouseenter precedes the first pointermove, so the move-gate alone would swallow
+        // the first real hover — see EB3).
+        if (!_hoverEnabled && DateTime.UtcNow - _openedUtc < TimeSpan.FromMilliseconds(250))
         {
             return;
         }
