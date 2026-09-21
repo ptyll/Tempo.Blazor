@@ -192,7 +192,12 @@
     border-spacing: 0;
     width: max-content;
     min-width: 100%;
-    table-layout: fixed;
+    /* auto (not fixed): with table-layout:fixed only the FIRST row sets column widths,
+       and the author-mode column-control row carries no width -> data columns collapsed
+       to ~0 so the 120px cells overflowed and covered the add-column button. auto lets the
+       data cells' width/min/max (incl. the per-column --tm-notion-table-cell-width var)
+       drive sizing; cells are width-pinned so columns stay stable during editing. */
+    table-layout: auto;
 }
 
 .tm-notion-table-block__empty-grid {
