@@ -3742,6 +3742,77 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
         await base.SaveAsync(localRequest, cancellationToken);
     }
 
+    /// <summary>
+    /// Mirrors an API-authoritative comment mutation into the local in-memory store. Canvas seed
+    /// documents read comments local-first (<see cref="GetCommentsAsync"/>), so without the mirror a
+    /// successful API reply/edit/resolve never becomes visible to local reads such as the shared
+    /// comment-provider bridge used by the editor rail.
+    /// </summary>
+    private async Task MirrorCommentToLocalStoreAsync(
+        string documentId,
+        DocumentComment comment,
+        CancellationToken cancellationToken)
+    {
+        if (!IsCanvasSeedDocumentId(documentId) || IsCanvasCollaborationOfflineDocumentId(documentId))
+        {
+            return;
+        }
+
+        var local = await base.LoadAsync(documentId, cancellationToken: cancellationToken);
+        if (!local.Found || local.Document is null)
+        {
+            return;
+        }
+
+        var clone = System.Text.Json.JsonSerializer.Deserialize<DocumentComment>(
+            System.Text.Json.JsonSerializer.Serialize(comment, DocumentEditorJson.Options),
+            DocumentEditorJson.Options) ?? comment;
+        var index = local.Document.Comments.FindIndex(item => string.Equals(item.Id, clone.Id, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            local.Document.Comments[index] = clone;
+        }
+        else
+        {
+            local.Document.Comments.Add(clone);
+        }
+
+        await base.SaveAsync(new DocumentEditorSaveRequest
+        {
+            DocumentId = documentId,
+            Document = local.Document,
+            ConcurrencyMode = DocumentEditorConcurrencyMode.Force
+        }, cancellationToken);
+    }
+
+    /// <summary>Mirrors an API-side comment delete into the local in-memory store for canvas seed documents.</summary>
+    private async Task RemoveCommentFromLocalStoreAsync(
+        string documentId,
+        string commentId,
+        CancellationToken cancellationToken)
+    {
+        if (!IsCanvasSeedDocumentId(documentId) || IsCanvasCollaborationOfflineDocumentId(documentId))
+        {
+            return;
+        }
+
+        var local = await base.LoadAsync(documentId, cancellationToken: cancellationToken);
+        if (!local.Found || local.Document is null)
+        {
+            return;
+        }
+
+        if (local.Document.Comments.RemoveAll(item => string.Equals(item.Id, commentId, StringComparison.Ordinal)) > 0)
+        {
+            await base.SaveAsync(new DocumentEditorSaveRequest
+            {
+                DocumentId = documentId,
+                Document = local.Document,
+                ConcurrencyMode = DocumentEditorConcurrencyMode.Force
+            }, cancellationToken);
+        }
+    }
+
     /// <inheritdoc />
     public override async Task<DocumentVersion> CreateVersionAsync(
         DocumentVersionCreateRequest request,
@@ -3868,6 +3939,7 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
                     var created = await response.Content.ReadFromJsonAsync<DocumentComment>(cancellationToken);
                     if (created is not null)
                     {
+                        await MirrorCommentToLocalStoreAsync(documentId, created, cancellationToken);
                         return created;
                     }
                 }
@@ -3903,6 +3975,7 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
                     var updated = await response.Content.ReadFromJsonAsync<DocumentComment>(cancellationToken);
                     if (updated is not null)
                     {
+                        await MirrorCommentToLocalStoreAsync(documentId, updated, cancellationToken);
                         return updated;
                     }
                 }
@@ -3939,6 +4012,7 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
                     var updated = await response.Content.ReadFromJsonAsync<DocumentComment>(cancellationToken);
                     if (updated is not null)
                     {
+                        await MirrorCommentToLocalStoreAsync(documentId, updated, cancellationToken);
                         return updated;
                     }
                 }
@@ -3973,6 +4047,7 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
                     var updated = await response.Content.ReadFromJsonAsync<DocumentComment>(cancellationToken);
                     if (updated is not null)
                     {
+                        await MirrorCommentToLocalStoreAsync(documentId, updated, cancellationToken);
                         return updated;
                     }
                 }
@@ -4007,6 +4082,7 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
                     var updated = await response.Content.ReadFromJsonAsync<DocumentComment>(cancellationToken);
                     if (updated is not null)
                     {
+                        await MirrorCommentToLocalStoreAsync(documentId, updated, cancellationToken);
                         return updated;
                     }
                 }
@@ -4038,6 +4114,7 @@ public class DemoDocumentEditorProvider : InMemoryDocumentEditorProvider
 
                 if (response.IsSuccessStatusCode)
                 {
+                    await RemoveCommentFromLocalStoreAsync(documentId, commentId, cancellationToken);
                     return;
                 }
             }
