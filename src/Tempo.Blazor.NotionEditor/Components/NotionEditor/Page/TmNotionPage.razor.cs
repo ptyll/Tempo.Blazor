@@ -613,6 +613,10 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private async Task HandleHistoryRestoredAsync(string pageId)
     {
         _historyVisible = false;
+        // Restore rewrote the page server-side, bypassing the aggregate save path — the session's
+        // cached snapshot is now stale and would keep serving pre-restore blocks to RefreshAsync.
+        if (Context.AggregateSession is { } session)
+            await session.ReloadAsync();
         await RefreshAsync();
     }
 

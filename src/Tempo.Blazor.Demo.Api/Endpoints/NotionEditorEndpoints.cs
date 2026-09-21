@@ -717,6 +717,7 @@ public static class NotionEditorEndpoints
             string pageId,
             string versionId,
             MockNotionBlockStore blockStore,
+            DemoNotionAggregateStore aggregateStore,
             [FromServices] DemoNotionHistoryStore historyStore) =>
         {
             var restoredBlocks = historyStore.RestoreVersion(pageId, versionId);
@@ -724,6 +725,10 @@ public static class NotionEditorEndpoints
                 return Results.NotFound();
 
             blockStore.ReplacePageBlocks(pageGuid, restoredBlocks);
+            // The restore writes blocks directly (no aggregate save) — drop the cached snapshot so
+            // the next aggregate load rebuilds from the block store instead of serving the
+            // pre-restore page (same bypass as task completion, CF4).
+            aggregateStore.InvalidatePageSnapshot(pageGuid);
             return Results.NoContent();
         });
 
