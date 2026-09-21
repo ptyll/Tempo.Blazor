@@ -200,7 +200,12 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
                     && editor.getAttribute('data-issue-count') === '100';
             }
             """,
-            options: new PageWaitForFunctionOptions { Timeout = 15000 });
+            // This is a setup wait, not a perf assertion (the budgets below are measured with
+            // in-page performance.now()). It has to cover cold WASM boot + 200-node diagram
+            // layout under suite load, and polls on a timer: the default rAF polling starves
+            // when the heavy first layout stalls frame production. M8/M9 waits use the same
+            // 30s WASM-boot window.
+            options: new PageWaitForFunctionOptions { Timeout = 30_000, PollingInterval = 250f });
 
     private static async Task<double> MeasureReloadAsync(IPage page)
     {
@@ -310,7 +315,9 @@ public sealed class ModelingPerformanceM26E2ETests : WasmTestBase
             ([attributeName, expected]) => document.querySelector('[data-testid="modeling-editor"]')?.getAttribute(attributeName) === String(expected)
             """,
             new object[] { attributeName, expected },
-            new PageWaitForFunctionOptions { Timeout = 10000 });
+            // Timer polling, same as WaitForLoadedPerformanceModelAsync — these checks run right
+            // after a reload/regenerate, when heavy layout can still starve rAF predicates.
+            new PageWaitForFunctionOptions { Timeout = 10000, PollingInterval = 250f });
     }
 
     private static void AssertFrameBudget(FrameProbe probe, string label)

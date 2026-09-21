@@ -371,11 +371,10 @@ public abstract class PlaywrightTestBase
         await HostLock.WaitAsync();
         try
         {
-            if (_demoHostsInitialized)
-            {
-                return;
-            }
-
+            // No "already initialized" fast path here on purpose: every class init re-probes the
+            // URLs (cheap when healthy — a refused/wedged host is answered in milliseconds) so a
+            // demo host that dies mid-run is resurrected instead of failing every later test with
+            // ERR_CONNECTION_REFUSED.
             var repoRoot = FindRepositoryRoot();
             await EnsureHostAsync(
                 context,
@@ -434,27 +433,74 @@ public abstract class PlaywrightTestBase
             return;
         }
 
+        var existing = DemoHostProcesses.FirstOrDefault(host => host.Name == name);
+        if (existing is { HasExited: false })
+        {
+            if (DateTimeOffset.UtcNow - existing.StartedAtUtc <= timeout)
+            {
+                // Still inside its readiness window (slow boot under load) — wait on the same
+                // process rather than stack a second `dotnet run` on the same port.
+                await WaitForHostReadyAsync(context, existing, urls, timeout);
+                return;
+            }
+
+            // Wedged: alive past its readiness window but not serving. Replace it.
+            DemoHostProcesses.Remove(existing);
+            existing.Dispose();
+            context.WriteLine($"{name} was unreachable past its readiness window — restarting.");
+        }
+        else if (existing is not null)
+        {
+            // The process we started died mid-run — resurrect it. Throttle back-to-back restarts
+            // so a permanently-broken host fails fast instead of paying the full startup per class.
+            var sinceLastStart = DateTimeOffset.UtcNow - existing.StartedAtUtc;
+            DemoHostProcesses.Remove(existing);
+            var recentOutput = existing.RecentOutput;
+            existing.Dispose();
+            if (sinceLastStart < TimeSpan.FromSeconds(30))
+            {
+                throw new InvalidOperationException($"{name} exited before it became ready. Recent output:{Environment.NewLine}{recentOutput}");
+            }
+
+            context.WriteLine($"{name} died mid-run — restarting it.");
+        }
+        else if (_demoHostsInitialized)
+        {
+            // The hosts were healthy at first init but this one is unreachable now, and no tracked
+            // process exists — an externally-started host died. Adopt it: self-host a replacement
+            // instead of letting every remaining test fail with connection refused.
+            context.WriteLine($"{name} became unreachable mid-run — self-hosting a replacement.");
+        }
+
         var process = StartDemoHostProcess(name, projectPath, launchProfile);
         DemoHostProcesses.Add(process);
+        await WaitForHostReadyAsync(context, process, urls, timeout);
+    }
 
+    private static async Task WaitForHostReadyAsync(
+        TestContext context,
+        DemoHostProcess process,
+        IReadOnlyList<string> urls,
+        TimeSpan timeout)
+    {
         var deadline = DateTimeOffset.UtcNow + timeout;
         while (DateTimeOffset.UtcNow < deadline)
         {
             if (process.HasExited)
             {
-                throw new InvalidOperationException($"{name} exited before it became ready. Recent output:{Environment.NewLine}{process.RecentOutput}");
+                throw new InvalidOperationException($"{process} exited before it became ready. Recent output:{Environment.NewLine}{process.RecentOutput}");
             }
 
             if (await AllUrlsReachableAsync(urls))
             {
-                context.WriteLine($"{name} ready at {string.Join(", ", urls)}.");
+                context.WriteLine($"{process} ready at {string.Join(", ", urls)}.");
                 return;
             }
 
             await Task.Delay(500);
         }
 
-        throw new TimeoutException($"{name} did not become ready at {string.Join(", ", urls)} within {timeout.TotalSeconds:n0}s. Recent output:{Environment.NewLine}{process.RecentOutput}");
+        throw new TimeoutException($"{process} did not become ready at {string.Join(", ", urls)} within {timeout.TotalSeconds:n0}s. Recent output:{Environment.NewLine}{process.RecentOutput}");
     }
 
     private static DemoHostProcess StartDemoHostProcess(string name, string projectPath, string launchProfile)
@@ -560,7 +606,13 @@ public abstract class PlaywrightTestBase
         {
             _name = name;
             _process = process;
+            StartedAtUtc = DateTimeOffset.UtcNow;
         }
+
+        public string Name => _name;
+
+        /// <summary>When this process was launched — used to throttle resurrection attempts.</summary>
+        public DateTimeOffset StartedAtUtc { get; }
 
         public bool HasExited => _process.HasExited;
 

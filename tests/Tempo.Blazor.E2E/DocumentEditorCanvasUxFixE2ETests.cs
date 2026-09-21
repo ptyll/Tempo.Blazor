@@ -234,7 +234,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     // Counts page-break blocks in the engine model (body blocks of type 'pageBreak').
     private static Task<int> ReadPageBreakCountAsync(IPage page)
-        => page.EvaluateAsync<int>(
+        => EvaluateWithContextRetryAsync<int>(page, 
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -277,7 +277,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var lastPageIndex = enginePageCount - 1;
         await page.Locator($"[data-testid='document-page-navigator-item'][data-page-index='{lastPageIndex}']").ClickAsync();
         await page.WaitForTimeoutAsync(600);
-        var visibleAfterNav = await page.EvaluateAsync<string>(
+        var visibleAfterNav = await EvaluateWithContextRetryAsync<string>(page, 
             "() => document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('data-canvas-visible-page-indexes') || ''");
         var navigatedToLast = visibleAfterNav.Split(',').Contains(lastPageIndex.ToString());
 
@@ -314,7 +314,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await OpenDocumentAsync(page, ContractDocumentId, OverviewBlockId);
 
         var output = CreateOutputDirectory("b11-copy");
-        await page.EvaluateAsync("value => navigator.clipboard.writeText(value)", "SENTINEL-UX-B11");
+        await EvaluateWithContextRetryAsync<string>(page, "value => { navigator.clipboard.writeText(value); return 'ok'; }", "SENTINEL-UX-B11");
 
         await SelectCanvasTextRangeViaInteropAsync(page, OverviewBlockId, 0, 9); // "The agree"
         await OpenTextContextMenuAtAsync(page, OverviewBlockId, 4);
@@ -323,7 +323,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var copyDisabled = await page.GetByTestId("document-context-copy").IsDisabledAsync();
         await ClickTestIdViaJsAsync(page, "document-context-copy");
         await page.WaitForTimeoutAsync(400);
-        var clipboard = await page.EvaluateAsync<string>("() => navigator.clipboard.readText()");
+        var clipboard = await EvaluateWithContextRetryAsync<string>(page, "() => navigator.clipboard.readText()");
 
         await File.WriteAllTextAsync(
             Path.Combine(output, "manifest.json"),
@@ -357,7 +357,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var cutDisabled = await page.GetByTestId("document-context-cut").IsDisabledAsync();
         await ClickTestIdViaJsAsync(page, "document-context-cut");
         await page.WaitForTimeoutAsync(500);
-        var clipboard = await page.EvaluateAsync<string>("() => navigator.clipboard.readText()");
+        var clipboard = await EvaluateWithContextRetryAsync<string>(page, "() => navigator.clipboard.readText()");
         var after = await ReadBlockTextAsync(page, OverviewBlockId);
 
         await File.WriteAllTextAsync(
@@ -385,7 +385,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await OpenDocumentAsync(page, ContractDocumentId, OverviewBlockId);
 
         var output = CreateOutputDirectory("b12-paste");
-        await page.EvaluateAsync("value => navigator.clipboard.writeText(value)", "Zq7paste");
+        await EvaluateWithContextRetryAsync<string>(page, "value => { navigator.clipboard.writeText(value); return 'ok'; }", "Zq7paste");
 
         // Caret at the start of the overview paragraph, then paste via the context menu.
         await SelectCanvasTextRangeViaInteropAsync(page, OverviewBlockId, 0, 0);
@@ -422,7 +422,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await WaitForObjectPresentAsync(page, LeftWrapImageId);
 
         var output = CreateOutputDirectory("b4-caption-wrap");
-        var caption = await page.EvaluateAsync<string>(
+        var caption = await EvaluateWithContextRetryAsync<string>(page, 
             """
             objectId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -486,7 +486,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         var fieldMenuVisible = await page.GetByTestId("document-header-footer-insert-field-menu").IsVisibleAsync();
 
         // Visual editing affordance (B6 scope 3): dim the body, dashed-frame the active slot, label the band.
-        var overlay = await page.EvaluateAsync<string>(
+        var overlay = await EvaluateWithContextRetryAsync<string>(page, 
             """
             () => JSON.stringify({
                 label: !!document.querySelector('[data-testid="document-canvas-hf-label"]'),
@@ -532,7 +532,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         await OpenDocumentAsync(page, ContractDocumentId, OverviewBlockId);
 
         var output = CreateOutputDirectory("b10-footer-field");
-        var footer = await page.EvaluateAsync<string>(
+        var footer = await EvaluateWithContextRetryAsync<string>(page, 
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -577,7 +577,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         // Sample the toolbar's presence over ~2s rather than a single instantaneous check: a flicker (the bug)
         // shows up as intermittent samples, "gone" as zero, and the fixed "stays" as nearly all present. A
         // single IsVisible can race a transient Blazor re-render that briefly swaps the DOM node.
-        var presence = await page.EvaluateAsync<int[]>(
+        var presence = await EvaluateWithContextRetryAsync<int[]>(page, 
             """
             async () => {
                 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -647,7 +647,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         }
 
         var presence = await SampleMiniToolbarPresenceAsync(page);
-        var toolbarMode = await page.EvaluateAsync<string>(
+        var toolbarMode = await EvaluateWithContextRetryAsync<string>(page, 
             "() => document.querySelector('[data-testid=\"document-mini-toolbar\"]')?.getAttribute('data-mini-toolbar-mode') || ''");
         var hasImagePanel = await page.GetByTestId("document-image-wrap-panel").CountAsync();
         await ScreenshotAsync(page, Path.Combine(output, "00-image-selected.png"));
@@ -840,7 +840,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     }
 
     private static Task<WrappedLineProbe> FindWrappedContinuationLineAsync(IPage page)
-        => page.EvaluateAsync<WrappedLineProbe>(
+        => EvaluateWithContextRetryAsync<WrappedLineProbe>(page, 
             """
             () => {
                 const rects = Array.from(document.querySelectorAll('[data-canvas-text-rect]'))
@@ -884,7 +884,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             """);
 
     private static Task<CaretRect> ReadCaretRectAsync(IPage page)
-        => page.EvaluateAsync<CaretRect>(
+        => EvaluateWithContextRetryAsync<CaretRect>(page, 
             """
             () => {
                 const caret = document.querySelector('[data-canvas-caret][data-testid="document-canvas-caret"]')
@@ -907,7 +907,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             bool visible;
             try
             {
-                visible = await page.EvaluateAsync<bool>(
+                visible = await EvaluateWithContextRetryAsync<bool>(page, 
                     """
                     () => {
                         const el = document.querySelector('[data-testid="document-mini-toolbar"]');
@@ -921,7 +921,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
                 await page.WaitForTimeoutAsync(100);
                 try
                 {
-                    visible = await page.EvaluateAsync<bool>(
+                    visible = await EvaluateWithContextRetryAsync<bool>(page, 
                         """
                         () => {
                             const el = document.querySelector('[data-testid="document-mini-toolbar"]');
@@ -959,13 +959,13 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     // re-renders from the debounced toolbar sync, which trips Playwright's stability check even though a real
     // user click lands fine, the backdrop sitting a z-index below the menu).
     private static Task ClickTestIdViaJsAsync(IPage page, string testId)
-        => page.EvaluateAsync(
+        => EvaluateWithContextRetryAsync(page, 
             "id => document.querySelector(`[data-testid=\"${id}\"]`)?.click()",
             testId);
 
     // Reads a block's plain text from the engine model (concatenated run text).
     private static Task<string> ReadBlockTextAsync(IPage page, string blockId)
-        => page.EvaluateAsync<string>(
+        => EvaluateWithContextRetryAsync<string>(page, 
             """
             blockId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -982,7 +982,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     // B6: enter/exit header-footer editing through the engine seam (a synthetic dblclick into the band is
     // unreliable on /document-editor); still drives the real region push → contextual tab.
     private static Task EditHeaderFooterViaInteropAsync(IPage page, string type)
-        => page.EvaluateAsync(
+        => EvaluateWithContextRetryAsync(page, 
             """
             type => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -994,7 +994,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             type);
 
     private static Task CloseHeaderFooterViaInteropAsync(IPage page)
-        => page.EvaluateAsync(
+        => EvaluateWithContextRetryAsync(page, 
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -1005,7 +1005,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             """);
 
     private static Task<string> ReadSelectionRegionAsync(IPage page)
-        => page.EvaluateAsync<string>(
+        => EvaluateWithContextRetryAsync<string>(page, 
             """
             () => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -1032,7 +1032,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             bool found;
             try
             {
-                found = await page.EvaluateAsync<bool>(
+                found = await EvaluateWithContextRetryAsync<bool>(page, 
                     "blockId => document.querySelectorAll(`[data-canvas-text-rect][data-block-id=\"${blockId}\"]`).length >= 1",
                     blockId);
             }
@@ -1056,10 +1056,33 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         throw new InvalidOperationException($"Could not scroll block {blockId} into view.");
     }
 
+    // The first evaluate after the canvas flips ready can race a transient execution-context swap (the
+    // engine mounts a fresh render pass on an idle continuation; window state survives — verified by
+    // probe). Retry the call a few times instead of failing the test on "Execution context was destroyed".
+    private static Task EvaluateWithContextRetryAsync(IPage page, string expression, object? arg = null)
+        => EvaluateWithContextRetryAsync<object?>(page, expression, arg);
+
+    private static async Task<T> EvaluateWithContextRetryAsync<T>(IPage page, string expression, object? arg = null)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return await page.EvaluateAsync<T>(expression, arg);
+            }
+            catch (PlaywrightException ex) when (attempt < 4
+                && (ex.Message.Contains("Execution context was destroyed", StringComparison.Ordinal)
+                    || ex.Message.Contains("because of a navigation", StringComparison.Ordinal)))
+            {
+                await page.WaitForTimeoutAsync(250);
+            }
+        }
+    }
+
     // Selects an image/drawing object through the engine's programmatic seam (interop.selectObject), avoiding
     // the unreliable synthetic pointer click on the full editor while still driving the real selection push.
     private static Task<string> SelectCanvasObjectViaInteropAsync(IPage page, string objectId)
-        => page.EvaluateAsync<string>(
+        => EvaluateWithContextRetryAsync<string>(page,
             """
             objectId => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -1072,7 +1095,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     // Selects a text range (blockId[start..end]) through the engine's programmatic seam (interop.selectTextRange).
     private static Task<string> SelectCanvasTextRangeViaInteropAsync(IPage page, string blockId, int startOffset, int endOffset)
-        => page.EvaluateAsync<string>(
+        => EvaluateWithContextRetryAsync<string>(page,
             """
             ([blockId, startOffset, endOffset]) => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
@@ -1084,7 +1107,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             new object[] { blockId, startOffset, endOffset });
 
     private static Task<int[]> ReadPageDomOrderAsync(IPage page)
-        => page.EvaluateAsync<int[]>(
+        => EvaluateWithContextRetryAsync<int[]>(page, 
             """
             () => Array.from(document.querySelectorAll('[data-testid="document-canvas-page"]'))
                 .map(node => Number(node.getAttribute('data-page-index') || '-1'))
@@ -1105,7 +1128,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     private static async Task<(double X, double Y)> ReadViewportCenterAsync(IPage page)
     {
-        var box = await page.EvaluateAsync<CenterPoint>(
+        var box = await EvaluateWithContextRetryAsync<CenterPoint>(page, 
             """
             () => {
                 const page = document.querySelector('[data-testid="document-canvas-page"]')
@@ -1122,7 +1145,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         // Read both drag endpoints in one evaluate, after scrolling the selection into view once, so the two
         // points are expressed in the same (post-scroll) viewport frame. Two separate ReadCanvasPointAsync
         // calls would each scroll and leave the first endpoint stale.
-        var range = await page.EvaluateAsync<CanvasRangePoints>(
+        var range = await EvaluateWithContextRetryAsync<CanvasRangePoints>(page, 
             """
             ([blockId, startOffset, endOffset]) => {
                 const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
@@ -1184,7 +1207,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
     private static Task<CanvasPoint> ReadCanvasPointAsync(IPage page, string blockId, int offset)
-        => page.EvaluateAsync<CanvasPoint>(
+        => EvaluateWithContextRetryAsync<CanvasPoint>(page, 
             """
             ([blockId, offset]) => {
                 const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
@@ -1210,7 +1233,7 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             new object[] { blockId, offset });
 
     private static async Task<int> ReadIntAttrAsync(IPage page, string attr)
-        => await page.EvaluateAsync<int>(
+        => await EvaluateWithContextRetryAsync<int>(page, 
             $"() => Number(document.querySelector('[data-testid=\"document-canvas-engine-root\"]')?.getAttribute('{attr}') || '0')");
 
     private static Task ScreenshotAsync(IPage page, string path)

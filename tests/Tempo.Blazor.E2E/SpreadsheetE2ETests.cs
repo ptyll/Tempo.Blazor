@@ -4875,6 +4875,24 @@ public partial class SpreadsheetE2ETests : WasmTestBase
                     VerticalAlign: 'bottom'
                 };
 
+                // The demo seeds label text wider than its 64px columns, so every seeded cell would
+                // take the clipping path and drown the unclipped counter the assert compares. Give
+                // the remaining seeded cells short values too — the contract under test is that
+                // fitting text draws without clipping.
+                for (const c of cells) {
+                    if (c === simple || c === slow) continue;
+                    const v = c.value ?? c.Value;
+                    if (v != null && String(v).length > 6) { c.value = 'ok'; c.Value = 'ok'; }
+                }
+
+                // Boot redraws already accumulated clipped counts for the original long labels
+                // (metrics are cumulative on state, and the public render() entry does not bump
+                // them), so reset the compared counters before the ArrowDown redraws below.
+                if (state.metrics) {
+                    state.metrics.clippedTextCount = 0;
+                    state.metrics.unclippedTextCount = 0;
+                }
+
                 window.tmSpreadsheetCanvas.render(el, state.canvas, model);
             }");
         await grid.PressAsync("ArrowDown");

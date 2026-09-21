@@ -17,8 +17,10 @@ public sealed class ModelingEditorM8E2ETests : WasmTestBase
         var page = await OpenPageWithoutInitialReadyWaitAsync($"{ModelingEditorUrl}?delay=500");
 
         var loading = page.Locator("[data-testid='modeling-editor-loading']");
-        await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 3000 });
-        await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 3000 });
+        // The loading element only exists once Blazor has booted and the component's first load
+        // started, so the observe window has to cover WASM boot, not just the ?delay=500 provider.
+        await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
 
         await WaitForLoadedEditorAsync(page);
 
