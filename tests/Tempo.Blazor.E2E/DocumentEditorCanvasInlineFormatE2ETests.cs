@@ -247,15 +247,21 @@ public sealed class DocumentEditorCanvasInlineFormatE2ETests : WasmTestBase
         => page.EvaluateAsync<CanvasTextRange>(
             """
             ([blockId, startOffset, endOffset]) => {
-                const rects = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
-                    .map(node => {
-                        const rect = node.getBoundingClientRect();
-                        const start = Number(node.getAttribute('data-canvas-start-offset') || '0');
-                        const end = Number(node.getAttribute('data-canvas-end-offset') || '0');
-                        return { node, rect, start, end };
-                    })
+                const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
+                    .map(node => ({
+                        node,
+                        start: Number(node.getAttribute('data-canvas-start-offset') || '0'),
+                        end: Number(node.getAttribute('data-canvas-end-offset') || '0')
+                    }))
                     .filter(item => item.end > item.start);
-                if (!rects.length) throw new Error(`No canvas text rects found for ${blockId}.`);
+                if (!items.length) throw new Error(`No canvas text rects found for ${blockId}.`);
+                const startItem = items.find(item => startOffset >= item.start && startOffset < item.end) || items[0];
+                const endItem = items.find(item => endOffset > item.start && endOffset <= item.end) || items[items.length - 1];
+                // The canvas is virtualized: a mounted text rect can sit below the fold, so read the rectangles
+                // only after centering the selection's midpoint — otherwise the drag lands outside the viewport.
+                const midIndex = Math.floor((items.indexOf(startItem) + items.indexOf(endItem)) / 2);
+                (items[midIndex] || startItem).node.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+                const rects = items.map(item => ({ node: item.node, rect: item.node.getBoundingClientRect(), start: item.start, end: item.end }));
                 const startRect = rects.find(item => startOffset >= item.start && startOffset < item.end) || rects[0];
                 const endRect = rects.find(item => endOffset > item.start && endOffset <= item.end) || rects[rects.length - 1];
                 const block = document.querySelector(`[data-testid="document-canvas-a11y-mirror"] [data-block-id="${blockId}"]`);

@@ -1119,8 +1119,40 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     private static async Task SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
     {
-        var start = await ReadCanvasPointAsync(page, blockId, startOffset);
-        var end = await ReadCanvasPointAsync(page, blockId, endOffset);
+        // Read both drag endpoints in one evaluate, after scrolling the selection into view once, so the two
+        // points are expressed in the same (post-scroll) viewport frame. Two separate ReadCanvasPointAsync
+        // calls would each scroll and leave the first endpoint stale.
+        var range = await page.EvaluateAsync<CanvasRangePoints>(
+            """
+            ([blockId, startOffset, endOffset]) => {
+                const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
+                    .map(node => ({
+                        node,
+                        start: Number(node.getAttribute('data-canvas-start-offset') || '0'),
+                        end: Number(node.getAttribute('data-canvas-end-offset') || '0')
+                    }))
+                    .filter(item => item.end > item.start);
+                if (!items.length) throw new Error(`No canvas text rects found for ${blockId}.`);
+                const startItem = items.find(item => startOffset >= item.start && startOffset <= item.end) || items[0];
+                const endItem = items.find(item => endOffset >= item.start && endOffset <= item.end) || items[items.length - 1];
+                // Center the midpoint rect so both endpoints land inside the viewport even on wrapped selections.
+                const mid = items[Math.floor(items.indexOf(endItem) >= items.indexOf(startItem)
+                    ? (items.indexOf(startItem) + items.indexOf(endItem)) / 2
+                    : items.indexOf(startItem))] || startItem;
+                mid.node.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+                const point = (item, offset) => {
+                    const rect = item.node.getBoundingClientRect();
+                    const ratio = Math.max(0, Math.min(1, (offset - item.start) / Math.max(1, item.end - item.start)));
+                    return { x: rect.left + Math.max(2, rect.width * ratio), y: rect.top + rect.height / 2 };
+                };
+                const s = point(startItem, startOffset);
+                const e = point(endItem, endOffset);
+                return { startX: s.x, startY: s.y, endX: e.x, endY: e.y };
+            }
+            """,
+            new object[] { blockId, startOffset, endOffset });
+        var start = new CanvasPoint { X = range.StartX, Y = range.StartY };
+        var end = new CanvasPoint { X = range.EndX, Y = range.EndY };
         await page.Mouse.MoveAsync((float)start.X, (float)start.Y);
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)end.X, (float)end.Y, new MouseMoveOptions { Steps = 10 });
@@ -1155,20 +1187,23 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         => page.EvaluateAsync<CanvasPoint>(
             """
             ([blockId, offset]) => {
-                const rects = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
-                    .map(node => {
-                        const rect = node.getBoundingClientRect();
-                        const start = Number(node.getAttribute('data-canvas-start-offset') || '0');
-                        const end = Number(node.getAttribute('data-canvas-end-offset') || '0');
-                        return { rect, start, end };
-                    })
+                const items = Array.from(document.querySelectorAll(`[data-canvas-text-rect][data-block-id="${blockId}"]`))
+                    .map(node => ({
+                        node,
+                        start: Number(node.getAttribute('data-canvas-start-offset') || '0'),
+                        end: Number(node.getAttribute('data-canvas-end-offset') || '0')
+                    }))
                     .filter(item => item.end > item.start);
-                if (!rects.length) throw new Error(`No canvas text rects found for ${blockId}.`);
-                const target = rects.find(item => offset >= item.start && offset <= item.end) || rects[0];
+                if (!items.length) throw new Error(`No canvas text rects found for ${blockId}.`);
+                const target = items.find(item => offset >= item.start && offset <= item.end) || items[0];
+                // The canvas is virtualized: a mounted text rect can still sit below the fold, which would make
+                // getBoundingClientRect() return a y outside the viewport and the mouse op land on nothing.
+                target.node.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+                const rect = target.node.getBoundingClientRect();
                 const ratio = Math.max(0, Math.min(1, (offset - target.start) / Math.max(1, target.end - target.start)));
                 return {
-                    x: target.rect.left + Math.max(2, target.rect.width * ratio),
-                    y: target.rect.top + target.rect.height / 2
+                    x: rect.left + Math.max(2, rect.width * ratio),
+                    y: rect.top + rect.height / 2
                 };
             }
             """,
@@ -1237,6 +1272,14 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
     {
         [JsonPropertyName("x")] public double X { get; set; }
         [JsonPropertyName("y")] public double Y { get; set; }
+    }
+
+    private sealed class CanvasRangePoints
+    {
+        [JsonPropertyName("startX")] public double StartX { get; set; }
+        [JsonPropertyName("startY")] public double StartY { get; set; }
+        [JsonPropertyName("endX")] public double EndX { get; set; }
+        [JsonPropertyName("endY")] public double EndY { get; set; }
     }
 
     private sealed class CenterPoint
