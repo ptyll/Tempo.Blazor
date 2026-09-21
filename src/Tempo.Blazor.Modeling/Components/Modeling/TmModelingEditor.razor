@@ -44,7 +44,12 @@
         </div>
     </header>
 
-    @if (_state == ModelingEditorState.Loading)
+    @* keepLoadedSurface reloads (force reload over an already loaded model) keep _model alive
+       while _state flips back to Loading — rendering the single-state screen here would tear down
+       the whole workspace DOM (tree, preview, issue panel) only to rebuild it a moment later,
+       which dominates the reload budget on large models. The workspace stays mounted and the
+       source panel shows its IsLoading affordance instead. *@
+    @if (_state == ModelingEditorState.Loading && _model is null)
     {
         <div class="tm-modeling-editor__single-state" data-testid="@TestId("modeling-editor-loading")" aria-live="polite">
             <TmSpinner Size="SpinnerSize.Lg" />
