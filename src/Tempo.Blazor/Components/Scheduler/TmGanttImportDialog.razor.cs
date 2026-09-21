@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Components.Scheduler;
@@ -24,7 +25,11 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private string? _errorMessage;
     private bool _isImporting;
     private ElementReference _fileInputWrap;
+    private ElementReference _dialogElement;
     private IJSObjectReference? _filePickerModule;
+    private bool _wasOpen;
+    private bool _shouldActivateTrap;
+    private FocusTrap? _focusTrap;
 
     /// <summary>Whether the dialog is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
@@ -37,6 +42,45 @@ public partial class TmGanttImportDialog : IAsyncDisposable
 
     /// <summary>Fires when the dialog should close.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The dialog renders inline at the end of the Gantt DOM — behind hundreds of task-tree
+    /// tab stops — so a keyboard user could never reach it by Tab alone. Moving focus inside
+    /// (and trapping it there while open) is the standard modal contract TmModal/TmDialog
+    /// already implement via the shared <see cref="FocusTrap"/>.
+    /// </summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _wasOpen = true;
+            _shouldActivateTrap = true;
+        }
+        else if (!IsOpen && _wasOpen)
+        {
+            _wasOpen = false;
+            await DeactivateTrapAsync();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldActivateTrap && IsOpen)
+        {
+            _shouldActivateTrap = false;
+            _focusTrap ??= new FocusTrap(JS);
+            await _focusTrap.ActivateAsync<TmGanttImportDialog>(_dialogElement);
+        }
+    }
+
+    private async Task DeactivateTrapAsync()
+    {
+        if (_focusTrap is not null)
+        {
+            await _focusTrap.DeactivateAsync();
+        }
+    }
 
     private void OnFileChangedAsync(InputFileChangeEventArgs e)
     {
@@ -62,6 +106,10 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     {
         try
         {
+            if (_focusTrap is not null)
+            {
+                await _focusTrap.DisposeAsync();
+            }
             if (_filePickerModule is not null)
             {
                 await _filePickerModule.DisposeAsync();

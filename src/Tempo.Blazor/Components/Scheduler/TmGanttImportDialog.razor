@@ -6,7 +6,7 @@
 @if (IsOpen)
 {
     <div class="tm-gantt__dialog-overlay" @onclick="OnClose">
-        <div class="tm-gantt__dialog tm-gantt__import-dialog" @onclick:stopPropagation>
+        <div class="tm-gantt__dialog tm-gantt__import-dialog" @ref="_dialogElement" @onclick:stopPropagation>
             <div class="tm-gantt__dialog-header">
                 <span class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>
                 <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose">
