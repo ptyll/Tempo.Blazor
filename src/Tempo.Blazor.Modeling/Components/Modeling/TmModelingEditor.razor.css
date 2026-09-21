@@ -127,10 +127,32 @@
 }
 
 .tm-modeling-editor__workspace {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 4)) minmax(0, 1fr) minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 4));
     min-height: 0;
     overflow: hidden;
+}
+
+/* Reload affordance over the mounted workspace (force reload keeps _model alive, so the
+   single-state surface is skipped — the badge carries the same modeling-editor-loading
+   contract without tearing down tree/preview/inspector DOM). */
+.tm-modeling-editor__reload-indicator {
+    position: absolute;
+    top: var(--tm-space-3);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-surface);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    box-shadow: var(--tm-shadow-md, 0 2px 8px rgb(0 0 0 / 0.15));
 }
 
 .tm-modeling-editor__panel {

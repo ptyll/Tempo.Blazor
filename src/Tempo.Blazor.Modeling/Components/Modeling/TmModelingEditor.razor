@@ -116,6 +116,16 @@
         </nav>
 
         <div class="tm-modeling-editor__workspace">
+            @* Force reload over a live model keeps the workspace mounted (see the single-state
+               branch above). The workspace alone must not lose the loading affordance: this badge
+               surfaces the same modeling-editor-loading contract while the reload runs. *@
+            @if (_state == ModelingEditorState.Loading)
+            {
+                <div class="tm-modeling-editor__reload-indicator" data-testid="@TestId("modeling-editor-loading")" role="status" aria-live="polite">
+                    <TmSpinner Size="SpinnerSize.Sm" />
+                    <span>@Loc["TmModelingEditor_LoadingTitle"]</span>
+                </div>
+            }
             <aside class="@GetPanelClass(ModelingEditorPanel.Tree, "tm-modeling-editor__panel tm-modeling-editor__tree")" data-testid="@TestId("modeling-model-tree-panel")" aria-label="@Loc["TmModelingEditor_ModelTree"]">
                 <TmModelingModelTree Elements="@VisibleTreeElements"
                                      SelectedElement="@_selectedElement"
