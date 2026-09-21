@@ -24,6 +24,17 @@
     pointer-events: auto;
 }
 
+/* Pinned while the context menu is open — the menu and its submenus live inside
+   the handle, so the handle must stay hit-testable even when the parent block
+   loses :hover (e.g., a re-render swaps the element under a stationary pointer,
+   which browsers do not re-hover until the next pointer move). Without this the
+   whole menu subtree becomes pointer-events:none, phantom mouseleave fires on
+   submenu triggers, and open submenus collapse. */
+.tm-notion-handle--menu-open {
+    opacity:        1;
+    pointer-events: auto;
+}
+
 /* ── Shared button style ──────────────────────────────────────── */
 
 .tm-notion-handle__btn {

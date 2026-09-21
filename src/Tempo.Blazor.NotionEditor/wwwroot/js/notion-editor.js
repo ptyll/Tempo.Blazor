@@ -459,6 +459,30 @@ window.tmNotionEditor = (function () {
         _focusTraps.delete(container);
     }
 
+    // Positions a fixed overlay menu at its anchor's viewport rect. The menu is
+    // position:fixed (see .tm-notion-ctx) so that scrolling the notion-main column
+    // cannot drag it out from under the pointer — an absolute menu inside the
+    // scroll container gets pulled away during scroll-reveal actions, which fires
+    // a phantom mouseleave that collapses open submenus mid-interaction.
+    function positionContextMenu(menuEl) {
+        if (!menuEl) return;
+        const anchor = menuEl.parentElement;
+        if (anchor) {
+            const r  = anchor.getBoundingClientRect();
+            const vw = document.documentElement.clientWidth;
+            const vh = document.documentElement.clientHeight;
+            const mw = menuEl.offsetWidth;
+            const mh = menuEl.offsetHeight;
+            let left = r.left;
+            let top  = r.bottom + 4;
+            if (left + mw > vw - 8) left = Math.max(8, vw - mw - 8);
+            if (top + mh > vh - 8 && r.top - mh - 4 >= 8) top = r.top - mh - 4;
+            menuEl.style.top  = top + 'px';
+            menuEl.style.left = left + 'px';
+        }
+        menuEl.classList.add('tm-notion-ctx--positioned');
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // 26.2 — Selection & formatting
     // ═══════════════════════════════════════════════════════════════════════════
@@ -3309,7 +3333,7 @@ window.tmNotionEditor = (function () {
         // 26.1
         initBlock, destroyBlock, getHtml, getEditableHtml, getCaretOffset, setCaretOffset, setHtml,
         focus, focusAtEnd, focusAtStart, focusAtOffset,
-        initFocusTrap, destroyFocusTrap,
+        initFocusTrap, destroyFocusTrap, positionContextMenu,
         initEditorKeyHandler, destroyEditorKeyHandler,
         // 26.2
         getSelectionRange, getSelectionRect, applyFormat,

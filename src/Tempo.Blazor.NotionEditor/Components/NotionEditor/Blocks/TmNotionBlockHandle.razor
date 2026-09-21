@@ -2,7 +2,7 @@
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
 
-<div class="tm-notion-handle" contenteditable="false" @onclick:stopPropagation="true">
+<div class="tm-notion-handle @(_showMenu ? "tm-notion-handle--menu-open" : "")" contenteditable="false" @onclick:stopPropagation="true">
 
     @* ── Add block below ────────────────────────────────────────────────────── *@
     <button class="tm-notion-handle__btn"

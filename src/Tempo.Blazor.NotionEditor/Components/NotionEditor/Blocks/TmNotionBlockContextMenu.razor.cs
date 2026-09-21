@@ -56,6 +56,7 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
 
         try
         {
+            await JS.InvokeVoidAsync("tmNotionEditor.positionContextMenu", _menuRef);
             await JS.InvokeVoidAsync("tmNotionEditor.initFocusTrap", _menuRef);
         }
         catch

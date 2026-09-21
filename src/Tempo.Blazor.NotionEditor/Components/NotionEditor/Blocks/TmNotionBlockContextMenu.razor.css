@@ -12,10 +12,17 @@
 
 /* ── Menu panel ───────────────────────────────────────────────── */
 
+/* The menu is viewport-fixed and positioned by tmNotionEditor.positionContextMenu
+   at the anchor's rect. It must NOT be position:absolute inside the block: the
+   block lives in the scrollable .tm-notion-main column, so scrolling the column
+   (which scroll-reveal actions do when a submenu item overflows the column's
+   client rect) would drag the menu out from under a stationary pointer, firing
+   a phantom @onmouseleave that collapses open submenus mid-interaction. */
 .tm-notion-ctx {
-    position:      absolute;
-    top:           calc(100% + 4px);
+    position:      fixed;
+    top:           0;
     left:          0;
+    visibility:    hidden;
     z-index:       var(--tm-z-dropdown);
     min-width:     192px;
     padding:       var(--tm-space-1);
@@ -24,6 +31,11 @@
     border-radius: var(--tm-radius-lg);
     box-shadow:    0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.07);
     animation:     tm-notion-ctx-in var(--tm-notion-anim-fast) ease;
+}
+
+/* Revealed once JS has written top/left — prevents a one-frame flash at 0,0. */
+.tm-notion-ctx--positioned {
+    visibility: visible;
 }
 
 @keyframes tm-notion-ctx-in {
