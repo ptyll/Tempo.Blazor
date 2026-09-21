@@ -44,6 +44,7 @@ public partial class TmNotionSlashMenu : TmComponentBase
     private double   _left;
     private bool     _wasVisible;
     private bool     _needsFocus;
+    private bool     _hoverEnabled;
 
     private List<BlockType> _recentlyUsed = [];
     private List<(SlashMenuCategory Category, List<SlashMenuItem> Items)> _groups = [];
@@ -66,6 +67,7 @@ public partial class TmNotionSlashMenu : TmComponentBase
             // Menu just opened — reset state
             _query         = string.Empty;
             _selectedIndex = 0;
+            _hoverEnabled  = false;
             _top           = Top;
             _left          = Left;
             _needsFocus    = true;
@@ -160,7 +162,21 @@ public partial class TmNotionSlashMenu : TmComponentBase
         return result;
     }
 
-    // ── Keyboard navigation ───────────────────────────────────────────────────
+    // ── Pointer / keyboard navigation ─────────────────────────────────────────
+
+    private void EnableHoverSelection() => _hoverEnabled = true;
+
+    private void OnItemMouseEnter(int index)
+    {
+        // Ignore a resting cursor sitting over the menu at open — only honor hover selection
+        // after the pointer has actually moved over the list (EnableHoverSelection).
+        if (!_hoverEnabled)
+        {
+            return;
+        }
+
+        _selectedIndex = index;
+    }
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs e)
     {

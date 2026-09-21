@@ -34,7 +34,10 @@
         </div>
 
         @* ── Item list ─────────────────────────────────────────────────────── *@
-        <div class="tm-notion-slash__list" role="listbox" @ref="_listRef">
+        @* The menu can open directly under a resting cursor (the caret sits where the user just
+           clicked) — without the pointer-move gate, a stale pointer position would steal the
+           default selection via mouseenter before the user has actually hovered. *@
+        <div class="tm-notion-slash__list" role="listbox" @ref="_listRef" @onpointermove="EnableHoverSelection">
             @if (!_showAiItem && _groups.Count == 0)
             {
                 <div class="tm-notion-slash__empty">@Loc["TmNotionSlashMenu_NoResults"]</div>
@@ -54,7 +57,7 @@
                              data-slash-idx="@flatIdx"
                              data-testid="@TestId("notion-ai-slash-item")"
                              @onclick="SelectAiItemAsync"
-                             @onmouseenter="() => _selectedIndex = 0">
+                             @onmouseenter="() => OnItemMouseEnter(0)">
                             <span class="tm-notion-slash__item-icon" aria-hidden="true">
                                 @((MarkupString)AiIcon)
                             </span>
@@ -81,7 +84,7 @@
                                  aria-selected="@isSelected"
                                  data-slash-idx="@capturedIdx"
                                  @onclick="() => SelectItemAsync(item)"
-                                 @onmouseenter="() => _selectedIndex = capturedIdx">
+                                 @onmouseenter="() => OnItemMouseEnter(capturedIdx)">
                                 <span class="tm-notion-slash__item-icon" aria-hidden="true">
                                     @((MarkupString)item.SvgIcon)
                                 </span>
