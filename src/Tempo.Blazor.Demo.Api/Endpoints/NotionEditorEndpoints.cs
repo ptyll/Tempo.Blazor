@@ -57,6 +57,8 @@ public static class NotionEditorEndpoints
         aggregateGroup.MapPost("/save", async (
             HttpRequest request,
             DemoNotionAggregateStore store,
+            DemoNotionWatchProvider watchProvider,
+            DemoNotionNotificationStore notificationStore,
             CancellationToken cancellationToken) =>
         {
             var payload = await request.ReadFromJsonAsync<NotionAggregateSaveRequest>(
@@ -67,6 +69,25 @@ public static class NotionEditorEndpoints
                 return Results.BadRequest();
             }
             var result = store.Save(payload);
+            if (result.Success)
+            {
+                // A committed aggregate save IS a page edit — notify watchers exactly like the
+                // removed granular block endpoint did. The actor comes from the page snapshot the
+                // editor stamped (LastEditedByUserId), falling back to the audit user header.
+                var fallbackActor = GetAuditUser(request).UserId;
+                foreach (var pageSave in payload.Pages)
+                {
+                    var actor = string.IsNullOrWhiteSpace(pageSave.Snapshot.Page.LastEditedByUserId)
+                        ? fallbackActor
+                        : pageSave.Snapshot.Page.LastEditedByUserId!;
+                    await NotifyPageWatchersAsync(
+                        pageSave.Snapshot.Page.Id,
+                        actor,
+                        watchProvider,
+                        notificationStore,
+                        cancellationToken);
+                }
+            }
             return Results.Json(
                 result,
                 NotionAggregateJson.Options,

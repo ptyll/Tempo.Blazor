@@ -8,7 +8,9 @@ namespace Tempo.Blazor.Components.NotionEditor.Services;
 /// Stateful load/clone/validate/save-once boundary used by one interactive Notion editor.
 /// A conflicted local candidate remains current until the user reloads or reapplies it.
 /// </summary>
-public sealed class NotionEditorAggregateSession(INotionAggregateProvider provider)
+public sealed class NotionEditorAggregateSession(
+    INotionAggregateProvider provider,
+    Func<string?>? currentUserId = null)
 {
     private Func<NotionPageSnapshot, NotionPageSnapshot>? _pendingMutation;
 
@@ -150,6 +152,15 @@ public sealed class NotionEditorAggregateSession(INotionAggregateProvider provid
                 Snapshot = CurrentSnapshot,
                 Issues = issues
             };
+        }
+
+        // Stamp the actor on the page snapshot so the provider/API can attribute the edit —
+        // the demo API uses it to notify page watchers (watch → page-edit notification).
+        var actor = currentUserId?.Invoke();
+        if (!string.IsNullOrWhiteSpace(actor))
+        {
+            candidate.Page.LastEditedByUserId = actor.Trim();
+            candidate.Page.LastEditedAt = DateTime.UtcNow;
         }
 
         var save = await provider.SaveAsync(

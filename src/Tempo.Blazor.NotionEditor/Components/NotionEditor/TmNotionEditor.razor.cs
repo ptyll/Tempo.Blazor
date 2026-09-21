@@ -277,10 +277,13 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         }
 
         _aggregateSessionProvider = AggregateProvider;
-        _aggregateSession = new NotionEditorAggregateSession(AggregateProvider);
+        _aggregateSession = new NotionEditorAggregateSession(
+            AggregateProvider,
+            () => EffectiveCurrentUserId);
         _blockService = new NotionEditorBlockService(
             AggregateProvider,
-            _aggregateSession);
+            _aggregateSession,
+            () => EffectiveCurrentUserId);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

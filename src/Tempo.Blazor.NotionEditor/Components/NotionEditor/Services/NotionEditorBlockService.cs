@@ -89,15 +89,18 @@ public sealed class NotionEditorBlockService : INotionEditorBlockService
 {
     private readonly INotionAggregateProvider _provider;
     private readonly NotionEditorAggregateSession? _session;
+    private readonly Func<string?>? _currentUserId;
     private readonly Dictionary<(Guid BlockId, BlockType Type), IBlockContent> _conversionMemory = [];
 
     /// <summary>Creates an aggregate-backed block service for one editor.</summary>
     public NotionEditorBlockService(
         INotionAggregateProvider provider,
-        NotionEditorAggregateSession? session = null)
+        NotionEditorAggregateSession? session = null,
+        Func<string?>? currentUserId = null)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
         _session = session;
+        _currentUserId = currentUserId;
     }
 
     /// <summary>Loads the page-level blocks of a complete page aggregate.</summary>
@@ -528,6 +531,18 @@ public sealed class NotionEditorBlockService : INotionEditorBlockService
         if (issues.Any(issue => issue.Severity == NotionIssueSeverity.Error))
         {
             throw PersistenceFailure(issues);
+        }
+
+        // Stamp the actor on every saved page so the provider/API can attribute the edit —
+        // the demo API uses it to notify page watchers (watch → page-edit notification).
+        var actor = _currentUserId?.Invoke();
+        if (!string.IsNullOrWhiteSpace(actor))
+        {
+            foreach (var candidate in candidates)
+            {
+                candidate.Page.LastEditedByUserId = actor.Trim();
+                candidate.Page.LastEditedAt = DateTime.UtcNow;
+            }
         }
 
         var save = await _provider.SaveAsync(new NotionAggregateSaveRequest
