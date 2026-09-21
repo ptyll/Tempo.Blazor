@@ -313,6 +313,14 @@ function buildParagraphBlockCommands(block, options, contentControlRenderMode) {
 
         const lineSegments = positionedLineSegments(line);
         for (const segment of lineSegments) {
+            // A signing-field run is an inline object too — it must be checked BEFORE the drawing
+            // branch, which would otherwise claim it (`inlineObject === true && !!segment.object`,
+            // with object falling back to a truthy `{}`) and emit a bogus imageObject command.
+            if (isSigningFieldSegment(segment)) {
+                commands.push(signingFieldCommandForSegment(segment, line, block, localSequence++));
+                continue;
+            }
+
             if (isDrawingSegment(segment)) {
                 const rect = segment.objectRect || segment.rect || {};
                 const imageCommands = imageDisplayCommands({
@@ -355,11 +363,6 @@ function buildParagraphBlockCommands(block, options, contentControlRenderMode) {
                 for (const annotation of annotationCommandsForRun(command, segment)) {
                     commands.push({ ...annotation, sequence: localSequence++ });
                 }
-                continue;
-            }
-
-            if (isSigningFieldSegment(segment)) {
-                commands.push(signingFieldCommandForSegment(segment, line, block, localSequence++));
                 continue;
             }
 

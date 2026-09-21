@@ -11695,6 +11695,10 @@ function buildParagraphBlockCommands(block, options, contentControlRenderMode) {
     }
     const lineSegments = positionedLineSegments(line);
     for (const segment of lineSegments) {
+      if (isSigningFieldSegment(segment)) {
+        commands.push(signingFieldCommandForSegment(segment, line, block, localSequence++));
+        continue;
+      }
       if (isDrawingSegment(segment)) {
         const rect = segment.objectRect || segment.rect || {};
         const imageCommands = imageDisplayCommands({
@@ -11736,10 +11740,6 @@ function buildParagraphBlockCommands(block, options, contentControlRenderMode) {
         for (const annotation of annotationCommandsForRun(command2, segment)) {
           commands.push({ ...annotation, sequence: localSequence++ });
         }
-        continue;
-      }
-      if (isSigningFieldSegment(segment)) {
-        commands.push(signingFieldCommandForSegment(segment, line, block, localSequence++));
         continue;
       }
       if (!segment.text && segment.type !== "space") {
