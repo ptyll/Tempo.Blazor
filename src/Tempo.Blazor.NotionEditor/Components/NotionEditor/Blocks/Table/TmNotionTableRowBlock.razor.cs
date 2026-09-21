@@ -175,7 +175,13 @@ public partial class TmNotionTableRowBlock : ComponentBase, IAsyncDisposable
             declarations.Add($"--tm-notion-table-cell-width:{width.Value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}px");
         }
 
-        declarations.Add($"--tm-notion-table-cell-vertical:{cell.VerticalAlignment.ToString().ToLowerInvariant()}");
+        // The stylesheet already falls back to top via var(--tm-notion-table-cell-vertical, top),
+        // so the default alignment adds no styling. Skipping it keeps the style attribute empty
+        // for untouched cells — including historical cells whose unsafe CSS was dropped.
+        if (cell.VerticalAlignment != NotionTableVerticalAlignment.Top)
+        {
+            declarations.Add($"--tm-notion-table-cell-vertical:{cell.VerticalAlignment.ToString().ToLowerInvariant()}");
+        }
         AddBorder(declarations, "top", cell.Borders.Top);
         AddBorder(declarations, "right", cell.Borders.Right);
         AddBorder(declarations, "bottom", cell.Borders.Bottom);
