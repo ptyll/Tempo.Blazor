@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Tempo.Blazor.E2E.CanvasEngine;
@@ -70,7 +71,9 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         await WaitForZoomPresetAsync(page, "fitWidth");
         await WaitForFitWidthRenderAsync(page);
         var fitProbe = await ReadViewProbeAsync(page);
-        var expectedFitWidth = Math.Max(1, Math.Round(fitProbe.MountViewportWidth - 48));
+        // fitWidth is defined against the scroll viewport (host clientWidth); the content-sized
+        // mount width tracks the page and is not a stable reference for the expected page width.
+        var expectedFitWidth = Math.Max(1, Math.Round(fitProbe.HostClientWidth - 48));
         Assert.AreEqual("fitWidth", fitProbe.ZoomPreset, fitProbe.Debug);
         Assert.IsTrue(fitProbe.ZoomPercent > 0, fitProbe.Debug);
         Assert.IsTrue(fitProbe.LogicalPageWidth > 0, fitProbe.Debug);
@@ -114,7 +117,33 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         var pdfPath = await AssertDownloadedFileAsync(pdfDownload, ".pdf", 64, "Print preview PDF export");
         var pdfBytes = await File.ReadAllBytesAsync(pdfPath);
         Assert.IsTrue(Encoding.ASCII.GetString(pdfBytes, 0, Math.Min(pdfBytes.Length, 8)).StartsWith("%PDF", StringComparison.Ordinal));
-        Assert.IsTrue(Encoding.ASCII.GetString(pdfBytes).Contains("Print preview is generated from the current canvas display list", StringComparison.Ordinal));
+        // The Skia PDF backend embeds text as subset glyph ids inside compressed content streams
+        // plus a ToUnicode CMap, so a raw byte scan can never find the marker. Extract the real
+        // text layer through PDF.js — the same probe DocumentEditorCanvasImportExportE2ETests uses.
+        var pdfBase64 = Convert.ToBase64String(pdfBytes);
+        var pdfText = await page.EvaluateAsync<string>(
+            """
+            async base64 => {
+                const pdfjs = await import('/_content/Tempo.Blazor.PdfViewer/js/pdf.min.mjs');
+                pdfjs.GlobalWorkerOptions.workerSrc = '/_content/Tempo.Blazor.PdfViewer/js/pdf.worker.min.mjs';
+                const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+                const doc = await pdfjs.getDocument({ data: bytes }).promise;
+                const parts = [];
+                for (let p = 1; p <= doc.numPages; p++) {
+                    const pdfPage = await doc.getPage(p);
+                    const content = await pdfPage.getTextContent();
+                    parts.push(content.items.map(i => i.str).join(' '));
+                }
+                return parts.join(' ');
+            }
+            """,
+            pdfBase64);
+        // PDF.js joins text items with per-item whitespace, so collapse runs of whitespace
+        // before matching the seeded sentence.
+        var normalizedPdfText = Regex.Replace(pdfText ?? string.Empty, @"\s+", " ").Trim();
+        Assert.IsTrue(
+            normalizedPdfText.Contains("Print preview is generated from the current canvas display list", StringComparison.Ordinal),
+            $"the seeded print-preview paragraph must survive into the PDF text layer. Extracted: {TrimTo(normalizedPdfText, 600)}");
 
         await DocumentEditorCanvasVisualAssert.AssertNoUiOverlapAsync(page);
         var contentMetrics = await DocumentEditorCanvasVisualAssert.AssertAnyCanvasNonBlankAsync(page, "[data-testid='document-canvas-engine-root'] [data-canvas-layer='content']");
@@ -208,15 +237,19 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         => page.WaitForFunctionAsync(
             """
             () => {
-                const mount = document.querySelector('[data-testid="document-canvas-engine-mount"]');
+                // The engine's fit-width preset is computed from the clipping scroll viewport
+                // (the host's clientWidth), not the content-sized mount: the mount grows with
+                // the laid-out page, so reading it feeds back into the assertion. See
+                // getViewportMetrics()/resolveScrollViewportElement in document-editor-canvas/entry.mjs.
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const canvasPage = document.querySelector('[data-testid="document-canvas-page"]');
-                const mountWidth = mount?.getBoundingClientRect?.().width || 0;
+                const viewportWidth = host?.clientWidth || 0;
                 const cssPageWidth = Number(canvasPage?.getAttribute('data-canvas-page-css-width') || '0');
-                if (mountWidth <= 0 || cssPageWidth <= 0) {
+                if (viewportWidth <= 0 || cssPageWidth <= 0) {
                     return false;
                 }
 
-                const expected = Math.max(1, Math.round(mountWidth - 48));
+                const expected = Math.max(1, Math.round(viewportWidth - 48));
                 return Math.abs(cssPageWidth - expected) <= 24;
             }
             """,
@@ -263,6 +296,7 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
                     logicalPageWidth: Number(page?.getAttribute('data-canvas-page-logical-width') || '0'),
                     cssPageWidth: Number(page?.getAttribute('data-canvas-page-css-width') || '0'),
                     hostViewportWidth: host?.getBoundingClientRect?.().width || 0,
+                    hostClientWidth: host?.clientWidth || 0,
                     mountViewportWidth: mount?.getBoundingClientRect?.().width || 0,
                     textRectWidth: rect?.width || 0,
                     dirty: host?.getAttribute('data-canvas-engine-dirty') === 'true',
@@ -344,6 +378,12 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         public string Debug { get; set; } = string.Empty;
     }
 
+    private static string TrimTo(string value, int maxLength)
+    {
+        var text = (value ?? string.Empty).ReplaceLineEndings(" ");
+        return text.Length <= maxLength ? text : string.Concat(text.AsSpan(0, maxLength), "…");
+    }
+
     private sealed class PhaseE11ViewProbe
     {
         public string ViewMode { get; set; } = string.Empty;
@@ -354,6 +394,7 @@ public sealed class DocumentEditorCanvasViewModesPrintE2ETests : WasmTestBase
         public double LogicalPageWidth { get; set; }
         public double CssPageWidth { get; set; }
         public double HostViewportWidth { get; set; }
+        public double HostClientWidth { get; set; }
         public double MountViewportWidth { get; set; }
         public double TextRectWidth { get; set; }
         public bool Dirty { get; set; }

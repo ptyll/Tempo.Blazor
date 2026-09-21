@@ -39,6 +39,24 @@ export function createCanvasDocumentEngine(options = {}) {
     return new CanvasDocumentEngine(options);
 }
 
+// The mount element is content-sized (it hugs the laid-out pages), so zoom presets that measure it
+// feed back into themselves. The stable viewport is the nearest clipping scroll ancestor — the
+// Blazor host wraps the mount in an overflow:auto shell; in bare/embedded mounts without one we
+// fall back to the host itself (and then to the window) so engine math still has a sane viewport.
+function resolveScrollViewportElement(element) {
+    let node = element?.parentElement || null;
+    const view = element?.ownerDocument?.defaultView || globalThis;
+    while (node) {
+        const style = typeof view.getComputedStyle === 'function' ? view.getComputedStyle(node) : null;
+        const overflow = style ? `${style.overflowX} ${style.overflowY}` : '';
+        if (/(auto|scroll|hidden)/.test(overflow)) {
+            return node;
+        }
+        node = node.parentElement;
+    }
+    return null;
+}
+
 export class CanvasDocumentEngine {
     constructor(options = {}) {
         const host = options.host;
@@ -1691,12 +1709,19 @@ export class CanvasDocumentEngine {
         const layoutPage = Array.isArray(this.lastLayout?.pages) && this.lastLayout.pages.length > 0
             ? this.lastLayout.pages[0]
             : null;
-        const hostBounds = this.host?.getBoundingClientRect?.() || null;
+        // `this.host` is the content-sized mount, not the scrollport: the mount element grows with
+        // the laid-out page width, so measuring it feeds back into fit-width/fit-page math (page
+        // gets wider → mount gets wider → next preset computes a bigger scale). The stable viewport
+        // is the clipping scroll ancestor — its client box never depends on the content inside it.
+        const viewportEl = resolveScrollViewportElement(this.host) || this.host;
+        const hostBounds = viewportEl?.getBoundingClientRect?.() || null;
+        const viewportWidth = Number(viewportEl?.clientWidth || hostBounds?.width || 0) || 0;
+        const viewportHeight = Number(viewportEl?.clientHeight || hostBounds?.height || 0) || 0;
         return {
             pageWidth: Number(layoutPage?.width || 794) || 794,
             pageHeight: Number(layoutPage?.height || 1123) || 1123,
-            viewportWidth: Number(hostBounds?.width || this.document?.defaultView?.innerWidth || globalThis.innerWidth || 1280) || 1280,
-            viewportHeight: Number(hostBounds?.height || this.document?.defaultView?.innerHeight || globalThis.innerHeight || 900) || 900,
+            viewportWidth: viewportWidth || this.document?.defaultView?.innerWidth || globalThis.innerWidth || 1280,
+            viewportHeight: viewportHeight || this.document?.defaultView?.innerHeight || globalThis.innerHeight || 900,
             pageGap: 24,
             paddingInline: 48,
             paddingBlock: 48,
