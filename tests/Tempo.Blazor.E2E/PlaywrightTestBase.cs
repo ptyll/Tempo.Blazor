@@ -84,7 +84,10 @@ public abstract class PlaywrightTestBase
                 _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
                     Headless = !context.Properties.Contains("Headless") || context.Properties["Headless"]?.ToString() != "false",
-                    SlowMo = 100 // Add small delay between actions for stability
+                    SlowMo = 100, // Add small delay between actions for stability
+                    // Enable precise performance.memory.usedJSHeapSize for the navigation memory-leak
+                    // probe; without the flag Chromium may omit the API entirely (returns 0 → NaN ratio).
+                    Args = new[] { "--enable-precise-memory-info" }
                 });
             }
         }

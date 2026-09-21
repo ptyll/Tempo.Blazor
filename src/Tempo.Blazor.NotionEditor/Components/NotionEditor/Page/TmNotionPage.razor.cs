@@ -119,6 +119,9 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private bool   _textCommentVisible;
     private string _textCommentId       = string.Empty;
     private string _textCommentBlockId  = string.Empty;
+    private int    _textCommentStartOffset;
+    private int    _textCommentEndOffset;
+    private string _textCommentHighlight = string.Empty;
     private double _textCommentTop;
     private double _textCommentLeft;
 
@@ -1104,18 +1107,24 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandleTextCommentClosedAsync()
     {
-        _textCommentVisible = false;
-        _textCommentId      = string.Empty;
-        _textCommentBlockId = string.Empty;
+        _textCommentVisible     = false;
+        _textCommentId          = string.Empty;
+        _textCommentBlockId     = string.Empty;
+        _textCommentStartOffset = 0;
+        _textCommentEndOffset   = 0;
+        _textCommentHighlight   = string.Empty;
         StateHasChanged();
         return Task.CompletedTask;
     }
 
     private async Task HandleTextCommentResolvedAsync()
     {
-        _textCommentVisible = false;
-        _textCommentId      = string.Empty;
-        _textCommentBlockId = string.Empty;
+        _textCommentVisible     = false;
+        _textCommentId          = string.Empty;
+        _textCommentBlockId     = string.Empty;
+        _textCommentStartOffset = 0;
+        _textCommentEndOffset   = 0;
+        _textCommentHighlight   = string.Empty;
         await LoadPageUnresolvedCommentCountAsync();
         StateHasChanged();
     }
@@ -1504,12 +1513,15 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public Task OnTextCommentCreated(string blockId, string commentId, string highlightedText, int startOffset, int endOffset, double top, double left)
     {
-        _textCommentId       = commentId;
-        _textCommentBlockId  = blockId;
-        _textCommentTop      = top;
-        _textCommentLeft     = left + 40;
-        _textCommentVisible  = true;
-        _toolbarVisible      = false;
+        _textCommentId          = commentId;
+        _textCommentBlockId     = blockId;
+        _textCommentStartOffset = startOffset;
+        _textCommentEndOffset   = endOffset;
+        _textCommentHighlight   = highlightedText;
+        _textCommentTop         = top;
+        _textCommentLeft        = left + 40;
+        _textCommentVisible     = true;
+        _toolbarVisible         = false;
         StateHasChanged();
         return Task.CompletedTask;
     }

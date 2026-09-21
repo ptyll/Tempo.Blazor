@@ -66,12 +66,12 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
         // Wait for WASM to boot
         await page.WaitForTimeoutAsync(3000);
 
-        // Verify rich editor is present
-        var editor = page.Locator(".tm-rich-editor, [data-testid='rich-editor']").First;
+        // Verify rich editor is present (TmRichEditorSimple/Full render tm-rich-editor-simple/-full)
+        var editor = page.Locator(".tm-rich-editor, .tm-rich-editor-simple, .tm-rich-editor-full, [data-testid='rich-editor']").First;
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // Verify editor toolbar is present
-        var toolbar = page.Locator(".tm-editor-toolbar, [data-testid='editor-toolbar']").First;
+        // Verify editor toolbar is present (TmRichEditor* render tm-rte-toolbar)
+        var toolbar = page.Locator(".tm-editor-toolbar, .tm-rte-toolbar, [data-testid='editor-toolbar']").First;
         await toolbar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         await TakeScreenshotAsync(page, "rich_editor_test");
@@ -109,12 +109,12 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
         // Wait for WASM to boot
         await page.WaitForTimeoutAsync(3000);
 
-        // Verify workflow designer is present
-        var canvas = page.Locator(".tm-workflow-canvas, [data-testid='workflow-canvas']").First;
+        // Verify workflow designer is present (TmWorkflowDesignerCanvas renders tm-wf-canvas)
+        var canvas = page.Locator(".tm-workflow-canvas, .tm-wf-canvas, [data-testid='workflow-canvas']").First;
         await canvas.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // Verify toolbox is present
-        var toolbox = page.Locator(".tm-workflow-toolbox, [data-testid='workflow-toolbox']").First;
+        // Verify toolbox is present (TmWorkflowToolbox renders tm-wf-toolbox)
+        var toolbox = page.Locator(".tm-workflow-toolbox, .tm-wf-toolbox, [data-testid='workflow-toolbox']").First;
         await toolbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         await TakeScreenshotAsync(page, "workflow_designer_test");
@@ -144,8 +144,8 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
                 await viewButton.ClickAsync();
                 await page.WaitForTimeoutAsync(1000);
 
-                // Verify the view changed
-                var activeView = page.Locator(".tm-scheduler-view-active, [data-testid='scheduler-view']").First;
+                // Verify the view changed (scheduler renders tm-scheduler-{month,week,day,timeline,agenda})
+                var activeView = page.Locator(".tm-scheduler-view-active, .tm-scheduler-body, .tm-scheduler-month, .tm-scheduler-week, .tm-scheduler-day, .tm-scheduler-timeline, .tm-scheduler-agenda, [data-testid='scheduler-view']").First;
                 await activeView.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
             }
         }
@@ -167,13 +167,13 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
         var dataTable = page.Locator(".tm-data-table, [data-testid='data-table']").First;
         await dataTable.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // Verify rows are loaded
-        var rows = page.Locator(".tm-data-table-row, [data-testid='data-row']");
+        // Verify rows are loaded (TmDataTable renders plain <tr> body rows, no tm-data-table-row class)
+        var rows = page.Locator(".tm-data-table tbody tr, .tm-data-table-row, [data-testid='data-row'], tr[data-row-mode]");
         var rowCount = await rows.CountAsync();
         Assert.IsTrue(rowCount > 0, "Expected data rows to be loaded");
 
         // Test sorting
-        var sortableHeaders = page.Locator(".tm-data-table-header-sortable, th[data-sortable='true']");
+        var sortableHeaders = page.Locator(".tm-data-table-header-sortable, th[data-sortable='true'], [data-sortable='true']");
         if (await sortableHeaders.CountAsync() > 0)
         {
             await sortableHeaders.First.ClickAsync();
@@ -189,9 +189,15 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
     {
         var page = await CreatePageAsync();
 
-        // Get initial heap size
+        // Get initial heap size. performance.memory is a non-standard Chromium API that can be
+        // absent in some browser builds/contexts; when it reports 0 there is nothing to measure.
         var initialHeap = await GetHeapSizeAsync(page);
         TestContext.WriteLine($"Initial heap size: {initialHeap} bytes");
+        if (initialHeap <= 0)
+        {
+            Assert.Inconclusive("performance.memory is unavailable in this browser — cannot measure JS heap growth.");
+            return;
+        }
 
         // Navigate multiple times
         for (int i = 0; i < 5; i++)
