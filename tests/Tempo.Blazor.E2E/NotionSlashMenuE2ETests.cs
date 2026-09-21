@@ -164,15 +164,12 @@ public class NotionSlashMenuE2ETests : WasmTestBase
         Assert.IsTrue(firstClass.Contains("tm-notion-slash__item--selected"),
             "First item should be selected by default");
 
-        // Arrow down once
+        // Arrow down once — poll for the selected class instead of a fixed 200ms delay
+        // (Blazor's keydown→render round-trip can exceed 200ms under load).
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(200);
-
-        // Second item should now be selected
-        var second = items.Nth(1);
-        var secondClass = await second.EvaluateAsync<string>("el => el.className");
-        Assert.IsTrue(secondClass.Contains("tm-notion-slash__item--selected"),
-            "Second item should be selected after ArrowDown");
+        await Assertions.Expect(items.Nth(1)).ToHaveClassAsync(
+            new System.Text.RegularExpressions.Regex("tm-notion-slash__item--selected"),
+            new LocatorAssertionsToHaveClassOptions { Timeout = 5000 });
 
         await TakeScreenshotAsync(page, "slash_menu_arrow_down");
     }
@@ -187,25 +184,21 @@ public class NotionSlashMenuE2ETests : WasmTestBase
         var items = page.Locator(".tm-notion-slash__item");
         await items.First.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
 
-        // Navigate down twice
+        // Navigate down twice — poll for the selected class instead of fixed 200ms delays
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(200);
+        await Assertions.Expect(items.Nth(1)).ToHaveClassAsync(
+            new System.Text.RegularExpressions.Regex("tm-notion-slash__item--selected"),
+            new LocatorAssertionsToHaveClassOptions { Timeout = 5000 });
         await page.Keyboard.PressAsync("ArrowDown");
-        await page.WaitForTimeoutAsync(200);
-
-        var third = items.Nth(2);
-        var thirdClass = await third.EvaluateAsync<string>("el => el.className");
-        Assert.IsTrue(thirdClass.Contains("tm-notion-slash__item--selected"),
-            "Third item should be selected after two ArrowDown presses");
+        await Assertions.Expect(items.Nth(2)).ToHaveClassAsync(
+            new System.Text.RegularExpressions.Regex("tm-notion-slash__item--selected"),
+            new LocatorAssertionsToHaveClassOptions { Timeout = 5000 });
 
         // Navigate up once
         await page.Keyboard.PressAsync("ArrowUp");
-        await page.WaitForTimeoutAsync(200);
-
-        var second = items.Nth(1);
-        var secondClass = await second.EvaluateAsync<string>("el => el.className");
-        Assert.IsTrue(secondClass.Contains("tm-notion-slash__item--selected"),
-            "Second item should be selected after ArrowUp");
+        await Assertions.Expect(items.Nth(1)).ToHaveClassAsync(
+            new System.Text.RegularExpressions.Regex("tm-notion-slash__item--selected"),
+            new LocatorAssertionsToHaveClassOptions { Timeout = 5000 });
 
         await TakeScreenshotAsync(page, "slash_menu_arrow_up");
     }

@@ -447,15 +447,15 @@ public class NotionBlockEditingE2ETests : WasmTestBase
         await codeArea.FillAsync("const x = 42;");
         await page.WaitForTimeoutAsync(300);
 
-        // Click copy button
+        // Click copy button — poll for the copied class (clipboard write → state → render
+        // can exceed a fixed delay under load)
         var copyBtn = page.Locator(".tm-notion-code-block").Last
             .Locator(".tm-notion-code-block__copy");
         await copyBtn.ClickAsync();
-        await page.WaitForTimeoutAsync(700);
+        await Assertions.Expect(copyBtn).ToHaveClassAsync(
+            new System.Text.RegularExpressions.Regex("tm-notion-code-block__copy--copied"),
+            new LocatorAssertionsToHaveClassOptions { Timeout = 5000 });
 
-        var cls = await copyBtn.GetAttributeAsync("class") ?? "";
-        Assert.IsTrue(cls.Contains("tm-notion-code-block__copy--copied"),
-            $"Copy button should show copied state. Classes: {cls}");
         await TakeScreenshotAsync(page, "code_block_copy");
     }
 
