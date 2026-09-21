@@ -236,9 +236,10 @@ public class WasmTests : WasmTestBase
     {
         var page = await CreatePageAsync();
 
-        // Verify WASM script is loaded
+        // Verify WASM script is loaded (script elements are never "visible" — assert DOM attachment)
         await page.WaitForSelectorAsync("script[src*='blazor.webassembly.js']", new PageWaitForSelectorOptions
         {
+            State = WaitForSelectorState.Attached,
             Timeout = 10000
         });
 

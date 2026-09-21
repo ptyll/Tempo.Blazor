@@ -126,10 +126,12 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         await ClickCanvasBlockAsync(page, "canvas-history-text", await ReadBlockEndOffsetAsync(page, "canvas-history-text"));
         await FocusHiddenCanvasInputAsync(page);
         await page.Keyboard.TypeAsync($"{marker} ");
-        await WaitForA11yTextAsync(page, marker);
 
+        // Assert the transient autosave-pending state BEFORE the a11y poll — the poll can outlast
+        // the debounce window and flip the status to "Saving..." before the expect observes it.
         await Assertions.Expect(page.GetByTestId("document-pending-status"))
             .ToContainTextAsync("Autosave pending", new() { Timeout = 5_000 });
+        await WaitForA11yTextAsync(page, marker);
         await Assertions.Expect(page.GetByTestId("document-save-message"))
             .ToContainTextAsync("Autosaved", new() { Timeout = 12_000 });
         await WaitForDirtyStateAsync(page, expectedDirty: false);
