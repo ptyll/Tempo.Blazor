@@ -36,9 +36,19 @@ public static class DemoJsInterop
     }
 
     [JSInvokable("ClearDemoNotificationsAsync")]
-    public static Task ClearDemoNotificationsAsync()
+    public static async Task ClearDemoNotificationsAsync()
     {
-        _store?.ClearAll();
-        return Task.CompletedTask;
+        // The demo hosts register an HTTP-backed DemoNotionNotificationService (not the
+        // in-memory store), so "_store?.ClearAll()" was a silent no-op and stale
+        // notifications leaked across tests. Dispatch on the concrete service type.
+        switch (_notificationService)
+        {
+            case InMemoryNotificationStore mem:
+                mem.ClearAll();
+                break;
+            case DemoNotionNotificationService http:
+                await http.ClearAsync();
+                break;
+        }
     }
 }
