@@ -2,6 +2,7 @@
 @implements IDisposable
 
 <button @onclick="ThemeService.Toggle"
+        data-testid="theme-toggle"
         class="relative p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 group"
         title="@(ThemeService.IsDark ? "Switch to light mode" : "Switch to dark mode")"
         aria-label="@(ThemeService.IsDark ? "Switch to light mode" : "Switch to dark mode")">

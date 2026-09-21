@@ -4,6 +4,7 @@
 <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1" data-testid="language-switcher">
     <button @onclick='() => SetCultureAsync("en")'
             data-testid="language-switcher-en"
+            aria-pressed="@(IsActiveCulture("en") ? "true" : "false")"
             class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("en") 
                 ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
@@ -11,6 +12,7 @@
     </button>
     <button @onclick='() => SetCultureAsync("cs")'
             data-testid="language-switcher-cs"
+            aria-pressed="@(IsActiveCulture("cs") ? "true" : "false")"
             class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("cs") 
                 ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">

@@ -54,7 +54,7 @@
             <TmTimePicker Label="Start time"
                           Value="@_time"
                           ValueChanged="@(t => _time = t)" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_time?.ToString("HH:mm") ?? "—")</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_time?.ToString("HH:mm") ?? "—")</span></p>
         </div>
         
         <div class="showcase-card">
@@ -65,8 +65,8 @@
                           ShowSeconds="true"
                           MinTime="@(new TimeOnly(8, 0))"
                           MaxTime="@(new TimeOnly(18, 0))" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_timeSeconds?.ToString("HH:mm:ss") ?? "—")</span></p>
-            <p class="text-xs text-slate-400">Allowed: 08:00–18:00</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_timeSeconds?.ToString("HH:mm:ss") ?? "—")</span></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Allowed: 08:00–18:00</p>
         </div>
         
         <div class="showcase-card">
@@ -93,7 +93,7 @@
                                ValueChanged="@(v => _timeRange = v)"
                                ShowDuration="true"
                                ShowSwapButton="true" />
-            <p class="text-sm text-slate-500 mt-3">
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                 From: <span class="font-mono">@(_timeRange.Start?.ToString("HH:mm") ?? "—")</span> 
                 to <span class="font-mono">@(_timeRange.End?.ToString("HH:mm") ?? "—")</span>
             </p>
@@ -122,7 +122,7 @@
             <TmDatePicker Label="Select date"
                           Value="@_date"
                           ValueChanged="@(d => _date = d)" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_date?.ToString("dd.MM.yyyy") ?? "—")</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_date?.ToString("dd.MM.yyyy") ?? "—")</span></p>
         </div>
         
         <div class="showcase-card">
@@ -132,8 +132,8 @@
                           ValueChanged="@(d => _dateLimited = d)"
                           MinDate="@(DateOnly.FromDateTime(DateTime.Today))"
                           MaxDate="@(DateOnly.FromDateTime(DateTime.Today.AddDays(30)))" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_dateLimited?.ToString("dd.MM.yyyy") ?? "—")</span></p>
-            <p class="text-xs text-slate-400">Range: Today + 30 days</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_dateLimited?.ToString("dd.MM.yyyy") ?? "—")</span></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Range: Today + 30 days</p>
         </div>
         
         <div class="showcase-card">
@@ -159,7 +159,7 @@
                                Value="@_dateRange"
                                ValueChanged="@(v => _dateRange = v)"
                                ShowPresets="true" />
-            <p class="text-sm text-slate-500 mt-3">
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                 <span class="font-mono">@(_dateRange.Start?.ToString("dd.MM.yyyy") ?? "—")</span>
                 –
                 <span class="font-mono">@(_dateRange.End?.ToString("dd.MM.yyyy") ?? "—")</span>
@@ -173,7 +173,7 @@
                                ValueChanged="@(v => _dateRangeCustom = v)"
                                Presets="@_customPresets"
                                ShowPresets="true" />
-            <p class="text-sm text-slate-500 mt-3">
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                 <span class="font-mono">@(_dateRangeCustom.Start?.ToString("dd.MM.yyyy") ?? "—")</span>
                 –
                 <span class="font-mono">@(_dateRangeCustom.End?.ToString("dd.MM.yyyy") ?? "—")</span>
@@ -194,7 +194,7 @@
             <TmDateTimePicker Label="Event date & time"
                               Value="@_dateTime"
                               ValueChanged="@(dt => _dateTime = dt)" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_dateTime?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_dateTime?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span></p>
         </div>
         
         <div class="showcase-card">
@@ -205,7 +205,7 @@
                               ShowSeconds="true"
                               MinValue="@DateTime.Today"
                               MaxValue="@DateTime.Today.AddDays(90)" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_dateTimeSeconds?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_dateTimeSeconds?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")</span></p>
         </div>
         
         <div class="showcase-card">
@@ -231,7 +231,7 @@
                                    Value="@_dateTimeRange"
                                    ValueChanged="@(v => _dateTimeRange = v)"
                                    ShowSeconds="false" />
-            <p class="text-sm text-slate-500 mt-3">
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                 <span class="font-mono">@(_dateTimeRange.Start?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span>
                 –
                 <span class="font-mono">@(_dateTimeRange.End?.ToString("dd.MM.yyyy HH:mm") ?? "—")</span>
@@ -269,7 +269,7 @@
                             ValueChanged="v => _userValue = v" />
             @if (_userValue != 0)
             {
-                <p class="text-sm text-slate-500 mt-3">Selected user ID: <span class="font-medium">@_userValue</span></p>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Selected user ID: <span class="font-medium">@_userValue</span></p>
             }
         </div>
 
@@ -289,7 +289,7 @@
                             DataProvider="_userProvider" />
             @if (_userSelectedValues.Count > 0)
             {
-                <p class="text-sm text-slate-500 mt-3">Selected IDs: <span class="font-medium">@string.Join(", ", _userSelectedValues)</span></p>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Selected IDs: <span class="font-medium">@string.Join(", ", _userSelectedValues)</span></p>
             }
         </div>
     </div>
@@ -310,7 +310,7 @@
                          AllowCreate="true" />
             @if (_selectedTags.Any())
             {
-                <p class="text-sm text-slate-500 mt-3">
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                     Selected: <span class="font-medium">@string.Join(", ", _selectedTags.Select(t => t.Name))</span>
                 </p>
             }
@@ -325,13 +325,13 @@
             </TmDropdown>
             @if (_dropdownVal is not null)
             {
-                <p class="text-sm text-slate-500 mt-3">Selected: <span class="font-medium">@_dropdownVal</span></p>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Selected: <span class="font-medium">@_dropdownVal</span></p>
             }
         </div>
         
         <div class="showcase-card">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Filterable Dropdown (API)</h3>
-            <p class="text-sm text-slate-500 mb-3">Countries loaded from Demo.Api with server-side search.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">Countries loaded from Demo.Api with server-side search.</p>
             <TmFilterableDropdown TItem="DropdownItem<string>" TValue="string"
                                   DataProvider="@_countriesProvider"
                                   Value="@_selectedCountry"
@@ -343,7 +343,7 @@
                                   ShowClearButton="true" />
             @if (_selectedCountry is not null)
             {
-                <p class="text-sm text-slate-500 mt-3">
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">
                     Selected: <span class="font-medium">@_selectedCountry.Label</span> (@_selectedCountry.Value)
                 </p>
             }
@@ -352,7 +352,7 @@
         <div class="showcase-card">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">File Drop Zone</h3>
             <TmFileDropZone Multiple="true" Accept="image/*,.pdf" />
-            <p class="text-xs text-slate-400 mt-2">Accepts: images and PDFs</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Accepts: images and PDFs</p>
         </div>
     </div>
 </section>
@@ -419,14 +419,14 @@
             <TmColorPicker Value="@_colorValue"
                            ValueChanged="@((string? v) => _colorValue = v)"
                            Placeholder="Select color..." />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_colorValue ?? "—")</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_colorValue ?? "—")</span></p>
         </div>
 
         <div class="showcase-card">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Flat Color Picker</h3>
             <TmFlatColorPicker Value="@_flatColorValue"
                                ValueChanged="@((string? v) => _flatColorValue = v)" />
-            <p class="text-sm text-slate-500 mt-3">Value: <span class="font-mono">@(_flatColorValue ?? "—")</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-3">Value: <span class="font-mono">@(_flatColorValue ?? "—")</span></p>
         </div>
     </div>
 </section>

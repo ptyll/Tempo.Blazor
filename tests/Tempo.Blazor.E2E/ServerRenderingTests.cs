@@ -75,9 +75,7 @@ public class ServerRenderingTests : ServerTestBase
     public async Task FormInputs_Renders()
     {
         var page = await CreatePageAsync();
-        await NavigateToPageAsync(page, "Forms");
-
-        // Verify text input
+        await NavigateToPageAsync(page, "Form Inputs");
         var textInputs = page.Locator(".tm-input");
         await textInputs.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
@@ -132,14 +130,14 @@ public class ServerRenderingTests : ServerTestBase
         // Switch to Czech
         await SwitchLanguageAsync(page, "cs");
 
-        // Verify the page contains Czech text (common words)
-        var pageContent = await page.ContentAsync();
-        Assert.IsTrue(
-            pageContent.Contains("Tlačítka") ||
-            pageContent.Contains("Komponenty") ||
-            pageContent.Contains("Nastavení"),
-            "Page should contain Czech text after switching language"
-        );
+        // The Server host applies tm-demo-culture via middleware before prerendering, so the
+        // switch is observable in the server-rendered document: <html lang> carries the Czech UI
+        // culture and the CS switcher button renders as the pressed/active option. (Demo chrome
+        // strings are not localized — checking localized prose would never see a difference.)
+        var lang = await page.EvaluateAsync<string?>("() => document.documentElement.lang");
+        Assert.AreEqual("cs", lang, "Server host should render <html lang=\"cs\"> after switching to Czech");
+        await Assertions.Expect(page.Locator("[data-testid='language-switcher-cs']"))
+            .ToHaveAttributeAsync("aria-pressed", "true", new() { Timeout = 10_000 });
 
         await TakeScreenshotAsync(page, "localization_czech");
     }
@@ -151,7 +149,7 @@ public class ServerRenderingTests : ServerTestBase
         var page = await CreatePageAsync();
 
         // Navigate through multiple pages
-        var pages = new[] { "Buttons", "Forms", "Data Display", "Feedback", "Pickers" };
+        var pages = new[] { "Buttons", "Form Inputs", "Data Display", "Feedback", "Pickers" };
 
         foreach (var pageName in pages)
         {
