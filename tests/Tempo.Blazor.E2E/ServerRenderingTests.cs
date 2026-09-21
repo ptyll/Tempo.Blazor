@@ -81,8 +81,8 @@ public class ServerRenderingTests : ServerTestBase
         var textInputs = page.Locator(".tm-input");
         await textInputs.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // Verify checkbox
-        var checkboxes = page.Locator(".tm-checkbox");
+        // Verify checkbox (TmCheckbox renders tm-checkbox-wrapper / tm-checkbox-input)
+        var checkboxes = page.Locator(".tm-checkbox, .tm-checkbox-wrapper, .tm-checkbox-input, .tm-checkbox-custom");
         var checkboxCount = await checkboxes.CountAsync();
         Assert.IsTrue(checkboxCount > 0, "Expected at least one checkbox");
 
