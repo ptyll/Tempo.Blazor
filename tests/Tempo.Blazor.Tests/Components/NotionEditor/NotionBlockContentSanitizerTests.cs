@@ -249,4 +249,129 @@ public sealed class NotionBlockContentSanitizerTests
         twice.Should().Be(once);
         once.Should().Contain("color: rgb(1, 2, 3)");
     }
+
+    // ── First-party inline chips (must survive round-trip) ─────────────────
+    //
+    // The editor writes tokens, comment-text mentions and smart-link chips into block content.
+    // If the sanitizer drops their classes/data-* the chips collapse into bare text on the next
+    // render — which is exactly what the seeded E2E page surfaced.
+
+    [Fact]
+    public void SanitizeBlockContent_KeepsTokenChip()
+    {
+        // Exact markup produced by SeedE2EMentionTokenPage.
+        const string html = """Invoice deadline <span contenteditable="false" class="tm-notion-token tm-notion-token--unknown" data-key="unknown.invoice_deadline">{{unknown.invoice_deadline}}</span>""";
+
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().Contain("tm-notion-token");
+        sanitized.Should().Contain("tm-notion-token--unknown");
+        sanitized.Should().Contain("data-key=\"unknown.invoice_deadline\"");
+        sanitized.Should().Contain("contenteditable=\"false\"");
+        sanitized.Should().Contain("{{unknown.invoice_deadline}}");
+    }
+
+    [Fact]
+    public void SanitizeBlockContent_KeepsJsTokenChipChildren()
+    {
+        // Exact structure _createTokenChip builds in notion-editor.js.
+        const string html = """<span contenteditable="false" class="tm-notion-token tm-notion-token--unknown" data-key="unknown.invoice_deadline"><span class="tm-notion-token__text">{{ unknown.invoice_deadline }}</span><span class="tm-notion-token__delete" aria-label="Remove token" role="button">×</span></span>""";
+
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().Contain("tm-notion-token__text");
+        sanitized.Should().Contain("tm-notion-token__delete");
+        sanitized.Should().Contain("role=\"button\"");
+        sanitized.Should().Contain("aria-label=\"Remove token\"");
+        sanitized.Should().Contain("data-key=\"unknown.invoice_deadline\"");
+    }
+
+    [Fact]
+    public void SanitizeBlockContent_KeepsCommentTextMention()
+    {
+        // Exact markup produced by MentionParser.ReplaceMentions for comment text.
+        const string html = """cc <span class="tm-mention" data-user-id="u42">@bob</span>""";
+
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().Contain("tm-mention");
+        sanitized.Should().Contain("data-user-id=\"u42\"");
+        sanitized.Should().Contain("@bob");
+    }
+
+    [Fact]
+    public void SanitizeBlockContent_KeepsSmartLinkChip()
+    {
+        // Exact markup notion-editor.js writes for a pasted link (span-favicon variant).
+        const string html = """<a class="tm-notion-smart-link" href="https://example.test/spec" target="_blank" rel="noopener noreferrer" contenteditable="false"><span class="tm-notion-smart-link__favicon" aria-hidden="true"></span><span class="tm-notion-smart-link__title">Spec</span><span class="tm-notion-smart-link__domain">example.test</span></a>""";
+
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().Contain("tm-notion-smart-link\"");
+        sanitized.Should().Contain("tm-notion-smart-link__favicon");
+        sanitized.Should().Contain("tm-notion-smart-link__title");
+        sanitized.Should().Contain("tm-notion-smart-link__domain");
+        sanitized.Should().Contain("href=\"https://example.test/spec\"");
+        sanitized.Should().Contain("target=\"_blank\"");
+        sanitized.Should().Contain("rel=\"noopener noreferrer\"");
+        sanitized.Should().Contain("contenteditable=\"false\"");
+    }
+
+    [Fact]
+    public void SanitizeBlockContent_KeepsCommentHighlightStateModifier()
+    {
+        const string html = """<mark class="tm-notion-comment-highlight tm-notion-comment-highlight--active" data-comment-id="c1">x</mark>""";
+
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().Contain("tm-notion-comment-highlight");
+        sanitized.Should().Contain("tm-notion-comment-highlight--active");
+    }
+
+    [Fact]
+    public void SanitizeBlockContent_KeepsSmartLinkFaviconImage()
+    {
+        // Exact markup notion-editor.js writes when the resolver returns a favicon.
+        const string html = """<a class="tm-notion-smart-link" href="https://example.test" target="_blank" contenteditable="false"><img class="tm-notion-smart-link__favicon" src="https://example.test/favicon.ico" alt="" loading="lazy"><span class="tm-notion-smart-link__title">Spec</span></a>""";
+
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().Contain("tm-notion-smart-link__favicon");
+        sanitized.Should().Contain("src=\"https://example.test/favicon.ico\"");
+        sanitized.Should().Contain("loading=\"lazy\"");
+    }
+
+    [Theory]
+    [InlineData("""<img src="javascript:alert(1)" class="tm-notion-smart-link__favicon">""")] // scriptable src
+    [InlineData("""<img src="https://example.test/x.png" class="attacker">""")]              // foreign class
+    [InlineData("""<img src="https://example.test/x.png">""")]                                // no class at all
+    public void SanitizeBlockContent_DropsImageThatIsNotFaviconChrome(string html)
+    {
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(html);
+
+        sanitized.Should().NotContain("<img");
+    }
+
+    // ── The chrome extensions must not open a new hole ──────────────────────
+
+    [Fact]
+    public void SanitizeBlockContent_DropsUnsafeAnchorTarget()
+    {
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(
+            """<a class="tm-notion-smart-link" href="https://example.test" target="evil">x</a>""");
+
+        sanitized.Should().NotContain("target=");
+        sanitized.Should().Contain("tm-notion-smart-link");
+    }
+
+    [Fact]
+    public void SanitizeBlockContent_StillStripsHandlersOnChips()
+    {
+        var sanitized = NotionInlineHtmlSanitizer.SanitizeBlockContent(
+            """<span class="tm-notion-token" data-key="k" onclick="steal()">{{k}}</span>""");
+
+        sanitized.Should().NotContainEquivalentOf("onclick");
+        sanitized.Should().Contain("tm-notion-token");
+        sanitized.Should().Contain("data-key=\"k\"");
+    }
 }
