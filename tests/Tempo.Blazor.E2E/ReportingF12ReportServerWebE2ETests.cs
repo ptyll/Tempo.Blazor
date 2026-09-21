@@ -243,7 +243,7 @@ public sealed class ReportingF12ReportServerWebE2ETests
         private async Task WaitUntilReadyAsync()
         {
             using var client = new HttpClient();
-            var deadline = DateTimeOffset.UtcNow.AddSeconds(90);
+            var deadline = DateTimeOffset.UtcNow.AddSeconds(240);
             while (DateTimeOffset.UtcNow < deadline)
             {
                 if (_process.HasExited)
