@@ -44,6 +44,11 @@ public sealed class NotionRestrictionsE2ETests : NotionE2ETestBase
             await bob.Locator(".tm-notion-page--readonly").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
             Assert.AreEqual(1, await bob.Locator(".tm-notion-restricted-badge").CountAsync(), "Bob should see the restricted indicator.");
 
+            // OpenNotionEditorAsync resets the demo store, which reverts the seeded page
+            // titles (restrictions themselves persist). Re-apply the seed so the lazily
+            // loaded child page keeps its CF20 title before the tree is expanded.
+            await SeedRestrictionsPageAsync();
+
             var readOnlyCapture = await CaptureRestrictionBaselineAsync(bob, "cf20-read-only-state", bob.Locator(".tm-notion-editor").First);
             TestContext.WriteLine($"UX CF20 read-only baseline captured: {readOnlyCapture.FullPagePath} / {readOnlyCapture.RegionPath}");
 
