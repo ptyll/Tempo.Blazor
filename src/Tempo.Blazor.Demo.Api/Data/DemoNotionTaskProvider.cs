@@ -15,11 +15,13 @@ public sealed partial class DemoNotionTaskProvider : TmWorkItemProviderBase
 {
     private readonly MockNotionDataStore _pageStore;
     private readonly MockNotionBlockStore _blockStore;
+    private readonly DemoNotionAggregateStore _aggregateStore;
 
-    public DemoNotionTaskProvider(MockNotionDataStore pageStore, MockNotionBlockStore blockStore)
+    public DemoNotionTaskProvider(MockNotionDataStore pageStore, MockNotionBlockStore blockStore, DemoNotionAggregateStore aggregateStore)
     {
         _pageStore = pageStore;
         _blockStore = blockStore;
+        _aggregateStore = aggregateStore;
     }
 
     public override string SourceKey => "notion";
@@ -71,8 +73,18 @@ public sealed partial class DemoNotionTaskProvider : TmWorkItemProviderBase
         });
     }
 
-    public override Task SetCompletedAsync(string id, bool completed, CancellationToken cancellationToken = default)
-        => _blockStore.SetTodoCompletedAsync(id, completed, cancellationToken);
+    public override async Task SetCompletedAsync(string id, bool completed, CancellationToken cancellationToken = default)
+    {
+        await _blockStore.SetTodoCompletedAsync(id, completed, cancellationToken);
+
+        // Completion writes mutate the block store directly, so drop the cached
+        // aggregate snapshot for the owning page — otherwise the next page load
+        // would serve the stale pre-toggle state and the todo renders unchecked.
+        if (Guid.TryParse(id, out var blockId) && _blockStore.GetBlock(blockId) is { } block)
+        {
+            _aggregateStore.InvalidatePageSnapshot(block.PageId);
+        }
+    }
 
     private static TmWorkItem MapTask(PageBlock block, ITodoBlockContent todo, IReadOnlyDictionary<string, string> pageTitles)
     {

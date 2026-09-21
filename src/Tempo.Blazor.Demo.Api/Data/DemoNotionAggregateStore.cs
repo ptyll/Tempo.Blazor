@@ -190,6 +190,20 @@ public sealed class DemoNotionAggregateStore(
         }
     }
 
+    /// <summary>
+    /// Drops the cached snapshot for a page so the next load rebuilds it from the
+    /// block store. Required when a write path mutates <see cref="MockNotionBlockStore"/>
+    /// directly (e.g., task completion), bypassing <see cref="Save"/> — otherwise the
+    /// stale cached snapshot keeps serving the pre-mutation state.
+    /// </summary>
+    public void InvalidatePageSnapshot(Guid pageId)
+    {
+        lock (_gate)
+        {
+            _snapshots.Remove(pageId);
+        }
+    }
+
     public bool AdvanceConcurrencyToken(Guid pageId)
     {
         lock (_gate)
