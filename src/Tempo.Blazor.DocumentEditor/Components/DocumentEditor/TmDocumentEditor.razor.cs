@@ -727,7 +727,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     // through track changes and the toggle is locked on.
     private bool RequiresTrackedEditing => EffectivePermissions.RequiresTrackedEditing;
 
-    private bool EffectiveTrackChangesEnabled => _trackChangesEnabled || RequiresTrackedEditing;
+    // Toolbar pressed state mirrors what the canvas engine actually does: suggestion mode forces
+    // tracking on (CanvasEngineTracksChanges), so the locked toggle reads on rather than showing a
+    // misleading "off" while the engine records every edit as a suggestion (B1).
+    private bool EffectiveTrackChangesEnabled => _trackChangesEnabled || RequiresTrackedEditing || IsCanvasSuggestionMode;
 
     // B4: the canvas engine has no separate provider-backed suggestion mode; its native "propose + review an
     // edit" mechanism IS track-changes (revisions: inline overlay + accept/reject, built in B3). So when the
@@ -6583,9 +6586,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
             return;
         }
 
-        if (RequiresTrackedEditing)
+        if (RequiresTrackedEditing || IsCanvasSuggestionMode)
         {
-            // SuggestOnly: tracked editing is mandatory — the toggle is locked on.
+            // SuggestOnly / canvas suggestion mode: tracked editing is mandatory — the toggle is
+            // locked on. In suggestion mode every edit IS a suggestion (an engine revision), so
+            // turning tracking off here would silently stop recording them (B1).
             return;
         }
 
@@ -6600,7 +6605,9 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
 
         if (UsingCanvasEngine && _canvasHost is not null)
         {
-            await _canvasHost.SetTrackChangesEnabledAsync(_trackChangesEnabled);
+            // Push the same expression the engine booted with (B4/B1): suggestion mode and
+            // SuggestOnly keep tracking on regardless of the user-toggleable bit.
+            await _canvasHost.SetTrackChangesEnabledAsync(CanvasEngineTracksChanges);
         }
 
         await InvokeAsync(StateHasChanged);

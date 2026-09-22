@@ -208,7 +208,7 @@
                                      OnToggleTrackChanges="ToggleTrackChanges"
                                      ReviewDisplayModeChanged="SetReviewDisplayModeAsync"
                                      CanComment="@CanUseComments"
-                                     CanTrackChanges="@(CanEditDocument && !IsVersionPreview && !IsTemplatePreview && IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges))"
+                                     CanTrackChanges="@(CanEditDocument && !IsVersionPreview && !IsTemplatePreview && !IsCanvasSuggestionMode && IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges))"
                                      OnAddComment="BeginCommentFromToolbarAsync"
                                      OnOpenComments="OpenCommentsPanelAsync"
                                      OnOpenRevisions="OpenRevisionsPanelAsync"

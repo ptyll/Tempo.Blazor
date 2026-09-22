@@ -2579,6 +2579,44 @@ public class TmDocumentEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task SuggestionMode_TrackChangesToggleIsLockedOn()
+    {
+        // B1 regression guard: in canvas suggestion mode every edit IS a suggestion, so tracked
+        // editing is mandatory — same locked-on contract as SuggestOnly. The toolbar toggle must be
+        // disabled and read as pressed, and no interaction path may send setTrackChangesEnabled(false)
+        // to the engine (that used to stop revision recording while the UI implied suggestions were
+        // still captured — silent data loss).
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var module = SetupDocumentCanvasModule();
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.SuggestionProvider, new InMemoryDocumentSuggestionProvider())
+                      .Add(p => p.SuggestionsEnabled, true));
+
+        await MarkCanvasReadyAsync(cut);
+
+        cut.Find("[data-testid='document-ribbon-tab-review']").Click();
+        var toggle = cut.Find("[data-testid='document-track-changes']");
+        toggle.GetAttribute("aria-pressed").Should().Be("true",
+            "suggestion mode is backed by the engine's track-changes — the toggle must read on");
+        toggle.HasAttribute("disabled").Should().BeTrue(
+            "the toggle is locked in suggestion mode — turning tracking off would silently stop recording suggestions");
+
+        // Even a dispatched click (toolbar guard, command registry) must not flip the engine flag.
+        toggle.Click();
+        toggle.Click();
+
+        module.Invocations.Should().NotContain(invocation =>
+                invocation.Identifier == "setTrackChangesEnabled"
+                && invocation.Arguments.Count >= 2
+                && Equals(invocation.Arguments[1], false),
+            "the engine must keep recording every edit as a reviewable suggestion");
+    }
+
+    [Fact]
     public async Task Collaboration_RemoteRevisionUpdateRefreshesPanelWithoutReplacingCanvasHost()
     {
         var provider = new InMemoryDocumentEditorProvider();

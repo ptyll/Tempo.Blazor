@@ -823,6 +823,8 @@ public partial class TmDocumentEditor
             CanTrackChanges = CanEditDocument
                 && !IsVersionPreview
                 && !IsTemplatePreview
+                // Canvas suggestion mode locks tracking on — the toggle has no off state to offer.
+                && !IsCanvasSuggestionMode
                 && IsFeatureEnabled(DocumentEditorFeatureNames.TrackChanges),
             CanAddComment = CanStartComment,
             CanCompareDocuments = CanCompareDocuments,
