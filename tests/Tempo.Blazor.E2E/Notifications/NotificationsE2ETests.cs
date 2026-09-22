@@ -62,6 +62,15 @@ public class NotificationsE2ETests : WasmTestBase
     [TestCategory("WASM")]
     public async Task Notifications_WebPush_SubscribeAndTestSend()
     {
+        // Clear stale subscriptions first: the API's in-memory push store outlives
+        // browser contexts, so subscriptions from earlier runs would otherwise keep
+        // inflating the attempted counter the assertion below pins to exactly 1.
+        using (var http = new HttpClient())
+        {
+            try { await http.PostAsync("https://localhost:5100/api/notifications/push/reset", null); }
+            catch { /* API may not be running; ignore */ }
+        }
+
         var page = await OpenAsync(grantNotifications: true);
 
         await page.GetByTestId("notif-subscribe").ClickAsync();

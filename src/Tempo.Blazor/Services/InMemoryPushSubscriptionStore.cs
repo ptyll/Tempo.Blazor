@@ -40,4 +40,7 @@ public sealed class InMemoryPushSubscriptionStore : IPushSubscriptionStore
 
     /// <summary>Total number of stored subscriptions (test/diagnostic helper).</summary>
     public int Count => _byEndpoint.Count;
+
+    /// <summary>Removes every stored subscription (test/diagnostic helper).</summary>
+    public void Clear() => _byEndpoint.Clear();
 }

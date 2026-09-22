@@ -42,6 +42,18 @@ public static class NotificationEndpoints
             return Results.Ok(new { unsubscribed = true });
         }).WithName("UnsubscribeWebPush");
 
+        // POST clear all stored subscriptions — E2E test isolation. The in-memory store
+        // outlives browser contexts, so subscriptions from earlier suite runs would
+        // otherwise keep inflating the attempted/succeeded counters of /push/test.
+        group.MapPost("/push/reset", (IPushSubscriptionStore store) =>
+        {
+            if (store is Tempo.Blazor.Services.InMemoryPushSubscriptionStore mem)
+            {
+                mem.Clear();
+            }
+            return Results.Ok(new { reset = true });
+        }).WithName("ResetWebPushSubscriptions");
+
         // POST send a test push to a user's subscriptions (verifies the server send path).
         group.MapPost("/push/test", async (IPushSubscriptionStore store, IWebPushSender sender, string userId, CancellationToken ct) =>
         {
