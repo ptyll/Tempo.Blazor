@@ -9,10 +9,16 @@
    The UA popover defaults (position:fixed; inset:0; margin:auto; border; padding) are reset:
    overlay.js positions the panel with top/left in viewport coordinates.
 
-   display:none is kept on the CLOSED state via :not(--open) instead of relying on the UA
-   :popover-open rules so the fallback path (browsers without the Popover API) hides the element
-   too — there [popover] is just an unknown attribute. The script adds --open in BOTH paths. */
-.tm-overlay-panel {
+   N196 (code review 2026-09-22): this file is imported AFTER every consumer stylesheet
+   (tempo-blazor.css:124), so a plain .tm-overlay-panel rule sat on the SAME element as the
+   consumer's own Class at the SAME (0,1,0) specificity and won by source order — every migrated
+   dropdown, calendar and menu rendered transparent, borderless and unpadded, and the compound
+   --open rule's display:block (0,2,0) overrode the consumers that lay their panel out with
+   display:flex. The reset therefore lives inside :where() — zero specificity — so ANY consumer
+   class always has the last word, which is exactly what a reset is for. Consumers never declare
+   position/inset/z-index themselves, so the positioning contract stays intact; if one ever does,
+   it now wins on purpose. */
+:where(.tm-overlay-panel) {
     position: fixed;
     inset: auto;
     top: 0;
@@ -30,10 +36,16 @@
     z-index: var(--tm-z-overlay, 1060);
 }
 
+/* display:none on the CLOSED state deliberately stays at full (0,2,0) specificity: it must hold
+   even when a consumer class declares its own display, or the fallback path (browsers without
+   the Popover API, where [popover] is just an unknown attribute) would leave a closed panel
+   visible. The script adds --open in BOTH paths. */
 .tm-overlay-panel:not(.tm-overlay-panel--open) {
     display: none;
 }
 
-.tm-overlay-panel.tm-overlay-panel--open {
+/* Same :where() reasoning as the reset: --open's display:block must lose to a consumer's own
+   display — multiselect/notification-bell/date-range/tag-picker all declare display:flex. */
+:where(.tm-overlay-panel.tm-overlay-panel--open) {
     display: block;
 }

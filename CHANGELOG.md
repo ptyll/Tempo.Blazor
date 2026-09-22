@@ -313,6 +313,36 @@ which is exactly the red
   overflow escape, inner-scroll tracking, the edge flip, painting above a modal, and a date
   picker flipping inside a scrolling modal body and tracking its trigger while it scrolls.
 
+- **Overlay cascade, lifecycle and dismissal hardening (Fáze 20B review — N196–N198,
+  N163–N165, N167–N169, N172).** The `_overlay-panel.css` reset silently owned every migrated
+  panel: imported last at the same specificity as the consumers' own classes, it painted over
+  their backgrounds, borders and padding, and its `--open` `display:block` beat the
+  `display:flex` layouts (N196). The reset now lives inside `:where()` — zero specificity, so a
+  consumer declaration always wins — while the closed-state `display:none` deliberately stays at
+  full specificity to keep fallback panels hidden, and `OverlayPanelComputedStyleRegressionTests`
+  resolves the shipped bundle through `CssCascade` to prove it. `TmMultiColumnComboBox`'s
+  dropdown root is rendered by `TmOverlayPanel` outside the component's CSS-isolation scope, so
+  its scoped rule never matched (N197) — that one rule moved to the new global
+  `_multi-column-combobox.css` while the in-scope child rules stayed scoped. Lifecycle races are
+  serialized behind a per-instance `SemaphoreSlim`: overlapping `OnAfterRenderAsync` runs can no
+  longer both observe the panel closed and double-`open()`, a render resuming after disposal
+  cannot import and leak a module, and `DisposeAsync` releases the module in a `finally` even
+  when `close()` throws a non-disconnect `JSException` (N198, N172). In `overlay.js`, `open()`
+  on an orphaned tracked entry now re-observes the *new* panel element and reinserts the key at
+  the top of the stacking order instead of watching a dead node (N164); a vetoed dismissal —
+  `NotifyDismissedAsync` answering `false` because a controlled consumer kept `IsOpen` — re-arms
+  `entry.dismissed` so the next Escape is not silently swallowed, with the same re-arm on
+  callback failure (N167); and the Escape-keyup suppressor that shields `TmModal`/`TmDialog`
+  gained a one-second timeout, so a keyup the browser swallows natively can no longer eat the
+  next unrelated Escape (N163). `TmEntityPicker` and `TmQueryInput` anchor wrappers carry
+  `tabindex="-1"` — programmatically focusable for dismissal focus-restore without entering the
+  tab order (N168) — and the dead wrapper-level Escape handlers in `TmPopover`, `TmContextMenu`
+  and `TmFilterableDropdown`'s trigger were deleted: `overlay.js` consumes Escape at window
+  capture, so those branches could never fire (N169). E2E now covers the no-Popover-API fallback
+  (`delete HTMLElement.prototype.showPopover` before page scripts — fixed positioning, the
+  transformed-modal containing-block walk, Escape) and the suppressor timeout end to end (N165,
+  N163).
+
 ### Changed — token defaults
 
 - **`--tm-color-danger` moves one step darker in the light theme** (`#ef4444` → `#dc2626`,

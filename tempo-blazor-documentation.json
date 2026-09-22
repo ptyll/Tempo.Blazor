@@ -22093,6 +22093,12 @@
           "description": "Total number of stored subscriptions (test/diagnostic helper)."
         },
         {
+          "name": "Clear",
+          "kind": "Method",
+          "type": "void",
+          "description": "Removes every stored subscription (test/diagnostic helper)."
+        },
+        {
           "name": "GetForUserAsync",
           "kind": "Method",
           "type": "Task<IReadOnlyList<TmPushSubscription>>",
@@ -24336,6 +24342,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_multi-column-combobox.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_multi-view-list.css",
       "kind": "Css"
     },
@@ -24681,6 +24691,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/workflow-designer.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/overlay-lifecycle.test.mjs",
       "kind": "JavaScript"
     },
     {

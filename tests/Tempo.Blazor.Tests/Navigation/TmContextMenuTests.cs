@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Navigation;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Navigation;
@@ -168,7 +169,7 @@ public class TmContextMenuTests : LocalizationTestBase
     // ── Escape closes ──────────────────────────────────────
 
     [Fact]
-    public void ContextMenu_Escape_ClosesMenu()
+    public async Task ContextMenu_Escape_ClosesMenu()
     {
         var cut = Render<TmContextMenu>(p => p
             .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Menu</button>")))
@@ -178,7 +179,11 @@ public class TmContextMenuTests : LocalizationTestBase
         cut.Find(".tm-context-menu__trigger").Click();
         cut.Find("[role='menu']").Should().NotBeNull();
 
-        cut.Find(".tm-context-menu-wrapper").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        // overlay.js consumes Escape in the window capture phase in a real browser — the
+        // component's dismissal path is this JSInvokable callback, not a keydown on the wrapper
+        // (N169 removed the dead HandleKeyDown branch).
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll("[role='menu']").Should().BeEmpty();
     }

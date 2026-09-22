@@ -279,6 +279,7 @@ function suppressEscapeKeyUp() {
     const disarm = () => {
         window.removeEventListener('keyup', onKeyUp, { capture: true });
         window.removeEventListener('blur', disarm);
+        clearTimeout(timeoutId);
         escapeKeyUpSuppressor = null;
     };
     const onKeyUp = e => {
@@ -288,6 +289,12 @@ function suppressEscapeKeyUp() {
         disarm();
         e.stopImmediatePropagation();
     };
+    // A keyup the browser swallows natively (fullscreen/PiP exit consuming the physical Escape
+    // without ever firing window blur) must not leave this armed forever — it would eat the
+    // NEXT, unrelated Escape's keyup. 1000ms comfortably covers a real press-then-release of the
+    // SAME key (the only pair this suppressor exists to eat) without surviving to the next one
+    // (N163, review 2026-09-22).
+    const timeoutId = setTimeout(disarm, 1000);
     escapeKeyUpSuppressor = onKeyUp;
     window.addEventListener('keyup', onKeyUp, { capture: true });
     window.addEventListener('blur', disarm, { once: true });
@@ -320,7 +327,8 @@ function maybeRestoreAnchorFocus(entry, target) {
     }, 0);
 }
 
-function dismiss(entry, reason) {
+// Exported so the lifecycle unit tests can drive the veto path directly.
+export function dismiss(entry, reason) {
     if (entry.dismissed) {
         return false;
     }
@@ -334,8 +342,16 @@ function dismiss(entry, reason) {
         }
     }
     // .NET flips IsOpen, which re-renders and runs close(key) — the panel element is hidden there,
-    // so a slow or swallowed callback can never leave a ghost panel tracked forever.
+    // so a slow or swallowed callback can never leave a ghost panel tracked forever. The callback
+    // answers whether the dismissal was ACCEPTED: a consumer that vetoes it (controlled IsOpen
+    // stays true) resolves false and the entry must be re-armed, or every later Escape is
+    // silently dropped by the dismissed===true short-circuit above (N167, review 2026-09-22).
     Promise.resolve(entry.dotNetRef.invokeMethodAsync('NotifyDismissedAsync', reason))
+        .then(accepted => {
+            if (!accepted) {
+                entry.dismissed = false;
+            }
+        })
         .catch(() => { entry.dismissed = false; });
     return true;
 }
@@ -483,11 +499,23 @@ export function open(key, panel, anchor, dotNetRef, options) {
     }
     const existing = tracked.get(key);
     if (existing) {
+        // An orphaned entry being reopened carries a NEW panel element (Blazor's @if deleted the
+        // old div and rendered a fresh one): stop observing the dead node and start observing the
+        // live one, or size changes never re-place the panel and the dead node is held forever
+        // (N164, review 2026-09-22).
+        if (existing.panel !== panel) {
+            resizeObserver?.unobserve(existing.panel);
+            resizeObserver?.observe(panel);
+        }
         existing.panel = panel;
         existing.anchor = anchor;
         existing.dotNetRef = dotNetRef;
         existing.options = normalizeOptions(options);
         existing.dismissed = false;
+        // Restore stacking order: a reopened entry counts as freshly opened, not stuck wherever
+        // it was first inserted — onKeyDown walks [...tracked.values()].reverse() (N164).
+        tracked.delete(key);
+        tracked.set(key, existing);
         showPanel(existing);
         place(existing);
         return;

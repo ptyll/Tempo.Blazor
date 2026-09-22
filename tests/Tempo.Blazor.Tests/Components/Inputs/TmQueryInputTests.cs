@@ -258,4 +258,18 @@ public class TmQueryInputTests : LocalizationTestBase
         calls.Should().Be(0);
         cut.FindAll("[role='listbox']").Should().BeEmpty();
     }
+
+    /// <summary>
+    /// N168: the overlay Anchor is the <c>.tm-query-input__field</c> wrapper — overlay.js calls
+    /// <c>.focus()</c> on it for Escape/outside dismissal. Without tabindex a plain div swallows
+    /// that as a no-op and focus falls to <c>&lt;body&gt;</c>. <c>-1</c> makes it
+    /// script-focusable without adding a Tab stop.
+    /// </summary>
+    [Fact]
+    public void TmQueryInput_AnchorWrapper_IsProgrammaticallyFocusable()
+    {
+        var cut = Render<TmQueryInput>();
+
+        cut.Find(".tm-query-input__field").GetAttribute("tabindex").Should().Be("-1");
+    }
 }

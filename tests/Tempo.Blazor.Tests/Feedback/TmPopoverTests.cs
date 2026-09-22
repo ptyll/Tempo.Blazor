@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Feedback;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Feedback;
@@ -55,7 +56,7 @@ public class TmPopoverTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Popover_EscapeCloses()
+    public async Task Popover_EscapeCloses()
     {
         var cut = Render<TmPopover>(p => p
             .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
@@ -64,7 +65,13 @@ public class TmPopoverTests : LocalizationTestBase
         cut.Find(".tm-popover__trigger").Click();
         cut.FindAll(".tm-popover__body").Should().HaveCount(1);
 
-        cut.Find(".tm-popover").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        // overlay.js consumes Escape in the window capture phase in a real browser — the
+        // component's own dismissal path is this JSInvokable callback, not a keydown on the
+        // wrapper (N169 removed the dead HandleKeyDown branch — CloseOnEscape is always true,
+        // so it could never fire).
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+
         cut.FindAll(".tm-popover__body").Should().BeEmpty();
     }
 

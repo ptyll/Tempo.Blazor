@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Overlay
 
-<div class="tm-popover tm-popover--@PositionCss @Class" @attributes="AdditionalAttributes" @onkeydown="HandleKeyDown">
+<div class="tm-popover tm-popover--@PositionCss @Class" @attributes="AdditionalAttributes">
     <div class="tm-popover__trigger"
          @ref="_triggerRef"
          role="button"
@@ -118,11 +118,7 @@
         }
     }
 
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape" && IsVisible)
-        {
-            await Close();
-        }
-    }
+    @* No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
+       (CloseOnEscape is always true here) and routes it through NotifyDismissedAsync — a
+       bubbling handler on this div could never run in a real browser (N169). *@
 }

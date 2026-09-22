@@ -11,7 +11,11 @@
         <label class="tm-query-input__label" for="@_inputId">@Label</label>
     }
 
-    <div class="tm-query-input__field" @ref="_fieldRef">
+    @* tabindex="-1": overlay.js calls .focus() on the Anchor for Escape/outside dismissal
+       (N168) — a plain div would swallow that no-op. The wrapper stays the anchor (its full
+       width drives MatchAnchorWidth), and -1 makes it script-focusable without adding a Tab
+       stop. *@
+    <div class="tm-query-input__field" @ref="_fieldRef" tabindex="-1">
 
         @* Error-underline overlay: a monospace-aligned mirror of the text with transparent glyphs,
            so only the wavy underline on error ranges shows behind the real input text. No JS measurement. *@

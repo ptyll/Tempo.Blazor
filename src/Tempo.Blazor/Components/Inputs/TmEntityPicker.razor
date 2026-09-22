@@ -8,7 +8,11 @@
         <label class="tm-input-label">@Label</label>
     }
 
-    <div @ref="_rootRef" class="tm-entity-picker @(Disabled ? "tm-entity-picker--disabled" : "") @(MultiSelect ? "tm-entity-picker--multi" : "")">
+    @* tabindex="-1": overlay.js calls .focus() on the Anchor for Escape/outside dismissal
+       (N168) — a plain div would swallow that no-op. The wrapper stays the anchor (its full
+       width drives MatchAnchorWidth), and -1 makes it script-focusable without adding a Tab
+       stop. *@
+    <div @ref="_rootRef" tabindex="-1" class="tm-entity-picker @(Disabled ? "tm-entity-picker--disabled" : "") @(MultiSelect ? "tm-entity-picker--multi" : "")">
         @if (MultiSelect && SelectedValues.Count > 0)
         {
             <div class="tm-entity-picker__chips">

@@ -220,9 +220,10 @@ public class ProvenanceComparisonTests
             "src/Tempo.Blazor/Tempo.Blazor.csproj declares three Pack=false globs — *.test.mjs, "
             + "__tests__ and *.md under wwwroot/js. 'Read and empty' must not look like "
             + "'never read'");
-        // js/__tests__/overlay.test.mjs — the overlay.js Node tests are exactly what the
-        // __tests__ Pack=false glob was declared for: they ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(1);
+        // js/__tests__/overlay.test.mjs + overlay-lifecycle.test.mjs — the overlay.js Node tests
+        // are exactly what the __tests__ Pack=false glob was declared for: they ship in the repo,
+        // never in the nupkg.
+        denominator.PackExcludedFiles.Should().Be(2);
     }
 
     /// <summary>

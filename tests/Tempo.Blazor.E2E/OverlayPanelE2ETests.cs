@@ -355,6 +355,144 @@ public class OverlayPanelE2ETests : WasmTestBase
     }
 
     /// <summary>
+    /// N163: the Escape-keyup suppressor exists so the keyup of a panel-closing Escape cannot
+    /// reach keyup-driven hosts (TmModal). It disarms on that keyup or on window blur — but a
+    /// keyup the browser swallows natively must not leave it armed forever, or it would eat the
+    /// NEXT, unrelated Escape. After the 1s timeout a fresh Escape still closes the modal on the
+    /// first press.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_EscapeKeyupSuppressor_TimesOut_AndNextEscapeReachesModal()
+    {
+        var page = await OpenOverlayPageAsync();
+
+        await page.GetByTestId("overlay-open-modal").ClickAsync();
+        var modal = page.Locator(".tm-modal");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var trigger = page.Locator("[data-testid='overlay-datepicker'] .tm-date-picker-trigger");
+        await trigger.ClickAsync();
+        var panel = page.Locator(".tm-date-picker-popup");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Swallowed keyup: DownAsync dispatches ONLY the keydown — the panel closes and the
+        // suppressor arms, but no keyup follows to disarm it (the fullscreen/PiP scenario).
+        await page.Keyboard.DownAsync("Escape");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        Assert.AreEqual(1, await modal.CountAsync(),
+            "the modal must survive the Escape keydown that closed its panel");
+
+        // Past the 1000ms suppressor timeout the armed listener is gone, so the NEXT Escape's
+        // keyup reaches the modal on the first real press — a still-armed suppressor would eat it
+        // and leave the modal open.
+        await page.WaitForTimeoutAsync(1300);
+        await page.Keyboard.PressAsync("Escape");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+    }
+
+    /// <summary>
+    /// N165: with the Popover API removed before any page script runs, overlay.js takes the
+    /// fallback path — position:fixed + containing-block math instead of the browser top layer.
+    /// The panel must still carry the same anchor geometry, be marked with
+    /// data-tm-overlay-fallback, and dismiss on Escape.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_WithoutPopoverApi_FallsBackToFixed_AndDismissesOnEscape()
+    {
+        var page = await OpenOverlayPageWithoutPopoverApiAsync();
+
+        await page.GetByTestId("overlay-open-bottom").ClickAsync();
+        var panel = page.GetByTestId("overlay-panel-bottom");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Fallback markers: no top layer, fixed positioning instead.
+        Assert.AreEqual("true", await panel.GetAttributeAsync("data-tm-overlay-fallback"));
+        Assert.IsFalse(await panel.EvaluateAsync<bool>("el => el.matches(':popover-open')"),
+            "without showPopover the panel must not be a live popover");
+        Assert.AreEqual("bottom", await panel.GetAttributeAsync("data-tm-placement"));
+
+        var anchorBox = await page.GetByTestId("overlay-open-bottom").BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(anchorBox);
+        Assert.IsNotNull(panelBox);
+        Assert.IsTrue(panelBox!.Y >= anchorBox!.Y + anchorBox.Height,
+            $"fallback panel top {panelBox.Y} should sit at/below anchor bottom {anchorBox.Y + anchorBox.Height}");
+
+        await page.Keyboard.PressAsync("Escape");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+    }
+
+    /// <summary>
+    /// N165: the fallback's containing-block walk. An open .tm-modal carries transform: scale(1),
+    /// which makes it the containing block for fixed descendants — overlay.js must measure
+    /// against its padding box instead of the viewport. The panel still has to land under its
+    /// trigger (in viewport coordinates) and paint above the modal chrome.
+    /// </summary>
+    [TestMethod]
+    public async Task Overlay_WithoutPopoverApi_InsideModal_PositionsAgainstContainingBlock()
+    {
+        var page = await OpenOverlayPageWithoutPopoverApiAsync();
+
+        await page.GetByTestId("overlay-open-modal").ClickAsync();
+        var modalTrigger = page.GetByTestId("overlay-open-in-modal");
+        await modalTrigger.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await modalTrigger.ClickAsync();
+
+        var panel = page.GetByTestId("overlay-panel-modal");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        Assert.AreEqual("true", await panel.GetAttributeAsync("data-tm-overlay-fallback"));
+        Assert.AreEqual("bottom", await panel.GetAttributeAsync("data-tm-placement"));
+
+        // Geometry is viewport-space truth: the containing-block math must land the panel
+        // directly under the trigger even though its inline left/top are relative to the
+        // transformed .tm-modal box.
+        var triggerBox = await modalTrigger.BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(triggerBox);
+        Assert.IsNotNull(panelBox);
+        Assert.IsTrue(panelBox!.Y >= triggerBox!.Y + triggerBox.Height,
+            $"fallback panel top {panelBox.Y} should sit at/below trigger bottom {triggerBox.Y + triggerBox.Height}");
+
+        // No top layer here: the panel still has to paint above the modal chrome it overlaps.
+        var hit = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const panel = document.querySelector('[data-testid="overlay-panel-modal"]');
+                if (!panel) return 'no-panel';
+                const r = panel.getBoundingClientRect();
+                if (!Number.isFinite(r.left) || !Number.isFinite(r.top) || r.width <= 0 || r.height <= 0)
+                    return `bad-rect:${r.left},${r.top} ${r.width}x${r.height}`;
+                const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return el && panel.contains(el)
+                    ? 'hit'
+                    : `miss:${el ? el.tagName + '.' + String(el.className) : 'null'}`;
+            }
+            """);
+        Assert.AreEqual("hit", hit,
+            "fallback panel must paint above the modal chrome it overlaps");
+
+        // Escape dismissal is identical in fallback mode — and its keyup suppressor still shields
+        // the host modal.
+        await page.Keyboard.PressAsync("Escape");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        Assert.AreEqual(1, await page.Locator(".tm-modal").CountAsync(),
+            "the modal must survive the Escape that closed its fallback panel");
+    }
+
+    private async Task<IPage> OpenOverlayPageWithoutPopoverApiAsync()
+    {
+        var context = await CreateContextAsync();
+        // Before ANY page script: overlay.js reads HTMLElement.prototype.showPopover once, at
+        // module evaluation, to choose between the top layer and the fixed+fallback path (N165).
+        await context.AddInitScriptAsync("delete HTMLElement.prototype.showPopover;");
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(PageUrl);
+        await WaitForAppReadyAsync(page);
+        return page;
+    }
+
+    /// <summary>
     /// Firefox leg: the Popover API is supported since Firefox 125, so the identical top-layer
     /// contract must hold there. PlaywrightTestBase runs Chromium only, so this test owns a
     /// dedicated Playwright + Firefox pair.

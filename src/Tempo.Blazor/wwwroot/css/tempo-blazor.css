@@ -50,6 +50,7 @@
 @import "components/_copy-button.css";
 @import "components/_floating-action-button.css";
 @import "components/_entity-picker.css";
+@import "components/_multi-column-combobox.css";
 @import "components/_multiselect.css";
 @import "components/_dynamic-form.css";
 @import "components/_expression-editor.css";

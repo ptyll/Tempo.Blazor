@@ -263,4 +263,21 @@ public class TmEntityPickerTests : LocalizationTestBase
         cut.WaitForState(() => cut.FindAll(".tm-entity-picker__recent-item").Count > 0);
         cut.Find(".tm-entity-picker__recent").TextContent.Should().Contain("Charlie");
     }
+
+    /// <summary>
+    /// N168: the overlay Anchor is the <c>.tm-entity-picker</c> wrapper — overlay.js calls
+    /// <c>.focus()</c> on it for Escape/outside dismissal. Without tabindex a plain div swallows
+    /// that as a no-op and focus falls to <c>&lt;body&gt;</c>. <c>-1</c> makes it
+    /// script-focusable without adding a Tab stop.
+    /// </summary>
+    [Fact]
+    public void TmEntityPicker_AnchorWrapper_IsProgrammaticallyFocusable()
+    {
+        var cut = Render<TmEntityPicker<TestItem, int>>(p => p
+            .Add(x => x.SearchProvider, SearchProvider)
+            .Add(x => x.ValueSelector, i => i.Id)
+            .Add(x => x.DisplaySelector, i => i.Name));
+
+        cut.Find(".tm-entity-picker").GetAttribute("tabindex").Should().Be("-1");
+    }
 }

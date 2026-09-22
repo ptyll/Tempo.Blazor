@@ -299,9 +299,9 @@
             case "Enter" or " ":
                 await ToggleAsync();
                 break;
-            case "Escape" when _isOpen:
-                _isOpen = false;
-                break;
+            // No Escape branch: overlay.js consumes Escape in the window capture phase and routes
+            // it through NotifyDismissedAsync — a bubbling trigger handler could never see it in a
+            // real browser (N169). The menu/filter Escape lives in HandleKeyDownAsync.
             case "ArrowDown" when !_isOpen:
                 await ToggleAsync();
                 break;
