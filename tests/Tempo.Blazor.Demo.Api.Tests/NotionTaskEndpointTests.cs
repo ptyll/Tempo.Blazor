@@ -73,7 +73,7 @@ public class NotionTaskEndpointTests : IClassFixture<WebApplicationFactory<Progr
             Content = new TodoBlockContent { Html = "Hidden navigation task", IsChecked = false }
         }, null);
 
-        var provider = new DemoNotionTaskProvider(pageStore, blockStore);
+        var provider = new DemoNotionTaskProvider(pageStore, blockStore, new DemoNotionAggregateStore(pageStore, blockStore));
         var result = await provider.SearchAsync(new TmWorkItemQuery
         {
             IncludeCompleted = true,
