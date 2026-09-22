@@ -1,6 +1,6 @@
 # E2E Test Lanes
 
-The Playwright E2E suite (`tests/Tempo.Blazor.E2E`, ~1700 tests, several hours
+The Playwright E2E suite (`tests/Tempo.Blazor.E2E`, ~1450 tests, several hours
 wall clock) is split into two lanes so pull requests get fast feedback while
 exhaustive coverage still runs every night.
 
@@ -23,6 +23,11 @@ exhaustive coverage still runs every night.
 ## Full lane (nightly)
 
 - **What runs:** the entire suite, no filter.
+- **Acceptance:** zero *deterministic* failures. Tests that go red only under
+  parallel shard contention are re-run serially (`-Filter` with their fully
+  qualified names); a failure that passes the serial residual counts as
+  contention flakiness and must be recorded (test + mechanism), not silently
+  accepted. Anything red in serial is a real defect.
 - **How to run:** `scripts/run-e2e-full.ps1` (optionally `-Filter "..."` to
   scope a rerun during triage). Failure traces are disabled by default on this
   lane (`TM_E2E_TRACE_ON_FAILURE=false`) because a full run can produce
@@ -54,8 +59,11 @@ change under test before merging.
 
 ## Practical notes for running locally
 
-- Both hosts are auto-started by `PlaywrightTestBase.EnsureDemoHostsAsync`
-  (Demo API on `https://localhost:5100`, Demo WASM on `https://localhost:7106`).
+- All four hosts are auto-started by `PlaywrightTestBase.EnsureDemoHostsAsync`
+  (Demo API on `https://localhost:5100`, Demo WASM on `https://localhost:7106`,
+  Demo Server on `https://localhost:7107`, InteractiveAuto on
+  `https://localhost:7108`). Set `TM_E2E_SELF_HOST=false` to run against
+  externally managed hosts instead.
   Kill stale listeners on those ports before a clean run — a stale host whose
   `bin/obj` was rebuilt serves broken static assets and every test times out on
   its first locator.
