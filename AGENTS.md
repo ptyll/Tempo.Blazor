@@ -98,7 +98,7 @@ dotnet test tests/Tempo.Blazor.E2E/
 
 # E2E lanes (see docs/e2e-test-lanes.md)
 scripts/run-e2e-smoke.ps1   # PR gate: TestCategory=Smoke, < 20 min
-scripts/run-e2e-full.ps1    # nightly: entire suite (~1700 tests, hours)
+scripts/run-e2e-full.ps1    # full lane: entire suite (~1450 tests, ~4h sharded)
 
 # JS engine unit tests (explicit file enumeration, no globs)
 npm run test:document-editor
@@ -130,7 +130,17 @@ dotnet run
 cd src/Tempo.Blazor.Demo.Server
 dotnet run
 # App runs on: https://localhost:7107
+
+# Start InteractiveAuto demo (terminal 3)
+cd src/Tempo.Blazor.Demo.InteractiveAuto
+dotnet run
+# App runs on: https://localhost:7108
 ```
+
+E2E tests self-host all four demo apps by default (PlaywrightTestBase starts
+API/WASM/Server/InteractiveAuto on demand). To run them against externally
+managed hosts instead, start the four apps above and set
+`TM_E2E_SELF_HOST=false`.
 
 ## Code Organization
 

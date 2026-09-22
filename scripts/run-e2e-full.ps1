@@ -1,4 +1,4 @@
-# Nightly full lane: the entire E2E suite (~1700 tests, several hours).
+# Full lane: the entire E2E suite (~1450 tests, several hours — shard for parallel runs).
 # Use scripts/run-e2e-smoke.ps1 as the fast PR gate. See docs/e2e-test-lanes.md.
 param(
     [string]$Filter = ''

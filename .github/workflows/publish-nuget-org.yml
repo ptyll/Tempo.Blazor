@@ -89,8 +89,12 @@ jobs:
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 
       # Named exceptions of the release gate (DEC-TEMPO-RELEASE-GATE):
-      #   Tempo.Blazor.E2E — Playwright over the demo hosts; measured separately, not a gate
-      #     until the run finishes green with a recorded duration.
+      #   Tempo.Blazor.E2E — Playwright over the demo hosts; excluded from this lane because
+      #     the full suite runs ~4h. The release condition's second clause is an owner-verified
+      #     green full-suite run over the released commit, recorded in the release evidence
+      #     (scripts/run-e2e-full.ps1; parallel failures rerun serially per
+      #     docs/e2e-test-lanes.md). No scheduled lane exists yet — until one does, the clause
+      #     is satisfied by the recorded manual run, not by CI.
       #   Tempo.ReportServer.Api.Tests.MsSql is IN the gate since Fáze 19: without
       #     REPORTSERVER_TEST_CONNECTION the suite starts its own
       #     mcr.microsoft.com/mssql/server:2022-latest container via Testcontainers
