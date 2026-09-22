@@ -2,7 +2,9 @@
 
 The Playwright E2E suite (`tests/Tempo.Blazor.E2E`, ~1450 tests, several hours
 wall clock) is split into two lanes so pull requests get fast feedback while
-exhaustive coverage still runs every night.
+exhaustive coverage keeps its own full lane. The full lane is intended to run
+nightly — today no scheduled workflow exists, so it runs manually via
+`scripts/run-e2e-full.ps1` until one is added (see DEC-TEMPO-RELEASE-GATE).
 
 ## Smoke lane (PR gate, < 20 minutes)
 
@@ -20,7 +22,7 @@ exhaustive coverage still runs every night.
   synchronization) and keep the total lane under 20 minutes including host
   startup.
 
-## Full lane (nightly)
+## Full lane (nightly — intended cadence, currently manual)
 
 - **What runs:** the entire suite, no filter.
 - **Acceptance:** zero *deterministic* failures. Tests that go red only under
@@ -53,7 +55,7 @@ JS engine unit tests run separately and are cheap enough for every commit:
 
 A lane is considered **baselined** when it is green three consecutive runs on
 the same commit. Phases that change components must keep the smoke lane green
-(PR gate); full-lane regressions are triaged nightly — classify each failure
+(PR gate); full-lane regressions are triaged after each full run — classify each failure
 as pre-existing (tracked in the triage list) or a regression introduced by the
 change under test before merging.
 
