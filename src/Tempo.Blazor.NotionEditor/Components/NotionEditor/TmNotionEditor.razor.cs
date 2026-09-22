@@ -5,7 +5,6 @@ using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Abstractions.WorkItems;
 using Tempo.Blazor.Components.NotionEditor.Services;
-using Tempo.Blazor.Components.Notifications;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -150,7 +149,6 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private DotNetObjectReference<TmNotionEditor>? _selfRef;
     private IJSObjectReference?        _jsScrollListener;
     private NotionCollaborationSync?   _collabSync;
-    private TmNotificationBell?        _notificationBell;
     private bool                       _notificationPanelOpen;
     private bool                       _tasksPanelOpen;
     private bool                       _blogPanelOpen;

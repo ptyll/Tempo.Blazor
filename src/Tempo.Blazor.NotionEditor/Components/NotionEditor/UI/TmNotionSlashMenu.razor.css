@@ -2,14 +2,15 @@
 .tm-notion-slash-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9998;
+    /* N5: popover-band tokens — the backdrop sits one step under the anchored menu card. */
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
     background: transparent;
 }
 
 /* ── Menu card ────────────────────────────────────────────────────────────── */
 .tm-notion-slash {
     position: fixed;
-    z-index: 9999;
+    z-index: var(--tm-z-popover, 1030);
     width: 320px;
     max-height: 400px;
     display: flex;
