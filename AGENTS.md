@@ -103,6 +103,7 @@ scripts/run-e2e-full.ps1    # nightly: entire suite (~1700 tests, hours)
 # JS engine unit tests (explicit file enumeration, no globs)
 npm run test:document-editor
 npm run test:reporting-modules
+npm run test:overlay
 ```
 
 ### Package Creation

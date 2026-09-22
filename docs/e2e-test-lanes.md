@@ -39,6 +39,10 @@ JS engine unit tests run separately and are cheap enough for every commit:
   expansion), so a stale glob can never silently skip tests again — the runner
   fails when a root is missing or matches no files.
 - `npm run test:reporting-modules` — reporting JS modules via the same runner.
+- `npm run test:overlay` — `TmOverlayPanel` placement JS (`src/Tempo.Blazor/wwwroot/js`,
+  flip/shift/clamp math + fallback-path branches) via the same runner. The overlay
+  primitive underpins 15 floating-surface components, so this lane runs on every
+  commit too.
 
 ## Baseline policy
 
