@@ -10,35 +10,35 @@
     {
       "snapshotId": "f7-invoice",
       "pageNumber": 1,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/01-invoice-p1.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/01-invoice-p1.png",
       "textRunCount": 160,
       "paintedCommandCount": 235
     },
     {
       "snapshotId": "f7-invoice",
       "pageNumber": 2,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/02-invoice-p2.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/02-invoice-p2.png",
       "textRunCount": 83,
       "paintedCommandCount": 128
     },
     {
       "snapshotId": "f7-sales",
       "pageNumber": 1,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/03-sales-p1.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/03-sales-p1.png",
       "textRunCount": 98,
       "paintedCommandCount": 177
     },
     {
       "snapshotId": "f7-sales",
       "pageNumber": 20,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/04-sales-p20.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/04-sales-p20.png",
       "textRunCount": 104,
       "paintedCommandCount": 177
     },
     {
       "snapshotId": "f7-sales",
       "pageNumber": 38,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/05-sales-p38.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f7/05-sales-p38.png",
       "textRunCount": 88,
       "paintedCommandCount": 159
     }

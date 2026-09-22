@@ -1,7 +1,7 @@
 {
   "phase": "F13",
   "testName": "F13_ReportDesigner_CoversD1ToD4ScreenshotGate",
-  "baseUrl": "http://127.0.0.1:44455",
+  "baseUrl": "http://127.0.0.1:36489",
   "screenshots": [
     "d1-canvas-bands.png",
     "d1-page-setup.png",
@@ -12,7 +12,7 @@
   "functionalReview": "The flow exercised the designer canvas bands, zoom, page setup, element insertion/copy/properties, field insertion, expression validation, preview and publish save event.",
   "uxReview": "The designer uses a dense report-authoring layout with a palette, ruler-like canvas, band grid, side properties, data/query panels and preview/revision sidebars.",
   "diagnostics": [
-    "console.info: [2026-09-21T12:25:11.730Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:44455/_blazor\u0027.",
-    "console.info: [2026-09-21T12:25:11.875Z] Information: WebSocket connected to ws://127.0.0.1:44455/_blazor?id=614hv5HWBQMdHoUg9mz3HQ."
+    "console.info: [2026-09-22T09:28:36.832Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:36489/_blazor\u0027.",
+    "console.info: [2026-09-22T09:28:37.013Z] Information: WebSocket connected to ws://127.0.0.1:36489/_blazor?id=rF5jMCSvqbf9Mf9qfjTyag."
   ]
 }

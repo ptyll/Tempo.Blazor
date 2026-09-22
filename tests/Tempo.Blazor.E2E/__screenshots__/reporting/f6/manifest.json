@@ -7,7 +7,7 @@
   "pages": [
     {
       "pageNumber": 1,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f6/01-invoice-p1.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f6/01-invoice-p1.png",
       "textRunCount": 160,
       "paintedCommandCount": 186,
       "canvasMetrics": {
@@ -15,7 +15,7 @@
         "height": 860,
         "pixelCount": 550400,
         "nonTransparentPixels": 550400,
-        "distinctColorCount": 167,
+        "distinctColorCount": 144,
         "minX": 0,
         "minY": 0,
         "maxX": 639,
@@ -25,7 +25,7 @@
     },
     {
       "pageNumber": 2,
-      "screenshotPath": "/home/pavel/NetProjects/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f6/02-invoice-p2.png",
+      "screenshotPath": "/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/__screenshots__/reporting/f6/02-invoice-p2.png",
       "textRunCount": 79,
       "paintedCommandCount": 94,
       "canvasMetrics": {
@@ -33,7 +33,7 @@
         "height": 860,
         "pixelCount": 550400,
         "nonTransparentPixels": 550400,
-        "distinctColorCount": 91,
+        "distinctColorCount": 79,
         "minX": 0,
         "minY": 0,
         "maxX": 639,

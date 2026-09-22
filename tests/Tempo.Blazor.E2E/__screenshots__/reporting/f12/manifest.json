@@ -1,7 +1,7 @@
 {
   "phase": "F12",
   "testName": "F12_ReportServerWeb_CoversLoginExplorerViewerExportAndAdmin",
-  "baseUrl": "http://127.0.0.1:39847",
+  "baseUrl": "http://127.0.0.1:40517",
   "screenshots": [
     "01-login.png",
     "02-explorer-grid.png",
@@ -14,7 +14,7 @@
   "functionalReview": "The flow signed in, used the tenant-aware explorer, opened a deep-linked report viewer, downloaded a PDF export, tested a data source, added an ACL row and rolled back a revision.",
   "uxReview": "The app shell uses dense report-server navigation, Tempo design tokens, grid/list explorer modes, empty-ready admin states and responsive constrained layouts.",
   "diagnostics": [
-    "console.info: [2026-09-21T12:24:27.159Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:39847/_blazor\u0027.",
-    "console.info: [2026-09-21T12:24:27.341Z] Information: WebSocket connected to ws://127.0.0.1:39847/_blazor?id=Swb6NedbXqFkeKMy5IrVoQ."
+    "console.info: [2026-09-22T05:41:22.230Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:40517/_blazor\u0027.",
+    "console.info: [2026-09-22T05:41:22.560Z] Information: WebSocket connected to ws://127.0.0.1:40517/_blazor?id=SCoYaThFHkUgL-LAhPT2MQ."
   ]
 }
