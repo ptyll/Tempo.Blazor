@@ -44,8 +44,6 @@ public partial class TmNotionSlashMenu : TmComponentBase
     private double   _left;
     private bool     _wasVisible;
     private bool     _needsFocus;
-    private bool     _hoverEnabled;
-    private DateTime _openedUtc;
 
     private List<BlockType> _recentlyUsed = [];
     private List<(SlashMenuCategory Category, List<SlashMenuItem> Items)> _groups = [];
@@ -68,8 +66,6 @@ public partial class TmNotionSlashMenu : TmComponentBase
             // Menu just opened — reset state
             _query         = string.Empty;
             _selectedIndex = 0;
-            _hoverEnabled  = false;
-            _openedUtc     = DateTime.UtcNow;
             _top           = Top;
             _left          = Left;
             _needsFocus    = true;
@@ -166,21 +162,13 @@ public partial class TmNotionSlashMenu : TmComponentBase
 
     // ── Pointer / keyboard navigation ─────────────────────────────────────────
 
-    private void EnableHoverSelection() => _hoverEnabled = true;
-
-    private void OnItemMouseEnter(int index)
+    private void OnItemPointerMove(int index)
     {
-        // Ignore a resting cursor sitting over the menu at open — a stale pointer position must
-        // not steal the default selection. Honor hover selection once the pointer has actually
-        // moved over the list (EnableHoverSelection) or once the menu has been open long enough
-        // that any enter is a deliberate hover (mount-time enters fire within a frame or two;
-        // note mouseenter precedes the first pointermove, so the move-gate alone would swallow
-        // the first real hover — see EB3).
-        if (!_hoverEnabled && DateTime.UtcNow - _openedUtc < TimeSpan.FromMilliseconds(250))
-        {
-            return;
-        }
-
+        // Hover selection is driven by pointermove, which only fires on real pointer movement.
+        // That is the whole resting-cursor fix: the menu may open directly under a stale pointer
+        // (the caret sits where the user clicked), and a mount-time or re-render mouseenter would
+        // fire without any movement — with pointermove, the selection can only follow a cursor
+        // that actually moved onto the item.
         _selectedIndex = index;
     }
 
