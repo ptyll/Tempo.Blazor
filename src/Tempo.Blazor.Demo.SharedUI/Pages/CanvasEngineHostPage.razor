@@ -19,9 +19,12 @@
 
 <PageTitle>Canvas Engine Host - Tempo.Blazor</PageTitle>
 
-<main class="min-h-screen bg-slate-100 p-4 pt-24 dark:bg-slate-950"
-      style="padding-top: 96px;"
-      data-testid="canvas-engine-host-page">
+@* N3: MainLayout already provides the page's <main> landmark — a second <main> here nests
+   landmarks, so this wrapper is a labelled region instead. *@
+<section class="min-h-screen bg-slate-100 p-4 pt-24 dark:bg-slate-950"
+         style="padding-top: 96px;"
+         aria-label="Canvas engine host"
+         data-testid="canvas-engine-host-page">
     <TmDocumentEditor DocumentId="@DocumentId"
 		                      Provider="@DocumentProvider"
 	                              FormatProvider="@FormatProvider"
@@ -52,7 +55,7 @@
                       CanDeleteOwnComments="true"
                       ShowVersionHistory="false"
                       data-testid="document-editor-demo" />
-</main>
+</section>
 
 @code {
     private const string DefaultDocumentId = "phase-3-canvas-empty";

@@ -159,7 +159,11 @@
 
     @if (_currentPage != null)
     {
-        <div style="height: 420px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface);">
+        @* tabindex=-1: the container takes programmatic focus when the load button unmounts
+           itself (N4) — without it, focus would fall back to <body>. *@
+        <div @ref="_singlePageEditorContainer"
+             tabindex="-1"
+             style="height: 420px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface);">
             @if (_singlePageEditorLoaded)
             {
                 <TmNotionEditor DataProvider="@DataProvider"
@@ -183,7 +187,7 @@
                     <button type="button"
                             class="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white transition-colors"
                             data-testid="notion-single-page-load"
-                            @onclick="() => _singlePageEditorLoaded = true">
+                            @onclick="LoadSinglePageEditor">
                         Load single-page editor
                     </button>
                 </div>
@@ -927,6 +931,8 @@
 
     private string? _singlePageNavMessage;
     private bool _singlePageEditorLoaded;
+    private bool _focusSinglePageEditor;
+    private ElementReference _singlePageEditorContainer;
 
     private static readonly IReadOnlySet<BlockType> _singlePageAllowedBlocks = new HashSet<BlockType>
     {
@@ -947,6 +953,13 @@
 
     private void HandleSinglePageNavigationRequested(string pageId)
         => _singlePageNavMessage = $"Host asked to open page '{pageId}' elsewhere (single-page editor stays put).";
+
+    private void LoadSinglePageEditor()
+    {
+        _singlePageEditorLoaded = true;
+        // N4: the clicked button unmounts itself — flag the freshly mounted container for focus.
+        _focusSinglePageEditor = true;
+    }
 
     private static readonly string[] E2ESeedMethods =
     [
@@ -1023,6 +1036,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_focusSinglePageEditor)
+        {
+            _focusSinglePageEditor = false;
+            await _singlePageEditorContainer.FocusAsync();
+        }
+
         if (!firstRender)
         {
             return;
