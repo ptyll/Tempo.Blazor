@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -97,6 +98,18 @@ public class DocumentLibraryE2ETests : WasmTestBase
     public async Task DocLib1_NewFolderRenameDelete()
     {
         // Operates in /Archive so it does not deplete the /Designs documents other tests rely on.
+        // Seed a sacrificial document first: the dialog store lives in the API process memory and
+        // the seeded "Old prototype" row is consumed by this very test — on a warm API /Archive can
+        // already be empty and the .tm-dod-row wait below would time out.
+        var sacrificial = "Sacrificial-" + Guid.NewGuid().ToString("N")[..6];
+        using (var http = new HttpClient())
+        {
+            var resp = await http.PostAsJsonAsync(
+                "https://localhost:5100/api/document-library/wireframe/documents",
+                new { name = sacrificial, folderPath = "/Archive", payloadJson = "{}", author = "E2E" });
+            resp.EnsureSuccessStatusCode();
+        }
+
         var page = await OpenDialogPageAsync();
         await OpenDialogAsync(page);
         await NavigateFolderAsync(page, "Archive");
@@ -110,8 +123,8 @@ public class DocumentLibraryE2ETests : WasmTestBase
         await page.WaitForFunctionAsync(
             $"() => document.querySelector('.tm-dod-tree').textContent.includes('{folderName}')");
 
-        // Select a row, rename it.
-        await page.Locator(".tm-dod-row").First.ClickAsync();
+        // Select the sacrificial row, rename it.
+        await page.Locator(".tm-dod-row", new() { HasTextString = sacrificial }).First.ClickAsync();
         await page.ClickAsync(".tm-dod-rename");
         var newName = "Renamed-" + Guid.NewGuid().ToString("N")[..6];
         await page.FillAsync(".tm-dod-rename-input", newName);
