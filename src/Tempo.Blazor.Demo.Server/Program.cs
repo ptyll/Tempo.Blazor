@@ -1,3 +1,4 @@
+using System.Reflection;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Demo.Services;
 using Tempo.Blazor.Demo.SharedUI.Services;
@@ -152,6 +153,16 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+
+// N193: dedicated readiness endpoint for the E2E host probe — /health must answer 2xx only when
+// the app is actually serving; a crashed app answering 500 on "/" used to read as "reachable".
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    version = typeof(Program).Assembly
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+        ?.InformationalVersion ?? "unknown",
+}));
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");

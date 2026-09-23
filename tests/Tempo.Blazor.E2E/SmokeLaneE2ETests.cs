@@ -59,6 +59,27 @@ public sealed class SmokeLaneE2ETests : WasmTestBase
         await AssertPageHealthyAsync(page, errors, "/canvas-engine-host");
     }
 
+    /// <summary>
+    /// N193: <c>WaitForAppReadyAsync</c> used to end with an unconditional 1000 ms sleep, so every
+    /// page open paid a full second of dead time. Now that the wait is stateful
+    /// (<c>[data-blazor-ready]</c> on <c>&lt;body&gt;</c>), calling it on an already-ready page must
+    /// return well under the old fixed cost — a fixed sleep would land at ≥1000 ms every time.
+    /// </summary>
+    [TestMethod]
+    public async Task Smoke_AppReady_OnReadyPage_ReturnsBelowOldFixedSleep()
+    {
+        var (page, errors) = await OpenPageWithErrorCaptureAsync("/");
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        await WaitForAppReadyAsync(page); // second call: the page is already fully ready
+        stopwatch.Stop();
+
+        TestContext.WriteLine($"WaitForAppReadyAsync on ready page: {stopwatch.ElapsedMilliseconds} ms");
+        Assert.IsTrue(stopwatch.ElapsedMilliseconds < 1000,
+            $"ready-page call took {stopwatch.ElapsedMilliseconds} ms — the old fixed 1000 ms sleep (or another fixed wait) is back");
+        await AssertPageHealthyAsync(page, errors, "/");
+    }
+
     /// <summary>Edge case: an unknown route must render the not-found surface, not crash the app.</summary>
     [TestMethod]
     public async Task Smoke_UnknownRoute_RendersNotFoundWithoutCrash()

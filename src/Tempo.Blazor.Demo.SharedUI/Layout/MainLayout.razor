@@ -126,6 +126,19 @@
         ThemeService.OnChanged += StateHasChanged;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // E2E readiness marker (N193): prerendering never calls OnAfterRenderAsync, so the
+        // attribute lands exactly when an interactive runtime has actually rendered — WASM boot
+        // finished or the server circuit is up. PlaywrightTestBase.WaitForAppReadyAsync waits on
+        // it instead of a fixed sleep.
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync(
+                "eval", "document.body.setAttribute('data-blazor-ready', 'true')");
+        }
+    }
+
     private void ToggleMobileMenu()
     {
         _mobileMenuOpen = !_mobileMenuOpen;

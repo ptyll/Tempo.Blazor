@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Tempo.Blazor.Components.Diagram.Services;
 using Tempo.Blazor.Configuration;
@@ -226,6 +227,16 @@ app.MapHub<TempoDocumentChangeHub>("/hubs/document-library");
 app.MapHub<TmNotificationHub>("/hubs/notifications");
 app.MapNotificationEndpoints();
 app.MapMcp("/mcp");
+
+// N193: dedicated readiness endpoint for the E2E host probe — /health must answer 2xx only when
+// the app is actually serving; a crashed app answering 500 on "/" used to read as "reachable".
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    version = typeof(Program).Assembly
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+        ?.InformationalVersion ?? "unknown",
+}));
 
 // Schema creation goes through DemoDiagramSchema because this host is started CONCURRENTLY against one
 // database — many WebApplicationFactory hosts inside one test process, and the demo as its own process

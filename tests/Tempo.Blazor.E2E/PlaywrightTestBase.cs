@@ -287,8 +287,15 @@ public abstract class PlaywrightTestBase
                 new PageWaitForFunctionOptions { Timeout = 45000 });
         }
 
-        // Additional wait for WASM to boot in InteractiveAuto mode
-        await page.WaitForTimeoutAsync(1000);
+        // Stateful readiness instead of the former fixed 1000 ms sleep (N193): the shared demo
+        // MainLayout sets [data-blazor-ready] on <body> from OnAfterRenderAsync(firstRender) —
+        // which prerendering never calls — so the attribute lands exactly when an interactive
+        // runtime has rendered (WASM boot finished / server circuit up). A host whose runtime
+        // never comes up now fails this wait instead of silently passing under the sleep.
+        await page.WaitForFunctionAsync(
+            "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
     }
 
     /// <summary>
@@ -450,7 +457,9 @@ public abstract class PlaywrightTestBase
 
             // Wedged: alive past its readiness window but not serving. Replace it.
             DemoHostProcesses.Remove(existing);
+            var wedgedOutput = existing.RecentOutput;
             existing.Dispose();
+            RecordHostRestart(name, "unreachable-past-window", wedgedOutput);
             context.WriteLine($"{name} was unreachable past its readiness window — restarting.");
         }
         else if (existing is not null)
@@ -466,6 +475,7 @@ public abstract class PlaywrightTestBase
                 throw new InvalidOperationException($"{name} exited before it became ready. Recent output:{Environment.NewLine}{recentOutput}");
             }
 
+            RecordHostRestart(name, "died-mid-run", recentOutput);
             context.WriteLine($"{name} died mid-run — restarting it.");
         }
         else if (_demoHostsInitialized)
@@ -473,6 +483,7 @@ public abstract class PlaywrightTestBase
             // The hosts were healthy at first init but this one is unreachable now, and no tracked
             // process exists — an externally-started host died. Adopt it: self-host a replacement
             // instead of letting every remaining test fail with connection refused.
+            RecordHostRestart(name, "externally-died", "");
             context.WriteLine($"{name} became unreachable mid-run — self-hosting a replacement.");
         }
 
@@ -566,17 +577,61 @@ public abstract class PlaywrightTestBase
         return true;
     }
 
+    /// <summary>
+    /// One pooled probe client for the whole class (N193): the previous per-call
+    /// <c>new HttpClient(handler)</c> churned a socket per 500 ms readiness poll across eight
+    /// shards. The handler keeps the dangerous cert callback because every demo host is a
+    /// self-signed localhost dev cert.
+    /// </summary>
+    private static readonly HttpClient ProbeClient = new(
+        new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        })
+    { Timeout = TimeSpan.FromSeconds(2) };
+
+    /// <summary>
+    /// Records a host resurrection to <c>TestResults/host-restarts.jsonl</c> — the machine-readable
+    /// half of N209. The restart itself stays (the suite should still try to finish); what ends is
+    /// its invisibility: the release-evidence run reads <see cref="HostRestartLog.TotalHostRestarts"/>
+    /// and refuses to report a run with hidden server crashes as a clean green.
+    /// </summary>
+    private static void RecordHostRestart(string name, string reason, string recentOutput)
+    {
+        try
+        {
+            HostRestartLog.AppendRestartRecord(
+                Path.Combine(FindRepositoryRoot(), "TestResults", "host-restarts.jsonl"),
+                name,
+                reason,
+                recentOutput);
+        }
+        catch
+        {
+            // The record is evidence, not the mechanism: a disk problem must not stop the restart.
+        }
+    }
+
+    /// <summary>
+    /// The readiness verdict over a /health response (N193): 2xx exactly. The previous predicate
+    /// — <c>status != ServiceUnavailable</c> — counted a crashed app answering 500 (or a
+    /// misrouted 404) as reachable, so a dead host passed its own readiness gate.
+    /// </summary>
+    internal static bool IsReadyStatusCode(HttpStatusCode statusCode) =>
+        (int)statusCode is >= 200 and <= 299;
+
     private static async Task<bool> IsUrlReachableAsync(string url)
     {
         try
         {
-            using var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            };
-            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
-            using var response = await client.GetAsync(url);
-            return response.StatusCode != HttpStatusCode.ServiceUnavailable;
+            // N193: probe the dedicated readiness endpoint, not the root URL — a crashed app
+            // answering 500 on "/" used to read as "reachable" because only 503 counted as down.
+            // /health must answer 2xx exactly. For the standalone WASM dev server there is no
+            // endpoint to add: its SPA fallback serves index.html for extensionless paths, so
+            // /health answers 200 as soon as the host serves at all — precisely the signal this
+            // probe asks for.
+            using var response = await ProbeClient.GetAsync($"{url.TrimEnd('/')}/health");
+            return IsReadyStatusCode(response.StatusCode);
         }
         catch
         {
