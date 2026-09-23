@@ -246,7 +246,7 @@ public sealed class CssComputedStyleRegressionTests
         ["button", "tm-btn tm-btn-outline-secondary tm-btn-md", "border-color", "var(--tm-border-color-control)", ".tm-btn.tm-btn-outline-secondary"],
         ["button", "tm-btn tm-btn-primary tm-btn-md", "border-color", "var(--tm-color-primary)", ".tm-btn.tm-btn-primary"],
         ["button", "tm-btn tm-btn-primary tm-btn-md", "background-color", "var(--tm-color-primary)", ".tm-btn.tm-btn-primary"],
-        ["button", "tm-btn tm-btn-secondary tm-btn-md", "border-color", "var(--tm-border-color)", ".tm-btn.tm-btn-secondary"],
+        ["button", "tm-btn tm-btn-secondary tm-btn-md", "border-color", "var(--tm-border-color-control)", ".tm-btn.tm-btn-secondary"],
         ["button", "tm-btn tm-btn-secondary tm-btn-md", "background-color", "var(--tm-bg-surface)", ".tm-btn.tm-btn-secondary"],
         ["button", "tm-btn tm-btn-md", "height", "var(--tm-input-height-md)", ".tm-btn.tm-btn-md"],
         ["button", "tm-btn tm-btn-md", "padding", "0 var(--tm-space-4)", ".tm-btn.tm-btn-md"],
