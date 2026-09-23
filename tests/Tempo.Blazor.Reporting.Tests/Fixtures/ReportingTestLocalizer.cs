@@ -52,6 +52,7 @@ internal sealed class ReportingTestLocalizer : ITmLocalizer
         ["TmReportExplorer_MoveTo"] = "Move to",
         ["TmReportExplorer_MoveReport"] = "Move report",
         ["TmReportDesigner_Label"] = "Report designer",
+        ["TmReportDesigner_CanvasLabel"] = "Report canvas",
         ["TmReportDesigner_Zoom"] = "Zoom",
         ["TmReportDesigner_Undo"] = "Undo",
         ["TmReportDesigner_Redo"] = "Redo",

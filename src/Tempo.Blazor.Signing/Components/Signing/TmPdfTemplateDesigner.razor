@@ -46,7 +46,10 @@
                 </aside>
             }
 
-            <main class="tm-pdf-template-designer__canvas">
+            @* N190: a labelled <section> region — the host layout owns the page's single
+               <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
+            <section class="tm-pdf-template-designer__canvas"
+                     aria-label="@Loc["TmPdfTemplateDesigner_CanvasLabel"]">
                 <div class="tm-pdf-template-designer__toolbar" role="group" aria-label="@Loc["TmPdfTemplateDesigner_ToolbarLabel"]">
                     <div class="tm-pdf-template-designer__page-controls">
                         <button type="button"
@@ -180,7 +183,7 @@
                         </section>
                     }
                 </div>
-            </main>
+            </section>
 
             <aside class="tm-pdf-template-designer__panel"
                    @onkeydown:stopPropagation="true">

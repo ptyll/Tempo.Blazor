@@ -145,7 +145,9 @@
         @* ════════════════════════════════════════════════════════════════════ *@
         @* ── RIGHT: Content area ───────────────────────────────────────────── *@
         @* ════════════════════════════════════════════════════════════════════ *@
-        <main class="tm-nph__content">
+        @* N190: a labelled <section> region — the host layout owns the page's single
+           <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
+        <section class="tm-nph__content" aria-label="@Loc["TmNotionPageHistory_ContentLabel"]">
 
             @if (_view == HistoryView.Empty)
             {
@@ -290,7 +292,7 @@
                                     Loading="_diffLoading" />
             }
 
-        </main>
+        </section>
 
     </div>
 

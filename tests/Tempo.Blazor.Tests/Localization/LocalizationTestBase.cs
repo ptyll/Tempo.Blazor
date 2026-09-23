@@ -884,6 +884,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotionPageTree_BulkOperationError"] = "Could not complete the bulk page operation.",
         ["TmNotionPageHistory_DiffModeInline"] = "Inline",
         ["TmNotionPageHistory_DiffModeSideBySide"] = "Side by side",
+        ["TmNotionPageHistory_ContentLabel"] = "Version content",
+        ["TmPdfTemplateDesigner_CanvasLabel"] = "Template canvas",
+        ["TmReportDesigner_CanvasLabel"] = "Report canvas",
 
         // TmDataTable Grouping
         ["TmDataTable_GroupDropPlaceholder"] = "Drag column headers here to group",
@@ -4386,6 +4389,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotionPageTree_BulkOperationError"] = "Hromadnou operaci se stránkami se nepodařilo dokončit.",
         ["TmNotionPageHistory_DiffModeInline"] = "V řádku",
         ["TmNotionPageHistory_DiffModeSideBySide"] = "Vedle sebe",
+        ["TmNotionPageHistory_ContentLabel"] = "Obsah verze",
+        ["TmPdfTemplateDesigner_CanvasLabel"] = "Plocha šablony",
+        ["TmReportDesigner_CanvasLabel"] = "Plocha sestavy",
 
         // TmDataTable Grouping
         ["TmDataTable_GroupDropPlaceholder"] = "Přetáhněte záhlaví sloupce pro seskupení",

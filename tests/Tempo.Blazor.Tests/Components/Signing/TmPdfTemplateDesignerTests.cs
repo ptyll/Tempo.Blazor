@@ -20,6 +20,19 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Canvas_IsNamedRegion_NotMainLandmark()
+    {
+        // N190 — the host layout owns the single <main> landmark; the designer canvas is a
+        // labelled <section> region instead (036ce5fd/a59cac9a rule, generalised).
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages()));
+
+        cut.FindAll("main").Should().BeEmpty("the host layout owns the single <main> landmark");
+        cut.Find("section.tm-pdf-template-designer__canvas")
+            .GetAttribute("aria-label").Should().Be("Template canvas");
+    }
+
+    [Fact]
     public void Render_DocumentsAndFields_UsesViewerAndOverlay()
     {
         var cut = Render<TmPdfTemplateDesigner>(parameters =>

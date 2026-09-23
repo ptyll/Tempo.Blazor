@@ -155,8 +155,11 @@
         }
     }
 
+    @* N190: the canvas shell is a labelled <section> region — the host layout owns the
+       page's single <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
     private RenderFragment RenderCanvas()
-        => @<main class="tm-report-designer__canvas-shell">
+        => @<section class="tm-report-designer__canvas-shell"
+                     aria-label="@Loc["TmReportDesigner_CanvasLabel"]">
             <div class="tm-report-designer__ruler tm-report-designer__ruler--top"></div>
             <div class="tm-report-designer__canvas-scroll" data-testid="@TestId("tm-designer-canvas-scroll")">
                 <div class="tm-report-designer__page"
@@ -187,7 +190,7 @@
                     }
                 </div>
             </div>
-        </main>;
+        </section>;
 
     private RenderFragment RenderElement(ReportElement element)
         => @<button type="button"

@@ -134,7 +134,9 @@
                                      OnElementDragEnded="HandleElementDragEndedAsync" />
             </aside>
 
-            <main class="@GetPanelClass(ModelingEditorPanel.Preview, "tm-modeling-editor__panel tm-modeling-editor__preview")" data-testid="@TestId("modeling-preview-panel")" aria-label="@Loc["TmModelingEditor_Preview"]">
+            @* N190: a labelled <section> region — the host layout owns the page's single
+               <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
+            <section class="@GetPanelClass(ModelingEditorPanel.Preview, "tm-modeling-editor__panel tm-modeling-editor__preview")" data-testid="@TestId("modeling-preview-panel")" aria-label="@Loc["TmModelingEditor_Preview"]">
                 <TmModelingDiagramPreview Document="@_document"
                                           DocumentChanged="UpdatePreviewDocumentAsync"
                                           ActiveDraggedElement="@_draggedElement"
@@ -143,7 +145,7 @@
                                           OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
                                           OnRelationshipSelected="SelectRelationshipAsync"
                                           OnOpenInEditor="OpenGeneratedDiagramAsync" />
-            </main>
+            </section>
 
             <aside class="@GetPanelClass(ModelingEditorPanel.Inspector, "tm-modeling-editor__panel tm-modeling-editor__inspector")" data-testid="@TestId("modeling-inspector-panel")" aria-label="@Loc["TmModelingEditor_Inspector"]">
                 <TmModelingSourcePanel Metadata="@_model?.Metadata"

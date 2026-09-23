@@ -52,6 +52,24 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Preview_panel_is_named_region_not_main_landmark()
+    {
+        // N190 — the host layout owns the single <main> landmark; the editor's preview area is a
+        // labelled <section> region instead (036ce5fd/a59cac9a rule, generalised).
+        Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+
+        using var cut = Render<TmModelingEditor>(parameters => parameters
+            .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("main").Should().BeEmpty("the host layout owns the single <main> landmark");
+            cut.Find("section.tm-modeling-editor__preview")
+                .GetAttribute("aria-label").Should().Be("Preview");
+        });
+    }
+
+    [Fact]
     public void Panel_tabs_switch_active_panel_state()
     {
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));

@@ -8,6 +8,19 @@ namespace Tempo.Blazor.Reporting.Tests.Components;
 public sealed class TmReportDesignerTests : ReportingComponentTestBase
 {
     [Fact]
+    public void Designer_CanvasIsNamedRegion_NotMainLandmark()
+    {
+        // N190 — the host layout owns the single <main> landmark; the designer canvas shell is a
+        // labelled <section> region instead (036ce5fd/a59cac9a rule, generalised).
+        var cut = Render<TmReportDesigner>(parameters => parameters
+            .Add(component => component.Definition, Definition()));
+
+        cut.FindAll("main").Should().BeEmpty("the host layout owns the single <main> landmark");
+        cut.Find("section.tm-report-designer__canvas-shell")
+            .GetAttribute("aria-label").Should().Be("Report canvas");
+    }
+
+    [Fact]
     public void Designer_RendersBandsAndUpdatesBandHeightAndZoom()
     {
         var cut = Render<TmReportDesigner>(parameters => parameters

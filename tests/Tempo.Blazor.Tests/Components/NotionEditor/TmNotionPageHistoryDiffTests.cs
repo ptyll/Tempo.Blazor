@@ -75,6 +75,29 @@ public sealed class TmNotionPageHistoryDiffTests : LocalizationTestBase
         });
     }
 
+    [Fact]
+    public void HistoryPanel_ContentIsNamedRegion_NotMainLandmark()
+    {
+        // N190 — the host layout owns the single <main> landmark; the history content area is a
+        // labelled <section> region instead (036ce5fd/a59cac9a rule, generalised).
+        var context = new NotionEditorContext
+        {
+            HistoryProvider = new CapturingHistoryProvider()
+        };
+
+        var host = Render<CascadingValue<NotionEditorContext>>(parameters => parameters
+            .Add(component => component.Value, context)
+            .AddChildContent<TmNotionPageHistory>(child => child
+                .Add(component => component.Visible, true)
+                .Add(component => component.PageId, CapturingHistoryProvider.PageId.ToString("D"))));
+
+        host.WaitForAssertion(() => host.FindAll(".tm-nph__version-item").Should().HaveCount(2));
+
+        host.FindAll("main").Should().BeEmpty("the host layout owns the single <main> landmark");
+        host.Find("section.tm-nph__content")
+            .GetAttribute("aria-label").Should().Be("Version content");
+    }
+
     private sealed class CapturingHistoryProvider : INotionVersionProvider
     {
         public static readonly Guid PageId = Guid.Parse("11111111-1111-1111-1111-111111111111");
