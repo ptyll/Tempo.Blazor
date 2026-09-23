@@ -186,7 +186,7 @@ to{transform:translateX(0);}
 .tm-btn.tm-btn-primary:hover:not(:disabled){background-color:var(--tm-color-primary-hover);border-color:var(--tm-color-primary-hover);}
 .tm-btn.tm-btn-primary:active:not(:disabled){background-color:var(--tm-color-primary-active);}
 [data-theme="dark"] .tm-btn-danger,.tm-dark .tm-btn-danger{color:var(--tm-text-inverse);}
-.tm-btn.tm-btn-secondary{background-color:var(--tm-bg-surface);border-color:var(--tm-border-color);color:var(--tm-text-primary);}
+.tm-btn.tm-btn-secondary{background-color:var(--tm-bg-surface);border-color:var(--tm-border-color-control);color:var(--tm-text-primary);}
 .tm-btn.tm-btn-secondary:hover:not(:disabled){background-color:var(--tm-color-gray-50);}
 .tm-btn.tm-btn-outline-secondary{background-color:transparent;border-color:var(--tm-border-color-control);color:var(--tm-text-primary);}
 .tm-btn.tm-btn-outline-secondary:hover:not(:disabled){background-color:var(--tm-color-gray-50);}

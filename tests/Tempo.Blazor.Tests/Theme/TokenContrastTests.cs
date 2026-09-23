@@ -92,6 +92,35 @@ public sealed class TokenContrastTests
     }
 
     /// <summary>
+    /// UX review Fáze 17 retarget (N150): <c>.tm-btn-secondary</c> painted its border from the same
+    /// decorative <c>--tm-border-color</c> register #11 measured at 1,24:1 light / 1,41:1 dark —
+    /// under the 3:1 a control boundary needs. Secondary is the heavy Cancel/Discard surface, so it
+    /// moves to <c>--tm-border-color-control</c> (4,83:1 / 5,71:1) like .tm-btn-default and
+    /// .tm-btn-outline-secondary before it. The test reads the DECLARED value out of
+    /// <c>_button.css</c> and then measures it — a revert to the decorative token fails on the
+    /// value, a token re-tune fails on the ratio.
+    /// </summary>
+    [Fact]
+    public void SecondaryButtonBorder_IsAControlToken_AndKeepsThreeToOne()
+    {
+        var declared = ThemeCss.Property("_button.css", ".tm-btn.tm-btn-secondary", "border-color");
+
+        declared.Should().Be("var(--tm-border-color-control)",
+            "N150: dekorační --tm-border-color měřil 1,24:1/1,41:1 — pod prahem 3:1 pro hranici " +
+            "ovládacího prvku; kontrolní token je tentýž fix jako .tm-btn-default (register #11) " +
+            "a .tm-btn-outline-secondary (2.8.17)");
+
+        foreach (var dark in new[] { false, true })
+        {
+            ThemeCss.Ratio(declared, "var(--tm-bg-surface)", dark).Should().BeGreaterThanOrEqualTo(
+                3.0,
+                "hranice .tm-btn-secondary na --tm-bg-surface ({0}) musí držet 3:1 — změřeno {1:0.00}:1",
+                dark ? "dark" : "light",
+                ThemeCss.Ratio(declared, "var(--tm-bg-surface)", dark));
+        }
+    }
+
+    /// <summary>
     /// Application gap register B: <c>.tm-btn-danger</c> and <c>.tm-badge-danger.tm-badge-filled</c>
     /// paint WHITE ink on <c>--tm-color-danger</c>, and the old #ef4444 measured 3,76:1 — under the
     /// 4,5:1 AA asks of text. The token moved one step darker (#dc2626 → 4,83:1, hover #b91c1c →

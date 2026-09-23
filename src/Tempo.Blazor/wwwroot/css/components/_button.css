@@ -85,9 +85,13 @@
   color: var(--tm-text-inverse);
 }
 
+/* --tm-border-color-control, not --tm-border-color: the decorative token measured
+   1.24:1 light / 1.41:1 dark against --tm-bg-surface — under the 3:1 a control border
+   needs (N150, same defect class as register #11 on .tm-btn-default and the 2.8.17 fix
+   on .tm-btn-outline-secondary). The control token measures 4.83:1 / 5.71:1. */
 .tm-btn.tm-btn-secondary {
   background-color: var(--tm-bg-surface);
-  border-color: var(--tm-border-color);
+  border-color: var(--tm-border-color-control);
   color: var(--tm-text-primary);
 }
 .tm-btn.tm-btn-secondary:hover:not(:disabled) {
