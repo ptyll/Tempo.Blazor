@@ -35,6 +35,12 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
     /// inject a collection fixture into a class fixture, and the runner initializes a collection
     /// fixture before it runs any test class of the collection — so the class fixtures read what
     /// was resolved here.
+    /// <para>
+    /// MIGRATION TO xUnit 3 (N180): <c>IAssemblyFixture&lt;MsSqlContainerFixture&gt;</c> replaces
+    /// this static bridge with direct injection into <see cref="MsSqlTestDatabase"/>; once that is
+    /// done, delete <c>internal static ResolvedServer? Server</c> and pass the fixture instance
+    /// through the constructor instead.
+    /// </para>
     /// </summary>
     internal static ResolvedServer? Server { get; private set; }
 
@@ -214,7 +220,12 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
         }
     }
 
-    /// <summary>Resets all catalog tables to empty, keeping the schema and migration history.</summary>
+    /// <summary>
+    /// Resets all catalog tables to empty, keeping the schema and migration history.
+    /// N181: Respawn deletes ROWS, not IDENTITY seeds — auto-increment values keep growing across
+    /// resets within a class. Tests in this suite do not assert absolute IDs; any future test that
+    /// does must use a returned/generated ID, never an assumption about a concrete value.
+    /// </summary>
     public async Task ResetAsync()
     {
         if (_respawner is null)

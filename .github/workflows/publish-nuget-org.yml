@@ -149,6 +149,12 @@ jobs:
       # once, for 2.8.20 — an observation, not a limit; see eng/pack-nuget-packages.sh) neither feed
       # guard can see the number, both pass truthfully, and the push step's own accounting is the only
       # thing that refuses. The two placements cover different moments of the same re-run.
+      #
+      # TWO INDEPENDENT MsSqlContainerFixture STARTS, ONE PER LANE — measured ~40 s + image pull
+      # each, paid twice per release run. Accepted 2026-09-23 (N182): sharing one container across
+      # the two `dotnet test` invocations in this job would need a persistent service (not a
+      # Testcontainers-per-test-run fixture) and is out of scope for this phase; revisit if the
+      # two-lane wall clock becomes the bottleneck.
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E"
 
