@@ -2617,6 +2617,97 @@ public class TmDocumentEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public void SuggestOnly_FlippedAtRuntime_PushesTrackChangesOnToCanvasEngine()
+    {
+        // N192: the engine reads trackChanges.enabled only at mount — setOptions/updateOptions
+        // ignore it. A runtime flip of RequiresTrackedEditing (permissions → SuggestOnly) locks
+        // the toggle on in the UI but must ALSO reach the engine through the dedicated interop,
+        // or edits stop being recorded while the UI claims tracking is on.
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var module = SetupDocumentCanvasModule();
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.Permissions, DocumentEditorPermissions.ForRole(DocumentEditorRole.Editor)));
+
+        cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
+        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "setTrackChangesEnabled",
+            "mount carries the flag inside optionsJson — nothing pushed the runtime flag yet");
+
+        cut.Render(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.Permissions, DocumentEditorPermissions.ForRole(DocumentEditorRole.SuggestOnly)));
+
+        cut.WaitForAssertion(() => module.Invocations.Should().Contain(invocation =>
+                invocation.Identifier == "setTrackChangesEnabled"
+                && invocation.Arguments.Count >= 2
+                && Equals(invocation.Arguments[1], true),
+            "flipping to SuggestOnly after mount must push trackChanges.enabled=true to the engine"));
+    }
+
+    [Fact]
+    public void SuggestionMode_RemovingProvider_PushesTrackChangesOffToCanvasEngine()
+    {
+        // N192 symmetric case: removing SuggestionProvider flips CanvasEngineTracksChanges
+        // true→false — without the push the engine would keep tracking while the suggestion
+        // UI is gone (the mirror image of the flip-on defect).
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var module = SetupDocumentCanvasModule();
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.SuggestionProvider, new InMemoryDocumentSuggestionProvider())
+                      .Add(p => p.SuggestionsEnabled, true));
+
+        cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
+        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "setTrackChangesEnabled",
+            "suggestion mode boots the flag through mount optionsJson — nothing pushed it yet");
+
+        cut.Render(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      // Blazor keeps parameters absent from the new view — removing the provider
+                      // must be expressed explicitly.
+                      .Add(p => p.SuggestionProvider, (IDocumentSuggestionProvider?)null));
+
+        cut.WaitForAssertion(() => module.Invocations.Should().Contain(invocation =>
+                invocation.Identifier == "setTrackChangesEnabled"
+                && invocation.Arguments.Count >= 2
+                && Equals(invocation.Arguments[1], false),
+            "removing the suggestion provider after mount must push trackChanges.enabled=false to the engine"));
+    }
+
+    [Fact]
+    public void CanvasEngine_NoEffectiveFlip_DoesNotRepushTrackChanges()
+    {
+        // N192 guard rail: OnParametersSetAsync runs on every parameter-bearing render — the push
+        // must fire only when the effective flag actually changes, not on every pass.
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var module = SetupDocumentCanvasModule();
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.ShowToolbar, true));
+
+        cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
+
+        cut.Render(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider)
+                      .Add(p => p.ShowToolbar, false));
+
+        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "setTrackChangesEnabled",
+            "an unrelated parameter change leaves the effective flag untouched — no redundant interop push");
+    }
+
+    [Fact]
     public async Task Collaboration_RemoteRevisionUpdateRefreshesPanelWithoutReplacingCanvasHost()
     {
         var provider = new InMemoryDocumentEditorProvider();

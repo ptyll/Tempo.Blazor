@@ -316,6 +316,10 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     private bool _isDirty;
     private bool _trackChangesEnabled;
     private bool _suggestionsEnabled;
+    // N192: the last track-changes flag the canvas engine was (or will be) told — either through
+    // the mount optionsJson or through the dedicated runtime interop. The engine's updateOptions()
+    // ignores trackChanges, so a runtime flip of the effective expression must be pushed explicitly.
+    private bool _appliedCanvasEngineTrackChanges;
     private bool _templatePreviewEnabled;
     private bool _versionDialogOpen;
     private bool _compareDialogOpen;
@@ -937,6 +941,21 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         if (SuggestionProvider is null)
         {
             _suggestionsEnabled = false;
+        }
+
+        // N192: the canvas engine reads trackChanges.enabled only at mount — updateOptions() ignores
+        // it. A runtime flip of the effective expression (permissions → SuggestOnly, the suggestion
+        // provider being added/removed, the TrackChangesEnabled parameter) locks the toolbar toggle
+        // but would leave the engine on its mount-time value: suggestion UI without recording, or
+        // tracking while the UI reads off. Push only real deltas — this runs on every parameter pass.
+        var canvasEngineTrackChanges = CanvasEngineTracksChanges;
+        if (canvasEngineTrackChanges != _appliedCanvasEngineTrackChanges)
+        {
+            _appliedCanvasEngineTrackChanges = canvasEngineTrackChanges;
+            if (_canvasHost is not null)
+            {
+                await _canvasHost.SetTrackChangesEnabledAsync(canvasEngineTrackChanges);
+            }
         }
 
         await RefreshFormatCapabilitiesAsync();
