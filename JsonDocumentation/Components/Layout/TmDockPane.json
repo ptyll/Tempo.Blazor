@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString()",
+      "description": "Unique identifier."
+    },
+    {
       "name": "CanClose",
       "type": "bool",
       "isRequired": false,

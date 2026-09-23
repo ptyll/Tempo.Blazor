@@ -369,6 +369,45 @@ public class ComponentDocumentationFreshnessTests
             + string.Join(", ", missing.Take(20)));
     }
 
+    /// <summary>
+    /// The bundle-level guard above cannot see overlay drift: the merge pipeline builds bundles
+    /// from reflection first and only enriches from the overlay files, so a parameter missing
+    /// under <c>JsonDocumentation/</c> still reaches the shipped bundle with a bare generated
+    /// entry — documented nowhere a maintainer can edit. This is the fourth combination the
+    /// 2026-09-22 review (N201) found unguarded: the overlay set itself must name every settable
+    /// parameter, merged across <c>Components/</c> and <c>Packages/&lt;id&gt;/items/</c>.
+    /// </summary>
+    [Fact]
+    public void Overlay_Covers_Every_Component_Parameter()
+    {
+        var docs = ComponentDocs();
+        var documentedTypes = DocumentedTypeNames();
+
+        var missing = ComponentPopulation()
+            .Where(c => !UndocumentedComponents.Contains(c.Name))
+            .SelectMany(c =>
+            {
+                var expected = ExpectedParameters(c, documentedTypes);
+                if (!docs.TryGetValue(c.Name, out var entry))
+                {
+                    return expected.Select(name =>
+                        $"{c.Name}.{name} — component has no kind:\"Component\" entry under JsonDocumentation/");
+                }
+
+                return expected
+                    .Where(name => !entry.Parameters.Contains(name))
+                    .Select(name => $"{Path.GetFileName(entry.File)}: {c.Name}.{name}");
+            })
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+        missing.Should().BeEmpty(
+            "a parameter a consumer can set must appear in the component's own JsonDocumentation/ "
+            + "overlay file — the bundle-level guard reflects live params even when the overlay page "
+            + "drifted, so this direction needs its own check: "
+            + string.Join(", ", missing.Take(20)));
+    }
+
     [Fact]
     public void Bundle_Documents_No_Phantom_Parameters()
     {

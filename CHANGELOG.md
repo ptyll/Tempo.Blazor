@@ -64,6 +64,40 @@ which is exactly the red
   If a page genuinely wants no current section ever, that is the case the register deferred: feed
   `ActiveId` from your own state instead of relying on the removed switch.
 
+- **`TmOverlayPanel`'s content mounts only while the panel is open.** Before the Popover-API
+  migration `ChildContent` stayed in the DOM, hidden by CSS, whenever `IsOpen` was `false`; it
+  is now rendered inside an `@if (IsVisible)` block (`TmOverlayPanel.razor`), so a closed
+  panel's children are fully disposed and re-created on the next open. Every consumer built on
+  `TmOverlayPanel` — `TmDropdown`, `TmPopover`, `TmFilterableDropdown`, `TmDatePicker` and the
+  rest of the 15 — shares this. Migration: a stateful child that must survive close/reopen
+  (a form draft, a scroll position) needs to persist that state OUTSIDE the panel (parent
+  component field, not local `@code` state of the child), and code that queried for the panel's
+  content while closed (bUnit `cut.Find` against a hidden node, direct DOM selectors) must
+  instead assert absence when closed and presence only after opening.
+
+- **`TmColorPicker` no longer exposes `CloseFromGlobalAsync`/`CloseFromGlobalEscapeAsync`,
+  does not implement `IAsyncDisposable`, and `color-picker.js` no longer exposes
+  `window.tmColorPicker.registerEscape`/`adjustDropdownPosition`/`unregister`.** The dropdown
+  is a `TmOverlayPanel` now — dismissal (Escape, outside pointerdown), placement, flip/shift
+  and scroll/resize tracking all live in the shared `overlay.js`, which owns disposal too.
+  `color-picker.js` keeps only `focusPaletteSwatch`, the palette keyboard-navigation helper
+  `TmColorPalette` still calls. Migration: any code calling the removed JSInvokable methods or
+  `window.tmColorPicker.*` global functions directly should remove that call — `TmOverlayPanel`
+  already handles the same dismissal contract.
+
+- **`TmNavigationGuard.OnSaveAndLeave` returning `false` now closes the dialog and forgets the
+  blocked destination.** The signature is unchanged (`Func<Task<bool>>?`), but the failure
+  contract changed: until now a failed save left the dialog open with `_pendingTargetLocation`
+  retained, so a second click on "Save and leave" retried against the original target. The
+  guard cannot know what failed or where the host wants focus, so per the
+  DEC-SAVE-AND-LEAVE-FAILURE decision it now closes its own dialog, keeps navigation cancelled,
+  clears the blocked destination, and raises the new `OnSaveAndLeaveFailed` callback (see
+  **Added**). **Migration:** if a host relied on the same-dialog retry (nothing else did — the
+  destination was never exposed), treat every leave attempt as fresh: wire
+  `OnSaveAndLeaveFailed` to focus the form's own error surface (first invalid field or an
+  `aria-live` error region); the user's next navigation attempt re-opens a fresh dialog for
+  wherever they are actually going then.
+
 ### Added
 
 - **`TmDataTable.ShowResultSummary` (`bool?`).** The item count used to exist only inside the
@@ -124,6 +158,14 @@ which is exactly the red
   is exposed on `data-tm-placement` so consumers (e.g. `TmPopover`'s arrow) can react. All
   fifteen floating components now delegate to it (see **Fixed** below), and the `/overlay` demo
   page exercises placements, overflow escape, modal stacking and the viewport-edge flip.
+
+- **`TmNavigationGuard.OnSaveAndLeaveFailed` (`EventCallback`).** Raised after a failed
+  `OnSaveAndLeave` once the guard's dialog has closed (DEC-SAVE-AND-LEAVE-FAILURE). The guard
+  deliberately does not pick a focus target or an announcement — it does not know the host's
+  error surface — so the host wires this callback to move focus to its own error area or first
+  invalid field and announce it (e.g. `aria-live`). Navigation stays cancelled and the blocked
+  destination is cleared: a retry means the host triggers a fresh navigation attempt, not a
+  second click in the same dialog.
 
 ### Fixed
 
@@ -342,6 +384,34 @@ which is exactly the red
   (`delete HTMLElement.prototype.showPopover` before page scripts — fixed positioning, the
   transformed-modal containing-block walk, Escape) and the suppressor timeout end to end (N165,
   N163).
+
+- **`TmDataTable`: the sort button's accessible name predicted the wrong action during
+  multi-sort (N202).** With two or more active sort descriptors the `aria-label`/`title` still
+  answered with the single-column tri-state cycle ("Sort descending" → "Clear sort"), but the
+  click actually resets to a single ascending sort — the announcement promised a state the
+  activation never reaches. The name now says "Sort ascending" whenever more than one
+  descriptor is active; the tri-state cycle is only announced when the column is the sole
+  sort. `SortByAsync` itself is unchanged — only the prediction was stale.
+
+- **`TmDataTable`: Shift+Enter on a pin-only header no longer leaks into the next sortable
+  column's click (N203).** The keydown that synthesizes a click on a sortable header records
+  its Shift state so the keyboard-originated click (which Firefox ships with every modifier
+  cleared) can apply multi-sort. That flag used to be armed for ANY header keydown — including
+  a pin-only, non-sortable header whose keydown never produces a click — and stayed set until
+  an unrelated later click on a different sortable column inherited it, silently turning a
+  plain activation into a multi-sort. The flag now arms only on a sortable header's activation
+  keys, so only the keydown that will actually produce the consuming click can seed it.
+
+- **`TmGanttImportDialog`: the file chooser no longer crosses a JS-interop boundary inside the
+  user gesture (N204).** "Choose file" used to run `input.click()` from an `@onclick` handler
+  through a `JS.InvokeAsync` round-trip — fine in WASM, but in Blazor Server the SignalR
+  hop severs the user-activation chain, and WebKit ignores `input.click()` issued outside a
+  native event handler even with the hop removed. The collocated module now registers a NATIVE
+  click listener on the trigger button ahead of the first click
+  (`registerFilePickerTrigger`), so `input.click()` runs synchronously inside the browser's own
+  click event for pointer, Enter and Space activation alike. The listener is re-registered on
+  every dialog open because closing destroys the DOM, and a `dataset` marker in JS plus a flag
+  in C# each guard against double registration.
 
 ### Changed — token defaults
 

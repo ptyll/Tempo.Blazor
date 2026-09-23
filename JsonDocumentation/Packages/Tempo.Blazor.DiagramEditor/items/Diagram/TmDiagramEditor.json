@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false,
+      "description": "Document being edited. Bind with @bind-Document."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

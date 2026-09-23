@@ -511,6 +511,7 @@
           "example": ":root {\n  /* Change primary color to indigo */\n  --tm-color-primary-500: #6366f1;\n  --tm-color-primary-600: #4f46e5;\n  --tm-color-primary-700: #4338ca;\n  --tm-color-primary: var(--tm-color-primary-500);\n  --tm-color-primary-hover: var(--tm-color-primary-600);\n  --tm-color-primary-active: var(--tm-color-primary-700);\n\n  /* Change default border radius */\n  --tm-radius-md: 0.5rem;\n\n  /* Change default font */\n  --tm-font-sans: 'Inter', system-ui, sans-serif;\n}"
         }
       },
+      "browserFloor": "Two CSS features set the practical browser floor. `rgb(from …)` relative colour syntax (used by --tm-shadow-focus, --tm-shadow-focus-danger and dark-theme tokens) requires Chrome 119+/Safari 16.4+/Firefox 128+; below that the declaration is invalid at computed-value time and the focus ring silently disappears (a11y-relevant). `:root:has()` (used to zero --tm-form-action-bar-reserve-block-size below the 768px breakpoint) requires Firefox 121+; below that it fails safe — the reserve stays positive, cosmetic degradation only. Both are Baseline 2024.",
       "reducedMotion": "Since 2.9.0 the @media (prefers-reduced-motion: reduce) block in animations.css enumerates only Tempo-owned animated classes instead of the previous universal * / *::before / *::after selector, so host-page elements are no longer touched. The 0.01ms duration is kept deliberately (transitionend/animationend still fire). The universal box-sizing reset in base.css remains an intentional document reset.",
       "floatingPanels": {
         "description": "Anchored floating panels (TmPopover body, TmDropdown menu, TmContextMenu menu, and any custom use of TmOverlayPanel) are rendered with popover=\"manual\" and opened via the HTML Popover API, which places them in the browser top layer.",
@@ -18143,7 +18144,13 @@
           "name": "OnSaveAndLeave",
           "type": "Func<Task<bool>>?",
           "isRequired": false,
-          "description": "Optional save callback. When set, the confirmation dialog gets a third \"save and leave\" button. Return true ONLY when the work is persisted: on true the guard re-issues the blocked navigation, on false it navigates nowhere and leaves the dialog open, so a failed save cannot discard the changes the guard exists to protect. Before 2.8.16 this was an EventCallback and the guard left regardless of the outcome."
+          "description": "Optional save callback. When set, the confirmation dialog gets a third \"save and leave\" button. Return true ONLY when the work is persisted: on true the guard re-issues the blocked navigation; on false it navigates nowhere, closes the dialog (see OnSaveAndLeaveFailed) and clears the blocked destination — a retry means the host triggers a fresh navigation attempt, not a second click in the same dialog. Before 2.8.16 this was an EventCallback and the guard left regardless of the outcome."
+        },
+        {
+          "name": "OnSaveAndLeaveFailed",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after a failed OnSaveAndLeave closes the dialog (F10, DEC-SAVE-AND-LEAVE-FAILURE). The guard does not know what error surface the host has — no default focus target, no assumed toast — so the host wires this to move focus to its own error area or first invalid field and announce it (e.g. aria-live). Navigation stays cancelled and the blocked destination is cleared: leaving again requires a fresh navigation attempt."
         },
         {
           "name": "SaveAndLeaveText",

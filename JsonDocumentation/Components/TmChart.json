@@ -8,6 +8,18 @@
   ],
   "parameters": [
     {
+      "name": "Type",
+      "type": "ChartType",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "Data",
+      "type": "ChartData",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
       "name": "Width",
       "type": "string",
       "isRequired": false,
@@ -51,6 +63,31 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false
+    },
+    {
+      "name": "InteractiveLegend",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, legend items become buttons that toggle the visibility of their series (multi-dataset legend) or single value (per-value legend). The component owns the hidden state; OnSeriesToggle reports each change. Default false keeps the legend non-interactive (backward compatible)."
+    },
+    {
+      "name": "OnSeriesToggle",
+      "type": "EventCallback<ChartSeriesToggle>",
+      "isRequired": false,
+      "description": "Raised whenever a legend series/value is toggled."
+    },
+    {
+      "name": "ShowTooltip",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Shows a tooltip when hovering a bar, point or slice. Default true."
+    },
+    {
+      "name": "TooltipTemplate",
+      "type": "RenderFragment<ChartTooltipContext>?",
+      "isRequired": false,
+      "description": "Optional custom tooltip content; when null a rich default tooltip is used."
     },
     {
       "name": "TreeNodes",

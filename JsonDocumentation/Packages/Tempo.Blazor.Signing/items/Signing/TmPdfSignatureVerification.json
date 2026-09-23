@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Result",
+      "type": "SigningPdfVerificationResult",
+      "isRequired": true,
+      "description": "Verification result to render."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

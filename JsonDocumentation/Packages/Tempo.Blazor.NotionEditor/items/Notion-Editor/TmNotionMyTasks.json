@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "WorkItemSource",
+      "type": "ITmWorkItemProvider",
+      "isRequired": true,
+      "description": "Unified work-item source used to query and update tasks.",
+      "editorRequired": true
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

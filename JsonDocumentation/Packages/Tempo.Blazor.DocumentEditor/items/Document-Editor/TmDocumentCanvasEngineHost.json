@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DocumentEditorDocument?",
+      "isRequired": false,
+      "description": "The document accepted by the canvas engine host."
+    },
+    {
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,

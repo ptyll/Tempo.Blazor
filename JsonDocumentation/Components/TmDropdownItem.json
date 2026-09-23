@@ -21,6 +21,12 @@
       "description": "Optional leading icon."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Item content."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

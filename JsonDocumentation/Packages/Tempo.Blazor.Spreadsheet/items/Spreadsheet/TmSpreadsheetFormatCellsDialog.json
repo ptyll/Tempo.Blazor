@@ -10,5 +10,24 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Spreadsheet"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Style",
+      "type": "SpreadsheetCellStyle",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "OnApply",
+      "type": "EventCallback<SpreadsheetCellStyle>",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": true,
+      "editorRequired": true
+    }
+  ]
 }

@@ -74,6 +74,12 @@
       "description": "Custom header content (replaces Title)."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Main body content."
+    },
+    {
       "name": "FooterContent",
       "type": "RenderFragment?",
       "isRequired": false,

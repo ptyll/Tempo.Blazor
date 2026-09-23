@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The current color value."
+    },
+    {
       "name": "ApplyText",
       "type": "string?",
       "isRequired": false,

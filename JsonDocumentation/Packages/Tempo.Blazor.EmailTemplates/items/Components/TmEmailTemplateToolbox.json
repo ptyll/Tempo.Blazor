@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "OnAddBlock",
+      "type": "EventCallback<BlockDescriptor>",
+      "isRequired": false,
+      "description": "Raised when a block is chosen (clicked) to be added."
+    },
+    {
       "name": "OnAddSection",
       "type": "EventCallback<LayoutPreset>",
       "isRequired": false,

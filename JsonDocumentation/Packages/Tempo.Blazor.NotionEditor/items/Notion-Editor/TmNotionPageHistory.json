@@ -12,8 +12,24 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "PageId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnRestored",
+      "type": "EventCallback<string>",
       "isRequired": false
     }
   ],

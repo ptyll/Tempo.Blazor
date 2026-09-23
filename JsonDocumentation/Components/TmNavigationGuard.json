@@ -75,10 +75,16 @@
       "description": "Raised after the user cancels and stays on the page."
     },
     {
+      "name": "OnSaveAndLeaveFailed",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after a failed OnSaveAndLeave closes the dialog (F10, DEC-SAVE-AND-LEAVE-FAILURE). The guard does not know what error surface the host has — no default focus target, no assumed toast — so the host wires this to move focus to its own error area or first invalid field and announce it (e.g. aria-live). Navigation stays cancelled and the blocked destination is cleared: leaving again requires a fresh navigation attempt."
+    },
+    {
       "name": "OnSaveAndLeave",
       "type": "Func<Task<bool>>?",
       "isRequired": false,
-      "description": "Optional save callback. When set, the confirmation dialog gets a third \"save and leave\" button. Return true ONLY when the work is persisted: on true the guard re-issues the blocked navigation, on false it navigates nowhere and leaves the dialog open, so a failed save cannot discard the changes the guard exists to protect. Before 2.8.16 this was an EventCallback and the guard left regardless of the outcome."
+      "description": "Optional save callback. When set, the confirmation dialog gets a third \"save and leave\" button. Return true ONLY when the work is persisted: on true the guard re-issues the blocked navigation; on false it navigates nowhere, closes the dialog (see OnSaveAndLeaveFailed) and clears the blocked destination — a retry means the host triggers a fresh navigation attempt, not a second click in the same dialog. Before 2.8.16 this was an EventCallback and the guard left regardless of the outcome."
     },
     {
       "name": "ShouldGuard",

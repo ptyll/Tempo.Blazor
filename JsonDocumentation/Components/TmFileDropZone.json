@@ -32,11 +32,29 @@
       "description": "When true, the drop zone is disabled and no files can be selected."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional custom content to display inside the drop zone."
+    },
+    {
       "name": "MaxFileCount",
       "type": "int",
       "isRequired": false,
       "default": "10",
       "description": "Maximum number of files to accept from a single selection. Default 10."
+    },
+    {
+      "name": "InputTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional test id passed to the internal file input."
+    },
+    {
+      "name": "InputAriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional aria-label passed to the internal file input."
     },
     {
       "name": "Class",

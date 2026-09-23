@@ -82,6 +82,25 @@
       "description": "Field label."
     },
     {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "Id of the search input, so the rendered Label can point at it with for. Defaults to a generated value; supply one when the page owns the label."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the field required: the asterisk on the label (tm-input-label-required, the same marker the other inputs use) plus required and aria-required on the search input."
+    },
+    {
+      "name": "FloatingMenu",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Lifts the results list out of the normal flow so an ancestor with overflow: auto — a modal body, a scrolling form column — cannot clip it or scroll it away from its input. The list is then positioned against the input by script, flipping above it when there is not enough room below. Off by default: it costs a JS module import, and a picker that is not inside a scroll container does not need it."
+    },
+    {
       "name": "Placeholder",
       "type": "string?",
       "isRequired": false,

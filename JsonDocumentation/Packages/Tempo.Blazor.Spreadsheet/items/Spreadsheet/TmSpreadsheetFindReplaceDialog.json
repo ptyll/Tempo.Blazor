@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "InitialOptions",
+      "type": "SpreadsheetSearchOptions?",
+      "isRequired": false,
+      "description": "Initial search options used to seed the panel."
+    },
+    {
       "name": "MatchCount",
       "type": "int",
       "isRequired": false,

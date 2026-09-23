@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Provider",
+      "type": "ITempoDocumentLibraryProvider",
+      "isRequired": true,
+      "description": "The library to browse. Required.",
+      "editorRequired": true
+    },
+    {
       "name": "DefaultMode",
       "type": "DocumentOpenMode",
       "isRequired": false,

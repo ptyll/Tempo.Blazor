@@ -9,5 +9,31 @@
   "documentationStatus": "generated",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Uploads",
+      "type": "IReadOnlyList<TmUploadItem>?",
+      "isRequired": false,
+      "description": "Uploads to display (in-progress and recently finished)."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback<TmUploadItem>",
+      "isRequired": false,
+      "description": "Invoked when the user cancels an in-flight upload."
+    },
+    {
+      "name": "OnResume",
+      "type": "EventCallback<TmUploadItem>",
+      "isRequired": false,
+      "description": "Invoked when the user resumes a cancelled or failed upload."
+    },
+    {
+      "name": "OnDismiss",
+      "type": "EventCallback<TmUploadItem>",
+      "isRequired": false,
+      "description": "Invoked when the user dismisses a finished upload from the list."
+    }
   ]
 }

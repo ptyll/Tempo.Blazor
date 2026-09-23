@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Image",
+      "type": "ImageBlockContent?",
+      "isRequired": false,
+      "description": "Image content displayed by the inspector."
+    },
+    {
       "name": "AlignmentChanged",
       "type": "EventCallback<DocumentImageAlignment>",
       "isRequired": false,

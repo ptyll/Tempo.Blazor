@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Field",
+      "type": "SigningField",
+      "isRequired": true,
+      "description": "Primary signing field represented by this step."
+    },
+    {
       "name": "AnonymousCheckbox",
       "type": "bool",
       "isRequired": false,

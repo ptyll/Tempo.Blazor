@@ -10,5 +10,26 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnExport",
+      "type": "EventCallback<WireframeExportDialogResult>",
+      "isRequired": false
+    },
+    {
+      "name": "DefaultFileName",
+      "type": "string?",
+      "isRequired": false
+    }
+  ]
 }

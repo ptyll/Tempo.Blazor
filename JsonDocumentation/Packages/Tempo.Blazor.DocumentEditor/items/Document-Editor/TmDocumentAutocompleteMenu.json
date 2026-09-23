@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the autocomplete menu is visible."
+    },
+    {
       "name": "EmptyText",
       "type": "string?",
       "isRequired": false,

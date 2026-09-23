@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Token",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Public share token from the route."
+    },
+    {
       "name": "AggregateProvider",
       "type": "INotionAggregateProvider",
       "isRequired": true,

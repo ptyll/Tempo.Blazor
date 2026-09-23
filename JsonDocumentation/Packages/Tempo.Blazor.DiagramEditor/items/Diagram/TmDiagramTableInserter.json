@@ -10,5 +10,12 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "OnInsert",
+      "type": "EventCallback<(int Rows, int Columns)>",
+      "isRequired": false,
+      "description": "Fires when user clicks a cell, passing selected rows and columns (1-based)."
+    }
+  ]
 }

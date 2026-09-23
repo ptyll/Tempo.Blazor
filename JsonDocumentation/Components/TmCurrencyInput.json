@@ -68,6 +68,18 @@
       "isRequired": false
     },
     {
+      "name": "ExchangeRateProvider",
+      "type": "IExchangeRateProvider?",
+      "isRequired": false,
+      "description": "Optional exchange-rate provider. When supplied, it takes precedence over ConvertAsync: the component fetches the rate for Currency → TargetCurrency and multiplies the amount by it. If the provider returns null (rate unavailable), the converted value is left unchanged. When null, the existing ConvertAsync callback is used exactly as before."
+    },
+    {
+      "name": "TargetCurrency",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Target currency code the amount is converted into when using ExchangeRateProvider. When null, the selected Currency is used as the target (a self-conversion). Ignored by the callback-based ConvertAsync path, which encodes its own target."
+    },
+    {
       "name": "ShowManualRate",
       "type": "bool",
       "isRequired": false,

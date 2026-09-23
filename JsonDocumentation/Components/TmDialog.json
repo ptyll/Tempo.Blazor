@@ -66,6 +66,11 @@
       "default": "\"Cancel\""
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false
+    },
+    {
       "name": "FooterContent",
       "type": "RenderFragment?",
       "isRequired": false
@@ -79,6 +84,20 @@
       "name": "OnPromptResult",
       "type": "EventCallback<string?>",
       "isRequired": false
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, pressing Escape cancels the dialog. Defaults to true (current behavior)."
+    },
+    {
+      "name": "CloseOnOverlayClick",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, clicking the backdrop cancels the dialog. Defaults to false so a decision prompt is not dismissed by an accidental outside click (current behavior)."
     },
     {
       "name": "Class",

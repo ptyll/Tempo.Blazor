@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "PendingRevisionCount",
+      "type": "int",
+      "isRequired": false,
+      "description": "Number of pending tracked changes."
+    },
+    {
       "name": "OpenCommentCount",
       "type": "int",
       "isRequired": false,

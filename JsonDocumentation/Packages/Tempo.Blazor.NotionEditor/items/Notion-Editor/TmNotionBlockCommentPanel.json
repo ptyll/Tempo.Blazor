@@ -12,8 +12,44 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "BlockId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "Top",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "Left",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "StartInNewThreadMode",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnCountChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false
+    },
+    {
+      "name": "OnMentionClicked",
+      "type": "EventCallback<string>",
       "isRequired": false
     }
   ],

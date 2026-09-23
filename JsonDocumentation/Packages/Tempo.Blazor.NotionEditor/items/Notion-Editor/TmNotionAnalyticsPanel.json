@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "AnalyticsProvider",
+      "type": "INotionAnalyticsProvider",
+      "isRequired": true,
+      "description": "Analytics provider used to query page views and top pages.",
+      "editorRequired": true
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

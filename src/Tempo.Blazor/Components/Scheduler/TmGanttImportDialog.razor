@@ -49,18 +49,25 @@
                 {
                     <div class="tm-gantt__import-file-area">
                         @* The InputFile stays in the DOM visually hidden — NOT display:none, so the
-                           JS-triggered input.click() inside the button's user gesture reliably opens
-                           the native chooser in every engine. The label-for-input trick was
-                           unreachable from the keyboard: a <label> can never take focus. *@
+                           JS-triggered input.click() inside the button's native click listener
+                           reliably opens the native chooser in every engine — including WebKit,
+                           which ignores input.click() issued after a Blazor interop round-trip
+                           (N204). The label-for-input trick was unreachable from the keyboard:
+                           a <label> can never take focus. *@
                         <div class="tm-gantt__import-file-input-wrap" @ref="_fileInputWrap">
                             <InputFile OnChange="OnFileChangedAsync" accept="@(_tab == ImportTab.Excel ? ".xlsx,.xls" : ".xml,.mpp")"
                                        class="tm-gantt__import-file-input" aria-hidden="true" tabindex="-1" />
                         </div>
-                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
-                                  Icon="upload" OnClick="OpenFilePickerAsync"
-                                  data-testid="@TestId("import-choose-file")">
-                            @Loc["TmGantt_ChooseFile"]
-                        </TmButton>
+                        @* The native listener is registered once per dialog lifetime by
+                           registerFilePickerTrigger — there is deliberately NO @onclick here:
+                           the whole C# interop path would sit between the click and input.click()
+                           and sever the user-activation chain. *@
+                        <div @ref="_triggerWrapRef">
+                            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" Icon="upload"
+                                      data-testid="@TestId("import-choose-file")">
+                                @Loc["TmGantt_ChooseFile"]
+                            </TmButton>
+                        </div>
                         @if (_selectedFileName is not null)
                         {
                             <span class="tm-gantt__import-file-name">@_selectedFileName</span>

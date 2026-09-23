@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "ProviderKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Provider key used to select the semantic model provider. Null or empty values render the empty state."
+    },
+    {
       "name": "AllowNodeDrop",
       "type": "bool",
       "isRequired": false,

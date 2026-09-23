@@ -63,10 +63,37 @@
       "isRequired": false
     },
     {
+      "name": "BlockLastAuthorAvatar",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "BlockLastEntryText",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "BlockLastEntryTime",
+      "type": "DateTime?",
+      "isRequired": false
+    },
+    {
       "name": "NumberedListNumber",
       "type": "int",
       "isRequired": false,
       "description": "1-based ordinal for NumberedList blocks, pre-computed by TmNotionBlockList."
+    },
+    {
+      "name": "PreviousListIndentLevel",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Indent level of the list item directly above this block, or null when this is the first block or the block above is not a list item. Tab may not nest deeper than one level below it."
+    },
+    {
+      "name": "OnMergeWithPrevious",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when Backspace at the start of this block should fold it into its predecessor. The payload is the block's current HTML."
     },
     {
       "name": "OnAddAfter",

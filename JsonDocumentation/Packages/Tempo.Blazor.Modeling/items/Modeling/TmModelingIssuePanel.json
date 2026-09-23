@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Issues",
+      "type": "IReadOnlyList<ModelingIssueDto>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Issues to render in severity-coded order."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

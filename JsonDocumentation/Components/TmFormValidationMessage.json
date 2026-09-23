@@ -8,6 +8,13 @@
   ],
   "parameters": [
     {
+      "name": "For",
+      "type": "Expression<Func<object>>?",
+      "isRequired": true,
+      "description": "Expression identifying the field to display validation messages for.",
+      "editorRequired": true
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Attributes",
+      "type": "MjAttributes",
+      "isRequired": true,
+      "description": "The head attributes containing the named-class definitions (mj-class).",
+      "editorRequired": true
+    },
+    {
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": true,

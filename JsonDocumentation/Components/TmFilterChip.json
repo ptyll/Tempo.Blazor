@@ -8,6 +8,13 @@
   ],
   "parameters": [
     {
+      "name": "Filter",
+      "type": "ActiveFilter",
+      "isRequired": true,
+      "description": "The active filter to display.",
+      "editorRequired": true
+    },
+    {
       "name": "OnRemove",
       "type": "EventCallback<ActiveFilter>",
       "isRequired": false,

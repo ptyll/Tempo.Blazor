@@ -18,8 +18,44 @@
       "editorRequired": true
     },
     {
+      "name": "ColumnIndex",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "WidthPercent",
+      "type": "double",
+      "isRequired": false,
+      "default": "50"
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnFocused",
       "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnSlashMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnMentionMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnPageLinkMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTokenMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
       "isRequired": false
     }
   ],

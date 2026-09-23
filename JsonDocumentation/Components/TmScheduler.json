@@ -20,6 +20,12 @@
       "description": "Server-side data provider. Takes priority over Events if both are set."
     },
     {
+      "name": "WorkItemSource",
+      "type": "ITmWorkItemProvider?",
+      "isRequired": false,
+      "description": "Unified work-item source shared with other components (Gantt, Notion). When set (and no DataProvider is given), scheduled work items overlapping the visible range are loaded and shown as calendar events, and drag/resize changes are persisted back through it (when the provider declares the Update capability)."
+    },
+    {
       "name": "View",
       "type": "TmScheduleViewType",
       "isRequired": false,
@@ -128,6 +134,19 @@
       "description": "Whether events are read-only (no drag/resize)."
     },
     {
+      "name": "HideTimeGrid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, hides the hourly time grid body in Day and Week views (only column headers and all-day row are shown)."
+    },
+    {
+      "name": "ShowAdjacentMonthEvents",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, events are rendered in adjacent-month day cells visible in the month grid. Default: true."
+    },
+    {
       "name": "EventTemplate",
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,
@@ -138,6 +157,19 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "AllowPrint",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the toolbar shows a Print button (uses the browser print dialog with print CSS). Default: true."
+    },
+    {
+      "name": "TimeZoneId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Display timezone (IANA id such as Europe/Prague, or a Windows id). When set, event times are converted to this zone at the render boundary (DST-aware). When null, the machine-local timezone is used and non-recurring events are passed through unchanged for backward compatibility."
     }
   ],
   "cssClasses": [

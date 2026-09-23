@@ -12,6 +12,41 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DocumentEditorDocument?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowReplace",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnResultsChanged",
+      "type": "EventCallback<IReadOnlyList<DocumentSearchResult>>",
+      "isRequired": false
+    },
+    {
+      "name": "OnActiveResultChanged",
+      "type": "EventCallback<DocumentSearchResult>",
+      "isRequired": false
+    },
+    {
+      "name": "OnReplaceOneRequested",
+      "type": "EventCallback<DocumentFindReplaceRequest>",
+      "isRequired": false
+    },
+    {
+      "name": "OnReplaceAllRequested",
+      "type": "EventCallback<DocumentFindReplaceRequest>",
+      "isRequired": false
+    },
+    {
       "name": "OnNavigateRequested",
       "type": "EventCallback<int>",
       "isRequired": false,

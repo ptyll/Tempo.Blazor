@@ -90,8 +90,9 @@
     /// Leave/Stay behavior.
     /// <para>
     /// <b>Return <c>true</c> only when the work is actually persisted.</b> On <c>true</c> the guard
-    /// re-issues the blocked navigation; on <c>false</c> it navigates NOWHERE and leaves the dialog
-    /// open, so the user keeps both the changes and the choice.
+    /// re-issues the blocked navigation; on <c>false</c> it navigates nowhere, closes the dialog
+    /// (see <see cref="OnSaveAndLeaveFailed"/>) and clears the blocked destination — a retry means
+    /// the host triggers a fresh navigation attempt, not a second click in the same dialog.
     /// </para>
     /// </summary>
     /// <remarks>
@@ -127,6 +128,16 @@
 
     /// <summary>Raised after the user cancels and stays on the page.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// Raised after a failed <see cref="OnSaveAndLeave"/> closes the dialog (F10,
+    /// DEC-SAVE-AND-LEAVE-FAILURE). The guard does not know what error surface the host has — no
+    /// default focus target, no assumed toast — so the host wires this to move focus to its own
+    /// error area or first invalid field and announce it (e.g. <c>aria-live</c>). Navigation stays
+    /// cancelled: the guard does not remember the blocked destination past this point, so leaving
+    /// again means the host triggers a fresh navigation attempt.
+    /// </summary>
+    [Parameter] public EventCallback OnSaveAndLeaveFailed { get; set; }
 
     private bool EffectiveDirty => IsDirtyCallback?.Invoke() ?? IsDirty;
 
@@ -218,7 +229,8 @@
     /// <summary>
     /// Saves, and leaves ONLY if the save reported success. The pending target and the open dialog are
     /// released after the callback, not before it: a failed save must leave the user exactly where the
-    /// guard stopped them, with the choice still on screen.
+    /// guard stopped them — on the page, navigation still cancelled — while the host's own error
+    /// surface (signalled through <see cref="OnSaveAndLeaveFailed"/>) takes over the messaging (F10).
     /// </summary>
     private async Task HandleSaveAndLeaveAsync()
     {
@@ -242,9 +254,20 @@
 
         if (!saved)
         {
-            // Stay put. The dialog is still open and `_pendingTargetLocation` still holds the blocked
-            // destination, so a retry or a deliberate "leave" both still work.
+            // F10 (DEC-SAVE-AND-LEAVE-FAILURE): close the dialog and leave navigation cancelled — the
+            // host's own error surface takes over, with its own focus management and aria-live. Until
+            // 2.9.0 the dialog stayed open "so a retry is one click away"; the owner decision retired
+            // that because the guard cannot know what actually failed or where the host wants focus —
+            // only the host does.
+            _showConfirm = false;
+            _pendingTargetLocation = null;
             StateHasChanged();
+
+            if (OnSaveAndLeaveFailed.HasDelegate)
+            {
+                await OnSaveAndLeaveFailed.InvokeAsync();
+            }
+
             return;
         }
 

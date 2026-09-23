@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Commands",
+      "type": "IReadOnlyList<AIPromptCommand>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Available quick-action commands displayed above the input."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -22,6 +29,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the input is disabled."
+    },
+    {
+      "name": "OnPromptSubmit",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fired when the user submits a prompt."
     },
     {
       "name": "OnCommandClick",

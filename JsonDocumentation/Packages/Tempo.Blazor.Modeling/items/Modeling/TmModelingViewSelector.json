@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "NotationKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Selected notation key."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

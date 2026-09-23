@@ -10,5 +10,22 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Filters",
+      "type": "List<GanttFilter>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "OnFiltersChanged",
+      "type": "EventCallback<IReadOnlyList<GanttFilter>>",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ]
 }

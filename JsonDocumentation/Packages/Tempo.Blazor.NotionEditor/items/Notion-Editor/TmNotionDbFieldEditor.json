@@ -12,10 +12,43 @@
   ],
   "parameters": [
     {
+      "name": "Field",
+      "type": "IDatabaseField",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnFieldChanged",
       "type": "EventCallback<IDatabaseField>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnFieldDuplicated",
+      "type": "EventCallback<IDatabaseField>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFieldDeleted",
+      "type": "EventCallback<Guid>",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

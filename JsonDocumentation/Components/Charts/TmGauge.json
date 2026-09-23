@@ -10,5 +10,68 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Charts"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Type",
+      "type": "GaugeType",
+      "isRequired": false,
+      "default": "GaugeType.Arc"
+    },
+    {
+      "name": "Value",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "Min",
+      "type": "double",
+      "isRequired": false,
+      "default": "0"
+    },
+    {
+      "name": "Max",
+      "type": "double",
+      "isRequired": false,
+      "default": "100"
+    },
+    {
+      "name": "Ranges",
+      "type": "IReadOnlyList<GaugeRange>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "ShowValue",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "LabelFormat",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Animated",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Width",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"200px\""
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"160px\""
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
+  ]
 }

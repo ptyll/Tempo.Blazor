@@ -44,6 +44,12 @@
       "description": "When true, the radio buttons are disabled."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered below the toggle when Value is true."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

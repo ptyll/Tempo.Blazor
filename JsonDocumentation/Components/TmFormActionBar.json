@@ -46,6 +46,13 @@
       "description": "Save/validation status content shown next to the start content (e.g. \"Saved\")."
     },
     {
+      "name": "StatusSeverity",
+      "type": "FormActionBarStatusSeverity",
+      "isRequired": false,
+      "default": "FormActionBarStatusSeverity.None",
+      "description": "What the Status content means. Defaults to None, which leaves the slot inheriting its colour."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,

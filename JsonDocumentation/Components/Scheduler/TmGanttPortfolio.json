@@ -10,5 +10,12 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Projects",
+      "type": "IReadOnlyList<GanttPortfolioProject>",
+      "isRequired": false,
+      "default": "[]"
+    }
+  ]
 }

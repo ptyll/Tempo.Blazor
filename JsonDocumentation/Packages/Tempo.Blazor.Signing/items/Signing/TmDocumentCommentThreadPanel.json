@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Comment threads to render."
+    },
+    {
       "name": "AllowReplyToResolved",
       "type": "bool",
       "isRequired": false,

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "SpaceProvider",
+      "type": "INotionSpaceProvider?",
+      "isRequired": false,
+      "description": "Optional provider that supplies spaces and cross-space page moves."
+    },
+    {
       "name": "CurrentPageId",
       "type": "string?",
       "isRequired": false,

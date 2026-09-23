@@ -57,6 +57,13 @@
       "description": "Fires when the child selection changes."
     },
     {
+      "name": "LoadChildOptionsAsync",
+      "type": "Func<TParent?, Task<IReadOnlyList<SelectOption<TChild>>>>",
+      "isRequired": true,
+      "description": "Async callback that loads child options based on the selected parent. Receives the current ParentValue (may be null when parent is cleared).",
+      "editorRequired": true
+    },
+    {
       "name": "ChildLabel",
       "type": "string?",
       "isRequired": false,

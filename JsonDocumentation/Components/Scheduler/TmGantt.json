@@ -12,6 +12,72 @@
   ],
   "parameters": [
     {
+      "name": "Items",
+      "type": "IReadOnlyList<TmWorkItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "In-memory work items. Used when WorkItemSource is null."
+    },
+    {
+      "name": "DependencyItems",
+      "type": "IReadOnlyList<GanttDependency>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "In-memory dependencies. Used when WorkItemSource is null."
+    },
+    {
+      "name": "WorkItemSource",
+      "type": "ITmWorkItemProvider?",
+      "isRequired": false,
+      "description": "Unified work-item source shared with other components. When set, the chart loads its items and dependencies from this provider instead of Items/DependencyItems, and routes task mutations back through it (when the provider declares the matching capability)."
+    },
+    {
+      "name": "View",
+      "type": "GanttView",
+      "isRequired": false,
+      "default": "GanttView.Week"
+    },
+    {
+      "name": "ViewChanged",
+      "type": "EventCallback<GanttView>",
+      "isRequired": false
+    },
+    {
+      "name": "SelectedTask",
+      "type": "TmWorkItem?",
+      "isRequired": false
+    },
+    {
+      "name": "OnTaskSelected",
+      "type": "EventCallback<TmWorkItem>",
+      "isRequired": false
+    },
+    {
+      "name": "ShowTaskPanel",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnTaskAdded",
+      "type": "EventCallback<TmWorkItem>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTaskInserted",
+      "type": "EventCallback<GanttTaskInsertedArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTaskRemoved",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTaskReordered",
+      "type": "EventCallback<GanttTaskReorderedArgs>",
+      "isRequired": false
+    },
+    {
       "name": "ActiveBaselineId",
       "type": "string?",
       "isRequired": false,
@@ -296,6 +362,11 @@
       "isRequired": false,
       "default": "GanttZoomPreset.Weeks",
       "description": "Current timeline zoom preset (Weeks by default)."
+    },
+    {
+      "name": "ContainerWidth",
+      "type": "double?",
+      "isRequired": false
     }
   ]
 }

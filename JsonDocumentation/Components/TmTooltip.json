@@ -8,6 +8,13 @@
   ],
   "parameters": [
     {
+      "name": "Text",
+      "type": "string",
+      "isRequired": true,
+      "description": "Tooltip text to display.",
+      "editorRequired": true
+    },
+    {
       "name": "Position",
       "type": "TooltipPosition",
       "isRequired": false,
@@ -27,6 +34,12 @@
       "isRequired": false,
       "default": "\"200px\"",
       "description": "Maximum width of the tooltip."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Trigger element."
     },
     {
       "name": "Class",

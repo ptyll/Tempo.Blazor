@@ -34,6 +34,12 @@
       "description": "Snap-to-grid cell size in SVG units (pixels). 0 = disabled."
     },
     {
+      "name": "SnapToObjects",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, dragged elements snap to edges/centers of other elements."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
@@ -41,10 +47,52 @@
       "description": "Disables all editing interactions (drag, resize, drop). Pan via middle-mouse or Space+drag still works."
     },
     {
+      "name": "ComponentScope",
+      "type": "WireframeComponentScope?",
+      "isRequired": false,
+      "description": "Optional application scope used to resolve custom wireframe components."
+    },
+    {
       "name": "OnSelectionChanged",
       "type": "EventCallback<string[]>",
       "isRequired": false,
       "description": "Raised when the user changes the selection. Payload is an array of selected element IDs."
+    },
+    {
+      "name": "OnConnectorSelectionChanged",
+      "type": "EventCallback<string[]>",
+      "isRequired": false,
+      "description": "Raised when the user changes the connector selection."
+    },
+    {
+      "name": "OnConnectorCreated",
+      "type": "EventCallback<(string FromId, string ToId)>",
+      "isRequired": false,
+      "description": "Raised when the user creates a connector by dragging from one element to another."
+    },
+    {
+      "name": "OnDeleteConnectors",
+      "type": "EventCallback<string[]>",
+      "isRequired": false,
+      "description": "Raised when user requests deletion of selected connectors."
+    },
+    {
+      "name": "OnConnectorWaypointDragged",
+      "type": "EventCallback<(string ConnectorId, int WaypointIndex, double X, double Y)>",
+      "isRequired": false,
+      "description": "Raised when user drags a connector waypoint to a new position."
+    },
+    {
+      "name": "OnConnectorWaypointAdded",
+      "type": "EventCallback<(string ConnectorId, double X, double Y)>",
+      "isRequired": false,
+      "description": "Raised when user double-clicks a connector path to add a new waypoint."
+    },
+    {
+      "name": "OnConnectorDragged",
+      "type": "EventCallback<(string ConnectorId, double Dx, double Dy)>",
+      "isRequired": false,
+      "description": "Raised when user drags a selected connector to move all its waypoints."
     },
     {
       "name": "OnToolModeChanged",
@@ -69,6 +117,60 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the canvas wrapper div."
+    },
+    {
+      "name": "OnCopyStyleRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when user requests copy style (Ctrl+Shift+C)."
+    },
+    {
+      "name": "OnPasteStyleRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when user requests paste style (Ctrl+Shift+V)."
+    },
+    {
+      "name": "OnPasteSizeRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when user requests paste size (Ctrl+Shift+S)."
+    },
+    {
+      "name": "OnElementContextMenuRequested",
+      "type": "EventCallback<(string Id, double ScreenX, double ScreenY)>",
+      "isRequired": false,
+      "description": "Raised when user opens context menu on an element (right-click)."
+    },
+    {
+      "name": "OnConnectorContextMenuRequested",
+      "type": "EventCallback<(string Id, double ScreenX, double ScreenY)>",
+      "isRequired": false,
+      "description": "Raised when user opens context menu on a connector (right-click)."
+    },
+    {
+      "name": "OnCanvasContextMenuRequested",
+      "type": "EventCallback<(double SvgX, double SvgY, double ScreenX, double ScreenY)>",
+      "isRequired": false,
+      "description": "Raised when user opens context menu on empty canvas (right-click)."
+    },
+    {
+      "name": "OnCloseContextMenu",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when context menu should close (click outside / Escape)."
+    },
+    {
+      "name": "OnViewBoxChangedEvent",
+      "type": "EventCallback<(double X, double Y, double W, double H)>",
+      "isRequired": false,
+      "description": "Raised when the viewBox changes (pan/zoom)."
+    },
+    {
+      "name": "OnCanvasMouseMoved",
+      "type": "EventCallback<(double SvgX, double SvgY)>",
+      "isRequired": false,
+      "description": "Raised when mouse moves over the canvas (SVG coordinates)."
     }
   ],
   "publicMethods": [

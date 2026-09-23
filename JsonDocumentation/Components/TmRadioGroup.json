@@ -58,6 +58,12 @@
       "description": "Disables all options."
     },
     {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the radio group as required. Shows a required marker on the label and sets aria-required on the radiogroup element."
+    },
+    {
       "name": "Layout",
       "type": "RadioLayout",
       "isRequired": false,

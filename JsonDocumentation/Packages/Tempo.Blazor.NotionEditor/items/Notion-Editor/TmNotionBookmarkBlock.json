@@ -12,8 +12,33 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IBookmarkBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "BookmarkProvider",
+      "type": "INotionBookmarkProvider?",
+      "isRequired": false
+    },
+    {
       "name": "OnResolved",
       "type": "EventCallback<BookmarkBlockContent>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCaptionSaved",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
       "isRequired": false
     }
   ],

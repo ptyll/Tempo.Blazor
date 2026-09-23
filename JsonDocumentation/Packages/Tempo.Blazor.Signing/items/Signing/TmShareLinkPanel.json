@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Link",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Public signing link."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Sheets",
+      "type": "List<SpreadsheetSheet>",
+      "isRequired": true,
+      "description": "All sheets in the workbook."
+    },
+    {
       "name": "ActiveIndex",
       "type": "int",
       "isRequired": false,

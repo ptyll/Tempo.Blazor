@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "PageId",
+      "type": "Guid?",
+      "isRequired": false,
+      "description": "Page ID owned by this rendered list."
+    },
+    {
       "name": "ActiveBlockId",
       "type": "Guid?",
       "isRequired": false,
@@ -30,6 +36,12 @@
       "default": "[]",
       "editorRequired": true,
       "description": "The ordered blocks this list renders. Keyed by block ID, so reordering never re-binds a block to a different component."
+    },
+    {
+      "name": "OnMergeBlockWithPrevious",
+      "type": "EventCallback<(string BlockId, string Html)>",
+      "isRequired": false,
+      "description": "Raised when Backspace at the start of a block should fold it into its predecessor. Carries the block's ID and its current HTML."
     },
     {
       "name": "OnAddBlockAfter",

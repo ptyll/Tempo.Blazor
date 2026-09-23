@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Aggregation",
+      "type": "SpreadsheetAggregationResult",
+      "isRequired": true,
+      "description": "The aggregation result for the current selection."
+    },
+    {
       "name": "OnZoomChanged",
       "type": "EventCallback<double>",
       "isRequired": false,

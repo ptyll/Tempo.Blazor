@@ -33,5 +33,104 @@
     "ReportViewerMetadata",
     "ReportViewerRenderResult",
     "ReportViewerExportResult"
+  ],
+  "parameters": [
+    {
+      "name": "ReportSource",
+      "type": "IReportSource?",
+      "isRequired": false,
+      "description": "Report source to render."
+    },
+    {
+      "name": "ParameterValues",
+      "type": "IReadOnlyDictionary<string, ReportParameterValue>?",
+      "isRequired": false,
+      "description": "Initial parameter values."
+    },
+    {
+      "name": "AutoLoad",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the viewer renders immediately after metadata is loaded."
+    },
+    {
+      "name": "ShowParameterPanel",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the parameter panel starts visible."
+    },
+    {
+      "name": "ShowParameterPanelToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether users can toggle the parameter panel from the toolbar."
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"720px\"",
+      "description": "Viewer height CSS value."
+    },
+    {
+      "name": "CultureName",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"en-US\"",
+      "description": "Culture used for rendering."
+    },
+    {
+      "name": "TenantId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Tenant identifier passed to report sources."
+    },
+    {
+      "name": "UserId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "User identifier passed to report sources."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes."
+    },
+    {
+      "name": "SnapshotChanged",
+      "type": "EventCallback<ReportSnapshot>",
+      "isRequired": false,
+      "description": "Fired after a snapshot is rendered."
+    },
+    {
+      "name": "OnDrillThrough",
+      "type": "EventCallback<ReportDrillThroughResolution>",
+      "isRequired": false,
+      "description": "Fired when a drill-through region is clicked, carrying the resolved target report reference and the parameter values mapped from the clicked context. The host decides the actual navigation."
+    },
+    {
+      "name": "PdfExported",
+      "type": "EventCallback<ReportViewerExportResult>",
+      "isRequired": false,
+      "description": "Fired after a PDF export is produced."
+    },
+    {
+      "name": "CsvExported",
+      "type": "EventCallback<ReportViewerExportResult>",
+      "isRequired": false,
+      "description": "Fired after a CSV export is produced."
+    },
+    {
+      "name": "XlsxExported",
+      "type": "EventCallback<ReportViewerExportResult>",
+      "isRequired": false,
+      "description": "Fired after an XLSX export is produced."
+    }
   ]
 }

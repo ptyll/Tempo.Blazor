@@ -14,6 +14,12 @@
       "description": "Allow multiple items open at once."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Accordion items."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

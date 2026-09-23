@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsOverflowing",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the toolbar currently has overflowed commands."
+    },
+    {
       "name": "Groups",
       "type": "IReadOnlyList<DocumentToolbarOverflowMenuGroup>",
       "isRequired": false,
@@ -37,6 +43,13 @@
       "isRequired": false,
       "default": "\"\"",
       "description": "Grouped overflow menu items."
+    },
+    {
+      "name": "NoResultsLabel",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Message shown when the search filter yields no commands (Fáze 18)."
     },
     {
       "name": "OnCommandRequested",

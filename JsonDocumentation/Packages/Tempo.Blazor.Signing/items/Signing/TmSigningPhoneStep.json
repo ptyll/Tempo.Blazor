@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Field",
+      "type": "SigningField",
+      "isRequired": true,
+      "description": "Signing field represented by this step."
+    },
+    {
       "name": "AppearsOn",
       "type": "string?",
       "isRequired": false,

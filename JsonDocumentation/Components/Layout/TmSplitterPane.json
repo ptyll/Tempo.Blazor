@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The content to render inside the pane."
+    },
+    {
       "name": "AdditionalCssClass",
       "type": "string?",
       "isRequired": false,

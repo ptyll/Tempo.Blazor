@@ -20,6 +20,12 @@
       "description": "Description displayed below the title."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content to preview (e.g. a data table)."
+    },
+    {
       "name": "OnConfirm",
       "type": "EventCallback",
       "isRequired": false,

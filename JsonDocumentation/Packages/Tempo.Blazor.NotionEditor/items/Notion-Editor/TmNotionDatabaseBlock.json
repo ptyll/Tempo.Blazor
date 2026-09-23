@@ -10,6 +10,38 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor.Blocks.Database"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Block",
+      "type": "IPageBlock",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "IsFocused",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnUpdated",
+      "type": "EventCallback<IPageBlock>",
+      "isRequired": false
+    },
+    {
+      "name": "OnOpenAsPage",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ],
   "subcategory": "Blocks / Database"
 }

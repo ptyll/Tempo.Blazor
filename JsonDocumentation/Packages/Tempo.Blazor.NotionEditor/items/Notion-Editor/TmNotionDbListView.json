@@ -12,10 +12,39 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Records",
+      "type": "IReadOnlyList<IDatabaseRecord>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "PreviewFieldIds",
+      "type": "IReadOnlyList<Guid>?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnRecordClicked",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnNewRecord",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

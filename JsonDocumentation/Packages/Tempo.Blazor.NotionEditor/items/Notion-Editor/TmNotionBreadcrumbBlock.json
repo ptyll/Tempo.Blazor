@@ -21,6 +21,16 @@
       "name": "Content",
       "type": "IBreadcrumbBlockContent?",
       "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Page"

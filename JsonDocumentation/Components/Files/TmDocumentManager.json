@@ -12,10 +12,48 @@
   ],
   "parameters": [
     {
+      "name": "DataProvider",
+      "type": "IDocumentManagerDataProvider<TMetadata>?",
+      "isRequired": false,
+      "description": "Data provider for document operations."
+    },
+    {
       "name": "AllowMultipleAttachments",
       "type": "bool",
       "isRequired": false,
       "description": "When true, allows one logical item to hold multiple physical file attachments."
+    },
+    {
+      "name": "MaxUploadSize",
+      "type": "long",
+      "isRequired": false,
+      "default": "100L * 1024 * 1024",
+      "description": "Maximum size of a single upload in bytes. Default 100 MB. Also caps the browser read stream."
+    },
+    {
+      "name": "ScanHook",
+      "type": "IFileScanHook?",
+      "isRequired": false,
+      "description": "Optional scan hook run after each upload; a Blocked result marks the item unavailable."
+    },
+    {
+      "name": "VersioningHook",
+      "type": "IFileVersioningHook?",
+      "isRequired": false,
+      "description": "Optional versioning hook. When supplied and ShowVersionHistory is set, a version-history action is available."
+    },
+    {
+      "name": "ShowVersionHistory",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether to show the version-history action (requires VersioningHook). Default true."
+    },
+    {
+      "name": "OnUploadProgress",
+      "type": "EventCallback<TmUploadProgress>",
+      "isRequired": false,
+      "description": "Fires for each chunk progress update during a chunked upload."
     },
     {
       "name": "AttachmentListTemplate",

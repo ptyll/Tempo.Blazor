@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsBusy",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether create action is currently running."
+    },
+    {
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false,

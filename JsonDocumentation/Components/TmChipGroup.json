@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Chip children."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

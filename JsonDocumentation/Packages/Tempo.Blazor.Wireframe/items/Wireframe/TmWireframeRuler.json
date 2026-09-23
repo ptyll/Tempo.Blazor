@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Orientation",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"Horizontal\"",
+      "description": "\"Horizontal\" or \"Vertical\"."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -16,5 +16,31 @@
     "ReportDefinition",
     "ReportDesignerSaveEventArgs",
     "ReportDesignerSaveKind"
+  ],
+  "parameters": [
+    {
+      "name": "Definition",
+      "type": "ReportDefinition?",
+      "isRequired": false,
+      "description": "Report definition edited by the designer."
+    },
+    {
+      "name": "DefinitionChanged",
+      "type": "EventCallback<ReportDefinition>",
+      "isRequired": false,
+      "description": "Raised when the edited definition changes."
+    },
+    {
+      "name": "Saved",
+      "type": "EventCallback<ReportDesignerSaveEventArgs>",
+      "isRequired": false,
+      "description": "Raised when users save a draft or publish a revision."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes."
+    }
   ]
 }

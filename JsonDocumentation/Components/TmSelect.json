@@ -64,6 +64,12 @@
       "description": "Disables the select."
     },
     {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element."
+    },
+    {
       "name": "Options",
       "type": "IReadOnlyList<SelectOption<TValue>>?",
       "isRequired": false,
@@ -114,7 +120,7 @@
     },
     {
       "title": "Manual option rendering via ChildContent (with preselection)",
-      "code": "@* Use ChildContent when you need full control over <option> elements\n   instead of using the Options parameter. The bound Value is preselected on\n   load — no need to add a `selected` attribute to the <option> yourself. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_selectedPriority\"\n          Label=\"Priority\">\n    <option value=\"\" disabled>-- Select priority --</option>\n    <option value=\"low\">\uD83D\uDFE2 Low</option>\n    <option value=\"medium\">\uD83D\uDFE1 Medium</option>\n    <option value=\"high\">\uD83D\uDD34 High</option>\n    <option value=\"critical\" disabled>⛔ Critical (admin only)</option>\n</TmSelect>\n\n@code {\n    // Loaded as \"high\" — the dropdown opens on High, not the first option.\n    private string? _selectedPriority = \"high\";\n}"
+      "code": "@* Use ChildContent when you need full control over <option> elements\n   instead of using the Options parameter. The bound Value is preselected on\n   load — no need to add a `selected` attribute to the <option> yourself. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_selectedPriority\"\n          Label=\"Priority\">\n    <option value=\"\" disabled>-- Select priority --</option>\n    <option value=\"low\">🟢 Low</option>\n    <option value=\"medium\">🟡 Medium</option>\n    <option value=\"high\">🔴 High</option>\n    <option value=\"critical\" disabled>⛔ Critical (admin only)</option>\n</TmSelect>\n\n@code {\n    // Loaded as \"high\" — the dropdown opens on High, not the first option.\n    private string? _selectedPriority = \"high\";\n}"
     },
     {
       "title": "Loading options from API on page load",

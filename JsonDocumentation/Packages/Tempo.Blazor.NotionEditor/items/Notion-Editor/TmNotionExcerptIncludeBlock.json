@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Block",
+      "type": "IPageBlock",
+      "isRequired": true,
+      "description": "Owning page block used for persistence and focus context."
+    },
+    {
       "name": "Content",
       "type": "IExcerptIncludeBlockContent?",
       "isRequired": false,

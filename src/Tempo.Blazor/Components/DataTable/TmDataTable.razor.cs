@@ -2159,7 +2159,11 @@ public partial class TmDataTable<TItem> : IDisposable
     {
         // Record the modifier state for the activation keys that synthesize a click on the sort
         // button (Enter fires click on keydown, Space on keyup — both bubble through here first).
-        if (e.Key is "Enter" or " ")
+        // Only a SORTABLE header's button produces the bubbled click that consumes this flag
+        // (HeaderClickRequestsMultiSort) — arming it for a pin-only header (no .tm-th-sort button,
+        // no click follows) leaves it stuck true until an unrelated later click on a DIFFERENT
+        // sortable column inherits it (N203, review 2026-09-22).
+        if (col.Sortable && e.Key is "Enter" or " ")
         {
             _activationKeyShift = e.ShiftKey;
         }
@@ -2282,7 +2286,13 @@ public partial class TmDataTable<TItem> : IDisposable
     private string SortButtonAccessibleName(TmDataTableColumn<TItem> col)
         => Loc["TmDataTable_SortBy", SortButtonHeaderText(col), Loc[NextSortActionKey(col)]];
 
-    /// <summary>The subject inside "Sort by {0}": <c>Title</c> wins, then <c>SortLabel</c>.</summary>
+    /// <summary>
+    /// The subject inside "Sort by {0}": <c>Title</c> wins, then <c>SortLabel</c>. The
+    /// <c>#if DEBUG</c> throw is a dev-loop safety net for source-embedded/debug-build consumers
+    /// and this library's own tests — a Release NuGet package never compiles it in, so a templated
+    /// header with neither <c>Title</c> nor <c>SortLabel</c> always falls back to the positional
+    /// name in a published app; it never throws there (N143).
+    /// </summary>
     private string SortButtonHeaderText(TmDataTableColumn<TItem> col)
     {
         if (!string.IsNullOrWhiteSpace(col.Title))
@@ -2314,15 +2324,22 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <summary>The resource key of the state the next activation on this column reaches.</summary>
     private string NextSortActionKey(TmDataTableColumn<TItem> col)
     {
-        var sort = GetColumnSort(col.Key);
-        if (sort is null)
+        // The tri-state cycle (ascending → descending → cleared) only applies when this column is
+        // the SOLE active sort — SortByAsync's plain-click branch resets every descriptor and sets
+        // just this column ascending whenever more than one is active, regardless of this column's
+        // own current direction (N202, review 2026-09-22).
+        if (_sortDescriptors.Count == 1)
         {
-            return "TmDataTable_SortAscending";
+            var sort = GetColumnSort(col.Key);
+            if (sort is not null)
+            {
+                return sort.Direction == DataTableSortDirection.Ascending
+                    ? "TmDataTable_SortDescending"
+                    : "TmDataTable_ClearSort";
+            }
         }
 
-        return sort.Direction == DataTableSortDirection.Ascending
-            ? "TmDataTable_SortDescending"
-            : "TmDataTable_ClearSort";
+        return "TmDataTable_SortAscending";
     }
 
     private string GetRowClass(TItem item) => IsSelected(item) ? "tm-row-selected" : string.Empty;

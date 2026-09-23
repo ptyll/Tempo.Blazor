@@ -17,5 +17,89 @@
     "ReportExplorerViewMode",
     "ReportExplorerCreateFolderRequest",
     "ReportExplorerMoveReportRequest"
+  ],
+  "parameters": [
+    {
+      "name": "RootFolder",
+      "type": "ReportExplorerFolder?",
+      "isRequired": false,
+      "description": "Root folder for the folder tree."
+    },
+    {
+      "name": "Reports",
+      "type": "IReadOnlyList<ReportExplorerReportItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Reports in the current scope."
+    },
+    {
+      "name": "CurrentFolderPath",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"/\"",
+      "description": "Current folder path."
+    },
+    {
+      "name": "CurrentFolderPathChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when the current folder path changes."
+    },
+    {
+      "name": "SearchText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Current search text."
+    },
+    {
+      "name": "SearchTextChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when search text changes."
+    },
+    {
+      "name": "ViewMode",
+      "type": "ReportExplorerViewMode",
+      "isRequired": false,
+      "default": "ReportExplorerViewMode.Grid",
+      "description": "Current explorer view mode."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<ReportExplorerViewMode>",
+      "isRequired": false,
+      "description": "Raised when the explorer view mode changes."
+    },
+    {
+      "name": "AllowFolderManagement",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether folder creation and move controls are available."
+    },
+    {
+      "name": "ReportOpened",
+      "type": "EventCallback<ReportExplorerReportItem>",
+      "isRequired": false,
+      "description": "Raised when a report should be opened."
+    },
+    {
+      "name": "CreateFolderRequested",
+      "type": "EventCallback<ReportExplorerCreateFolderRequest>",
+      "isRequired": false,
+      "description": "Raised when a folder should be created."
+    },
+    {
+      "name": "ReportMoveRequested",
+      "type": "EventCallback<ReportExplorerMoveReportRequest>",
+      "isRequired": false,
+      "description": "Raised when a report should be moved."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes."
+    }
   ]
 }

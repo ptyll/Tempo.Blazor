@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Items",
+      "type": "IEnumerable<TItem>?",
+      "isRequired": false,
+      "description": "Flat list of items. Each item must expose an id and a parent id."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,
@@ -74,6 +80,12 @@
       "description": "Enables multi-selection via Ctrl/Shift click and drag-to-select."
     },
     {
+      "name": "OnRowSelect",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires when a row is clicked (only when Selectable is true)."
+    },
+    {
       "name": "OnCollapse",
       "type": "EventCallback<object>",
       "isRequired": false,
@@ -132,6 +144,16 @@
       "type": "bool",
       "isRequired": false,
       "description": "When true, sorts in descending order. Default is ascending."
+    },
+    {
+      "name": "OnPageChange",
+      "type": "EventCallback<int>",
+      "isRequired": false
+    },
+    {
+      "name": "OnPageSizeChange",
+      "type": "EventCallback<int>",
+      "isRequired": false
     }
   ],
   "typeParameters": [

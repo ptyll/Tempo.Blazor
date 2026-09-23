@@ -84,6 +84,12 @@
       "description": "Fired when the button is clicked (and not disabled/loading)."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Button content."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

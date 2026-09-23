@@ -45,6 +45,76 @@
       "description": "Enables page version history with diff view and restore."
     },
     {
+      "name": "AIProvider",
+      "type": "INotionAIProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "WorkItemSource",
+      "type": "ITmWorkItemProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "WorkItemProviders",
+      "type": "TmWorkItemProviderRegistry?",
+      "isRequired": false
+    },
+    {
+      "name": "ReactionProvider",
+      "type": "INotionReactionProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "AnalyticsProvider",
+      "type": "INotionAnalyticsProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "BlogProvider",
+      "type": "INotionBlogProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "WatchProvider",
+      "type": "INotionWatchProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "SpaceProvider",
+      "type": "INotionSpaceProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "PagePropertiesProvider",
+      "type": "INotionPagePropertiesProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "TemplateProvider",
+      "type": "INotionTemplateProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "SmartLinkProvider",
+      "type": "ISmartLinkProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "AuthorizationProvider",
+      "type": "ITmAuthorizationProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "PermissionProvider",
+      "type": "INotionPermissionProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "PublicShareProvider",
+      "type": "INotionPublicShareProvider?",
+      "isRequired": false
+    },
+    {
       "name": "AuditProvider",
       "type": "ITmActivityProvider?",
       "isRequired": false,
@@ -73,6 +143,16 @@
       "type": "ITmFileProvider?",
       "isRequired": false,
       "description": "Enables file upload for image, PDF, audio, and file blocks via drag-and-drop or the Upload tab."
+    },
+    {
+      "name": "DocumentLibraryProvider",
+      "type": "Tempo.Blazor.DocumentLibrary.ITempoDocumentLibraryProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "DocumentChangeNotifier",
+      "type": "Tempo.Blazor.DocumentLibrary.ITempoDocumentChangeNotifier?",
+      "isRequired": false
     },
     {
       "name": "MediaLibraryProvider",
@@ -154,6 +234,20 @@
       "description": "Prevents all editing interactions."
     },
     {
+      "name": "CurrentUserId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Explicit current user identifier for collaboration, reactions, and user-scoped actions. When blank, the editor resolves ITmCurrentUser from DI and falls back to demo."
+    },
+    {
+      "name": "CurrentUserGroupIds",
+      "type": "IReadOnlyList<string>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Group identifiers used for permission checks for the current user."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -170,6 +264,12 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Raised when the user requests to open the trash panel from the sidebar."
+    },
+    {
+      "name": "OnCreateTokenRequested",
+      "type": "Func<string, Task<(string Key, string DisplayName, string? ColorClass)?>?>?",
+      "isRequired": false,
+      "description": "Called when the user clicks \"Create token\" in the token dropdown. Arg = current search query (may be empty). Return the newly created token (Key, DisplayName, ColorClass) so the editor can insert it automatically, or null if the user cancelled."
     }
   ],
   "publicMethods": [

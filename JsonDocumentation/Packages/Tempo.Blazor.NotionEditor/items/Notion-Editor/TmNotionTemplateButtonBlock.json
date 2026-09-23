@@ -12,6 +12,11 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "ITemplateButtonBlockContent?",
+      "isRequired": false
+    },
+    {
       "name": "IsFocused",
       "type": "bool",
       "isRequired": false

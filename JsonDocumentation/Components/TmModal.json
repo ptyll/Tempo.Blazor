@@ -29,6 +29,11 @@
       "isRequired": false
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false
+    },
+    {
       "name": "Footer",
       "type": "RenderFragment?",
       "isRequired": false

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false,
+      "description": "Document to display and edit."
+    },
+    {
       "name": "ActiveGroupId",
       "type": "string?",
       "isRequired": false,
@@ -59,6 +65,24 @@
       "type": "EventCallback<(string EdgeId, double ScreenX, double ScreenY)>",
       "isRequired": false,
       "description": "Raised when an edge is right-clicked to open a context menu."
+    },
+    {
+      "name": "ShowPageView",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Show page view with shadow and boundaries."
+    },
+    {
+      "name": "OnConnectArrowClicked",
+      "type": "EventCallback<(string NodeId, string Direction)>",
+      "isRequired": false,
+      "description": "Raised when a connect arrow is clicked."
+    },
+    {
+      "name": "OnToolboxDrop",
+      "type": "EventCallback<(string StencilId, double X, double Y)>",
+      "isRequired": false
     },
     {
       "name": "OnEdgeCreated",
@@ -235,6 +259,11 @@
       "type": "EventCallback<double>",
       "isRequired": false,
       "description": "Raised when the zoom level changes (e.g. via wheel)."
+    },
+    {
+      "name": "OnPortMouseDownEvent",
+      "type": "EventCallback<(string NodeId, string PortId)>",
+      "isRequired": false
     }
   ]
 }

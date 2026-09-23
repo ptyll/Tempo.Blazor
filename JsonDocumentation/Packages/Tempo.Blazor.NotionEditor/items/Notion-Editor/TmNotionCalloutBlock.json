@@ -12,6 +12,26 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "ICalloutBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "IsFocused",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
       "name": "OnContentSaved",
       "type": "EventCallback<string>",
       "isRequired": false,
@@ -22,6 +42,18 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fired when Backspace is pressed on an empty block."
+    },
+    {
+      "name": "OnMergeWithPrevious",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when Backspace is pressed at the start of a non-empty block. The payload is the block's current, sanitized HTML, which the previous block absorbs before this one is deleted."
+    },
+    {
+      "name": "OnStructuredPaste",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when pasted HTML carries more than one block element. The payload is the raw clipboard HTML; the consumer turns it into page blocks."
     },
     {
       "name": "OnEmojiChanged",

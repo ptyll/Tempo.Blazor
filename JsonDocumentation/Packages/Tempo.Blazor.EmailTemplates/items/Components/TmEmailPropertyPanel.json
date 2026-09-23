@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "EmailTemplateDocument",
+      "isRequired": true,
+      "description": "The document being edited.",
+      "editorRequired": true
+    },
+    {
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": false,

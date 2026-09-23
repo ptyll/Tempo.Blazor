@@ -44,6 +44,12 @@
       "description": "Disables the checkbox."
     },
     {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the checkbox as required. Shows a required marker on the label and sets aria-required on the checkbox input."
+    },
+    {
       "name": "Indeterminate",
       "type": "bool",
       "isRequired": false,

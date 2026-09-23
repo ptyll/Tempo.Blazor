@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
       "name": "StencilDragStart",
       "type": "EventCallback<string>",
       "isRequired": false,

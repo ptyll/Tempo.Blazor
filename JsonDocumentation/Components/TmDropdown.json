@@ -27,6 +27,33 @@
       "description": "Fires when a dropdown item is selected (value = item key)."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Menu content — typically TmDropdownItem elements."
+    },
+    {
+      "name": "Placement",
+      "type": "OverlayPlacement",
+      "isRequired": false,
+      "default": "OverlayPlacement.Bottom",
+      "description": "Preferred side of the trigger the menu opens on. Default Bottom."
+    },
+    {
+      "name": "Align",
+      "type": "OverlayAlign",
+      "isRequired": false,
+      "default": "OverlayAlign.Start",
+      "description": "Cross-axis alignment of the menu against the trigger. Default Start."
+    },
+    {
+      "name": "Offset",
+      "type": "int",
+      "isRequired": false,
+      "default": "4",
+      "description": "Gap in pixels between trigger and menu. Default 4."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

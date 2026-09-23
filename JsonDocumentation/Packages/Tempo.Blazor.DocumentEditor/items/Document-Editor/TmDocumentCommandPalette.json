@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the command palette is visible."
+    },
+    {
       "name": "Commands",
       "type": "IReadOnlyDictionary<string, DocumentEditorCommandState>?",
       "isRequired": false,

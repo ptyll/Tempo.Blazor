@@ -38,6 +38,12 @@
       "description": "Expression identifying the model field to track for EditContext validation errors."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Input(s) wrapped by this field."
+    },
+    {
       "name": "For",
       "type": "string?",
       "isRequired": false,

@@ -10,5 +10,43 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Wireframe"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Document",
+      "type": "WireframeDocument?",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "SelectedElementIds",
+      "type": "string[]",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ActiveLayerId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ActiveLayerIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "DocumentChanged",
+      "type": "EventCallback<WireframeDocument>",
+      "isRequired": false
+    }
+  ]
 }

@@ -28,6 +28,12 @@
       "description": "Optional title displayed above the description."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Description content."
+    },
+    {
       "name": "Dismissable",
       "type": "bool",
       "isRequired": false,

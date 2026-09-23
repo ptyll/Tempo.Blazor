@@ -8,6 +8,14 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<DynamicFieldDefinition>",
+      "isRequired": true,
+      "default": "[]",
+      "description": "Field definitions.",
+      "editorRequired": true
+    },
+    {
       "name": "Values",
       "type": "Dictionary<string, object?>",
       "isRequired": true,

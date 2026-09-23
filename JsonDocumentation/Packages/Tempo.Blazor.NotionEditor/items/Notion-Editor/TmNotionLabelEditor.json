@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "PageId",
+      "type": "Guid",
+      "isRequired": false,
+      "description": "Identifier of the page whose labels are edited."
+    },
+    {
       "name": "Labels",
       "type": "IReadOnlyList<string>",
       "isRequired": false,

@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<SigningField>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "All fields in the current signing template."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

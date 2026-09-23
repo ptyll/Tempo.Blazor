@@ -12,10 +12,23 @@
   ],
   "parameters": [
     {
+      "name": "Cell",
+      "type": "TableCellContent?",
+      "isRequired": false,
+      "description": "Current cell content."
+    },
+    {
       "name": "CellChanged",
       "type": "EventCallback<TableCellContent>",
       "isRequired": false,
       "description": "Current cell content."
+    },
+    {
+      "name": "TestIdRoot",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"document-cell-properties\"",
+      "description": "Base string for this panel's data-testid attributes. Defaults to document-cell-properties."
     },
     {
       "name": "TestIdPrefix",

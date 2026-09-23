@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Controls whether the dialog is visible."
+    },
+    {
       "name": "PageId",
       "type": "share is managed.</summary> [Parameter, EditorRequired] public Guid",
       "isRequired": true,

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "OnApply",
+      "type": "EventCallback<SpreadsheetPasteSpecialOptions>",
+      "isRequired": false,
+      "description": "Raised when the user applies the paste."
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,

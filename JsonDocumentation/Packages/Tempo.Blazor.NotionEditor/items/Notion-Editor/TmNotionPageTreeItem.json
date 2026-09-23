@@ -10,6 +10,23 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor.Sidebar"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Page",
+      "type": "INotionPage",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "Depth",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "ActivePageId",
+      "type": "string?",
+      "isRequired": false
+    }
+  ],
   "subcategory": "Sidebar"
 }

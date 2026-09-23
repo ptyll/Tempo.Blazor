@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the side panel shell is open."
+    },
+    {
       "name": "ActiveTab",
       "type": "DocumentSidePanelTab",
       "isRequired": false,

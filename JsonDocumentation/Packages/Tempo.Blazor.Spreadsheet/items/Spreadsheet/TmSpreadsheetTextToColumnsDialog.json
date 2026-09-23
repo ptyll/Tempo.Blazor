@@ -12,6 +12,14 @@
   ],
   "parameters": [
     {
+      "name": "SourceRows",
+      "type": "IReadOnlyList<string>",
+      "isRequired": true,
+      "default": "[]",
+      "description": "The raw text of each source row to be split (used for the live preview).",
+      "editorRequired": true
+    },
+    {
       "name": "OnApply",
       "type": "EventCallback<SpreadsheetTextToColumnsResult>",
       "isRequired": true,

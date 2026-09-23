@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Message",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Message announced to assistive technologies."
+    },
+    {
       "name": "AriaLive",
       "type": "string",
       "isRequired": false,

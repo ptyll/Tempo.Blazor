@@ -73,6 +73,25 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the editor root element."
+    },
+    {
+      "name": "ShowPageTabs",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Always show page tabs even when there is only one page."
+    },
+    {
+      "name": "ShowRulers",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Show rulers around the canvas."
+    },
+    {
+      "name": "ComponentScope",
+      "type": "WireframeComponentScope?",
+      "isRequired": false,
+      "description": "Optional application scope used to resolve custom wireframe components."
     }
   ],
   "keyboardShortcuts": [

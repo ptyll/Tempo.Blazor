@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Metrics",
+      "type": "WysiwygPageMetrics?",
+      "isRequired": false,
+      "description": "Runtime page metrics reported by the WYSIWYG editor."
+    },
+    {
       "name": "ActivePageIndex",
       "type": "int",
       "isRequired": false,

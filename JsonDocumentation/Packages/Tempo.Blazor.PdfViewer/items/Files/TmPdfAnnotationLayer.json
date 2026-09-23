@@ -9,5 +9,57 @@
   "documentationStatus": "generated",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Annotation threads available to render."
+    },
+    {
+      "name": "PageNumber",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "One-based current page number."
+    },
+    {
+      "name": "SelectedThreadId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Selected thread id."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id used for mention styling."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved threads should be rendered."
+    },
+    {
+      "name": "DraftAnchor",
+      "type": "DocumentCommentAnchor?",
+      "isRequired": false,
+      "description": "Current draft anchor for a pending, not-yet-saved annotation."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether marker interaction is disabled."
+    },
+    {
+      "name": "OnThreadSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when a thread marker or highlight is selected."
+    }
   ]
 }

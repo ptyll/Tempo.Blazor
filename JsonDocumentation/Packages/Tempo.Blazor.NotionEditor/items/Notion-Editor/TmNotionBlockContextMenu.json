@@ -16,6 +16,61 @@
       "type": "IPageBlock",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnDuplicate",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnTurnInto",
+      "type": "EventCallback<BlockType>",
+      "isRequired": false
+    },
+    {
+      "name": "OnMoveTo",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnCopyLink",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnComment",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnNewThread",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnCalloutVariantChange",
+      "type": "EventCallback<CalloutVariant>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTextColorChange",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnBackgroundChange",
+      "type": "EventCallback<string?>",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks"

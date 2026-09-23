@@ -8,6 +8,34 @@
   ],
   "parameters": [
     {
+      "name": "Columns",
+      "type": "IReadOnlyList<KanbanColumn>?",
+      "isRequired": true,
+      "description": "Column definitions.",
+      "editorRequired": true
+    },
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<TItem>?",
+      "isRequired": true,
+      "description": "All items on the board.",
+      "editorRequired": true
+    },
+    {
+      "name": "ColumnSelector",
+      "type": "Func<TItem, string>?",
+      "isRequired": true,
+      "description": "Function to determine which column an item belongs to.",
+      "editorRequired": true
+    },
+    {
+      "name": "CardTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": true,
+      "description": "Template for rendering a card.",
+      "editorRequired": true
+    },
+    {
       "name": "OnItemMoved",
       "type": "EventCallback<KanbanMoveEvent<TItem>>",
       "isRequired": false,
@@ -72,6 +100,19 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the kanban board is disabled (prevents drag)."
+    },
+    {
+      "name": "VirtualizeCards",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Opt-in vertical card virtualization. When true, each (non-swimlane) column body becomes a fixed-height scroll container that renders only the visible window of cards through Blazor's built-in <Virtualize> — so a column holding thousands of cards stays fast. The card markup/template is unchanged. Defaults to false, which keeps the exact classic @foreach rendering (fully backward compatible)."
+    },
+    {
+      "name": "CardItemSize",
+      "type": "double",
+      "isRequired": false,
+      "default": "88",
+      "description": "Estimated card row height (px) handed to <Virtualize ItemSize> when VirtualizeCards is enabled. Defaults to 88."
     }
   ],
   "cssClasses": [

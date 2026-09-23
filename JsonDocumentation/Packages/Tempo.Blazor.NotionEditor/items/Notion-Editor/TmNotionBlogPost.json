@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Post",
+      "type": "NotionBlogPostDto",
+      "isRequired": true,
+      "description": "Blog post to render.",
+      "editorRequired": true
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

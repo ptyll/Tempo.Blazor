@@ -119,22 +119,25 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// A FAILED save must not leave. Until 2.8.16 the guard navigated as soon as the callback completed,
-    /// no matter what it did, so an HTTP error or a rejected validation discarded the very changes the
-    /// guard exists to protect — through the button that promises to save them.
+    /// A FAILED save must not leave — and per F10 (DEC-SAVE-AND-LEAVE-FAILURE) the guard's own
+    /// dialog CLOSES on failure: the guard cannot know what failed or where the host wants focus,
+    /// so the host's error surface takes over, signalled through <c>OnSaveAndLeaveFailed</c>.
+    /// Navigation stays cancelled and the blocked destination is forgotten.
     /// </summary>
     /// <remarks>
-    /// The dialog stays open on purpose: the user keeps both the work and the three-way choice, so a retry
-    /// or a deliberate "leave" are still one click away. This is the mutation that fails against the old
-    /// behaviour — the previous implementation passes every other test in this file unchanged.
+    /// This test replaces <c>SaveAndLeave_FailedSave_StaysPut_AndKeepsTheDialogOpen</c>, which
+    /// asserted exactly the pre-F10 contract the owner decision retired (dialog open, destination
+    /// remembered). Rewritten to the new contract, not deleted silently.
     /// </remarks>
     [Fact]
-    public async Task SaveAndLeave_FailedSave_StaysPut_AndKeepsTheDialogOpen()
+    public async Task SaveAndLeave_FailedSave_ClosesDialog_CancelsNavigation_AndRaisesFailedCallback()
     {
         var attempts = 0;
+        var failedRaised = 0;
         var cut = Render<TmNavigationGuard>(p => p
             .Add(x => x.IsDirty, true)
             .Add(x => x.OnSaveAndLeave, () => { attempts++; return Task.FromResult(false); })
+            .Add(x => x.OnSaveAndLeaveFailed, EventCallback.Factory.Create(this, () => failedRaised++))
             .Add(x => x.SaveAndLeaveText, "Save and leave"));
 
         Nav.NavigateTo("/next-page");
@@ -146,18 +149,25 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
         await cut.InvokeAsync(() => saveButton.Click());
 
         attempts.Should().Be(1);
-        Nav.History.Should().HaveCount(1, "a save that failed must not re-issue the blocked navigation");
+        failedRaised.Should().Be(1,
+            "the host must be told the save failed so it can move focus to its own error surface");
+        Nav.History.Should().HaveCount(1, "a failed save must not re-issue the blocked navigation");
         Nav.History.First().State.Should().Be(NavigationState.Prevented);
-        cut.Find(".tm-dialog").Should().NotBeNull("the choice must still be on screen after a failed save");
+        cut.FindAll(".tm-dialog").Should().BeEmpty(
+            "F10: the guard's own dialog closes on failure — the host's error surface takes over");
     }
 
     /// <summary>
-    /// The blocked destination survives a failed save: after a retry that succeeds, the guard leaves for
-    /// the SAME place the user was originally going. Forgetting it would turn one failed save into a
-    /// silent dead end.
+    /// F10: a failed save abandons the blocked destination — the guard does not remember it. A
+    /// genuine retry is a FRESH navigation attempt, which re-opens a fresh dialog from scratch.
     /// </summary>
+    /// <remarks>
+    /// This test replaces <c>SaveAndLeave_RetryAfterFailure_LeavesForTheOriginalDestination</c>,
+    /// which relied on <c>_pendingTargetLocation</c> surviving the failure so a second click in the
+    /// SAME dialog could leave for the ORIGINAL target. Rewritten to the new contract.
+    /// </remarks>
     [Fact]
-    public async Task SaveAndLeave_RetryAfterFailure_LeavesForTheOriginalDestination()
+    public async Task SaveAndLeave_AfterFailure_ANewNavigationAttempt_ReopensAFreshDialog()
     {
         var succeed = false;
         var cut = Render<TmNavigationGuard>(p => p
@@ -167,20 +177,56 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
 
         Nav.NavigateTo("/next-page");
         cut.WaitForState(() => Nav.History.Count > 0);
+        var saveButton = cut.FindAll(".tm-dialog-footer button")
+            .First(b => b.TextContent.Contains("Save and leave"));
+        await cut.InvokeAsync(() => saveButton.Click());
+        cut.FindAll(".tm-dialog").Should().BeEmpty("dialog closed after the failure");
+
+        // F10: leaving is abandoned, not remembered — a genuine retry is a FRESH navigation
+        // attempt, which re-opens the dialog from scratch.
+        succeed = true;
+        Nav.NavigateTo("/next-page");
+        cut.WaitForState(() => cut.FindAll(".tm-dialog").Count > 0);
+        var retryButton = cut.FindAll(".tm-dialog-footer button")
+            .First(b => b.TextContent.Contains("Save and leave"));
+        await cut.InvokeAsync(() => retryButton.Click());
+        cut.WaitForState(() => Nav.History.Count > 2);
+
+        // BunitNavigationManager.History records EVERY NavigateTo, most recent first — including
+        // the two prevented attempts. So: [re-issue Succeeded, attempt-2 Prevented, attempt-1 Prevented].
+        Nav.History.Should().HaveCount(3,
+            "each blocked attempt is recorded once, and the second, successful attempt re-issues " +
+            "navigation to the destination it was actually blocked from this time");
+        Nav.History.First().State.Should().Be(NavigationState.Succeeded,
+            "the most recent entry is the re-issued navigation after the successful save");
+        Nav.History.First().Uri.Should().EndWith("/next-page");
+    }
+
+    /// <summary>
+    /// <c>OnSaveAndLeaveFailed</c> is strictly a failure signal — a successful save-and-leave must
+    /// never raise it.
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLeave_SuccessfulSave_DoesNotRaiseFailedCallback()
+    {
+        var failedRaised = 0;
+        var cut = Render<TmNavigationGuard>(p => p
+            .Add(x => x.IsDirty, true)
+            .Add(x => x.OnSaveAndLeave, () => Task.FromResult(true))
+            .Add(x => x.OnSaveAndLeaveFailed, EventCallback.Factory.Create(this, () => failedRaised++))
+            .Add(x => x.SaveAndLeaveText, "Save and leave"));
+
+        Nav.NavigateTo("/next-page");
+        cut.WaitForState(() => Nav.History.Count > 0);
 
         var saveButton = cut.FindAll(".tm-dialog-footer button")
             .First(b => b.TextContent.Contains("Save and leave"));
         await cut.InvokeAsync(() => saveButton.Click());
-        Nav.History.Should().HaveCount(1);
-
-        succeed = true;
-        saveButton = cut.FindAll(".tm-dialog-footer button")
-            .First(b => b.TextContent.Contains("Save and leave"));
-        await cut.InvokeAsync(() => saveButton.Click());
         cut.WaitForState(() => Nav.History.Count > 1);
 
-        Nav.History.Last().Uri.Should().EndWith("/next-page");
-        Nav.History.First().State.Should().Be(NavigationState.Succeeded);
+        failedRaised.Should().Be(0, "a successful save raises no failure callback");
+        Nav.History.First().State.Should().Be(NavigationState.Succeeded,
+            "History is most-recent-first: the re-issued navigation after the save succeeded");
         cut.FindAll(".tm-dialog").Should().BeEmpty();
     }
 

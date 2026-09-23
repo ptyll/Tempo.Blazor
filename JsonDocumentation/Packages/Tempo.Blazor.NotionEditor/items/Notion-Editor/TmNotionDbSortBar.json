@@ -12,10 +12,32 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Sorts",
+      "type": "IReadOnlyList<NotionDatabaseSort>?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnSortsChanged",
       "type": "EventCallback<IReadOnlyList<NotionDatabaseSort>>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

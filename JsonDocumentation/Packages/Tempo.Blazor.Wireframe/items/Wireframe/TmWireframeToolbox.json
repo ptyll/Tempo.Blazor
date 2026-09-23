@@ -18,6 +18,12 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the toolbox wrapper."
+    },
+    {
+      "name": "ComponentScope",
+      "type": "WireframeComponentScope?",
+      "isRequired": false,
+      "description": "Optional application scope used to resolve custom wireframe components."
     }
   ],
   "cssClasses": [

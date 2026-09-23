@@ -10,6 +10,54 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Rows",
+      "type": "int",
+      "isRequired": false,
+      "default": "2"
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "OnKeyDown",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false
+    },
+    {
+      "name": "MentionProvider",
+      "type": "ITmPeopleProvider?",
+      "isRequired": false
+    }
+  ],
   "subcategory": "UI"
 }

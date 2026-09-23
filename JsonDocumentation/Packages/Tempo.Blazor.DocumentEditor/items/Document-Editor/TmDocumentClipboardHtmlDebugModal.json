@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the modal is open."
+    },
+    {
       "name": "Html",
       "type": "string?",
       "isRequired": false,

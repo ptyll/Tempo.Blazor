@@ -58,6 +58,12 @@
       "description": "Disables the textarea."
     },
     {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the textarea as required. Shows a required marker on the label and sets aria-required on the <textarea> element."
+    },
+    {
       "name": "TabIndex",
       "type": "int",
       "isRequired": false,

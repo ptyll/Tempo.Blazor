@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "List<PivotField<TItem>>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "All available field definitions."
+    },
+    {
       "name": "AllowDragDrop",
       "type": "bool",
       "isRequired": false,

@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Pages",
+      "type": "IReadOnlyList<SigningDocumentPage>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Document pages shown during signing."
+    },
+    {
       "name": "AutoSaveDelay",
       "type": "TimeSpan",
       "isRequired": false,

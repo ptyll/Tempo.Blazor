@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsDisabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the toolbar is disabled."
+    },
+    {
       "name": "ActiveFormats",
       "type": "List<string>",
       "isRequired": true,

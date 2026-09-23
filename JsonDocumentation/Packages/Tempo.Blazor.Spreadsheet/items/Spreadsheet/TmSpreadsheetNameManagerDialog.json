@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Workbook",
+      "type": "SpreadsheetWorkbook",
+      "isRequired": true,
+      "description": "The workbook whose named ranges are being managed.",
+      "editorRequired": true
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,

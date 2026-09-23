@@ -9,5 +9,92 @@
   "documentationStatus": "generated",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Annotation threads to render."
+    },
+    {
+      "name": "SelectedThreadId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Selected thread id."
+    },
+    {
+      "name": "SelectedThreadIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Callback invoked when the selected thread id changes."
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Current user id used for mention styling."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved threads are shown."
+    },
+    {
+      "name": "ShowResolvedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback invoked when the resolved filter toggles."
+    },
+    {
+      "name": "PendingSelection",
+      "type": "PdfTextSelection?",
+      "isRequired": false,
+      "description": "Pending text selection awaiting a new comment, when present."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether panel interaction is disabled."
+    },
+    {
+      "name": "OnCreateThreadRequested",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked with the body of a new thread requested from the pending selection."
+    },
+    {
+      "name": "OnReplyRequested",
+      "type": "EventCallback<DocumentCommentReplyRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when a reply is requested."
+    },
+    {
+      "name": "OnResolveRequested",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when resolving a thread is requested."
+    },
+    {
+      "name": "OnReopenRequested",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when reopening a thread is requested."
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback<DocumentCommentDeleteRequest>",
+      "isRequired": false,
+      "description": "Callback invoked when deleting a comment is requested."
+    },
+    {
+      "name": "OnSelectionDismissed",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Callback invoked when the pending selection is dismissed."
+    }
   ]
 }

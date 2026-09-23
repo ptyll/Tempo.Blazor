@@ -12,10 +12,56 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Records",
+      "type": "IReadOnlyList<IDatabaseRecord>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "CardSize",
+      "type": "GalleryCardSize",
+      "isRequired": false,
+      "default": "GalleryCardSize.Medium"
+    },
+    {
+      "name": "CoverFieldId",
+      "type": "Guid?",
+      "isRequired": false
+    },
+    {
+      "name": "CoverFit",
+      "type": "CoverFit",
+      "isRequired": false,
+      "default": "CoverFit.Cover"
+    },
+    {
+      "name": "PreviewFieldIds",
+      "type": "IReadOnlyList<Guid>?",
+      "isRequired": false
+    },
+    {
       "name": "OnRecordClicked",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnNewRecord",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

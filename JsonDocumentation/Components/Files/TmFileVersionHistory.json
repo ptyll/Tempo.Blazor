@@ -9,5 +9,25 @@
   "documentationStatus": "generated",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "ItemId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Identifier of the item whose versions are shown."
+    },
+    {
+      "name": "Hook",
+      "type": "IFileVersioningHook?",
+      "isRequired": false,
+      "description": "Versioning hook that supplies the history, diffs, and restore."
+    },
+    {
+      "name": "OnRestored",
+      "type": "EventCallback<TmFileVersion>",
+      "isRequired": false,
+      "description": "Raised after a version is restored so the host can refresh its listing."
+    }
   ]
 }

@@ -12,8 +12,38 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IVideoBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnMediaSet",
       "type": "EventCallback<(string? FileId, string? Url)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnWidthChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCaptionSaved",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
       "isRequired": false
     }
   ],

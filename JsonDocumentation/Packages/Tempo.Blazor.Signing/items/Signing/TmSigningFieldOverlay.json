@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Field",
+      "type": "SigningField?",
+      "isRequired": false,
+      "description": "Signing field definition to render."
+    },
+    {
       "name": "Area",
       "type": "SigningFieldArea?",
       "isRequired": false,

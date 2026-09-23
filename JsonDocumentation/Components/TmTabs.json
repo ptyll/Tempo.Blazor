@@ -28,6 +28,30 @@
       "description": "Visual variant of the tab strip."
     },
     {
+      "name": "Wrap",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the tab strip wraps onto multiple rows to fit the available width instead of scrolling horizontally. Use when many tabs would otherwise overflow/truncate in a narrow container."
+    },
+    {
+      "name": "HeaderLeading",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional content rendered immediately BEFORE the tab strip, as a SIBLING of the role=\"tablist\" element — never inside it. The tab strip owns a roving tabindex (Arrow/Home/End, tabindex 0/-1, aria-selected AND the DOM focus, which moves with the selection); an element that can never be selected would misreport that contract to assistive technology and would be reachable with the arrow keys as if it were a tab. Setting this (or HeaderTrailing) wraps the strip in an extra .tm-tabs__header-row flex row. The wrapper is emitted ONLY when at least one slot is supplied; with neither slot the rendered markup is byte-identical to a tab strip that has no slots at all, so existing CSS and tests that rely on .tm-tabs > .tm-tabs__header keep working. CONTRACT FOR STICKY CONSUMERS: when the slots are in use, a sticky tab strip must stick the ROW (.tm-tabs__header-row), not the header (.tm-tabs__header). Sticking the header alone pins only the strip and lets the slot content scroll away."
+    },
+    {
+      "name": "HeaderTrailing",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional content rendered immediately AFTER the tab strip, as a SIBLING of the role=\"tablist\" element — never inside it, for the same roving-focus reason as HeaderLeading. Setting this (or HeaderLeading) wraps the strip in an extra .tm-tabs__header-row flex row. The wrapper is emitted ONLY when at least one slot is supplied; with neither slot the rendered markup is byte-identical to a tab strip that has no slots at all. CONTRACT FOR STICKY CONSUMERS: when the slots are in use, stick the ROW (.tm-tabs__header-row), not the header (.tm-tabs__header), otherwise the slot content scrolls away from under the pinned strip."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Tab panel children."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Wizard step components."
+    },
+    {
       "name": "ActiveStep",
       "type": "int",
       "isRequired": false,
@@ -67,6 +73,30 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class(es)."
+    },
+    {
+      "name": "Parser",
+      "type": "IImportFileParser?",
+      "isRequired": false,
+      "description": "Optional parser hook. When supplied, the wizard renders a built-in upload → column-mapping panel: it parses the chosen file, shows the detected columns, and lets the user map each column to a TargetFields entry. When null the wizard behaves exactly as before."
+    },
+    {
+      "name": "ParseOptions",
+      "type": "ImportParseOptions?",
+      "isRequired": false,
+      "description": "Options passed to Parser. Defaults to new ImportParseOptions()."
+    },
+    {
+      "name": "TargetFields",
+      "type": "IReadOnlyList<ImportTargetField>?",
+      "isRequired": false,
+      "description": "Target fields the host declares as mapping destinations for detected columns."
+    },
+    {
+      "name": "OnMapped",
+      "type": "EventCallback<ImportMappingResult>",
+      "isRequired": false,
+      "description": "Fires when the user applies a column mapping, carrying the mapping and mapped rows."
     }
   ],
   "cssClasses": [

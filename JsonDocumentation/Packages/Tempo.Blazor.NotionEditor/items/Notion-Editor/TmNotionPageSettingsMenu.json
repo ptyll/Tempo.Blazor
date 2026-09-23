@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Page",
+      "type": "INotionPage",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
       "name": "OnAIAskPageRequested",
       "type": "EventCallback",
       "isRequired": false,

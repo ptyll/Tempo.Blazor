@@ -300,4 +300,57 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
 
         Names(cut).Should().Equal("Charlie", "Alice", "Bob");
     }
+
+    /// <summary>
+    /// A pin-only header (<c>!Sortable &amp;&amp; ShowColumnMenu</c>) has no <c>.tm-th-sort</c>
+    /// button inside, so Enter/Space on it never produces the bubbled click that would consume the
+    /// recorded Shift state. Arming <c>_activationKeyShift</c> there leaves it stuck until the next
+    /// keyboard-originated click on an UNRELATED sortable column inherits it as a phantom
+    /// multi-sort modifier (N203, review 2026-09-22).
+    /// </summary>
+    [Fact]
+    public void ShiftEnterOnAPinOnlyHeader_DoesNotLeakIntoALaterPlainClickOnASortableColumn()
+    {
+        var cut = Render<TmDataTable<KeyPerson>>(p =>
+        {
+            p.Add(c => c.Items, People);
+            p.Add(c => c.ShowColumnMenu, true);
+            p.AddChildContent(b =>
+            {
+                b.OpenComponent<TmDataTableColumn<KeyPerson>>(0);
+                b.AddAttribute(1, "Title", "Actions"); // no Sortable => pin-only header
+                b.CloseComponent();
+                b.OpenComponent<TmDataTableColumn<KeyPerson>>(10);
+                b.AddAttribute(11, "Title", "Name"); b.AddAttribute(12, "PropertyName", "Name");
+                b.AddAttribute(13, "Sortable", true);
+                b.AddAttribute(14, "Field", (Func<KeyPerson, object?>)(x => x.Name));
+                b.CloseComponent();
+                b.OpenComponent<TmDataTableColumn<KeyPerson>>(20);
+                b.AddAttribute(21, "Title", "Age"); b.AddAttribute(22, "PropertyName", "Age");
+                b.AddAttribute(23, "Sortable", true);
+                b.AddAttribute(24, "Field", (Func<KeyPerson, object?>)(x => x.Age));
+                b.CloseComponent();
+            });
+        });
+
+        // An existing single-column sort makes a leaked modifier OBSERVABLE: a phantom Shift turns
+        // the next keyboard-originated click into a multi-sort append instead of a single reset.
+        cut.FindAll("button.tm-th-sort")[0].Click(new MouseEventArgs { Detail = 1 }); // Name asc, sole
+
+        // Shift+Enter on the pin-only header: no button inside, so no click ever follows this keydown.
+        cut.FindAll("th")[0].KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
+
+        // A later keyboard-originated click (detail == 0, modifiers cleared — the Firefox shape the
+        // flag exists for) on the OTHER sortable column must be a single-column sort.
+        cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
+
+        cut.FindAll(".tm-sort-order").Should().BeEmpty(
+            "a plain click after an unrelated Shift+Enter elsewhere must be a SINGLE-column sort, " +
+            "not a leaked multi-sort — .tm-sort-order badges only render when more than one column is active");
+        cut.FindAll("th[data-sortable='true']")
+           .Select(h => h.GetAttribute("aria-sort"))
+           .Should().Equal(new[] { "none", "ascending" },
+               "the leaked Shift must not keep Name sorted beside Age — the pin-only header's " +
+               "keydown was never going to produce a click, so it must not have armed the flag");
+    }
 }

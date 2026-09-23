@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Filtered threads to render."
+    },
+    {
       "name": "AllThreads",
       "type": "IReadOnlyList<DocumentCommentThread>",
       "isRequired": false,

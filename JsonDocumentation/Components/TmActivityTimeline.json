@@ -19,6 +19,49 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the timeline is loading data."
+    },
+    {
+      "name": "ShowInternal",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether internal entries are included (default: true — the activity timeline shows everything)."
+    },
+    {
+      "name": "Filter",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional free-text filter applied to author, content, and entry type (additive, default: none)."
+    },
+    {
+      "name": "EntryTypeFilter",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional entry-type filter (e.g. \"comment\"); null/empty shows all types (additive, default: none)."
+    },
+    {
+      "name": "PageSize",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Page size for incremental \"load more\" paging. null (default) shows every entry — backward compatible."
+    },
+    {
+      "name": "EntryTypeFilterOptions",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Optional explicit set of entry-type options for the filter bar. When null, distinct types are derived from Entries."
+    },
+    {
+      "name": "ShowFilterBar",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, renders a built-in search + type filter bar (default: false)."
+    },
+    {
+      "name": "DataProvider",
+      "type": "ITimelineDataProvider?",
+      "isRequired": false,
+      "description": "Optional async data provider. When set, entries are fetched (filtered + paged) from it instead of Entries."
     }
   ],
   "cssClasses": [

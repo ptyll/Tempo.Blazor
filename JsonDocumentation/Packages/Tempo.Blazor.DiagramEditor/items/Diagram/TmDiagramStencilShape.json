@@ -10,5 +10,47 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Node",
+      "type": "DiagramNode",
+      "isRequired": true
+    },
+    {
+      "name": "IsSelected",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnPortMouseDownEvent",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnSectionEdit",
+      "type": "EventCallback<(string DataKey, object Value)>",
+      "isRequired": false
+    },
+    {
+      "name": "SelectedTableCells",
+      "type": "List<(int Row, int Column)>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "Page",
+      "type": "DiagramPage?",
+      "isRequired": false
+    },
+    {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    }
+  ]
 }

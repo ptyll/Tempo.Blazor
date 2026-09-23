@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Workbook",
+      "type": "SpreadsheetWorkbook",
+      "isRequired": true,
+      "description": "The workbook containing the named range.",
+      "editorRequired": true
+    },
+    {
       "name": "OnCancel",
       "type": "EventCallback",
       "isRequired": false,

@@ -18,8 +18,49 @@
       "editorRequired": true
     },
     {
+      "name": "Content",
+      "type": "IColumnListBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnUpdated",
       "type": "EventCallback<IPageBlock>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the column list has no columns left and should be removed from the page."
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnSlashMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnMentionMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnPageLinkMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnTokenMenu",
+      "type": "EventCallback<(string BlockId, double Top, double Left)>",
       "isRequired": false
     }
   ],

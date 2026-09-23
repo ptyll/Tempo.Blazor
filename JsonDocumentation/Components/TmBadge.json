@@ -65,6 +65,12 @@
       "description": "Alias for Dot."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Alias for Dot."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -56,6 +56,10 @@ public partial class TmStatCard
 
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(2);
 
+    // Accepted functions are var()/hex/rgb()/rgba()/hsl()/hsla()/oklch()/color-mix() plus the 148
+    // named colours below — narrower than CSS Color 4 (hwb()/lab()/lch()/oklab() are NOT accepted).
+    // This is a deliberate, documented exclusion for 2.9.0, not an oversight; extending the
+    // whitelist is a future breaking-surface decision, not a bugfix (N144, review 2026-09-22).
     private static readonly Regex FunctionalColor = new(
         @"^(?:var|rgba?|hsla?|oklch|color-mix)\(.*\)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline,

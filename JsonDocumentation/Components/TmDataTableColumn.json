@@ -15,6 +15,12 @@
       "description": "Column header text."
     },
     {
+      "name": "SortLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The subject the header sort button's accessible name announces — the {0} inside \"Sort by {0} — {next action}\". Defaults to Title; set it on a templated or icon-only header whose caption is not text (a templated header with neither Title nor SortLabel throws in DEBUG and falls back to a localized positional name in RELEASE)."
+    },
+    {
       "name": "Field",
       "type": "Func<TItem, object?>",
       "isRequired": false,
@@ -84,6 +90,19 @@
       "description": "Minimum column width CSS value."
     },
     {
+      "name": "Resizable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the user can drag-resize this column. Default false."
+    },
+    {
+      "name": "Pinned",
+      "type": "ColumnPin",
+      "isRequired": false,
+      "default": "ColumnPin.None",
+      "description": "Default pin state (left/right/none). User pin changes override this at runtime. Default None."
+    },
+    {
       "name": "Align",
       "type": "ColumnAlign",
       "isRequired": false,
@@ -101,6 +120,18 @@
       "type": "RenderFragment?",
       "isRequired": false,
       "description": "Custom header render fragment (replaces plain Title text when set)."
+    },
+    {
+      "name": "Editable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether this column supports inline editing (requires TmDataTable.Editable)."
+    },
+    {
+      "name": "EditTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Template rendered for this cell when the row is in edit mode. Replaces CellTemplate/Field."
     },
     {
       "name": "Order",

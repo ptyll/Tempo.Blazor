@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Reactions",
+      "type": "IReadOnlyList<string>",
+      "isRequired": false,
+      "default": "[\"👍\", \"✅\", \"👀\", \"❤️\", \"🎉\"]",
+      "description": "Available reaction values."
+    },
+    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,

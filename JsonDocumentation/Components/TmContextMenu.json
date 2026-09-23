@@ -14,6 +14,12 @@
       "description": "The trigger element that opens the menu."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Menu item children (TmContextMenuItem)."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

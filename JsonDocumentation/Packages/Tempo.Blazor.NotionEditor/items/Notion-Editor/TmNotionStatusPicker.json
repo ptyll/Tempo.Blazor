@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows or hides the picker."
+    },
+    {
       "name": "InitialColor",
       "type": "NotionStatusColor",
       "isRequired": false,

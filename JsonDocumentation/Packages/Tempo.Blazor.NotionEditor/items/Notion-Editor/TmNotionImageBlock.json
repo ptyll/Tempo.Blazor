@@ -12,6 +12,16 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IImageBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnAlignmentChanged",
       "type": "EventCallback<MediaAlignment>",
       "isRequired": false,

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "OnInsert",
+      "type": "EventCallback<(int Rows, int Columns)>",
+      "isRequired": false,
+      "description": "Raised when the user chooses a table size."
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,

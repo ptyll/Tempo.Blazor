@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Sheet",
+      "type": "SpreadsheetSheet?",
+      "isRequired": false,
+      "description": "The sheet to render."
+    },
+    {
       "name": "ActiveCellChanged",
       "type": "EventCallback<string?>",
       "isRequired": false,

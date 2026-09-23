@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsDirty",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the document has local unsaved changes."
+    },
+    {
       "name": "ActiveRegionLabel",
       "type": "string",
       "isRequired": false,

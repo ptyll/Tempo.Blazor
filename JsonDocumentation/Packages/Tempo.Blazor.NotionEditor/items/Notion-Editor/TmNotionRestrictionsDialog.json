@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Controls whether the dialog is visible."
+    },
+    {
       "name": "EffectivePermission",
       "type": "PageEffectivePermissionDto?",
       "isRequired": false,

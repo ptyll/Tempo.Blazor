@@ -27,10 +27,47 @@
       "description": "IDs of the currently selected elements. Empty = no selection shown."
     },
     {
+      "name": "SelectedConnectorIds",
+      "type": "string[]",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Currently selected connector ids."
+    },
+    {
+      "name": "OnCopyStyle",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user requests copy style from the selected element."
+    },
+    {
+      "name": "OnPasteStyle",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user requests paste style to the selected elements."
+    },
+    {
+      "name": "OnPasteSize",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user requests paste size to the selected elements."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Prevent all editing interactions."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class applied to the panel wrapper."
+    },
+    {
+      "name": "ComponentScope",
+      "type": "WireframeComponentScope?",
+      "isRequired": false,
+      "description": "Optional application scope used to resolve custom wireframe components."
     }
   ],
   "cssClasses": [

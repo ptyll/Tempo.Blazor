@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "CurrentUser",
+      "type": "ChatUser",
+      "isRequired": true,
+      "description": "The currently authenticated user."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -31,6 +37,18 @@
       "description": "List of messages to display."
     },
     {
+      "name": "OnSendMessage",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fired when the user sends a message (text only). Retained for backward compatibility."
+    },
+    {
+      "name": "OnSend",
+      "type": "EventCallback<ChatSendRequest>",
+      "isRequired": false,
+      "description": "Fired when the user sends a message, carrying optional thread/reply context."
+    },
+    {
       "name": "OnAttachmentClick",
       "type": "EventCallback<ChatAttachment>",
       "isRequired": false,
@@ -48,6 +66,90 @@
       "isRequired": false,
       "default": "[]",
       "description": "Users currently typing."
+    },
+    {
+      "name": "OnEditMessage",
+      "type": "EventCallback<ChatMessageEdit>",
+      "isRequired": false,
+      "description": "Fired when the user commits an edit to one of their messages."
+    },
+    {
+      "name": "OnDeleteMessage",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fired when the user deletes one of their messages."
+    },
+    {
+      "name": "OnToggleReaction",
+      "type": "EventCallback<ChatReactionToggle>",
+      "isRequired": false,
+      "description": "Fired when the user toggles an emoji reaction on a message."
+    },
+    {
+      "name": "OnReply",
+      "type": "EventCallback<ChatMessage>",
+      "isRequired": false,
+      "description": "Fired when the user opens a message's reply thread."
+    },
+    {
+      "name": "OnMessageRead",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fired once per incoming message when it first becomes visible, for read receipts."
+    },
+    {
+      "name": "ActiveThreadRootId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the thread root whose reply panel is open. Two-way bindable."
+    },
+    {
+      "name": "ActiveThreadRootIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires when the open thread changes."
+    },
+    {
+      "name": "EnableThreads",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, replies are grouped into a thread panel instead of shown inline. Default true."
+    },
+    {
+      "name": "EnableReactions",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, messages show a reaction bar and emoji picker. Default true."
+    },
+    {
+      "name": "AllowEditDelete",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, the current user can edit and delete their own messages. Default true."
+    },
+    {
+      "name": "ShowReadReceipts",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, own messages display per-user read receipts. Default true."
+    },
+    {
+      "name": "AutoReadReceipts",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, incoming messages fire OnMessageRead as they render. Default true."
+    },
+    {
+      "name": "ReactionEmojis",
+      "type": "IReadOnlyList<string>",
+      "isRequired": false,
+      "default": "[\"👍\", \"❤️\", \"😂\", \"🎉\", \"😮\", \"😢\"]",
+      "description": "Emoji offered by the reaction picker."
     }
   ]
 }

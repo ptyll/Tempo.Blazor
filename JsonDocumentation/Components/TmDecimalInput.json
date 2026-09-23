@@ -126,6 +126,12 @@
       "description": "Render the input as read-only."
     },
     {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the input as required. Shows a required marker on the label and sets aria-required on the input element."
+    },
+    {
       "name": "AutoComplete",
       "type": "string?",
       "isRequired": false,

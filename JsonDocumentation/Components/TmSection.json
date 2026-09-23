@@ -20,6 +20,12 @@
       "description": "Optional icon name displayed before the title."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Section body content."
+    },
+    {
       "name": "HeaderActions",
       "type": "RenderFragment?",
       "isRequired": false,

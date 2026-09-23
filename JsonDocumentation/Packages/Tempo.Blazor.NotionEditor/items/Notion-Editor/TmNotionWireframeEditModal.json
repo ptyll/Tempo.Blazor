@@ -21,6 +21,16 @@
       "type": "Guid",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnSaved",
+      "type": "EventCallback<(WireframeDocument Document, string SvgPreview)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDiscarded",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Tempo Blocks"

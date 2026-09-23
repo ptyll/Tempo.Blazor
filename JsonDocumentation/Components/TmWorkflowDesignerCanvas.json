@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "Definition",
+      "type": "WorkflowCanvasDefinition?",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
       "name": "DefinitionChanged",
       "type": "EventCallback<WorkflowCanvasDefinition>",
       "isRequired": false

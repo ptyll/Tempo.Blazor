@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "CanComment",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the current user may submit comments."
+    },
+    {
       "name": "CancelTestId",
       "type": "string",
       "isRequired": false,

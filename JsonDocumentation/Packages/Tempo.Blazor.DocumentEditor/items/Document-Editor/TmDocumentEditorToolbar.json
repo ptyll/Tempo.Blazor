@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "CommandRegistry",
+      "type": "DocumentEditorCommandRegistry?",
+      "isRequired": false,
+      "description": "Whether toolbar commands should be disabled for read-only mode."
+    },
+    {
       "name": "ActiveHeaderFooterScopeLabel",
       "type": "string?",
       "isRequired": false,
@@ -314,6 +320,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether the current paragraph is a bulleted list item."
+    },
+    {
+      "name": "OnInsertImageUrl",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when URL image insertion is requested from the split menu."
     },
     {
       "name": "OnAddComment",

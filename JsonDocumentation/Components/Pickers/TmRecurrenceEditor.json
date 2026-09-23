@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The recurrence rule value (iCal RRULE string)."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

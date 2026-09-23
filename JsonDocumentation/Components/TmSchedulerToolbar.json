@@ -42,6 +42,18 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fires when the user clicks Today."
+    },
+    {
+      "name": "ShowPrint",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether to show the Print button."
+    },
+    {
+      "name": "OnPrint",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the user clicks Print."
     }
   ],
   "cssClasses": [

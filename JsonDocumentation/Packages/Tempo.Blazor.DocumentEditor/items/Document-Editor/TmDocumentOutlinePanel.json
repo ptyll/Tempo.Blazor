@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Outline",
+      "type": "IReadOnlyList<DocumentOutlineItem>?",
+      "isRequired": false,
+      "description": "Document heading outline to display."
+    },
+    {
       "name": "ActiveBlockId",
       "type": "string?",
       "isRequired": false,

@@ -12,10 +12,63 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "SelectedIds",
+      "type": "string[]",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "DocumentChanged",
+      "type": "EventCallback<DiagramDocument>",
+      "isRequired": false
+    },
+    {
+      "name": "OnEdgeRoutingChanged",
+      "type": "EventCallback<(string EdgeId, string OldRouting, string NewRouting)>",
+      "isRequired": false
+    },
+    {
       "name": "OnEdgeManualRoutingChanged",
       "type": "EventCallback<(string EdgeId, bool Value)>",
       "isRequired": false,
       "description": "Raised when the \"Manual routing\" checkbox is toggled for an edge. The editor listens so it can seed an empty Waypoints list from the auto-router when the user flips to manual on an orthogonal-like edge — otherwise the edge would collapse to a straight line at the moment of toggle."
+    },
+    {
+      "name": "OnApplyLayout",
+      "type": "EventCallback<(string Algorithm, string Direction)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnPageSizeChanged",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "SelectedTableCells",
+      "type": "List<(int Row, int Column)>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "SelectedTableCellsChanged",
+      "type": "EventCallback<List<(int Row, int Column)>>",
+      "isRequired": false
     }
   ]
 }

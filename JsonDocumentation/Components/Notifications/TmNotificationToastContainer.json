@@ -10,5 +10,17 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Notifications"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "CurrentUserId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"demo\""
+    },
+    {
+      "name": "IsPanelOpen",
+      "type": "bool",
+      "isRequired": false
+    }
+  ]
 }

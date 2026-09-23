@@ -10,6 +10,12 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor.Sidebar"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "OnClosed",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ],
   "subcategory": "Sidebar"
 }

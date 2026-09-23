@@ -26,6 +26,30 @@
       "description": "Label text shown beside the toggle."
     },
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name for the switch, rendered as aria-label on the inner input rather than on the wrapper. Use it when the switch must carry a name without any visible text of its own; it takes precedence over Label for the accessible name and does not render a visible span."
+    },
+    {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Space-separated id list of the element(s) that name the switch, rendered as aria-labelledby on the inner input. Use it when the visible label already exists elsewhere on the page and the switch itself has to stay alone inside its own element."
+    },
+    {
+      "name": "Id",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id applied to the inner input, so a host-owned <label for=\"…\"> can point at the switch. Null (the default) renders no id attribute."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the switch required: aria-required=\"true\" on the input and, when Label renders visible text, the same asterisk marker the other inputs use."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

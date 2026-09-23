@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Roles",
+      "type": "IReadOnlyList<SigningSubmitterRole>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Roles or submission recipients currently edited."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

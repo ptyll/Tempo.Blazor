@@ -13,6 +13,12 @@
       "isRequired": false
     },
     {
+      "name": "EntityType",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"activity-entity\""
+    },
+    {
       "name": "TimelineEntries",
       "type": "IReadOnlyList<ITimelineEntry>",
       "isRequired": false,
@@ -67,6 +73,42 @@
       "name": "OnCommentDeleted",
       "type": "EventCallback<string>",
       "isRequired": false
+    },
+    {
+      "name": "TimelineFilter",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional free-text filter forwarded to the timeline tab (author, content, entry type)."
+    },
+    {
+      "name": "TimelineEntryTypeFilter",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional entry-type filter forwarded to the timeline tab; null/empty shows all types."
+    },
+    {
+      "name": "TimelineEntryTypeFilterOptions",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Optional explicit entry-type options for the timeline filter bar."
+    },
+    {
+      "name": "TimelinePageSize",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Page size for the timeline tab's incremental \"load more\" paging. null (default) shows every entry."
+    },
+    {
+      "name": "ShowTimelineFilterBar",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the timeline tab renders a built-in search + type filter bar (default: false)."
+    },
+    {
+      "name": "TimelineDataProvider",
+      "type": "ITimelineDataProvider?",
+      "isRequired": false,
+      "description": "Optional async data provider for the timeline tab (server-side filtering + pagination)."
     }
   ],
   "cssClasses": [

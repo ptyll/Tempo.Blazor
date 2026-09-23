@@ -25,8 +25,10 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private string? _errorMessage;
     private bool _isImporting;
     private ElementReference _fileInputWrap;
+    private ElementReference _triggerWrapRef;
     private ElementReference _dialogElement;
     private IJSObjectReference? _filePickerModule;
+    private bool _pickerRegistered;
     private bool _wasOpen;
     private bool _shouldActivateTrap;
     private FocusTrap? _focusTrap;
@@ -59,6 +61,9 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         else if (!IsOpen && _wasOpen)
         {
             _wasOpen = false;
+            // Closing destroys the dialog DOM (@if (IsOpen)); on reopen a NEW button element
+            // exists without the native listener, so registration must run again (N204).
+            _pickerRegistered = false;
             await DeactivateTrapAsync();
         }
     }
@@ -71,6 +76,17 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             _shouldActivateTrap = false;
             _focusTrap ??= new FocusTrap(JS);
             await _focusTrap.ActivateAsync<TmGanttImportDialog>(_dialogElement);
+        }
+
+        // Register the NATIVE click listener ahead of the first click — only while open, because
+        // _triggerWrapRef/_fileInputWrap don't exist otherwise. input.click() then runs inside the
+        // browser's own click event with no interop in the gesture chain (N204, review 2026-09-22).
+        if (IsOpen && !_pickerRegistered)
+        {
+            _filePickerModule ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            await _filePickerModule.InvokeVoidAsync(
+                "registerFilePickerTrigger", _triggerWrapRef, _fileInputWrap);
+            _pickerRegistered = true;
         }
     }
 
@@ -87,18 +103,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         _selectedFile = e.File;
         _selectedFileName = e.File.Name;
         _errorMessage = null;
-    }
-
-    /// <summary>
-    /// Opens the native file chooser by clicking the visually hidden <see cref="InputFile"/> inside
-    /// the button's user gesture — so Enter, Space and pointer activation all reach the chooser.
-    /// The module is imported lazily on first use: the dialog renders before JS interop is
-    /// available on prerender, and importing here keeps the chooser inside the same activation.
-    /// </summary>
-    private async Task OpenFilePickerAsync()
-    {
-        _filePickerModule ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        await _filePickerModule.InvokeVoidAsync("openFilePicker", _fileInputWrap);
     }
 
     /// <inheritdoc />

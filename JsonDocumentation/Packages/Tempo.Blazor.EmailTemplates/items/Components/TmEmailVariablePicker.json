@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Variables",
+      "type": "IReadOnlyList<TemplateVariableInfo>",
+      "isRequired": false,
+      "default": "Array.Empty<TemplateVariableInfo>()",
+      "description": "The variables available to insert (extracted from the document plus host-provided)."
+    },
+    {
       "name": "OnInsert",
       "type": "EventCallback<string>",
       "isRequired": false,

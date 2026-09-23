@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Comments",
+      "type": "IReadOnlyList<DocumentComment>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Comment threads to display."
+    },
+    {
       "name": "CanComment",
       "type": "bool",
       "isRequired": false,

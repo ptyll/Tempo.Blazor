@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Controls whether the AI menu is rendered."
+    },
+    {
       "name": "ContextHtml",
       "type": "string?",
       "isRequired": false,

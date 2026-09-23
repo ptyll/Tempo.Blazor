@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "ActiveCellRef",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The A1 reference of the currently active cell."
+    },
+    {
       "name": "DisplayValue",
       "type": "string?",
       "isRequired": false,

@@ -10,5 +10,21 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnImport",
+      "type": "EventCallback<SqlImportResult>",
+      "isRequired": false
+    }
+  ]
 }

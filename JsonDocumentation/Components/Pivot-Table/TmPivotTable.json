@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Items",
+      "type": "IEnumerable<TItem>?",
+      "isRequired": false,
+      "description": "Source data items for in-memory pivot transformation."
+    },
+    {
       "name": "AllowDragDrop",
       "type": "bool",
       "isRequired": false,

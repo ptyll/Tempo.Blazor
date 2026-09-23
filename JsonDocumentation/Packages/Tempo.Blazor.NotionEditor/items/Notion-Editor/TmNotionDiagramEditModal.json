@@ -26,6 +26,16 @@
       "name": "Provider",
       "type": "IDiagramDocumentProvider?",
       "isRequired": false
+    },
+    {
+      "name": "OnSaved",
+      "type": "EventCallback<(DiagramDocument Document, string SvgPreview)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDiscarded",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Tempo Blocks"

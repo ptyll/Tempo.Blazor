@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the dialog is shown."
+    },
+    {
       "name": "Document",
       "type": "EmailTemplateDocument",
       "isRequired": true,

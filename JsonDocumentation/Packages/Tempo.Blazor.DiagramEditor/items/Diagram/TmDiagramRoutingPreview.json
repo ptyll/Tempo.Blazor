@@ -10,5 +10,22 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Routing",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"straight\""
+    },
+    {
+      "name": "IsSelected",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ]
 }

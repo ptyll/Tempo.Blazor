@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class on the notification center root."
+    },
+    {
       "name": "CurrentUserId",
       "type": "string",
       "isRequired": false,

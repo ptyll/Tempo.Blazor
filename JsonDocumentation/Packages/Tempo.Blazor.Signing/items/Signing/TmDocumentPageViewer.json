@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Id",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional id assigned to the rendered page element."
+    },
+    {
       "name": "AllowReplyToResolved",
       "type": "bool",
       "isRequired": false,

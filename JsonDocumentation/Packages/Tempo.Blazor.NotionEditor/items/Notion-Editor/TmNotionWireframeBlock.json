@@ -12,8 +12,28 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IWireframeBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnContentSaved",
       "type": "EventCallback<WireframeBlockContent>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnRemoveRequested",
+      "type": "EventCallback",
       "isRequired": false
     }
   ],

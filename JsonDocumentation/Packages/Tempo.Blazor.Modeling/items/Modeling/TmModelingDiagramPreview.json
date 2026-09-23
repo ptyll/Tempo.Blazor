@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false,
+      "description": "Generated diagram document to show in the preview. Null renders the pre-generation empty state."
+    },
+    {
       "name": "ActiveDraggedElement",
       "type": "ModelingElementDto?",
       "isRequired": false,

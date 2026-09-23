@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Block",
+      "type": "IPageBlock",
+      "isRequired": true,
+      "description": "Owning page block used to resolve the current page when no root page is configured."
+    },
+    {
       "name": "Content",
       "type": "IChildrenDisplayBlockContent?",
       "isRequired": false,

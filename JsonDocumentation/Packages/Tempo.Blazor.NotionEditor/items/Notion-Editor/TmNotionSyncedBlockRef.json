@@ -18,6 +18,11 @@
       "editorRequired": true
     },
     {
+      "name": "Content",
+      "type": "ISyncedBlockRefContent?",
+      "isRequired": false
+    },
+    {
       "name": "IsFocused",
       "type": "bool",
       "isRequired": false

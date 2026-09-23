@@ -10,5 +10,31 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "Options",
+      "type": "IReadOnlyList<SelectOption<string>>?",
+      "isRequired": false
+    },
+    {
+      "name": "PreviewRenderer",
+      "type": "Func<string?, string>?",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
+  ]
 }

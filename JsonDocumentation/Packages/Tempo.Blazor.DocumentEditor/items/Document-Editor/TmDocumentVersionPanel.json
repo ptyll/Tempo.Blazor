@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Versions",
+      "type": "IReadOnlyList<DocumentVersion>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Versions to render."
+    },
+    {
       "name": "IsLoading",
       "type": "bool",
       "isRequired": false,

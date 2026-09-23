@@ -12,8 +12,33 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IEquationBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "IsFocused",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnExpressionSaved",
       "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
       "isRequired": false
     }
   ],

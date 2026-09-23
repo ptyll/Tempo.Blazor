@@ -27,6 +27,12 @@
       "description": "Optional icon shown in the header."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Card body content."
+    },
+    {
       "name": "Footer",
       "type": "string?",
       "isRequired": false,

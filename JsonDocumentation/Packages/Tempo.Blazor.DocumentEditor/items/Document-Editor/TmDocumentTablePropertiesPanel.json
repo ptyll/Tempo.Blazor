@@ -12,10 +12,23 @@
   ],
   "parameters": [
     {
+      "name": "Layout",
+      "type": "TableLayoutContent?",
+      "isRequired": false,
+      "description": "Current table layout."
+    },
+    {
       "name": "LayoutChanged",
       "type": "EventCallback<TableLayoutContent>",
       "isRequired": false,
       "description": "Current table layout."
+    },
+    {
+      "name": "TestIdRoot",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"document-table-properties\"",
+      "description": "Base string for this panel's data-testid attributes. Defaults to document-table-properties."
     },
     {
       "name": "TestIdPrefix",

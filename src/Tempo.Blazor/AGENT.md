@@ -48,6 +48,7 @@ builder.Services.AddTempoFluentValidation(typeof(MyValidator).Assembly);
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Components.Tags
 @using Tempo.Blazor.Components.Timeline

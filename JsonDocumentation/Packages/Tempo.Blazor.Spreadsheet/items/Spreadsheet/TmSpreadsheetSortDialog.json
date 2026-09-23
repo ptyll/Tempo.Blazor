@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Range",
+      "type": "SpreadsheetRange",
+      "isRequired": true,
+      "description": "The range being sorted.",
+      "editorRequired": true
+    },
+    {
       "name": "OnApply",
       "type": "EventCallback<SpreadsheetSortSpec>",
       "isRequired": true,

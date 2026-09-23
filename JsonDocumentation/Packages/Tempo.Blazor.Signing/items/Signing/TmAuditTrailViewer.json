@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Trail",
+      "type": "SigningAuditTrail?",
+      "isRequired": false,
+      "description": "Audit trail payload to render."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

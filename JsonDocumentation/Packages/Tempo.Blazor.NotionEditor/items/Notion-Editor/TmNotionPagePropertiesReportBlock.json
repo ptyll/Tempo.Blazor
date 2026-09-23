@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Block",
+      "type": "IPageBlock",
+      "isRequired": true,
+      "description": "Owning page block for focus context."
+    },
+    {
       "name": "Content",
       "type": "IPagePropertiesReportBlockContent?",
       "isRequired": false,

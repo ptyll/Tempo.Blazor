@@ -73,6 +73,12 @@
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,
       "description": "Optional custom event template."
+    },
+    {
+      "name": "HideTimeGrid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, hides the hourly time grid body."
     }
   ],
   "cssClasses": [

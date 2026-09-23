@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "DocumentId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Document id used by provider-backed image resolution."
+    },
+    {
       "name": "Block",
       "type": "DocumentBlock?",
       "isRequired": false,

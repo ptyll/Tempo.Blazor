@@ -12,6 +12,11 @@
   ],
   "parameters": [
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnCommentBadgeClicked",
       "type": "EventCallback",
       "isRequired": false,

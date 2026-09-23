@@ -12,10 +12,32 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Grouping",
+      "type": "NotionDatabaseGrouping?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnGroupingChanged",
       "type": "EventCallback<NotionDatabaseGrouping?>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

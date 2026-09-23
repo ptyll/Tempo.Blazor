@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "ColumnIndex",
+      "type": "int",
+      "isRequired": false,
+      "description": "The column index the filter applies to."
+    },
+    {
       "name": "Kind",
       "type": "SpreadsheetFilterKind",
       "isRequired": false,

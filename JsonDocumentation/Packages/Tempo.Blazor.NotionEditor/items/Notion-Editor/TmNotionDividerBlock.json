@@ -12,6 +12,11 @@
   ],
   "parameters": [
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "IsFocused",
       "type": "bool",
       "isRequired": false

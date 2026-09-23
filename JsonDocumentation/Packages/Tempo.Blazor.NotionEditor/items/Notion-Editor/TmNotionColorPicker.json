@@ -12,6 +12,27 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Top",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "Left",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "OnColorSelected",
+      "type": "EventCallback<(string? TextColor, string? BgColor)>",
+      "isRequired": false,
+      "description": "Raised when a color is chosen. Exactly one element of the tuple is non-null: (hex, null) → text color selected; (null, hex) → background color selected. (null, null) → default (remove color) selected for either section."
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
       "isRequired": false,

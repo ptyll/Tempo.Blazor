@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Field",
+      "type": "SigningField?",
+      "isRequired": false,
+      "description": "Selected signing field edited by the panel."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

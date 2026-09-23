@@ -10,6 +10,37 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor.Blocks.Page"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Content",
+      "type": "IChildPageBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "IsFocused",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnNavigate",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnRenameCommitted",
+      "type": "EventCallback<string>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ],
   "subcategory": "Blocks / Page"
 }

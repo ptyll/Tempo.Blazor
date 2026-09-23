@@ -10,6 +10,22 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnSelect",
+      "type": "EventCallback<DiagramTemplate>",
+      "isRequired": false
+    }
+  ],
   "subcategory": "Templates"
 }

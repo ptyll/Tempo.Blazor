@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "TValue?",
+      "isRequired": false,
+      "description": "Selected value."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -80,6 +86,50 @@
       "type": "Func<TItem, TValue>",
       "isRequired": true,
       "description": "Expression that returns the value for a given item. Required for selection matching."
+    },
+    {
+      "name": "Columns",
+      "type": "IReadOnlyList<MultiColumnComboBoxColumn<TItem>>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Column definitions for the dropdown grid."
+    },
+    {
+      "name": "MultiSelect",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Enables multi-select mode: selections are tracked via SelectedValues and rendered as chips in the trigger. Default false."
+    },
+    {
+      "name": "SelectedValues",
+      "type": "IReadOnlyList<TValue>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The selected values in multi-select mode (source of truth when MultiSelect is true)."
+    },
+    {
+      "name": "SelectedValuesChanged",
+      "type": "EventCallback<IReadOnlyList<TValue>>",
+      "isRequired": false,
+      "description": "Fires when the multi-select selection changes."
+    },
+    {
+      "name": "AllowCreateNew",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows an inline \"create new\" row that calls DataProvider.CreateAsync. Requires DataProvider. Default false."
+    },
+    {
+      "name": "ShowRecent",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows a \"recent\" group loaded from DataProvider.GetRecentAsync when the dropdown opens. Requires DataProvider. Default false."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IDropdownDataProvider<TItem>?",
+      "isRequired": false,
+      "description": "Optional data provider that powers the create-new and recent-items features (opt-in). The grid still binds to Data."
     }
   ],
   "typeParameters": [

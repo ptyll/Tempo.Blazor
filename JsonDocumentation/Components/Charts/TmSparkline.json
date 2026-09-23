@@ -10,5 +10,35 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Charts"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Data",
+      "type": "double[]",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "Type",
+      "type": "SparklineType",
+      "isRequired": false,
+      "default": "SparklineType.Line"
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"40px\""
+    },
+    {
+      "name": "Width",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"100%\""
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
+  ]
 }

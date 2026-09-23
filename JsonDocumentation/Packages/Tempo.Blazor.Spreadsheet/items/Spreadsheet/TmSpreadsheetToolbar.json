@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "CanUndo",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether undo is available."
+    },
+    {
       "name": "BackgroundColor",
       "type": "string?",
       "isRequired": false,

@@ -10,6 +10,24 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor.UI"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Diffs",
+      "type": "IReadOnlyList<BlockDiff>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "ViewMode",
+      "type": "NotionDiffViewMode",
+      "isRequired": false,
+      "default": "NotionDiffViewMode.Inline"
+    },
+    {
+      "name": "Loading",
+      "type": "bool",
+      "isRequired": false
+    }
+  ],
   "subcategory": "UI"
 }

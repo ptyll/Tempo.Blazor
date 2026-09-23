@@ -12,6 +12,21 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Top",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "Left",
+      "type": "double",
+      "isRequired": false
+    },
+    {
       "name": "OnAISelected",
       "type": "EventCallback",
       "isRequired": false,

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional completed title override."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

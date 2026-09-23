@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Provider",
+      "type": "INotionWatchProvider?",
+      "isRequired": false,
+      "description": "Watch provider used to persist page subscriptions."
+    },
+    {
       "name": "OnWatchingChanged",
       "type": "EventCallback<bool>",
       "isRequired": false,

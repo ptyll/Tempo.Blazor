@@ -12,10 +12,90 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Records",
+      "type": "IReadOnlyList<IDatabaseRecord>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "RowHeight",
+      "type": "TableRowHeight",
+      "isRequired": false,
+      "default": "TableRowHeight.Medium"
+    },
+    {
+      "name": "WrapCells",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnRecordUpdated",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnNewRecord",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnNewField",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnRecordClicked",
+      "type": "EventCallback<IDatabaseRecord>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFieldResized",
+      "type": "EventCallback<(Guid FieldId, int Width)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFieldMoved",
+      "type": "EventCallback<(int FromIndex, int ToIndex)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFieldEdit",
+      "type": "EventCallback<IDatabaseField>",
+      "isRequired": false
+    },
+    {
+      "name": "GroupByField",
+      "type": "IDatabaseField?",
+      "isRequired": false
+    },
+    {
+      "name": "HideEmptyGroups",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ShowSubItems",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnExpandRecord",
+      "type": "EventCallback<IDatabaseRecord>",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

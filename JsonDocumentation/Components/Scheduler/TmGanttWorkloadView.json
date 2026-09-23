@@ -10,5 +10,23 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Tasks",
+      "type": "IReadOnlyList<TmWorkItem>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "WorkingSchedule",
+      "type": "WorkingSchedule",
+      "isRequired": true
+    },
+    {
+      "name": "DisplayMode",
+      "type": "WorkloadDisplayMode",
+      "isRequired": false,
+      "default": "WorkloadDisplayMode.Hours"
+    }
+  ]
 }

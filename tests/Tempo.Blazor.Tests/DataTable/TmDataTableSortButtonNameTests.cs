@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -23,9 +24,9 @@ namespace Tempo.Blazor.Tests.DataTable;
 /// </summary>
 public class TmDataTableSortButtonNameTests : LocalizationTestBase
 {
-    private sealed record Person(string Name);
+    private sealed record Person(string Name, int Age);
 
-    private static readonly List<Person> People = [new("Alice"), new("Bob")];
+    private static readonly List<Person> People = [new("Alice", 34), new("Bob", 28)];
 
     private IRenderedComponent<TmDataTable<Person>> RenderTable(
         Action<Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder> configureColumn,
@@ -247,6 +248,41 @@ public class TmDataTableSortButtonNameTests : LocalizationTestBase
         buttons[1].GetAttribute("aria-label").Should().Be("Sort by Column 2 — Sort ascending",
             "the fallback names the column by its position, so two unnamed headers still get " +
             "distinct names");
+    }
+
+    [Fact]
+    public void AColumnPartOfAMultiSort_Announces_SortAscending_NotAStaleTriState()
+    {
+        var cut = Render<TmDataTable<Person>>(p =>
+        {
+            p.Add(c => c.Items, People);
+            p.AddChildContent(b =>
+            {
+                b.OpenComponent<TmDataTableColumn<Person>>(0);
+                b.AddAttribute(1, "Title", "Name"); b.AddAttribute(2, "Sortable", true);
+                b.AddAttribute(3, "Field", (Func<Person, object?>)(x => x.Name));
+                b.CloseComponent();
+                b.OpenComponent<TmDataTableColumn<Person>>(10);
+                b.AddAttribute(11, "Title", "Age"); b.AddAttribute(12, "Sortable", true);
+                b.AddAttribute(13, "Field", (Func<Person, object?>)(x => x.Age));
+                b.CloseComponent();
+            });
+        });
+
+        cut.FindAll("th[data-sortable='true']")[0].Click();                                       // Name ascending (sole)
+        cut.FindAll("th[data-sortable='true']")[1].Click(new MouseEventArgs { ShiftKey = true }); // + Age ascending → Count == 2
+        cut.FindAll("th[data-sortable='true']")[1].Click(new MouseEventArgs { ShiftKey = true }); //   Age asc → desc, still inside the 2-descriptor multi-sort
+
+        // Both columns are part of a 2-descriptor multi-sort. A PLAIN click on EITHER resets
+        // every descriptor and sorts just that column ascending — the name must say so, never
+        // "sort descending"/"clear sort" from the single-column cycle (N202, review 2026-09-22).
+        var buttons = cut.FindAll("button.tm-th-sort");
+        buttons[0].GetAttribute("aria-label").Should().Be("Sort by Name — Sort ascending",
+            "Name is ascending but is one of TWO descriptors — a plain click does not cycle to " +
+            "descending, it resets the whole sort to Name-ascending only");
+        buttons[1].GetAttribute("aria-label").Should().Be("Sort by Age — Sort ascending",
+            "Age is descending but is one of TWO descriptors — a plain click does not clear the " +
+            "sort, it resets the whole sort to Age-ascending only");
     }
 
     [Fact]

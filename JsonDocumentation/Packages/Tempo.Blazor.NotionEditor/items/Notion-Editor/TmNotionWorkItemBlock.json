@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IWorkItemBlockContent?",
+      "isRequired": false,
+      "description": "Work-item block content."
+    },
+    {
       "name": "OnContentChanged",
       "type": "EventCallback<WorkItemBlockContent>",
       "isRequired": false,

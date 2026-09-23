@@ -12,6 +12,46 @@
   ],
   "parameters": [
     {
+      "name": "DocumentId",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"\"",
+      "description": "Stable document id to load from the provider.",
+      "editorRequired": true
+    },
+    {
+      "name": "PdfForensicWatermark",
+      "type": "DocumentPdfForensicWatermarkOptions?",
+      "isRequired": false,
+      "description": "Optional forensic watermark stamped on every page of PDF exports (user name, export time, IP). The user name defaults to Author; hosts should fill the IP address and timestamp server-side so the stamp cannot be spoofed by the client."
+    },
+    {
+      "name": "ProofingProvider",
+      "type": "ITempoProofingProvider?",
+      "isRequired": false,
+      "description": "Optional asynchronous proofing provider (e.g. the LanguageTool reference implementation from Tempo.Blazor.Proofing.LanguageTool). The editor extracts the document plain text, calls the provider after load and after edits (debounced by ProofingCheckDebounce), and merges the findings over ProofingOptions for the canvas squiggle overlay and spelling context menu. Provider failures are fail-open: the last known proofing state stays."
+    },
+    {
+      "name": "ProofingCheckDebounce",
+      "type": "TimeSpan",
+      "isRequired": false,
+      "default": "TimeSpan.FromMilliseconds(1200)",
+      "description": "Debounce between an edit and the follow-up ProofingProvider pass."
+    },
+    {
+      "name": "RenderEngine",
+      "type": "DocumentEditorRenderEngine",
+      "isRequired": false,
+      "default": "DocumentEditorRenderEngine.CanvasEnginePreview",
+      "description": "Legacy compatibility parameter. The editor is canvas-only and ignores this value."
+    },
+    {
+      "name": "OfflineStore",
+      "type": "IDocumentOfflineStore?",
+      "isRequired": false,
+      "description": "Optional offline draft store used when OfflineMode is enabled."
+    },
+    {
       "name": "AuditFailureMode",
       "type": "DocumentEditorAuditFailureMode",
       "isRequired": false,
@@ -261,6 +301,13 @@
       "isRequired": false,
       "default": "true",
       "description": "Whether the version history panel is displayed."
+    },
+    {
+      "name": "SigningRoles",
+      "type": "IReadOnlyList<Tempo.Blazor.Abstractions.Models.SigningSubmitterRole>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Signer roles used to colour inline signing fields and to attribute placed fields (plan S2)."
     },
     {
       "name": "SigningFieldsChanged",

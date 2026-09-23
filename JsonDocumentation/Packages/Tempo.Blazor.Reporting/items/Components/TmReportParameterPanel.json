@@ -16,5 +16,44 @@
     "ReportViewerParameterOption",
     "ReportParameterChangedEventArgs",
     "ReportParameterSubmitEventArgs"
+  ],
+  "parameters": [
+    {
+      "name": "Parameters",
+      "type": "IReadOnlyList<ReportViewerParameterMetadata>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Parameter metadata to render."
+    },
+    {
+      "name": "Values",
+      "type": "IReadOnlyDictionary<string, ReportParameterValue>?",
+      "isRequired": false,
+      "description": "Current parameter values."
+    },
+    {
+      "name": "OnParameterChanged",
+      "type": "EventCallback<ReportParameterChangedEventArgs>",
+      "isRequired": false,
+      "description": "Fired when a parameter value changes."
+    },
+    {
+      "name": "OnSubmit",
+      "type": "EventCallback<ReportParameterSubmitEventArgs>",
+      "isRequired": false,
+      "description": "Fired when the user submits parameters."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables parameter controls."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes."
+    }
   ]
 }

@@ -12,6 +12,17 @@
   ],
   "parameters": [
     {
+      "name": "PageId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "Expanded",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnCountChanged",
       "type": "EventCallback",
       "isRequired": false

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": false,
+      "description": "Document to render."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

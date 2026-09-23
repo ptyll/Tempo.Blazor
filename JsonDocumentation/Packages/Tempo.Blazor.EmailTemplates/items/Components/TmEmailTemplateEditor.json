@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Document",
+      "type": "EmailTemplateDocument?",
+      "isRequired": false,
+      "description": "Gets or sets the edited document. Two-way bindable via DocumentChanged."
+    },
+    {
       "name": "AutoSave",
       "type": "AutoSaveOptions?",
       "isRequired": false,

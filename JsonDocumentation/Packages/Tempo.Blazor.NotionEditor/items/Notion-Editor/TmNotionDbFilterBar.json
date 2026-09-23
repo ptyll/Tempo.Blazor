@@ -12,10 +12,32 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Filter",
+      "type": "INotionDatabaseFilter?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnFilterChanged",
       "type": "EventCallback<INotionDatabaseFilter?>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

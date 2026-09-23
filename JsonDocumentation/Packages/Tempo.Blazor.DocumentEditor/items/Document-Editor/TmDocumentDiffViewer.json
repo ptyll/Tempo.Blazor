@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "OldDocument",
+      "type": "DocumentEditorDocument?",
+      "isRequired": false,
+      "description": "Old document snapshot."
+    },
+    {
       "name": "ComparisonResult",
       "type": "DocumentCompareResult?",
       "isRequired": false,

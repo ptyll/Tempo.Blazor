@@ -10,5 +10,13 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.DocumentEditor"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Cursors",
+      "type": "IReadOnlyList<DocumentCollaborationCursor>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Remote collaboration cursors."
+    }
+  ]
 }

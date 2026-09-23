@@ -12,7 +12,67 @@
   ],
   "parameters": [
     {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "X",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "Y",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "MenuType",
+      "type": "WireframeContextMenuType",
+      "isRequired": true
+    },
+    {
       "name": "CanUndo",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "CanRedo",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "HasClipboardStyle",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "SelectedCount",
+      "type": "int",
+      "isRequired": false
+    },
+    {
+      "name": "HasGroupInSelection",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "IsSelectionLocked",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ShowGrid",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "SnapToObjects",
       "type": "bool",
       "isRequired": false
     },
@@ -22,8 +82,108 @@
       "isRequired": false
     },
     {
+      "name": "OnUndo",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnRedo",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnSelectAll",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnDuplicate",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnBringToFront",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnSendToBack",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnGroup",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnUngroup",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnLock",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnUnlock",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnCopyStyle",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnPasteStyle",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnPasteSize",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnAlign",
+      "type": "EventCallback<WireframeAlignment>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDistribute",
+      "type": "EventCallback<WireframeDistribution>",
+      "isRequired": false
+    },
+    {
+      "name": "OnToggleGrid",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnToggleSnapToObjects",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnFitToView",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
       "name": "OnEditConnectorLabel",
       "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnSetConnectorRouting",
+      "type": "EventCallback<string>",
       "isRequired": false
     }
   ]

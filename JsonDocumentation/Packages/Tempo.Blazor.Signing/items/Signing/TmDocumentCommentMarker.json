@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Thread",
+      "type": "DocumentCommentThread",
+      "isRequired": true,
+      "description": "Thread rendered by the marker.",
+      "editorRequired": true
+    },
+    {
       "name": "CurrentUserId",
       "type": "string?",
       "isRequired": false,

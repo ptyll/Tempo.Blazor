@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Items",
+      "type": "IList<TItem>",
+      "isRequired": true,
+      "description": "The list of sub-elements being edited (mutated in place).",
+      "editorRequired": true
+    },
+    {
       "name": "ItemPrimary",
       "type": "IReadOnlyList<string>",
       "isRequired": true,

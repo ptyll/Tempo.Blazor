@@ -10,6 +10,35 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "Reactions",
+      "type": "IReadOnlyList<TmCommentReaction>",
+      "isRequired": false,
+      "default": "Array.Empty<TmCommentReaction>()"
+    },
+    {
+      "name": "EntryId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "CurrentUserId",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "Provider",
+      "type": "ITmCommentReactionProvider?",
+      "isRequired": false
+    },
+    {
+      "name": "OnChanged",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ],
   "subcategory": "UI"
 }

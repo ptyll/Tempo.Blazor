@@ -14,6 +14,12 @@
       "description": "Optional title displayed at the start of the toolbar."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content for the left/start section of the toolbar."
+    },
+    {
       "name": "Actions",
       "type": "RenderFragment?",
       "isRequired": false,

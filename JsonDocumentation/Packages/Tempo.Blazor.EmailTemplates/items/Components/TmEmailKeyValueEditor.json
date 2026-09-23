@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Items",
+      "type": "IDictionary<string, string>",
+      "isRequired": true,
+      "description": "The dictionary being edited (rebuilt in place on every change).",
+      "editorRequired": true
+    },
+    {
       "name": "OnChanged",
       "type": "EventCallback",
       "isRequired": true,

@@ -53,6 +53,12 @@
       "description": "Distance from the top (px) at which a section becomes active during scroll-spy."
     },
     {
+      "name": "ScrollContainerSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element that actually scrolls the sections. Null (the default) listens on the window, which is correct only when the page itself scrolls; an application shell that puts the content in its own overflow-y: auto column never raises a window scroll event, so scroll-spy silently never fires. Point this at that column and ScrollOffset is then measured from the top of the container rather than from the top of the viewport."
+    },
+    {
       "name": "Variant",
       "type": "ScrollSpyNavVariant",
       "isRequired": false,

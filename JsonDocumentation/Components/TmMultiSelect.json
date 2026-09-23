@@ -35,6 +35,20 @@
       "description": "Server-side data provider. When set, Items is ignored."
     },
     {
+      "name": "DisplayField",
+      "type": "Func<TItem, string>",
+      "isRequired": true,
+      "description": "Extracts display text from an item.",
+      "editorRequired": true
+    },
+    {
+      "name": "ValueField",
+      "type": "Func<TItem, TValue>",
+      "isRequired": true,
+      "description": "Extracts the value from an item.",
+      "editorRequired": true
+    },
+    {
       "name": "IdField",
       "type": "Func<TItem, string>?",
       "isRequired": false,

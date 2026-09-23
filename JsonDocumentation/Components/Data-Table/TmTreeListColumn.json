@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Title",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Column header text."
+    },
+    {
       "name": "Align",
       "type": "ColumnAlign",
       "isRequired": false,

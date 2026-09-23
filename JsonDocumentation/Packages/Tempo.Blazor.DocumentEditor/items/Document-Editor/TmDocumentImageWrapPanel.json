@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "CurrentWrapMode",
+      "type": "DocumentWrapMode",
+      "isRequired": false,
+      "default": "DocumentWrapMode.Inline",
+      "description": "Current text wrapping mode for the selected image."
+    },
+    {
       "name": "CurrentHorizontalPosition",
       "type": "DocumentImageHorizontalPosition?",
       "isRequired": false,

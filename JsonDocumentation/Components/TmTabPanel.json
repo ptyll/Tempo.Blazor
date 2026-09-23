@@ -8,6 +8,20 @@
   ],
   "parameters": [
     {
+      "name": "Id",
+      "type": "string",
+      "isRequired": true,
+      "description": "Unique ID for this tab panel (required).",
+      "editorRequired": true
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": true,
+      "description": "Tab header title.",
+      "editorRequired": true
+    },
+    {
       "name": "Icon",
       "type": "string?",
       "isRequired": false,
@@ -24,6 +38,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "When true, the tab cannot be selected."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered when this tab is active."
     },
     {
       "name": "Class",

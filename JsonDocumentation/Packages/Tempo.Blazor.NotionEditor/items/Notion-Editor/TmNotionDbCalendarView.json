@@ -12,10 +12,44 @@
   ],
   "parameters": [
     {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Records",
+      "type": "IReadOnlyList<IDatabaseRecord>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "DateFieldId",
+      "type": "Guid?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnRecordUpdated",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnRecordClicked",
+      "type": "EventCallback<IDatabaseRecord>",
+      "isRequired": false
+    },
+    {
+      "name": "OnNewRecord",
+      "type": "EventCallback<DateTime>",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

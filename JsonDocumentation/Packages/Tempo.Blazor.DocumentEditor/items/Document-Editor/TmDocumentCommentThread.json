@@ -12,6 +12,18 @@
   ],
   "parameters": [
     {
+      "name": "Comment",
+      "type": "DocumentComment?",
+      "isRequired": false,
+      "description": "Comment thread to render."
+    },
+    {
+      "name": "Participants",
+      "type": "IReadOnlyList<DocumentCommentParticipant>?",
+      "isRequired": false,
+      "description": "Optional participant palette used to color this thread and its entries by author."
+    },
+    {
       "name": "CanComment",
       "type": "bool",
       "isRequired": false,

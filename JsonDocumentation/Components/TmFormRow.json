@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content items rendered as columns."
+    },
+    {
       "name": "Columns",
       "type": "int",
       "isRequired": false,

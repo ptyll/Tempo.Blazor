@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsVisible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the token menu is visible."
+    },
+    {
       "name": "HighlightedIndex",
       "type": "int",
       "isRequired": false,

@@ -38,6 +38,9 @@ Kompletní přehled všech komponent knihovny Tempo.Blazor, jejich parametrů, p
 30. [Validace formulářů - kompletní příklady](#validace-formulářů---kompletní-příklady)
 31. [Knihovna dokumentů](#knihovna-dokumentů-document-library) — ITempoDocumentLibraryProvider, TmDocumentOpenDialog, ITempoDocumentChangeNotifier, NotionEditor insert-existing, MCP
 32. [Reporting](#reporting) — TmReportViewer, TmReportParameterPanel, TmReportExplorer, TmReportDesigner
+33. [Přehled enumů](#přehled-enumů)
+34. [Design Token System](#design-token-system)
+35. [Diagram Editor](#diagram-editor)
 
 ---
 
@@ -2899,6 +2902,8 @@ Výběr data a času.
 | `Required` | `bool` | `false` | Povinné |
 | `HideClear` | `bool` | `false` | Skrýt vymazání |
 | `Label` | `string?` | `null` | Popisek |
+| `TimeLabel` | `string?` | `null` | Volitelný popisek nad časovým (HH:mm) sub-polem; `null` = bez popisku |
+| `TriggerId` | `string?` | `null` | Volitelné explicitní id triggeru data, aby ho mohla cílit `<label for>` nadřazené komponenty |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -3021,6 +3026,7 @@ Nízkoúrovňový vstup pro čas (hodiny:minuty:sekundy).
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `MinTime` | `TimeSpan?` | `null` | Minimum |
 | `MaxTime` | `TimeSpan?` | `null` | Maximum |
+| `InputId` | `string?` | `null` | Volitelné id aplikované na segment hodin, aby ho mohla cílit nadřazená `<label for>` |
 
 #### Příklady
 
@@ -3618,7 +3624,10 @@ popisek lišty stránkování (`pagination-info`), nebo žádné. V DOM tedy vž
 zvoleného místa. Do 2.8.8 se renderovala obě naráz a počet záznamů byl v patičce dvakrát vedle sebe.
 Když pager neběží vůbec (`ShowPagination="false"`, grouping, jediná stránka, nepaginovaný
 `ScrollMode`), nesdělí počet nikdo — od 2.9.0 to řeší `ShowResultSummary="true"`, které vykreslí
-tentýž `pagination-summary` řádek samostatně; v DOM je i tak nejvýše jednou.
+tentýž `pagination-summary` řádek samostatně; v DOM je i tak nejvýše jednou. Dvě rohové kombinace:
+s `PaginationInfoPlacement="None"` a vykresleným pagerem `ShowResultSummary="true"` nevypíše nic
+(větev `else if` bez pageru se nikdy nespustí), a s `placement="Pagination"` `ShowResultSummary="false"`
+nepotlačí vlastní `ShowInfo` slot pageru — to je samostatný přepínač řízený jen umístěním.
 
 #### TmDataTableColumn\<TItem\>
 

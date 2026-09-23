@@ -20,6 +20,64 @@
       "description": "Fires when the single-select value changes."
     },
     {
+      "name": "MultiSelect",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Enables multi-select mode: selections are tracked via SelectedValues and rendered as chips. Default false."
+    },
+    {
+      "name": "SelectedValues",
+      "type": "IReadOnlyList<TValue>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The selected values in multi-select mode (source of truth when MultiSelect is true)."
+    },
+    {
+      "name": "SelectedValuesChanged",
+      "type": "EventCallback<IReadOnlyList<TValue>>",
+      "isRequired": false,
+      "description": "Fires when the multi-select selection changes."
+    },
+    {
+      "name": "AllowCreateNew",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows an inline \"create new\" row that calls DataProvider.CreateAsync. Requires DataProvider. Default false."
+    },
+    {
+      "name": "ShowRecent",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows a \"recent\" group loaded from DataProvider.GetRecentAsync when the picker opens. Requires DataProvider. Default false."
+    },
+    {
+      "name": "DataProvider",
+      "type": "IDropdownDataProvider<TItem>?",
+      "isRequired": false,
+      "description": "Optional data provider that powers the create-new and recent-items features (opt-in). The main search still flows through SearchProvider."
+    },
+    {
+      "name": "SearchProvider",
+      "type": "Func<string, Task<IEnumerable<TItem>>>",
+      "isRequired": true,
+      "description": "Search provider function.",
+      "editorRequired": true
+    },
+    {
+      "name": "ValueSelector",
+      "type": "Func<TItem, TValue>",
+      "isRequired": true,
+      "description": "Extracts the value from an item.",
+      "editorRequired": true
+    },
+    {
+      "name": "DisplaySelector",
+      "type": "Func<TItem, string>",
+      "isRequired": true,
+      "description": "Extracts the display text from an item.",
+      "editorRequired": true
+    },
+    {
       "name": "Label",
       "type": "string?",
       "isRequired": false,

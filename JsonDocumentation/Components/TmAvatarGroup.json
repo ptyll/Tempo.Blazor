@@ -25,6 +25,12 @@
       "isRequired": false,
       "default": "Md",
       "description": "Size applied to overflow avatar bubble and group spacing. Defaults to Md."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Avatar elements to render."
     }
   ],
   "cssClasses": [

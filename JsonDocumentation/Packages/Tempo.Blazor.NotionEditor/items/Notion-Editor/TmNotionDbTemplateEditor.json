@@ -12,10 +12,39 @@
   ],
   "parameters": [
     {
+      "name": "Template",
+      "type": "IDatabaseRecordTemplate",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "DatabaseName",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnTemplateSaved",
+      "type": "EventCallback<IDatabaseRecordTemplate>",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Database"

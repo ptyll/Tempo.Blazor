@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Sheet",
+      "type": "SpreadsheetSheet",
+      "isRequired": true,
+      "description": "The sheet the filter applies to.",
+      "editorRequired": true
+    },
+    {
       "name": "ColumnIndex",
       "type": "int",
       "isRequired": true,

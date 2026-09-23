@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Task",
+      "type": "TmWorkItem?",
+      "isRequired": false,
+      "description": "The task being edited."
+    },
+    {
       "name": "ActiveTimerTaskId",
       "type": "string?",
       "isRequired": false,

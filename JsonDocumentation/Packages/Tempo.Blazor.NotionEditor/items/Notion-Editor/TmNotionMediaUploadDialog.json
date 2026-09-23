@@ -12,6 +12,11 @@
   ],
   "parameters": [
     {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "MediaType",
       "type": "string",
       "isRequired": false,
@@ -23,6 +28,11 @@
       "type": "EventCallback<(string? FileId, string? Url)>",
       "isRequired": false,
       "description": "\"image\" | \"video\" | \"audio\" | \"pdf\" | \"file\""
+    },
+    {
+      "name": "OnCancelled",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "UI"

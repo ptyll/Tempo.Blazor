@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Warnings",
+      "type": "IReadOnlyList<DocumentClipboardWarning>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Warnings to display after a paste operation."
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,

@@ -9,5 +9,131 @@
   "documentationStatus": "generated",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Url",
+      "type": "string?",
+      "isRequired": false,
+      "description": "URL of the PDF document to annotate."
+    },
+    {
+      "name": "DocumentId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable document identifier used by the annotation provider. Falls back to Url."
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Height of the annotator (CSS value). Default is \"600px\"."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes for the root element."
+    },
+    {
+      "name": "AnnotationProvider",
+      "type": "IPdfAnnotationProvider?",
+      "isRequired": false,
+      "description": "Provider used to load and persist annotation threads. When omitted, an in-memory provider keeps annotations for the lifetime of the component."
+    },
+    {
+      "name": "CurrentUser",
+      "type": "DocumentCommentUser?",
+      "isRequired": false,
+      "description": "Author applied to annotations created in this annotator."
+    },
+    {
+      "name": "Users",
+      "type": "IReadOnlyList<DocumentCommentUser>?",
+      "isRequired": false,
+      "description": "Known users, used to resolve author roles for role-based colors."
+    },
+    {
+      "name": "AuthorColors",
+      "type": "IReadOnlyDictionary<string, string>?",
+      "isRequired": false,
+      "description": "Annotation colors per author, keyed by user id."
+    },
+    {
+      "name": "RoleColors",
+      "type": "IReadOnlyDictionary<string, string>?",
+      "isRequired": false,
+      "description": "Annotation colors per role, keyed by role."
+    },
+    {
+      "name": "AnnotationColor",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Explicit color (CSS value) stored with annotations created in this annotator. When null (default) colors resolve per author/role at display time."
+    },
+    {
+      "name": "Mode",
+      "type": "PdfAnnotatorMode",
+      "isRequired": false,
+      "default": "PdfAnnotatorMode.Browse",
+      "description": "Active tool. Supports two-way binding. Default is Browse."
+    },
+    {
+      "name": "ModeChanged",
+      "type": "EventCallback<PdfAnnotatorMode>",
+      "isRequired": false,
+      "description": "Callback invoked when the active tool changes."
+    },
+    {
+      "name": "StampOptions",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Stamp texts offered in stamp mode. Defaults to localized Approved/Rejected/Draft/Confidential."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved annotation threads are shown by default. Default is false."
+    },
+    {
+      "name": "ShowResolvedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Callback invoked when the resolved filter toggles."
+    },
+    {
+      "name": "ShowPanel",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the thread panel is rendered. Default is true."
+    },
+    {
+      "name": "ShowViewerToolbar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the underlying viewer toolbar (pagination, zoom) is shown. Default is true."
+    },
+    {
+      "name": "AllowExport",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether export and print actions are offered. Default is true."
+    },
+    {
+      "name": "ExportFileName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "File name used for the exported PDF. Defaults to the source name with an \"-annotated\" suffix."
+    },
+    {
+      "name": "AnnotationsChanged",
+      "type": "EventCallback<IReadOnlyList<DocumentCommentThread>>",
+      "isRequired": false,
+      "description": "Callback invoked when the loaded annotation set changes."
+    }
   ]
 }

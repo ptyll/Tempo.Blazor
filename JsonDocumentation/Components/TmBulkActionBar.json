@@ -20,6 +20,12 @@
       "description": "Fires when the clear selection button is clicked."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Action buttons slot."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

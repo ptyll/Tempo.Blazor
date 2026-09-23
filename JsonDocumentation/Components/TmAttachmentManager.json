@@ -44,6 +44,25 @@
       "description": "When true, upload and delete controls are disabled."
     },
     {
+      "name": "MaxUploadSize",
+      "type": "long",
+      "isRequired": false,
+      "default": "100L * 1024 * 1024",
+      "description": "Maximum size of a single upload in bytes. Default 100 MB. Also caps the browser read stream."
+    },
+    {
+      "name": "ScanHook",
+      "type": "IFileScanHook?",
+      "isRequired": false,
+      "description": "Optional scan hook run after each upload; a Blocked result marks the file unavailable."
+    },
+    {
+      "name": "OnUploadProgress",
+      "type": "EventCallback<TmUploadProgress>",
+      "isRequired": false,
+      "description": "Fires for each chunk progress update during a chunked upload."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

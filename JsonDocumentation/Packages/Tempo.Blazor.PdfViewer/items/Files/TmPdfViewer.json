@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Url",
+      "type": "string?",
+      "isRequired": false,
+      "description": "URL of the PDF document to display."
+    },
+    {
       "name": "AllowDownload",
       "type": "bool",
       "isRequired": false,
@@ -105,6 +111,72 @@
       "type": "EventCallback<PdfViewMode>",
       "isRequired": false,
       "description": "Current view mode. Default is SinglePage."
+    },
+    {
+      "name": "EnableAnnotations",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the annotation layer and comments panel are enabled. Default is false."
+    },
+    {
+      "name": "AnnotationProvider",
+      "type": "IPdfAnnotationProvider?",
+      "isRequired": false,
+      "description": "Provider used to load and persist annotation threads when EnableAnnotations is true. When omitted, an in-memory provider keeps annotations for the current session."
+    },
+    {
+      "name": "DocumentId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable document identifier used by the annotation provider. Falls back to Url."
+    },
+    {
+      "name": "CurrentUser",
+      "type": "DocumentCommentUser?",
+      "isRequired": false,
+      "description": "Author applied to annotations created by the current viewer."
+    },
+    {
+      "name": "ShowResolvedAnnotations",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved annotation threads are shown by default. Default is false."
+    },
+    {
+      "name": "Annotations",
+      "type": "IReadOnlyList<DocumentCommentThread>?",
+      "isRequired": false,
+      "description": "Optional seed threads used when no AnnotationProvider is supplied."
+    },
+    {
+      "name": "AnnotationsChanged",
+      "type": "EventCallback<IReadOnlyList<DocumentCommentThread>>",
+      "isRequired": false,
+      "description": "Callback invoked when the loaded annotation set changes."
+    },
+    {
+      "name": "OnTextSelected",
+      "type": "EventCallback<PdfTextSelection>",
+      "isRequired": false,
+      "description": "Callback invoked when text is selected in the viewer text layer."
+    },
+    {
+      "name": "OverlayContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional content rendered in an overlay that is kept aligned with the current page canvas (used by TmPdfAnnotator to draw its own annotation layer)."
+    },
+    {
+      "name": "OnDocumentLoaded",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Callback invoked with the total page count once the document is loaded."
+    },
+    {
+      "name": "EnableTextSelectionEvents",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Enables text selection events (OnTextSelected) without turning on the built-in annotation layer and panel. Default is false."
     }
   ]
 }

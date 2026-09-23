@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Revisions",
+      "type": "IReadOnlyList<DocumentRevision>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Document revisions to display."
+    },
+    {
       "name": "CanReview",
       "type": "bool",
       "isRequired": false,

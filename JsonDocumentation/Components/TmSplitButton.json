@@ -8,6 +8,13 @@
   ],
   "parameters": [
     {
+      "name": "Text",
+      "type": "string",
+      "isRequired": true,
+      "description": "Text label on the primary button.",
+      "editorRequired": true
+    },
+    {
       "name": "OnClick",
       "type": "EventCallback",
       "isRequired": false,
@@ -37,6 +44,12 @@
       "type": "bool",
       "isRequired": false,
       "description": "Shows a loading spinner on the primary button."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Dropdown menu items (e.g. TmDropdownItem or TmContextMenuItem)."
     },
     {
       "name": "Class",

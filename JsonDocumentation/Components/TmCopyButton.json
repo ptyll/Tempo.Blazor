@@ -8,6 +8,13 @@
   ],
   "parameters": [
     {
+      "name": "Text",
+      "type": "string",
+      "isRequired": true,
+      "description": "Text to copy to clipboard.",
+      "editorRequired": true
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

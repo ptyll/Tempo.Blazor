@@ -8,6 +8,14 @@
   ],
   "parameters": [
     {
+      "name": "Name",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"\"",
+      "description": "Icon name — use IconNames constants (e.g. IconNames.Check).",
+      "editorRequired": true
+    },
+    {
       "name": "Size",
       "type": "IconSize",
       "isRequired": false,

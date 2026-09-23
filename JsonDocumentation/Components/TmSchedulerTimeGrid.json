@@ -8,6 +8,14 @@
   ],
   "parameters": [
     {
+      "name": "Dates",
+      "type": "IReadOnlyList<DateOnly>",
+      "isRequired": true,
+      "default": "[]",
+      "description": "Dates to display as columns.",
+      "editorRequired": true
+    },
+    {
       "name": "Events",
       "type": "IReadOnlyList<TmScheduleEvent>?",
       "isRequired": false,
@@ -67,6 +75,12 @@
       "type": "RenderFragment<TmScheduleEvent>?",
       "isRequired": false,
       "description": "Optional custom event template."
+    },
+    {
+      "name": "HideTimeGrid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, hides the hourly time grid body (only header and all-day row are shown)."
     }
   ],
   "cssClasses": [

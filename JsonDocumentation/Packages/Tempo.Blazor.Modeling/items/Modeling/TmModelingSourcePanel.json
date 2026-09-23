@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Metadata",
+      "type": "ModelingMetadataDto?",
+      "isRequired": false,
+      "description": "Metadata describing the currently loaded modeling source."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

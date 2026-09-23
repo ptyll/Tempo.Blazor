@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "SourceColumns",
+      "type": "IEnumerable<string>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Source column names from the imported file."
+    },
+    {
       "name": "IsOpen",
       "type": "bool",
       "isRequired": false,

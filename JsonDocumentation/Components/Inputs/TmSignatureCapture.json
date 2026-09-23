@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Captured signature value."
+    },
+    {
       "name": "BackgroundColor",
       "type": "string?",
       "isRequired": false,

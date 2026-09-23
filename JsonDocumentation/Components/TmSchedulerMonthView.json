@@ -27,6 +27,13 @@
       "description": "Max events visible per day cell before showing \"+N more\"."
     },
     {
+      "name": "ShowAdjacentMonthEvents",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true, events are also rendered in adjacent-month day cells visible in the grid."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,

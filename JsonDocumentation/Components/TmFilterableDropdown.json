@@ -99,6 +99,12 @@
       "description": "Disables the dropdown."
     },
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name for the combobox trigger. When null the visible placeholder/value text inside the trigger names it instead."
+    },
+    {
       "name": "AccentInsensitiveFilter",
       "type": "bool",
       "isRequired": false,

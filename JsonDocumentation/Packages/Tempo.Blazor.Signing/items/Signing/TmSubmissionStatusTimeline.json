@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Events",
+      "type": "IReadOnlyList<SigningSubmissionStatusEvent>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Submission events to display."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

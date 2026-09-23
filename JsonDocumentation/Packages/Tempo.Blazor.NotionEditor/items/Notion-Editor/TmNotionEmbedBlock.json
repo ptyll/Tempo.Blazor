@@ -12,8 +12,33 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IEmbedBlockContent?",
+      "isRequired": false
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
       "name": "OnUrlSet",
       "type": "EventCallback<EmbedBlockContent>",
+      "isRequired": false
+    },
+    {
+      "name": "OnResized",
+      "type": "EventCallback<(int W, int H)>",
+      "isRequired": false
+    },
+    {
+      "name": "OnCaptionSaved",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "OnFocused",
+      "type": "EventCallback",
       "isRequired": false
     }
   ],

@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The current color value (hex, rgb, or rgba)."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

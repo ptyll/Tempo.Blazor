@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "ActivePageId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "ID of the currently active (open) page — highlights it in the tree."
+    },
+    {
       "name": "OnTrashRequested",
       "type": "EventCallback",
       "isRequired": false,

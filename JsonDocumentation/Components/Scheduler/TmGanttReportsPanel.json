@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Reports",
+      "type": "IReadOnlyList<GanttReport>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
       "name": "OnReportRun",
       "type": "EventCallback<GanttReport>",
       "isRequired": false

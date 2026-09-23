@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "InsertRowBefore",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when a row should be inserted before the current row."
+    },
+    {
       "name": "CellProperties",
       "type": "EventCallback",
       "isRequired": false,

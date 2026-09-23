@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Controls whether the template gallery dialog is rendered."
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
       "isRequired": false,

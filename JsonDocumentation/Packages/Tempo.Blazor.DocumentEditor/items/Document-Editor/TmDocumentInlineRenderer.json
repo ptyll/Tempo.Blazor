@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Inline",
+      "type": "InlineContent?",
+      "isRequired": false,
+      "description": "Inline content to render."
+    },
+    {
       "name": "DocumentId",
       "type": "string",
       "isRequired": false,

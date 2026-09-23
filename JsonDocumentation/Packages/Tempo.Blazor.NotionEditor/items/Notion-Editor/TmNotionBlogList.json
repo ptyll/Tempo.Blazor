@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "BlogProvider",
+      "type": "INotionBlogProvider",
+      "isRequired": true,
+      "description": "Blog provider used to query and mutate posts.",
+      "editorRequired": true
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

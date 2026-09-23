@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Reactions",
+      "type": "IReadOnlyList<DocumentCommentReaction>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Existing grouped reactions."
+    },
+    {
       "name": "AvailableReactions",
       "type": "IReadOnlyList<string>",
       "isRequired": false,

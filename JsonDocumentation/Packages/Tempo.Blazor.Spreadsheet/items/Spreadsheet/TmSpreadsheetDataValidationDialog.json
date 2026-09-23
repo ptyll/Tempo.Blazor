@@ -10,5 +10,21 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Spreadsheet"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Validation",
+      "type": "SpreadsheetDataValidation?",
+      "isRequired": false
+    },
+    {
+      "name": "OnSave",
+      "type": "EventCallback<SpreadsheetDataValidation>",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ]
 }

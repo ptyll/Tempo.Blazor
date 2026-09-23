@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Element",
+      "type": "ModelingElementDto?",
+      "isRequired": false,
+      "description": "Selected modeling element. Takes precedence when both element and relationship are supplied."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

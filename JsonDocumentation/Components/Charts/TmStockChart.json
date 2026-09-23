@@ -10,5 +10,51 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Charts"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Data",
+      "type": "IReadOnlyList<StockChartDataPoint>",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "Type",
+      "type": "StockChartType",
+      "isRequired": false,
+      "default": "StockChartType.Candlestick"
+    },
+    {
+      "name": "ShowVolume",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "ShowGrid",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true"
+    },
+    {
+      "name": "Animated",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Width",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"400px\""
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    }
+  ]
 }

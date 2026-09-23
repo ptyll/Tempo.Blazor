@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Target",
+      "type": "object",
+      "isRequired": true,
+      "description": "The model object whose scalar properties are edited.",
+      "editorRequired": true
+    },
+    {
       "name": "Exclude",
       "type": "IReadOnlyList<string>",
       "isRequired": false,

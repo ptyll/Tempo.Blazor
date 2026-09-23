@@ -48,6 +48,12 @@
       "description": "Additional CSS classes."
     },
     {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS class attribute (alternative to AdditionalCssClass)."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,

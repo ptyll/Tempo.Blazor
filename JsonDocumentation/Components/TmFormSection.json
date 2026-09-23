@@ -20,6 +20,12 @@
       "description": "Optional description text below the heading."
     },
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered inside the section body."
+    },
+    {
       "name": "Collapsible",
       "type": "bool",
       "isRequired": false,

@@ -45,6 +45,19 @@
       "description": "Field label."
     },
     {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "Id of the input, so the rendered Label can point at it with for and the error and help text can be referenced. Defaults to a generated value."
+    },
+    {
+      "name": "Required",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Marks the field required: the asterisk on the label (tm-input-label-required, the marker the other inputs use) plus required and aria-required on the input."
+    },
+    {
       "name": "Placeholder",
       "type": "string?",
       "isRequired": false,

@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Orientation",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"horizontal\"",
+      "description": "Either horizontal or vertical."
+    },
+    {
       "name": "CursorX",
       "type": "double",
       "isRequired": false,

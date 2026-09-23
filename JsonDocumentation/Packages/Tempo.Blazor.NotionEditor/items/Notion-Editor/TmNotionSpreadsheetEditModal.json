@@ -21,6 +21,16 @@
       "type": "Guid",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "OnSaved",
+      "type": "EventCallback<SpreadsheetWorkbook>",
+      "isRequired": false
+    },
+    {
+      "name": "OnDiscarded",
+      "type": "EventCallback",
+      "isRequired": false
     }
   ],
   "subcategory": "Blocks / Tempo Blocks"

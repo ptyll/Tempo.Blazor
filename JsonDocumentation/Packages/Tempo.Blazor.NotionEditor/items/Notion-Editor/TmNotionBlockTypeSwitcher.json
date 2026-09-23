@@ -12,8 +12,33 @@
   ],
   "parameters": [
     {
+      "name": "Visible",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Top",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "Left",
+      "type": "double",
+      "isRequired": false
+    },
+    {
+      "name": "CurrentType",
+      "type": "BlockType",
+      "isRequired": true
+    },
+    {
       "name": "OnTypeChanged",
       "type": "EventCallback<BlockType>",
+      "isRequired": false
+    },
+    {
+      "name": "OnClosed",
+      "type": "EventCallback",
       "isRequired": false
     }
   ],

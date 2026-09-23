@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Query",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Current search query."
+    },
+    {
       "name": "CurrentIndex",
       "type": "int",
       "isRequired": false,

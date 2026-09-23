@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Field",
+      "type": "PivotField<TItem>",
+      "isRequired": true,
+      "description": "The field this chip represents."
+    },
+    {
       "name": "AllowDragDrop",
       "type": "bool",
       "isRequired": false,

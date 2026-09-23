@@ -10,6 +10,48 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.NotionEditor.Blocks.Database"
   ],
-  "parameters": [],
+  "parameters": [
+    {
+      "name": "DatabaseId",
+      "type": "Guid",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "Fields",
+      "type": "IReadOnlyList<IDatabaseField>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "Views",
+      "type": "IReadOnlyList<IDatabaseView>",
+      "isRequired": true,
+      "default": "[]",
+      "editorRequired": true
+    },
+    {
+      "name": "DatabaseName",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\""
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "OnImported",
+      "type": "EventCallback",
+      "isRequired": false
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false
+    }
+  ],
   "subcategory": "Blocks / Database"
 }

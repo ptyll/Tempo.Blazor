@@ -8,6 +8,20 @@
   ],
   "parameters": [
     {
+      "name": "Provider",
+      "type": "IDataTableViewProvider",
+      "isRequired": true,
+      "description": "Data provider for views.",
+      "editorRequired": true
+    },
+    {
+      "name": "ViewContext",
+      "type": "string",
+      "isRequired": true,
+      "description": "Unique identifier for this table instance. Used to scope saved views to specific tables (e.g., \"employees\", \"projects\").",
+      "editorRequired": true
+    },
+    {
       "name": "OnViewApplied",
       "type": "EventCallback<DataTableView>",
       "isRequired": false,

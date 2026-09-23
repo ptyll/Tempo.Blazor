@@ -9,5 +9,70 @@
   "documentationStatus": "generated",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Files"
+  ],
+  "parameters": [
+    {
+      "name": "Threads",
+      "type": "IReadOnlyList<DocumentCommentThread>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Annotation threads available to render."
+    },
+    {
+      "name": "PageNumber",
+      "type": "int",
+      "isRequired": false,
+      "default": "1",
+      "description": "One-based current page number."
+    },
+    {
+      "name": "SelectedThreadId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Selected thread id."
+    },
+    {
+      "name": "ShowResolved",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether resolved threads should be rendered."
+    },
+    {
+      "name": "ColorResolver",
+      "type": "Func<DocumentCommentThread, string>?",
+      "isRequired": false,
+      "description": "Resolves the display color of a thread. Falls back to the default palette."
+    },
+    {
+      "name": "Draft",
+      "type": "PdfAnnotatorDraft?",
+      "isRequired": false,
+      "description": "Current pending draft, when any."
+    },
+    {
+      "name": "ActiveStroke",
+      "type": "IReadOnlyList<DocumentInkPoint>?",
+      "isRequired": false,
+      "description": "Stroke currently being drawn, when any."
+    },
+    {
+      "name": "DraftColor",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"#2563eb\"",
+      "description": "Color used for the draft and the active stroke."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether interaction is disabled."
+    },
+    {
+      "name": "OnThreadSelected",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Callback invoked when an annotation is selected."
+    }
   ]
 }

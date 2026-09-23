@@ -12,6 +12,14 @@
   ],
   "parameters": [
     {
+      "name": "ThreadId",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"\"",
+      "description": "Parent thread id.",
+      "editorRequired": true
+    },
+    {
       "name": "Comment",
       "type": "DocumentComment",
       "isRequired": true,

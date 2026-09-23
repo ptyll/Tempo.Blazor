@@ -8,6 +8,19 @@
   ],
   "parameters": [
     {
+      "name": "TriggerContent",
+      "type": "RenderFragment",
+      "isRequired": true,
+      "description": "Trigger content.",
+      "editorRequired": true
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Popover body content."
+    },
+    {
       "name": "Position",
       "type": "PopoverPosition",
       "isRequired": false,

@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Elements",
+      "type": "IReadOnlyList<ModelingElementDto>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Elements rendered by the tree. They are grouped by SemanticType."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

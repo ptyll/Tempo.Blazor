@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The current signature value as an SVG data URL or raw SVG markup."
+    },
+    {
       "name": "BackgroundColor",
       "type": "string?",
       "isRequired": false,

@@ -9,6 +9,111 @@
   ],
   "parameters": [
     {
+      "name": "LayoutStore",
+      "type": "IDataTableLayoutStore?",
+      "isRequired": false,
+      "description": "Persistence hook for per-user column layout (widths + pin state). Optional."
+    },
+    {
+      "name": "LayoutChanged",
+      "type": "EventCallback<DataTableLayout>",
+      "isRequired": false,
+      "description": "Fires whenever the column layout (widths or pin state) changes."
+    },
+    {
+      "name": "ShowColumnMenu",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether column header controls (pin toggle, resize handle) are shown. Default true."
+    },
+    {
+      "name": "Editable",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Enables inline row editing (double-click a row). Requires editable columns with EditTemplate."
+    },
+    {
+      "name": "ShowEditButtons",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether to show the row edit action buttons. Defaults to true."
+    },
+    {
+      "name": "OnRowEditStart",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires when a row enters inline edit mode."
+    },
+    {
+      "name": "OnRowSave",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires after a valid row edit is saved."
+    },
+    {
+      "name": "OnRowEditCancel",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Fires when a row edit is cancelled. The callback receives the edited item; restoring its original values is the consuming application's responsibility."
+    },
+    {
+      "name": "RowValidatorFactory",
+      "type": "Func<TItem, EditContext>?",
+      "isRequired": false,
+      "description": "Optional factory that creates the EditContext cascaded to a row's edit templates. When omitted, the table creates a context for the edited item."
+    },
+    {
+      "name": "OnRowCommit",
+      "type": "Func<TItem, Task<bool>>?",
+      "isRequired": false,
+      "description": "Invoked to persist a committed row edit. Return false to keep the row in edit mode (for example when a server rejected the change). When null, the edit commits locally."
+    },
+    {
+      "name": "OnRowEditCancelled",
+      "type": "EventCallback<TItem>",
+      "isRequired": false,
+      "description": "Legacy cancellation callback invoked after OnRowEditCancel. It receives the already-mutated item; restoring original values remains the consuming application's responsibility."
+    },
+    {
+      "name": "RowEditValidator",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Optional validator content rendered inside the row's cascading EditContext while editing (for example <FluentValidationValidator /> or <DataAnnotationsValidator />). Commit is blocked while the edit context is invalid."
+    },
+    {
+      "name": "DetailTemplate",
+      "type": "RenderFragment<TItem>?",
+      "isRequired": false,
+      "description": "Template rendered as an expandable detail row beneath a data row."
+    },
+    {
+      "name": "OnLoadDetail",
+      "type": "Func<TItem, Task>?",
+      "isRequired": false,
+      "description": "Invoked once, the first time a row is expanded, so the host can lazily load detail data before DetailTemplate renders it."
+    },
+    {
+      "name": "ShowExport",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows the export format dropdown in the table toolbar. Defaults to false."
+    },
+    {
+      "name": "CsvDelimiter",
+      "type": "string",
+      "isRequired": false,
+      "default": "\",\"",
+      "description": "Delimiter used by the built-in CSV export. Defaults to a comma."
+    },
+    {
+      "name": "OnExportCompleted",
+      "type": "EventCallback<DataTableExportResult>",
+      "isRequired": false,
+      "description": "Fires after an export has been generated and handed to the browser download API."
+    },
+    {
       "name": "Items",
       "type": "IEnumerable<TItem>?",
       "isRequired": false,
@@ -19,6 +124,12 @@
       "type": "IDataTableDataProvider<TItem>?",
       "isRequired": false,
       "description": "Server-side data provider. When set, overrides Items and calls GetDataAsync on query changes."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Column definitions (TmDataTableColumn children)."
     },
     {
       "name": "IsLoading",
@@ -79,6 +190,12 @@
       "description": "When true, renders the toolbar container with search, column picker, and view manager. Default: true. The toolbar is not rendered when no visible control would be shown (see ToolbarMode). For a page-owned filter surface, set ToolbarMode to ContentOnly and supply filtered data via Items or DataProvider."
     },
     {
+      "name": "CardMode",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Opt-in responsive card mode. When true, the wrapper gains the tm-data-table-wrapper--card class and every data cell carries a data-label attribute (the owning column's Title), which the scoped CSS uses on narrow viewports to stack each row into a labeled card. Default: false — the rendered markup is unchanged from a non-card table, so existing consumers are unaffected. Fully compatible with server-side data (DataProvider) and sorting."
+    },
+    {
       "name": "ToolbarMode",
       "type": "DataToolbarMode",
       "isRequired": false,
@@ -100,6 +217,18 @@
       "description": "Initial page size. Default: 25."
     },
     {
+      "name": "PageSize",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Controlled page size. When set, it wins over DefaultPageSize — including in the very first IDataTableDataProvider{TItem} query — and changing it after the table is mounted resizes the table in place. Null (the default) leaves the table uncontrolled: it starts at DefaultPageSize and the built-in page-size dropdown owns the value from then on."
+    },
+    {
+      "name": "PageSizeChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Fires whenever the effective page size changes — from the built-in dropdown, from ChangePageSizeAsync, from an applied saved view, or because an IDataTableDataProvider{TItem} answered with a page size different from the one asked for. Enables @bind-PageSize."
+    },
+    {
       "name": "DefaultSortColumn",
       "type": "string?",
       "isRequired": false,
@@ -117,6 +246,18 @@
       "isRequired": false,
       "default": "[5, 10, 25, 50, 100]",
       "description": "Page size options shown in the pagination dropdown."
+    },
+    {
+      "name": "PaginationAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional HTML attributes splatted onto the built-in TmPagination root element. Use it to attach host-owned hooks (analytics ids, extra ARIA) to the pagination bar; the data-testids of the pagination controls themselves come from TestIdPrefix, which this table propagates to the pagination automatically."
+    },
+    {
+      "name": "PaginationInfoTemplate",
+      "type": "RenderFragment<DataTablePaginationInfo>?",
+      "isRequired": false,
+      "description": "Replaces the built-in \"showing X–Y of Z\" summary next to the pagination bar. The context carries the current paging state (DataTablePaginationInfo), so a host can render its own wording instead of the library's TmDataTable_ShowingItems resource. When null the localized default is used. Applies to the Summary placement only, which is the only placement the table itself renders."
     },
     {
       "name": "PaginationInfoPlacement",

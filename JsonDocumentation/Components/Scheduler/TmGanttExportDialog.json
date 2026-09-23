@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the dialog is visible."
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false,

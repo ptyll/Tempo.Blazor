@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "Content",
+      "type": "IContentByLabelBlockContent?",
+      "isRequired": false,
+      "description": "Saved Content-by-Label block configuration."
+    },
+    {
       "name": "OnContentChanged",
       "type": "EventCallback<ContentByLabelBlockContent>",
       "isRequired": false,

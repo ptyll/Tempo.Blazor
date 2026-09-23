@@ -12,6 +12,12 @@
   ],
   "parameters": [
     {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Child TmDockPane definitions."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -10,5 +10,43 @@
   "requiredImports": [
     "@using Tempo.Blazor.Components.Diagram"
   ],
-  "parameters": []
+  "parameters": [
+    {
+      "name": "Document",
+      "type": "DiagramDocument?",
+      "isRequired": true,
+      "editorRequired": true
+    },
+    {
+      "name": "SelectedIds",
+      "type": "string[]",
+      "isRequired": false,
+      "default": "[]"
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ActiveLayerId",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ActiveLayerIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false
+    },
+    {
+      "name": "DocumentChanged",
+      "type": "EventCallback<DiagramDocument>",
+      "isRequired": false
+    }
+  ]
 }

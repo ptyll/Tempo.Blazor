@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Current text value."
+    },
+    {
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,

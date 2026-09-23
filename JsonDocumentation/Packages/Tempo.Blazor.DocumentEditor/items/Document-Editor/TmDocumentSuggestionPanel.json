@@ -12,6 +12,13 @@
   ],
   "parameters": [
     {
+      "name": "Suggestions",
+      "type": "IReadOnlyList<DocumentSuggestion>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Suggestions to display."
+    },
+    {
       "name": "CanReview",
       "type": "bool",
       "isRequired": false,
