@@ -8,11 +8,13 @@
          tabindex="0"
          aria-expanded="@(IsVisible ? "true" : "false")"
          @onclick="Toggle"
-         @onkeydown="HandleTriggerKeyDown">
+         @onkeydown="HandleTriggerKeyDown"
+         @onkeyup="HandleTriggerKeyUp">
         @* Consumer trigger content may contain a native <button> — its bubbled Enter/Space would
-           hit the emulating handler on top of the native click. The keydown fence keeps exactly
-           one activation per press (Escape is unaffected: overlay.js consumes it at the window). *@
-        <span class="tm-popover__trigger-content" @onkeydown:stopPropagation="true">
+           hit the emulating handler on top of the native click. The fences keep exactly one
+           activation per press — keyup is fenced too because Space now activates on keyup (N162);
+           Escape is unaffected either way: overlay.js consumes it at the window. *@
+        <span class="tm-popover__trigger-content" @onkeydown:stopPropagation="true" @onkeyup:stopPropagation="true">
             @TriggerContent
         </span>
     </div>
@@ -107,12 +109,25 @@
         await SetOpenAsync(false);
     }
 
-    // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is
-    // a div[role=button], not a native <button>, so the browser never produces
-    // a click for Enter/Space on its own.
+    // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is a div[role=button],
+    // not a native <button>, so the browser never produces a click for Enter/Space on its own.
+    // Enter fires on KEYDOWN (native buttons do the same, including auto-repeat while held — the
+    // e.Repeat guard keeps a held key from re-toggling on every repeat event) — Space fires on
+    // KEYUP ONLY, matching the native <button> contract exactly
+    // (docs/keyboard-activation-convention.md). Splitting them this way also kills the held-Space
+    // double-toggle: a keydown auto-repeat burst never reaches the keyup handler, only the single
+    // release does (N162).
     private async Task HandleTriggerKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key is "Enter" or " ")
+        if (e.Key == "Enter" && !e.Repeat)
+        {
+            await Toggle();
+        }
+    }
+
+    private async Task HandleTriggerKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == " ")
         {
             await Toggle();
         }

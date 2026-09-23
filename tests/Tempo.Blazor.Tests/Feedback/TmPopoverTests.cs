@@ -173,8 +173,37 @@ public class TmPopoverTests : LocalizationTestBase
             .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
             .AddChildContent("Content"));
 
-        cut.Find(".tm-popover__trigger").KeyDown(new KeyboardEventArgs { Key = " " });
+        // Space activates on KEYUP — the native <button> contract the emulation mirrors (N162):
+        // firing on keydown would re-toggle on every held-key auto-repeat.
+        cut.Find(".tm-popover__trigger").KeyUp(new KeyboardEventArgs { Key = " " });
         cut.FindAll(".tm-popover__body").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Popover_Trigger_SpaceKeydown_DoesNotToggle()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        // A Space keydown must NOT activate: held Space auto-repeats keydowns, so a keydown-fired
+        // toggle could open AND close within one press (N162). Only the release counts.
+        cut.Find(".tm-popover__trigger").KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-popover__body").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Popover_Trigger_RepeatedEnterKeydown_TogglesOnlyOnce()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        // An auto-repeat Enter keydown (Repeat=true without a preceding non-repeat press — the
+        // edge case) must not toggle: the native button's repeated keydown clicks are bounded by
+        // the press, not by the repeat stream (N162).
+        cut.Find(".tm-popover__trigger").KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        cut.FindAll(".tm-popover__body").Should().BeEmpty();
     }
 
     [Fact]
@@ -189,6 +218,21 @@ public class TmPopoverTests : LocalizationTestBase
 
         var inner = cut.Find(".inner-btn");
         var act = () => inner.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>();
+    }
+
+    [Fact]
+    public void Popover_Trigger_Native_Child_Keyup_Is_Fenced()
+    {
+        // Space activates on keyup now (N162), so the fence must cover keyup too: a bubbled
+        // Space keyup off a native <button> inside TriggerContent would toggle the popover on
+        // top of the button's own click — the same double-activation the keydown fence kills.
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button class='inner-btn'>Open</button>"))
+            .AddChildContent("Content"));
+
+        var inner = cut.Find(".inner-btn");
+        var act = () => inner.KeyUp(new KeyboardEventArgs { Key = " " });
         act.Should().Throw<MissingEventHandlerException>();
     }
 

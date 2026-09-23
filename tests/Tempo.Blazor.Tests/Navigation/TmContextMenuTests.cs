@@ -54,20 +54,54 @@ public class TmContextMenuTests : LocalizationTestBase
         trigger.GetAttribute("aria-expanded").Should().Be("false");
     }
 
-    [Theory]
-    [InlineData("Enter")]
-    [InlineData(" ")]
-    public void ContextMenu_KeyboardActivation_OpensMenu(string key)
+    [Fact]
+    public void ContextMenu_Enter_OpensMenu()
     {
         var cut = Render<TmContextMenu>(p => p
             .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
             .AddChildContent<TmContextMenuItem>(mi => mi
                 .Add(x => x.Label, "Edit")));
 
-        cut.Find(".tm-context-menu__trigger").KeyDown(new KeyboardEventArgs { Key = key });
+        // Enter fires on keydown — the native <button> contract the emulation mirrors.
+        cut.Find(".tm-context-menu__trigger").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         cut.Find("[role='menu']").Should().NotBeNull();
         cut.Find(".tm-context-menu__trigger").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void ContextMenu_Space_OpensMenu()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Edit")));
+
+        // Space activates on KEYUP only (N162) — bUnit does not synthesize the keydown→keyup
+        // chain, so both are dispatched explicitly. A keydown-fired Space toggle would flip the
+        // menu open AND closed inside a single held press; the release must open it exactly once.
+        var trigger = cut.Find(".tm-context-menu__trigger");
+        trigger.KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll("[role='menu']").Should().BeEmpty("Space keydown must not toggle");
+        trigger.KeyUp(new KeyboardEventArgs { Key = " " });
+
+        cut.Find("[role='menu']").Should().NotBeNull();
+        cut.Find(".tm-context-menu__trigger").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    [Fact]
+    public void ContextMenu_RepeatedEnterKeydown_DoesNotToggle()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Edit")));
+
+        // An auto-repeat Enter keydown must not toggle on its own — the guard bounds activation
+        // to the real press, not to the repeat stream a held key emits (N162).
+        cut.Find(".tm-context-menu__trigger").KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
     }
 
     // ── Items ──────────────────────────────────────────────

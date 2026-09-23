@@ -30,6 +30,21 @@ second invocation landed on the re-focused trigger and re-opened the panel the k
 `@onkeydown` Enter/Space → action handlers (e.g. `TmDataTable`/`TmMultiViewList` rows, the
 `TmContextMenu` trigger, the `TmMultiSelect` combobox trigger when it carries no filter input).
 
+**Space fires on keyup, Enter on keydown — match the native split, and guard Enter's repeat.**
+A `div[role="button"]`'s keydown handler must not react to Space (the browser's default action
+for Space on a focused non-form element is to scroll the page, and there is no reliable,
+non-blanket way to `preventDefault()` only that key — `@onkeydown:preventDefault` is a
+render-time bool, not a per-key one, so a static `true` would also swallow Tab and trap focus
+inside the trigger, a worse defect than the scroll). Emulate Space on **keyup** instead, exactly
+where the native `<button>` fires its click, and guard Enter's keydown handler with `!e.Repeat`
+so a held key does not re-toggle on every auto-repeat event. `TmPopover` and `TmContextMenu`
+(2.9.0) are the reference implementation — the residual default-scroll on Space keydown is
+accepted, not fixed: it is cosmetic (the panel has not opened yet, there is nothing to lose
+focus of) and the alternative is worse. Where emulation moved to keyup, any existing
+`@onkeydown:stopPropagation` fence around native children needs a matching
+`@onkeyup:stopPropagation` — a bubbled Space keyup off a nested control would otherwise fire
+the container's activation on top of the child's own.
+
 ## Fence native children inside an emulating container
 
 When a native control sits inside a non-native element that emulates activation — a grid row with

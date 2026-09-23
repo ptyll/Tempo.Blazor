@@ -9,8 +9,13 @@ import { open, close, dismiss } from '../overlay.js';
 function stubWindow() {
     return { innerWidth: 1280, innerHeight: 800, addEventListener() {}, removeEventListener() {} };
 }
-function stubDocument() {
-    return { addEventListener() {}, removeEventListener() {} };
+function stubDocument({ activeElement = null } = {}) {
+    const body = { isConnected: true };
+    const documentElement = { isConnected: true };
+    return {
+        addEventListener() {}, removeEventListener() {},
+        activeElement, body, documentElement,
+    };
 }
 function stubPanel() {
     return {
@@ -25,7 +30,7 @@ function stubAnchor() {
     };
 }
 
-function installDomStubs({ captureKeydown = null } = {}) {
+function installDomStubs({ captureKeydown = null, activeElement = null } = {}) {
     globalThis.window = stubWindow();
     if (captureKeydown) {
         globalThis.window.addEventListener = (type, fn) => {
@@ -34,7 +39,7 @@ function installDomStubs({ captureKeydown = null } = {}) {
             }
         };
     }
-    globalThis.document = stubDocument();
+    globalThis.document = stubDocument({ activeElement });
     const observed = [];
     const unobserved = [];
     globalThis.ResizeObserver = class {
@@ -102,6 +107,81 @@ test('a vetoed dismissal (dotNetRef resolves false) resets entry.dismissed so th
     assert.equal(entry.dismissed, true, 'dismissed is set synchronously while the callback runs');
     await new Promise(r => setTimeout(r, 0));
     assert.equal(entry.dismissed, false, 'a veto must re-arm the entry for the next Escape');
+});
+
+test('escape dismiss does NOT steal focus from an element outside the panel (passive anchor)', async () => {
+    // TmEntityPicker/TmQueryInput: the anchor is a tabindex="-1" WRAPPER and the focused
+    // element is the input INSIDE it — Escape while typing means "close the popup", not
+    // "leave the field" (20B carry-forward). Unconditional anchorEl.focus() yanked focus
+    // onto the passive div.
+    const focusCalls = [];
+    const input = { isConnected: true };
+    installDomStubs({ activeElement: input });
+    const anchor = {
+        isConnected: true,
+        focus: () => focusCalls.push('anchor'),
+    };
+    const entry = {
+        key: 'cf-passive-anchor',
+        panel: { ...stubPanel(), contains: () => false },
+        anchor,
+        dotNetRef: { invokeMethodAsync: async () => true },
+        options: { closeOnEscape: true },
+        dismissed: false,
+    };
+
+    assert.equal(dismiss(entry, 'escape'), true);
+    assert.deepEqual(focusCalls, [],
+        'focus was inside the anchor (typing), nowhere near the doomed panel — it must stay put');
+    await new Promise(r => setTimeout(r, 0));
+});
+
+test('escape dismiss restores focus to the anchor when focus sat INSIDE the panel', async () => {
+    // The panel node is about to be destroyed by the .NET re-render — focus inside it would
+    // drop to <body>. That is the case the anchor restore exists for.
+    const focusCalls = [];
+    const insidePanel = { isConnected: true };
+    installDomStubs({ activeElement: insidePanel });
+    const anchor = {
+        isConnected: true,
+        focus: () => focusCalls.push('anchor'),
+    };
+    const entry = {
+        key: 'cf-focus-inside-panel',
+        panel: { ...stubPanel(), contains: el => el === insidePanel },
+        anchor,
+        dotNetRef: { invokeMethodAsync: async () => true },
+        options: { closeOnEscape: true },
+        dismissed: false,
+    };
+
+    assert.equal(dismiss(entry, 'escape'), true);
+    assert.deepEqual(focusCalls, ['anchor'],
+        'focus inside the doomed panel must land on the anchor, not die on <body>');
+    await new Promise(r => setTimeout(r, 0));
+});
+
+test('escape dismiss restores focus to the anchor when focus is on <body>', async () => {
+    const focusCalls = [];
+    installDomStubs();
+    globalThis.document.activeElement = globalThis.document.body;
+    const anchor = {
+        isConnected: true,
+        focus: () => focusCalls.push('anchor'),
+    };
+    const entry = {
+        key: 'cf-focus-body',
+        panel: { ...stubPanel(), contains: () => false },
+        anchor,
+        dotNetRef: { invokeMethodAsync: async () => true },
+        options: { closeOnEscape: true },
+        dismissed: false,
+    };
+
+    assert.equal(dismiss(entry, 'escape'), true);
+    assert.deepEqual(focusCalls, ['anchor'],
+        'focus on <body> means it went nowhere — the anchor takes it (N168 contract)');
+    await new Promise(r => setTimeout(r, 0));
 });
 
 test('an accepted dismissal (dotNetRef resolves true) keeps entry.dismissed', async () => {

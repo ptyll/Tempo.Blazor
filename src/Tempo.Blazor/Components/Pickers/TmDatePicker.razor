@@ -7,7 +7,7 @@
    at BOTH the label and the displayed value, so the announced name is "{label}, {value-or-placeholder}".
    `aria-*` keys in AdditionalAttributes are splatted onto the trigger (the element assistive tech
    names and operates); `data-*` and everything else stays on the root, where test ids live. *@
-<div class="tm-date-picker @Class" @onkeydown="OnKeyDown" @attributes="RootAttributes">
+<div class="tm-date-picker @Class" @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId"
@@ -179,8 +179,7 @@
         await ValueChanged.InvokeAsync(today);
     }
 
-    private void OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") _isOpen = false;
-    }
+    // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
+    // and routes it through TmOverlayPanel.NotifyDismissedAsync — a bubbling handler on this
+    // div could never run in a real browser (dead-branch sweep, N169 follow-up).
 }

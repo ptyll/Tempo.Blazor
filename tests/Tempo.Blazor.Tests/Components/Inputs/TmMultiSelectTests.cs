@@ -611,8 +611,11 @@ public class TmMultiSelectTests : LocalizationTestBase
 
     // ── Focus management ────────────────────────────────────────────────────
     // Opening focuses the filter input; every close destroys it, so focus is
-    // restored to the trigger combobox (WCAG 2.4.3). ElementReference.FocusAsync
-    // surfaces in bUnit's Loose JSInterop as "Blazor._internal.domWrapper.focus".
+    // restored to the trigger combobox (WCAG 2.4.3). Escape/outside dismissal
+    // is overlay.js's job — it refocuses the anchor itself before notifying —
+    // while Blazor-side close paths (item select, confirm) keep their own
+    // restore. ElementReference.FocusAsync surfaces in bUnit's Loose JSInterop
+    // as "Blazor._internal.domWrapper.focus".
 
     private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
 
@@ -646,7 +649,7 @@ public class TmMultiSelectTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmMultiSelect_Escape_In_Popup_Restores_Focus_To_Trigger()
+    public async Task TmMultiSelect_Escape_In_Popup_Closes_Through_Js_Dismissal()
     {
         var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
             .Add(c => c.Items, FruitOptions)
@@ -657,14 +660,21 @@ public class TmMultiSelectTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
             JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1));
 
-        // The filter input's own keydown handler only handles Enter — Escape
-        // bubbles to the popup container, which closes and restores focus.
+        // A bubbled Escape keydown on the filter input must not close on its own: overlay.js
+        // consumes Escape at the window capture phase and delivers it through
+        // NotifyDismissedAsync — the popup's own Escape case was dead code (dead-branch sweep).
         cut.Find(".tm-multiselect__filter-input")
             .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.FindAll(".tm-multiselect__popup").Should().HaveCount(1,
+            "a bubbled Escape keydown is not the dismissal path — overlay.js owns it");
+
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll(".tm-multiselect__popup").Should().BeEmpty();
-        cut.WaitForAssertion(() =>
-            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2));
+        // overlay.js itself restores focus to the anchor before notifying — the Blazor side
+        // must not focus a second time (still just the one call from opening).
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1);
     }
 
     [Fact]

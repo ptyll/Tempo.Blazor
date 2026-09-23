@@ -186,7 +186,7 @@ public class TmColorPickerTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmColorPicker_Escape_ClosesDropdownWithoutFiringValueChanged()
+    public async Task TmColorPicker_Escape_ClosesDropdownWithoutFiringValueChanged()
     {
         string? changed = null;
         var cut = Render<TmColorPicker>(parameters =>
@@ -198,7 +198,16 @@ public class TmColorPickerTests : LocalizationTestBase
 
         cut.Find(".tm-color-picker-trigger").Click();
         cut.Find(".tm-color-palette-swatch").Click();
-        cut.Find(".tm-color-picker").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        // A bubbled Escape keydown must not close on its own: overlay.js consumes Escape at the
+        // window capture phase and delivers it through NotifyDismissedAsync — the component's
+        // own keydown branches were dead code in a real browser (dead-branch sweep).
+        cut.Find(".tm-color-picker-trigger").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.FindAll(".tm-color-picker-dropdown").Should().HaveCount(1,
+            "a bubbled Escape keydown is not the dismissal path — overlay.js owns it");
+
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll(".tm-color-picker-dropdown").Should().BeEmpty();
         changed.Should().BeNull();

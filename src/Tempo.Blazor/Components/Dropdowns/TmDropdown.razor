@@ -3,7 +3,7 @@
 @using Tempo.Blazor.Components.Overlay
 @using Microsoft.AspNetCore.Components.Web
 
-<div class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @onkeydown="HandleKeyDownAsync" @attributes="AdditionalAttributes">
+<div class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             @ref="_triggerRef"
             class="tm-dropdown-trigger"
@@ -90,12 +90,7 @@
         StateHasChanged();
     }
 
-    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            _isOpen = false;
-            await Task.CompletedTask;
-        }
-    }
+    // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
+    // and routes it through TmOverlayPanel.NotifyDismissedAsync — a bubbling handler on this
+    // div could never run in a real browser (dead-branch sweep, N169 follow-up).
 }

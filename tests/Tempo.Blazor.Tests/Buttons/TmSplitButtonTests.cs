@@ -118,7 +118,7 @@ public class TmSplitButtonTests : LocalizationTestBase
     }
 
     [Fact]
-    public void SplitButton_Escape_ClosesDropdown()
+    public async Task SplitButton_Escape_ClosesDropdown()
     {
         var cut = Render<TmSplitButton>(p => p
             .Add(x => x.Text, "Save")
@@ -127,7 +127,11 @@ public class TmSplitButtonTests : LocalizationTestBase
         cut.Find(".tm-split-button__toggle").Click();
         cut.Find("[role='menu']").Should().NotBeNull();
 
-        cut.Find("[role='menu']").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        // overlay.js consumes Escape in the window capture phase in a real browser — the
+        // component's dismissal path is this JSInvokable callback, not a keydown on the
+        // wrapper (dead-branch sweep, N169 follow-up).
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll("[role='menu']").Should().BeEmpty();
     }

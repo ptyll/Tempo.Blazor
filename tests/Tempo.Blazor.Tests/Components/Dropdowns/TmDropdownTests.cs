@@ -62,14 +62,19 @@ public class TmDropdownTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmDropdown_Escape_Key_Closes_Menu()
+    public async Task TmDropdown_Escape_Key_Closes_Menu()
     {
         var cut = Render<TmDropdown>(p => p
             .Add(c => c.Text, "Options")
             .AddChildContent("<div>Item</div>"));
 
         cut.Find("button.tm-dropdown-trigger").Click();
-        cut.Find(".tm-dropdown-wrapper").KeyDown(Key.Escape);
+
+        // overlay.js consumes Escape in the window capture phase in a real browser — the
+        // component's dismissal path is this JSInvokable callback, not a keydown on the
+        // wrapper (dead-branch sweep, N169 follow-up).
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll(".tm-dropdown-menu").Should().BeEmpty();
     }

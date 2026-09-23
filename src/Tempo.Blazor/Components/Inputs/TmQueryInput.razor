@@ -250,21 +250,16 @@
                         return;
                     }
                     break;
-                case "Escape":
-                    CloseDropdown();
-                    return;
+                // No Escape case: overlay.js consumes Escape at the window capture phase and
+                // routes it through TmOverlayPanel.NotifyDismissedAsync — a bubbling case on the
+                // input could never run in a real browser (dead-branch sweep, N169 follow-up).
             }
         }
 
-        switch (e.Key)
+        if (e.Key == "Enter")
         {
-            case "Enter":
-                CloseDropdown();
-                await OnSubmit.InvokeAsync(Value ?? string.Empty);
-                break;
-            case "Escape":
-                CloseDropdown();
-                break;
+            CloseDropdown();
+            await OnSubmit.InvokeAsync(Value ?? string.Empty);
         }
     }
 

@@ -157,7 +157,7 @@ public class TmQueryInputTests : LocalizationTestBase
     }
 
     [Fact]
-    public void QueryInput_Escape_ClosesDropdown()
+    public async Task QueryInput_Escape_ClosesDropdown()
     {
         var cut = Render<TmQueryInput>(p => p
             .Add(c => c.DebounceMs, 0)
@@ -166,7 +166,15 @@ public class TmQueryInputTests : LocalizationTestBase
         cut.Find(".tm-query-input__input").Input("st");
         cut.WaitForAssertion(() => cut.FindAll("[role='listbox']").Should().HaveCount(1));
 
+        // A bubbled Escape keydown on the input must not close on its own: overlay.js consumes
+        // Escape at the window capture phase and delivers it through NotifyDismissedAsync — the
+        // component's own Escape cases were dead code in a real browser (dead-branch sweep).
         cut.Find(".tm-query-input__input").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.FindAll("[role='listbox']").Should().HaveCount(1,
+            "a bubbled Escape keydown is not the dismissal path — overlay.js owns it");
+
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll("[role='listbox']").Should().BeEmpty();
     }

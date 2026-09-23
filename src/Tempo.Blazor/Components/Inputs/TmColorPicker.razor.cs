@@ -141,6 +141,8 @@ public partial class TmColorPicker
         await OpenChanged.InvokeAsync(false);
     }
 
+    // Keyboard emulation is REQUIRED here: the trigger is a div[role=button], not a native
+    // <button>, so the browser never produces a click for Enter/Space on its own.
     private async Task HandleTriggerKeyDownAsync(KeyboardEventArgs args)
     {
         if (Disabled)
@@ -151,30 +153,11 @@ public partial class TmColorPicker
         if (IsActivationKey(args.Key))
         {
             await ToggleDropdownAsync();
-            return;
         }
 
-        if (args.Key == "Escape" && _isOpen)
-        {
-            await CloseWithoutApplyingAsync();
-        }
-    }
-
-    // Escape keydown anywhere inside the component still closes without applying — overlay.js's
-    // document-level listener normally wins this race (it is the tracked panel), but this handler
-    // keeps the keyboard contract working when JS has not loaded, and CloseWithoutApplyingAsync is
-    // idempotent when both paths fire.
-    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        if (args.Key == "Escape" && _isOpen)
-        {
-            await CloseWithoutApplyingAsync();
-        }
+        // No Escape branch anywhere in this component: overlay.js consumes Escape in the window
+        // capture phase and routes it through OnPanelOpenChangedAsync — a bubbling keydown case
+        // could never run in a real browser (dead-branch sweep, N169 follow-up).
     }
 
     /// <summary>

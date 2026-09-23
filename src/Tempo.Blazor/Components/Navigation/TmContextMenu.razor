@@ -9,7 +9,8 @@
          aria-haspopup="menu"
          aria-expanded="@BoolText(_isOpen)"
          @onclick="ToggleMenu"
-         @onkeydown="HandleTriggerKeyDown">
+         @onkeydown="HandleTriggerKeyDown"
+         @onkeyup="HandleTriggerKeyUp">
         @Trigger
     </div>
 
@@ -68,12 +69,25 @@
     // (CloseOnEscape is always true) and routes it through NotifyDismissedAsync — a bubbling
     // handler on this div could never run in a real browser (N169).
 
-    // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is
-    // a div[role=button], not a native <button>, so the browser never produces
-    // a click for Enter/Space on its own.
+    // Keyboard emulation is REQUIRED here (unlike on TmButton): the trigger is a div[role=button],
+    // not a native <button>, so the browser never produces a click for Enter/Space on its own.
+    // Enter fires on KEYDOWN (native buttons do the same, including auto-repeat while held — the
+    // e.Repeat guard keeps a held key from re-toggling on every repeat event) — Space fires on
+    // KEYUP ONLY, matching the native <button> contract exactly
+    // (docs/keyboard-activation-convention.md). Splitting them this way also kills the held-Space
+    // double-toggle: a keydown auto-repeat burst never reaches the keyup handler, only the single
+    // release does (N162).
     private void HandleTriggerKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key is "Enter" or " ")
+        if (e.Key == "Enter" && !e.Repeat)
+        {
+            ToggleMenu();
+        }
+    }
+
+    private void HandleTriggerKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == " ")
         {
             ToggleMenu();
         }

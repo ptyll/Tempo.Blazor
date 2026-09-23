@@ -299,9 +299,9 @@
             case "Enter" or " ":
                 await ToggleAsync();
                 break;
-            // No Escape branch: overlay.js consumes Escape in the window capture phase and routes
-            // it through NotifyDismissedAsync — a bubbling trigger handler could never see it in a
-            // real browser (N169). The menu/filter Escape lives in HandleKeyDownAsync.
+            // No Escape branch anywhere in this component: overlay.js consumes Escape in the
+            // window capture phase and routes it through NotifyDismissedAsync — a bubbling
+            // handler could never see it in a real browser (dead-branch sweep, N169 follow-up).
             case "ArrowDown" when !_isOpen:
                 await ToggleAsync();
                 break;
@@ -313,12 +313,9 @@
         var filtered = GetFilteredItems().ToList();
         switch (e.Key)
         {
-            case "Escape":
-                _isOpen = false;
-                // Keydown inside the menu means focus was inside the popup
-                // (the filter input) — it is destroyed now, restore to trigger.
-                _focusTriggerAfterClose = true;
-                break;
+            // No Escape branch: overlay.js consumes Escape at the window capture phase and
+            // refocuses the anchor itself before NotifyDismissedAsync — a bubbling menu
+            // handler could never run (dead-branch sweep, N169 follow-up).
             case "ArrowDown":
                 _selectedIndex = Math.Min(_selectedIndex + 1, filtered.Count - 1);
                 break;

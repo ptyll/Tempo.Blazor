@@ -1,7 +1,7 @@
 @namespace Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 
-<div @ref="_rootRef" class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "") @Class" @onkeydown="HandleKeyDown" @attributes="AdditionalAttributes">
+<div class="tm-split-button @SizeClass @VariantClass @(Disabled ? "tm-split-button--disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             class="tm-split-button__primary"
             disabled="@Disabled"
@@ -44,7 +44,6 @@
 
 @code {
     private bool _isOpen;
-    private ElementReference _rootRef;
     private ElementReference _toggleRef;
 
     /// <summary>Text label on the primary button.</summary>
@@ -107,9 +106,7 @@
         _isOpen = open;
     }
 
-    private void HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            _isOpen = false;
-    }
+    // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
+    // and routes it through TmOverlayPanel.NotifyDismissedAsync — a bubbling handler on this
+    // div could never run in a real browser (dead-branch sweep, N169 follow-up).
 }

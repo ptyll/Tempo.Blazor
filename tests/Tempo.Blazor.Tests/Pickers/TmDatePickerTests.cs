@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Tests.Localization;
 
@@ -143,13 +144,17 @@ public class TmDatePickerTests : LocalizationTestBase
     }
 
     [Fact]
-    public void DatePicker_Escape_ClosesCalendar()
+    public async Task DatePicker_Escape_ClosesCalendar()
     {
         var cut = Render<TmDatePicker>();
         cut.Find(".tm-date-picker-trigger").Click();
         cut.FindAll(".tm-calendar").Should().HaveCount(1);
 
-        cut.Find(".tm-date-picker").KeyDown(Key.Escape);
+        // overlay.js consumes Escape in the window capture phase in a real browser — the
+        // component's dismissal path is this JSInvokable callback, not a keydown on the
+        // wrapper (dead-branch sweep, N169 follow-up).
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll(".tm-calendar").Should().BeEmpty();
     }

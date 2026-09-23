@@ -457,10 +457,9 @@ public partial class TmMultiSelect<TItem, TValue>
             case "ArrowUp" when _isOpen && !AllowFiltering:
                 _focusedIndex = Math.Max(_focusedIndex - 1, 0);
                 break;
-            case "Escape" when _isOpen:
-                _isOpen = false;
-                await OnClose.InvokeAsync();
-                break;
+            // No Escape branch anywhere in this component: overlay.js consumes Escape at the
+            // window capture phase and SetOpenFromJsAsync already invokes OnClose on that path —
+            // a bubbling case could never run in a real browser (dead-branch sweep).
             case "Backspace" when Values.Count > 0 && !_isOpen:
                 await RemoveItemAsync(Values[^1]);
                 break;
@@ -475,16 +474,9 @@ public partial class TmMultiSelect<TItem, TValue>
         var items = GetVisibleItems().ToList();
         switch (e.Key)
         {
-            // `when _isOpen`: overlay.js dismisses on Escape too (window, capture) and its
-            // NotifyDismissedAsync lands through IsOpenChanged — an unconditional case could
-            // invoke OnClose a second time for the same gesture once _isOpen is already false.
-            case "Escape" when _isOpen:
-                _isOpen = false;
-                // Keydown inside the popup means focus was inside it (filter
-                // input or a popup control) — it is destroyed now, restore.
-                _focusTriggerAfterClose = true;
-                await OnClose.InvokeAsync();
-                break;
+            // No Escape branch: overlay.js consumes Escape at the window capture phase, refocuses
+            // the anchor itself, and SetOpenFromJsAsync invokes OnClose — a bubbling case could
+            // never run (dead-branch sweep, N169 follow-up).
             case "ArrowDown":
                 _focusedIndex = Math.Min(_focusedIndex + 1, items.Count - 1);
                 break;

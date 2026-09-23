@@ -334,11 +334,23 @@ export function dismiss(entry, reason) {
     }
     entry.dismissed = true;
     if (reason === 'escape') {
-        // Keyboard dismissal returns focus to the trigger: the panel node is about to be
-        // removed by the .NET re-render and focus would otherwise drop to <body>.
+        // Keyboard dismissal returns focus to the trigger ONLY when focus actually needs a
+        // home — it sat inside the doomed panel or on a node already gone (the same nowhere
+        // condition maybeRestoreAnchorFocus uses for outside pointerdown). An anchor that
+        // CONTAINS the focused element — TmEntityPicker/TmQueryInput wrap the typed-in input
+        // and ARE the anchor (tabindex="-1", N168) — must not yank focus off that input:
+        // Escape there means "close the popup", not "leave the field" (20B carry-forward).
         const anchorEl = resolveAnchor(entry);
         if (anchorEl && typeof anchorEl.focus === 'function') {
-            anchorEl.focus({ preventScroll: true });
+            const active = document.activeElement;
+            const nowhere = !active
+                || active === document.body
+                || active === document.documentElement
+                || !active.isConnected
+                || entry.panel.contains(active);
+            if (nowhere && anchorEl.isConnected) {
+                anchorEl.focus({ preventScroll: true });
+            }
         }
     }
     // .NET flips IsOpen, which re-renders and runs close(key) — the panel element is hidden there,
