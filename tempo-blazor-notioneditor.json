@@ -1449,10 +1449,54 @@
       "kind": "Class",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells",
-      "description": "Public class defined by Tempo.Blazor.",
+      "description": "Base class for Notion database cell renderers. Each concrete cell (TmNotionDbCellText, TmNotionDbCellNumber, …) inherits the shared display/edit contract declared here, so the parameters below are documented once instead of repeated on every cell's page.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/Cells/TmNotionDbCellBase.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Field",
+          "kind": "Property",
+          "type": "IDatabaseField",
+          "description": "The database field (column) this cell renders — required; supplies name, type and metadata."
+        },
+        {
+          "name": "IsEditing",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true the cell shows its inline editor instead of the read view."
+        },
+        {
+          "name": "OnCancel",
+          "kind": "Property",
+          "type": "EventCallback",
+          "description": "Raised when the user cancels the edit (Escape, focus loss without commit)."
+        },
+        {
+          "name": "OnCommit",
+          "kind": "Property",
+          "type": "EventCallback<object?>",
+          "description": "Raised when the user confirms an edit; carries the new cell value."
+        },
+        {
+          "name": "OnEditRequested",
+          "kind": "Property",
+          "type": "EventCallback",
+          "description": "Raised when the user asks to edit the cell (click/double-click in read mode)."
+        },
+        {
+          "name": "ReadOnly",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true the cell renders display-only and never enters edit mode."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "object?",
+          "description": "The raw cell value, typed per the field's data kind (string, number, option id, …)."
+        }
+      ]
     },
     {
       "itemName": "TmNotionPage.BlockCommentInfo",

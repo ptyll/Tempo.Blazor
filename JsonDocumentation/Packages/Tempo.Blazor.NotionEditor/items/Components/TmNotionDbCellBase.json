@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells",
-  "description": "Public class defined by Tempo.Blazor.",
+  "description": "Base class for Notion database cell renderers. Each concrete cell (TmNotionDbCellText, TmNotionDbCellNumber, …) inherits the shared display/edit contract declared here, so the parameters below are documented once instead of repeated on every cell's page.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/Cells/TmNotionDbCellBase.cs",
   "documentationStatus": "generated",

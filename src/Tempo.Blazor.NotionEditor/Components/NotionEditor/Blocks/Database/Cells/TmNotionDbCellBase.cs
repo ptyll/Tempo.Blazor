@@ -4,16 +4,40 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells;
 
+/// <summary>
+/// Base class for Notion database cell renderers. Each concrete cell (<c>TmNotionDbCellText</c>,
+/// <c>TmNotionDbCellNumber</c>, …) inherits the shared display/edit contract declared here, so the
+/// parameters below are documented once instead of repeated on every cell's page.
+/// </summary>
 public abstract class TmNotionDbCellBase : ComponentBase
 {
-    [Parameter, EditorRequired] public IDatabaseField  Field    { get; set; } = default!;
-    [Parameter]                 public object?         Value    { get; set; }
-    [Parameter]                 public bool            ReadOnly { get; set; }
-    [Parameter]                 public bool            IsEditing { get; set; }
+    /// <summary>The database field (column) this cell renders — required; supplies name, type and metadata.</summary>
+    [Parameter, EditorRequired]
+    public IDatabaseField Field { get; set; } = default!;
 
-    [Parameter] public EventCallback<object?> OnCommit       { get; set; }
-    [Parameter] public EventCallback          OnCancel       { get; set; }
-    [Parameter] public EventCallback          OnEditRequested { get; set; }
+    /// <summary>The raw cell value, typed per the field's data kind (string, number, option id, …).</summary>
+    [Parameter]
+    public object? Value { get; set; }
+
+    /// <summary>When true the cell renders display-only and never enters edit mode.</summary>
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    /// <summary>When true the cell shows its inline editor instead of the read view.</summary>
+    [Parameter]
+    public bool IsEditing { get; set; }
+
+    /// <summary>Raised when the user confirms an edit; carries the new cell value.</summary>
+    [Parameter]
+    public EventCallback<object?> OnCommit { get; set; }
+
+    /// <summary>Raised when the user cancels the edit (Escape, focus loss without commit).</summary>
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    /// <summary>Raised when the user asks to edit the cell (click/double-click in read mode).</summary>
+    [Parameter]
+    public EventCallback OnEditRequested { get; set; }
 
     private bool _wasEditing;
 

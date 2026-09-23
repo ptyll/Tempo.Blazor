@@ -228,28 +228,98 @@ public class ComponentDocumentationFreshnessTests
     /// repeated in 162 derived components).
     /// </summary>
     private static HashSet<string> DocumentedTypeNames()
+        => new(DocumentedTypeMembers().Keys, StringComparer.Ordinal);
+
+    /// <summary>
+    /// The member names each documented type's own page carries, keyed by <c>itemName</c> and merged
+    /// across every file that names it — <c>parameters[].name</c> for component entries and
+    /// <c>members[].name</c> for class entries, over BOTH the <c>JsonDocumentation/</c> overlays and
+    /// the committed <c>tempo-*.json</c> bundles. This is the coverage view
+    /// <see cref="Documented_Ancestor_Pages_Name_The_Parameters_They_Declare"/> checks attribution
+    /// against: ancestor attribution is only sound when the ancestor's page actually NAMES the
+    /// parameter somewhere a consumer reads.
+    /// </summary>
+    private static Dictionary<string, HashSet<string>> DocumentedTypeMembers()
     {
-        var root = Path.Combine(ThemeCss.RepositoryRoot().FullName, "JsonDocumentation");
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var file in Directory.GetFiles(root, "*.json", SearchOption.AllDirectories))
+        var members = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        CollectDocumentedTypeMembers(
+            Path.Combine(ThemeCss.RepositoryRoot().FullName, "JsonDocumentation"), "*.json",
+            SearchOption.AllDirectories, members);
+        CollectDocumentedTypeMembers(
+            ThemeCss.RepositoryRoot().FullName, "tempo-*.json",
+            SearchOption.TopDirectoryOnly, members);
+        return members;
+    }
+
+    private static void CollectDocumentedTypeMembers(
+        string directory, string pattern, SearchOption option,
+        Dictionary<string, HashSet<string>> members)
+    {
+        foreach (var file in Directory.GetFiles(directory, pattern, option))
         {
+            JsonElement document;
             try
             {
                 using var parsed = JsonDocument.Parse(File.ReadAllText(file));
-                if (parsed.RootElement.TryGetProperty("itemName", out var itemName)
-                    && itemName.GetString() is { Length: > 0 } name)
-                {
-                    names.Add(name);
-                }
+                document = parsed.RootElement.Clone();
             }
             catch (JsonException e)
             {
                 throw new InvalidOperationException(
                     $"documentation file is not valid JSON: {file}", e);
             }
-        }
 
-        return names;
+            CollectDocumentedTypeMembers(document, members);
+        }
+    }
+
+    private static void CollectDocumentedTypeMembers(
+        JsonElement element, Dictionary<string, HashSet<string>> members)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                if (element.TryGetProperty("itemName", out var itemName)
+                    && itemName.GetString() is { Length: > 0 } name)
+                {
+                    var set = members.TryGetValue(name, out var existing)
+                        ? existing
+                        : members[name] = new HashSet<string>(StringComparer.Ordinal);
+                    AddMemberNames(element, "parameters", set);
+                    AddMemberNames(element, "members", set);
+                }
+                else
+                {
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        CollectDocumentedTypeMembers(property.Value, members);
+                    }
+                }
+
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    CollectDocumentedTypeMembers(item, members);
+                }
+
+                break;
+        }
+    }
+
+    private static void AddMemberNames(JsonElement item, string arrayName, HashSet<string> set)
+    {
+        if (item.TryGetProperty(arrayName, out var array) && array.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var member in array.EnumerateArray())
+            {
+                if (member.TryGetProperty("name", out var memberName)
+                    && memberName.GetString() is { Length: > 0 } n)
+                {
+                    set.Add(n);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -406,6 +476,68 @@ public class ComponentDocumentationFreshnessTests
             + "overlay file — the bundle-level guard reflects live params even when the overlay page "
             + "drifted, so this direction needs its own check: "
             + string.Join(", ", missing.Take(20)));
+    }
+
+    /// <summary>
+    /// <see cref="ExpectedParameters"/> attributes a parameter declared on an ancestor to the
+    /// ancestor's own documentation page — but until this check nothing verified the page actually
+    /// carries it. A bare generated entry is enough to launder the whole inherited surface: the
+    /// leaf components report no missing parameters (all attributed away) and the ancestor's page
+    /// names none of them, so the parameters are documented NOWHERE while every guard stays green.
+    /// That is precisely what happened to the seven parameters of <c>TmNotionDbCellBase</c>
+    /// (20C review carry-forward): <c>Field</c>, <c>Value</c>, <c>ReadOnly</c>, <c>IsEditing</c>,
+    /// <c>OnCommit</c>, <c>OnCancel</c> and <c>OnEditRequested</c> were absent from every overlay and
+    /// every shipped bundle — invisible to consumers on ~20 cell components.
+    /// </summary>
+    /// <para>
+    /// The check walks the ancestor chain of every population component and, for each ancestor
+    /// that owns at least one settable <c>[Parameter]</c> AND has a documentation entry of its
+    /// own, requires the entry to name each parameter the ancestor declares — in
+    /// <c>parameters</c> or <c>members</c>, on the overlay or in a bundle. An ancestor with no
+    /// entry at all stays the leaf's responsibility under <see cref="ExpectedParameters"/>;
+    /// this fact only removes the free pass a contentless entry used to grant.
+    /// </para>
+    [Fact]
+    public void Documented_Ancestor_Pages_Name_The_Parameters_They_Declare()
+    {
+        var documentedMembers = DocumentedTypeMembers();
+
+        var missing = ComponentPopulation()
+            .SelectMany(c => c.Types)
+            .SelectMany(AncestorChain)
+            .Where(ancestor => documentedMembers.ContainsKey(BaseName(ancestor.Name)))
+            .SelectMany(ancestor => ancestor
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(IsParameter)
+                .Where(p => p.DeclaringType == ancestor)
+                .Where(p => p.GetCustomAttribute<ParameterAttribute>()!.CaptureUnmatchedValues is false)
+                .Where(p => !documentedMembers[BaseName(ancestor.Name)].Contains(p.Name))
+                .Select(p => $"{BaseName(ancestor.Name)}.{p.Name}"))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+        missing.Should().BeEmpty(
+            "a parameter declared on a documented ancestor must be named on that ancestor's own "
+            + "page — attribution only moves the obligation, it cannot fulfil it. Document the "
+            + "member (XML doc on the declaration regenerates 'members'; a hand-maintained entry "
+            + "may list it too) or the leaf components inherit an invisible parameter: "
+            + string.Join(", ", missing.Take(20)));
+    }
+
+    /// <summary>
+    /// Every type the component inherits from, nearest first, stopping below
+    /// <see cref="ComponentBase"/> — the framework base carries no <c>[Parameter]</c>s and the
+    /// walk has nowhere left to go.
+    /// </summary>
+    private static IEnumerable<Type> AncestorChain(Type type)
+    {
+        for (var ancestor = type.BaseType;
+             ancestor is not null && ancestor != typeof(ComponentBase) && ancestor != typeof(object);
+             ancestor = ancestor.BaseType)
+        {
+            yield return ancestor;
+        }
     }
 
     [Fact]
