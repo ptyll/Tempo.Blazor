@@ -1314,7 +1314,8 @@
 }
 
 /* Visually hidden but still present: the chooser button clicks this input programmatically
-   (openFilePicker in TmGanttImportDialog.razor.js) inside the same user gesture. display:none was
+   (the native listener registered by registerFilePickerTrigger in TmGanttImportDialog.razor.js)
+   inside the same user gesture. display:none was
    replaced by the standard sr-only geometry so the click works identically in every engine; the
    input itself is aria-hidden + tabindex=-1, so it never reaches AT or the tab order. */
 .tm-gantt__import-file-input {

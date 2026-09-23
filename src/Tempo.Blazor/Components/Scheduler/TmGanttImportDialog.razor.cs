@@ -28,7 +28,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private ElementReference _triggerWrapRef;
     private ElementReference _dialogElement;
     private IJSObjectReference? _filePickerModule;
-    private bool _pickerRegistered;
     private bool _wasOpen;
     private bool _shouldActivateTrap;
     private FocusTrap? _focusTrap;
@@ -61,9 +60,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         else if (!IsOpen && _wasOpen)
         {
             _wasOpen = false;
-            // Closing destroys the dialog DOM (@if (IsOpen)); on reopen a NEW button element
-            // exists without the native listener, so registration must run again (N204).
-            _pickerRegistered = false;
             await DeactivateTrapAsync();
         }
     }
@@ -78,15 +74,17 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             await _focusTrap.ActivateAsync<TmGanttImportDialog>(_dialogElement);
         }
 
-        // Register the NATIVE click listener ahead of the first click — only while open, because
-        // _triggerWrapRef/_fileInputWrap don't exist otherwise. input.click() then runs inside the
+        // Register the NATIVE click listener ahead of the first click — re-attempted on EVERY
+        // render while the trigger element exists, because tab switches (@if/else-if in the
+        // markup) destroy and recreate the file area: a C# "registered once" flag can never see
+        // the fresh button, but the JS dataset.tmFilePickerRegistered marker dedupes per element
+        // so repeat calls on the same element are no-ops. input.click() then runs inside the
         // browser's own click event with no interop in the gesture chain (N204, review 2026-09-22).
-        if (IsOpen && !_pickerRegistered)
+        if (IsOpen && _tab is ImportTab.Excel or ImportTab.Mpp)
         {
             _filePickerModule ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
             await _filePickerModule.InvokeVoidAsync(
                 "registerFilePickerTrigger", _triggerWrapRef, _fileInputWrap);
-            _pickerRegistered = true;
         }
     }
 

@@ -70,4 +70,32 @@ public class TmGanttImportDialogTests : LocalizationTestBase
             "closing destroys the dialog DOM (@if IsOpen) — the reopened button is a NEW element " +
             "without the dataset marker, so the listener must be registered again");
     }
+
+    [Fact]
+    public void ImportDialog_TabRoundTrip_ReregistersTrigger_OnFreshDom()
+    {
+        var module = JSInterop.SetupModule(ModulePath);
+        var register = module.SetupVoid("registerFilePickerTrigger", _ => true).SetVoidResult();
+
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        // Excel → Jira swaps the file area for the Jira form (@if / else-if in the dialog body):
+        // the registered trigger button leaves the DOM even though the dialog stays open.
+        cut.FindAll(".tm-gantt__import-tab")[2].Click();
+        cut.FindAll("button[data-testid='import-choose-file']").Should().BeEmpty(
+            "the Jira tab renders a different subtree — the file area and its button are destroyed");
+
+        // Jira → Excel creates a NEW button element without the dataset.tmFilePickerRegistered
+        // marker, so the native listener must be wired on it again.
+        cut.FindAll(".tm-gantt__import-tab")[0].Click();
+
+        var calls = register.Invocations["registerFilePickerTrigger"];
+        calls.Should().HaveCount(2,
+            "a C# 'registered once per open' flag can never observe the element a tab switch " +
+            "recreates — registration must be re-attempted on every render and left for the " +
+            "per-element dataset marker to dedupe");
+        calls[1].Arguments[0].Should().NotBe(calls[0].Arguments[0],
+            "the second call must target the freshly rendered trigger wrapper (@ref hands a new " +
+            "ElementReference for the recreated element), not the destroyed one");
+    }
 }

@@ -58,8 +58,10 @@
                             <InputFile OnChange="OnFileChangedAsync" accept="@(_tab == ImportTab.Excel ? ".xlsx,.xls" : ".xml,.mpp")"
                                        class="tm-gantt__import-file-input" aria-hidden="true" tabindex="-1" />
                         </div>
-                        @* The native listener is registered once per dialog lifetime by
-                           registerFilePickerTrigger — there is deliberately NO @onclick here:
+                        @* The native listener is wired by registerFilePickerTrigger, re-attempted
+                           on every render while this element exists — the JS dedupes per element
+                           via a dataset marker, so a freshly recreated button (tab round-trip,
+                           reopen) always ends up wired. There is deliberately NO @onclick here:
                            the whole C# interop path would sit between the click and input.click()
                            and sever the user-activation chain. *@
                         <div @ref="_triggerWrapRef">
