@@ -33,8 +33,14 @@ public sealed class SqlServerCacheFixture : IAsyncLifetime
     /// </summary>
     public const string ConnectionEnvironmentVariable = "REPORTSERVER_TEST_CONNECTION";
 
-    /// <summary>SQL Server image — the same one the app E2E suite runs.</summary>
-    public const string ContainerImage = "mcr.microsoft.com/mssql/server:2022-latest";
+    /// <summary>
+    /// SQL Server image — the same one the app E2E suite runs. N178: pinned by digest 2026-09-23
+    /// (was the floating <c>:2022-latest</c> tag). MUST stay byte-identical with
+    /// <c>tests/Tempo.ReportServer.Api.Tests/MsSql/MsSqlTestDatabase.cs</c>'s
+    /// <c>ContainerImage</c> — both lanes must run the same engine; guarded by
+    /// <c>PinnedImageDigestMatchesInBothFixtures</c>.
+    /// </summary>
+    public const string ContainerImage = "mcr.microsoft.com/mssql/server@sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6bbbe741f999e76264a090";
 
     /// <summary>
     /// Name prefix of the per-fixture generated database — kept as the documentation reference for
@@ -87,8 +93,20 @@ public sealed class SqlServerCacheFixture : IAsyncLifetime
 
         _serverConnectionString = serverConnectionString;
         _ownedDatabase = $"{DatabaseName}_{Guid.NewGuid():N}";
-        CacheConnectionString = await PrepareSqlCacheTableAsync(serverConnectionString, _ownedDatabase)
-            .ConfigureAwait(false);
+        try
+        {
+            CacheConnectionString = await PrepareSqlCacheTableAsync(serverConnectionString, _ownedDatabase)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            // N179: CREATE DATABASE may have succeeded before the cache-table DDL failed — an owned
+            // database left behind on an external server outlives the run. Best effort only: the
+            // original exception is the finding, a cleanup failure must not mask it.
+            try { await DropOwnedDatabaseAsync().ConfigureAwait(false); }
+            catch { /* best-effort teardown on the init-failure path */ }
+            throw;
+        }
     }
 
     /// <inheritdoc />
@@ -96,33 +114,48 @@ public sealed class SqlServerCacheFixture : IAsyncLifetime
     {
         // N213: drop the fixture-owned database on ANY server kind — in external mode the server
         // outlives the run, so without the drop every lane would leave a tempo_cache_test_* behind.
-        if (_serverConnectionString is { Length: > 0 } server && _ownedDatabase is not null)
+        if (_serverConnectionString is { Length: > 0 })
         {
-            var masterConnectionString = new SqlConnectionStringBuilder(server)
-            {
-                InitialCatalog = "master",
-            }.ConnectionString;
-
             if (CacheConnectionString is { Length: > 0 })
             {
                 using var probe = new SqlConnection(CacheConnectionString);
                 SqlConnection.ClearPool(probe);
             }
 
-            await using var master = new SqlConnection(masterConnectionString);
-            await master.OpenAsync().ConfigureAwait(false);
-            await using var drop = master.CreateCommand();
-            drop.CommandText =
-                $"IF DB_ID('{_ownedDatabase}') IS NOT NULL "
-                + $"ALTER DATABASE [{_ownedDatabase}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; "
-                + $"IF DB_ID('{_ownedDatabase}') IS NOT NULL DROP DATABASE [{_ownedDatabase}]";
-            await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
+            await DropOwnedDatabaseAsync().ConfigureAwait(false);
         }
 
         if (_container is not null)
         {
             await _container.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Drops <see cref="_ownedDatabase"/> if it exists — shared by the init-failure cleanup and
+    /// normal dispose so both run the identical drop (N179).
+    /// </summary>
+    private async Task DropOwnedDatabaseAsync()
+    {
+        if (_serverConnectionString is not { Length: > 0 } server || _ownedDatabase is null)
+        {
+            return;
+        }
+
+        var masterConnectionString = new SqlConnectionStringBuilder(server)
+        {
+            InitialCatalog = "master",
+        }.ConnectionString;
+
+        await using var master = new SqlConnection(masterConnectionString);
+        await master.OpenAsync().ConfigureAwait(false);
+        await using var drop = master.CreateCommand();
+        drop.CommandText =
+            $"IF DB_ID('{_ownedDatabase}') IS NOT NULL "
+            + $"ALTER DATABASE [{_ownedDatabase}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; "
+            + $"IF DB_ID('{_ownedDatabase}') IS NOT NULL DROP DATABASE [{_ownedDatabase}]";
+        await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
+        _ownedDatabase = null;
     }
 
     private static async Task<string> PrepareSqlCacheTableAsync(string serverConnectionString, string database)

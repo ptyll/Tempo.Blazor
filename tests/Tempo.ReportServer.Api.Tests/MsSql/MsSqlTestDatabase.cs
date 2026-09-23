@@ -91,26 +91,12 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
     {
         /// <summary>
         /// N175: the synthesized record <c>ToString()</c> would print the connection string
-        /// verbatim — including <c>Password=</c> — into any future assert or log line. Print it
-        /// redacted instead.
+        /// verbatim — including <c>Password=</c> — into any future assert or log line. The string
+        /// is never needed in readable output (diagnose through
+        /// <c>SqlConnectionStringBuilder(ServerConnectionString).DataSource</c> explicitly if it
+        /// ever is), so <c>ToString</c> prints nothing of it at all — no value, no key names.
         /// </summary>
-        public override string ToString()
-        {
-            try
-            {
-                var builder = new SqlConnectionStringBuilder(ServerConnectionString);
-                if (!string.IsNullOrEmpty(builder.Password))
-                {
-                    builder.Password = "***";
-                }
-
-                return $"ResolvedServer {{ ServerConnectionString = {builder.ConnectionString} }}";
-            }
-            catch (ArgumentException)
-            {
-                return "ResolvedServer { ServerConnectionString = <unparseable> }";
-            }
-        }
+        public override string ToString() => "ResolvedServer { redacted }";
     }
 }
 
@@ -140,8 +126,15 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
     /// </summary>
     public const string ConnectionEnvironmentVariable = "REPORTSERVER_TEST_CONNECTION";
 
-    /// <summary>The SQL Server image the suite starts when no connection override is set.</summary>
-    internal const string ContainerImage = "mcr.microsoft.com/mssql/server:2022-latest";
+    /// <summary>
+    /// The SQL Server image the suite starts when no connection override is set. N178: pinned by
+    /// digest 2026-09-23 (was the floating <c>:2022-latest</c> tag — a CU re-tag could silently
+    /// change engine behavior between runs). MUST stay byte-identical with
+    /// <c>tests/Tempo.ReportServer.Web.Tests/SqlServerCacheFixture.cs</c>'s
+    /// <c>ContainerImage</c> — both lanes must run the same engine; guarded by
+    /// <c>PinnedImageDigestMatchesInBothFixtures</c>.
+    /// </summary>
+    internal const string ContainerImage = "mcr.microsoft.com/mssql/server@sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6bbbe741f999e76264a090";
 
     private Respawner? _respawner;
     private string? _connectionString;
@@ -155,6 +148,16 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
     /// the mssql-report-catalog collection.
     /// </summary>
     internal MsSqlContainerFixture.ResolvedServer? ServerOverride { get; set; }
+
+    /// <summary>
+    /// Test seam (N179): invoked inside <see cref="InitializeAsync"/> after
+    /// <c>CREATE DATABASE</c> succeeds and before the EF migrations run — lets an isolation test
+    /// inject a mid-init failure deterministically and observe the owned-database cleanup.
+    /// </summary>
+    internal Func<Task>? AfterDatabaseCreatedHook { get; set; }
+
+    /// <summary>Test seam (N179): the generated <c>tempo_test_*</c> name, for sys.databases probes.</summary>
+    internal string? OwnedDatabaseForTest => _ownedDatabase;
 
     /// <summary>The connection string for this class's SQL Server catalog test database.</summary>
     public string ConnectionString =>
@@ -182,6 +185,11 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
         {
             // Always CREATE DATABASE — the only isolation the fixture can guarantee (N213).
             await CreateOwnedDatabaseAsync(_serverConnectionString, _ownedDatabase).ConfigureAwait(false);
+
+            if (AfterDatabaseCreatedHook is { } afterCreateHook)
+            {
+                await afterCreateHook().ConfigureAwait(false);
+            }
 
             // Apply the catalog migrations inside the freshly created database.
             await using (var context = CreateDbContext("default"))

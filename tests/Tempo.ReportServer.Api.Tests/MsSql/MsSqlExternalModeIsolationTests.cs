@@ -123,14 +123,49 @@ public class MsSqlExternalModeIsolationTests : IAsyncLifetime
     }
 
     [Fact]
-    public void ResolvedServer_ToString_NeverPrintsThePassword()
+    public void ResolvedServerRedactsConnectionString()
     {
+        // N175: the synthesized record ToString() would print ServerConnectionString verbatim —
+        // including Password= — into any future assert or log line. ToString prints nothing of
+        // the string at all: no value, no key names.
         var server = new MsSqlContainerFixture.ResolvedServer(
             "Server=localhost,1433;User Id=sa;Password=Tempo_ReportServer_Tests!2026;TrustServerCertificate=True");
 
         string printed = server.ToString();
+        Assert.Equal("ResolvedServer { redacted }", printed);
         Assert.DoesNotContain("Tempo_ReportServer_Tests!2026", printed);
-        Assert.Contains("***", printed);
+        Assert.DoesNotContain("Password", printed, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("localhost", printed);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_DropsOwnedDatabase_WhenMigrationFails()
+    {
+        // N179: when CREATE DATABASE succeeds but a later init step throws, xUnit never calls
+        // DisposeAsync on the failed fixture — without the catch-path drop the owned database
+        // would linger on the server until it dies. The hook stands in for the EF migration
+        // blowing up (it runs at exactly that point in InitializeAsync).
+        // The hook captures the generated name while it is still set — a successful cleanup
+        // nulls the field (no double-drop), so post-failure reads would see null.
+        string? ownedCatalog = null;
+        var database = new MsSqlTestDatabase
+        {
+            ServerOverride = new MsSqlContainerFixture.ResolvedServer(_adminConnectionString),
+        };
+        database.AfterDatabaseCreatedHook = () =>
+        {
+            ownedCatalog = database.OwnedDatabaseForTest;
+            return Task.FromException(new InvalidOperationException("simulated migration failure"));
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => database.InitializeAsync());
+        Assert.Equal("simulated migration failure", exception.Message);
+
+        Assert.False(string.IsNullOrEmpty(ownedCatalog));
+        Assert.StartsWith("tempo_test_", ownedCatalog);
+
+        var names = await QueryDatabaseNamesAsync();
+        Assert.DoesNotContain(names, name => name == ownedCatalog);
     }
 
     private async Task<IReadOnlyList<string>> QueryDatabaseNamesAsync()
