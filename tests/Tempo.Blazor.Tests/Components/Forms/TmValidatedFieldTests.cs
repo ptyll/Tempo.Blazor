@@ -25,28 +25,35 @@ public class TmValidatedFieldTests : LocalizationTestBase
         public string Name { get; set; } = "";
     }
 
-    private IRenderedComponent<ContainerFragment> RenderInEditForm(FormModel model, bool required = false)
+    private static RenderFragment<EditContext> BuildFieldFragment(FormModel model, bool required = false)
     {
-        return Render(builder =>
-        {
-            builder.OpenComponent<EditForm>(0);
-            builder.AddAttribute(1, nameof(EditForm.Model), model);
-            builder.AddAttribute(2, nameof(EditForm.ChildContent), (RenderFragment<EditContext>)(_ =>
-                (RenderTreeBuilder b) =>
-                {
-                    b.OpenComponent<TmValidatedField>(0);
-                    b.AddAttribute(1, nameof(TmValidatedField.Label), "Name");
-                    b.AddAttribute(2, nameof(TmValidatedField.Required), required);
-                    b.AddAttribute(3, nameof(TmValidatedField.Value), model.Name);
-                    b.AddAttribute(4, nameof(TmValidatedField.ValueChanged),
-                        EventCallback.Factory.Create<string>(this, v => model.Name = v));
-                    b.AddAttribute(5, nameof(TmValidatedField.ValueExpression),
-                        (Expression<Func<string>>)(() => model.Name));
-                    b.CloseComponent();
-                }));
-            builder.CloseComponent();
-        });
+        return _ => BuildFieldMarkup(model, required);
     }
+
+    private static RenderFragment BuildFieldMarkup(FormModel model, bool required = false)
+    {
+        return builder =>
+        {
+            builder.OpenComponent<TmValidatedField>(0);
+            builder.AddAttribute(1, nameof(TmValidatedField.Label), "Name");
+            builder.AddAttribute(2, nameof(TmValidatedField.Required), required);
+            builder.AddAttribute(3, nameof(TmValidatedField.Value), model.Name);
+            builder.AddAttribute(4, nameof(TmValidatedField.ValueChanged),
+                EventCallback.Factory.Create<string>(model, v => model.Name = v));
+            builder.AddAttribute(5, nameof(TmValidatedField.ValueExpression),
+                (Expression<Func<string>>)(() => model.Name));
+            builder.CloseComponent();
+        };
+    }
+
+    private IRenderedComponent<EditForm> RenderInEditForm(FormModel model, bool required = false)
+    {
+        return Render<EditForm>(parameters => parameters
+            .Add(p => p.Model, model)
+            .Add(p => p.ChildContent, BuildFieldFragment(model, required)));
+    }
+
+    private static EditContext ContextOf(IRenderedComponent<EditForm> cut) => cut.Instance.EditContext!;
 
     [Fact]
     public void Required_IsForwardedToTheInnerInput()
@@ -86,12 +93,81 @@ public class TmValidatedFieldTests : LocalizationTestBase
         var model = new FormModel { Name = "valid value" };
         var cut = RenderInEditForm(model);
 
-        var editContext = cut.FindComponent<EditForm>().Instance.EditContext!;
-        editContext.Validate(); // raises OnValidationRequested + OnValidationStateChanged
+        var editContext = ContextOf(cut);
+        editContext.Validate();
+        // A real validator (DataAnnotationsValidator/FluentValidationValidator) calls
+        // NotifyValidationStateChanged after processing OnValidationRequested — the test tree has
+        // no validator component, so we simulate that notification explicitly (N151).
+        editContext.NotifyValidationStateChanged();
 
         cut.WaitForAssertion(() =>
             cut.Find("input").ClassList.Should().Contain("tm-input-valid"));
         cut.Find(".tm-input-validation-success").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AsyncValidation_InFlight_DoesNotShowGreenBeforeStateChanges()
+    {
+        // N151: Validate() alone fires OnValidationRequested — an async validator (e.g.
+        // FluentValidation) has ACCEPTED the request but not yet produced results. The field must
+        // stay neutral until OnValidationStateChanged arrives; painting tm-input-valid in the
+        // in-flight window is the green→red flicker this fix removes.
+        var model = new FormModel { Name = "in-flight" };
+        var cut = RenderInEditForm(model);
+
+        var editContext = ContextOf(cut);
+        editContext.Validate(); // request only — no NotifyValidationStateChanged yet
+
+        cut.Find("input").ClassList.Should().NotContain("tm-input-valid",
+            "a validation request whose results have not arrived must not paint the field valid");
+
+        editContext.NotifyValidationStateChanged(); // the async pass now completed with no errors
+
+        cut.WaitForAssertion(() =>
+            cut.Find("input").ClassList.Should().Contain("tm-input-valid"));
+    }
+
+    [Fact]
+    public void EditContextSwap_ReSubscribesValidationHandlers()
+    {
+        // N152: when the cascaded EditContext instance changes (e.g. the host re-renders with a
+        // new Model), the SAME field instance must re-subscribe — otherwise it keeps listening
+        // on the discarded context and never reacts to validation on the new one. A plain
+        // (non-fixed) CascadingValue swap preserves the field instance, so this test exercises
+        // the subscription itself, not component recreation.
+        var model1 = new FormModel { Name = "first" };
+        var editContext1 = new EditContext(model1);
+        var cut = Render<CascadingValue<EditContext>>(parameters => parameters
+            .Add(p => p.Value, editContext1)
+            .Add(p => p.ChildContent, (RenderFragment)BuildFieldMarkup(model1)));
+        var field1 = cut.FindComponent<TmValidatedField>().Instance;
+
+        var model2 = new FormModel { Name = "second" };
+        var editContext2 = new EditContext(model2);
+        cut.Render(parameters => parameters
+            .Add(p => p.Value, editContext2)
+            .Add(p => p.ChildContent, (RenderFragment)BuildFieldMarkup(model2)));
+
+        var field2 = cut.FindComponent<TmValidatedField>().Instance;
+        field2.Should().BeSameAs(field1,
+            "the cascading-value swap must reuse the field instance — a recreated field would " +
+            "subscribe fresh in OnInitialized and this test would prove nothing");
+
+        // (1) Resubscription: a completed validation pass on the NEW context must paint valid.
+        editContext2.NotifyValidationStateChanged();
+        cut.WaitForAssertion(() =>
+            cut.Find("input").ClassList.Should().Contain("tm-input-valid",
+                "the field must listen to the NEW EditContext — a handler still bound to the " +
+                "discarded one would never see this notification"));
+
+        // (2) FieldIdentifier must follow the new ValueExpression: messages stored under the new
+        // model must surface as the error state.
+        var store = new ValidationMessageStore(editContext2);
+        store.Add(editContext2.Field(nameof(FormModel.Name)), "error on the new context");
+        editContext2.NotifyValidationStateChanged();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("input").ClassList.Should().Contain("tm-input-error"));
     }
 
     [Fact]
@@ -100,7 +176,7 @@ public class TmValidatedFieldTests : LocalizationTestBase
         var model = new FormModel { Name = "bad" };
         var cut = RenderInEditForm(model);
 
-        var editContext = cut.FindComponent<EditForm>().Instance.EditContext!;
+        var editContext = ContextOf(cut);
         var store = new ValidationMessageStore(editContext);
         store.Add(editContext.Field(nameof(FormModel.Name)), "Name is not valid");
         editContext.NotifyValidationStateChanged();
@@ -119,7 +195,7 @@ public class TmValidatedFieldTests : LocalizationTestBase
         var model = new FormModel { Name = "x" };
         var cut = RenderInEditForm(model);
 
-        var editContext = cut.FindComponent<EditForm>().Instance.EditContext!;
+        var editContext = ContextOf(cut);
         editContext.NotifyValidationStateChanged();
 
         cut.WaitForAssertion(() =>

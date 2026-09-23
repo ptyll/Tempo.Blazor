@@ -78,6 +78,7 @@
     [Parameter] public Expression<Func<string>>? ValueExpression { get; set; }
     
     private FieldIdentifier? _fieldIdentifier;
+    private Expression<Func<string>>? _seenValueExpression;
     
     private FieldIdentifier FieldIdentifier 
     { 
@@ -105,9 +106,11 @@
 
     // "Valid" means the field PASSED validation, not that it contains text: the green frame and
     // check icon must not appear on a field nobody validated (application gap register #10). We
-    // therefore report true only once the EditContext ran a validation pass (OnValidationRequested
-    // or OnValidationStateChanged — either marks a pass having happened) and this field has no
-    // messages. Without an EditContext there is no validation at all, so the field stays neutral.
+    // therefore report true only once the EditContext reported a completed validation pass
+    // (OnValidationStateChanged — a real validator raises it AFTER producing messages, including
+    // async passes, so there is no green→red flicker while a validation request is in flight,
+    // N151) and this field has no messages. Without an EditContext there is no validation at
+    // all, so the field stays neutral.
     private bool? IsValid
     {
         get
@@ -126,12 +129,34 @@
         }
     }
 
-    protected override void OnInitialized()
+    private EditContext? _subscribedEditContext;
+
+    protected override void OnParametersSet()
     {
-        if (EditContext != null)
+        // N152: the host EditForm may cascade a NEW EditContext when its Model instance changes —
+        // re-subscribe to the current context and drop the delegate on the discarded one.
+        if (!ReferenceEquals(EditContext, _subscribedEditContext))
         {
-            EditContext.OnValidationStateChanged += HandleValidationStateChanged;
-            EditContext.OnValidationRequested += HandleValidationRequested;
+            if (_subscribedEditContext is not null)
+            {
+                _subscribedEditContext.OnValidationStateChanged -= HandleValidationStateChanged;
+            }
+
+            _subscribedEditContext = EditContext;
+
+            if (_subscribedEditContext is not null)
+            {
+                _subscribedEditContext.OnValidationStateChanged += HandleValidationStateChanged;
+            }
+        }
+
+        // The cached FieldIdentifier captures the model instance inside ValueExpression; when the
+        // expression (and its captured model) changes, the identifier must be rebuilt or messages
+        // stored under the NEW model would never be found.
+        if (!ReferenceEquals(ValueExpression, _seenValueExpression))
+        {
+            _seenValueExpression = ValueExpression;
+            _fieldIdentifier = null;
         }
     }
 
@@ -141,18 +166,11 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void HandleValidationRequested(object? sender, ValidationRequestedEventArgs e)
-    {
-        _validationRan = true;
-        InvokeAsync(StateHasChanged);
-    }
-
     public void Dispose()
     {
-        if (EditContext != null)
+        if (_subscribedEditContext is not null)
         {
-            EditContext.OnValidationStateChanged -= HandleValidationStateChanged;
-            EditContext.OnValidationRequested -= HandleValidationRequested;
+            _subscribedEditContext.OnValidationStateChanged -= HandleValidationStateChanged;
         }
     }
 }
