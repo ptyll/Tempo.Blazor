@@ -88,9 +88,10 @@
     {
         if (Disabled || IsLoading)
             return;
-        // The primary button sits inside the anchor's exemption zone, so an open menu survives
-        // this click unless we close it ourselves — a running primary action must not leave the
-        // menu floating.
+        // The overlay anchor is _toggleRef, so the primary button sits OUTSIDE the anchor's
+        // exemption zone: an open menu reaches the JS outside-dismiss on this click too — but
+        // only after the interop round-trip. The synchronous close here guarantees the menu
+        // can never outlive the primary action it floated over.
         _isOpen = false;
         await OnClick.InvokeAsync();
     }
