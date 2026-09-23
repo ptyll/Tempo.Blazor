@@ -1,14 +1,14 @@
 {
-  "commit": "8b6a85459e3e1cba3408bfd9968dc855a9b1135f",
-  "verifiedDate": "unset",
-  "verifiedBy": "unset-pending-run",
-  "runName": "unset",
-  "passed": 0,
-  "failed": 0,
-  "skipped": 0,
-  "total": 0,
-  "serialResidualTotal": 0,
+  "commit": "d5e3d5509c349f453fe34f94c42bf624419b00ae",
+  "verifiedDate": "2026-09-23",
+  "verifiedBy": "devin-agent",
+  "runName": "full-run-20260923",
+  "passed": 1259,
+  "failed": 128,
+  "skipped": 69,
+  "total": 1456,
+  "serialResidualTotal": 128,
   "serialResidualFailed": 0,
-  "wallClock": "unset",
-  "artifactsPath": "unset"
+  "wallClock": "6h57m",
+  "artifactsPath": "tests/Tempo.Blazor.E2E/TestResults/full-run-20260923"
 }
