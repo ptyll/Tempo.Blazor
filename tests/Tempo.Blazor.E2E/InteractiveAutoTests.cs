@@ -33,25 +33,27 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
     {
         var page = await CreatePageAsync();
 
-        // Wait for the Blazor runtime script — InteractiveAuto hosts serve _framework/blazor.web.js
-        // (which boots blazor.server.js first and dotnet.* once the WASM leg is cached), never a
-        // literal blazor.webassembly.js, so match the _framework loader family.
-        await page.WaitForSelectorAsync("script[src*='_framework/blazor']", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Attached, // <script> elements have no box — never "visible"
-            Timeout = 10000
-        });
+        // N210: the _framework/blazor script tag is in the HTML already at SSR prerender — waiting
+        // for it says nothing about hydration. [data-blazor-ready] is set by the shared MainLayout
+        // from OnAfterRenderAsync(firstRender), which prerendering never calls, so the attribute
+        // lands exactly when an interactive runtime has rendered the layout.
+        await Assertions.Expect(page.Locator("body[data-blazor-ready]")).ToBeAttachedAsync(
+            new() { Timeout = 15000 });
 
-        // Additional wait for hydration
-        await page.WaitForTimeoutAsync(2000);
+        // Hydration proof that cannot pass on SSR markup: [data-testid='hydration-probe'] is the
+        // home page's "Explore Components" button whose @onclick calls Nav.NavigateTo("buttons").
+        // Only a live Blazor runtime wires that handler — a click on prerendered markup (or with
+        // no runtime at all) is a no-op, so the navigation below can only happen post-hydration.
+        // The old `if (await buttons.CountAsync() > 0)` branch is deliberately gone: a missing
+        // interactive element is a finding, not a reason to pass untested.
+        var probe = page.Locator("[data-testid='hydration-probe']");
+        await Assertions.Expect(probe).ToBeVisibleAsync(new() { Timeout = 15000 });
+        await probe.ClickAsync();
 
-        // Verify interactivity works by clicking a button
-        var buttons = page.Locator(".tm-btn");
-        if (await buttons.CountAsync() > 0)
-        {
-            await buttons.First.ClickAsync();
-            await page.WaitForTimeoutAsync(500);
-        }
+        // In-page SPA navigation to /buttons — the URL changes and the target page renders.
+        await page.WaitForURLAsync("**/buttons", new PageWaitForURLOptions { Timeout = 15000 });
+        await Assertions.Expect(page.Locator("[data-testid='buttons-variants-card']"))
+            .ToBeVisibleAsync(new() { Timeout = 15000 });
 
         await TakeScreenshotAsync(page, "wasm_hydration_test");
     }
@@ -127,27 +129,45 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
         var page = await CreatePageAsync();
         await NavigateToPageAsync(page, "Scheduler");
 
-        // Wait for WASM to boot
-        await page.WaitForTimeoutAsync(3000);
+        // Wait for the interactive runtime to render the layout — stateful, not a fixed sleep.
+        await Assertions.Expect(page.Locator("body[data-blazor-ready]")).ToBeAttachedAsync(
+            new() { Timeout = 15000 });
 
-        // Verify scheduler is present
-        var scheduler = page.Locator(".tm-scheduler, [data-testid='scheduler']").First;
-        await scheduler.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-
-        // Test different views
-        var viewButtons = new[] { "Month", "Week", "Day", "Timeline" };
-        foreach (var view in viewButtons)
+        // N210: the demo page mounts several TmScheduler instances, each with its own toolbar —
+        // scope every locator to the "Interactive Demo" section so a click lands on the scheduler
+        // under test, not on whichever toolbar happens to sit first in the DOM.
+        var interactiveSection = page.Locator("section.demo-section", new PageLocatorOptions
         {
-            var viewButton = page.Locator($"button:has-text('{view}')").First;
-            if (await viewButton.IsVisibleAsync())
-            {
-                await viewButton.ClickAsync();
-                await page.WaitForTimeoutAsync(1000);
+            Has = page.Locator("h2", new PageLocatorOptions { HasTextString = "Interactive Demo" })
+        });
+        var interactiveScheduler = interactiveSection.Locator(".tm-scheduler");
+        await Assertions.Expect(interactiveScheduler).ToBeVisibleAsync(new() { Timeout = 15000 });
 
-                // Verify the view changed (scheduler renders tm-scheduler-{month,week,day,timeline,agenda})
-                var activeView = page.Locator(".tm-scheduler-view-active, .tm-scheduler-body, .tm-scheduler-month, .tm-scheduler-week, .tm-scheduler-day, .tm-scheduler-timeline, .tm-scheduler-agenda, [data-testid='scheduler-view']").First;
-                await activeView.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
-            }
+        // View → the class its body renders. The previous OR locator listed .tm-scheduler-body —
+        // a wrapper present in EVERY view — so it matched before any switching happened. The map
+        // asserts the view-specific class absent before the click and present after it, which is
+        // what "the view actually switched" means. The sequence starts from the bound default
+        // (Month) and never clicks the already-active view, so the before-assert always has teeth.
+        var transitions = new (string View, string ExpectedClass)[]
+        {
+            ("Week", "tm-scheduler-week"),
+            ("Day", "tm-scheduler-day"),
+            ("Timeline", "tm-scheduler-timeline"),
+            ("Month", "tm-scheduler-month"),
+        };
+
+        foreach (var (view, expectedClass) in transitions)
+        {
+            var targetView = interactiveScheduler.Locator($".{expectedClass}");
+            Assert.AreEqual(0, await targetView.CountAsync(),
+                $".{expectedClass} must not exist inside the interactive scheduler before switching to {view}");
+
+            await interactiveScheduler.Locator($"button[data-view='{view}']").ClickAsync();
+
+            await Assertions.Expect(targetView.First)
+                .ToBeVisibleAsync(new() { Timeout = 15000 });
+            Assert.AreEqual(1, await targetView.CountAsync(),
+                $"exactly one .{expectedClass} body expected after switching to {view}");
         }
 
         await TakeScreenshotAsync(page, "scheduler_test");
