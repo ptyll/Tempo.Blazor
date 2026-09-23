@@ -40,6 +40,21 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
         => DocumentEditorE2EReset.ResetAsync();
 
     /// <summary>
+    /// N211: a frame navigation after the canvas page is marked ready is a finding, not a flake —
+    /// but until now the evaluate retry swallowed "Execution context was destroyed" up to 4× per
+    /// call, so a mid-test reload vanished. <see cref="OpenDocumentAsync"/> registers a
+    /// <c>FrameNavigated</c> counter once the page is ready and this cleanup asserts it stayed at
+    /// zero. A test that navigates on purpose must reset the counter itself before continuing.
+    /// </summary>
+    [TestCleanup]
+    public void AssertNoUnexpectedFrameNavigations()
+    {
+        var navigations = Volatile.Read(ref _frameNavigationsSinceReady);
+        Assert.AreEqual(0, navigations,
+            $"{navigations} frame navigation(s) happened after the canvas page was marked ready — a mid-test reload/navigation is a finding, not a retryable flake (N211).");
+    }
+
+    /// <summary>
     /// B1 — click in the middle of a WRAPPED continuation line, press Home. The caret must move to the start
     /// of that same visual line (x decreases, y unchanged). RED before the fix: the shared caret stop lookup
     /// resolves the wrap-boundary offset to the END of the PREVIOUS line, so the caret jumps up a line.
@@ -791,6 +806,13 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
                     Timeout = 120_000
                 });
                 await WaitForCanvasDocumentReadyAsync(page, blockId);
+
+                // N211: the page is "ready" from here on — count every subsequent frame navigation
+                // so a mid-test reload is a finding, not a silently retried flake. The counter is
+                // zeroed right after ready; navigations during GotoAsync happened before the
+                // handler existed and are never counted.
+                page.FrameNavigated += (_, _) => Interlocked.Increment(ref _frameNavigationsSinceReady);
+                Interlocked.Exchange(ref _frameNavigationsSinceReady, 0);
                 return;
             }
             catch (TimeoutException) when (attempt == 0)
@@ -1058,7 +1080,30 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
 
     // The first evaluate after the canvas flips ready can race a transient execution-context swap (the
     // engine mounts a fresh render pass on an idle continuation; window state survives — verified by
-    // probe). Retry the call a few times instead of failing the test on "Execution context was destroyed".
+    // probe). Retry THAT first loss once — N211: retrying every later call (the old attempt<4 loop)
+    // let a real mid-test reload pass silently against a fresh page. A repeated loss now fails with
+    // the number of frame navigations since ready instead of being retried away.
+    private static int _frameNavigationsSinceReady;
+
+    /// <summary>The two Playwright messages that mean "the JS context died under us" (N211).</summary>
+    internal static bool IsTransientContextLoss(PlaywrightException ex)
+        => ex.Message.Contains("Execution context was destroyed", StringComparison.Ordinal)
+           || ex.Message.Contains("because of a navigation", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Retry is allowed on the FIRST evaluate attempt only — attempt 0 is the post-ready transient.
+    /// attempt &gt;= 1 means the context died AGAIN within ~250 ms: that is a navigation/reload, not
+    /// a transient, and must surface as a failure carrying the navigation count.
+    /// </summary>
+    internal static bool ShouldRetryContextLoss(PlaywrightException ex, int attempt)
+        => IsTransientContextLoss(ex) && attempt == 0;
+
+    /// <summary>The failure message for a repeated context loss — includes the navigation count.</summary>
+    internal static string ContextLossFailureMessage(int attempt, int frameNavigationsSinceReady)
+        => $"Execution context was destroyed again on evaluate retry #{attempt} — "
+           + $"{frameNavigationsSinceReady} frame navigation(s) since the page was marked ready. "
+           + "A mid-test navigation/reload is a finding, not a retryable flake (N211).";
+
     private static Task EvaluateWithContextRetryAsync(IPage page, string expression, object? arg = null)
         => EvaluateWithContextRetryAsync<object?>(page, expression, arg);
 
@@ -1070,10 +1115,14 @@ public sealed class DocumentEditorCanvasUxFixE2ETests : WasmTestBase
             {
                 return await page.EvaluateAsync<T>(expression, arg);
             }
-            catch (PlaywrightException ex) when (attempt < 4
-                && (ex.Message.Contains("Execution context was destroyed", StringComparison.Ordinal)
-                    || ex.Message.Contains("because of a navigation", StringComparison.Ordinal)))
+            catch (PlaywrightException ex) when (IsTransientContextLoss(ex))
             {
+                if (!ShouldRetryContextLoss(ex, attempt))
+                {
+                    throw new InvalidOperationException(
+                        ContextLossFailureMessage(attempt, Volatile.Read(ref _frameNavigationsSinceReady)), ex);
+                }
+
                 await page.WaitForTimeoutAsync(250);
             }
         }
