@@ -300,6 +300,19 @@ function suppressEscapeKeyUp() {
     window.addEventListener('blur', disarm, { once: true });
 }
 
+// Focus "went nowhere" when it sits on nothing the user can act on: no element at all, the
+// page roots the browser falls back to, a detached node the closing panel just destroyed, or
+// still inside the doomed panel itself. Both dismiss paths (Escape and outside pointerdown)
+// restore the anchor under exactly this condition — one shared predicate so they cannot
+// drift apart (20D carry-forward).
+function focusWentNowhere(entry, active) {
+    return !active
+        || active === document.body
+        || active === document.documentElement
+        || !active.isConnected
+        || entry.panel.contains(active);
+}
+
 // Outside pointerdown: give focus back to the anchor ONLY when the pointerdown target cannot
 // take focus itself. A click into a field/button earns its focus through the browser's own
 // mousedown — pulling it back to the anchor would steal it (B1). For dead-space clicks the
@@ -315,13 +328,7 @@ function maybeRestoreAnchorFocus(entry, target) {
         return;
     }
     setTimeout(() => {
-        const active = document.activeElement;
-        const nowhere = !active
-            || active === document.body
-            || active === document.documentElement
-            || !active.isConnected
-            || entry.panel.contains(active);
-        if (nowhere && anchorEl.isConnected) {
+        if (focusWentNowhere(entry, document.activeElement) && anchorEl.isConnected) {
             anchorEl.focus({ preventScroll: true });
         }
     }, 0);
@@ -335,20 +342,14 @@ export function dismiss(entry, reason) {
     entry.dismissed = true;
     if (reason === 'escape') {
         // Keyboard dismissal returns focus to the trigger ONLY when focus actually needs a
-        // home — it sat inside the doomed panel or on a node already gone (the same nowhere
-        // condition maybeRestoreAnchorFocus uses for outside pointerdown). An anchor that
-        // CONTAINS the focused element — TmEntityPicker/TmQueryInput wrap the typed-in input
-        // and ARE the anchor (tabindex="-1", N168) — must not yank focus off that input:
-        // Escape there means "close the popup", not "leave the field" (20B carry-forward).
+        // home — the same focusWentNowhere condition the outside-pointerdown restore uses.
+        // An anchor that CONTAINS the focused element — TmEntityPicker/TmQueryInput wrap the
+        // typed-in input and ARE the anchor (tabindex="-1", N168) — must not yank focus off
+        // that input: Escape there means "close the popup", not "leave the field" (20B
+        // carry-forward).
         const anchorEl = resolveAnchor(entry);
         if (anchorEl && typeof anchorEl.focus === 'function') {
-            const active = document.activeElement;
-            const nowhere = !active
-                || active === document.body
-                || active === document.documentElement
-                || !active.isConnected
-                || entry.panel.contains(active);
-            if (nowhere && anchorEl.isConnected) {
+            if (focusWentNowhere(entry, document.activeElement) && anchorEl.isConnected) {
                 anchorEl.focus({ preventScroll: true });
             }
         }
