@@ -2,6 +2,7 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Overlay
 @implements IDisposable
 
 <div class="tm-notification-bell tm-notion-notifications @Class @(_hasNew ? "tm-notification-bell--pulse" : "")"
@@ -12,6 +13,10 @@
             data-testid="@TestId("notion-notification-toggle")"
             aria-label="@AriaLabelText"
             title="@AriaLabelText"
+            aria-haspopup="dialog"
+            aria-expanded="@(_isOpen ? "true" : "false")"
+            aria-controls="@(_isOpen ? _panelId : null)"
+            @ref="_buttonRef"
             @onclick="ToggleAsync">
         <TmIcon Name="@IconNames.Bell" Size="IconSize.Sm" />
         @if (BadgeCount > 0)
@@ -20,10 +25,20 @@
         }
     </button>
 
-    @if (_isOpen)
-    {
-        <div class="tm-notification-bell__dropdown tm-notion-notifications__panel"
-             data-testid="@TestId("notion-notification-panel")">
+    @* The panel is a TmOverlayPanel (N189): popover="manual" puts it in the browser top layer,
+       overlay.js provides Escape + outside-pointerdown dismissal and focus restoration to the
+       bell button — the same contract TmNotificationBell exposes. The old plain div had none of
+       that and its z-index:1060 sat above the modal band, so it could cover a later modal. *@
+    <TmOverlayPanel Anchor="_buttonRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpenFromJsAsync"
+                    Id="@_panelId"
+                    DataTestId="@TestId("notion-notification-panel")"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Offset="8"
+                    Role="dialog"
+                    Class="tm-notification-bell__dropdown tm-notion-notifications__panel">
             <div class="tm-notification-bell__header">
                 <span class="tm-notification-bell__title">@Loc["Notion_Notifications_Title"]</span>
                 <div class="tm-notification-bell__actions">
@@ -86,8 +101,7 @@
                     </div>
                 }
             </div>
-        </div>
-    }
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -117,6 +131,9 @@
     private List<TmNotification> _notifications = new();
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _pollCts;
+    private ElementReference _buttonRef;
+    // Per-instance id so the toggle's aria-controls can reference the overlay panel element.
+    private readonly string _panelId = $"tm-notion-notification-panel-{Guid.NewGuid():n}";
 
     private int BadgeCount => _unreadCount;
 
@@ -191,6 +208,27 @@
             _showOnlyUnread = false;
         }
 
+        await OnDropdownOpenChanged.InvokeAsync(_isOpen);
+    }
+
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js) — same state effects
+    /// as the toggle path: reset the unread-only filter and notify OnDropdownOpenChanged.
+    /// </summary>
+    private async Task SetOpenFromJsAsync(bool open)
+    {
+        if (open == _isOpen)
+            return;
+        _isOpen = open;
+        if (open)
+        {
+            _hasNew = false;
+            await LoadNotificationsAsync();
+        }
+        else
+        {
+            _showOnlyUnread = false;
+        }
         await OnDropdownOpenChanged.InvokeAsync(_isOpen);
     }
 

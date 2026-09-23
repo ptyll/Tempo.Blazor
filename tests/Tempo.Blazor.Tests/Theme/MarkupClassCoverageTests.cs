@@ -368,7 +368,7 @@ public sealed class MarkupClassCoverageTests
     [
         new Scope("Tempo.Blazor", "Tempo.Blazor", UnstyledMarkupClasses,
             MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false,
-            ExpectedUnmeasurableStems: 34),
+            ExpectedUnmeasurableStems: 35),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

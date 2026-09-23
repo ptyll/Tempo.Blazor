@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.UI;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.NotionEditor.Helpers;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -100,6 +101,62 @@ public sealed class TmNotionWatchNotificationsTests : LocalizationTestBase
         nav.Uri.Should().Contain("/notion-editor?page=page-1");
         _notifications.GetUnreadCountAsync("alice").Result.Should().Be(0);
     }
+
+    // ── N189: the panel is a TmOverlayPanel popover with full popup semantics ──
+
+    [Fact]
+    public void NotificationCenter_Toggle_ExposesPopupSemantics()
+    {
+        var cut = RenderNotificationCenter();
+
+        var toggle = cut.Find("[data-testid='notion-notification-toggle']");
+        toggle.GetAttribute("aria-haspopup").Should().Be("dialog");
+        toggle.GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void NotificationCenter_Open_RendersOverlayPopover_AndSyncsToggleAria()
+    {
+        var cut = RenderNotificationCenter();
+
+        cut.Find("[data-testid='notion-notification-toggle']").Click();
+
+        // TmOverlayPanel renders a manual top-layer popover — Escape/light-dismiss/focus
+        // restore come from overlay.js, matching TmNotificationBell.
+        cut.FindComponent<TmOverlayPanel>();
+        var panel = cut.Find("[data-testid='notion-notification-panel']");
+        panel.GetAttribute("role").Should().Be("dialog");
+        panel.GetAttribute("popover").Should().Be("manual");
+
+        var toggle = cut.Find("[data-testid='notion-notification-toggle']");
+        toggle.GetAttribute("aria-expanded").Should().Be("true");
+        toggle.GetAttribute("aria-controls").Should().Be(panel.Id);
+    }
+
+    [Theory]
+    [InlineData("escape")]
+    [InlineData("outside")]
+    public async Task NotificationCenter_JsDismissal_Closes_AndNotifies(string reason)
+    {
+        bool? open = null;
+        var cut = RenderNotificationCenter(v => open = v);
+
+        cut.Find("[data-testid='notion-notification-toggle']").Click();
+        open.Should().BeTrue();
+
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync(reason));
+
+        cut.FindAll("[data-testid='notion-notification-panel']").Should().BeEmpty();
+        open.Should().BeFalse();
+    }
+
+    private IRenderedComponent<TmNotionNotificationCenter> RenderNotificationCenter(Action<bool>? openChanged = null)
+        => Render<TmNotionNotificationCenter>(parameters => parameters
+            .Add(p => p.CurrentUserId, "alice")
+            .Add(p => p.PollInterval, TimeSpan.Zero)
+            .Add(p => p.OnDropdownOpenChanged, EventCallback.Factory.Create<bool>(
+                this, v => openChanged?.Invoke(v))));
 
     private Task<IReadOnlyList<TmNotification>> GetNotificationsAsync(string recipient)
         => _notifications.GetNotificationsAsync(new TmNotificationQuery { RecipientUserId = recipient });

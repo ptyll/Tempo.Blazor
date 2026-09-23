@@ -2,14 +2,12 @@
     position: relative;
 }
 
+/* The panel is a TmOverlayPanel (N189): position:fixed + z-index come from _overlay-panel.css,
+   overlay.js writes top/left (Bottom + End + 8px) and the popover lands in the browser top
+   layer — so nothing here may set position/stacking again. min() keeps the 24rem panel inside
+   the viewport on narrow screens (replaces the old fixed-position mobile media query, which
+   overlay.js inline styles would override anyway). */
 .tm-notion-notifications__panel {
-    /* This panel is a plain div (not a TmOverlayPanel popover), so it must carry its own
-       positioning + stacking — anchored to the .tm-notification-bell (position:relative)
-       container, floating above in-flow demo content such as .demo-section. */
-    position: absolute;
-    top: calc(100% + var(--tm-space-2, 0.5rem));
-    right: 0;
-    z-index: var(--tm-z-overlay, 1060);
     width: min(24rem, calc(100vw - 1.5rem));
 }
 
@@ -27,14 +25,4 @@
     min-height: 5rem;
     color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-sm);
-}
-
-@media (max-width: 760px) {
-    .tm-notion-notifications__panel {
-        position: fixed;
-        top: 3.75rem;
-        right: var(--tm-space-3);
-        left: var(--tm-space-3);
-        width: auto;
-    }
 }
