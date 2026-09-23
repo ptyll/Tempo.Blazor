@@ -268,6 +268,15 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: bash eng/verify-announced-version.sh
 
+      # DEC-TEMPO-RELEASE-GATE, second clause: the release condition is the CI filter AND an
+      # owner-verified green full-suite E2E run over this commit (or one differing only in paths
+      # that cannot change the outcome — the staleness bound in the script header). The evidence
+      # JSON is written by the recorded run (scripts/run-e2e-full.ps1 shape); this refuses a
+      # release whose evidence is missing, stale, carries unresolved serial reds, or is
+      # internally inconsistent — BEFORE anything is built or pushed.
+      - name: Verify the release evidence (DEC-TEMPO-RELEASE-GATE)
+        run: bash eng/verify-release-evidence.sh
+
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 

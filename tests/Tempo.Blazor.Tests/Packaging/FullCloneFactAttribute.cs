@@ -112,7 +112,7 @@ public sealed class FullCloneFactAttribute : ProbeDecidedFactAttribute
     /// <see cref="ProcessStartInfo.ArgumentList"/> so nothing is re-parsed by a shell, and both
     /// streams read before the wait so a chatty stderr cannot deadlock the pipe.
     /// </summary>
-    private static (int ExitCode, string StandardOutput, string StandardError) RunGit(
+    internal static (int ExitCode, string StandardOutput, string StandardError) RunGit(
         string repositoryRoot, params string[] arguments)
     {
         var startInfo = new ProcessStartInfo("git")
