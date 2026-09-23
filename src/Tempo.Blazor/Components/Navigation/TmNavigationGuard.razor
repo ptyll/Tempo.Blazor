@@ -19,13 +19,16 @@
                   Message="@ConfirmMessage"
                   OnResult="HandleDialogResultAsync">
             <FooterContent>
-                <TmButton Variant="ButtonVariant.Ghost" OnClick="() => HandleDialogResultAsync(false)">
+                @* The whole footer is inert while a save is in flight (20C review carry-forward):
+                   Leave would abandon the pending write, Stay would dismiss the dialog the save
+                   still reports through. *@
+                <TmButton Variant="ButtonVariant.Ghost" Disabled="@_saving" OnClick="() => HandleDialogResultAsync(false)">
                     @CancelText
                 </TmButton>
                 <TmButton Variant="ButtonVariant.Primary" Disabled="@_saving" OnClick="HandleSaveAndLeaveAsync">
                     @SaveAndLeaveText
                 </TmButton>
-                <TmButton Variant="ButtonVariant.Danger" OnClick="() => HandleDialogResultAsync(true)">
+                <TmButton Variant="ButtonVariant.Danger" Disabled="@_saving" OnClick="() => HandleDialogResultAsync(true)">
                     @ConfirmLeaveText
                 </TmButton>
             </FooterContent>
@@ -93,6 +96,9 @@
     /// re-issues the blocked navigation; on <c>false</c> it navigates nowhere, closes the dialog
     /// (see <see cref="OnSaveAndLeaveFailed"/>) and clears the blocked destination — a retry means
     /// the host triggers a fresh navigation attempt, not a second click in the same dialog.
+    /// A thrown exception takes the SAME failure path (dialog closes, destination forgotten,
+    /// <see cref="OnSaveAndLeaveFailed"/> fires) and then propagates normally to the host's
+    /// error boundary.
     /// </para>
     /// </summary>
     /// <remarks>
@@ -247,6 +253,16 @@
         {
             saved = await OnSaveAndLeave();
         }
+        catch
+        {
+            // A thrown save is still a FAILED save for the dialog contract: run the same
+            // close-on-failure path a `false` return runs — the pre-carry-forward code left the
+            // dialog open here, inconsistent with F10 (20C UX review). The exception then keeps
+            // propagating: an escaped exception is the error boundary's report, not this
+            // component's to swallow.
+            await FailSaveAndLeaveAsync();
+            throw;
+        }
         finally
         {
             _saving = false;
@@ -254,20 +270,7 @@
 
         if (!saved)
         {
-            // F10 (DEC-SAVE-AND-LEAVE-FAILURE): close the dialog and leave navigation cancelled — the
-            // host's own error surface takes over, with its own focus management and aria-live. Until
-            // 2.9.0 the dialog stayed open "so a retry is one click away"; the owner decision retired
-            // that because the guard cannot know what actually failed or where the host wants focus —
-            // only the host does.
-            _showConfirm = false;
-            _pendingTargetLocation = null;
-            StateHasChanged();
-
-            if (OnSaveAndLeaveFailed.HasDelegate)
-            {
-                await OnSaveAndLeaveFailed.InvokeAsync();
-            }
-
+            await FailSaveAndLeaveAsync();
             return;
         }
 
@@ -279,6 +282,26 @@
         {
             _suppressNext = true;
             Navigation.NavigateTo(targetLocation);
+        }
+    }
+
+    /// <summary>
+    /// F10 (DEC-SAVE-AND-LEAVE-FAILURE): close the dialog and leave navigation cancelled — the
+    /// host's own error surface takes over, with its own focus management and aria-live. Until
+    /// 2.9.0 the dialog stayed open "so a retry is one click away"; the owner decision retired
+    /// that because the guard cannot know what actually failed or where the host wants focus —
+    /// only the host does. Shared by the <c>false</c> return and the thrown-exception paths so
+    /// both fail identically.
+    /// </summary>
+    private async Task FailSaveAndLeaveAsync()
+    {
+        _showConfirm = false;
+        _pendingTargetLocation = null;
+        StateHasChanged();
+
+        if (OnSaveAndLeaveFailed.HasDelegate)
+        {
+            await OnSaveAndLeaveFailed.InvokeAsync();
         }
     }
 

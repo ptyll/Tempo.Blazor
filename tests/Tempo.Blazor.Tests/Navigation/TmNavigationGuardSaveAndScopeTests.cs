@@ -231,6 +231,78 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
     }
 
     /// <summary>
+    /// A thrown <c>OnSaveAndLeave</c> is still a FAILED save for the guard's dialog contract: the
+    /// same close-on-failure path a <c>false</c> return runs must execute — dialog closed, blocked
+    /// destination forgotten, <c>OnSaveAndLeaveFailed</c> raised. The pre-carry-forward code left
+    /// the dialog open here, inconsistent with the <c>false</c> path (20C UX review). The exception
+    /// itself keeps propagating — an escaped exception is the error boundary's report, not this
+    /// component's to swallow.
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLeave_ThrownException_RunsTheFailurePath_AndStillPropagates()
+    {
+        var failedRaised = 0;
+        var cut = Render<TmNavigationGuard>(p => p
+            .Add(x => x.IsDirty, true)
+            .Add(x => x.OnSaveAndLeave, () => Task.FromException<bool>(new InvalidOperationException("save blew up")))
+            .Add(x => x.OnSaveAndLeaveFailed, EventCallback.Factory.Create(this, () => failedRaised++))
+            .Add(x => x.SaveAndLeaveText, "Save and leave"));
+
+        Nav.NavigateTo("/next-page");
+        cut.WaitForState(() => Nav.History.Count > 0);
+
+        var saveButton = cut.FindAll(".tm-dialog-footer button")
+            .First(b => b.TextContent.Contains("Save and leave"));
+        var act = async () => await cut.InvokeAsync(() => saveButton.Click());
+
+        await act.Should().ThrowAsync<Exception>(
+            "an escaped save exception is the error boundary's report — the guard runs the " +
+            "failure path, it does not swallow it");
+
+        failedRaised.Should().Be(1,
+            "a thrown save is a failed save — the host's error surface must still be signalled");
+        Nav.History.Should().HaveCount(1, "the blocked navigation stays cancelled");
+        Nav.History.First().State.Should().Be(NavigationState.Prevented);
+        cut.FindAll(".tm-dialog").Should().BeEmpty(
+            "close-on-failure applies to a thrown save exactly as to a false return");
+    }
+
+    /// <summary>
+    /// While a save is in flight the whole footer must be inert: Leave would abandon the in-flight
+    /// write (the navigation it confirms resolves the pending target the save still needs), and
+    /// Stay would dismiss the dialog the save still reports through (20C UX review residual —
+    /// only the Save button carried <c>Disabled="@_saving"</c>).
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLeave_DuringInFlightSave_AllDialogActionsAreDisabled()
+    {
+        var gate = new TaskCompletionSource<bool>();
+        var cut = Render<TmNavigationGuard>(p => p
+            .Add(x => x.IsDirty, true)
+            .Add(x => x.OnSaveAndLeave, () => gate.Task)
+            .Add(x => x.SaveAndLeaveText, "Save and leave")
+            .Add(x => x.CancelText, "Stay")
+            .Add(x => x.ConfirmLeaveText, "Leave"));
+
+        Nav.NavigateTo("/next-page");
+        cut.WaitForState(() => Nav.History.Count > 0);
+
+        var saveButton = cut.FindAll(".tm-dialog-footer button")
+            .First(b => b.TextContent.Contains("Save and leave"));
+        var first = cut.InvokeAsync(() => saveButton.Click());
+
+        cut.WaitForAssertion(() => cut.FindAll(".tm-dialog-footer button")
+            .Should().OnlyContain(b => b.HasAttribute("disabled"),
+                "an in-flight save owns the dialog — Leave must not abandon the pending write, " +
+                "Stay must not dismiss the dialog the save still reports through"));
+
+        gate.SetResult(true);
+        await first;
+        cut.WaitForState(() => Nav.History.Count > 1);
+        Nav.History.First().State.Should().Be(NavigationState.Succeeded);
+    }
+
+    /// <summary>
     /// A second click while the first save is still in flight must not start a second save. The dialog
     /// stays up during the save, so the button stays there to be clicked.
     /// </summary>
