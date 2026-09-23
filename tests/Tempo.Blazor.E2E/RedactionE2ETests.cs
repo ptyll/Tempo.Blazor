@@ -146,8 +146,15 @@ public class RedactionE2ETests : WasmTestBase
         await layer.Locator("[data-testid='redaction-rect']").First
             .WaitForAsync(new LocatorWaitForOptions { Timeout = 60000 });
 
-        // Draw another rectangle over the bank account line.
+        // Draw another rectangle over the bank account line. The seeded rect exists in the
+        // DOM before pdf.js finishes painting the page, so the overlay can still be 0-height
+        // at that point — wait for the surface to actually reach the rendered page size
+        // (state-based, not a fixed delay).
         var surface = layer.Locator("[data-testid='redaction-surface']");
+        await page.WaitForFunctionAsync(
+            "() => { const s = document.querySelector('[data-testid=\"redaction-demo-pdf\"] [data-testid=\"redaction-surface\"]'); return !!s && s.getBoundingClientRect().height > 400; }",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 30000 });
         var box = await surface.BoundingBoxAsync();
         Assert.IsNotNull(box);
         Assert.IsTrue(box!.Height > 400, "The overlay must be synced to the rendered page size.");

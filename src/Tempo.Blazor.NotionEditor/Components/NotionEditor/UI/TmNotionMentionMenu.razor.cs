@@ -92,7 +92,11 @@ public partial class TmNotionMentionMenu : ComponentBase
             _needsFocus = false;
             try
             {
-                await _inputRef.FocusAsync();
+                // Not a plain FocusAsync: the keystroke that opened this menu also queues a
+                // content update whose render can refocus the block's editable a frame later
+                // and silently steal the typing target back. focusMenuInput re-asserts focus
+                // across the next frames so the search box wins that race.
+                await JS.InvokeVoidAsync("tmNotionEditor.focusMenuInput", _inputRef);
             }
             catch { /* SSR / test */ }
         }

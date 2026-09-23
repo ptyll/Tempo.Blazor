@@ -195,8 +195,10 @@ public class TmDataTableSortButtonE2ETests : WasmTestBase
 
     /// <summary>
     /// Shift+Enter is the keyboard multi-sort path: focus each sort button and press Shift+Enter —
-    /// the second column must join the sort rather than replace the first, so BOTH headers carry
-    /// a live <c>aria-sort</c>.
+    /// the second column must join the sort rather than replace the first. ARIA allows at most ONE
+    /// directional <c>aria-sort</c> claim per table (ea9c5cc0), so the secondary key keeps
+    /// <c>aria-sort="none"</c> and proves its membership through the precedence badge the header
+    /// renders for every non-primary sort key instead.
     /// </summary>
     private static async Task AssertShiftEnterMultiSortAsync(IPage page)
     {
@@ -215,10 +217,21 @@ public class TmDataTableSortButtonE2ETests : WasmTestBase
         await buttons.Nth(1).FocusAsync();
         await buttons.Nth(1).PressAsync("Shift+Enter");
 
+        // Primary key still carries the single directional claim; the secondary key joined the
+        // sort, which the "2" precedence badge proves — aria-sort itself must stay 'none'.
         await Assertions.Expect(sortableHeaders.Nth(0)).ToHaveAttributeAsync("aria-sort", "ascending");
-        await Assertions.Expect(sortableHeaders.Nth(1)).ToHaveAttributeAsync("aria-sort", "ascending");
+        await Assertions.Expect(sortableHeaders.Nth(1)).ToHaveAttributeAsync("aria-sort", "none");
+        await Assertions.Expect(buttons.Nth(1).Locator(".tm-sort-order")).ToHaveTextAsync("2");
 
-        // And the spoken name tracks the cycle: the first column's next activation now DESCENDS.
+        // Under multi-sort EVERY column's next plain activation is the sole-ascending reset
+        // (N202), so the name-cycle check needs sole sort again: a plain Enter on column 1
+        // drops the secondary key, and only then does its name announce 'descending' —
+        // the state the next activation truly reaches.
+        await buttons.Nth(0).FocusAsync();
+        await buttons.Nth(0).PressAsync("Enter");
+        await Assertions.Expect(sortableHeaders.Nth(0)).ToHaveAttributeAsync("aria-sort", "ascending");
+        await Assertions.Expect(sortableHeaders.Nth(1)).ToHaveAttributeAsync("aria-sort", "none");
+
         var name = await buttons.Nth(0).GetAttributeAsync("aria-label");
         Assert.IsTrue(name?.Contains("descending", StringComparison.OrdinalIgnoreCase) == true
                       || name?.Contains("sestupně", StringComparison.OrdinalIgnoreCase) == true

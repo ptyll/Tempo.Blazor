@@ -85,7 +85,8 @@ public partial class TmNotionTokenDropdown : ComponentBase, IDisposable
         {
             _needsFocus = false;
             try { await JS.InvokeVoidAsync("eval", "void 0"); } catch { }
-            try { await _inputRef.FocusAsync(); } catch { }
+            // Same focus race as the mention/slash menus — re-assert across frames.
+            try { await JS.InvokeVoidAsync("tmNotionEditor.focusMenuInput", _inputRef); } catch { }
         }
 
         if (_needsPositionAdjustment && Visible)

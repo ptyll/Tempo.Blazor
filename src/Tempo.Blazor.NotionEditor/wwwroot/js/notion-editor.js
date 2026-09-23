@@ -468,6 +468,24 @@ window.tmNotionEditor = (function () {
         if (first) first.focus({ preventScroll: true });
     }
 
+    // Floating menus open while the editor is still settling the keystroke that
+    // triggered them: the same input event queues a Blazor content update whose
+    // render can refocus the block's editable a frame or two AFTER the menu's
+    // first focus call, silently stealing the typing target. Re-assert focus on
+    // the next frames so the menu wins; bounded (~10 frames) so a detached or
+    // never-focusable element cannot loop, and cheap — once the contending work
+    // is done the input keeps focus for good.
+    function focusMenuInput(el) {
+        if (!el) return;
+        let attempts = 0;
+        const tryFocus = () => {
+            if (!el.isConnected || ++attempts > 10) return;
+            el.focus({ preventScroll: true });
+            requestAnimationFrame(tryFocus);
+        };
+        tryFocus();
+    }
+
     // Positions a fixed overlay menu at its anchor's viewport rect. The menu is
     // position:fixed (see .tm-notion-ctx) so that scrolling the notion-main column
     // cannot drag it out from under the pointer — an absolute menu inside the
@@ -3342,7 +3360,7 @@ window.tmNotionEditor = (function () {
         // 26.1
         initBlock, destroyBlock, getHtml, getEditableHtml, getCaretOffset, setCaretOffset, setHtml,
         focus, focusAtEnd, focusAtStart, focusAtOffset,
-        initFocusTrap, destroyFocusTrap, positionContextMenu, focusFirstMenuItem,
+        initFocusTrap, destroyFocusTrap, positionContextMenu, focusFirstMenuItem, focusMenuInput,
         initEditorKeyHandler, destroyEditorKeyHandler,
         // 26.2
         getSelectionRange, getSelectionRect, applyFormat,

@@ -89,7 +89,10 @@ public partial class TmNotionSlashMenu : TmComponentBase
             _needsFocus = false;
             try
             {
-                await _inputRef.FocusAsync();
+                // Same race as the mention menu: the '/' keystroke queues a content update
+                // that can refocus the block's editable after this call — focusMenuInput
+                // re-asserts across the next frames so the search box keeps the typing target.
+                await JS.InvokeVoidAsync("tmNotionEditor.focusMenuInput", _inputRef);
                 await JS.InvokeVoidAsync("tmNotionEditor.adjustSlashMenuPosition", _menuRef);
             }
             catch { /* SSR / test */ }

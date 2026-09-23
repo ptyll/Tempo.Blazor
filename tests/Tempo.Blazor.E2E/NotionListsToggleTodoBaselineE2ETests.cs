@@ -139,8 +139,12 @@ public class NotionListsToggleTodoBaselineE2ETests : NotionE2ETestBase
         await menuButton.EvaluateAsync("el => el.click()");
         await page.Locator(".tm-notion-ctx").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
+        // Real hover, not a synthetic mouseenter: since N188 the open handler lives on the
+        // neutral .tm-notion-ctx__sub wrapper, and a dispatched mouseenter on the trigger
+        // button never reaches it (mouseenter does not bubble). A real pointer entry fires
+        // the wrapper's own mouseenter — the same path ContextMenu_TurnInto_SubMenuOpens uses.
         var turnIntoItem = page.Locator(".tm-notion-ctx__item--sub").First;
-        await turnIntoItem.DispatchEventAsync("mouseenter");
+        await turnIntoItem.HoverAsync();
         await page.Locator(".tm-notion-ctx-sub").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
         var target = page.Locator(".tm-notion-ctx-sub .tm-notion-ctx__item").Filter(new LocatorFilterOptions
