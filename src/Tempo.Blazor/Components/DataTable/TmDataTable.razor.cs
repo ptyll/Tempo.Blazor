@@ -2119,6 +2119,36 @@ public partial class TmDataTable<TItem> : IDisposable
     private bool _activationKeyShift;
 
     /// <summary>
+    /// When <see cref="_activationKeyShift"/> was armed, on the injectable clock. The flag's click
+    /// can be lost — Space pressed, focus moved away before keyup dispatches the click — and a
+    /// much later keyboard-originated click (any <c>detail == 0</c> click, including a
+    /// programmatic <c>.click()</c>) would inherit the stale modifier as a phantom multi-sort.
+    /// The flag is therefore time-bound like the overlay's Escape-keyup suppressor (N163): beyond
+    /// <see cref="ActivationKeyShiftWindow"/> a click answers only its own <c>shiftKey</c>.
+    /// </summary>
+    private long _activationKeyShiftArmedAt;
+
+    /// <summary>
+    /// How long an armed <see cref="_activationKeyShift"/> stays consumable. Enter's synthesized
+    /// click lands inside the keydown dispatch itself; Space's lands on keyup, so the window must
+    /// cover an ordinary key-hold — a second does that without surviving into the next gesture
+    /// (same bound as the N163 suppressor). A Space held longer falls back to the click's own
+    /// <c>shiftKey</c>, which is the Firefox shape the flag exists for — Shift+Space held over a
+    /// second then released is the documented edge the bound trades away.
+    /// </summary>
+    private static readonly TimeSpan ActivationKeyShiftWindow = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Clock behind the armed-flag deadline. Resolved through <see cref="IServiceProvider"/> so a
+    /// consumer that never registers a <see cref="TimeProvider"/> still gets
+    /// <see cref="TimeProvider.System"/> — tests register a FakeTimeProvider (same pattern as
+    /// <c>TmSearchInput</c>'s debounce clock).
+    /// </summary>
+    private TimeProvider Clock
+        => _clock ??= ServiceProvider.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
+    /// <summary>
     /// The <c>&lt;th&gt;</c>'s own key handler exists for ONE shortcut now: P for the pin. Activation is
     /// deliberately NOT handled here — a sortable header's activatable element is the
     /// <c>.tm-th-sort</c> button inside it, where Enter and Space produce a native <c>click</c> that
@@ -2166,6 +2196,7 @@ public partial class TmDataTable<TItem> : IDisposable
         if (col.Sortable && e.Key is "Enter" or " ")
         {
             _activationKeyShift = e.ShiftKey;
+            _activationKeyShiftArmedAt = Clock.GetTimestamp();
         }
 
         if (ShowColumnMenu && (e.Key is "p" or "P"))
@@ -2189,7 +2220,11 @@ public partial class TmDataTable<TItem> : IDisposable
             return e.ShiftKey;
         }
 
-        var shift = _activationKeyShift;
+        // Honour the recorded modifier only inside its window — a click this late did not come
+        // from the keydown that armed it (the Space→focus-move→keyup path loses the click, and a
+        // later detail==0 click would otherwise inherit the stale Shift).
+        var shift = _activationKeyShift
+            && Clock.GetElapsedTime(_activationKeyShiftArmedAt) < ActivationKeyShiftWindow;
         _activationKeyShift = false;
         return shift || e.ShiftKey;
     }
@@ -2259,13 +2294,20 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <c>none</c> there means "sortable, not currently sorted". On a column that cannot be sorted — an
     /// ACTIONS column — it announced an affordance that does not exist. Blazor omits an attribute whose
     /// value is null, so returning null is what removes it.
+    /// <para>
+    /// ARIA allows at most ONE directional <c>aria-sort</c> claim per table — under multi-sort every
+    /// participating header used to announce its own direction, which is out of contract (carry-forward
+    /// from the 20C UX review). Only the PRIMARY sort descriptor (<c>_sortDescriptors[0]</c>) announces
+    /// ascending/descending; a secondary sort key reads <c>none</c> — sortable, not the column
+    /// controlling the sort — while its precedence badge (aria-hidden) and the sort button's
+    /// next-action name still carry the detail.
+    /// </para>
     /// </remarks>
     private string? GetAriaSortValue(TmDataTableColumn<TItem> col)
     {
         if (!col.Sortable) return null;
-        var sort = GetColumnSort(col.Key);
-        if (sort is null) return "none";
-        return sort.Direction == DataTableSortDirection.Descending ? "descending" : "ascending";
+        if (_sortDescriptors.Count == 0 || _sortDescriptors[0].Column != col.Key) return "none";
+        return _sortDescriptors[0].Direction == DataTableSortDirection.Descending ? "descending" : "ascending";
     }
 
     /// <summary>

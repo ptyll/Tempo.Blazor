@@ -158,6 +158,34 @@ public class TmDataTableMultiSortTests : LocalizationTestBase
         cut.FindAll(".tm-sort-order")[1].TextContent.Trim().Should().Be("2");
     }
 
+    /// <summary>
+    /// ARIA allows at most ONE directional <c>aria-sort</c> claim per table — under multi-sort every
+    /// participating header used to announce its own direction, which is out of contract (carry-forward
+    /// from the 20C UX review). Only the PRIMARY descriptor (index 0) announces
+    /// ascending/descending; a secondary sort key reads <c>none</c> — sortable, not the column
+    /// controlling the sort. Its precedence badge (aria-hidden) and the button's next-action name
+    /// still carry the detail.
+    /// </summary>
+    [Fact]
+    public void MultiSort_OnlyPrimaryHeaderClaimsAriaSortDirection()
+    {
+        var cut = RenderTable(items:
+        [
+            new Person("Bob", "B", 30),
+            new Person("Ann", "A", 40),
+            new Person("Al", "A", 20)
+        ]);
+
+        cut.FindAll("th[data-sortable='true']")[1].Click();                                       // Dept primary asc
+        cut.FindAll("th[data-sortable='true']")[2].Click(new MouseEventArgs { ShiftKey = true });  // Age secondary asc
+
+        cut.FindAll("th[data-sortable='true']")
+           .Select(h => h.GetAttribute("aria-sort"))
+           .Should().Equal(new[] { "none", "ascending", "none" },
+               "aria-sort is a single-claim attribute — the secondary sort key must not announce " +
+               "a second direction; it reads 'none' like any sortable, non-controlling column");
+    }
+
     [Fact]
     public void ClientMode_MultiSort_OrdersRows()
     {

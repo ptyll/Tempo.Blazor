@@ -2,6 +2,8 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Tests.Localization;
 
@@ -203,10 +205,13 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
         cut.FindAll("button.tm-th-sort")[0].Click();
         cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { ShiftKey = true });
 
-        // Both columns are now sort keys, which only the multi-sort path produces.
+        // Both columns are now sort keys, which only the multi-sort path produces — the badges
+        // prove the second key, while aria-sort stays single-claim on the primary (carry-forward
+        // from the 20C UX review: at most one directional aria-sort per table).
+        cut.FindAll(".tm-sort-order").Should().HaveCount(2);
         cut.FindAll("th[data-sortable='true']")
            .Select(h => h.GetAttribute("aria-sort"))
-           .Should().Equal("ascending", "ascending");
+           .Should().Equal("ascending", "none");
     }
 
     /// <summary>
@@ -229,11 +234,14 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
         // The click Firefox synthesizes for that Enter: keyboard detail, every modifier cleared.
         cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
 
+        cut.FindAll(".tm-sort-order").Should().HaveCount(2,
+            "Shift+Enter must multi-sort even where the engine strips modifiers off the " +
+            "synthesized click — the keydown's Shift state is the truthful one");
         cut.FindAll("th[data-sortable='true']")
            .Select(h => h.GetAttribute("aria-sort"))
-           .Should().Equal(new[] { "ascending", "ascending" },
-               "Shift+Enter must multi-sort even where the engine strips modifiers off the " +
-               "synthesized click — the keydown's Shift state is the truthful one");
+           .Should().Equal(new[] { "ascending", "none" },
+               "aria-sort stays single-claim on the primary descriptor — the secondary key is " +
+               "proven by the .tm-sort-order badges above, not a second directional claim");
     }
 
     /// <summary>
@@ -252,18 +260,25 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
         cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
         cut.FindAll("th[data-sortable='true']")
            .Select(h => h.GetAttribute("aria-sort"))
-           .Should().Equal(new[] { "ascending", "ascending" });
+           .Should().Equal(new[] { "ascending", "none" },
+               "the Shift+Enter appended a secondary sort — aria-sort claims its direction only " +
+               "on the primary; the .tm-sort-order badge carries the second key");
 
         // A plain Enter on the first column must become the single-column sort — a stale Shift
         // would keep the second column sorted (and multi-sort would cycle it to descending).
+        // Under the single-claim aria-sort contract a single sort and a Name-primary multi-sort
+        // share the same attribute signature, so the .tm-sort-order badges are the detector.
         cut.FindAll("button.tm-th-sort")[0].KeyDown(new KeyboardEventArgs { Key = "Enter", ShiftKey = false });
         cut.FindAll("button.tm-th-sort")[0].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
 
+        cut.FindAll(".tm-sort-order").Should().BeEmpty(
+            "plain Enter after Shift+Enter is a single-column sort — the recorded modifier is " +
+            "consumed by the click it armed, not inherited by the next one; a leaked Shift would " +
+            "have kept Age as a secondary key and rendered two badges");
         cut.FindAll("th[data-sortable='true']")
            .Select(h => h.GetAttribute("aria-sort"))
            .Should().Equal(new[] { "ascending", "none" },
-               "plain Enter after Shift+Enter is a single-column sort — the recorded modifier is " +
-               "consumed by the click it armed, not inherited by the next one");
+               "single-column sort: the primary claims the direction, the unsorted column reads none");
     }
 
     /// <summary>
@@ -352,5 +367,41 @@ public class TmDataTableKeyboardSortTests : LocalizationTestBase
            .Should().Equal(new[] { "none", "ascending" },
                "the leaked Shift must not keep Name sorted beside Age — the pin-only header's " +
                "keydown was never going to produce a click, so it must not have armed the flag");
+    }
+
+    /// <summary>
+    /// The residual the pin-only fix could not reach: a keydown on a SORTABLE header whose
+    /// synthesized click never arrives — Space pressed, focus moved away before keyup, so the
+    /// button's click is dispatched elsewhere. The armed flag survived and the NEXT
+    /// keyboard-originated click (any <c>detail == 0</c> click, including a programmatic
+    /// <c>.click()</c>) inherited the stale Shift as a phantom multi-sort. The flag is time-bound
+    /// like the overlay's Escape-keyup suppressor (N163): a click more than a second after the
+    /// keydown answers only its own <c>shiftKey</c>.
+    /// </summary>
+    [Fact]
+    public void AStaleRecordedShift_ExpiresInsteadOfLeakingIntoALaterProgrammaticClick()
+    {
+        var clock = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(clock);
+
+        var cut = RenderTable(secondColumn: true);
+
+        cut.FindAll("button.tm-th-sort")[0].Click(); // Name asc, sole — makes a leak observable
+
+        // Shift+Space keydown arms the flag; the focus-move path means no click ever consumes it.
+        cut.FindAll("button.tm-th-sort")[1].KeyDown(new KeyboardEventArgs { Key = " ", ShiftKey = true });
+        clock.Advance(TimeSpan.FromSeconds(2));
+
+        // A later keyboard-originated/programmatic click on Age (detail == 0, modifiers cleared).
+        cut.FindAll("button.tm-th-sort")[1].Click(new MouseEventArgs { Detail = 0, ShiftKey = false });
+
+        cut.FindAll(".tm-sort-order").Should().BeEmpty(
+            "the stale armed flag must expire, not multi-sort — .tm-sort-order badges render only " +
+            "when more than one column is active");
+        cut.FindAll("th[data-sortable='true']")
+           .Select(h => h.GetAttribute("aria-sort"))
+           .Should().Equal(new[] { "none", "ascending" },
+               "a click arriving after the armed window answers its own shiftKey — an inherited " +
+               "stale Shift would have kept Name sorted beside Age as a phantom multi-sort");
     }
 }
