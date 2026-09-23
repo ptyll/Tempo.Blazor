@@ -144,6 +144,27 @@ public class TmGanttImportDialogTests : LocalizationTestBase
     }
 
     [Fact]
+    public void ImportError_NeverRendersRawExceptionMessage()
+    {
+        // 20D carry-forward: the generic catch interpolated ex.Message into the user-facing
+        // error — framework messages are English, machine-specific, and can carry paths or
+        // inner details a dialog must not render. Failures map to localized details instead.
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        // Garbage xlsx → the reflected GanttExcelImporter throws inside MethodInfo.Invoke,
+        // arriving here as a TargetInvocationException whose Message is framework English.
+        cut.FindComponent<Microsoft.AspNetCore.Components.Forms.InputFile>()
+           .UploadFiles(InputFileContent.CreateFromBinary(new byte[] { 1, 2, 3 }, "tasks.xlsx"));
+        cut.FindAll(".tm-gantt__dialog-actions button")[0].Click();
+
+        var error = cut.Find(".tm-gantt-task-panel__error").TextContent;
+        error.Should().NotContain("target of an invocation",
+            "the raw TargetInvocationException message must never reach the user");
+        error.Should().Contain("unexpected error",
+            "unclassified failures fall back to the localized generic detail");
+    }
+
+    [Fact]
     public void SelectedFileName_IsLiveRegion()
     {
         var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));

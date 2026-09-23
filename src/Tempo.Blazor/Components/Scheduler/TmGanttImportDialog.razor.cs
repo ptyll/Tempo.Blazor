@@ -150,8 +150,16 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             if (_tab == ImportTab.Excel)
             {
                 if (_selectedFile is null) return;
+                if (ResolveGanttExcelImporterType() is not { } importerType)
+                {
+                    // Already-localized guidance — this path never reaches the exception
+                    // classifier below (it is a supported configuration state, not a failure).
+                    _errorMessage = Loc["TmGantt_ImportError"].Replace("{0}", Loc["TmGantt_ImportXlsxPackageMissing"]);
+                    await OnImportError.InvokeAsync(_errorMessage);
+                    return;
+                }
                 using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                tasks = ImportExcelTasks(stream);
+                tasks = ImportExcelTasks(stream, importerType);
             }
             else if (_tab == ImportTab.Mpp)
             {
@@ -167,14 +175,9 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             await OnImportCompleted.InvokeAsync(tasks);
             await OnClose.InvokeAsync();
         }
-        catch (GanttImportAuthException)
-        {
-            _errorMessage = Loc["TmGantt_ImportError"].Replace("{0}", "authentication failed");
-            await OnImportError.InvokeAsync(_errorMessage);
-        }
         catch (Exception ex)
         {
-            _errorMessage = Loc["TmGantt_ImportError"].Replace("{0}", ex.Message);
+            _errorMessage = Loc["TmGantt_ImportError"].Replace("{0}", ImportErrorDetail(ex));
             await OnImportError.InvokeAsync(_errorMessage);
         }
         finally
@@ -183,11 +186,21 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         }
     }
 
-    private IReadOnlyList<TmWorkItem> ImportExcelTasks(Stream stream)
+    /// <summary>
+    /// Maps an import failure to a LOCALIZED detail — never <see cref="Exception.Message"/>:
+    /// framework messages are English, machine-specific, and can carry file paths, URLs, or
+    /// inner-exception details the dialog must not render (review 2026-09-22 carry-forward).
+    /// </summary>
+    private string ImportErrorDetail(Exception exception) => exception switch
     {
-        var importerType = ResolveGanttExcelImporterType()
-            ?? throw new InvalidOperationException(Loc["TmGantt_ImportXlsxPackageMissing"]);
+        GanttImportAuthException => Loc["TmGantt_ImportErrorAuth"],
+        HttpRequestException => Loc["TmGantt_ImportErrorNetwork"],
+        IOException or InvalidDataException => Loc["TmGantt_ImportErrorFile"],
+        _ => Loc["TmGantt_ImportErrorGeneric"],
+    };
 
+    private IReadOnlyList<TmWorkItem> ImportExcelTasks(Stream stream, Type importerType)
+    {
         var importMethod = importerType.GetMethods()
             .FirstOrDefault(method =>
             {
