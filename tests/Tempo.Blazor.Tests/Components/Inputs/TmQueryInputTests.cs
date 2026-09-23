@@ -180,6 +180,32 @@ public class TmQueryInputTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task QueryInput_Dismissal_InvalidatesInFlightSuggestionRequest()
+    {
+        // 20D carry-forward: overlay dismissal routed SetOpen(false) — it did not bump
+        // _requestVersion or clear suggestions, so an in-flight LoadSuggestionsAsync could
+        // land afterwards and re-set _isOpen=true, reopening the just-closed dropdown.
+        var gate = new TaskCompletionSource<IReadOnlyList<QuerySuggestion>>();
+        var cut = Render<TmQueryInput>(p => p
+            .Add(c => c.DebounceMs, 0)
+            .Add(c => c.SuggestionsProvider, _ => gate.Task));
+
+        cut.Find(".tm-query-input__input").Input("st");
+        cut.WaitForAssertion(() => cut.FindAll("[role='listbox']").Should().HaveCount(1));
+
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+        cut.FindAll("[role='listbox']").Should().BeEmpty();
+
+        // The late response must be discarded — the dismissal invalidated its version.
+        gate.SetResult(Sample);
+        await Task.Delay(250); // let the provider continuation run
+
+        cut.FindAll("[role='listbox']").Should().BeEmpty(
+            "a suggestion response landing after dismissal must not reopen the dropdown");
+    }
+
+    [Fact]
     public void QueryInput_Enter_WhenClosed_FiresOnSubmit()
     {
         string? submitted = null;
