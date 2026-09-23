@@ -78,6 +78,82 @@ public sealed class ReleaseGateFilterTests
         }
     }
 
+    /// <summary>
+    /// N212 — every <c>dotnet test</c> invocation must carry a <c>--filter</c>. The readers above
+    /// only see filters that exist; an invocation with none runs the whole suite ungated — the E2E
+    /// assembly included — and no assertion in this class would notice. Mutation pair proven below:
+    /// adding a bare <c>dotnet test</c> step turns this red with the offending line named, while a
+    /// <c>--filter '…'</c> spelled with single quotes is seen by <see cref="ReadFilters"/> (it was
+    /// invisible before this step — that direction is the positive mutation).
+    /// </summary>
+    [Fact]
+    public void EveryDotnetTestInvocationCarriesAFilter()
+    {
+        foreach (string relative in WorkflowRelativePaths)
+        {
+            string code = ReadWorkflowCode(relative);
+
+            // Denominator first: the workflow must actually run dotnet test somewhere — an empty
+            // population would make the empty offender list below vacuous.
+            int invocations = code.Split('\n')
+                .Count(line => line.Contains("dotnet test", StringComparison.Ordinal));
+            invocations.Should().BeGreaterThanOrEqualTo(
+                1,
+                $"{relative} must run dotnet test at least once; zero invocations means the gate "
+                + "step was lost and there is nothing left to assert over");
+
+            DotnetTestLinesWithoutAFilter(code).Should().BeEmpty(
+                $"every `dotnet test` line in {relative} must carry a --filter on the same line — "
+                + "an unfiltered invocation runs the E2E assembly and every other test the release "
+                + "gate exists to exclude (runsettings TestCaseFilter is not used in this "
+                + "repository today, so --filter on the same line is the only recognised shape)");
+        }
+    }
+
+    /// <summary>
+    /// The mutation pair for <see cref="EveryDotnetTestInvocationCarriesAFilter"/> and
+    /// <see cref="ReadFilters"/>: a bare <c>dotnet test</c> must be named, and a single-quoted
+    /// filter must be SEEN — the shape the first reader could not see at all.
+    /// </summary>
+    [Fact]
+    public void TheInvocationGuard_NamesUnfilteredRuns_AndSeesSingleQuotedFilters()
+    {
+        string healthy = ReadWorkflowCode(WorkflowRelativePaths[0]);
+
+        using (new AssertionScope())
+        {
+            DotnetTestLinesWithoutAFilter(healthy).Should().BeEmpty(
+                "the positive control: today every dotnet test carries a filter");
+
+            string bare = healthy.Replace(
+                "dotnet test --no-build --configuration Release --verbosity normal --filter \"FullyQualifiedName!~Tempo.Blazor.E2E\"",
+                "dotnet test --no-build --configuration Release --verbosity normal",
+                StringComparison.Ordinal);
+            bare.Should().NotBe(healthy, "the mutation must actually change the text");
+            DotnetTestLinesWithoutAFilter(bare).Should().Contain(
+                line => line.Contains("dotnet test", StringComparison.Ordinal),
+                "dropping --filter must name the offending line, not pass as 'no drift found'");
+
+            // Positive mutation: single quotes used to be invisible to ReadFilters entirely —
+            // exercised through FilterArgumentsIn, the same function the live reader calls.
+            string singleQuoted = healthy.Replace(
+                "--filter \"FullyQualifiedName!~Tempo.Blazor.E2E\"",
+                "--filter 'FullyQualifiedName!~Tempo.Blazor.E2E'",
+                StringComparison.Ordinal);
+            singleQuoted.Should().NotBe(healthy, "the mutation must actually change the text");
+            FilterArgumentsIn(singleQuoted).Should().HaveCount(
+                2, "both lanes' single-quoted filters must be seen now");
+
+            string bareToken = healthy.Replace(
+                "--filter \"FullyQualifiedName!~Tempo.Blazor.E2E\"",
+                "--filter FullyQualifiedName!~Tempo.Blazor.E2E",
+                StringComparison.Ordinal);
+            bareToken.Should().NotBe(healthy, "the mutation must actually change the text");
+            FilterArgumentsIn(bareToken).Should().HaveCount(
+                2, "an unquoted --filter token is a filter the gate must see too");
+        }
+    }
+
     [Fact]
     public void ReleaseGateFilter_IsExactlyTheNamedExceptions()
     {
@@ -428,8 +504,8 @@ public sealed class ReleaseGateFilterTests
             // The separator half: an assignment inside a `run:` block carries no colon, so the old
             // needle scored zero hits over it no matter which variable it named.
             string exportBeforeTheReleaseBuild = healthy.Replace(
-                "        run: bash eng/verify-announced-version.sh\n\n      - name: Build\n        run: dotnet build",
-                "        run: bash eng/verify-announced-version.sh\n\n"
+                "        run: bash eng/verify-release-evidence.sh\n\n      - name: Build\n        run: dotnet build",
+                "        run: bash eng/verify-release-evidence.sh\n\n"
                 + "      - name: Pick a locale\n        run: export LC_ALL=cs_CZ.UTF-8\n\n"
                 + "      - name: Build\n        run: dotnet build",
                 StringComparison.Ordinal);
@@ -445,8 +521,8 @@ public sealed class ReleaseGateFilterTests
             // in front of the publish build must NOT produce an offender, because that line sets
             // nothing and cannot change the emitted IL.
             string echoBeforeTheReleaseBuild = healthy.Replace(
-                "        run: bash eng/verify-announced-version.sh\n\n      - name: Build\n        run: dotnet build",
-                "        run: bash eng/verify-announced-version.sh\n\n"
+                "        run: bash eng/verify-release-evidence.sh\n\n      - name: Build\n        run: dotnet build",
+                "        run: bash eng/verify-release-evidence.sh\n\n"
                 + "      - name: Say the locale\n        run: echo \"[locale-lane] LANG=$LANG LC_ALL=$LC_ALL\"\n\n"
                 + "      - name: Build\n        run: dotnet build",
                 StringComparison.Ordinal);
@@ -610,6 +686,51 @@ public sealed class ReleaseGateFilterTests
             JobsRunningTestsWithoutTheWaitBudget(viaWorkflowEnv, out _).Should().BeEmpty(
                 "a workflow-level env: reaches every job, so the budget set there covers the "
                 + "lanes — refusing it would be a red nobody could fix");
+        }
+    }
+
+    /// <summary>
+    /// N184 — the value bounds are the contract: an OLD_-prefixed dead key, an out-of-range value,
+    /// an explicit empty string, and a trailing comment must EACH report the job as an offender —
+    /// all four passed the unanchored <c>key:[ \t]*\S</c> this guard ran before.
+    /// </summary>
+    [Fact]
+    public void TheWaitBudgetGuard_EnforcesTheValueContract()
+    {
+        string healthy = ReadWorkflowCode(WorkflowRelativePaths[0]);
+        const string live = "      TEMPO_BUNIT_WAIT_SECONDS: \"10\"\n";
+        healthy.Should().Contain(live, "the mutation baseline must exist verbatim");
+
+        using (new AssertionScope())
+        {
+            JobsRunningTestsWithoutTheWaitBudget(healthy, out _).Should().BeEmpty(
+                "baseline: TEMPO_BUNIT_WAIT_SECONDS: \"10\" produces zero offenders");
+
+            string deadKey = healthy.Replace(live,
+                "      OLD_TEMPO_BUNIT_WAIT_SECONDS: \"10\"\n", StringComparison.Ordinal);
+            JobsRunningTestsWithoutTheWaitBudget(deadKey, out _).Should().Contain(
+                "build-and-test",
+                "an OLD_-prefixed dead key exports nothing — the unanchored regex passed it");
+
+            string outOfRange = healthy.Replace(live,
+                "      TEMPO_BUNIT_WAIT_SECONDS: \"300\"\n", StringComparison.Ordinal);
+            JobsRunningTestsWithoutTheWaitBudget(outOfRange, out _).Should().Contain(
+                "build-and-test",
+                "300 s is five measured CI budgets wide — out of the 1–10 contract it reads as unset");
+
+            string emptyValue = healthy.Replace(live,
+                "      TEMPO_BUNIT_WAIT_SECONDS: \"\"\n", StringComparison.Ordinal);
+            JobsRunningTestsWithoutTheWaitBudget(emptyValue, out _).Should().Contain(
+                "build-and-test",
+                "an explicitly empty value is GitHub's spelling of 'not set'");
+
+            string trailingComment = healthy.Replace(live,
+                "      TEMPO_BUNIT_WAIT_SECONDS: \"10\"  # note\n", StringComparison.Ordinal);
+            JobsRunningTestsWithoutTheWaitBudget(trailingComment, out _).Should().Contain(
+                "build-and-test",
+                "trailing text after the value is an offender by design — StripYamlComments only "
+                + "removes whole-line comments, so the reader and the runner would disagree about "
+                + "which characters are the value (documented fail-closed variant)");
         }
     }
 
@@ -1010,14 +1131,30 @@ public sealed class ReleaseGateFilterTests
     }
 
     /// <summary>
-    /// The assignment spelling of the wait budget inside an <c>env:</c> block — key, colon, and a
-    /// NON-EMPTY value. A bare <c>TEMPO_BUNIT_WAIT_SECONDS:</c> with nothing after the colon is
-    /// not a setting: GitHub exports it as the empty string, <c>TestAssemblyInit</c> ignores
-    /// zero-length values, and the job silently runs the 2 s default the variable exists to
-    /// override.
+    /// The assignment spelling of the wait budget inside an <c>env:</c> block — a whole line whose
+    /// key is exactly <c>TEMPO_BUNIT_WAIT_SECONDS</c> and whose value is an integer 1–10, optionally
+    /// in matching quotes, with nothing after the value.
+    /// <para>
+    /// N184 — the bounds are the contract, not pedantry. The unanchored
+    /// <c>key:[ \t]*\S</c> it replaces passed <c>OLD_TEMPO_BUNIT_WAIT_SECONDS: 5</c> (a dead key),
+    /// <c>TEMPO_BUNIT_WAIT_SECONDS: "300"</c> (a value five measured CI budgets wide — GitHub exports
+    /// the empty string for a missing value, and <c>TestAssemblyInit</c> runs the 2 s default on it,
+    /// while an out-of-range value just moves the stall somewhere slower), and
+    /// <c>TEMPO_BUNIT_WAIT_SECONDS: ""</c> (explicitly empty). 10 is the measured CI value
+    /// (Phase 19, <c>6b953cda</c>); anything outside 1–10 is reported as NOT SET, i.e. the job lands
+    /// in the offender list — the fail-closed side of the guard.
+    /// </para>
+    /// <para>
+    /// TRAILING TEXT IS AN OFFENDER TOO: <c>TEMPO_BUNIT_WAIT_SECONDS: "10"  # note</c> does NOT
+    /// satisfy the pattern — <see cref="StripYamlComments"/> removes only whole-line comments, so a
+    /// trailing comment would reach the regex as part of the value. Treating it as unset is the
+    /// fail-closed reading (a reader and the runner would disagree about which characters are the
+    /// value); the workflow carries no such line today.
+    /// </para>
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex WaitBudgetIsSetHere = new(
-        @"TEMPO_BUNIT_WAIT_SECONDS[ \t]*:[ \t]*\S");
+        @"^[ \t]*TEMPO_BUNIT_WAIT_SECONDS[ \t]*:[ \t]*(?<q>[""']?)(?<value>[1-9]|10)\k<q>[ \t]*$",
+        System.Text.RegularExpressions.RegexOptions.Multiline);
 
     /// <summary>
     /// The body of a job-level <c>env:</c> mapping inside a job segment — the region whose keys
@@ -1147,15 +1284,20 @@ public sealed class ReleaseGateFilterTests
         @"^FullyQualifiedName\s*!~\s*(?<name>\S+)\s*$");
 
     /// <summary>
-    /// The filter split on <c>&amp;</c> into trimmed clauses. vstest also understands <c>|</c>
-    /// and parentheses, but none of those may appear in the gate — a clause containing them
-    /// fails <see cref="ExclusionClauseShape"/> and lands in <see cref="UnrecognizedClauses"/>
-    /// rather than being silently dropped.
+    /// The filter split on <c>&amp;</c> into trimmed clauses (<c>TrimEntries</c> does the trimming —
+    /// a second <c>Select(Trim)</c> the first version carried did nothing). vstest also understands
+    /// <c>|</c> and parentheses, but none of those may appear in the gate.
+    /// <para>
+    /// N186 — how an OR-joined clause actually fails: <c>FullyQualifiedName!~A|Name=B</c> inside ONE
+    /// <c>&amp;</c>-segment does NOT reach <see cref="UnrecognizedClauses"/> — the greedy
+    /// <c>\S+</c> of <see cref="ExclusionClauseShape"/> swallows <c>A|Name=B</c> as the name, so it
+    /// surfaces in <c>exclusions.Except(NamedExceptions)</c> as an unknown exception instead. Both
+    /// paths are red; they just report different categories — this docstring now says which.
+    /// </para>
     /// </summary>
     private static IReadOnlyList<string> FilterClauses(string filter) =>
         [.. filter
-            .Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(clause => clause.Trim())];
+            .Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
     /// <summary>
     /// Every clause that is NOT a <c>FullyQualifiedName!~&lt;name&gt;</c> exclusion. Each is
@@ -1183,28 +1325,61 @@ public sealed class ReleaseGateFilterTests
     }
 
     /// <summary>
-    /// EVERY <c>--filter "…"</c> in the file, in file order. Plural since the gate runs in more than
-    /// one lane; an empty result is a failure rather than an empty population, because "no filter
-    /// found" and "no exceptions" produce the same green everywhere this is read.
+    /// EVERY <c>--filter …</c> in the file, in file order — double-quoted, single-quoted, or a bare
+    /// token (N212: the first version saw only <c>--filter "…"</c>, so the same gate spelled with
+    /// single quotes or no quotes was invisible to every assertion that reads this list). Plural
+    /// since the gate runs in more than one lane; an empty result is a failure rather than an
+    /// empty population, because "no filter found" and "no exceptions" produce the same green
+    /// everywhere this is read.
+    /// <para>
+    /// BLIND SPOTS, NAMED: a <c>runsettings</c>/<c>TestCaseFilter</c> filter and the
+    /// <c>--filter:…</c> colon spelling are not recognised — neither appears in these workflows
+    /// today (verified by grep over <c>.github/workflows/</c>); if one ever appears, extend this
+    /// reader. A <c>dotnet test</c> with NO filter at all is caught by
+    /// <see cref="EveryDotnetTestInvocationCarriesAFilter"/>, not here.
+    /// </para>
     /// </summary>
     private static IReadOnlyList<string> ReadFilters(string relativePath)
     {
         // CODE, NOT RAW TEXT: a commented-out lane leaves its `--filter` in the file, which made the
         // count 2 and `Distinct` 1 over a workflow that ran the gate once. Measured 2026-08-21.
         string text = ReadWorkflowCode(relativePath);
-        IReadOnlyList<string> filters =
-        [
-            .. System.Text.RegularExpressions.Regex
-                .Matches(text, @"--filter\s+""(?<filter>[^""]+)""")
-                .Select(match => match.Groups["filter"].Value)
-        ];
+        IReadOnlyList<string> filters = FilterArgumentsIn(text);
 
         filters.Should().NotBeEmpty(
-            $"{relativePath} must contain a --filter \"…\" on every Test step; without it this "
+            $"{relativePath} must contain a --filter … on every Test step; without it this "
             + "guard cannot see the exceptions and would treat a missing gate as no exceptions");
 
         return filters;
     }
+
+    /// <summary>
+    /// The <c>--filter</c> argument values inside <paramref name="workflowCode"/> — the reader
+    /// <see cref="ReadFilters"/> delegates to, and the function the mutation tests call directly so
+    /// both exercise the same regex. Sees double-quoted, single-quoted, and bare-token spellings.
+    /// </summary>
+    internal static IReadOnlyList<string> FilterArgumentsIn(string workflowCode) =>
+        [.. System.Text.RegularExpressions.Regex
+            .Matches(workflowCode, @"--filter\s+(?:""(?<dq>[^""]+)""|'(?<sq>[^']+)'|(?<bare>\S+))")
+            .Select(match => match.Groups["dq"].Success
+                ? match.Groups["dq"].Value
+                : match.Groups["sq"].Success
+                    ? match.Groups["sq"].Value
+                    : match.Groups["bare"].Value)];
+
+    /// <summary>
+    /// Lines that run <c>dotnet test</c> without a <c>--filter</c> on the same line — the
+    /// population <see cref="EveryDotnetTestInvocationCarriesAFilter"/> asserts empty. An
+    /// unfiltered invocation runs the E2E assembly and everything else the gate exists to
+    /// exclude; spelling the filter on the next line of a block scalar does not exist in these
+    /// workflows today and would be reported here as an offender rather than silently honoured.
+    /// </summary>
+    internal static IReadOnlyList<string> DotnetTestLinesWithoutAFilter(string workflowCode) =>
+        [.. workflowCode
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Contains("dotnet test", StringComparison.Ordinal))
+            .Where(line => !line.Contains("--filter", StringComparison.Ordinal))];
 
     internal static string ReadRepoFile(string relativePath)
     {
