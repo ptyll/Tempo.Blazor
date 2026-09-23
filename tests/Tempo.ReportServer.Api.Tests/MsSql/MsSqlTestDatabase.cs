@@ -15,11 +15,13 @@ namespace Tempo.ReportServer.Api.Tests.MsSql;
 /// <c>Tempo.ReportServer.Api.Tests.MsSql</c> — one container per test run.
 /// <para>
 /// Resolution order: <see cref="MsSqlTestDatabase.ConnectionEnvironmentVariable"/> wins when it
-/// is set (a developer's own SQL Server, used exactly as given — one shared database). Otherwise
-/// a Testcontainers <c>mcr.microsoft.com/mssql/server:2022-latest</c> container is started, the
-/// same image the application's own E2E suite runs. When Docker is not reachable the fixture
-/// throws and every test in the collection FAILS with "Docker required" — a missing service is
-/// a red, never a skip.
+/// is set — and N213: an external connection is now only a SERVER address; every
+/// <see cref="MsSqlTestDatabase"/> creates its own <c>tempo_test_*</c> database on it, so a
+/// developer-supplied connection string can never point the suite's Respawner at a database the
+/// developer owns. Otherwise a Testcontainers <c>mcr.microsoft.com/mssql/server:2022-latest</c>
+/// container is started, the same image the application's own E2E suite runs. When Docker is not
+/// reachable the fixture throws and every test in the collection FAILS with "Docker required" —
+/// a missing service is a red, never a skip.
 /// </para>
 /// </summary>
 public sealed class MsSqlContainerFixture : IAsyncLifetime
@@ -42,7 +44,7 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
         if (Environment.GetEnvironmentVariable(MsSqlTestDatabase.ConnectionEnvironmentVariable)
                 is { Length: > 0 } externalConnection)
         {
-            Server = new ResolvedServer(externalConnection, PerClassDatabases: false);
+            Server = new ResolvedServer(externalConnection);
             return;
         }
 
@@ -67,7 +69,7 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
             // Testcontainers serves a self-signed certificate — required here, not a weakening.
             TrustServerCertificate = true,
         };
-        Server = new ResolvedServer(builder.ConnectionString, PerClassDatabases: true);
+        Server = new ResolvedServer(builder.ConnectionString);
     }
 
     /// <inheritdoc />
@@ -80,13 +82,36 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
         }
     }
 
-    /// <summary>What <see cref="MsSqlTestDatabase"/> connects to, and whether it may CREATE DATABASE.</summary>
+    /// <summary>What <see cref="MsSqlTestDatabase"/> connects to.</summary>
     /// <param name="ServerConnectionString">The container's connection string in container mode;
-    /// the verbatim <c>REPORTSERVER_TEST_CONNECTION</c> in external mode.</param>
-    /// <param name="PerClassDatabases">True only when the fixture owns the server and each test
-    /// class may create (and drop) its own database. False for an external connection string,
-    /// which is used as given — its login is not promised to carry CREATE DATABASE rights.</param>
-    internal sealed record ResolvedServer(string ServerConnectionString, bool PerClassDatabases);
+    /// the verbatim <c>REPORTSERVER_TEST_CONNECTION</c> in external mode — used as a SERVER
+    /// address only: its <c>Initial Catalog</c> is ignored because every fixture database is
+    /// created fresh (N213).</param>
+    internal sealed record ResolvedServer(string ServerConnectionString)
+    {
+        /// <summary>
+        /// N175: the synthesized record <c>ToString()</c> would print the connection string
+        /// verbatim — including <c>Password=</c> — into any future assert or log line. Print it
+        /// redacted instead.
+        /// </summary>
+        public override string ToString()
+        {
+            try
+            {
+                var builder = new SqlConnectionStringBuilder(ServerConnectionString);
+                if (!string.IsNullOrEmpty(builder.Password))
+                {
+                    builder.Password = "***";
+                }
+
+                return $"ResolvedServer {{ ServerConnectionString = {builder.ConnectionString} }}";
+            }
+            catch (ArgumentException)
+            {
+                return "ResolvedServer { ServerConnectionString = <unparseable> }";
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -96,12 +121,23 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
 /// dropped again on dispose, so classes cannot leak rows into each other even when a test
 /// forgets <see cref="ResetAsync"/>. The database is migrated once through the authored EF Core
 /// migrations and reset between tests with Respawn (the EF migrations-history table is
-/// preserved). With <c>REPORTSERVER_TEST_CONNECTION</c> set there is no owned server: the given
-/// connection string is used as-is for a single shared database, exactly as before.
+/// preserved).
+/// <para>
+/// N213 — the external-override path is IDENTICAL: with <c>REPORTSERVER_TEST_CONNECTION</c> set,
+/// the given connection string is a SERVER address, never a database. Any <c>Initial Catalog</c>
+/// the user put in it is ignored and a private <c>tempo_test_*</c> database is created anyway —
+/// the old "use it as-is" branch let Respawner wipe every table of a database the developer owns.
+/// An external login without CREATE DATABASE rights is refused outright rather than silently
+/// falling back to the shared database.
+/// </para>
 /// </summary>
 public sealed class MsSqlTestDatabase : IAsyncLifetime
 {
-    /// <summary>Environment variable that overrides the SQL Server test connection string.</summary>
+    /// <summary>
+    /// Environment variable that overrides the SQL Server test connection string. The value is a
+    /// SERVER address: its <c>Initial Catalog</c> is always ignored — the fixture creates its own
+    /// <c>tempo_test_*</c> database on that server and drops it on dispose (N213).
+    /// </summary>
     public const string ConnectionEnvironmentVariable = "REPORTSERVER_TEST_CONNECTION";
 
     /// <summary>The SQL Server image the suite starts when no connection override is set.</summary>
@@ -110,6 +146,15 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
     private Respawner? _respawner;
     private string? _connectionString;
     private string? _ownedDatabase;
+    private string? _serverConnectionString;
+
+    /// <summary>
+    /// Test seam (N213): an explicit server resolution — exactly the shape
+    /// <c>REPORTSERVER_TEST_CONNECTION</c> produces — injected without touching the shared static
+    /// <see cref="MsSqlContainerFixture.Server"/>, so an isolation test stays parallel-safe against
+    /// the mssql-report-catalog collection.
+    /// </summary>
+    internal MsSqlContainerFixture.ResolvedServer? ServerOverride { get; set; }
 
     /// <summary>The connection string for this class's SQL Server catalog test database.</summary>
     public string ConnectionString =>
@@ -120,47 +165,45 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
     /// <inheritdoc />
     public async Task InitializeAsync()
     {
-        MsSqlContainerFixture.ResolvedServer server = MsSqlContainerFixture.Server
+        MsSqlContainerFixture.ResolvedServer server = ServerOverride
+            ?? MsSqlContainerFixture.Server
             ?? throw new InvalidOperationException(
                 $"{nameof(MsSqlContainerFixture)} resolved no server; its initialization is "
                 + "guaranteed to run before any class of the mssql-report-catalog collection.");
 
-        if (server.PerClassDatabases)
+        _serverConnectionString = server.ServerConnectionString;
+        _ownedDatabase = $"tempo_test_{Guid.NewGuid():N}";
+        _connectionString = new SqlConnectionStringBuilder(server.ServerConnectionString)
         {
-            _ownedDatabase = $"TempoReportServerTests_{Guid.NewGuid():N}";
-            _connectionString = new SqlConnectionStringBuilder(server.ServerConnectionString)
-            {
-                InitialCatalog = _ownedDatabase,
-            }.ConnectionString;
+            InitialCatalog = _ownedDatabase,
+        }.ConnectionString;
 
-            await using (var master = new SqlConnection(server.ServerConnectionString))
+        try
+        {
+            // Always CREATE DATABASE — the only isolation the fixture can guarantee (N213).
+            await CreateOwnedDatabaseAsync(_serverConnectionString, _ownedDatabase).ConfigureAwait(false);
+
+            // Apply the catalog migrations inside the freshly created database.
+            await using (var context = CreateDbContext("default"))
             {
-                await master.OpenAsync().ConfigureAwait(false);
-                await using var create = master.CreateCommand();
-                // The name is generated here (hex suffix), never user input — bracket quoting is safe.
-                create.CommandText = $"CREATE DATABASE [{_ownedDatabase}]";
-                await create.ExecuteNonQueryAsync().ConfigureAwait(false);
+                await context.Database.MigrateAsync().ConfigureAwait(false);
             }
-        }
-        else
-        {
-            _connectionString = server.ServerConnectionString;
-        }
 
-        // Apply the catalog migrations (creates the database too when the connection string's
-        // own InitialCatalog does not exist — the external-override path).
-        await using (var context = CreateDbContext("default"))
-        {
-            await context.Database.MigrateAsync().ConfigureAwait(false);
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync().ConfigureAwait(false);
+            _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+            {
+                TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
+                DbAdapter = DbAdapter.SqlServer,
+            }).ConfigureAwait(false);
         }
-
-        await using var connection = new SqlConnection(ConnectionString);
-        await connection.OpenAsync().ConfigureAwait(false);
-        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        catch
         {
-            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
-            DbAdapter = DbAdapter.SqlServer,
-        }).ConfigureAwait(false);
+            // N213/N179: an owned database whose initialization failed must not linger on a server
+            // the fixture does not own — drop it (best effort) before the exception escapes.
+            await DropOwnedDatabaseQuietlyAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <summary>Resets all catalog tables to empty, keeping the schema and migration history.</summary>
@@ -213,34 +256,104 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
     /// <inheritdoc />
     public async Task DisposeAsync()
     {
+        // The fixture owns this database — drop it so the shared server does not accumulate one
+        // test database per class (in external mode the server is NOT thrown away with the run,
+        // so the drop is what keeps it clean). SINGLE_USER WITH ROLLBACK kicks pooled connections
+        // still holding the database open; the pool entry is cleared first so nothing reopens it.
+        if (_connectionString is not null)
+        {
+            // N176: the probing connection is a resource too — dispose it after clearing the pool.
+            using var probe = new SqlConnection(_connectionString);
+            SqlConnection.ClearPool(probe);
+        }
+
+        await DropOwnedDatabaseAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// <c>CREATE DATABASE</c> on the resolved server — the shared private helper also used by
+    /// <see cref="DropOwnedDatabaseAsync"/>'s sibling path. A denied login is refused here with a
+    /// message that says WHY: without the permission the fixture cannot guarantee isolation, so
+    /// falling back to a shared database would repeat the N213 wipe-a-developer's-database hole.
+    /// </summary>
+    private static async Task CreateOwnedDatabaseAsync(string serverConnectionString, string database)
+    {
+        try
+        {
+            // The name is generated here (hex suffix), never user input — bracket quoting is safe.
+            await ExecuteAgainstMasterAsync(
+                serverConnectionString, $"CREATE DATABASE [{database}]").ConfigureAwait(false);
+        }
+        catch (SqlException ex) when (IsCreateDatabaseDenied(ex))
+        {
+            throw new InvalidOperationException(
+                $"{ConnectionEnvironmentVariable} must carry CREATE DATABASE permission — a shared "
+                + "database without it must not be used, because the fixture cannot guarantee "
+                + "isolation there.", ex);
+        }
+    }
+
+    private static bool IsCreateDatabaseDenied(SqlException ex) =>
+        ex.Message.Contains("CREATE DATABASE permission", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("permission", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("denied", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Runs <paramref name="commandText"/> against <c>master</c> on the resolved server — shared
+    /// by create-on-init and drop-on-dispose so both see the same connection handling.
+    /// </summary>
+    private static async Task ExecuteAgainstMasterAsync(string serverConnectionString, string commandText)
+    {
+        var masterConnectionString = new SqlConnectionStringBuilder(serverConnectionString)
+        {
+            InitialCatalog = "master",
+        }.ConnectionString;
+
+        await using var master = new SqlConnection(masterConnectionString);
+        await master.OpenAsync().ConfigureAwait(false);
+        await using var command = master.CreateCommand();
+        command.CommandText = commandText;
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Drops <see cref="_ownedDatabase"/> if it exists. Uses the server string captured at init
+    /// (works in ServerOverride/isolation tests where the collection static is null); a missing
+    /// server string means the container is going down anyway and takes the database with it.
+    /// </summary>
+    private async Task DropOwnedDatabaseAsync()
+    {
         if (_ownedDatabase is null)
         {
             return;
         }
 
-        // The fixture owns this database — drop it so the shared container does not accumulate
-        // one test database per class. SINGLE_USER WITH ROLLBACK kicks pooled connections still
-        // holding the database open; the pool entry is cleared first so nothing reopens it.
-        // A null Server at this point means the collection fixture is already disposed — the
-        // container is going down anyway and takes the database with it.
-        if (_connectionString is not null)
-        {
-            SqlConnection.ClearPool(new SqlConnection(_connectionString));
-        }
-
-        if (MsSqlContainerFixture.Server?.ServerConnectionString is not { Length: > 0 } masterConnection)
+        string? masterConnection = _serverConnectionString
+            ?? MsSqlContainerFixture.Server?.ServerConnectionString;
+        if (masterConnection is not { Length: > 0 })
         {
             return;
         }
 
-        await using var master = new SqlConnection(masterConnection);
-        await master.OpenAsync().ConfigureAwait(false);
-        await using var drop = master.CreateCommand();
-        drop.CommandText =
+        await ExecuteAgainstMasterAsync(
+            masterConnection,
             $"IF DB_ID('{_ownedDatabase}') IS NOT NULL "
             + $"ALTER DATABASE [{_ownedDatabase}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; "
-            + $"IF DB_ID('{_ownedDatabase}') IS NOT NULL DROP DATABASE [{_ownedDatabase}]";
-        await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
+            + $"IF DB_ID('{_ownedDatabase}') IS NOT NULL DROP DATABASE [{_ownedDatabase}]").ConfigureAwait(false);
+        _ownedDatabase = null;
+    }
+
+    /// <summary>Best-effort drop used on the init-failure path — must never mask the real error.</summary>
+    private async Task DropOwnedDatabaseQuietlyAsync()
+    {
+        try
+        {
+            await DropOwnedDatabaseAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            // The original exception is the finding; a cleanup failure would only hide it.
+        }
     }
 }
 
