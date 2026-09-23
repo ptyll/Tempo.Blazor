@@ -193,9 +193,9 @@ which is exactly the red
   `<label for>` styled as a button pointing at a `display:none` `InputFile` — pointer users could
   click it, but a `<label>` can never receive keyboard focus, so Enter/Space had no path to the
   chooser at all. The label is now a real `TmButton` (Secondary, Sm, localized
-  `TmGantt_ChooseFile`) whose click calls `openFilePicker` in the collocated
-  `TmGanttImportDialog.razor.js` module, which calls `input.click()` on the hidden `InputFile`
-  inside the same user gesture. The input stays in the DOM visually hidden (sr-only geometry, not
+  `TmGantt_ChooseFile`) with a NATIVE click listener wired by `registerFilePickerTrigger` in the
+  collocated `TmGanttImportDialog.razor.js` module, which calls `input.click()` on the hidden
+  `InputFile` inside the browser's own click event. The input stays in the DOM visually hidden (sr-only geometry, not
   `display:none`) with `aria-hidden` + `tabindex="-1"` so it never reaches the a11y tree or the
   tab order. bUnit verifies the module invocation and that no `<label>` remains; Playwright tabs
   to the button and opens the chooser with both Enter and Space via `WaitForFileChooserAsync`,
@@ -409,9 +409,10 @@ which is exactly the red
   native event handler even with the hop removed. The collocated module now registers a NATIVE
   click listener on the trigger button ahead of the first click
   (`registerFilePickerTrigger`), so `input.click()` runs synchronously inside the browser's own
-  click event for pointer, Enter and Space activation alike. The listener is re-registered on
-  every dialog open because closing destroys the DOM, and a `dataset` marker in JS plus a flag
-  in C# each guard against double registration.
+  click event for pointer, Enter and Space activation alike. Registration is re-attempted on
+  EVERY render while the dialog is open — closing the dialog and switching tabs both destroy the
+  file area's DOM, and a C# "registered once" flag can never see the fresh element — while the
+  `dataset.tmFilePickerRegistered` marker in JS dedupes repeat calls on the same button.
 
 ### Changed — token defaults
 

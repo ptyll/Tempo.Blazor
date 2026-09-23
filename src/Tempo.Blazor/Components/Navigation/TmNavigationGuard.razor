@@ -143,6 +143,13 @@
     /// cancelled: the guard does not remember the blocked destination past this point, so leaving
     /// again means the host triggers a fresh navigation attempt.
     /// </summary>
+    /// <remarks>
+    /// Focus timing: a synchronous <c>element.focus()</c> inside this callback races the dialog's
+    /// focus-trap teardown, which restores <c>returnTarget</c> focus after the dialog unmounts —
+    /// whichever runs last wins, and the trap usually runs last. Move focus from
+    /// <c>OnAfterRenderAsync</c> or after an <c>await Task.Yield()</c> so it lands after the trap's
+    /// restore, not before it.
+    /// </remarks>
     [Parameter] public EventCallback OnSaveAndLeaveFailed { get; set; }
 
     private bool EffectiveDirty => IsDirtyCallback?.Invoke() ?? IsDirty;
