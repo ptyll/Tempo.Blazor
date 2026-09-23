@@ -554,10 +554,11 @@ which is exactly the red
   run that justifies a release: the commit it ran against, who verified it and when, the
   run name, the passed/failed/skipped totals, the serial-residual counts, the wall clock
   and the artifact path. `eng/verify-release-evidence.sh`
-  validates the schema and applies the agreed staleness policy B (zúžená): the evidence is
-  stale when commits after `evidence.commit` touched `src/`, `tests/Tempo.Blazor.E2E/`,
-  `.github/workflows/` or `eng/*.sh` — changes to unit-test projects, docs or the evidence
-  directory itself do NOT force a re-run. The publish workflow runs the verifier before the
+  validates the schema and applies the recorded staleness scope
+  (DEC-TEMPO-RELEASE-EVIDENCE-SCOPE, owner decision F14): the evidence is stale when ANY
+  commit after `evidence.commit` touched a path outside the allowed list — `*.md`, `docs/`,
+  `eng/release-evidence/`, `.github/` — so any `src/` or `tests/` change, bUnit included,
+  forces a re-measurement. The publish workflow runs the verifier before the
   pack step, so a release on untested code fails closed in CI, not at NuGet.
   `ReleaseEvidenceTests` proves the JSON parses, the verifier accepts the committed file and
   rejects tampered staleness windows.

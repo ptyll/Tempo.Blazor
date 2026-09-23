@@ -12,19 +12,19 @@ set -euo pipefail
 # eng/pack-nuget-packages.sh already make. Every required key missing is a refusal, not a default:
 # an unreadable evidence file must produce red, not silence.
 #
-# THE STALENESS BOUND — owner decision 2026-09-23, policy (B) "zúžená": the bound breaks ONLY on
-# changes under
-#   src/                       (code compiled into the packages)
-#   tests/Tempo.Blazor.E2E/    (the suite the evidence claims ran green)
-#   .github/workflows/         (the publish path itself)
-#   eng/*.sh                   (the release scripts — excluding eng/release-evidence/, which is the
-#                              evidence store itself and legitimately changes when a run is recorded)
-# Unit test projects outside E2E, docs, CHANGELOG.md, planning/ and everything else are EXEMPT:
-# they cannot change the outcome of the E2E suite or of the publish step, and forcing a 4h+ re-run
-# over them would teach the gate to be bypassed. If the policy ever flips to (A) "přísná" — any
-# change outside docs/*.md/planning/eng/release-evidence/ breaks the bound — replace
-# STALE_BREAKING_PATTERN with an allowlist and refuse any path NOT matching it.
-STALE_BREAKING_PATTERN='^(src/|tests/Tempo\.Blazor\.E2E/|\.github/workflows/|eng/[^/]*\.sh$)'
+# THE STALENESS BOUND — owner decision DEC-TEMPO-RELEASE-EVIDENCE-SCOPE (ptyll, 2026-09-22, F14):
+# the evidence is valid ONLY when every path changed between the run commit and the tagged commit
+# stays OUTSIDE what compiles into the package. The owner's allowed list is exhaustive —
+#   *.md                   (any markdown file — prose never compiles into the package)
+#   docs/                  (documentation tree)
+#   eng/release-evidence/  (the evidence store itself — legitimately changes when a run is recorded)
+#   .github/               (CI definition — not compiled into the package)
+# ANY change in src/ or tests/ — explicitly including bUnit and other non-E2E test projects —
+# invalidates the evidence and the full run must be re-measured; anything else outside the
+# allowed list (scripts/, eng/*.sh, package manifests, …) invalidates too, fail-closed by
+# omission. The bound is an ALLOWLIST precisely so a path nobody enumerated cannot slip through:
+# refuse anything NOT matching STALE_ALLOWED_PATTERN rather than enumerating what may break it.
+STALE_ALLOWED_PATTERN='(\.md$|^docs/|^eng/release-evidence/|^\.github/)'
 
 # THE GIT QUESTIONS this asks — cat-file -e and merge-base --is-ancestor — need the full ref
 # store. The publish workflows check out with fetch-depth: 0 for exactly this reason; the script
@@ -85,8 +85,8 @@ fi
 
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
-  if grep -Eq "$STALE_BREAKING_PATTERN" <<<"$path"; then
-    refuse "staleness bound broken: '$path' changed between the verified run ($commit) and HEAD — it can alter the E2E outcome or the publish itself, so the evidence must be re-measured (owner policy B)."
+  if ! grep -Eq "$STALE_ALLOWED_PATTERN" <<<"$path"; then
+    refuse "staleness bound broken: '$path' changed between the verified run ($commit) and HEAD — DEC-TEMPO-RELEASE-EVIDENCE-SCOPE allows only *.md, docs/, eng/release-evidence/ and .github/ to change without re-measuring; any src/ or tests/ change (bUnit included) invalidates the evidence."
   fi
 done < <(git diff --name-only "$commit" HEAD)
 

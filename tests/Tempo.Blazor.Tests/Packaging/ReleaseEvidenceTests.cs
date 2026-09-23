@@ -134,14 +134,17 @@ public sealed class ReleaseEvidenceTests
     }
 
     /// <summary>
-    /// Five-step mutation proof, each arm over the REAL script — never a re-implemented check:
+    /// Seven-step mutation proof, each arm over the REAL script — never a re-implemented check:
     /// (1) evidence at HEAD with a clean diff passes; (2) serialResidualFailed=1 refuses; (3) a
     /// commit that exists but is not an ancestor of HEAD refuses; (4) a src/ change after the
-    /// evidence commit refuses on the staleness bound; (5) a CHANGELOG.md-only change passes —
-    /// the owner-approved (B) whitelist holds in BOTH directions.
+    /// evidence commit refuses on the staleness bound; (5) a NON-E2E test change
+    /// (tests/Tempo.Blazor.Tests/) refuses — DEC-TEMPO-RELEASE-EVIDENCE-SCOPE invalidates on ANY
+    /// tests/ change, bUnit included; (6) a CHANGELOG.md-only change passes; (7) a
+    /// .github/workflows/ change passes — .github/ is inside the owner's allowed list. The
+    /// allowlist holds in BOTH directions.
     /// </summary>
     [BashScriptFact]
-    public void Verifier_FiveArmProof_OverATempWorktree()
+    public void Verifier_SevenArmProof_OverATempWorktree()
     {
         string root = ReleaseScriptInputReadTests.FindRepoRoot();
         string worktree = Path.Combine(Path.GetTempPath(), $"tm-evidence-wt-{Guid.NewGuid():N}");
@@ -192,7 +195,27 @@ public sealed class ReleaseEvidenceTests
             staleSrcResult.Combined.Should().Contain("src/Tempo.Blazor/StalenessProbe.cs",
                 "the refusal must name the offending path");
 
-            // (5) undo the src/ probe and change only CHANGELOG.md — whitelisted under policy (B).
+            // (5) undo the src/ probe and change a NON-E2E test file — the owner's scope decision
+            // invalidates evidence on ANY tests/ change, bUnit included; an implementation that
+            // only watches tests/Tempo.Blazor.E2E/ under-enforces the recorded policy.
+            FullCloneFactAttribute.RunGit(worktree, "reset", "--hard", evidenceCommit);
+            string bunitProbe = Path.Combine(
+                worktree, "tests", "Tempo.Blazor.Tests", "StalenessProbeTests.cs");
+            File.WriteAllText(bunitProbe, "// staleness probe — fixture only\n");
+            CommitAll(worktree, "probe: bUnit test change after evidence");
+            string staleTests = WriteEvidence(fixtureDir, evidenceCommit);
+            ReleaseScriptInputReadTests.ScriptResult staleTestsResult =
+                RunVerifier(worktree, staleTests);
+            Dump("tests/Tempo.Blazor.Tests change after evidence", staleTestsResult);
+            staleTestsResult.Exit.Should().Be(1,
+                $"a non-E2E tests/ change after the evidence commit must refuse — "
+                + $"DEC-TEMPO-RELEASE-EVIDENCE-SCOPE covers bUnit explicitly "
+                + $"({staleTestsResult.Combined})");
+            staleTestsResult.Combined.Should().Contain(
+                "tests/Tempo.Blazor.Tests/StalenessProbeTests.cs",
+                "the refusal must name the offending path");
+
+            // (6) undo the tests/ probe and change only CHANGELOG.md — *.md is allowed.
             FullCloneFactAttribute.RunGit(worktree, "reset", "--hard", evidenceCommit);
             string changelog = Path.Combine(worktree, "CHANGELOG.md");
             File.AppendAllText(changelog, "\n<!-- staleness probe — fixture only -->\n");
@@ -201,8 +224,22 @@ public sealed class ReleaseEvidenceTests
             ReleaseScriptInputReadTests.ScriptResult staleDocResult = RunVerifier(worktree, staleDoc);
             Dump("CHANGELOG-only change after evidence", staleDocResult);
             staleDocResult.Exit.Should().Be(0,
-                $"a CHANGELOG.md-only diff after the evidence commit must pass — policy (B) "
-                + $"exempts it ({staleDocResult.Combined})");
+                $"a CHANGELOG.md-only diff after the evidence commit must pass — *.md is inside "
+                + $"the allowed list ({staleDocResult.Combined})");
+
+            // (7) undo the changelog probe and change a workflow file — .github/ is inside the
+            // owner's allowed list (CI definition is not compiled into the package).
+            FullCloneFactAttribute.RunGit(worktree, "reset", "--hard", evidenceCommit);
+            string workflow = Path.Combine(
+                worktree, ".github", "workflows", "publish-nuget-org.yml");
+            File.AppendAllText(workflow, "\n# staleness probe — fixture only\n");
+            CommitAll(worktree, "probe: workflow change after evidence");
+            string staleCi = WriteEvidence(fixtureDir, evidenceCommit);
+            ReleaseScriptInputReadTests.ScriptResult staleCiResult = RunVerifier(worktree, staleCi);
+            Dump(".github/workflows change after evidence", staleCiResult);
+            staleCiResult.Exit.Should().Be(0,
+                $"a .github/ diff after the evidence commit must pass — the owner allowlists "
+                + $"CI definition files ({staleCiResult.Combined})");
         }
         finally
         {
