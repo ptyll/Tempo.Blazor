@@ -29,7 +29,7 @@ namespace Tempo.Blazor.Tests.Packaging;
 /// </remarks>
 public sealed class ReleaseGateFilterTests
 {
-    private static readonly string[] WorkflowRelativePaths =
+    internal static readonly string[] WorkflowRelativePaths =
     [
         Path.Combine(".github", "workflows", "publish-nuget.yml"),
         Path.Combine(".github", "workflows", "publish-nuget-org.yml"),
@@ -983,7 +983,7 @@ public sealed class ReleaseGateFilterTests
     /// splitter that started at the top of the file would report them as jobs and dilute the
     /// population that the caller asserts on.
     /// </summary>
-    private static IReadOnlyList<(string Name, string Body)> JobSegments(string workflowCode)
+    internal static IReadOnlyList<(string Name, string Body)> JobSegments(string workflowCode)
     {
         var jobsKey = System.Text.RegularExpressions.Regex.Match(workflowCode, @"^jobs:\s*$",
             System.Text.RegularExpressions.RegexOptions.Multiline);
@@ -1093,7 +1093,7 @@ public sealed class ReleaseGateFilterTests
     /// two different notions of "code".
     /// </para>
     /// </summary>
-    private static string ReadWorkflowCode(string relativePath) =>
+    internal static string ReadWorkflowCode(string relativePath) =>
         StripYamlComments(ReadRepoFile(relativePath));
 
     /// <summary>Drops every line whose first non-blank character is <c>#</c>.</summary>
@@ -1206,7 +1206,7 @@ public sealed class ReleaseGateFilterTests
         return filters;
     }
 
-    private static string ReadRepoFile(string relativePath)
+    internal static string ReadRepoFile(string relativePath)
     {
         string root = FindRepoRoot();
         string path = Path.Combine(root, relativePath);

@@ -195,6 +195,12 @@ jobs:
   publish:
     needs: build-and-test
     runs-on: ubuntu-latest
+    # DEC-TEMPO-NUGET-ENVIRONMENT (F4): the job that can push packages runs inside the GitHub
+    # Environment `nuget-org`, whose required reviewer is the owner (ptyll) — a tag push or a
+    # workflow_dispatch then cannot reach eng/push-nuget-packages.sh without human approval.
+    # Until the environment is created in GitHub UI (manual owner task, N206) this line already
+    # fails CLOSED: GitHub refuses the job with "Environment not found", it does not publish.
+    environment: nuget-org
     # Publikujeme jen na verzovaném tagu (release, refs/tags/v*) nebo při ručním spuštění -
     # NE na každý push do main/master (ten jen builduje a testuje). Verzi řídí tag / csproj.
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
