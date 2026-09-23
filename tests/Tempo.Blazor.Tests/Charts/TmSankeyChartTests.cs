@@ -229,7 +229,11 @@ public class TmSankeyChartTests : LocalizationTestBase
             .Should().BeEmpty();
 
         node.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = "Enter" });
+        // Space activates on KEYUP (keyboard-activation-convention) — the keydown
+        // alone must not fire the click.
         link.TriggerEvent("onkeydown", new KeyboardEventArgs { Key = " " });
+        clickedLink.Should().BeNull("Space keydown must not activate — the release does");
+        link.TriggerEvent("onkeyup", new KeyboardEventArgs { Key = " " });
 
         clickedNode.Should().BeSameAs(data.Nodes[1]);
         clickedLink.Should().BeSameAs(data.Links[1]);

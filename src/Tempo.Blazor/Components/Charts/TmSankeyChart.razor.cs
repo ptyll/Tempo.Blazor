@@ -180,6 +180,12 @@ public partial class TmSankeyChart
                         this,
                         args => HandleLinkKeyDownAsync(args, layout.Link)));
                 builder.AddAttribute(
+                    100,
+                    "onkeyup",
+                    EventCallback.Factory.Create<KeyboardEventArgs>(
+                        this,
+                        args => HandleLinkKeyUpAsync(args, layout.Link)));
+                builder.AddAttribute(
                     15,
                     "onfocus",
                     EventCallback.Factory.Create<FocusEventArgs>(
@@ -248,6 +254,12 @@ public partial class TmSankeyChart
                     EventCallback.Factory.Create<KeyboardEventArgs>(
                         this,
                         args => HandleNodeKeyDownAsync(args, layout.Node)));
+                builder.AddAttribute(
+                    100,
+                    "onkeyup",
+                    EventCallback.Factory.Create<KeyboardEventArgs>(
+                        this,
+                        args => HandleNodeKeyUpAsync(args, layout.Node)));
                 builder.AddAttribute(
                     14,
                     "onfocus",
@@ -389,14 +401,21 @@ public partial class TmSankeyChart
     private Task HandleLinkClickAsync(SankeyLink link) =>
         OnLinkClick.HasDelegate ? OnLinkClick.InvokeAsync(link) : Task.CompletedTask;
 
+    // The <rect>/<path> activatables are non-native focusables (role="button" + tabindex) —
+    // the emulation is required and follows the native <button> split exactly
+    // (docs/keyboard-activation-convention.md): Enter fires on keydown (!Repeat-guarded —
+    // a held Enter's auto-repeat stream must not re-fire), Space fires on keyup only.
     private Task HandleNodeKeyDownAsync(KeyboardEventArgs args, SankeyNode node) =>
-        IsActivationKey(args) ? HandleNodeClickAsync(node) : Task.CompletedTask;
+        args.Key == "Enter" && !args.Repeat ? HandleNodeClickAsync(node) : Task.CompletedTask;
 
     private Task HandleLinkKeyDownAsync(KeyboardEventArgs args, SankeyLink link) =>
-        IsActivationKey(args) ? HandleLinkClickAsync(link) : Task.CompletedTask;
+        args.Key == "Enter" && !args.Repeat ? HandleLinkClickAsync(link) : Task.CompletedTask;
 
-    private static bool IsActivationKey(KeyboardEventArgs args) =>
-        args.Key is "Enter" or " " or "Spacebar" || args.Code == "Space";
+    private Task HandleNodeKeyUpAsync(KeyboardEventArgs args, SankeyNode node) =>
+        args.Key == " " ? HandleNodeClickAsync(node) : Task.CompletedTask;
+
+    private Task HandleLinkKeyUpAsync(KeyboardEventArgs args, SankeyLink link) =>
+        args.Key == " " ? HandleLinkClickAsync(link) : Task.CompletedTask;
 
     private void HighlightNode(string nodeId)
     {

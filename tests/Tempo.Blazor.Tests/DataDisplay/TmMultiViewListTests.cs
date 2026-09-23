@@ -78,6 +78,76 @@ public class TmMultiViewListTests : LocalizationTestBase
         clicked.Should().NotBeNull();
     }
 
+    // ── Keyboard activation (keyboard-activation-convention) ────────────────
+    // Rows/cards/items are non-native focusables — Enter fires on keydown (repeat-
+    // guarded), Space fires on keyup only. Native children inside them are fenced.
+
+    [Fact]
+    public void MultiViewList_RowEnterKeyDown_FiresItemClick()
+    {
+        TestItem? clicked = null;
+        var cut = Render<TmMultiViewList<TestItem>>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.OnItemClick, (TestItem item) => clicked = item));
+
+        cut.FindAll(".tm-mvl-row").First()
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        clicked.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MultiViewList_RowRepeatedEnterKeydown_DoesNotRefire()
+    {
+        var clicks = 0;
+        var cut = Render<TmMultiViewList<TestItem>>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.OnItemClick, (TestItem _) => clicks++));
+
+        cut.FindAll(".tm-mvl-row").First()
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        clicks.Should().Be(0, "a held Enter's auto-repeat stream must not re-fire the click");
+    }
+
+    [Fact]
+    public void MultiViewList_RowSpaceKeyUp_FiresItemClick_KeydownDoesNot()
+    {
+        TestItem? clicked = null;
+        var cut = Render<TmMultiViewList<TestItem>>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.OnItemClick, (TestItem item) => clicked = item));
+
+        cut.FindAll(".tm-mvl-row").First()
+            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        clicked.Should().BeNull("Space keydown must not activate — the release does");
+        // Re-find: every dispatched event completes with a re-render, so the
+        // previously found element's handler IDs are stale by now.
+        cut.FindAll(".tm-mvl-row").First()
+            .KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+
+        clicked.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MultiViewList_SelectCheckbox_SpaceKeyUp_DoesNotFireItemClick()
+    {
+        // The selection cell's keydown fence needs the matching keyup barrier — a
+        // bubbled Space release off the checkbox would otherwise fire the row click
+        // on top of the checkbox's own toggle.
+        var clicks = 0;
+        var cut = Render<TmMultiViewList<TestItem>>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.AllowSelection, true)
+            .Add(c => c.OnItemClick, (TestItem _) => clicks++));
+
+        var checkbox = cut.Find(".tm-mvl-col-select input[type='checkbox']");
+        var act = () => checkbox.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        act.Should().Throw<Bunit.MissingEventHandlerException>(
+            "the selection cell must isolate its keyup from the row's Space handler");
+        clicks.Should().Be(0);
+    }
+
     [Fact]
     public void MultiViewList_TableView_RendersColumns()
     {

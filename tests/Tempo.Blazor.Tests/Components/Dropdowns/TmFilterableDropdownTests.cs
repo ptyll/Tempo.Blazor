@@ -281,10 +281,29 @@ public class TmFilterableDropdownTests : LocalizationTestBase
             .Add(c => c.Items, FruitOptions)
             .Add(c => c.DisplayField, o => o.Label));
 
-        cut.Find(".tm-filterable-dropdown-trigger")
-            .KeyDown(new KeyboardEventArgs { Key = " " });
+        // Space activates on KEYUP, matching the native <button> contract
+        // (docs/keyboard-activation-convention.md) — the keydown must not toggle.
+        cut.Find(".tm-filterable-dropdown-trigger").KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty(
+            "Space keydown must not toggle — activation lives on the release");
+        // Re-find: the keydown completed with a re-render, rotating handler IDs.
+        cut.Find(".tm-filterable-dropdown-trigger").KeyUp(new KeyboardEventArgs { Key = " " });
 
         cut.FindAll(".tm-filterable-dropdown-menu").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_RepeatedEnter_On_Trigger_DoesNotToggle()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger")
+            .KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty(
+            "a held Enter's auto-repeat stream must not re-toggle on every repeat");
     }
 
     [Fact]
@@ -324,6 +343,27 @@ public class TmFilterableDropdownTests : LocalizationTestBase
 
         selections.Should().HaveCount(1);
         selections[0].Should().BeNull();
+        cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_Space_On_Clear_Button_DoesNotToggle()
+    {
+        // Space activation moved to keyup — the clear button's keydown fence needs the
+        // matching keyup barrier or the release bubbles into the trigger's toggle
+        // (keyboard-activation-convention: "a bubbled Space keyup off a nested control
+        // would otherwise fire the container's activation on top of the child's own").
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.Value, FruitOptions[0])
+            .Add(c => c.DisplayField, o => o.Label)
+            .Add(c => c.ShowClearButton, true));
+
+        var clear = cut.Find(".tm-filterable-dropdown-clear");
+        var act = () => clear.KeyUp(new KeyboardEventArgs { Key = " " });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the clear button must also isolate its keyup from the trigger's Space handler");
+
         cut.FindAll(".tm-filterable-dropdown-menu").Should().BeEmpty();
     }
 

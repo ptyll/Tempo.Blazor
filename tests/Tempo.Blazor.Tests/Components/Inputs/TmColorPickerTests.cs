@@ -70,10 +70,28 @@ public class TmColorPickerTests : LocalizationTestBase
         trigger = cut.Find(".tm-color-picker-trigger");
         trigger.GetAttribute("aria-expanded").Should().Be("true");
 
+        // Space activates on KEYUP, matching the native <button> contract
+        // (docs/keyboard-activation-convention.md) — the keydown itself must not toggle.
         trigger.KeyDown(new KeyboardEventArgs { Key = " " });
+        cut.FindAll(".tm-color-picker-dropdown").Should().HaveCount(1,
+            "Space keydown must not toggle — activation lives on the release");
+        // Re-find: the keydown completed with a re-render, rotating handler IDs.
+        cut.Find(".tm-color-picker-trigger").KeyUp(new KeyboardEventArgs { Key = " " });
 
         cut.FindAll(".tm-color-picker-dropdown").Should().BeEmpty();
         cut.Find(".tm-color-picker-trigger").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void TmColorPicker_RepeatedEnterKeydown_DoesNotToggle()
+    {
+        // A held Enter emits auto-repeat keydowns; the guard bounds activation to the real
+        // press so holding the key cannot open-and-close the dropdown in one gesture.
+        var cut = Render<TmColorPicker>();
+
+        cut.Find(".tm-color-picker-trigger").KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+
+        cut.FindAll(".tm-color-picker-dropdown").Should().BeEmpty();
     }
 
     [Fact]

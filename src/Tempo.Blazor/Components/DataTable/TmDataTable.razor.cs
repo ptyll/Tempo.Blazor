@@ -1968,6 +1968,7 @@ public partial class TmDataTable<TItem> : IDisposable
                         builder.AddAttribute(seq++, "tabindex", "0");
                         builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleRowClickAsync(rowItem)));
                         builder.AddAttribute(seq++, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleRowKeyDownAsync(e, rowItem)));
+                        builder.AddAttribute(seq++, "onkeyup", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => HandleRowKeyUpAsync(e, rowItem)));
                         builder.AddMultipleAttributes(seq++, GetRowAttributes(rowItem));
 
                         if (HasDetail)
@@ -1988,8 +1989,12 @@ public partial class TmDataTable<TItem> : IDisposable
                             builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => ToggleRowSelectionAsync(rowItem, e)));
                             // Same barriers as the ungrouped checkboxes: the row is a
                             // non-native focusable that emulates Enter/Space, so this
-                            // native control's keydown/click must not leak into it.
+                            // native control's keydown/keyup/click must not leak into it.
+                            // The keyup barrier is required too — Space activates on the
+                            // release, so a keydown-only fence would still leak the Space
+                            // keyup into the row's click handler.
                             builder.AddEventStopPropagationAttribute(seq++, "onkeydown", true);
+                            builder.AddEventStopPropagationAttribute(seq++, "onkeyup", true);
                             builder.AddEventStopPropagationAttribute(seq++, "onclick", true);
                             builder.CloseElement(); // input
                             builder.CloseElement(); // td
@@ -2095,9 +2100,22 @@ public partial class TmDataTable<TItem> : IDisposable
 
     private Task HandleRowClickAsync(TItem item) => OnRowClick.InvokeAsync(item);
 
+    // The <tr> is a non-native focusable — the emulation is required, and it follows the
+    // native <button> split exactly (docs/keyboard-activation-convention.md): Enter fires
+    // on keydown (the !Repeat guard bounds it to the real press — a held Enter's auto-repeat
+    // stream must not re-fire the click), Space fires on keyup only. Native children inside
+    // the row (selection checkbox, expander, edit-start) fence BOTH their keydowns and
+    // keyups so their own activation never reaches these handlers.
     private Task HandleRowKeyDownAsync(KeyboardEventArgs e, TItem item)
     {
-        if (e.Key is "Enter" or " ")
+        if (e.Key == "Enter" && !e.Repeat)
+            return HandleRowClickAsync(item);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleRowKeyUpAsync(KeyboardEventArgs e, TItem item)
+    {
+        if (e.Key == " ")
             return HandleRowClickAsync(item);
         return Task.CompletedTask;
     }

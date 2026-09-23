@@ -142,7 +142,10 @@ public partial class TmColorPicker
     }
 
     // Keyboard emulation is REQUIRED here: the trigger is a div[role=button], not a native
-    // <button>, so the browser never produces a click for Enter/Space on its own.
+    // <button>, so the browser never produces a click for Enter/Space on its own. Enter fires
+    // on KEYDOWN like a native button (the !Repeat guard bounds it to the real press — a held
+    // Enter's auto-repeat stream must not re-toggle); Space fires on KEYUP only, matching the
+    // native activation split exactly (docs/keyboard-activation-convention.md).
     private async Task HandleTriggerKeyDownAsync(KeyboardEventArgs args)
     {
         if (Disabled)
@@ -150,7 +153,7 @@ public partial class TmColorPicker
             return;
         }
 
-        if (IsActivationKey(args.Key))
+        if (args.Key == "Enter" && !args.Repeat)
         {
             await ToggleDropdownAsync();
         }
@@ -158,6 +161,19 @@ public partial class TmColorPicker
         // No Escape branch anywhere in this component: overlay.js consumes Escape in the window
         // capture phase and routes it through OnPanelOpenChangedAsync — a bubbling keydown case
         // could never run in a real browser (dead-branch sweep, N169 follow-up).
+    }
+
+    private async Task HandleTriggerKeyUpAsync(KeyboardEventArgs args)
+    {
+        if (Disabled)
+        {
+            return;
+        }
+
+        if (args.Key == " ")
+        {
+            await ToggleDropdownAsync();
+        }
     }
 
     /// <summary>
@@ -198,7 +214,4 @@ public partial class TmColorPicker
             await OpenChanged.InvokeAsync(false);
         }
     }
-
-    private static bool IsActivationKey(string? key)
-        => key is "Enter" or " " or "Space" or "Spacebar";
 }

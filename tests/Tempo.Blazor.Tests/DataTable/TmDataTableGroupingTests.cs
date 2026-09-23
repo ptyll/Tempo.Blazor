@@ -468,20 +468,36 @@ public class TmDataTableGroupingTests : LocalizationTestBase
         rowClicks.Should().Be(0);
     }
 
-    [Theory]
-    [InlineData("Enter")]
-    [InlineData(" ")]
-    public async Task DataTable_Grouped_RowKeyDown_FiresOnRowClickOnce(string key)
+    [Fact]
+    public async Task DataTable_Grouped_RowEnterKeyDown_FiresOnRowClickOnce()
     {
-        // Ungrouped rows are <tr tabindex="0"> mapping Enter/Space to
-        // OnRowClick — a legitimate emulation on a non-native focusable.
-        // Grouped leaf rows must offer the same contract.
+        // Ungrouped rows are <tr tabindex="0"> mapping Enter to OnRowClick on keydown —
+        // a legitimate emulation on a non-native focusable. Grouped leaf rows must
+        // offer the same contract.
         var clicks = new List<GroupPerson>();
         var cut = await RenderSelectableGroupedTable(clicks.Add, _ => { });
 
         var row = FirstGroupedLeafRow(cut);
         row.GetAttribute("tabindex").Should().Be("0");
-        row.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = key });
+        row.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+        clicks.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task DataTable_Grouped_RowSpaceKeyUp_FiresOnRowClickOnce()
+    {
+        // Space activates on KEYUP (keyboard-activation-convention): the grouped row's
+        // keydown must not click, the release must.
+        var clicks = new List<GroupPerson>();
+        var cut = await RenderSelectableGroupedTable(clicks.Add, _ => { });
+
+        var row = FirstGroupedLeafRow(cut);
+        row.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        clicks.Should().BeEmpty("Space keydown must not activate — activation lives on the release");
+        // Re-find: every dispatched event completes with a re-render, so the
+        // previously found element's handler IDs are stale by now.
+        FirstGroupedLeafRow(cut).KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
 
         clicks.Should().HaveCount(1);
     }
@@ -499,6 +515,12 @@ public class TmDataTableGroupingTests : LocalizationTestBase
         var act = () => checkbox.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>(
             "the grouped selection checkbox isolates its keydown from the row's Enter/Space handler");
+
+        // Space activation moved to keyup — the cell needs the matching keyup barrier or
+        // the release would bubble into the row's click handler (same convention rule).
+        var keyUp = () => checkbox.KeyUp(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = " " });
+        keyUp.Should().Throw<MissingEventHandlerException>(
+            "the grouped selection checkbox must also isolate its keyup from the row's Space handler");
 
         rowClicks.Should().Be(0);
     }

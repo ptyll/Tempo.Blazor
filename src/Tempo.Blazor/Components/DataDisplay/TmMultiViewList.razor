@@ -1076,10 +1076,21 @@
 
     // Keyboard emulation is REQUIRED here (unlike on TmButton): the clickable
     // rows/cards/items are <tr>/<div>/<li> elements, not native <button>, so
-    // the browser never produces a click for Enter/Space on its own.
+    // the browser never produces a click for Enter/Space on its own. It follows
+    // the native <button> split exactly (docs/keyboard-activation-convention.md):
+    // Enter fires on keydown (the !Repeat guard bounds it to the real press),
+    // Space fires on keyup only. Native children inside the rows (the selection
+    // checkbox cells) fence both their keydowns and keyups.
     private Task HandleItemKeyDownAsync(KeyboardEventArgs e, TItem item)
     {
-        if (e.Key is "Enter" or " ")
+        if (e.Key == "Enter" && !e.Repeat)
+            return OnItemClick.InvokeAsync(item);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleItemKeyUpAsync(KeyboardEventArgs e, TItem item)
+    {
+        if (e.Key == " ")
             return OnItemClick.InvokeAsync(item);
         return Task.CompletedTask;
     }
@@ -1093,11 +1104,12 @@
             draggable="@(AllowDrag ? "true" : "false")"
             @onclick="() => OnItemClick.InvokeAsync(item)"
             @onkeydown="e => HandleItemKeyDownAsync(e, item)"
+            @onkeyup="e => HandleItemKeyUpAsync(e, item)"
             @ondragstart="() => HandleDragStartAsync(item)"
             @ondragend="HandleDragEnd">
             @if (AllowSelection)
             {
-                <td class="tm-mvl-col-select" @onclick:stopPropagation @onkeydown:stopPropagation>
+                <td class="tm-mvl-col-select" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
                     <input type="checkbox"
                            class="tm-mvl-checkbox"
                            checked="@selected"
@@ -1221,13 +1233,14 @@
              draggable="@(AllowDrag ? "true" : "false")"
              @onclick="() => OnItemClick.InvokeAsync(item)"
              @onkeydown="e => HandleItemKeyDownAsync(e, item)"
+             @onkeyup="e => HandleItemKeyUpAsync(e, item)"
              @ondragstart="() => HandleDragStartAsync(item)"
              @ondragend="HandleDragEnd">
             @if (CardTemplate is not null)
             {
                 @if (AllowSelection)
                 {
-                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation>
+                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
                         <input type="checkbox"
                                class="tm-mvl-checkbox"
                                checked="@selected"
@@ -1240,7 +1253,7 @@
             {
                 @if (AllowSelection)
                 {
-                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation>
+                    <div class="tm-mvl-card-select-row" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
                         <input type="checkbox"
                                class="tm-mvl-checkbox"
                                checked="@selected"
@@ -1284,11 +1297,12 @@
             draggable="@(AllowDrag ? "true" : "false")"
             @onclick="() => OnItemClick.InvokeAsync(item)"
             @onkeydown="e => HandleItemKeyDownAsync(e, item)"
+            @onkeyup="e => HandleItemKeyUpAsync(e, item)"
             @ondragstart="() => HandleDragStartAsync(item)"
             @ondragend="HandleDragEnd">
             @if (AllowSelection)
             {
-                <div class="tm-mvl-list-select" @onclick:stopPropagation @onkeydown:stopPropagation>
+                <div class="tm-mvl-list-select" @onclick:stopPropagation @onkeydown:stopPropagation @onkeyup:stopPropagation>
                     <input type="checkbox"
                            class="tm-mvl-checkbox"
                            checked="@selected"

@@ -15,7 +15,8 @@
          aria-haspopup="listbox"
          @ref="_triggerRef"
          @onclick="ToggleAsync"
-         @onkeydown="HandleTriggerKeyDownAsync">
+         @onkeydown="HandleTriggerKeyDownAsync"
+         @onkeyup="HandleTriggerKeyUpAsync">
         @if (Value is null || IsEmptyValue(Value))
         {
             <span class="tm-filterable-dropdown-placeholder">@(Placeholder ?? Loc["TmFilterableDropdown_Placeholder"])</span>
@@ -31,7 +32,8 @@
                     aria-label="@Loc["TmFilterableDropdown_ClearSelection"]"
                     @onclick="ClearValueAsync"
                     @onclick:stopPropagation="true"
-                    @onkeydown:stopPropagation="true">
+                    @onkeydown:stopPropagation="true"
+                    @onkeyup:stopPropagation="true">
                 ✕
             </button>
         }
@@ -290,13 +292,16 @@
 
     // The trigger is a non-native focusable (role="combobox"), so keyboard
     // activation is legitimate emulation here — matching TmMultiSelect's
-    // trigger. The nested clear <button> stops its keydowns from reaching this
-    // handler (@onkeydown:stopPropagation), so Enter on it only clears.
+    // trigger. Enter fires on KEYDOWN (the !Repeat guard bounds it to the real
+    // press); Space fires on KEYUP only — the native <button> split exactly
+    // (docs/keyboard-activation-convention.md). The nested clear <button> stops
+    // both its keydowns and keyups from reaching these handlers, so Enter/Space
+    // on it only clears.
     private async Task HandleTriggerKeyDownAsync(KeyboardEventArgs e)
     {
         switch (e.Key)
         {
-            case "Enter" or " ":
+            case "Enter" when !e.Repeat:
                 await ToggleAsync();
                 break;
             // No Escape branch anywhere in this component: overlay.js consumes Escape in the
@@ -305,6 +310,14 @@
             case "ArrowDown" when !_isOpen:
                 await ToggleAsync();
                 break;
+        }
+    }
+
+    private async Task HandleTriggerKeyUpAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == " ")
+        {
+            await ToggleAsync();
         }
     }
 
