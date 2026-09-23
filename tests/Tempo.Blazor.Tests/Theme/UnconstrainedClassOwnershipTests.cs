@@ -82,6 +82,10 @@ public class UnconstrainedClassOwnershipTests
     /// cried wolf over every table in the library. Two claims through DISJOINT non-empty ancestor
     /// sets never contest the same box, and reporting them is how a sweep cries wolf over
     /// components that legitimately style their own markup.
+    /// LIMIT (N142): two claims through DISJOINT non-empty class-ancestor sets are never marked
+    /// fighting, even when the regions are NESTED (<c>.tm-a .tm-x</c> vs <c>.tm-b .tm-x</c> both
+    /// match <c>.tm-a .tm-b .tm-x</c>) — a deliberate noise heuristic (see the reasoning above),
+    /// fail-open for that specific shape.
     /// </summary>
     private static bool RegionsCanFight(IReadOnlySet<string> first, IReadOnlySet<string> second) =>
         first.Count == 0 || second.Count == 0
@@ -252,6 +256,68 @@ public class UnconstrainedClassOwnershipTests
     }
 
     /// <summary>
+    /// N170 — the skipped-selector population, measured rather than assumed. <see cref="TryClaim"/>
+    /// and <see cref="TryModifierClaim"/> return <c>null</c> for deliberately-out-of-model selectors
+    /// (attributes, ids, sibling combinators, subject pseudos — the bulk: measured 2026-09-23 at
+    /// ~1500 parts, nearly all <c>tm-*</c> with a state/element tail) AND for unparseable ones: a
+    /// functional pseudo carrying a comma (<c>:is(a, b)</c>, <c>:where(…)</c>) is sliced
+    /// mid-argument by <see cref="ThemeCss.SelectorParts"/>, leaving fragments with UNBALANCED
+    /// parens that <c>null</c>-out silently. The contract this pins: ZERO unparseable fragments —
+    /// a sliced claim is a collision the sweep would never report, so its count must be empty over
+    /// the production tree. Total skipped is reported in the message so the population stays
+    /// visible.
+    /// </summary>
+    [Fact]
+    public void SkippedSelectorCountIsZero_OverCurrentStylesheets()
+    {
+        var ownershipSkipped = new List<(string Stylesheet, string Selector)>();
+        _ = Collisions(ownershipSkipped);
+        var modifierSkipped = new List<(string Stylesheet, string Selector)>();
+        _ = ModifierClaims(modifierSkipped);
+
+        var all = ownershipSkipped.Concat(modifierSkipped).ToList();
+        var unparseable = all.Where(s => IsUnparseableFragment(s.Selector)).ToList();
+
+        unparseable.Should().BeEmpty(
+            "a selector part with unbalanced parens is a functional pseudo sliced mid-argument — "
+            + "an UNPARSEABLE claim the sweep silently dropped (N170). {0} unparseable of {1} skipped: {2}",
+            unparseable.Count,
+            all.Count,
+            string.Join(" | ", unparseable.Take(10).Select(s => $"{s.Stylesheet}: {s.Selector}")));
+    }
+
+    /// <summary>
+    /// Whether a skipped selector part is a fragment of a comma-sliced functional pseudo: parens
+    /// that don't balance mean <see cref="ThemeCss.SelectorParts"/> cut a <c>:is(…)</c>/<c>:where(…)</c>/
+    /// <c>:not(…)</c> argument list in two (its comma split is argument-blind). A balanced
+    /// functional pseudo stays one part, so parens alone are not the marker — imbalance is.
+    /// </summary>
+    private static bool IsUnparseableFragment(string selector) =>
+        selector.Count(ch => ch == '(') != selector.Count(ch => ch == ')');
+
+    /// <summary>
+    /// N170 mutation proof: a <c>:is(a, b)</c> rule fed straight into the collectors must land in
+    /// the skipped list as unparseable fragments — if the counter ever stops counting, this goes
+    /// red instead of the silent null-return regression it guards.
+    /// </summary>
+    [Fact]
+    public void TheSkippedCounterSeesACommaSlicedFunctionalPseudo()
+    {
+        const string mutant = ":is(a, b) { transition: opacity 0.2s; }";
+
+        var ownershipSkipped = new List<(string Stylesheet, string Selector)>();
+        Collect("mutant.css", mutant, NewDeclarations(), ownershipSkipped);
+        var modifierSkipped = new List<(string Stylesheet, string Selector)>();
+        CollectModifierClaims("mutant.css", mutant, [], modifierSkipped);
+
+        ownershipSkipped.Where(s => IsUnparseableFragment(s.Selector)).Should().NotBeEmpty(
+            "SelectorParts slices ':is(a, b)' at the comma — the ownership collector must record "
+            + "the fragments as skipped, not swallow them");
+        modifierSkipped.Where(s => IsUnparseableFragment(s.Selector)).Should().NotBeEmpty(
+            "the modifier collector must record the same fragments");
+    }
+
+    /// <summary>
     /// Mutation, both directions: an invented duplicate must be seen, and a state-constrained
     /// duplicate must NOT be — a state is a condition on the same owner, not a competing claim.
     /// </summary>
@@ -356,7 +422,8 @@ public class UnconstrainedClassOwnershipTests
     private static Dictionary<string, Dictionary<string, List<Claim>>> NewDeclarations() =>
         new(StringComparer.Ordinal);
 
-    private static IReadOnlyList<Collision> Collisions()
+    private static IReadOnlyList<Collision> Collisions(
+        List<(string Stylesheet, string Selector)>? skipped = null)
     {
         var declarations = NewDeclarations();
         foreach (var project in ComponentCssProjects)
@@ -370,7 +437,7 @@ public class UnconstrainedClassOwnershipTests
 
             foreach (var file in Directory.EnumerateFiles(dir, "*.css").Order(StringComparer.Ordinal))
             {
-                Collect($"{project}/{Path.GetFileName(file)}", File.ReadAllText(file), declarations);
+                Collect($"{project}/{Path.GetFileName(file)}", File.ReadAllText(file), declarations, skipped);
             }
         }
 
@@ -386,6 +453,13 @@ public class UnconstrainedClassOwnershipTests
     /// compound that is not a pure class/element — a <c>:hover</c> there is a condition, not a
     /// claim). A compound is normalised to <c>tag + its classes sorted</c>, so <c>.tm-b.tm-a</c>
     /// and <c>.tm-a.tm-b</c> claim the same subject.
+    /// LIMIT (N170): an UNPARSEABLE selector returns <c>null</c> exactly like a deliberate reject —
+    /// a functional pseudo carrying a comma (<c>:is(a, b)</c>) is sliced mid-argument by
+    /// <see cref="ThemeCss.SelectorParts"/> and the fragments drop here silently, unlike
+    /// <see cref="CssCascade"/>'s <c>Unmodelled</c> channel which reports the same shape. None
+    /// exists in the swept tree today (no comma-bearing functional pseudo in
+    /// <c>src/Tempo.Blazor/**/*.css</c>, measured 2026-09-22);
+    /// <see cref="SkippedSelectorCountIsZero_OverCurrentStylesheets"/> asserts the population.
     /// </summary>
     private static (string Subject, Claim Claim)? TryClaim(
         string selector,
@@ -466,10 +540,17 @@ public class UnconstrainedClassOwnershipTests
     }
 
     /// <summary>Records every ownership claim of one stylesheet, keeping the media condition it sits under.</summary>
+    /// <param name="skipped">
+    /// N170 — when non-null, every selector part <see cref="TryClaim"/> rejects is appended here so
+    /// the sweep's caller can assert the population of silently-dropped selectors (an unparseable
+    /// selector — a functional pseudo sliced mid-argument, say — returns <c>null</c> exactly like a
+    /// deliberately-out-of-model one, and only a counted population keeps the difference visible).
+    /// </param>
     private static void Collect(
         string stylesheet,
         string css,
-        Dictionary<string, Dictionary<string, List<Claim>>> declarations)
+        Dictionary<string, Dictionary<string, List<Claim>>> declarations,
+        List<(string Stylesheet, string Selector)>? skipped = null)
     {
         foreach (var rule in CssCascade.ParseRules(ThemeCss.StripComments(css)))
         {
@@ -488,6 +569,7 @@ public class UnconstrainedClassOwnershipTests
                 var claimed = TryClaim(part, rule.MediaCondition, properties);
                 if (claimed is null)
                 {
+                    skipped?.Add((stylesheet, part));
                     continue;
                 }
 
@@ -864,7 +946,8 @@ public class UnconstrainedClassOwnershipTests
 
     /// <summary>All claims of one stylesheet and all <c>*.razor.css</c> scoped sheets — the scoped
     /// selectors gain a uniform <c>[b-*]</c> at build time, so comparisons inside them stay faithful.</summary>
-    private static List<ModifierClaim> ModifierClaims()
+    private static List<ModifierClaim> ModifierClaims(
+        List<(string Stylesheet, string Selector)>? skipped = null)
     {
         var claims = new List<ModifierClaim>();
         var root = ThemeCss.RepositoryRoot().FullName;
@@ -878,7 +961,7 @@ public class UnconstrainedClassOwnershipTests
 
             foreach (var file in Directory.EnumerateFiles(dir, "*.css").Order(StringComparer.Ordinal))
             {
-                CollectModifierClaims($"{project}/{Path.GetFileName(file)}", File.ReadAllText(file), claims);
+                CollectModifierClaims($"{project}/{Path.GetFileName(file)}", File.ReadAllText(file), claims, skipped);
             }
         }
 
@@ -886,14 +969,19 @@ public class UnconstrainedClassOwnershipTests
                      .Order(StringComparer.Ordinal))
         {
             var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
-            CollectModifierClaims($"scoped:{relative}", File.ReadAllText(file), claims);
+            CollectModifierClaims($"scoped:{relative}", File.ReadAllText(file), claims, skipped);
         }
 
         return claims;
     }
 
+    /// <param name="skipped">
+    /// N170 — when non-null, every selector part <see cref="TryModifierClaim"/> rejects is appended
+    /// here so the sweep's caller can assert the population of silently-dropped selectors.
+    /// </param>
     private static void CollectModifierClaims(
-        string stylesheet, string css, List<ModifierClaim> claims)
+        string stylesheet, string css, List<ModifierClaim> claims,
+        List<(string Stylesheet, string Selector)>? skipped = null)
     {
         foreach (var rule in CssCascade.ParseRules(ThemeCss.StripComments(css)))
         {
@@ -916,6 +1004,10 @@ public class UnconstrainedClassOwnershipTests
                 {
                     claims.Add(claim);
                 }
+                else
+                {
+                    skipped?.Add((stylesheet, part));
+                }
             }
         }
     }
@@ -926,6 +1018,9 @@ public class UnconstrainedClassOwnershipTests
     /// non-descendant combinators), plus pseudo-elements on the subject (a <c>::before</c> is a
     /// different box, not the element). Pseudo-classes on the subject are kept: a state is still a
     /// claim, and only a <c>:not(…)</c> argument can exclude the modifier by name.
+    /// LIMIT (N170): same silent-null hole as <see cref="TryClaim"/> — a comma-sliced functional
+    /// pseudo's fragments (unbalanced parens) drop here without a report;
+    /// <see cref="SkippedSelectorCountIsZero_OverCurrentStylesheets"/> asserts none exist today.
     /// </summary>
     private static ModifierClaim? TryModifierClaim(
         string selector, string stylesheet, string? media, IReadOnlyDictionary<string, bool> props)

@@ -1234,6 +1234,16 @@ internal static class CssCascade
         return (layerName, tail.Length == 0 ? null : tail);
     }
 
+    /// <summary>
+    /// Joins an inherited media condition with a nested one. SCOPE LIMIT (N141): for a nested
+    /// <c>@media</c> with a comma-list on the INNER level
+    /// (<c>@media outer { @media b1, b2 {…} }</c>) this joins <c>outer</c> textually against the
+    /// whole list (<c>"outer and b1, b2"</c>) instead of the cartesian product
+    /// <c>[outer∧b1, outer∧b2]</c> — the mis-parse reports MORE conditions, never fewer, so the
+    /// sweep can never hide a collision through this hole. No such nested comma-list exists in the
+    /// swept <c>src/Tempo.Blazor</c> tree today (measured 2026-09-22); if one appears,
+    /// over-approximation reports it as a falsely-broader condition, not as none.
+    /// </summary>
     private static string JoinMedia(string? media, string condition)
         => media is null ? condition : media + " and " + condition;
 
