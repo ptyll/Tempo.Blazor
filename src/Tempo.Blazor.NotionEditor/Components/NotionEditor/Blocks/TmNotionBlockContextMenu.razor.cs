@@ -43,27 +43,54 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
     private bool _showPanelType;
     private bool _showColor;
     private bool _focusPending = true;
+    private Sub? _pendingSubFocus;
     private ElementReference _menuRef;
     private ElementReference _turnIntoTriggerRef;
     private ElementReference _panelTypeTriggerRef;
     private ElementReference _colorTriggerRef;
+    private ElementReference _turnIntoPanelRef;
+    private ElementReference _panelTypePanelRef;
+    private ElementReference _colorPanelRef;
 
     private bool HasCommentProvider => Context.CommentProvider is not null;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_focusPending)
-            return;
-
-        _focusPending = false;
-
-        try
+        if (_focusPending)
         {
-            await JS.InvokeVoidAsync("tmNotionEditor.positionContextMenu", _menuRef);
-            await JS.InvokeVoidAsync("tmNotionEditor.initFocusTrap", _menuRef);
+            _focusPending = false;
+
+            try
+            {
+                await JS.InvokeVoidAsync("tmNotionEditor.positionContextMenu", _menuRef);
+                await JS.InvokeVoidAsync("tmNotionEditor.initFocusTrap", _menuRef);
+            }
+            catch
+            {
+            }
         }
-        catch
+
+        // The submenu panel only exists in the DOM after the ArrowRight-triggered
+        // re-render — the focus hand-off must run here, not in the keydown handler.
+        if (_pendingSubFocus is { } pending)
         {
+            _pendingSubFocus = null;
+
+            var panel = pending switch
+            {
+                Sub.TurnInto  => _turnIntoPanelRef,
+                Sub.PanelType => _panelTypePanelRef,
+                _             => _colorPanelRef,
+            };
+
+            try
+            {
+                await JS.InvokeVoidAsync("tmNotionEditor.focusFirstMenuItem", panel);
+            }
+            catch
+            {
+                // Best-effort — a failed focus must never break the open itself.
+            }
         }
     }
 
@@ -162,6 +189,21 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
         {
             await CloseOpenSubAsync();
         }
+    }
+
+    private Task HandleSubTriggerKeyDownAsync(KeyboardEventArgs args, Sub sub)
+    {
+        // APG menu-button pattern: Right Arrow on a submenu trigger opens the submenu and
+        // lands focus on its first item. Enter/Space already open it through the button's
+        // native click — ArrowRight was the missing gesture. The handler lives on each
+        // trigger (not the bubbled container handler) because only the target element
+        // knows which submenu it owns.
+        if (!string.Equals(args.Key, "ArrowRight", StringComparison.Ordinal))
+            return Task.CompletedTask;
+
+        OpenSub(sub);
+        _pendingSubFocus = sub;
+        return Task.CompletedTask;
     }
 
     private async Task<bool> CloseOpenSubAsync()

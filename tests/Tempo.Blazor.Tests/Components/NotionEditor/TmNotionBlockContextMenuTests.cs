@@ -113,6 +113,28 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task ArrowRight_OnSubmenuTrigger_OpensSubmenu_AndFocusesFirstItem()
+    {
+        // 20D carry-forward (APG menu pattern): Right Arrow on a submenu trigger opens the
+        // submenu AND lands focus on its first item — Enter/Space already opened via the
+        // button click, Tab walked the items, but the arrow gesture was missing.
+        var focusFirst = JSInterop.SetupVoid("tmNotionEditor.focusFirstMenuItem", _ => true)
+            .SetVoidResult();
+
+        var cut = RenderMenu(CalloutBlock());
+        var turnInto = cut.FindAll("button[aria-haspopup='menu']").First();
+
+        await cut.InvokeAsync(() => turnInto.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" }));
+
+        cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1,
+            "ArrowRight on a submenu trigger must open its submenu like Enter/Space do");
+        cut.FindAll("button[aria-haspopup='menu']").First()
+            .GetAttribute("aria-expanded").Should().Be("true");
+        focusFirst.Invocations["tmNotionEditor.focusFirstMenuItem"].Should().HaveCount(1,
+            "the APG contract lands focus on the first submenu item, not just opens the panel");
+    }
+
+    [Fact]
     public void ArrowLeft_WithOpenSubmenu_ClosesOnlySubmenu()
     {
         var closed = false;

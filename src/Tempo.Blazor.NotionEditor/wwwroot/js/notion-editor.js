@@ -459,6 +459,15 @@ window.tmNotionEditor = (function () {
         _focusTraps.delete(container);
     }
 
+    // APG menu-button pattern: when a submenu trigger opens its panel (ArrowRight,
+    // Enter), focus lands on the panel's first item — an aria-expanded flip alone
+    // leaves the user outside the submenu they just opened.
+    function focusFirstMenuItem(panel) {
+        if (!panel) return;
+        const first = panel.querySelector('button:not([disabled])');
+        if (first) first.focus({ preventScroll: true });
+    }
+
     // Positions a fixed overlay menu at its anchor's viewport rect. The menu is
     // position:fixed (see .tm-notion-ctx) so that scrolling the notion-main column
     // cannot drag it out from under the pointer — an absolute menu inside the
@@ -3333,7 +3342,7 @@ window.tmNotionEditor = (function () {
         // 26.1
         initBlock, destroyBlock, getHtml, getEditableHtml, getCaretOffset, setCaretOffset, setHtml,
         focus, focusAtEnd, focusAtStart, focusAtOffset,
-        initFocusTrap, destroyFocusTrap, positionContextMenu,
+        initFocusTrap, destroyFocusTrap, positionContextMenu, focusFirstMenuItem,
         initEditorKeyHandler, destroyEditorKeyHandler,
         // 26.2
         getSelectionRange, getSelectionRect, applyFormat,
