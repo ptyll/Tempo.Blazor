@@ -1,12 +1,12 @@
 .tm-notion-token-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 999;
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
 }
 
 .tm-notion-token-dropdown {
     position: fixed;
-    z-index: 1000;
+    z-index: var(--tm-z-popover, 1030);
     --tm-floating-menu-max-height: 360px;
     min-width: 260px;
     max-width: 360px;

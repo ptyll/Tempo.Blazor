@@ -5,7 +5,7 @@
 .tm-media-dialog-backdrop {
     position:        fixed;
     inset:           0;
-    z-index:         1000;
+    z-index:         var(--tm-z-modal, 1040);
     background:      rgba(0, 0, 0, 0.45);
     display:         flex;
     align-items:     center;

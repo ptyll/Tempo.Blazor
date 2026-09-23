@@ -19,7 +19,7 @@
 .tm-dbt__drag-overlay {
     position: fixed;
     inset: 0;
-    z-index: 9999;
+    z-index: var(--tm-z-overlay, 1060);
     cursor: grabbing;
 }
 

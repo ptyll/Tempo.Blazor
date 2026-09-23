@@ -3,14 +3,14 @@
 .tm-notion-emoji-picker-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9996;
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
 }
 
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 
 .tm-notion-emoji-picker {
     position: fixed;
-    z-index: 9997;
+    z-index: var(--tm-z-popover, 1030);
     width: 352px;
     display: flex;
     flex-direction: column;

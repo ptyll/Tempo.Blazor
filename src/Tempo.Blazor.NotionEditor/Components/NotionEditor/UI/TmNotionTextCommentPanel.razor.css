@@ -3,7 +3,7 @@
 .tm-ntcp-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1020;
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
     background: transparent;
 }
 
@@ -11,7 +11,7 @@
 
 .tm-ntcp {
     position: fixed;
-    z-index: 1030;
+    z-index: var(--tm-z-popover, 1030);
     width: 300px;
     max-height: 480px;
     display: flex;

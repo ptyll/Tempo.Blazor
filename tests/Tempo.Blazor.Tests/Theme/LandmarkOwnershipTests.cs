@@ -36,9 +36,14 @@ public sealed class LandmarkOwnershipTests
     [Fact]
     public void NoShippedComponentEmitsMainLandmark()
     {
+        var population = ComponentMarkupFiles().ToList();
+        population.Should().NotBeEmpty(
+            "the landmark sweep must read a real markup population — an empty enumeration "
+            + "(moved src root, renamed package pattern) would pass vacuously");
+
         var offenders = new List<string>();
 
-        foreach (var file in ComponentMarkupFiles())
+        foreach (var file in population)
         {
             var markup = HtmlComment.Replace(
                 RazorComment.Replace(File.ReadAllText(file), string.Empty),

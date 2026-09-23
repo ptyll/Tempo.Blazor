@@ -3,7 +3,7 @@
 .tm-nps-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    z-index: calc(var(--tm-z-overlay, 1060) - 1);
     background: var(--tm-bg-overlay);
     backdrop-filter: blur(2px);
     animation: tm-nps-fade-in var(--tm-transition-fast);
@@ -19,7 +19,7 @@
 .tm-nps {
     position: fixed;
     inset: 0;
-    z-index: 10001;
+    z-index: var(--tm-z-overlay, 1060);
     display: flex;
     align-items: flex-start;
     justify-content: center;

@@ -1,6 +1,6 @@
 .tm-notion-ai {
     position: fixed;
-    z-index: calc(var(--tm-z-tooltip) + 9000);
+    z-index: var(--tm-z-popover, 1030);
     width: min(28rem, calc(100vw - var(--tm-space-4)));
     max-height: calc(100vh - var(--tm-space-6));
     overflow-y: auto;

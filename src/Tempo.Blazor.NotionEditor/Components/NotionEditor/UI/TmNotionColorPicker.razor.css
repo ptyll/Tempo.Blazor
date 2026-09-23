@@ -3,14 +3,14 @@
 .tm-notion-color-picker-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9997;
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
 }
 
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 
 .tm-notion-color-picker {
     position: fixed;
-    z-index: 9998;
+    z-index: var(--tm-z-popover, 1030);
     min-width: 210px;
     padding: 6px 4px;
     background: var(--tm-surface-overlay, #fff);
