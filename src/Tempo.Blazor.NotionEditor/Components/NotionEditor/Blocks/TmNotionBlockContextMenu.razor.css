@@ -82,6 +82,14 @@
 
 /* ── Submenu trigger item ─────────────────────────────────────── */
 
+/* Neutral hover wrapper around the submenu trigger <button> and its panel: keeps the
+   hover region (row + 4px bridge + panel) and is the positioned ancestor for the
+   absolutely-positioned .tm-notion-ctx-sub — the role the old interactive wrapper div
+   played before the trigger became a real button (N188). */
+.tm-notion-ctx__sub {
+    position: relative;
+}
+
 .tm-notion-ctx__item--sub {
     justify-content: flex-start;
 }

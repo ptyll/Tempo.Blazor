@@ -44,6 +44,9 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
     private bool _showColor;
     private bool _focusPending = true;
     private ElementReference _menuRef;
+    private ElementReference _turnIntoTriggerRef;
+    private ElementReference _panelTypeTriggerRef;
+    private ElementReference _colorTriggerRef;
 
     private bool HasCommentProvider => Context.CommentProvider is not null;
 
@@ -146,8 +149,37 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {
+        // Escape with an open submenu collapses ONLY the submenu and returns focus to its
+        // trigger — the APG menu-button contract. Only a top-level Escape (no submenu open)
+        // closes the whole menu. ArrowLeft is the submenu's "back" gesture.
         if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            if (await CloseOpenSubAsync())
+                return;
             await CloseAsync();
+        }
+        else if (string.Equals(args.Key, "ArrowLeft", StringComparison.Ordinal))
+        {
+            await CloseOpenSubAsync();
+        }
+    }
+
+    private async Task<bool> CloseOpenSubAsync()
+    {
+        if (_showTurnInto)  { CloseSub(Sub.TurnInto);  await FocusSubTriggerAsync(_turnIntoTriggerRef);  return true; }
+        if (_showPanelType) { CloseSub(Sub.PanelType); await FocusSubTriggerAsync(_panelTypeTriggerRef); return true; }
+        if (_showColor)     { CloseSub(Sub.Color);     await FocusSubTriggerAsync(_colorTriggerRef);     return true; }
+        return false;
+    }
+
+    private async Task FocusSubTriggerAsync(ElementReference reference)
+    {
+        try { await reference.FocusAsync(); }
+        catch
+        {
+            // Best-effort — the trigger exists whenever its submenu was open, but a failed
+            // focus call must never break the close itself.
+        }
     }
 
     public async ValueTask DisposeAsync()
