@@ -2492,6 +2492,7 @@
   "TmGantt_History": "Historie",
   "TmGantt_HistoryEmpty": "Zatím žádná historie.",
   "TmGantt_Import": "Importovat",
+  "TmGantt_ImportDialogClose": "Zavřít dialog importu",
   "TmGantt_ImportError": "Import selhal: {0}",
   "TmGantt_ImportExcel": "Importovat z Excelu",
   "TmGantt_ImportJira": "Importovat z JIRA",

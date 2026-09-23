@@ -2487,6 +2487,7 @@
   "TmGantt_History": "Historique",
   "TmGantt_HistoryEmpty": "Aucun historique pour le moment.",
   "TmGantt_Import": "Importer",
+  "TmGantt_ImportDialogClose": "Fermer la boîte de dialogue d'importation",
   "TmGantt_ImportError": "Échec de l'importation : {0}",
   "TmGantt_ImportExcel": "Importer depuis Excel",
   "TmGantt_ImportJira": "Importer depuis JIRA",

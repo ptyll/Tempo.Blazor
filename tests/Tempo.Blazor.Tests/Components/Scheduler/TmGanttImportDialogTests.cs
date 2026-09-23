@@ -9,8 +9,10 @@ namespace Tempo.Blazor.Tests.Components.Scheduler;
 /// <summary>
 /// The import dialog's file chooser must be a real, keyboard-focusable button: the old
 /// label-for-hidden-input pattern could never take focus, so keyboard users had no way to
-/// pick a file. The button gets a NATIVE click listener (registered once per dialog lifetime
-/// via <c>registerFilePickerTrigger</c>) that clicks the visually-hidden (not display:none)
+/// pick a file. The button gets a NATIVE click listener (registration re-attempted on EVERY
+/// render via <c>registerFilePickerTrigger</c> and deduplicated per element by the JS
+/// <c>dataset.tmFilePickerRegistered</c> marker — tab switches and reopen destroy/recreate the
+/// trigger, which no C# flag could observe) that clicks the visually-hidden (not display:none)
 /// InputFile synchronously inside the browser's own click event — a C#-mediated
 /// <c>@onclick → JS interop</c> path would sit between the click and <c>input.click()</c>
 /// and sever the user-activation chain WebKit requires (N204, review 2026-09-22).
@@ -44,7 +46,7 @@ public class TmGanttImportDialogTests : LocalizationTestBase
     }
 
     [Fact]
-    public void ImportDialog_FirstRender_RegistersNativeFilePickerTrigger_Once()
+    public void ImportDialog_FirstRender_RegistersNativeFilePickerTrigger_AheadOfFirstClick()
     {
         var module = JSInterop.SetupModule(ModulePath);
         var register = module.SetupVoid("registerFilePickerTrigger", _ => true).SetVoidResult();
@@ -97,5 +99,88 @@ public class TmGanttImportDialogTests : LocalizationTestBase
         calls[1].Arguments[0].Should().NotBe(calls[0].Arguments[0],
             "the second call must target the freshly rendered trigger wrapper (@ref hands a new " +
             "ElementReference for the recreated element), not the destroyed one");
+    }
+
+    // ── Dialog semantics (N153) ────────────────────────────────
+
+    [Fact]
+    public void Dialog_HasDialogRoleAriaModalAndLabelledBy()
+    {
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        var dialog = cut.Find(".tm-gantt__import-dialog");
+        dialog.GetAttribute("role").Should().Be("dialog");
+        dialog.GetAttribute("aria-modal").Should().Be("true");
+
+        var labelledBy = dialog.GetAttribute("aria-labelledby");
+        labelledBy.Should().NotBeNullOrEmpty();
+        cut.Find($"#{labelledBy}").TextContent.Trim()
+            .Should().Be(cut.Find(".tm-gantt__dialog-title").TextContent.Trim());
+    }
+
+    [Fact]
+    public void CloseButton_HasAccessibleName()
+    {
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        // The close button is icon-only (TmIcon is aria-hidden) — it must carry an aria-label.
+        cut.Find(".tm-gantt__dialog-close").GetAttribute("aria-label")
+            .Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public void ImportError_HasAlertRole()
+    {
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        // Drive the component into its error state: an Excel import without the GanttXlsx
+        // package (or with an unreadable stream) surfaces _errorMessage.
+        cut.FindComponent<Microsoft.AspNetCore.Components.Forms.InputFile>()
+           .UploadFiles(InputFileContent.CreateFromBinary(new byte[] { 1, 2, 3 }, "tasks.xlsx"));
+        cut.FindAll(".tm-gantt__dialog-actions button")[0].Click();
+
+        cut.Find(".tm-gantt-task-panel__error").GetAttribute("role").Should().Be("alert",
+            "the import error must be announced — same convention as TmGanttTaskPanel's error surface");
+    }
+
+    [Fact]
+    public void SelectedFileName_IsLiveRegion()
+    {
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        // The element is persistent (not conditionally mounted) so assistive tech registers the
+        // live region before the first file lands in it.
+        cut.Find(".tm-gantt__import-file-name").GetAttribute("aria-live").Should().Be("polite");
+    }
+
+    [Fact]
+    public async Task ImportDialog_Escape_ClosesDialog()
+    {
+        // Carry-forward from 20C review: a modal dialog must close on Escape (APG contract).
+        // The shared focus-trap module delivers document-level Escape via this JSInvokable.
+        var closed = false;
+        var cut = Render<TmGanttImportDialog>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.OnClose, () => closed = true));
+
+        await cut.InvokeAsync(() => cut.Instance.HandleFocusTrapEscapeAsync());
+
+        closed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ImportDialog_FocusTrap_ActivatesWithEscapeHandling()
+    {
+        var focusTrap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        var activate = focusTrap.SetupVoid("activate", _ => true).SetVoidResult();
+
+        var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
+
+        var calls = activate.Invocations["activate"];
+        calls.Should().HaveCount(1);
+        calls[0].Arguments.Should().HaveCount(4,
+            "activate(element, id, escapeHandler, closeOnEscape) — an escape handler and the " +
+            "closeOnEscape flag must reach the shared focus-trap module");
+        calls[0].Arguments[3].Should().Be(true);
     }
 }

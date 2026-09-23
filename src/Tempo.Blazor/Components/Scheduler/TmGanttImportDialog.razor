@@ -6,10 +6,12 @@
 @if (IsOpen)
 {
     <div class="tm-gantt__dialog-overlay" @onclick="OnClose">
-        <div class="tm-gantt__dialog tm-gantt__import-dialog" @ref="_dialogElement" @onclick:stopPropagation>
+        <div class="tm-gantt__dialog tm-gantt__import-dialog" @ref="_dialogElement" @onclick:stopPropagation
+             role="dialog" aria-modal="true" aria-labelledby="@_titleId">
             <div class="tm-gantt__dialog-header">
-                <span class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>
-                <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose">
+                <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>
+                <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose"
+                        aria-label="@Loc["TmGantt_ImportDialogClose"]">
                     <TmIcon Name="x" />
                 </button>
             </div>
@@ -17,7 +19,7 @@
             <div class="tm-gantt__dialog-body">
                 @if (!string.IsNullOrEmpty(_errorMessage))
                 {
-                    <div class="tm-gantt-task-panel__error" data-testid="@TestId("import-error")">
+                    <div class="tm-gantt-task-panel__error" data-testid="@TestId("import-error")" role="alert">
                         <TmIcon Name="alert-circle" />
                         <span>@_errorMessage</span>
                     </div>
@@ -70,10 +72,9 @@
                                 @Loc["TmGantt_ChooseFile"]
                             </TmButton>
                         </div>
-                        @if (_selectedFileName is not null)
-                        {
-                            <span class="tm-gantt__import-file-name">@_selectedFileName</span>
-                        }
+                        @* Persistent live region: assistive tech must register it BEFORE a file
+                           lands, or the file-name update would never be announced (N153). *@
+                        <span class="tm-gantt__import-file-name" aria-live="polite">@_selectedFileName</span>
                     </div>
                 }
                 else if (_tab == ImportTab.Jira)

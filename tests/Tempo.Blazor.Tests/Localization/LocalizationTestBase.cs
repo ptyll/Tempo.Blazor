@@ -3642,6 +3642,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmGantt_ImportExcel"]             = "Import from Excel",
         ["TmGantt_ImportMpp"]               = "Import MS Project",
         ["TmGantt_ImportJira"]              = "Import from JIRA",
+        ["TmGantt_ImportDialogClose"]       = "Close import dialog",
         ["TmGantt_ImportError"]             = "Import failed: {0}",
         ["TmGantt_ImportMapping"]           = "Column mapping",
         ["TmGantt_ImportSourceColumn"]      = "Source column",

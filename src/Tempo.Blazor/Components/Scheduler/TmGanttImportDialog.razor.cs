@@ -31,6 +31,8 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private bool _wasOpen;
     private bool _shouldActivateTrap;
     private FocusTrap? _focusTrap;
+    private DotNetObjectReference<TmGanttImportDialog>? _dotNetRef;
+    private readonly string _titleId = $"tm-gantt-import-title-{Guid.NewGuid():N}";
 
     /// <summary>Whether the dialog is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
@@ -70,8 +72,12 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         if (_shouldActivateTrap && IsOpen)
         {
             _shouldActivateTrap = false;
+            _dotNetRef ??= DotNetObjectReference.Create(this);
             _focusTrap ??= new FocusTrap(JS);
-            await _focusTrap.ActivateAsync<TmGanttImportDialog>(_dialogElement);
+            // Escape is handled at the document level so it closes the dialog regardless of
+            // where focus currently sits — the modal contract TmDrawer/TmModal already follow
+            // (carry-forward review item: the dialog trapped focus but ignored Escape).
+            await _focusTrap.ActivateAsync<TmGanttImportDialog>(_dialogElement, _dotNetRef, closeOnEscape: true);
         }
 
         // Register the NATIVE click listener ahead of the first click — re-attempted on EVERY
@@ -94,6 +100,13 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         {
             await _focusTrap.DeactivateAsync();
         }
+    }
+
+    /// <summary>Invoked by the shared focus-trap module when Escape is pressed at the document level.</summary>
+    [JSInvokable]
+    public async Task HandleFocusTrapEscapeAsync()
+    {
+        await OnClose.InvokeAsync();
     }
 
     private void OnFileChangedAsync(InputFileChangeEventArgs e)
@@ -120,6 +133,10 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         catch (JSDisconnectedException)
         {
             // Circuit already gone.
+        }
+        finally
+        {
+            _dotNetRef?.Dispose();
         }
     }
 
