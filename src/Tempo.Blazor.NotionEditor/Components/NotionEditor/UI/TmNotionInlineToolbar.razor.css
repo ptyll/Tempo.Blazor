@@ -1,6 +1,8 @@
 .tm-notion-inline-toolbar {
     position: fixed;
-    z-index: 9998;
+    /* N191: popover band, same floating-surface level as TmNotionSlashMenu — a bare
+       9998 sat above the modal band's top (--tm-z-modal, 1040 token scale end). */
+    z-index: var(--tm-z-popover, 1030);
     display: flex;
     align-items: center;
     gap: 1px;

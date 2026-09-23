@@ -3,14 +3,15 @@
 .tm-notion-type-switcher-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9997;
+    /* N191: popover-band tokens — the backdrop sits one step under the anchored panel. */
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
 }
 
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 
 .tm-notion-type-switcher {
     position: fixed;
-    z-index: 9998;
+    z-index: var(--tm-z-popover, 1030);
     min-width: 220px;
     padding: 6px 4px;
     background: var(--tm-surface-overlay, #fff);

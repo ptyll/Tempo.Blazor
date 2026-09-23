@@ -3,7 +3,8 @@
 .tm-nmm-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9998;
+    /* N191: popover-band tokens — the backdrop sits one step under the anchored menu card. */
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
     background: transparent;
 }
 
@@ -11,7 +12,7 @@
 
 .tm-nmm {
     position: fixed;
-    z-index: 9999;
+    z-index: var(--tm-z-popover, 1030);
     --tm-nmm-viewport-margin: var(--tm-space-2, 8px);
     --tm-nmm-max-menu-height: 360px;
     width: 280px;
