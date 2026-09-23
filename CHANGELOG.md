@@ -466,6 +466,46 @@ which is exactly the red
   `TmNotionDbCellBase`'s seven shared cell parameters be attributed to a page
   that never named them.
 
+- **Second accessibility/component-residue wave (Fáze 20D carry-forwards, closed in 20E).**
+  `TmNotionBlockContextMenu`'s submenu triggers now answer the APG **ArrowRight** gesture —
+  Enter and click already opened the submenu, Tab walked its items, but the arrow gesture a
+  menu-button user reaches for did nothing; it opens the panel and lands focus on its first
+  item (`tmNotionEditor.focusFirstMenuItem`), ArrowLeft/Escape still collapse back to the
+  trigger (`0916707f`). `TmContextMenu`'s `Trigger` fragment is fenced the way
+  `TmPopover.TriggerContent` already was (`d335c307`): a native control inside the trigger
+  content used to fire the emulating `div[role=button]`'s toggle on top of its own click —
+  the span now carries matching `@onkeydown`/`@onkeyup` barriers (the keyup one matters:
+  Space activates on the release). `TmQueryInput`'s overlay dismissal no longer loses an
+  asynchronous race (`8f31e911`): `SetOpen(false)` previously flipped only `_isOpen`, so a
+  late provider response could reopen the dropdown after dismissal — the path now runs the
+  same `CloseDropdown()` every other close uses, bumping the request version, clearing
+  suggestions and the loading/error flags. `TmValidatedField` drops `_validationRan` when
+  the cascaded `EditContext` instance is swapped (`f2c3fa6b`): the flag had measured a pass
+  on the DISCARDED context, and carrying it over painted `tm-input-valid` on a context that
+  never validated — N151's defect in mirror image. `TmDocumentCanvasEngineHost` re-asserts
+  `trackChanges.enabled` and `reviewDisplayMode` against the freshly mounted engine
+  (`64f57f35`): a flip landing while the awaited mount was in flight was silently dropped
+  (`_handle` still null) and the engine's `updateOptions()` ignores both flags, so the stale
+  mount-time value would have persisted for the life of the mount; both re-asserts are
+  idempotent and run once per mount. `TmGanttImportDialog` no longer interpolates raw
+  `Exception.Message` into user-facing errors (`aa941a54`) — failures are mapped onto
+  localized categories (auth, network, file, generic, missing-xlsx-package). And the
+  keyboard-activation convention reached its remaining outliers (`29dde88e`): the
+  `TmColorPicker` and `TmFilterableDropdown` triggers, `TmDataTable` data rows (flat,
+  virtualized and grouped-leaf alike), `TmMultiViewList` rows/cards/items, and
+  `TmSankeyChart`'s focusable nodes/links all fire Enter on **keydown** guarded by
+  `!e.Repeat` and Space on **keyup** only — the held-Enter re-toggle and the keydown-timed
+  Space are gone; every fenced native child (dropdown clear button, row checkboxes,
+  expander and edit-start buttons, view-list selection cells) gained the matching
+  `@onkeyup:stopPropagation` barrier the convention now requires, because a keydown-only
+  fence still leaks the Space release into the container's activation. The same wave swept
+  the remaining floating surfaces onto the shared z-token bands (`cd627154` — the
+  Notion `UI/*.razor.css` off the `9997–9999` literals and every other hardcoded literal
+  the sweep found, and `LandmarkOwnershipTests` now asserts the element population it
+  audited, not just "no `<main>`") and deduplicated `overlay.js`'s focus-restore
+  verdict into one `focusWentNowhere` helper (`c56a04f0`) so the two copy-pasted
+  four-node walks can never diverge on what counts as "focus escaped".
+
 ### Changed — token defaults
 
 - **`--tm-color-danger` moves one step darker in the light theme** (`#ef4444` → `#dc2626`,
@@ -498,6 +538,36 @@ which is exactly the red
   by `FocusTokenDerivationE2ETests`. `--tm-color-primary-500-rgb` stays a manual triplet —
   CSS cannot extract channels from a colour — with a new guard pinning that it names the
   channels of the step it shadows in each theme.
+
+### Release gate
+
+- **NuGet publication now requires a human gate (`8b6a8545`, N206,
+  DEC-TEMPO-NUGET-ENVIRONMENT).** Both publish workflows — `publish-nuget.yml` and
+  `publish-nuget-org.yml` — run their `publish` jobs inside the GitHub Environment
+  `nuget-org`, so `dotnet nuget push` cannot execute without an environment reviewer's
+  approval. `PublishEnvironmentGateTests` parses both workflow YAMLs fail-closed: a publish
+  job without the environment, or an environment name drifted off `nuget-org`, fails the
+  suite rather than the release.
+
+- **Release evidence is a machine-checked artifact, not a promise (`3772ff70`, N207,
+  DEC-TEMPO-RELEASE-GATE).** `eng/release-evidence/e2e-full-run.json` records the full-lane
+  run that justifies a release: the commit it ran against, who verified it and when, the
+  run name, the passed/failed/skipped totals, the serial-residual counts, the wall clock
+  and the artifact path. `eng/verify-release-evidence.sh`
+  validates the schema and applies the agreed staleness policy B (zúžená): the evidence is
+  stale when commits after `evidence.commit` touched `src/`, `tests/Tempo.Blazor.E2E/`,
+  `.github/workflows/` or `eng/*.sh` — changes to unit-test projects, docs or the evidence
+  directory itself do NOT force a re-run. The publish workflow runs the verifier before the
+  pack step, so a release on untested code fails closed in CI, not at NuGet.
+  `ReleaseEvidenceTests` proves the JSON parses, the verifier accepts the committed file and
+  rejects tampered staleness windows.
+
+- **`fetch-depth: 0` is enforced where it is load-bearing (`e029dd31`, N208).** The
+  changelog-commit guard and the version/tag guard both need history; a shallow clone turns
+  them vacuous. `TEMPO_REQUIRE_FULL_CLONE=1` (set by the workflows) makes the
+  `FullCloneFactAttribute` fail on a shallow checkout instead of skipping — the attribute's
+  skip path stays for developer machines where a full clone is optional, but CI can no
+  longer silently downgrade a git-dependent guard into a skip.
 
 ### Tests & docs
 
@@ -551,6 +621,52 @@ which is exactly the red
 - **`4f0afe7a`**, **`d6eb7a55`** — documentation: the descendant-selector scope limit and the known
   RTE label residual are declared; the pack-script comment names the renamed
   `MarkupClassCoverageTests`.
+
+- **E2E host lifecycle and assertion honesty (Fáze 20E review — N193, N209–N211).**
+  `PlaywrightTestBase` can no longer resurrect a dead host silently or pass a test against a
+  503 (`29f89b91`): demo hosts are probed on `/health` through a pooled `HttpClient` instead
+  of a per-test socket, a dead host is restarted once with every restart appended to
+  `host-restarts.jsonl` (the lane report surfaces the count — a host that needed rescuing is
+  a finding, not a detail), and the boot wait is stateful rather than a fixed sleep.
+  `InteractiveAutoTests` now proves hydration instead of markup (`f67e292d`): a
+  server-prerendered page that never wires its interactive circuit renders the same DOM, so
+  the tests assert the behaviour only a live circuit produces. And
+  `DocumentEditorCanvasUxFixE2ETests` retries the canvas-context evaluation only on the first
+  probe where a lost context is legitimate, with a navigation counter proving the retry did
+  not smuggle in a reload (`6ec8e6f2`).
+
+- **E2E release-gate filters see every spelling, bounded (`6c424d4c`, N184, N186, N212).**
+  The filters that decide which tests belong to a release-gate lane previously matched one
+  casing/spelling each, so a renamed category silently shrank the lane; the regexes now
+  cover every observed spelling and an upper bound on matched tests fails the guard rather
+  than letting a runaway pattern pass as "everything ran".
+
+- **Test SQL databases can no longer wipe foreign data (`5714f0ae`, N213).** When the
+  fixtures run in external mode (a developer-provided server instead of a Testcontainers
+  instance) they create per-run isolated database names and the cleanup path only ever drops
+  a database it created — an external server's pre-existing data is never in the drop set.
+
+- **Fixture and sweep hardening (Fáze 20E review — N214, N174–N179).** The heap-leak E2E
+  fails hard and measures the real heap (`673ad040`): `Assert.IsTrue` instead of a soft
+  warning, a scalar `evaluate` so the returned number is the heap figure itself, Chromium
+  launched with `--enable-precise-memory-info` plus a warm-up pass, so the threshold compares
+  settled memory rather than GC timing noise. The bUnit wait-budget env var rejects
+  `NaN`/`Infinity` as documented (`bec86fde`, N174). The MsSql fixtures stop leaking their
+  connection string, pool their admin connections correctly and die honestly
+  (`b541e252`): `ToString()` redacts credentials, the `ClearPool` admin connection lives
+  inside a `using`, the container image is digest-pinned, and a fixture whose init fails is
+  dropped from the pool instead of handed to the next test (N175, N176, N178, N179).
+
+- **Named limits, counted populations (Fáze 20E review — N180–N183, N141, N142, N170,
+  N146, N158, N270, F13).** `008cdae0` documents the limits the suite already accepted —
+  the xUnit2 bridge surface, the identity seeds, the two-lane cost model — and gives the
+  satellite test project its own `TestAssemblyInit` so the wait-budget env var is honoured
+  there too. The theme-token sweep's thresholds are named constants with the skipped-selector
+  count reported in the assertion message, so a shrink shows up as a number, not a silent
+  pass (`735f09c5`). Orphaned regression screenshots whose owning test no longer exists were
+  deleted, with the keep-or-delete convention and the reduced-motion limit documented
+  (`40b52101`). And no source file may exceed 1200 lines: `29172da2` freezes the list of
+  47 legacy offenders so the ceiling ratchets — a 48th file over the line fails the suite.
 
 ## 2.8.26 - 2026-09-13
 
