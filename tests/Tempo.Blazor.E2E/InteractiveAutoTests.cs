@@ -209,15 +209,26 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
     {
         var page = await CreatePageAsync();
 
-        // Get initial heap size. performance.memory is a non-standard Chromium API that can be
-        // absent in some browser builds/contexts; when it reports 0 there is nothing to measure.
+        // Warm up to steady state BEFORE the baseline: the first InteractiveAuto navigation pays a
+        // one-time ~60 MB cost (WASM runtime finish-init, component/route caches, JS interop
+        // tables). Measured 2026-04: fresh page ≈ 53 MB, after one Dashboard↔Buttons pair ≈ 113 MB,
+        // then only ~30–75 KB per further pair. Baselining on the cold page compares cold→warm and
+        // reports ~180 % "growth" that is caching, not a leak. Two pairs get past first-use caches.
+        for (int i = 0; i < 2; i++)
+        {
+            await NavigateToPageAsync(page, "Dashboard");
+            await NavigateToPageAsync(page, "Buttons");
+        }
+        await ForcePageGcAsync(page);
+
+        // Get initial heap size. performance.memory is a non-standard Chromium API; the runner
+        // launches Chromium with --enable-precise-memory-info (PlaywrightTestBase), so a zero
+        // reading is a runner regression or a missing flag — N214: a failure, not an inconclusive
+        // skip that TRX reports as NotExecuted (reads as "didn't run", never as red).
         var initialHeap = await GetHeapSizeAsync(page);
         TestContext.WriteLine($"Initial heap size: {initialHeap} bytes");
-        if (initialHeap <= 0)
-        {
-            Assert.Inconclusive("performance.memory is unavailable in this browser — cannot measure JS heap growth.");
-            return;
-        }
+        Assert.IsTrue(initialHeap > 0,
+            "unmeasurable:precise-memory-info — performance.memory returned 0; verify --enable-precise-memory-info and the chromium version.");
 
         // Navigate multiple times
         for (int i = 0; i < 5; i++)
@@ -228,9 +239,8 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
             await page.WaitForTimeoutAsync(1000);
         }
 
-        // Force garbage collection
-        await page.EvaluateAsync("() => { if (window.gc) window.gc(); }");
-        await page.WaitForTimeoutAsync(1000);
+        // Force garbage collection (window.gc exists — the runner passes --js-flags=--expose-gc).
+        await ForcePageGcAsync(page);
 
         // Get final heap size
         var finalHeap = await GetHeapSizeAsync(page);
@@ -241,6 +251,19 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
         Assert.IsTrue(growthRatio < 1.5, $"Memory growth ratio {growthRatio:P} exceeds 50% threshold");
 
         await TakeScreenshotAsync(page, "memory_leak_test");
+    }
+
+    /// <summary>
+    /// Runs two full V8 collections with settle gaps — a single <c>window.gc()</c> can leave
+    /// recently-detached Blazor DOM/component objects in the pending finalization queue, so the
+    /// second pass is what makes the retained-heap reading stable.
+    /// </summary>
+    private static async Task ForcePageGcAsync(IPage page)
+    {
+        await page.EvaluateAsync("() => { if (window.gc) window.gc(); }");
+        await page.WaitForTimeoutAsync(500);
+        await page.EvaluateAsync("() => { if (window.gc) window.gc(); }");
+        await page.WaitForTimeoutAsync(500);
     }
 }
 

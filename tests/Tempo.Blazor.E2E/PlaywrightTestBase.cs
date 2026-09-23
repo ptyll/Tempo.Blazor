@@ -87,7 +87,9 @@ public abstract class PlaywrightTestBase
                     SlowMo = 100, // Add small delay between actions for stability
                     // Enable precise performance.memory.usedJSHeapSize for the navigation memory-leak
                     // probe; without the flag Chromium may omit the API entirely (returns 0 → NaN ratio).
-                    Args = new[] { "--enable-precise-memory-info" }
+                    // --expose-gc makes window.gc() real so the probe measures retained memory after
+                    // collection — otherwise transient navigation allocations count as "growth".
+                    Args = new[] { "--enable-precise-memory-info", "--js-flags=--expose-gc" }
                 });
             }
         }
@@ -364,12 +366,14 @@ public abstract class PlaywrightTestBase
     /// </summary>
     protected async Task<long> GetHeapSizeAsync(IPage page)
     {
-        var metrics = await page.EvaluateAsync<Dictionary<string, object>>("() => { return { usedJSHeapSize: performance.memory?.usedJSHeapSize || 0 }; }");
-        // performance.memory is Chromium-only and can be absent mid-navigation on InteractiveAuto —
-        // treat a missing key as 0 instead of crashing the leak probe.
-        return metrics is not null && metrics.TryGetValue("usedJSHeapSize", out var heap)
-            ? Convert.ToInt64(heap)
-            : 0;
+        // Evaluate a scalar, not an object: Playwright's .NET serializer wraps returned objects in a
+        // preserved-reference envelope ({"$id":"1", ...}) that materializes as an EMPTY
+        // Dictionary<string,object> — the key lookup then silently yields 0 and the probe reads
+        // "unmeasurable" on every run even though performance.memory is alive. A bare number has no
+        // envelope, so EvaluateAsync<long> returns the real heap size. performance.memory is
+        // Chromium-only and can be absent mid-navigation on InteractiveAuto — the ?./|| still maps
+        // that to 0 for the caller to assert on.
+        return await page.EvaluateAsync<long>("() => performance.memory?.usedJSHeapSize || 0");
     }
 
     private static async Task EnsureDemoHostsAsync(TestContext context)
