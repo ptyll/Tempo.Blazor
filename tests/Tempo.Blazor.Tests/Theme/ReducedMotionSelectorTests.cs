@@ -62,6 +62,12 @@ public sealed class ReducedMotionSelectorTests
     /// pseudo-element becomes <c>.tm-x::before|::after</c>; an animated element that carries no
     /// class of its own keeps its full descendant selector (e.g. <c>.tm-chat__typing-dots span</c>)
     /// because the ancestor class alone cannot reach it.
+    /// LIMIT (N158): an animated rule whose selector carries NO <c>.tm-*</c> class anywhere in the
+    /// chain (a bare element or a foreign class) is excluded from the population entirely — safe
+    /// under the library convention (every owned selector bears a <c>tm-</c> prefix, enforced by
+    /// <c>MarkupClassCoverageTests</c>/the ownership suite), but a convention breach (a
+    /// bare-element <c>transition</c> with no <c>tm-</c> ancestor) would escape BOTH the
+    /// reduced-motion block in <c>animations.css</c> AND this guard.
     /// </summary>
     private static SortedSet<string> AnimatedSubjects()
     {

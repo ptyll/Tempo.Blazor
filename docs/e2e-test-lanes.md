@@ -35,6 +35,15 @@ nightly — today no scheduled workflow exists, so it runs manually via
   lane (`TM_E2E_TRACE_ON_FAILURE=false`) because a full run can produce
   ~800 MB of traces; export the variable as `true` before the run to override.
 
+**Regression-screenshot convention:** a `before`/`after` PNG pair may enter the
+repository ONLY as the output of a named test calling `TakeScreenshotAsync`
+(see `PlaywrightTestBase.TakeScreenshotAsync`), never copied in by hand. The
+test that produces the pair must be cited next to the files
+(`__screenshots__/<set-name>/README.md` or the test's XML comment) — a pair
+with no test that reproduces it is deleted (N146, 2026-09-22: the
+`regression-2.9.0` set was byte-identical between "versions" and wired into
+nothing — it implied a verification that never ran).
+
 ## Node module lane
 
 JS engine unit tests run separately and are cheap enough for every commit:
