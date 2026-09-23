@@ -193,11 +193,16 @@ public class NotionLayoutE2ETests : WasmTestBase
         var colsBefore = await Columns(page).CountAsync();
         Assert.IsTrue(colsBefore >= 2, "Should have at least 2 columns before adding");
 
-        // Click the add-column button inside the ColumnList
+        // Click the add-column button inside the ColumnList — then wait STATE-BASED for the new
+        // column to render (the click round-trips through Blazor; a fixed wait reads the count
+        // before the re-render lands under shared-host load).
         var addBtn = colList.Locator(".tm-notion-column-list__add-col").First;
         await addBtn.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
         await addBtn.ClickAsync();
-        await page.WaitForTimeoutAsync(1200);
+        await page.WaitForFunctionAsync(
+            "expected => document.querySelectorAll('.tm-notion-column').length === expected",
+            colsBefore + 1,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
 
         var colsAfter = await Columns(page).CountAsync();
         Assert.AreEqual(colsBefore + 1, colsAfter, "Column count should increase by 1 after clicking add column");
@@ -214,7 +219,9 @@ public class NotionLayoutE2ETests : WasmTestBase
         var colList = ColumnListBlock(page);
         await colList.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
 
-        // Repeatedly click add-column until button disappears or we reach 5 columns
+        // Repeatedly click add-column until button disappears or we reach 5 columns — each click
+        // waits STATE-BASED for the column to render, not on a fixed delay, so the loop can never
+        // fire the next click against a pre-render count under shared-host load.
         for (var i = 0; i < 10; i++)
         {
             var addBtn = colList.Locator(".tm-notion-column-list__add-col");
@@ -225,7 +232,10 @@ public class NotionLayoutE2ETests : WasmTestBase
             if (colsCount >= 5) break;
 
             await addBtn.First.ClickAsync();
-            await page.WaitForTimeoutAsync(1200);
+            await page.WaitForFunctionAsync(
+                "expected => document.querySelectorAll('.tm-notion-column').length >= expected",
+                colsCount + 1,
+                new PageWaitForFunctionOptions { Timeout = 15000 });
         }
 
         // Should have 5 columns now
@@ -289,12 +299,12 @@ public class NotionLayoutRecoveryE2ETests : NotionE2ETestBase
         Assert.AreEqual(2, await twoColumnList.Locator(".tm-notion-column").CountAsync(), "EB8 two-column baseline should contain exactly 2 columns.");
         Assert.AreEqual(4, await fourColumnList.Locator(".tm-notion-column").CountAsync(), "EB8 four-column baseline should contain exactly 4 columns.");
 
-        await AddColumnWithButtonAsync(twoColumnList);
+        await AddColumnWithButtonAsync(twoColumnList, TwoColumnListId, expectedColumns: 3);
         Assert.AreEqual(3, await twoColumnList.Locator(".tm-notion-column").CountAsync(), "EB8 add-column action should create a 3-column visual state.");
 
         await CaptureBaselineAsync("layout", "desktop-2-3-4-columns", page.Locator(".tm-notion-page").First);
 
-        await ResizeFirstDividerAsync(page, twoColumnList, 90);
+        await ResizeFirstDividerAsync(page, twoColumnList, TwoColumnListId, 90);
         await AssertColumnWidthsChangedAsync(twoColumnList);
         await CaptureBaselineAsync("layout", "desktop-resized-divider", twoColumnList);
 
@@ -307,7 +317,11 @@ public class NotionLayoutRecoveryE2ETests : NotionE2ETestBase
         var toc = page.Locator(".tm-toc").First;
         await toc.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.Locator(".tm-toc__item").Nth(3).ClickAsync();
-        await page.WaitForTimeoutAsync(600);
+        // State-based, not a fixed delay: scroll-spy marks the active item after the scroll
+        // settles — under load a fixed 600ms reads the list before the class lands.
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll(\".tm-toc__item--active, .tm-toc__item[aria-current='true']\").length > 0",
+            new PageWaitForFunctionOptions { Timeout = 15000 });
         var activeItems = await page.Locator(".tm-toc__item--active, .tm-toc__item[aria-current='true']").CountAsync();
         Assert.IsTrue(activeItems > 0, "EB8 TOC scroll-spy should expose an active state after navigating to a heading.");
         await CaptureBaselineAsync("layout", "toc-many-headings-scroll-spy", toc);
@@ -340,15 +354,27 @@ public class NotionLayoutRecoveryE2ETests : NotionE2ETestBase
 
     private static bool BooleanIdentity(bool value) => value;
 
-    private static async Task AddColumnWithButtonAsync(ILocator columnList)
+    private static async Task AddColumnWithButtonAsync(ILocator columnList, string blockId, int expectedColumns)
     {
         var button = columnList.Locator(".tm-notion-column-list__add-col").First;
         await button.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await button.ClickAsync();
-        await columnList.Page.WaitForTimeoutAsync(750);
+        // State-based, not a fixed delay: the add-column click round-trips through Blazor before
+        // the new column renders — under shared-host load a fixed wait observes the list before
+        // the re-render lands (serial-run symptom: count still 2 instead of 3). The selector is
+        // scoped by block id because the page carries multiple column lists.
+        await columnList.Page.WaitForFunctionAsync(
+            """
+            ([scopeSelector, expected]) => {
+                const scope = document.querySelector(scopeSelector);
+                return scope && scope.querySelectorAll('.tm-notion-column').length === expected;
+            }
+            """,
+            new object[] { $"[data-block-id='{blockId}'] .tm-notion-column-list", expectedColumns },
+            new PageWaitForFunctionOptions { Timeout = 15000 });
     }
 
-    private static async Task ResizeFirstDividerAsync(IPage page, ILocator columnList, int deltaX)
+    private static async Task ResizeFirstDividerAsync(IPage page, ILocator columnList, string blockId, int deltaX)
     {
         var divider = columnList.Locator(".tm-notion-column-list__divider").First;
         await divider.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
@@ -362,7 +388,22 @@ public class NotionLayoutRecoveryE2ETests : NotionE2ETestBase
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync(startX + deltaX, startY, new MouseMoveOptions { Steps = 8 });
         await page.Mouse.UpAsync();
-        await page.WaitForTimeoutAsync(900);
+        // State-based, not a fixed delay: the drag commits widths through a Blazor re-render —
+        // wait until the first two columns actually diverge before asserting the screenshot.
+        // Scoped by block id because the page carries multiple column lists.
+        await page.WaitForFunctionAsync(
+            """
+            scopeSelector => {
+                const scope = document.querySelector(scopeSelector);
+                const cols = scope?.querySelectorAll('.tm-notion-column') ?? [];
+                if (cols.length < 2) return false;
+                const w0 = Math.round(cols[0].getBoundingClientRect().width);
+                const w1 = Math.round(cols[1].getBoundingClientRect().width);
+                return Math.abs(w0 - w1) > 24;
+            }
+            """,
+            $"[data-block-id='{blockId}'] .tm-notion-column-list",
+            new PageWaitForFunctionOptions { Timeout = 15000 });
     }
 
     private static async Task AssertColumnWidthsChangedAsync(ILocator columnList)

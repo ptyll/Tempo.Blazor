@@ -60,10 +60,13 @@ public class NotionEditPersistenceE2ETests : NotionE2ETestBase
 
         var firstId = await TypeIntoFirstParagraphAsync(page, "first block");
 
-        // Create a second block and type into it WITHOUT blurring.
+        // Create a second block and type into it WITHOUT blurring. The Enter split creates the
+        // new block asynchronously — WaitForBlockFocusToMoveAsync waits until the new editable
+        // owns focus before typing, so keystrokes cannot be swallowed by the source block's
+        // setHtml(before) rewrite (observed loss: "ed second block").
         await page.Keyboard.PressAsync("End");
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(700);
+        await WaitForBlockFocusToMoveAsync(page, firstId);
         await page.Keyboard.TypeAsync("unsaved second block");
         await page.WaitForTimeoutAsync(300);
 

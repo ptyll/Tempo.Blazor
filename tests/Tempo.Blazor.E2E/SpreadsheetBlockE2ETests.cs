@@ -187,13 +187,18 @@ public class SpreadsheetBlockE2ETests : WasmTestBase
     {
         var page = await OpenNotionEditorAsync();
 
-        // Open a new block via Enter in first paragraph, then type /spreadsheet
+        // Open a new block via Enter in first paragraph, then type /spreadsheet. The Enter split
+        // creates the new block asynchronously — wait for its focus to land (the source block's
+        // setHtml(before) rewrite swallows keystrokes sent during the gap, so a fixed delay can
+        // type "/spreadsheet" into a block that gets rewritten before the menu ever sees it).
         var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").First;
         await para.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+        var sourceBlockId = await para.EvaluateAsync<string>(
+            "el => el.closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''");
         await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(800);
+        await NotionE2ETestBase.WaitForBlockFocusToMoveAsync(page, sourceBlockId);
 
         await page.Keyboard.TypeAsync("/spreadsheet");
         await page.WaitForSelectorAsync(".tm-notion-slash",
@@ -207,10 +212,13 @@ public class SpreadsheetBlockE2ETests : WasmTestBase
         await spreadsheetItem.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await spreadsheetItem.ClickAsync();
 
-        // A new spreadsheet block should appear
-        await page.WaitForTimeoutAsync(1000);
-        var spreadsheetBlocks = page.Locator(".tm-notion-spreadsheet-block");
-        var count = await spreadsheetBlocks.CountAsync();
+        // A new spreadsheet block should appear — state-based count, not a fixed delay: the
+        // insert round-trips through Blazor before the block renders, and under a shared-host
+        // load a fixed 1s can observe the page before the re-render lands (got 1 of 2).
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('.tm-notion-spreadsheet-block').length >= 2",
+            new PageWaitForFunctionOptions { Timeout = 15000 });
+        var count = await page.Locator(".tm-notion-spreadsheet-block").CountAsync();
         Assert.IsTrue(count >= 2, $"At least 2 spreadsheet blocks expected (pre-seeded + newly inserted), got {count}");
 
         await TakeScreenshotAsync(page, "spreadsheet_slash_menu_insert");

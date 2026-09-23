@@ -835,6 +835,30 @@ public abstract class NotionE2ETestBase : WasmTestBase
         var chars = value.Select(ch => invalid.Contains(ch) || char.IsWhiteSpace(ch) ? '-' : char.ToLowerInvariant(ch)).ToArray();
         return new string(chars);
     }
+
+    /// <summary>
+    /// STATE-BASED readiness after an Enter split, replacing fixed post-Enter delays. The Enter
+    /// keydown is <c>preventDefault</c>'d and the new block is created through an async
+    /// JSInvokable → CreateBlockAsync → StateHasChanged → OnAfterRender → focusAtStart pipeline.
+    /// Typing before the new editable owns focus sends keystrokes to the SOURCE block — which
+    /// <c>OnEnterPressed</c> then rewrites via <c>setHtml(before)</c>, silently erasing them
+    /// (observed serial-run loss: <c>"ed second block"</c> instead of <c>"unsaved second block"</c>).
+    /// The wait completes once <c>document.activeElement</c> sits inside a
+    /// <c>[data-block-id]</c> different from <paramref name="previousBlockId"/> — only then is
+    /// typing deterministic.
+    /// </summary>
+    internal static async Task WaitForBlockFocusToMoveAsync(IPage page, string previousBlockId)
+    {
+        await page.WaitForFunctionAsync(
+            """
+            previousId => {
+                const owner = document.activeElement?.closest('[data-block-id]');
+                return owner && owner.getAttribute('data-block-id') !== previousId;
+            }
+            """,
+            previousBlockId,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
+    }
 }
 
 public sealed record NotionBaselineCapture(string FullPagePath, string RegionPath);
