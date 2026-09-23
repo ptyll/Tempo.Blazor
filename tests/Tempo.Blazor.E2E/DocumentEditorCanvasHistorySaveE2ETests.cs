@@ -238,9 +238,40 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
                 Assert.Fail($"Canvas click on block '{blockId}' kept resolving to offset {focusOffset} instead of {offset}.");
             }
 
-            await page.WaitForTimeoutAsync(250);
+            // N194: the settle between attempts is state-based, not a fixed sleep. A wrong-offset
+            // click inside the post-mount replaceModel window races a partial progressive layout
+            // (data-canvas-layout-complete="false"); wait until the layout reports complete again
+            // AND the render counter has advanced past the render that resolved wrong. If the
+            // signal never fires the attempt bound above still owns the verdict.
+            var renderCountBefore = await ReadCanvasRenderCountAsync(page);
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    """
+                    prev => {
+                        const root = document.querySelector('[data-testid="document-canvas-engine-root"]');
+                        if (!root) { return false; }
+                        if (root.getAttribute('data-canvas-layout-complete') !== 'true') { return false; }
+                        return Number(root.getAttribute('data-canvas-render-count') || '0') !== prev;
+                    }
+                    """,
+                    renderCountBefore,
+                    new PageWaitForFunctionOptions { Timeout = 2_500 });
+            }
+            catch (TimeoutException)
+            {
+                // Settle signal never fired inside the window — re-click anyway; the bounded
+                // retry owns the outcome, not the delay.
+            }
         }
     }
+
+    private static Task<int> ReadCanvasRenderCountAsync(IPage page)
+        => page.EvaluateAsync<int>(
+            """
+            () => Number(document.querySelector('[data-testid="document-canvas-engine-root"]')
+                ?.getAttribute('data-canvas-render-count') || '0')
+            """);
 
     private static async Task<CanvasTextRange> SelectCanvasTextRangeAsync(IPage page, string blockId, int startOffset, int endOffset)
     {
