@@ -171,6 +171,41 @@ public class TmValidatedFieldTests : LocalizationTestBase
     }
 
     [Fact]
+    public void EditContextSwap_ResetsValidationRan_UntilNewContextValidates()
+    {
+        // 20D carry-forward: _validationRan survived an EditContext swap, so the field kept
+        // painting tm-input-valid on a context that never validated — the N151 defect class
+        // run backwards (a carried-over flag instead of an early flag).
+        var model1 = new FormModel { Name = "first" };
+        var editContext1 = new EditContext(model1);
+        var cut = Render<CascadingValue<EditContext>>(parameters => parameters
+            .Add(p => p.Value, editContext1)
+            .Add(p => p.ChildContent, (RenderFragment)BuildFieldMarkup(model1)));
+
+        // A completed validation pass on the FIRST context paints the green frame.
+        editContext1.NotifyValidationStateChanged();
+        cut.WaitForAssertion(() =>
+            cut.Find("input").ClassList.Should().Contain("tm-input-valid"));
+
+        // Swap to a fresh context that has NOT validated — the field must go neutral.
+        var model2 = new FormModel { Name = "second" };
+        var editContext2 = new EditContext(model2);
+        cut.Render(parameters => parameters
+            .Add(p => p.Value, editContext2)
+            .Add(p => p.ChildContent, (RenderFragment)BuildFieldMarkup(model2)));
+
+        cut.Find("input").ClassList.Should().NotContain("tm-input-valid",
+            "the new EditContext never ran a validation pass — a _validationRan carried over " +
+            "from the discarded context would keep the green frame on an unvalidated field");
+        cut.FindAll(".tm-input-validation-success").Should().BeEmpty();
+
+        // …and a completed pass on the NEW context turns it green again.
+        editContext2.NotifyValidationStateChanged();
+        cut.WaitForAssertion(() =>
+            cut.Find("input").ClassList.Should().Contain("tm-input-valid"));
+    }
+
+    [Fact]
     public void FieldWithValidationError_ShowsErrorState_NotGreen()
     {
         var model = new FormModel { Name = "bad" };

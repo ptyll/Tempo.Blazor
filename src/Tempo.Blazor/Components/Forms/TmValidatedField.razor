@@ -148,6 +148,10 @@
             {
                 _subscribedEditContext.OnValidationStateChanged += HandleValidationStateChanged;
             }
+
+            // 20D carry-forward: the flag measured a pass on the DISCARDED context — carrying it
+            // over would paint tm-input-valid on a context that never validated (N151 reversed).
+            _validationRan = false;
         }
 
         // The cached FieldIdentifier captures the model instance inside ValueExpression; when the
