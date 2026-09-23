@@ -12,6 +12,13 @@
     cursor: pointer;
 }
 
+/* Keydown/keyup-propagation fence only (same contract as .tm-popover__trigger-content):
+   the span exists so a native control inside the Trigger fragment does not double-activate
+   the emulating div[role=button] — it must not form a layout box of its own. */
+.tm-context-menu__trigger-content {
+    display: contents;
+}
+
 /* ── Menu dropdown ─────────────────────────────────────── */
 /* The menu is a TmOverlayPanel: position:fixed + z-index come from _overlay-panel.css and
    overlay.js writes top/left (Bottom + End + 4px replaces the old top:100%;right:0;margin-top).

@@ -11,7 +11,15 @@
          @onclick="ToggleMenu"
          @onkeydown="HandleTriggerKeyDown"
          @onkeyup="HandleTriggerKeyUp">
-        @Trigger
+        @* Fence: the Trigger fragment may contain a native control (e.g. a <button>)
+           whose Enter keydown / Space keyup would otherwise bubble into this emulating
+           container and fire ToggleMenu on top of the child's own click. Both barriers
+           are required — Space activation lives on keyup (N162), so a keydown-only fence
+           would still leak the release (keyboard-activation-convention; TmPopover is the
+           reference implementation). *@
+        <span class="tm-context-menu__trigger-content"
+              @onkeydown:stopPropagation="true"
+              @onkeyup:stopPropagation="true">@Trigger</span>
     </div>
 
     @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an

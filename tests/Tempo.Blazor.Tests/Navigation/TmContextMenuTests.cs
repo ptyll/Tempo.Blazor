@@ -104,6 +104,35 @@ public class TmContextMenuTests : LocalizationTestBase
         cut.FindAll("[role='menu']").Should().BeEmpty();
     }
 
+    [Fact]
+    public void ContextMenu_ActivationKeys_OnNativeTriggerContent_DoNotToggleMenu()
+    {
+        // The @Trigger fragment may carry a native <button>. Its bubbled Enter keydown /
+        // Space keyup would otherwise reach the emulating container's activation on top of
+        // the button's own click — the fenced trigger-content span cuts the bubble off
+        // (docs/keyboard-activation-convention.md: a keyup emulation needs a keyup fence).
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button class='inner'>Menu</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Action")));
+
+        // bUnit surfaces a fully fenced event as MissingEventHandlerException: the
+        // trigger-content span cuts the bubble before it reaches the emulating
+        // container's handlers — exactly the barrier the convention requires. An
+        // unfenced event would reach HandleTriggerKeyDown/Up and toggle the menu.
+        var inner = cut.Find(".inner");
+
+        inner.Invoking(i => i.KeyDown(new KeyboardEventArgs { Key = "Enter" }))
+            .Should().Throw<MissingEventHandlerException>(
+                "a bubbled Enter keydown off a native trigger child must not fire the container's activation");
+        inner.Invoking(i => i.KeyUp(new KeyboardEventArgs { Key = " " }))
+            .Should().Throw<MissingEventHandlerException>(
+                "a bubbled Space keyup off a native trigger child must not fire the container's activation");
+
+        cut.FindAll("[role='menu']").Should().BeEmpty(
+            "a native trigger child's activation keys must never reach the emulating container");
+    }
+
     // ── Items ──────────────────────────────────────────────
 
     [Fact]
