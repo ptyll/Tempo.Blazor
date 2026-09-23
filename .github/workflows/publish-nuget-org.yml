@@ -24,6 +24,9 @@ jobs:
     # apart — ReleaseGateFilterTests requires this on every job that runs `dotnet test`.
     env:
       TEMPO_BUNIT_WAIT_SECONDS: "10"
+      # N208: inside CI a shallow checkout must FAIL the suite, not skip every git-facing guard
+      # green. FullCloneFactAttribute throws instead of answering a skip reason when this is set.
+      TEMPO_REQUIRE_FULL_CLONE: "1"
     services:
       smtp4dev:
         image: rnwood/smtp4dev:latest

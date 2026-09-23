@@ -54,10 +54,39 @@ public sealed class FullCloneFactAttribute : ProbeDecidedFactAttribute
     /// <c>internal</c> rather than private so a member that wants to tripwire on the same verdict
     /// reads the same string rather than re-deciding it.
     /// </summary>
-    internal static string? IncompleteCloneSkipReason()
-    {
-        var repositoryRoot = ReleaseScriptInputReadTests.FindRepoRoot();
+    internal static string? IncompleteCloneSkipReason() =>
+        IncompleteCloneSkipReason(ReleaseScriptInputReadTests.FindRepoRoot());
 
+    /// <summary>
+    /// The probe over an explicit repository root — the parameterless overload's whole read with
+    /// the root injectable, so the suite can ask the same question against a fixture clone
+    /// (a temp <c>git clone --depth 1</c>) instead of only against itself.
+    /// <para>
+    /// <c>TEMPO_REQUIRE_FULL_CLONE=1</c> turns a would-be skip into a THROW: CI must never get a
+    /// silent green-skip out of a checkout that cannot answer. The throw escapes
+    /// <see cref="ProbeDecidedFactAttribute"/>'s <c>catch (Exception)</c> — which reads ANY probe
+    /// failure as "do not skip" — so the decorated member then runs and its own git calls fail
+    /// with the evidence in the test output, instead of the clone's blindness being reported as a
+    /// clean skip. Outside CI the variable is unset and the skip behaves exactly as before.
+    /// </para>
+    /// </summary>
+    internal static string? IncompleteCloneSkipReason(string repositoryRoot)
+    {
+        string? reason = ProbeClone(repositoryRoot);
+        if (reason is not null
+            && string.Equals(
+                Environment.GetEnvironmentVariable("TEMPO_REQUIRE_FULL_CLONE"),
+                "1",
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(reason);
+        }
+
+        return reason;
+    }
+
+    private static string? ProbeClone(string repositoryRoot)
+    {
         // `.git` may be a FILE, not a directory — a linked worktree or a submodule writes
         // `gitdir: <path>` into one — so the absence check must cover both shapes.
         var gitPath = Path.Combine(repositoryRoot, ".git");
