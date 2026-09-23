@@ -414,6 +414,58 @@ which is exactly the red
   file area's DOM, and a C# "registered once" flag can never see the fresh element — while the
   `dataset.tmFilePickerRegistered` marker in JS dedupes repeat calls on the same button.
 
+- **Accessibility and component-residue review wave (Fáze 20D review — N147–N153,
+  N159, N161–N162, N188–N192).** Picker requiredness is back inside what ARIA 1.2
+  permits: `aria-required` left the button triggers (`TmDatePicker`,
+  `TmDateTimePicker`) where it was never a permitted attribute — requiredness
+  stays on the required-label marker and form validation (N147) — and
+  `TmTimePicker` dropped the inert `data-required` marker plus an `aria-disabled`
+  that only meant "out of range": its label gained the required marker and every
+  segment now announces `aria-invalid` through the new `TmTimeInput.Invalid`
+  parameter (N148). `TmTimeRangePicker`'s From/To sections are named
+  `role="group"` sub-groups like `TmDateTimeRangePicker`'s (N149), and the docs
+  now say plainly that a consumer `aria-label` loses to the component's
+  `aria-labelledby` — set `Label` instead (N159). `.tm-btn-secondary`'s
+  decorative border measured 1,24:1/1,41:1 and now uses the control-border token
+  (N150). `TmValidatedField` publishes `IsValid` only after a completed
+  validation pass — the in-flight render can no longer flash green before an
+  async validator answers — and re-subscribes when the host swaps the cascaded
+  `EditContext` instead of listening to a dead context forever (N151, N152).
+  `TmGanttImportDialog` is a real modal: `role="dialog"` + `aria-modal` +
+  `aria-labelledby`, a localized close-button name, `role="alert"` import
+  errors, a persistent `aria-live` filename region (a conditionally-mounted live
+  region drops its first announcement) and document-level Escape-to-close
+  (N153). A stale `TmSplitButton` comment now describes the `_toggleRef` anchor
+  geometry it actually uses (N161). Keyboard emulation follows the native
+  contract — Enter on keydown guarded by `!e.Repeat`, Space on keyup only, with
+  a keyup fence so a bubbled Space off a native child cannot double-activate —
+  and the dead bubbling Escape branches `overlay.js` could never reach were
+  deleted (N162, N169 follow-up). `TmNotionBlockContextMenu` submenu triggers
+  are real `<button>`s with `aria-haspopup="menu"`/`aria-expanded`; Escape
+  collapses the open submenu and returns focus to its trigger while ArrowLeft is
+  the submenu back gesture (N188). `TmNotionNotificationCenter`'s panel migrated
+  onto `TmOverlayPanel` (N189). The nested `<main>` landmarks inside
+  `TmModelingEditor`, `TmNotionPageHistory`, `TmReportDesigner` and
+  `TmPdfTemplateDesigner` became named `<section>` regions, and
+  `LandmarkOwnershipTests` sweeps every shipped package fail-closed so a
+  component can never emit `<main` again (N190). The Notion floating UI —
+  mention menu, inline toolbar, block type switcher — moved off hardcoded
+  `9997–9999` z-indexes onto the shared `--tm-z-popover` band (N191). And
+  `TmDocumentEditor` pushes runtime track-changes flips — SuggestOnly
+  permission, a suggestion provider appearing or leaving, `TrackChangesEnabled`
+  toggling — through `setTrackChangesEnabled` instead of leaving the canvas
+  engine on its mount-time value while the toolbar reads the new one (N192).
+  Three 20C review carry-forwards closed in the same wave: `TmDataTable` emits a
+  directional `aria-sort` on the primary sort descriptor only and the recorded
+  activation-key Shift state expires after one second on the injected
+  `TimeProvider`; a thrown `OnSaveAndLeave` now runs the same failure path a
+  `false` result runs (dialog closes, `OnSaveAndLeaveFailed` fires) before the
+  exception propagates, and every `TmNavigationGuard` dialog action — not only
+  Save — is disabled while a save is in flight; and the documentation parity
+  guard's ancestor attribution is verified, closing the hole that let
+  `TmNotionDbCellBase`'s seven shared cell parameters be attributed to a page
+  that never named them.
+
 ### Changed — token defaults
 
 - **`--tm-color-danger` moves one step darker in the light theme** (`#ef4444` → `#dc2626`,
