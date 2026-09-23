@@ -1,17 +1,20 @@
 @namespace Tempo.Blazor.Components.Pickers
 
 <div class="tm-time-picker @Class @(IsOutOfRange ? "tm-time-picker--invalid" : "")"
-     data-required="@(Required ? "true" : null)"
-     aria-disabled="@(IsOutOfRange ? "true" : null)"
      @attributes="RootAttributes">
 
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label id="@_labelId" class="tm-picker-label" for="@_inputId">@Label</label>
+        <label id="@_labelId"
+               class="tm-picker-label @(Required ? "tm-input-label-required" : "")"
+               for="@_inputId">@Label</label>
     }
 
     @* Composite control (hours/minutes/seconds + clear): the label's `for` targets the first
-       segment, and the body is a named group so assistive tech announces "{label}, group". *@
+       segment, and the body is a named group so assistive tech announces "{label}, group".
+       N148: no aria-disabled for out-of-range values — the segments stay editable, so "disabled"
+       was the wrong signal; the invalid state is announced via aria-invalid on the segments
+       (Invalid=@IsOutOfRange below) and painted by the --invalid class on the wrapper. *@
     <div class="tm-time-picker-body"
          role="group"
          aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
@@ -22,7 +25,8 @@
                      ShowSeconds="@ShowSeconds"
                      Disabled="@Disabled"
                      MinTime="@MinTime"
-                     MaxTime="@MaxTime" />
+                     MaxTime="@MaxTime"
+                     Invalid="@IsOutOfRange" />
 
         @if (Value.HasValue && !Disabled)
         {

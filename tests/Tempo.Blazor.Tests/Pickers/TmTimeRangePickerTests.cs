@@ -63,4 +63,27 @@ public class TmTimeRangePickerTests : LocalizationTestBase
 
         cut.Find(".tm-time-range-duration").TextContent.Should().Contain("2");
     }
+
+    [Fact]
+    public void TimeRangePicker_Sections_HaveDistinctAccessibleNames()
+    {
+        // N149: both ends of the range are named sub-groups (same pattern as
+        // TmDateTimeRangePicker) so screen readers distinguish "From" from "To" instead of
+        // hearing identical bare Hours/Minutes segments twice.
+        var cut = Render<TmTimeRangePicker>();
+
+        var from = cut.Find(".tm-time-range-from");
+        from.GetAttribute("role").Should().Be("group");
+        var fromLabelId = from.GetAttribute("aria-labelledby");
+        fromLabelId.Should().NotBeNullOrEmpty();
+        cut.Find($"#{fromLabelId}").TextContent.Should().Be("From");
+
+        var to = cut.Find(".tm-time-range-to");
+        to.GetAttribute("role").Should().Be("group");
+        var toLabelId = to.GetAttribute("aria-labelledby");
+        toLabelId.Should().NotBeNullOrEmpty();
+        cut.Find($"#{toLabelId}").TextContent.Should().Be("To");
+
+        fromLabelId.Should().NotBe(toLabelId);
+    }
 }

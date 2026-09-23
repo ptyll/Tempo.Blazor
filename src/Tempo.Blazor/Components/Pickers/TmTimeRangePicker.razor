@@ -11,8 +11,12 @@
          role="group"
          aria-labelledby="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
          @attributes="AriaAttributes">
-        <div class="tm-time-range-section tm-time-range-from">
-            <span class="tm-time-range-label">@Loc["TmTimeRangePicker_From"]</span>
+        @* Each end of the range is a named sub-group (same pattern as TmDateTimeRangePicker) so
+           assistive tech announces "From"/"To" instead of identical bare Hours/Minutes (N149). *@
+        <div class="tm-time-range-section tm-time-range-from"
+             role="group"
+             aria-labelledby="@_fromLabelId">
+            <span id="@_fromLabelId" class="tm-time-range-label">@Loc["TmTimeRangePicker_From"]</span>
             <TmTimeInput Value="@Value.Start"
                          ValueChanged="OnStartChanged"
                          InputId="@_startInputId"
@@ -22,8 +26,10 @@
 
         <span class="tm-time-range-sep" aria-hidden="true">–</span>
 
-        <div class="tm-time-range-section tm-time-range-to">
-            <span class="tm-time-range-label">@Loc["TmTimeRangePicker_To"]</span>
+        <div class="tm-time-range-section tm-time-range-to"
+             role="group"
+             aria-labelledby="@_toLabelId">
+            <span id="@_toLabelId" class="tm-time-range-label">@Loc["TmTimeRangePicker_To"]</span>
             <TmTimeInput Value="@Value.End"
                          ValueChanged="OnEndChanged"
                          ShowSeconds="@ShowSeconds"
@@ -68,6 +74,8 @@
 
     private readonly string _labelId      = $"tm-time-range-label-{Guid.NewGuid():N}";
     private readonly string _startInputId = $"tm-time-range-start-{Guid.NewGuid():N}";
+    private readonly string _fromLabelId  = $"tm-time-range-from-label-{Guid.NewGuid():N}";
+    private readonly string _toLabelId    = $"tm-time-range-to-label-{Guid.NewGuid():N}";
 
     private bool IsInvalid =>
         Value.Start.HasValue && Value.End.HasValue && Value.End.Value < Value.Start.Value;

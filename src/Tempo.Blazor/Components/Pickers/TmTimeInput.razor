@@ -8,6 +8,7 @@
            value="@_hours"
            disabled="@Disabled"
            aria-label="@Loc["TmTimePicker_Hours"]"
+           aria-invalid="@(Invalid ? "true" : null)"
            @onchange="OnHoursChange" />
     <span class="tm-time-sep" aria-hidden="true">:</span>
     <input type="number"
@@ -16,6 +17,7 @@
            value="@_minutes"
            disabled="@Disabled"
            aria-label="@Loc["TmTimePicker_Minutes"]"
+           aria-invalid="@(Invalid ? "true" : null)"
            @onchange="OnMinutesChange" />
     @if (ShowSeconds)
     {
@@ -26,6 +28,7 @@
                value="@_seconds"
                disabled="@Disabled"
                aria-label="@Loc["TmTimePicker_Seconds"]"
+               aria-invalid="@(Invalid ? "true" : null)"
                @onchange="OnSecondsChange" />
     }
 </div>
@@ -39,6 +42,10 @@
     [Parameter] public TimeOnly?  MaxTime      { get; set; }
     /// <summary>Optional id applied to the hours segment so a parent <c>&lt;label for&gt;</c> can target it.</summary>
     [Parameter] public string?    InputId      { get; set; }
+    /// <summary>Marks every segment <c>aria-invalid="true"</c> — used by the owning picker when the
+    /// value is out of range. The segments stay editable; this only announces the invalid state
+    /// (N148).</summary>
+    [Parameter] public bool       Invalid      { get; set; }
 
     private string _hours   = "00";
     private string _minutes = "00";

@@ -19328,6 +19328,12 @@
               "description": "Optional id applied to the hours segment so a parent <label for> can target it."
             },
             {
+              "name": "Invalid",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Marks every segment aria-invalid=\"true\" — used by the owning picker when the value is out of range. The segments stay editable; this only announces the invalid state."
+            },
+            {
               "name": "MaxTime",
               "type": "TimeOnly?",
               "isRequired": false

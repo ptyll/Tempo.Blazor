@@ -168,10 +168,13 @@ public class TmDatePickerTests : LocalizationTestBase
     // ── Required (accessibility) ─────────────────────────────────
 
     [Fact]
-    public void DatePicker_Required_SetsAriaRequiredOnTrigger()
+    public void DatePicker_Required_HasNoAriaRequiredOnTrigger()
     {
+        // N147: aria-required is NOT a permitted attribute on role=button (ARIA 1.2/HTML-AAM) —
+        // requiredness is carried by the tm-input-label-required marker on the label and by form
+        // validation, never by an attribute on the trigger.
         var cut = Render<TmDatePicker>(p => p.Add(c => c.Required, true));
-        cut.Find(".tm-date-picker-trigger").GetAttribute("aria-required").Should().Be("true");
+        cut.Find(".tm-date-picker-trigger").HasAttribute("aria-required").Should().BeFalse();
     }
 
     [Fact]

@@ -57,7 +57,9 @@ public class TmTimePickerTests : LocalizationTestBase
             .Add(c => c.Value,   new TimeOnly(8, 0))
             .Add(c => c.MinTime, new TimeOnly(9, 0)));
 
-        // The wrapper should carry the disabled class or inputs disabled
+        // The invalid state paints the --invalid class on the wrapper. N148: aria-disabled is no
+        // longer emitted (the segments stay editable, so "disabled" was the wrong signal) — the
+        // selector is carried by the class only.
         cut.FindAll(".tm-time-picker--invalid, [aria-disabled='true']")
            .Should().NotBeEmpty();
     }
@@ -69,8 +71,35 @@ public class TmTimePickerTests : LocalizationTestBase
             .Add(c => c.Value,   new TimeOnly(22, 0))
             .Add(c => c.MaxTime, new TimeOnly(18, 0)));
 
+        // The invalid state paints the --invalid class on the wrapper. N148: aria-disabled is no
+        // longer emitted (the segments stay editable, so "disabled" was the wrong signal) — the
+        // selector is carried by the class only.
         cut.FindAll(".tm-time-picker--invalid, [aria-disabled='true']")
            .Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void TimePicker_OutOfRange_SetsAriaInvalidOnSegments()
+    {
+        // N148: an out-of-range value is announced on the editable segments via aria-invalid,
+        // not by disabling the group (segments stay editable).
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value,   new TimeOnly(8, 0))
+            .Add(c => c.MinTime, new TimeOnly(9, 0)));
+
+        cut.Find(".tm-time-seg--hours").GetAttribute("aria-invalid").Should().Be("true");
+        cut.Find(".tm-time-seg--minutes").GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    [Fact]
+    public void TimePicker_InRange_HasNoAriaInvalidOnSegments()
+    {
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Value,   new TimeOnly(10, 0))
+            .Add(c => c.MinTime, new TimeOnly(9, 0)));
+
+        cut.Find(".tm-time-seg--hours").HasAttribute("aria-invalid").Should().BeFalse();
+        cut.Find(".tm-time-seg--minutes").HasAttribute("aria-invalid").Should().BeFalse();
     }
 
     [Fact]
@@ -105,10 +134,14 @@ public class TmTimePickerTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TimePicker_Required_RendersRequired()
+    public void TimePicker_Required_AddsRequiredMarkerClassToLabel()
     {
-        var cut = Render<TmTimePicker>(p => p.Add(c => c.Required, true));
+        // N148: Required is carried by the same tm-input-label-required marker class as
+        // TmDatePicker — not by a data-required attribute no assistive tech consumes.
+        var cut = Render<TmTimePicker>(p => p
+            .Add(c => c.Label,    "Start")
+            .Add(c => c.Required, true));
 
-        cut.Find(".tm-time-picker").GetAttribute("data-required").Should().Be("true");
+        cut.Find(".tm-picker-label").ClassList.Should().Contain("tm-input-label-required");
     }
 }

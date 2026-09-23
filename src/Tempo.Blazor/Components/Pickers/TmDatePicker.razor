@@ -16,6 +16,9 @@
     }
 
     <div class="tm-date-picker-input-row">
+        @* No aria-required here: it is not a permitted attribute on a native <button> (ARIA 1.2 /
+           HTML-AAM). Requiredness is announced by the tm-input-label-required marker on the label
+           and enforced by form validation (N147). *@
         <button type="button"
                 @ref="_triggerRef"
                 id="@_triggerId"
@@ -23,7 +26,6 @@
                 disabled="@Disabled"
                 aria-haspopup="true"
                 aria-expanded="@_isOpen"
-                aria-required="@(Required ? "true" : null)"
                 aria-labelledby="@TriggerLabelledBy"
                 @attributes="AriaAttributes"
                 @onclick="ToggleCalendar">
@@ -111,6 +113,9 @@
     /// The trigger's accessible name is the label followed by the shown value (or placeholder). With
     /// no <see cref="Label"/> the value span alone names the button — identical to the text content,
     /// so nothing regresses when the consumer renders the picker unlabelled.
+    /// A consumer <c>aria-label</c> passed through <see cref="AdditionalAttributes"/> is overridden
+    /// by this <c>aria-labelledby</c> in the accessible-name algorithm — set <see cref="Label"/>
+    /// instead of <c>aria-label</c> to name the trigger (N159).
     /// </summary>
     private string TriggerLabelledBy =>
         string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
