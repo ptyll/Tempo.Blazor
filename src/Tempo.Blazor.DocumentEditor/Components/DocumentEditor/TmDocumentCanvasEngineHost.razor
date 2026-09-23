@@ -300,6 +300,15 @@
             return;
         }
 
+        // 20D carry-forward (mount race): re-assert the CURRENT trackChanges / reviewDisplayMode
+        // flags against the now-live engine. A flip landing while the awaited mount was in flight
+        // was dropped by SetTrackChangesEnabledAsync / SetReviewDisplayModeAsync (_handle still
+        // null), and the engine's updateOptions() ignores both (N192) — the stale mount-time
+        // value would persist for the life of the mount. Both calls are idempotent and run once
+        // per mount.
+        await SetTrackChangesEnabledAsync(TrackChangesEnabled);
+        await SetReviewDisplayModeAsync(ReviewDisplayMode);
+
         await MarkReadyAsync();
     }
 

@@ -179,6 +179,39 @@ public sealed class CanvasEngineHostRenderTests : LocalizationTestBase
         module.Invocations.Any(invocation => invocation.Identifier == "mount").Should().BeTrue();
     }
 
+    [Fact]
+    public void CanvasEngineHost_ReassertsTrackChanges_AgainstMountedEngine()
+    {
+        // Mount-time race (20D carry-forward): a TrackChangesEnabled flip landing while the
+        // awaited mount was in flight was dropped by SetTrackChangesEnabledAsync (_handle
+        // still null), and the engine's updateOptions() ignores trackChanges (N192) — the
+        // stale mount-time value would persist for the mount's life. The host must re-assert
+        // the current parameter against the now-live engine; the call is idempotent.
+        var module = SetupCanvasModule();
+        var document = DocumentEditorDocument.Empty("canvas-host-track-changes");
+
+        var cut = Render<TmDocumentCanvasEngineHost>(parameters => parameters
+            .Add(p => p.Document, document)
+            .Add(p => p.TrackChangesEnabled, true)
+            .Add(p => p.AriaLabel, "Document editor")
+            .Add(p => p.InputAriaLabel, "Document editor"));
+
+        cut.WaitForAssertion(() => cut.Instance.IsReady.Should().BeTrue());
+
+        module.Invocations.Any(invocation =>
+                invocation.Identifier == "setTrackChangesEnabled" &&
+                invocation.Arguments.Count >= 2 &&
+                Equals(invocation.Arguments[1], true))
+            .Should().BeTrue(
+                "the host must re-assert trackChanges on the mounted engine — updateOptions() ignores the flag");
+        module.Invocations.Any(invocation =>
+                invocation.Identifier == "setReviewDisplayMode" &&
+                invocation.Arguments.Count >= 2 &&
+                Equals(invocation.Arguments[1], "AllMarkup"))
+            .Should().BeTrue(
+                "reviewDisplayMode sits inside the same mount-only trackChanges options — same race, same re-assert");
+    }
+
     private sealed class CountingImageUrlResolver : IDocumentImageUrlResolver
     {
         public int CallCount;

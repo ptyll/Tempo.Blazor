@@ -2633,8 +2633,11 @@ public class TmDocumentEditorTests : LocalizationTestBase
                       .Add(p => p.Permissions, DocumentEditorPermissions.ForRole(DocumentEditorRole.Editor)));
 
         cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
-        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "setTrackChangesEnabled",
-            "mount carries the flag inside optionsJson — nothing pushed the runtime flag yet");
+        module.Invocations.Should().NotContain(invocation =>
+                invocation.Identifier == "setTrackChangesEnabled"
+                && invocation.Arguments.Count >= 2
+                && Equals(invocation.Arguments[1], true),
+            "nothing has asked for tracking yet — the post-mount re-assert pushes the mount-time false");
 
         cut.Render(parameters =>
             parameters.Add(p => p.DocumentId, "doc-1")
@@ -2665,8 +2668,11 @@ public class TmDocumentEditorTests : LocalizationTestBase
                       .Add(p => p.SuggestionsEnabled, true));
 
         cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
-        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "setTrackChangesEnabled",
-            "suggestion mode boots the flag through mount optionsJson — nothing pushed it yet");
+        module.Invocations.Should().NotContain(invocation =>
+                invocation.Identifier == "setTrackChangesEnabled"
+                && invocation.Arguments.Count >= 2
+                && Equals(invocation.Arguments[1], false),
+            "suggestion mode keeps tracking on — the post-mount re-assert pushes the mount-time true");
 
         cut.Render(parameters =>
             parameters.Add(p => p.DocumentId, "doc-1")
@@ -2696,15 +2702,19 @@ public class TmDocumentEditorTests : LocalizationTestBase
                       .Add(p => p.Provider, provider)
                       .Add(p => p.ShowToolbar, true));
 
-        cut.WaitForAssertion(() => cut.FindComponent<TmDocumentCanvasEngineHost>().Should().NotBeNull());
+        cut.WaitForAssertion(() =>
+            cut.FindComponent<TmDocumentCanvasEngineHost>().Instance.IsReady.Should().BeTrue());
+        var pushesBefore = module.Invocations.Count(invocation =>
+            invocation.Identifier == "setTrackChangesEnabled");
 
         cut.Render(parameters =>
             parameters.Add(p => p.DocumentId, "doc-1")
                       .Add(p => p.Provider, provider)
                       .Add(p => p.ShowToolbar, false));
 
-        module.Invocations.Should().NotContain(invocation => invocation.Identifier == "setTrackChangesEnabled",
-            "an unrelated parameter change leaves the effective flag untouched — no redundant interop push");
+        module.Invocations.Count(invocation => invocation.Identifier == "setTrackChangesEnabled")
+            .Should().Be(pushesBefore,
+                "an unrelated parameter change leaves the effective flag untouched — no redundant interop push");
     }
 
     [Fact]
