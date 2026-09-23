@@ -37,12 +37,16 @@ internal static class TestAssemblyInit
         double seconds = DefaultWaitSeconds;
         if (Environment.GetEnvironmentVariable(WaitBudgetEnvironmentVariable) is { Length: > 0 } raw)
         {
+            // !double.IsFinite rejects NaN/±Infinity ("NaN" and "1e999" both parse successfully —
+            // every comparison with NaN is false, so `parsed <= 0` alone never catches them and
+            // they would sail through to TimeSpan.FromSeconds as an undocumented ArgumentException).
             if (!double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-                || parsed <= 0)
+                || parsed <= 0
+                || !double.IsFinite(parsed))
             {
                 throw new InvalidOperationException(
                     $"{WaitBudgetEnvironmentVariable} is set to '{raw}', which is not a positive "
-                    + "number of seconds — the wait budget is a measurement knob, so a misread of "
+                    + "finite number of seconds — the wait budget is a measurement knob, so a misread of "
                     + "it must not silently run at the default.");
             }
 
