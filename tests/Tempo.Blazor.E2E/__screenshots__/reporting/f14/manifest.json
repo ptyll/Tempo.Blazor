@@ -1,7 +1,7 @@
 {
   "phase": "F14",
   "testName": "F14_SalesDashboard_RendersEngineDrawnChartsTableAndPdfExport",
-  "baseUrl": "http://127.0.0.1:41591",
+  "baseUrl": "http://127.0.0.1:38041",
   "screenshots": [
     "01-dashboard-viewer.png",
     "02-dashboard-designer-chart-properties.png"
@@ -22,8 +22,8 @@
   "functionalReview": "The dashboard opened by deep link, rendered one column chart, one line chart, one donut chart and a tablix from the Sales dataset; pixel stats confirmed all three palette colors and PDF export produced a valid PDF.",
   "uxReview": "The report uses Tempo token palette colors, BI-style chart density, compact axes/legends, a persistent parameter panel and a designer chart properties preview.",
   "diagnostics": [
-    "console.info: [2026-09-22T05:35:27.529Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:41591/_blazor\u0027.",
-    "console.info: [2026-09-22T05:35:27.967Z] Information: WebSocket connected to ws://127.0.0.1:41591/_blazor?id=kFg_8I7yJt3L6iZXDE7SPw.",
+    "console.info: [2026-09-23T15:02:51.321Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:38041/_blazor\u0027.",
+    "console.info: [2026-09-23T15:02:51.544Z] Information: WebSocket connected to ws://127.0.0.1:38041/_blazor?id=J73IMRfBBrJqZyMxZVIfhw.",
     "console.warning: Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently"
   ]
 }
