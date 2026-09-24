@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="78af7616-1eb2-4327-b3ce-f50ca2a68719" name="@vmi3495495 2026-09-24 13:23:09" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-24T13:23:09.1388933+02:00" queuing="2026-09-24T13:23:09.1388934+02:00" start="2026-09-24T13:22:40.9900143+02:00" finish="2026-09-24T13:25:27.1555952+02:00" />
+  <TestSettings name="default" id="43a118a8-dbc5-47df-9556-5f7b1c8932d2">
+    <Deployment runDeploymentRoot="_vmi3495495_2026-09-24_13_23_09" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d87cc0cb-351d-4479-a605-d578e6528077" testId="2d5b842d-d087-0da1-bd7f-062887c8bd8c" testName="Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave" computerName="vmi3495495" duration="00:00:23.0810288" startTime="2026-09-24T13:22:43.2673723+02:00" endTime="2026-09-24T13:23:09.0224104+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d87cc0cb-351d-4479-a605-d578e6528077">
+      <Output>
+        <StdOut>TestContext Messages:
+[baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="e535a545-be4c-43e3-80c3-19b92f60885a" testId="a6cd17a6-8208-c516-d70a-da38876cd10b" testName="StatusChip_SurvivesSanitizationAndReload" computerName="vmi3495495" duration="00:00:30.5724529" startTime="2026-09-24T13:24:56.2611625+02:00" endTime="2026-09-24T13:25:27.0063155+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e535a545-be4c-43e3-80c3-19b92f60885a" />
+    <UnitTestResult executionId="51ce66fe-4004-426f-a33d-acb7d80bb9e8" testId="e5c9396e-f4f9-6548-e234-117a21794f20" testName="MarkdownCodeBlock_EmptyAndInvalidMarkdownDoNotCrash" computerName="vmi3495495" duration="00:00:33.6288466" startTime="2026-09-24T13:24:22.6081522+02:00" endTime="2026-09-24T13:24:56.2381653+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="51ce66fe-4004-426f-a33d-acb7d80bb9e8">
+      <Output>
+        <StdOut>TestContext Messages:
+UX: an empty preview collapses to a thin band rather than an empty box with borders; a malformed table degrades to plain paragraphs, so no content is silently lost.</StdOut>
+      </Output>
+      <ResultFiles>
+        <ResultFile path="vmi3495495/edge-empty-and-invalid.png" />
+        <ResultFile path="vmi3495495/edge-empty-and-invalid.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="8f5bb10e-e7f8-4696-8b34-4beb56bde17d" testId="8a896e4d-d5ad-cbbc-b6c9-6ad084b02227" testName="Phase15_CanvasImages_RenderSelectResizeMoveAndPersist" computerName="vmi3495495" duration="00:00:20.5637962" startTime="2026-09-24T13:23:09.0745380+02:00" endTime="2026-09-24T13:23:29.6418922+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8f5bb10e-e7f8-4696-8b34-4beb56bde17d">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.IsTrue failed. Expected pointer move to shift the image right. Before: 0.0, after: 0.0.</Message>
+          <StackTrace>   at Tempo.Blazor.E2E.DocumentEditorCanvasImageE2ETests.Phase15_CanvasImages_RenderSelectResizeMoveAndPersist() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentEditorCanvasImageE2ETests.cs:line 83
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="85647a8c-2f7e-40f5-ad39-0c14fc836677" testId="43340a9a-5036-eb26-b241-350bbb07efc9" testName="DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload" computerName="vmi3495495" duration="00:00:52.9587152" startTime="2026-09-24T13:23:29.6459003+02:00" endTime="2026-09-24T13:24:22.6067064+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="85647a8c-2f7e-40f5-ad39-0c14fc836677">
+      <Output>
+        <ErrorInfo>
+          <Message>Test method Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload threw exception: &#xD;
+System.TimeoutException: Timeout 30000ms exceeded.</Message>
+          <StackTrace>   at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentLibraryNotionE2ETests.cs:line 136
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="MarkdownCodeBlock_EmptyAndInvalidMarkdownDoNotCrash" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="e5c9396e-f4f9-6548-e234-117a21794f20">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="51ce66fe-4004-426f-a33d-acb7d80bb9e8" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests" name="MarkdownCodeBlock_EmptyAndInvalidMarkdownDoNotCrash" />
+    </UnitTest>
+    <UnitTest name="StatusChip_SurvivesSanitizationAndReload" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="a6cd17a6-8208-c516-d70a-da38876cd10b">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="e535a545-be4c-43e3-80c3-19b92f60885a" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionEditPersistenceE2ETests" name="StatusChip_SurvivesSanitizationAndReload" />
+    </UnitTest>
+    <UnitTest name="DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="43340a9a-5036-eb26-b241-350bbb07efc9">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="85647a8c-2f7e-40f5-ad39-0c14fc836677" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests" name="DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload" />
+    </UnitTest>
+    <UnitTest name="Phase15_CanvasImages_RenderSelectResizeMoveAndPersist" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="8a896e4d-d5ad-cbbc-b6c9-6ad084b02227">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="8f5bb10e-e7f8-4696-8b34-4beb56bde17d" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorCanvasImageE2ETests" name="Phase15_CanvasImages_RenderSelectResizeMoveAndPersist" />
+    </UnitTest>
+    <UnitTest name="Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="2d5b842d-d087-0da1-bd7f-062887c8bd8c">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="Smoke" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="d87cc0cb-351d-4479-a605-d578e6528077" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorCanvasHistorySaveE2ETests" name="Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="2d5b842d-d087-0da1-bd7f-062887c8bd8c" executionId="d87cc0cb-351d-4479-a605-d578e6528077" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a6cd17a6-8208-c516-d70a-da38876cd10b" executionId="e535a545-be4c-43e3-80c3-19b92f60885a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e5c9396e-f4f9-6548-e234-117a21794f20" executionId="51ce66fe-4004-426f-a33d-acb7d80bb9e8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a896e4d-d5ad-cbbc-b6c9-6ad084b02227" executionId="8f5bb10e-e7f8-4696-8b34-4beb56bde17d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="43340a9a-5036-eb26-b241-350bbb07efc9" executionId="85647a8c-2f7e-40f5-ad39-0c14fc836677" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="5" executed="5" passed="3" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+</TestRun>

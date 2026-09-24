@@ -1,7 +1,7 @@
 {
   "phase": "F16",
   "testName": "F16_ReportServerSchedules_DeliverPdfThroughSmtp4DevOutbox",
-  "baseUrl": "http://127.0.0.1:38563",
+  "baseUrl": "http://127.0.0.1:46161",
   "screenshots": [
     "01-schedules-management.png",
     "02-smtp4dev-outbox.png"
@@ -11,7 +11,7 @@
   "functionalReview": "The flow signed in, created a tenant-scoped schedule, ran the new dashboard schedule, rendered a PDF attachment and captured the delivered email in the smtp4dev demo outbox.",
   "uxReview": "The schedule screen keeps management controls, schedule rows and delivery evidence in a dense admin layout using existing report-server panels, status chips and table rows.",
   "diagnostics": [
-    "console.info: [2026-09-23T15:27:52.634Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:38563/_blazor\u0027.",
-    "console.info: [2026-09-23T15:27:52.925Z] Information: WebSocket connected to ws://127.0.0.1:38563/_blazor?id=rCBI-S8umqpefTtrOBGIFw."
+    "console.info: [2026-09-24T06:55:29.737Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:46161/_blazor\u0027.",
+    "console.info: [2026-09-24T06:55:30.018Z] Information: WebSocket connected to ws://127.0.0.1:46161/_blazor?id=HLI_Nx4Ojs2qOOf6QD3wMw."
   ]
 }

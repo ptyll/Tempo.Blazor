@@ -7,7 +7,7 @@
   "viewerText": "Page\n1 of 3\nZoom\nFit width\nFit page\n50%\n75%\n100%\n125%\n150%\n200%\nParameters\nExport",
   "statusText": "",
   "browserDiagnostics": [
-    "console.info: [2026-09-23T15:04:09.739Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:36435/_blazor\u0027.",
-    "console.info: [2026-09-23T15:04:10.042Z] Information: WebSocket connected to ws://127.0.0.1:36435/_blazor?id=4fjholQ2s_OMcSo4s8OenQ."
+    "console.info: [2026-09-24T06:28:45.789Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:45365/_blazor\u0027.",
+    "console.info: [2026-09-24T06:28:46.462Z] Information: WebSocket connected to ws://127.0.0.1:45365/_blazor?id=DUm0oSxHCWf5t7vS61mCCA."
   ]
 }

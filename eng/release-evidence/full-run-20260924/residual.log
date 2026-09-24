@@ -1,0 +1,55 @@
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave [18 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.DocumentEditorCanvasHistorySaveE2ETests.Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave threw exception: 
+Microsoft.Playwright.PlaywrightException: Locator expected to contain text 'Autosave pending'
+But was: '<element(s) not found>' 
+Call log:
+  -   - LocatorAssertions.ToContainTextAsync with timeout 5000ms
+  -   - waiting for GetByTestId("document-pending-status")
+  -     - locator resolved to <span aria-live="polite" class="tm-document-editor__pending" data-testid="document-pending-status">Saving...</span>
+  -     - unexpected value "Saving..."
+  Stack Trace:
+     at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, FrameExpectOptions expectOptions, Object expected, String message) in /_/src/Playwright/Core/AssertionsBase.cs:line 87
+   at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, ExpectedTextValue[] expectedText, Object expected, String message, FrameExpectOptions options) in /_/src/Playwright/Core/AssertionsBase.cs:line 65
+   at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, ExpectedTextValue textValue, Object expected, String message, FrameExpectOptions options) in /_/src/Playwright/Core/AssertionsBase.cs:line 57
+   at Tempo.Blazor.E2E.DocumentEditorCanvasHistorySaveE2ETests.Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentEditorCanvasHistorySaveE2ETests.cs:line 132
+
+  Failed Phase15_CanvasImages_RenderSelectResizeMoveAndPersist [19 s]
+  Error Message:
+   Assert.IsTrue failed. Expected pointer move to shift the image right. Before: 0.0, after: 0.0.
+  Stack Trace:
+     at Tempo.Blazor.E2E.DocumentEditorCanvasImageE2ETests.Phase15_CanvasImages_RenderSelectResizeMoveAndPersist() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentEditorCanvasImageE2ETests.cs:line 83
+
+  Failed DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload [52 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload threw exception: 
+System.TimeoutException: Timeout 30000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentLibraryNotionE2ETests.cs:line 136
+
+  Failed MarkdownCodeBlock_EmptyAndInvalidMarkdownDoNotCrash [24 s]
+  Error Message:
+   Assert.AreEqual failed. Expected:<>. Actual:<This is a demo paragraph. You can edit this text, use slash commands to add new blocks, and test various features.>. Empty markdown should render an empty preview.
+  Stack Trace:
+     at Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.MarkdownCodeBlock_EmptyAndInvalidMarkdownDoNotCrash() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCodeBlockMarkdownPreviewE2ETests.cs:line 117
+
+  Failed StatusChip_SurvivesSanitizationAndReload [31 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.StatusChip_SurvivesSanitizationAndReload threw exception: 
+System.TimeoutException: Timeout 15000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.PlaywrightTestBase.WaitForAppReadyAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 297
+   at Tempo.Blazor.E2E.NotionE2ETestBase.OpenNotionEditorAsync(String query) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 52
+   at Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.StatusChip_SurvivesSanitizationAndReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionEditPersistenceE2ETests.cs:line 154
+
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/e2e-serial-residual.trx
+
+Failed!  - Failed:     5, Passed:   112, Skipped:     0, Total:   117, Duration: 1 h - Tempo.Blazor.E2E.dll (net10.0)

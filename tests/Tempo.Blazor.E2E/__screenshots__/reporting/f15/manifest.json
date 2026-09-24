@@ -1,7 +1,7 @@
 {
   "phase": "F15",
   "testName": "F15_ReportViewer_DownloadsCsvAndXlsxExports",
-  "baseUrl": "http://127.0.0.1:41295",
+  "baseUrl": "http://127.0.0.1:38033",
   "downloads": [
     "sales-dashboard.csv",
     "sales-dashboard.xlsx"
@@ -9,7 +9,7 @@
   "csvBytes": 633,
   "xlsxBytes": 7063,
   "diagnostics": [
-    "console.info: [2026-09-23T14:58:45.784Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:41295/_blazor\u0027.",
-    "console.info: [2026-09-23T14:58:45.992Z] Information: WebSocket connected to ws://127.0.0.1:41295/_blazor?id=33HtL-cL7kEOTfclu3FLhQ."
+    "console.info: [2026-09-24T06:21:05.370Z] Information: Normalizing \u0027_blazor\u0027 to \u0027http://127.0.0.1:38033/_blazor\u0027.",
+    "console.info: [2026-09-24T06:21:05.496Z] Information: WebSocket connected to ws://127.0.0.1:38033/_blazor?id=7bXu2WacwlLXt1Ry2mOR8A."
   ]
 }

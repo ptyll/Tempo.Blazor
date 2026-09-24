@@ -1,0 +1,192 @@
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed TimeAxis_Tooltip_ShowsFullDate [17 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmChartTimeAxisE2ETests.TimeAxis_Tooltip_ShowsFullDate threw exception: 
+Microsoft.Playwright.PlaywrightException: Locator expected to be visible 
+Call log:
+  -   - LocatorAssertions.ToBeVisibleAsync with timeout 5000ms
+  -   - waiting for Locator("[data-testid='charts-time-axis-section']").Locator(".tm-chart").First.Locator("[data-testid='chart-tooltip']")
+  Stack Trace:
+     at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, FrameExpectOptions expectOptions, Object expected, String message) in /_/src/Playwright/Core/AssertionsBase.cs:line 85
+   at Microsoft.Playwright.Core.AssertionsBase.ExpectImplAsync(String expression, ExpectedTextValue[] expectedText, Object expected, String message, FrameExpectOptions options) in /_/src/Playwright/Core/AssertionsBase.cs:line 65
+   at Tempo.Blazor.E2E.TmChartTimeAxisE2ETests.TimeAxis_Tooltip_ShowsFullDate() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Charts/TmChartTimeAxisE2ETests.cs:line 101
+
+  Failed Phase15_CanvasImages_RenderSelectResizeMoveAndPersist [33 s]
+  Error Message:
+   Assert.IsTrue failed. Expected pointer move to shift the image right. Before: 0.0, after: 0.0.
+  Stack Trace:
+     at Tempo.Blazor.E2E.DocumentEditorCanvasImageE2ETests.Phase15_CanvasImages_RenderSelectResizeMoveAndPersist() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentEditorCanvasImageE2ETests.cs:line 83
+
+  Failed ModelingEditor_LoadsDemoProvider_WithVisiblePanels [31 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.ModelingEditorM8E2ETests.ModelingEditor_LoadsDemoProvider_WithVisiblePanels threw exception: 
+System.TimeoutException: Timeout 30000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-testid='modeling-editor-loading']") to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.ModelingEditorM8E2ETests.ModelingEditor_LoadsDemoProvider_WithVisiblePanels() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/ModelingEditorM8E2ETests.cs:line 22
+
+  Failed NumberedList_Renders_SequentialNumbers [34 s]
+  Error Message:
+   Assert.IsTrue failed. At least 3 numbered list items should be present. Actual: 0
+  Stack Trace:
+     at Tempo.Blazor.E2E.NotionBlockEditingE2ETests.NumberedList_Renders_SequentialNumbers() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionBlockEditingE2ETests.cs:line 269
+
+  Failed CodeBlock_PreviewToggleHiddenForOtherLanguages [31 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.CodeBlock_PreviewToggleHiddenForOtherLanguages threw exception: 
+System.TimeoutException: Timeout 10000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='72861f76-4d1f-498b-adc2-0bafa7ea3e86']").First.Locator("textarea.tm-notion-code-block__content") to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.InsertCodeBlockAsync(IPage page, String code) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCodeBlockMarkdownPreviewE2ETests.cs:line 161
+   at Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.CodeBlock_PreviewToggleHiddenForOtherLanguages() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCodeBlockMarkdownPreviewE2ETests.cs:line 64
+
+  Failed MarkdownCodeBlock_PreviewIsSanitized [30 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.MarkdownCodeBlock_PreviewIsSanitized threw exception: 
+System.TimeoutException: Timeout 10000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='7179b885-c265-497b-b8b9-b3e730502b26']").First.Locator("textarea.tm-notion-code-block__content") to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.InsertCodeBlockAsync(IPage page, String code) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCodeBlockMarkdownPreviewE2ETests.cs:line 161
+   at Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.CreateMarkdownCodeBlockAsync(IPage page, String markdown) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCodeBlockMarkdownPreviewE2ETests.cs:line 151
+   at Tempo.Blazor.E2E.NotionCodeBlockMarkdownPreviewE2ETests.MarkdownCodeBlock_PreviewIsSanitized() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCodeBlockMarkdownPreviewE2ETests.cs:line 135
+
+  Failed InlineCode_IsCommittedAndSurvivesReload [1 m]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.InlineCode_IsCommittedAndSurvivesReload threw exception: 
+System.TimeoutException: Timeout 20000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='b5e14cf6-9fa6-498e-811a-f5ea83190410']").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.InlineCode_IsCommittedAndSurvivesReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionEditPersistenceE2ETests.cs:line 46
+
+  Failed UnsavedEdit_SurvivesChangeToAnotherBlock [34 s]
+  Error Message:
+   StringAssert.Contains failed. String '' does not contain string 'unsaved second block'. The unsaved block must keep its text..
+  Stack Trace:
+     at Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.UnsavedEdit_SurvivesChangeToAnotherBlock() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionEditPersistenceE2ETests.cs:line 96
+
+  Failed StatusChip_SurvivesSanitizationAndReload [50 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.StatusChip_SurvivesSanitizationAndReload threw exception: 
+System.TimeoutException: Timeout 20000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='177e5a29-70ab-4331-9059-29cdef65e984']").First.Locator(".tm-notion-status").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionEditPersistenceE2ETests.StatusChip_SurvivesSanitizationAndReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionEditPersistenceE2ETests.cs:line 174
+
+  Failed InlineToolbar_TurnInto_Heading1_Converts [19 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionFormattingE2ETests.InlineToolbar_TurnInto_Heading1_Converts threw exception: 
+System.TimeoutException: Timeout 10000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-notion-paragraph[contenteditable='true']").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionFormattingE2ETests.OpenInlineToolbarAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionFormattingE2ETests.cs:line 58
+   at Tempo.Blazor.E2E.NotionFormattingE2ETests.InlineToolbar_TurnInto_Heading1_Converts() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionFormattingE2ETests.cs:line 423
+
+  Failed EB4_InlineToolbar_MainButtonsAndActiveStates_CaptureBaseline [1 m 18 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionFormattingE2ETests.EB4_InlineToolbar_MainButtonsAndActiveStates_CaptureBaseline threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb400000-0000-0000-0000-000000000002'] code") to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionFormattingE2ETests.SeedInlineToolbarPageAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionFormattingE2ETests.cs:line 563
+   at Tempo.Blazor.E2E.NotionFormattingE2ETests.EB4_InlineToolbar_MainButtonsAndActiveStates_CaptureBaseline() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionFormattingE2ETests.cs:line 446
+
+  Failed CF25_ExportMenu_DownloadsAllDocumentFormatsWithSubpages [1 m 11 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionImportExportE2ETests.CF25_ExportMenu_DownloadsAllDocumentFormatsWithSubpages threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-notion-header-title").Filter(new() { HasText = "CF25 Export Bridge" }).First to be visible
+  -     - waiting for" https://localhost:7106/notion-editor" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedExportPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 645
+   at Tempo.Blazor.E2E.NotionImportExportE2ETests.CF25_ExportMenu_DownloadsAllDocumentFormatsWithSubpages() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionImportExportE2ETests.cs:line 21
+
+  Failed F7_KrDocxTables_RenderMergedAndImpactFormattingAcrossThemes [1 m 12 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionKrDocxFidelityE2ETests.F7_KrDocxTables_RenderMergedAndImpactFormattingAcrossThemes threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='f7000000-0000-0000-0000-000000000020'] .tm-notion-table") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedKrFidelityPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 208
+   at Tempo.Blazor.E2E.NotionKrDocxFidelityE2ETests.F7_KrDocxTables_RenderMergedAndImpactFormattingAcrossThemes() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionKrDocxFidelityE2ETests.cs:line 15
+
+  Failed FileBlock_Shows_DownloadLink [26 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.FileBlock_Shows_DownloadLink threw exception: 
+System.TimeoutException: Timeout 5000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.InsertBlockViaSlashMenuAsync(IPage page, String searchTerm, String itemName, String expectedBlockType) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMediaBlocksE2ETests.cs:line 70
+   at Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.FileBlock_Shows_DownloadLink() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMediaBlocksE2ETests.cs:line 311
+
+  Failed Overlay_Firefox_OpensAsPopover_AndDismisses [40 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.OverlayPanelE2ETests.Overlay_Firefox_OpensAsPopover_AndDismisses threw exception: 
+System.TimeoutException: Timeout 15000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.PlaywrightTestBase.WaitForAppReadyAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 297
+   at Tempo.Blazor.E2E.OverlayPanelE2ETests.Overlay_Firefox_OpensAsPopover_AndDismisses() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/OverlayPanelE2ETests.cs:line 517
+   at Tempo.Blazor.E2E.OverlayPanelE2ETests.Overlay_Firefox_OpensAsPopover_AndDismisses() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/OverlayPanelE2ETests.cs:line 532
+   at Tempo.Blazor.E2E.OverlayPanelE2ETests.Overlay_Firefox_OpensAsPopover_AndDismisses() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/OverlayPanelE2ETests.cs:line 532
+
+  Skipped F8_PdfRenderer_MatchesCanvasGoldenImagesForInvoiceAndSales [3 s]
+  Skipped Catalog_PortalLoads_CreateFolder_PersistsRow [3 ms]
+  Skipped NewReport_CreatesRealReport_ShownInDesigner_AndPersisted [< 1 ms]
+  Skipped NewReport_ImportsRdl_CreatesRealReport_ShownInDesigner_AndPersisted [< 1 ms]
+  Skipped Favorites_ToggleRoundTrips_AndPersists [< 1 ms]
+  Skipped Render_WithParameter_RecordsRunInHistory [< 1 ms]
+  Skipped Schedule_FiresSoon_DeliversEmailWithPdf_AndRecordsDeliveredRun [1 ms]
+  Failed CanvasJsEngine_InlineFormulaEditorCzechDecimalCommaDoesNotAdvanceArgumentHintPrematurely [37 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.SpreadsheetE2ETests.CanvasJsEngine_InlineFormulaEditorCzechDecimalCommaDoesNotAdvanceArgumentHintPrematurely threw exception: 
+System.TimeoutException: Timeout 30000ms exceeded.
+Call log:
+  -   - waiting for navigation until "load"
+  -     - navigated to "https://localhost:7106/spreadsheet"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Page.ReloadAsync(PageReloadOptions options) in /_/src/Playwright/Core/Page.cs:line 818
+   at Tempo.Blazor.E2E.SpreadsheetE2ETests.CanvasJsEngine_InlineFormulaEditorCzechDecimalCommaDoesNotAdvanceArgumentHintPrematurely() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetE2ETests.cs:line 2239
+
+  Skipped Gantt_TimelinePan_DragsHorizontally
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/e2e-shard-3.trx
+
+Failed!  - Failed:    16, Passed:   496, Skipped:     8, Total:   520, Duration: 2 h 54 m - Tempo.Blazor.E2E.dll (net10.0)

@@ -1,0 +1,21 @@
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed Phase15_CanvasImages_RenderSelectResizeMoveAndPersist [20 s]
+  Error Message:
+   Assert.IsTrue failed. Expected pointer move to shift the image right. Before: 0.0, after: 0.0.
+  Stack Trace:
+     at Tempo.Blazor.E2E.DocumentEditorCanvasImageE2ETests.Phase15_CanvasImages_RenderSelectResizeMoveAndPersist() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentEditorCanvasImageE2ETests.cs:line 83
+
+  Failed DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload [52 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload threw exception: 
+System.TimeoutException: Timeout 30000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentLibraryNotionE2ETests.cs:line 136
+
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/e2e-serial-residual2.trx
+
+Failed!  - Failed:     2, Passed:     3, Skipped:     0, Total:     5, Duration: 2 m 43 s - Tempo.Blazor.E2E.dll (net10.0)

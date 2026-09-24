@@ -1,0 +1,641 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="58d0fdb4-ed97-4f7f-bdec-4ba3c4397baf" name="@vmi3495495 2026-09-24 10:46:35" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-24T10:46:35.5459659+02:00" queuing="2026-09-24T10:46:35.5459660+02:00" start="2026-09-24T10:46:33.0902000+02:00" finish="2026-09-24T11:02:00.8165951+02:00" />
+  <TestSettings name="default" id="0cdc852f-7cb3-43c8-b31a-835baf1a6206">
+    <Deployment runDeploymentRoot="_vmi3495495_2026-09-24_10_46_35" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="88940640-797f-4b23-8e39-40b3ac4ce268" testId="06ff0ed0-efc7-da17-418a-f73099bf5803" testName="Phase12_SaveFailure_CreatesOfflineDraftRetryAndBeforeUnloadState" computerName="vmi3495495" duration="00:00:19.2904488" startTime="2026-09-24T10:47:23.5388181+02:00" endTime="2026-09-24T10:47:42.8387521+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="88940640-797f-4b23-8e39-40b3ac4ce268" />
+    <UnitTestResult executionId="553d5786-ce0e-4439-b9b0-688922125502" testId="1dbad770-0f2e-7639-ec52-ed524b0d3364" testName="Phase9_InsertMenu_OpensTokenPanelInsertsTokenAndPersists" computerName="vmi3495495" duration="00:00:23.4672860" startTime="2026-09-24T10:49:16.4595010+02:00" endTime="2026-09-24T10:49:39.9282961+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="553d5786-ce0e-4439-b9b0-688922125502">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/00-token-panel-open.png" />
+        <ResultFile path="vmi3495495/01-token-inserted.png" />
+        <ResultFile path="vmi3495495/02-after-reload.png" />
+        <ResultFile path="vmi3495495/manifest.json" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="67c216ee-2d74-444a-b530-d0bafbd928a7" testId="90569c41-595d-4ea6-c3e8-18aa25778377" testName="EB13_EmptyHistoryPanel_IsCaptured" computerName="vmi3495495" duration="00:00:23.0292057" startTime="2026-09-24T10:55:21.9798956+02:00" endTime="2026-09-24T10:55:45.0110704+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="67c216ee-2d74-444a-b530-d0bafbd928a7">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/empty-history-panel.png" />
+        <ResultFile path="vmi3495495/empty-history-panel.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="ca38005a-75de-4dc5-8d7f-dbf0e10b2df8" testId="84cb4b71-0fd4-b4cc-a852-7783d6abf35b" testName="S2_InlineSigningFieldsFlowFromEditorIntoRunner" computerName="vmi3495495" duration="00:00:18.5389781" startTime="2026-09-24T10:48:57.9192155+02:00" endTime="2026-09-24T10:49:16.4585914+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ca38005a-75de-4dc5-8d7f-dbf0e10b2df8" />
+    <UnitTestResult executionId="d15a270e-6ab7-4e88-8382-5cb2468843ae" testId="46781b0a-f752-b783-7fdd-e1f92bdb8766" testName="Portal_RunsCleanly_OnWasm" computerName="vmi3495495" duration="00:00:00.0020904" startTime="2026-09-24T11:02:00.3080766+02:00" endTime="2026-09-24T11:02:00.5537791+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d15a270e-6ab7-4e88-8382-5cb2468843ae">
+      <Output>
+        <ErrorInfo>
+          <Message>Initialization method Tempo.Blazor.E2E.ReportServerCatalogWasmE2ETests.ReportServerTestInitialize threw exception. Assert.Inconclusive failed. Report Server E2E lane is disabled. Set TM_RS_E2E=1 to run it (dotnet test --filter TestCategory=ReportServerE2E)..</Message>
+          <StackTrace>   at Tempo.Blazor.E2E.ReportServerE2ETestBase.ReportServerTestInitialize() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/ReportServerE2ETestBase.cs:line 87
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="92c7a985-ca99-4e8a-a4f1-b16f73e257f8" testId="4c73a3a8-0f1f-5601-3a0f-2eef9f8a91de" testName="S1_EditorPagesExportIntoSigningTemplateAndRunner" computerName="vmi3495495" duration="00:00:16.0572238" startTime="2026-09-24T10:48:41.8608257+02:00" endTime="2026-09-24T10:48:57.9185996+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="92c7a985-ca99-4e8a-a4f1-b16f73e257f8" />
+    <UnitTestResult executionId="7a3461bb-ca96-4208-a603-698b8033fd09" testId="41559c78-88d1-8f4f-24d2-9c7a1953e704" testName="EB16_ContextMenuDuplicateDelete_CapturesBaselines" computerName="vmi3495495" duration="00:00:32.4869183" startTime="2026-09-24T10:49:46.1836755+02:00" endTime="2026-09-24T10:50:18.6720832+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7a3461bb-ca96-4208-a603-698b8033fd09">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/context-menu-after-delete.png" />
+        <ResultFile path="vmi3495495/context-menu-after-delete.region.png" />
+        <ResultFile path="vmi3495495/context-menu-after-duplicate.png" />
+        <ResultFile path="vmi3495495/context-menu-after-duplicate.region.png" />
+        <ResultFile path="vmi3495495/context-menu-copy-duplicate-delete.png" />
+        <ResultFile path="vmi3495495/context-menu-copy-duplicate-delete.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="09dbdcdb-078f-476c-9bda-d89b0edf9ee2" testId="498d8a9f-1479-dea2-e8a9-b5f7844a3319" testName="EB13_ManyVersionsPreviewAndScrolled_AreCaptured" computerName="vmi3495495" duration="00:00:26.1037039" startTime="2026-09-24T10:55:45.0121368+02:00" endTime="2026-09-24T10:56:11.1162739+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="09dbdcdb-078f-476c-9bda-d89b0edf9ee2">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/many-versions-preview.png" />
+        <ResultFile path="vmi3495495/many-versions-preview.region.png" />
+        <ResultFile path="vmi3495495/many-versions-scrolled.png" />
+        <ResultFile path="vmi3495495/many-versions-scrolled.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="15278604-c426-4913-9b00-82f2cb5d5599" testId="c9c0c74c-bd83-d62f-973f-63c9a56d5d78" testName="EB15_SpecialBlocks_EquationBookmarkEmbedTemplate_CapturesBaselines" computerName="vmi3495495" duration="00:00:42.0431872" startTime="2026-09-24T11:00:15.8516484+02:00" endTime="2026-09-24T11:00:57.9048775+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="15278604-c426-4913-9b00-82f2cb5d5599">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/bookmark-og-resolved.png" />
+        <ResultFile path="vmi3495495/bookmark-og-resolved.region.png" />
+        <ResultFile path="vmi3495495/bookmark-provider-fallback.png" />
+        <ResultFile path="vmi3495495/bookmark-provider-fallback.region.png" />
+        <ResultFile path="vmi3495495/bookmark-static-fallback.png" />
+        <ResultFile path="vmi3495495/bookmark-static-fallback.region.png" />
+        <ResultFile path="vmi3495495/embed-codepen-detected.png" />
+        <ResultFile path="vmi3495495/embed-codepen-detected.region.png" />
+        <ResultFile path="vmi3495495/embed-generic-unknown.png" />
+        <ResultFile path="vmi3495495/embed-generic-unknown.region.png" />
+        <ResultFile path="vmi3495495/equation-invalid-fallback.png" />
+        <ResultFile path="vmi3495495/equation-invalid-fallback.region.png" />
+        <ResultFile path="vmi3495495/equation-valid.png" />
+        <ResultFile path="vmi3495495/equation-valid.region.png" />
+        <ResultFile path="vmi3495495/template-button.png" />
+        <ResultFile path="vmi3495495/template-button.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="a737ff53-7fa5-4cde-9f11-d8e84487f9f2" testId="d9aaa475-9d80-7525-fa4c-27c25faad51b" testName="EB11_SidebarNavigationStates_AreCaptured" computerName="vmi3495495" duration="00:01:10.5067737" startTime="2026-09-24T10:57:56.8275171+02:00" endTime="2026-09-24T10:59:07.3360759+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a737ff53-7fa5-4cde-9f11-d8e84487f9f2">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/deep-tree-desktop.png" />
+        <ResultFile path="vmi3495495/deep-tree-desktop.region.png" />
+        <ResultFile path="vmi3495495/desktop-collapsed.png" />
+        <ResultFile path="vmi3495495/desktop-collapsed.region.png" />
+        <ResultFile path="vmi3495495/empty-navigation-sections.png" />
+        <ResultFile path="vmi3495495/empty-navigation-sections.region.png" />
+        <ResultFile path="vmi3495495/mobile-slide-over.png" />
+        <ResultFile path="vmi3495495/mobile-slide-over.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="5f6f287c-b0d6-4d70-b855-9829db064b7e" testId="c9398b54-376f-49a2-ff3e-e8cd8b14445a" testName="BuildRestartLine_EscapesJson_AndCapsRecentOutput" computerName="vmi3495495" duration="00:00:00.0014167" startTime="2026-09-24T10:49:39.9387968+02:00" endTime="2026-09-24T10:49:39.9404228+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5f6f287c-b0d6-4d70-b855-9829db064b7e" />
+    <UnitTestResult executionId="cf4995e1-172d-44e5-be7b-48d8fb217a0f" testId="45bccc8c-a46e-b2c1-ca86-aed72c2e2f6a" testName="S0_DocumentEditorBaseline_RendersAndCapturesScreenshot" computerName="vmi3495495" duration="00:00:16.9336899" startTime="2026-09-24T10:48:13.8399148+02:00" endTime="2026-09-24T10:48:30.7744955+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cf4995e1-172d-44e5-be7b-48d8fb217a0f" />
+    <UnitTestResult executionId="d86d3a13-812f-4a21-bfa7-93fd5dc8aafe" testId="7caa1ed2-0305-7b6c-4fe2-1910993a9748" testName="EB15_NavigationAndSyncedBlocks_CapturesBaselines" computerName="vmi3495495" duration="00:00:37.2878420" startTime="2026-09-24T10:54:44.6881294+02:00" endTime="2026-09-24T10:55:21.9777905+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d86d3a13-812f-4a21-bfa7-93fd5dc8aafe">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/breadcrumb.png" />
+        <ResultFile path="vmi3495495/breadcrumb.region.png" />
+        <ResultFile path="vmi3495495/child-page.png" />
+        <ResultFile path="vmi3495495/child-page.region.png" />
+        <ResultFile path="vmi3495495/linked-page.png" />
+        <ResultFile path="vmi3495495/linked-page.region.png" />
+        <ResultFile path="vmi3495495/synced-origin.png" />
+        <ResultFile path="vmi3495495/synced-origin.region.png" />
+        <ResultFile path="vmi3495495/synced-ref.png" />
+        <ResultFile path="vmi3495495/synced-ref.region.png" />
+        <ResultFile path="vmi3495495/table-of-contents.png" />
+        <ResultFile path="vmi3495495/table-of-contents.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="33866393-6e7e-4b98-bbc8-45ca2b66b943" testId="f1b69225-2c7f-0dd0-58c6-82727065619b" testName="EB10_TextAnchorPagePanelAndNoProviderStates_AreCaptured" computerName="vmi3495495" duration="00:00:47.0958518" startTime="2026-09-24T10:51:01.9831490+02:00" endTime="2026-09-24T10:51:49.0795927+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="33866393-6e7e-4b98-bbc8-45ca2b66b943">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/no-comment-provider.png" />
+        <ResultFile path="vmi3495495/no-comment-provider.region.png" />
+        <ResultFile path="vmi3495495/page-comment-panel.png" />
+        <ResultFile path="vmi3495495/page-comment-panel.region.png" />
+        <ResultFile path="vmi3495495/text-anchor-panel-and-mark.png" />
+        <ResultFile path="vmi3495495/text-anchor-panel-and-mark.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="944236cb-ba38-4e6a-87bf-756989927199" testId="82258606-bbb1-7b2c-ae48-2f5e9164f362" testName="EB13_RestoreConfirmAndRestoredPageContent_AreCaptured" computerName="vmi3495495" duration="00:00:30.0540336" startTime="2026-09-24T10:56:11.1169037+02:00" endTime="2026-09-24T10:56:41.1713988+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="944236cb-ba38-4e6a-87bf-756989927199">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/restore-confirm.png" />
+        <ResultFile path="vmi3495495/restore-confirm.region.png" />
+        <ResultFile path="vmi3495495/restored-page-content.png" />
+        <ResultFile path="vmi3495495/restored-page-content.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="955ad659-e737-492b-8ac6-289333cfca5e" testId="98d7121c-0d33-c8cd-ab28-6f1227b8c825" testName="EB10_BlockCommentStates_AreCaptured" computerName="vmi3495495" duration="00:00:43.3045026" startTime="2026-09-24T10:50:18.6742518+02:00" endTime="2026-09-24T10:51:01.9802979+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="955ad659-e737-492b-8ac6-289333cfca5e">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/block-panel-after-delete.png" />
+        <ResultFile path="vmi3495495/block-panel-after-delete.region.png" />
+        <ResultFile path="vmi3495495/block-panel-long-thread.png" />
+        <ResultFile path="vmi3495495/block-panel-long-thread.region.png" />
+        <ResultFile path="vmi3495495/block-panel-reactions.png" />
+        <ResultFile path="vmi3495495/block-panel-reactions.region.png" />
+        <ResultFile path="vmi3495495/block-panel-resolved.png" />
+        <ResultFile path="vmi3495495/block-panel-resolved.region.png" />
+        <ResultFile path="vmi3495495/block-panel-thread-list.png" />
+        <ResultFile path="vmi3495495/block-panel-thread-list.region.png" />
+        <ResultFile path="vmi3495495/margin-threads-unread-resolved.png" />
+        <ResultFile path="vmi3495495/margin-threads-unread-resolved.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="31f1cdb2-35f7-4c8f-8f6d-341c1f934371" testId="81ee501e-8f0b-a819-ad25-38b68d3e45ad" testName="NavigationMessage_CountsAsContextLoss" computerName="vmi3495495" duration="00:00:00.0012522" startTime="2026-09-24T10:46:35.1387195+02:00" endTime="2026-09-24T10:46:35.1441153+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="31f1cdb2-35f7-4c8f-8f6d-341c1f934371" />
+    <UnitTestResult executionId="118fa1e1-ca2f-491d-82be-3d4590146e59" testId="4db9f48d-d727-a4e0-5bbd-5d42c0613c68" testName="EB16_ColumnMoves_CapturesIntoOutAndCrossColumnBaselines" computerName="vmi3495495" duration="00:00:29.0925067" startTime="2026-09-24T10:53:08.9985977+02:00" endTime="2026-09-24T10:53:38.0921697+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="118fa1e1-ca2f-491d-82be-3d4590146e59">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/cross-column-moved.png" />
+        <ResultFile path="vmi3495495/cross-column-moved.region.png" />
+        <ResultFile path="vmi3495495/moved-into-column.png" />
+        <ResultFile path="vmi3495495/moved-into-column.region.png" />
+        <ResultFile path="vmi3495495/moved-out-of-column.png" />
+        <ResultFile path="vmi3495495/moved-out-of-column.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="0f3d0543-653b-4bb5-8680-8278030ea19e" testId="2d5b842d-d087-0da1-bd7f-062887c8bd8c" testName="Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave" computerName="vmi3495495" duration="00:00:20.0501452" startTime="2026-09-24T10:47:03.4857906+02:00" endTime="2026-09-24T10:47:23.5369936+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0f3d0543-653b-4bb5-8680-8278030ea19e" />
+    <UnitTestResult executionId="4edaf2ff-ec6e-4c28-889f-13a86203eaa9" testId="e391b588-3863-8cd8-bf00-7b2f5218d933" testName="EB16_DragIndicatorEscapeAndTopLevelReorder_CapturesBaselines" computerName="vmi3495495" duration="00:00:26.9733362" startTime="2026-09-24T10:52:42.0230278+02:00" endTime="2026-09-24T10:53:08.9973430+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4edaf2ff-ec6e-4c28-889f-13a86203eaa9">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/drag-indicator.png" />
+        <ResultFile path="vmi3495495/drag-indicator.region.png" />
+        <ResultFile path="vmi3495495/top-level-reordered.png" />
+        <ResultFile path="vmi3495495/top-level-reordered.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="df9a9913-587f-4a95-b771-e068c8385362" testId="d5ed29cb-0cc1-956c-28c3-a9733d7afc2f" testName="EB11_DragMoveReparentedState_IsCaptured" computerName="vmi3495495" duration="00:00:24.2502921" startTime="2026-09-24T10:59:51.5994762+02:00" endTime="2026-09-24T11:00:15.8501979+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="df9a9913-587f-4a95-b771-e068c8385362">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/drag-move-reparented.png" />
+        <ResultFile path="vmi3495495/drag-move-reparented.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="6b046218-ce2b-409f-b596-0a5be7366adf" testId="da9adf09-3d96-78a1-d90f-49ec25e6873c" testName="EB11_TrashStatesAndActions_AreCaptured" computerName="vmi3495495" duration="00:00:44.2558207" startTime="2026-09-24T10:59:07.3415319+02:00" endTime="2026-09-24T10:59:51.5986629+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6b046218-ce2b-409f-b596-0a5be7366adf">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/empty-trash.png" />
+        <ResultFile path="vmi3495495/empty-trash.region.png" />
+        <ResultFile path="vmi3495495/trash-after-actions.png" />
+        <ResultFile path="vmi3495495/trash-after-actions.region.png" />
+        <ResultFile path="vmi3495495/trash-with-items.png" />
+        <ResultFile path="vmi3495495/trash-with-items.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="e8574b11-f300-494d-acaf-b1d2f5f3fcbb" testId="aff6ed25-4142-9d9d-f305-f3784c5074c5" testName="EB8_MobileColumnsStackWithoutOverflow_AreCaptured" computerName="vmi3495495" duration="00:00:20.3811771" startTime="2026-09-24T10:54:24.3056679+02:00" endTime="2026-09-24T10:54:44.6873357+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e8574b11-f300-494d-acaf-b1d2f5f3fcbb">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/mobile-columns-stacked.png" />
+        <ResultFile path="vmi3495495/mobile-columns-stacked.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="a8c5067c-ff37-42e8-8b8e-1463e038b77c" testId="4f8f2d03-547f-7dc3-66fc-82b6df1c5ee5" testName="Fullscreen_ToggleAndEscape_AppliesBodyClassScrollLockAndFixedEditor" computerName="vmi3495495" duration="00:00:15.5843572" startTime="2026-09-24T10:47:42.8394293+02:00" endTime="2026-09-24T10:47:58.4284097+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a8c5067c-ff37-42e8-8b8e-1463e038b77c">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/fullscreen-active.png" />
+        <ResultFile path="vmi3495495/fullscreen-exited.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="624e161f-ea94-439b-94f0-48c5a55057a7" testId="7034074d-17fd-8dc0-155f-a6cbe0044366" testName="Fullscreen_NavigateAwayWhileActive_DisposeRemovesBodyClassAndScrollLock" computerName="vmi3495495" duration="00:00:15.4090137" startTime="2026-09-24T10:47:58.4294277+02:00" endTime="2026-09-24T10:48:13.8391543+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="624e161f-ea94-439b-94f0-48c5a55057a7">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/fullscreen-dispose-cleanup.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="90af3218-adbb-44c1-9403-d48256e85a8a" testId="0c213d3d-9b4b-93bd-cb8a-fd30acc4cbf1" testName="Phase12_HistoryManualSaveReloadAndCategorySmoke_PersistsCanvasModel" computerName="vmi3495495" duration="00:00:27.2394137" startTime="2026-09-24T10:46:35.1470661+02:00" endTime="2026-09-24T10:47:03.4744377+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="90af3218-adbb-44c1-9403-d48256e85a8a">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/00-phase12-before.png" />
+        <ResultFile path="vmi3495495/01-phase12-after-reload.png" />
+        <ResultFile path="vmi3495495/manifest.json" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="a3fa20d1-8cba-4c03-bf77-f240a5cf03aa" testId="fb40c9da-4022-38f4-275c-0ee3c59f1282" testName="CF10_PageCommentsStates_AreCaptured" computerName="vmi3495495" duration="00:00:52.9376344" startTime="2026-09-24T10:51:49.0803234+02:00" endTime="2026-09-24T10:52:42.0188497+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a3fa20d1-8cba-4c03-bf77-f240a5cf03aa">
+      <Output>
+        <StdOut>TestContext Messages:
+UX CF10 review: page-level comments stay visually separated from block comments, empty/providerless states avoid misleading affordances, replies and reactions remain accessible, and resolved threads preserve readable context.</StdOut>
+      </Output>
+      <ResultFiles>
+        <ResultFile path="vmi3495495/cf10-page-comments-empty.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-empty.region.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-long-thread.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-long-thread.region.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-providerless-hidden.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-providerless-hidden.region.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-resolved.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-resolved.region.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-section.png" />
+        <ResultFile path="vmi3495495/cf10-page-comments-section.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="3c063b86-7c3c-404c-b358-dba5162d48c8" testId="9a68483f-38b1-cb74-8a58-3940c17d158d" testName="RestartRecord_AppendsJsonl_AndIncrementsCounter" computerName="vmi3495495" duration="00:00:00.0086781" startTime="2026-09-24T10:49:39.9295254+02:00" endTime="2026-09-24T10:49:39.9386811+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3c063b86-7c3c-404c-b358-dba5162d48c8" />
+    <UnitTestResult executionId="63c472b4-a598-4d4a-871a-441fd5769fc5" testId="77dcd82a-e5dd-b46d-833a-306e003eadee" testName="S0_SigningComponentsBaseline_RendersDesignerAndRunnerFlow" computerName="vmi3495495" duration="00:00:11.0815671" startTime="2026-09-24T10:48:30.7771265+02:00" endTime="2026-09-24T10:48:41.8598996+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="63c472b4-a598-4d4a-871a-441fd5769fc5" />
+    <UnitTestResult executionId="91e3640f-805c-44a5-8a44-b4fbe2ce63f2" testId="3df86541-b555-bccb-8894-0271ad5ae4c4" testName="EB12_FullWidthSmallTextLocked_AreCaptured" computerName="vmi3495495" duration="00:00:23.1296536" startTime="2026-09-24T10:57:33.6964851+02:00" endTime="2026-09-24T10:57:56.8265455+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="91e3640f-805c-44a5-8a44-b4fbe2ce63f2">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/full-width-small-text-locked.png" />
+        <ResultFile path="vmi3495495/full-width-small-text-locked.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="9aef12b7-5ccf-49a1-a2cb-accc83a531f4" testId="ca32dabd-074f-b1fb-862e-f5549cec0bd9" testName="WasmApp_LoadsAndRenders" computerName="vmi3495495" duration="00:00:06.2401368" startTime="2026-09-24T10:49:39.9410384+02:00" endTime="2026-09-24T10:49:46.1821791+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9aef12b7-5ccf-49a1-a2cb-accc83a531f4">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/wasm_app_loads_20260924_104946.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="d28d2b2c-4e34-4c24-8c18-79ad96cf6414" testId="b36991f9-cbd8-7bd2-a7ef-f3a04fd818ef" testName="HealthProbe_OnlyTwoHundredCountsAsReady" computerName="vmi3495495" duration="00:00:00.0003178" startTime="2026-09-24T10:49:39.9405172+02:00" endTime="2026-09-24T10:49:39.9410005+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d28d2b2c-4e34-4c24-8c18-79ad96cf6414" />
+    <UnitTestResult executionId="fb430497-869f-47a0-ba68-c33771358ba1" testId="b4d17c50-282f-d8b1-c07e-b74213cc801d" testName="EB12_EmojiPickerRecent_AreCaptured" computerName="vmi3495495" duration="00:00:25.0172627" startTime="2026-09-24T10:57:08.6776379+02:00" endTime="2026-09-24T10:57:33.6953984+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb430497-869f-47a0-ba68-c33771358ba1">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/emoji-picker-recent.png" />
+        <ResultFile path="vmi3495495/emoji-picker-recent.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="6d545985-4600-4f15-ae29-06788958c138" testId="7cdc236d-7114-05a2-d1b9-94ad58e59d99" testName="LoginPage_BootsTo_WebAssembly" computerName="vmi3495495" duration="00:00:00.0181832" startTime="2026-09-24T11:02:00.2871135+02:00" endTime="2026-09-24T11:02:00.3079661+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6d545985-4600-4f15-ae29-06788958c138">
+      <Output>
+        <ErrorInfo>
+          <Message>Initialization method Tempo.Blazor.E2E.ReportServerCatalogWasmE2ETests.ReportServerTestInitialize threw exception. Assert.Inconclusive failed. Report Server E2E lane is disabled. Set TM_RS_E2E=1 to run it (dotnet test --filter TestCategory=ReportServerE2E)..</Message>
+          <StackTrace>   at Tempo.Blazor.E2E.ReportServerE2ETestBase.ReportServerTestInitialize() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/ReportServerE2ETestBase.cs:line 87
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="386cc5aa-aa12-4bcf-8ba4-b29e69b8fbcf" testId="8147357c-050a-173d-636f-a5c628c4c9d9" testName="EB15_TempoBlocks_DiagramWireframeSpreadsheet_CapturesEmptyModalAndSavedBaselines" computerName="vmi3495495" duration="00:01:02.3730941" startTime="2026-09-24T11:00:57.9057868+02:00" endTime="2026-09-24T11:02:00.2832297+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="386cc5aa-aa12-4bcf-8ba4-b29e69b8fbcf">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/diagram-empty.png" />
+        <ResultFile path="vmi3495495/diagram-empty.region.png" />
+        <ResultFile path="vmi3495495/diagram-no-provider-modal.png" />
+        <ResultFile path="vmi3495495/diagram-no-provider-modal.region.png" />
+        <ResultFile path="vmi3495495/diagram-no-provider-saved.png" />
+        <ResultFile path="vmi3495495/diagram-no-provider-saved.region.png" />
+        <ResultFile path="vmi3495495/spreadsheet-empty.png" />
+        <ResultFile path="vmi3495495/spreadsheet-empty.region.png" />
+        <ResultFile path="vmi3495495/spreadsheet-no-provider-modal.png" />
+        <ResultFile path="vmi3495495/spreadsheet-no-provider-modal.region.png" />
+        <ResultFile path="vmi3495495/spreadsheet-no-provider-saved.png" />
+        <ResultFile path="vmi3495495/spreadsheet-no-provider-saved.region.png" />
+        <ResultFile path="vmi3495495/wireframe-empty.png" />
+        <ResultFile path="vmi3495495/wireframe-empty.region.png" />
+        <ResultFile path="vmi3495495/wireframe-no-provider-modal.png" />
+        <ResultFile path="vmi3495495/wireframe-no-provider-modal.region.png" />
+        <ResultFile path="vmi3495495/wireframe-no-provider-saved.png" />
+        <ResultFile path="vmi3495495/wireframe-no-provider-saved.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="6c2733a4-b42b-493c-914c-6f1c8516b004" testId="0e1c4a8f-142e-371c-2eb9-61f597dfe2ef" testName="FailureMessage_CarriesAttemptAndNavigationCount" computerName="vmi3495495" duration="00:00:00.0009474" startTime="2026-09-24T10:46:35.1455550+02:00" endTime="2026-09-24T10:46:35.1469813+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6c2733a4-b42b-493c-914c-6f1c8516b004" />
+    <UnitTestResult executionId="ae6413b0-11c4-444f-9579-8c1a4aba0918" testId="1661a656-906e-682e-a51b-37abd9d4428c" testName="UnrelatedErrors_AreNeverRetried" computerName="vmi3495495" duration="00:00:00.0002581" startTime="2026-09-24T10:46:35.1450137+02:00" endTime="2026-09-24T10:46:35.1454899+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ae6413b0-11c4-444f-9579-8c1a4aba0918" />
+    <UnitTestResult executionId="d9515eb9-c555-46b3-9383-27aced86b068" testId="b79faa3d-42de-32f2-58b3-5a556946b9e3" testName="FirstContextLoss_IsTheOnlyRetryableOne" computerName="vmi3495495" duration="00:00:00.0070474" startTime="2026-09-24T10:46:35.0431159+02:00" endTime="2026-09-24T10:46:35.1277580+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d9515eb9-c555-46b3-9383-27aced86b068" />
+    <UnitTestResult executionId="43842d23-c603-4f5d-a588-fc40c2f8919b" testId="67b8d2c1-ae83-1ffe-3bb1-33a26de8767f" testName="EB12_CoverDragAndRemoveStates_AreCaptured" computerName="vmi3495495" duration="00:00:27.5040666" startTime="2026-09-24T10:56:41.1722464+02:00" endTime="2026-09-24T10:57:08.6770412+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="43842d23-c603-4f5d-a588-fc40c2f8919b">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/cover-repositioned.png" />
+        <ResultFile path="vmi3495495/cover-repositioned.region.png" />
+        <ResultFile path="vmi3495495/normal-with-cover.png" />
+        <ResultFile path="vmi3495495/normal-with-cover.region.png" />
+        <ResultFile path="vmi3495495/without-cover.png" />
+        <ResultFile path="vmi3495495/without-cover.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="c5ddea46-a79d-43ee-9e04-94ec527a7cba" testId="ac3883e1-b25d-c737-5606-1262cc9642d2" testName="EB8_DesktopColumnsResizeAndTocStates_AreCaptured" computerName="vmi3495495" duration="00:00:46.2073146" startTime="2026-09-24T10:53:38.0940190+02:00" endTime="2026-09-24T10:54:24.3041440+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c5ddea46-a79d-43ee-9e04-94ec527a7cba">
+      <ResultFiles>
+        <ResultFile path="vmi3495495/desktop-2-3-4-columns.png" />
+        <ResultFile path="vmi3495495/desktop-2-3-4-columns.region.png" />
+        <ResultFile path="vmi3495495/desktop-resized-divider.png" />
+        <ResultFile path="vmi3495495/desktop-resized-divider.region.png" />
+        <ResultFile path="vmi3495495/toc-empty-state.png" />
+        <ResultFile path="vmi3495495/toc-empty-state.region.png" />
+        <ResultFile path="vmi3495495/toc-many-headings-scroll-spy.png" />
+        <ResultFile path="vmi3495495/toc-many-headings-scroll-spy.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Fullscreen_ToggleAndEscape_AppliesBodyClassScrollLockAndFixedEditor" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="4f8f2d03-547f-7dc3-66fc-82b6df1c5ee5">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="a8c5067c-ff37-42e8-8b8e-1463e038b77c" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorFullscreenE2ETests" name="Fullscreen_ToggleAndEscape_AppliesBodyClassScrollLockAndFixedEditor" />
+    </UnitTest>
+    <UnitTest name="EB8_MobileColumnsStackWithoutOverflow_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="aff6ed25-4142-9d9d-f305-f3784c5074c5">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="e8574b11-f300-494d-acaf-b1d2f5f3fcbb" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionLayoutRecoveryE2ETests" name="EB8_MobileColumnsStackWithoutOverflow_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="EB15_SpecialBlocks_EquationBookmarkEmbedTemplate_CapturesBaselines" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="c9c0c74c-bd83-d62f-973f-63c9a56d5d78">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="15278604-c426-4913-9b00-82f2cb5d5599" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionSpecialBlocksRecoveryE2ETests" name="EB15_SpecialBlocks_EquationBookmarkEmbedTemplate_CapturesBaselines" />
+    </UnitTest>
+    <UnitTest name="EB16_ColumnMoves_CapturesIntoOutAndCrossColumnBaselines" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="4db9f48d-d727-a4e0-5bbd-5d42c0613c68">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="118fa1e1-ca2f-491d-82be-3d4590146e59" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionDragDropRecoveryE2ETests" name="EB16_ColumnMoves_CapturesIntoOutAndCrossColumnBaselines" />
+    </UnitTest>
+    <UnitTest name="FirstContextLoss_IsTheOnlyRetryableOne" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b79faa3d-42de-32f2-58b3-5a556946b9e3">
+      <Execution id="d9515eb9-c555-46b3-9383-27aced86b068" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ContextLossRetryPolicyTests" name="FirstContextLoss_IsTheOnlyRetryableOne" />
+    </UnitTest>
+    <UnitTest name="NavigationMessage_CountsAsContextLoss" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="81ee501e-8f0b-a819-ad25-38b68d3e45ad">
+      <Execution id="31f1cdb2-35f7-4c8f-8f6d-341c1f934371" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ContextLossRetryPolicyTests" name="NavigationMessage_CountsAsContextLoss" />
+    </UnitTest>
+    <UnitTest name="EB12_CoverDragAndRemoveStates_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="67b8d2c1-ae83-1ffe-3bb1-33a26de8767f">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="43842d23-c603-4f5d-a588-fc40c2f8919b" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageSettingsRecoveryE2ETests" name="EB12_CoverDragAndRemoveStates_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="S2_InlineSigningFieldsFlowFromEditorIntoRunner" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="84cb4b71-0fd4-b4cc-a852-7783d6abf35b">
+      <TestCategory>
+        <TestCategoryItem TestCategory="SigningEditorBridge" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="ca38005a-75de-4dc5-8d7f-dbf0e10b2df8" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorSigningBridgeE2ETests" name="S2_InlineSigningFieldsFlowFromEditorIntoRunner" />
+    </UnitTest>
+    <UnitTest name="EB16_ContextMenuDuplicateDelete_CapturesBaselines" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="41559c78-88d1-8f4f-24d2-9c7a1953e704">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="7a3461bb-ca96-4208-a603-698b8033fd09" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionBlockOpsRecoveryE2ETests" name="EB16_ContextMenuDuplicateDelete_CapturesBaselines" />
+    </UnitTest>
+    <UnitTest name="LoginPage_BootsTo_WebAssembly" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="7cdc236d-7114-05a2-d1b9-94ad58e59d99">
+      <TestCategory>
+        <TestCategoryItem TestCategory="ReportServerE2E:WebAssembly" />
+        <TestCategoryItem TestCategory="ReportServerE2E" />
+      </TestCategory>
+      <Execution id="6d545985-4600-4f15-ae29-06788958c138" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ReportServerCatalogWasmE2ETests" name="LoginPage_BootsTo_WebAssembly" />
+    </UnitTest>
+    <UnitTest name="EB10_BlockCommentStates_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="98d7121c-0d33-c8cd-ab28-6f1227b8c825">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="955ad659-e737-492b-8ac6-289333cfca5e" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionCommentsRecoveryE2ETests" name="EB10_BlockCommentStates_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="CF10_PageCommentsStates_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="fb40c9da-4022-38f4-275c-0ee3c59f1282">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="a3fa20d1-8cba-4c03-bf77-f240a5cf03aa" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionCommentsRecoveryE2ETests" name="CF10_PageCommentsStates_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="UnrelatedErrors_AreNeverRetried" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="1661a656-906e-682e-a51b-37abd9d4428c">
+      <Execution id="ae6413b0-11c4-444f-9579-8c1a4aba0918" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ContextLossRetryPolicyTests" name="UnrelatedErrors_AreNeverRetried" />
+    </UnitTest>
+    <UnitTest name="HealthProbe_OnlyTwoHundredCountsAsReady" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b36991f9-cbd8-7bd2-a7ef-f3a04fd818ef">
+      <Execution id="d28d2b2c-4e34-4c24-8c18-79ad96cf6414" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.HostRestartRecordingTests" name="HealthProbe_OnlyTwoHundredCountsAsReady" />
+    </UnitTest>
+    <UnitTest name="EB12_EmojiPickerRecent_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b4d17c50-282f-d8b1-c07e-b74213cc801d">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="fb430497-869f-47a0-ba68-c33771358ba1" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageSettingsRecoveryE2ETests" name="EB12_EmojiPickerRecent_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="EB11_SidebarNavigationStates_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="d9aaa475-9d80-7525-fa4c-27c25faad51b">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="a737ff53-7fa5-4cde-9f11-d8e84487f9f2" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionSidebarRecoveryE2ETests" name="EB11_SidebarNavigationStates_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="FailureMessage_CarriesAttemptAndNavigationCount" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="0e1c4a8f-142e-371c-2eb9-61f597dfe2ef">
+      <Execution id="6c2733a4-b42b-493c-914c-6f1c8516b004" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ContextLossRetryPolicyTests" name="FailureMessage_CarriesAttemptAndNavigationCount" />
+    </UnitTest>
+    <UnitTest name="EB16_DragIndicatorEscapeAndTopLevelReorder_CapturesBaselines" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="e391b588-3863-8cd8-bf00-7b2f5218d933">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="4edaf2ff-ec6e-4c28-889f-13a86203eaa9" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionDragDropRecoveryE2ETests" name="EB16_DragIndicatorEscapeAndTopLevelReorder_CapturesBaselines" />
+    </UnitTest>
+    <UnitTest name="WasmApp_LoadsAndRenders" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="ca32dabd-074f-b1fb-862e-f5549cec0bd9">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="9aef12b7-5ccf-49a1-a2cb-accc83a531f4" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.WasmTests" name="WasmApp_LoadsAndRenders" />
+    </UnitTest>
+    <UnitTest name="BuildRestartLine_EscapesJson_AndCapsRecentOutput" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="c9398b54-376f-49a2-ff3e-e8cd8b14445a">
+      <Execution id="5f6f287c-b0d6-4d70-b855-9829db064b7e" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.HostRestartRecordingTests" name="BuildRestartLine_EscapesJson_AndCapsRecentOutput" />
+    </UnitTest>
+    <UnitTest name="EB15_TempoBlocks_DiagramWireframeSpreadsheet_CapturesEmptyModalAndSavedBaselines" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="8147357c-050a-173d-636f-a5c628c4c9d9">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="386cc5aa-aa12-4bcf-8ba4-b29e69b8fbcf" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionTempoBlocksRecoveryE2ETests" name="EB15_TempoBlocks_DiagramWireframeSpreadsheet_CapturesEmptyModalAndSavedBaselines" />
+    </UnitTest>
+    <UnitTest name="EB13_RestoreConfirmAndRestoredPageContent_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="82258606-bbb1-7b2c-ae48-2f5e9164f362">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="944236cb-ba38-4e6a-87bf-756989927199" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageHistoryRecoveryE2ETests" name="EB13_RestoreConfirmAndRestoredPageContent_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="Phase12_SaveFailure_CreatesOfflineDraftRetryAndBeforeUnloadState" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="06ff0ed0-efc7-da17-418a-f73099bf5803">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="Smoke" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="88940640-797f-4b23-8e39-40b3ac4ce268" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorCanvasHistorySaveE2ETests" name="Phase12_SaveFailure_CreatesOfflineDraftRetryAndBeforeUnloadState" />
+    </UnitTest>
+    <UnitTest name="EB13_EmptyHistoryPanel_IsCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="90569c41-595d-4ea6-c3e8-18aa25778377">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="67c216ee-2d74-444a-b530-d0bafbd928a7" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageHistoryRecoveryE2ETests" name="EB13_EmptyHistoryPanel_IsCaptured" />
+    </UnitTest>
+    <UnitTest name="EB10_TextAnchorPagePanelAndNoProviderStates_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="f1b69225-2c7f-0dd0-58c6-82727065619b">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="33866393-6e7e-4b98-bbc8-45ca2b66b943" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionCommentsRecoveryE2ETests" name="EB10_TextAnchorPagePanelAndNoProviderStates_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="Phase12_HistoryManualSaveReloadAndCategorySmoke_PersistsCanvasModel" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="0c213d3d-9b4b-93bd-cb8a-fd30acc4cbf1">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="Smoke" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="90af3218-adbb-44c1-9403-d48256e85a8a" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorCanvasHistorySaveE2ETests" name="Phase12_HistoryManualSaveReloadAndCategorySmoke_PersistsCanvasModel" />
+    </UnitTest>
+    <UnitTest name="Phase9_InsertMenu_OpensTokenPanelInsertsTokenAndPersists" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="1dbad770-0f2e-7639-ec52-ed524b0d3364">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="553d5786-ce0e-4439-b9b0-688922125502" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorTokenMenuE2ETests" name="Phase9_InsertMenu_OpensTokenPanelInsertsTokenAndPersists" />
+    </UnitTest>
+    <UnitTest name="Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="2d5b842d-d087-0da1-bd7f-062887c8bd8c">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="Smoke" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="0f3d0543-653b-4bb5-8680-8278030ea19e" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorCanvasHistorySaveE2ETests" name="Phase12_AutosaveDebounce_PersistsCurrentCanvasModelWithoutManualSave" />
+    </UnitTest>
+    <UnitTest name="S1_EditorPagesExportIntoSigningTemplateAndRunner" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="4c73a3a8-0f1f-5601-3a0f-2eef9f8a91de">
+      <TestCategory>
+        <TestCategoryItem TestCategory="SigningEditorBridge" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="92c7a985-ca99-4e8a-a4f1-b16f73e257f8" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorSigningBridgeE2ETests" name="S1_EditorPagesExportIntoSigningTemplateAndRunner" />
+    </UnitTest>
+    <UnitTest name="EB12_FullWidthSmallTextLocked_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="3df86541-b555-bccb-8894-0271ad5ae4c4">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="91e3640f-805c-44a5-8a44-b4fbe2ce63f2" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageSettingsRecoveryE2ETests" name="EB12_FullWidthSmallTextLocked_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="EB11_TrashStatesAndActions_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="da9adf09-3d96-78a1-d90f-49ec25e6873c">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="6b046218-ce2b-409f-b596-0a5be7366adf" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionSidebarRecoveryE2ETests" name="EB11_TrashStatesAndActions_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="RestartRecord_AppendsJsonl_AndIncrementsCounter" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="9a68483f-38b1-cb74-8a58-3940c17d158d">
+      <Execution id="3c063b86-7c3c-404c-b358-dba5162d48c8" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.HostRestartRecordingTests" name="RestartRecord_AppendsJsonl_AndIncrementsCounter" />
+    </UnitTest>
+    <UnitTest name="EB8_DesktopColumnsResizeAndTocStates_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="ac3883e1-b25d-c737-5606-1262cc9642d2">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="c5ddea46-a79d-43ee-9e04-94ec527a7cba" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionLayoutRecoveryE2ETests" name="EB8_DesktopColumnsResizeAndTocStates_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="S0_DocumentEditorBaseline_RendersAndCapturesScreenshot" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="45bccc8c-a46e-b2c1-ca86-aed72c2e2f6a">
+      <TestCategory>
+        <TestCategoryItem TestCategory="SigningEditorBridge" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="cf4995e1-172d-44e5-be7b-48d8fb217a0f" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorSigningBridgeE2ETests" name="S0_DocumentEditorBaseline_RendersAndCapturesScreenshot" />
+    </UnitTest>
+    <UnitTest name="Fullscreen_NavigateAwayWhileActive_DisposeRemovesBodyClassAndScrollLock" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="7034074d-17fd-8dc0-155f-a6cbe0044366">
+      <TestCategory>
+        <TestCategoryItem TestCategory="DocumentEditor" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="624e161f-ea94-439b-94f0-48c5a55057a7" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorFullscreenE2ETests" name="Fullscreen_NavigateAwayWhileActive_DisposeRemovesBodyClassAndScrollLock" />
+    </UnitTest>
+    <UnitTest name="EB11_DragMoveReparentedState_IsCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="d5ed29cb-0cc1-956c-28c3-a9733d7afc2f">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="df9a9913-587f-4a95-b771-e068c8385362" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionSidebarRecoveryE2ETests" name="EB11_DragMoveReparentedState_IsCaptured" />
+    </UnitTest>
+    <UnitTest name="S0_SigningComponentsBaseline_RendersDesignerAndRunnerFlow" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="77dcd82a-e5dd-b46d-833a-306e003eadee">
+      <TestCategory>
+        <TestCategoryItem TestCategory="SigningEditorBridge" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="63c472b4-a598-4d4a-871a-441fd5769fc5" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorSigningBridgeE2ETests" name="S0_SigningComponentsBaseline_RendersDesignerAndRunnerFlow" />
+    </UnitTest>
+    <UnitTest name="EB13_ManyVersionsPreviewAndScrolled_AreCaptured" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="498d8a9f-1479-dea2-e8a9-b5f7844a3319">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="09dbdcdb-078f-476c-9bda-d89b0edf9ee2" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageHistoryRecoveryE2ETests" name="EB13_ManyVersionsPreviewAndScrolled_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="EB15_NavigationAndSyncedBlocks_CapturesBaselines" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="7caa1ed2-0305-7b6c-4fe2-1910993a9748">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="d86d3a13-812f-4a21-bfa7-93fd5dc8aafe" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionNavBlocksRecoveryE2ETests" name="EB15_NavigationAndSyncedBlocks_CapturesBaselines" />
+    </UnitTest>
+    <UnitTest name="Portal_RunsCleanly_OnWasm" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="46781b0a-f752-b783-7fdd-e1f92bdb8766">
+      <TestCategory>
+        <TestCategoryItem TestCategory="ReportServerE2E:WebAssembly" />
+        <TestCategoryItem TestCategory="ReportServerE2E" />
+      </TestCategory>
+      <Execution id="d15a270e-6ab7-4e88-8382-5cb2468843ae" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ReportServerCatalogWasmE2ETests" name="Portal_RunsCleanly_OnWasm" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="06ff0ed0-efc7-da17-418a-f73099bf5803" executionId="88940640-797f-4b23-8e39-40b3ac4ce268" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1dbad770-0f2e-7639-ec52-ed524b0d3364" executionId="553d5786-ce0e-4439-b9b0-688922125502" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="90569c41-595d-4ea6-c3e8-18aa25778377" executionId="67c216ee-2d74-444a-b530-d0bafbd928a7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="84cb4b71-0fd4-b4cc-a852-7783d6abf35b" executionId="ca38005a-75de-4dc5-8d7f-dbf0e10b2df8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="46781b0a-f752-b783-7fdd-e1f92bdb8766" executionId="d15a270e-6ab7-4e88-8382-5cb2468843ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4c73a3a8-0f1f-5601-3a0f-2eef9f8a91de" executionId="92c7a985-ca99-4e8a-a4f1-b16f73e257f8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="41559c78-88d1-8f4f-24d2-9c7a1953e704" executionId="7a3461bb-ca96-4208-a603-698b8033fd09" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="498d8a9f-1479-dea2-e8a9-b5f7844a3319" executionId="09dbdcdb-078f-476c-9bda-d89b0edf9ee2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c9c0c74c-bd83-d62f-973f-63c9a56d5d78" executionId="15278604-c426-4913-9b00-82f2cb5d5599" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d9aaa475-9d80-7525-fa4c-27c25faad51b" executionId="a737ff53-7fa5-4cde-9f11-d8e84487f9f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c9398b54-376f-49a2-ff3e-e8cd8b14445a" executionId="5f6f287c-b0d6-4d70-b855-9829db064b7e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="45bccc8c-a46e-b2c1-ca86-aed72c2e2f6a" executionId="cf4995e1-172d-44e5-be7b-48d8fb217a0f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7caa1ed2-0305-7b6c-4fe2-1910993a9748" executionId="d86d3a13-812f-4a21-bfa7-93fd5dc8aafe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f1b69225-2c7f-0dd0-58c6-82727065619b" executionId="33866393-6e7e-4b98-bbc8-45ca2b66b943" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="82258606-bbb1-7b2c-ae48-2f5e9164f362" executionId="944236cb-ba38-4e6a-87bf-756989927199" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="98d7121c-0d33-c8cd-ab28-6f1227b8c825" executionId="955ad659-e737-492b-8ac6-289333cfca5e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="81ee501e-8f0b-a819-ad25-38b68d3e45ad" executionId="31f1cdb2-35f7-4c8f-8f6d-341c1f934371" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4db9f48d-d727-a4e0-5bbd-5d42c0613c68" executionId="118fa1e1-ca2f-491d-82be-3d4590146e59" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2d5b842d-d087-0da1-bd7f-062887c8bd8c" executionId="0f3d0543-653b-4bb5-8680-8278030ea19e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="e391b588-3863-8cd8-bf00-7b2f5218d933" executionId="4edaf2ff-ec6e-4c28-889f-13a86203eaa9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d5ed29cb-0cc1-956c-28c3-a9733d7afc2f" executionId="df9a9913-587f-4a95-b771-e068c8385362" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="da9adf09-3d96-78a1-d90f-49ec25e6873c" executionId="6b046218-ce2b-409f-b596-0a5be7366adf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="aff6ed25-4142-9d9d-f305-f3784c5074c5" executionId="e8574b11-f300-494d-acaf-b1d2f5f3fcbb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4f8f2d03-547f-7dc3-66fc-82b6df1c5ee5" executionId="a8c5067c-ff37-42e8-8b8e-1463e038b77c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7034074d-17fd-8dc0-155f-a6cbe0044366" executionId="624e161f-ea94-439b-94f0-48c5a55057a7" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0c213d3d-9b4b-93bd-cb8a-fd30acc4cbf1" executionId="90af3218-adbb-44c1-9403-d48256e85a8a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fb40c9da-4022-38f4-275c-0ee3c59f1282" executionId="a3fa20d1-8cba-4c03-bf77-f240a5cf03aa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9a68483f-38b1-cb74-8a58-3940c17d158d" executionId="3c063b86-7c3c-404c-b358-dba5162d48c8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77dcd82a-e5dd-b46d-833a-306e003eadee" executionId="63c472b4-a598-4d4a-871a-441fd5769fc5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3df86541-b555-bccb-8894-0271ad5ae4c4" executionId="91e3640f-805c-44a5-8a44-b4fbe2ce63f2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca32dabd-074f-b1fb-862e-f5549cec0bd9" executionId="9aef12b7-5ccf-49a1-a2cb-accc83a531f4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b36991f9-cbd8-7bd2-a7ef-f3a04fd818ef" executionId="d28d2b2c-4e34-4c24-8c18-79ad96cf6414" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b4d17c50-282f-d8b1-c07e-b74213cc801d" executionId="fb430497-869f-47a0-ba68-c33771358ba1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7cdc236d-7114-05a2-d1b9-94ad58e59d99" executionId="6d545985-4600-4f15-ae29-06788958c138" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8147357c-050a-173d-636f-a5c628c4c9d9" executionId="386cc5aa-aa12-4bcf-8ba4-b29e69b8fbcf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0e1c4a8f-142e-371c-2eb9-61f597dfe2ef" executionId="6c2733a4-b42b-493c-914c-6f1c8516b004" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1661a656-906e-682e-a51b-37abd9d4428c" executionId="ae6413b0-11c4-444f-9579-8c1a4aba0918" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b79faa3d-42de-32f2-58b3-5a556946b9e3" executionId="d9515eb9-c555-46b3-9383-27aced86b068" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="67b8d2c1-ae83-1ffe-3bb1-33a26de8767f" executionId="43842d23-c603-4f5d-a588-fc40c2f8919b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ac3883e1-b25d-c737-5606-1262cc9642d2" executionId="c5ddea46-a79d-43ee-9e04-94ec527a7cba" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="40" executed="38" passed="38" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>Test 'LoginPage_BootsTo_WebAssembly' was skipped in the test run.
+Test 'Portal_RunsCleanly_OnWasm' was skipped in the test run.
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

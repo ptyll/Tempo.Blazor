@@ -1,0 +1,153 @@
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Skipped GenerateAllBaselines [13 ms]
+  Skipped GenerateAllBaselines [6 ms]
+  Failed CF27_AIProviderlessHiddenState_Baseline [1 m 18 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionAIE2ETests.CF27_AIProviderlessHiddenState_Baseline threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb100000-0000-0000-0000-000000000011'] .tm-notion-code-block") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor?disableAIProvider=true" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor?disableAIProvider=true"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedTextFormattingPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 96
+   at Tempo.Blazor.E2E.NotionAIE2ETests.CF27_AIProviderlessHiddenState_Baseline() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionAIE2ETests.cs:line 17
+
+  Failed CF28_AIInlineUX_EdgeCases_Work [1 m 18 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionAIE2ETests.CF28_AIInlineUX_EdgeCases_Work threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb100000-0000-0000-0000-000000000011'] .tm-notion-code-block") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor?disableAIProvider=true" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor?disableAIProvider=true"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedTextFormattingPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 96
+   at Tempo.Blazor.E2E.NotionAIE2ETests.CF28_AIInlineUX_EdgeCases_Work() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionAIE2ETests.cs:line 87
+
+  Failed CF28_AIInlineUX_RetryCancelImproveModesAndProviderError_Work [1 m 18 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionAIE2ETests.CF28_AIInlineUX_RetryCancelImproveModesAndProviderError_Work threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb100000-0000-0000-0000-000000000011'] .tm-notion-code-block") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor?slowAIProvider=true"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedTextFormattingPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 96
+   at Tempo.Blazor.E2E.NotionAIE2ETests.CF28_AIInlineUX_RetryCancelImproveModesAndProviderError_Work() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionAIE2ETests.cs:line 118
+
+  Failed EB14_Collaboration_NoCollaborators_HidesPresence [1 m 14 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionCollaborationE2ETests.EB14_Collaboration_NoCollaborators_HidesPresence threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb140000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedCollaborationPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 320
+   at Tempo.Blazor.E2E.NotionCollaborationE2ETests.EB14_Collaboration_NoCollaborators_HidesPresence() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCollaborationE2ETests.cs:line 18
+
+  Failed EB14_Collaboration_OneAndManyCursors_RenderReadablePresence [1 m 17 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionCollaborationE2ETests.EB14_Collaboration_OneAndManyCursors_RenderReadablePresence threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb140000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedCollaborationPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 320
+   at Tempo.Blazor.E2E.NotionCollaborationE2ETests.EB14_Collaboration_OneAndManyCursors_RenderReadablePresence() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCollaborationE2ETests.cs:line 36
+
+  Failed EB14_Collaboration_LongNamesAndOverlap_StayLegible [1 m 20 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionCollaborationE2ETests.EB14_Collaboration_LongNamesAndOverlap_StayLegible threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='eb140000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedCollaborationPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 320
+   at Tempo.Blazor.E2E.NotionCollaborationE2ETests.EB14_Collaboration_LongNamesAndOverlap_StayLegible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionCollaborationE2ETests.cs:line 63
+
+  Failed ContentByLabel_ConfigureRenderLimitAndNavigate [1 m 18 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionContentByLabelE2ETests.ContentByLabel_ConfigureRenderLimitAndNavigate threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-cbl") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedContentByLabelPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 360
+   at Tempo.Blazor.E2E.NotionContentByLabelE2ETests.ContentByLabel_ConfigureRenderLimitAndNavigate() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionContentByLabelE2ETests.cs:line 15
+
+  Failed CF33_PublicShare_HappyPathAndBaseline [1 m 20 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionPublicShareE2ETests.CF33_PublicShare_HappyPathAndBaseline threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='cf330000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedPublicSharePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 480
+   at Tempo.Blazor.E2E.NotionPublicShareE2ETests.CF33_PublicShare_HappyPathAndBaseline() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionPublicShareE2ETests.cs:line 15
+
+  Failed CF33_PublicShare_EdgeCases_Baseline [1 m 42 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionPublicShareE2ETests.CF33_PublicShare_EdgeCases_Baseline threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='cf160000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedExpiredPublicSharePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 490
+   at Tempo.Blazor.E2E.NotionPublicShareE2ETests.CF33_PublicShare_EdgeCases_Baseline() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionPublicShareE2ETests.cs:line 73
+
+  Standard Output Messages:
+ 
+ 
+ TestContext Messages:
+ UX CF33 providerless menu baseline captured: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/Deploy_root 20260924T075119_1807276/In/baseline-sandbox/notion/share/cf33-providerless-settings-menu.png / /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/Deploy_root 20260924T075119_1807276/In/baseline-sandbox/notion/share/cf33-providerless-settings-menu.region.png
+
+
+  Skipped names_01_manager [6 ms]
+  Skipped names_02_namebox [2 ms]
+  Skipped hyperlink_01_dialog [< 1 ms]
+  Skipped hyperlink_02_incell [< 1 ms]
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/e2e-shard-0.trx
+
+Failed!  - Failed:     9, Passed:   172, Skipped:     6, Total:   187, Duration: 1 h 31 m - Tempo.Blazor.E2E.dll (net10.0)

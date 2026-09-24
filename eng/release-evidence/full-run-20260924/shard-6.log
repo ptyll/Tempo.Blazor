@@ -1,0 +1,192 @@
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed CF32_AuditLog_HappyPathAndBaseline [1 m 20 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionAuditLogE2ETests.CF32_AuditLog_HappyPathAndBaseline threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='cf160000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedAuditPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 450
+   at Tempo.Blazor.E2E.NotionAuditLogE2ETests.CF32_AuditLog_HappyPathAndBaseline() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionAuditLogE2ETests.cs:line 20
+
+  Failed CF32_AuditLog_EdgeCases_Work [2 m 12 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionAuditLogE2ETests.CF32_AuditLog_EdgeCases_Work threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='cf160000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedManyAuditEntriesPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 470
+   at Tempo.Blazor.E2E.NotionAuditLogE2ETests.CF32_AuditLog_EdgeCases_Work() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionAuditLogE2ETests.cs:line 64
+
+  Failed Sidebar_PageTree_ExpandCollapse_SubPages [21 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionSidebarE2ETests.Sidebar_PageTree_ExpandCollapse_SubPages threw exception: 
+System.TimeoutException: Timeout 8000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-npt-item").Filter(new() { HasText = "Engineering Wiki" }).First.Locator(".tm-npt-children").First to be visible
+  -     20 × locator resolved to hidden <ul role="group" b-anxemloz2n="" class="tm-npt-children"></ul>
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionSidebarE2ETests.Sidebar_PageTree_ExpandCollapse_SubPages() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionSidebarE2ETests.cs:line 157
+
+  Failed TableExport_ProducesGfmWithAlignment_AndRoundTrips [1 m 23 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionTableImportExportE2ETests.TableExport_ProducesGfmWithAlignment_AndRoundTrips threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded while waiting for event "Download" ---> System.TimeoutException: Timeout 60000ms exceeded while waiting for event "Download"
+  Stack Trace:
+     at Microsoft.Playwright.Helpers.TaskHelper.<>c__DisplayClass2_0.<WithTimeout>b__0() in /_/src/Playwright/Helpers/TaskHelper.cs:line 73
+   at Microsoft.Playwright.Helpers.TaskHelper.WithTimeout(Task task, Func`1 timeoutAction, TimeSpan timeout, CancellationToken cancellationToken) in /_/src/Playwright/Helpers/TaskHelper.cs:line 109
+   at Microsoft.Playwright.Core.Waiter.WaitForPromiseAsync[T](Task`1 task, Action dispose) in /_/src/Playwright/Core/Waiter.cs:line 218
+--- End of inner exception stack trace ---
+   at Microsoft.Playwright.Core.Waiter.WaitForPromiseAsync[T](Task`1 task, Action dispose) in /_/src/Playwright/Core/Waiter.cs:line 226
+   at Microsoft.Playwright.Core.Waiter.CancelWaitOnExceptionAsync(Task waitForEventTask, Func`1 action) in /_/src/Playwright/Core/Waiter.cs:line 242
+   at Microsoft.Playwright.Transport.Connection.WrapApiBoundaryAsync(Func`1 action) in /_/src/Playwright/Transport/Connection.cs:line 568
+   at Microsoft.Playwright.Core.Page.InnerWaitForEventAsync[T](PlaywrightEvent`1 pageEvent, Func`1 action, Func`2 predicate, Nullable`1 timeout) in /_/src/Playwright/Core/Page.cs:line 495
+   at Tempo.Blazor.E2E.NotionTableImportExportE2ETests.DownloadMarkdownAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionTableImportExportE2ETests.cs:line 350
+   at Tempo.Blazor.E2E.NotionTableImportExportE2ETests.TableExport_ProducesGfmWithAlignment_AndRoundTrips() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionTableImportExportE2ETests.cs:line 117
+
+  Failed TableImport_EdgeCases_RenderAndExportCorrectly [1 m 27 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionTableImportExportE2ETests.TableImport_EdgeCases_RenderAndExportCorrectly threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded while waiting for event "Download" ---> System.TimeoutException: Timeout 60000ms exceeded while waiting for event "Download"
+  Stack Trace:
+     at Microsoft.Playwright.Helpers.TaskHelper.<>c__DisplayClass2_0.<WithTimeout>b__0() in /_/src/Playwright/Helpers/TaskHelper.cs:line 73
+   at Microsoft.Playwright.Helpers.TaskHelper.WithTimeout(Task task, Func`1 timeoutAction, TimeSpan timeout, CancellationToken cancellationToken) in /_/src/Playwright/Helpers/TaskHelper.cs:line 109
+   at Microsoft.Playwright.Core.Waiter.WaitForPromiseAsync[T](Task`1 task, Action dispose) in /_/src/Playwright/Core/Waiter.cs:line 218
+--- End of inner exception stack trace ---
+   at Microsoft.Playwright.Core.Waiter.WaitForPromiseAsync[T](Task`1 task, Action dispose) in /_/src/Playwright/Core/Waiter.cs:line 226
+   at Microsoft.Playwright.Core.Waiter.CancelWaitOnExceptionAsync(Task waitForEventTask, Func`1 action) in /_/src/Playwright/Core/Waiter.cs:line 242
+   at Microsoft.Playwright.Transport.Connection.WrapApiBoundaryAsync(Func`1 action) in /_/src/Playwright/Transport/Connection.cs:line 568
+   at Microsoft.Playwright.Core.Page.InnerWaitForEventAsync[T](PlaywrightEvent`1 pageEvent, Func`1 action, Func`2 predicate, Nullable`1 timeout) in /_/src/Playwright/Core/Page.cs:line 495
+   at Tempo.Blazor.E2E.NotionTableImportExportE2ETests.DownloadMarkdownAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionTableImportExportE2ETests.cs:line 350
+   at Tempo.Blazor.E2E.NotionTableImportExportE2ETests.TableImport_EdgeCases_RenderAndExportCorrectly() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionTableImportExportE2ETests.cs:line 179
+
+  Failed UndoOfAConversion_RestoresTheTypeAndTheText [49 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionUndoRedoE2ETests.UndoOfAConversion_RestoresTheTypeAndTheText threw exception: 
+System.TimeoutException: Timeout 20000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='51bf2f15-546d-4f92-b172-e315bafc7923']").First.Locator(".tm-notion-heading--h2").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionUndoRedoE2ETests.UndoOfAConversion_RestoresTheTypeAndTheText() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionUndoRedoE2ETests.cs:line 28
+
+  Failed UndoOfDeletingATable_RestoresItsRows [44 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionUndoRedoE2ETests.UndoOfDeletingATable_RestoresItsRows threw exception: 
+System.TimeoutException: Timeout 20000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-notion-table").Filter(new() { HasText = "Undo" }).First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionUndoRedoE2ETests.UndoOfDeletingATable_RestoresItsRows() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionUndoRedoE2ETests.cs:line 57
+
+  Failed RedoReappliesTheConversion [30 s]
+  Error Message:
+   Assert.AreEqual failed. Expected:<0>. Actual:<1>. 
+  Stack Trace:
+     at Tempo.Blazor.E2E.NotionUndoRedoE2ETests.RedoReappliesTheConversion() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionUndoRedoE2ETests.cs:line 92
+
+  Failed CtrlZWhileTyping_DoesNotUndoTheStructuralEdit [47 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionUndoRedoE2ETests.CtrlZWhileTyping_DoesNotUndoTheStructuralEdit threw exception: 
+System.TimeoutException: Timeout 20000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='c8491fb2-6ce8-460a-84a3-92103b2c7261']").First.Locator(".tm-notion-heading--h1").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.NotionUndoRedoE2ETests.CtrlZWhileTyping_DoesNotUndoTheStructuralEdit() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionUndoRedoE2ETests.cs:line 107
+
+  Failed CF21_WatchPage_ReceivesNotificationFromSecondContext [1 m 12 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionWatchNotificationsE2ETests.CF21_WatchPage_ReceivesNotificationFromSecondContext threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='cf160000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor?user=demo" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor?user=demo"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedPageInfoPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 410
+   at Tempo.Blazor.E2E.NotionWatchNotificationsE2ETests.CF21_WatchPage_ReceivesNotificationFromSecondContext() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionWatchNotificationsE2ETests.cs:line 15
+
+  Failed CF21_WatchNotifications_EdgeCases [1 m 31 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionWatchNotificationsE2ETests.CF21_WatchNotifications_EdgeCases threw exception: 
+System.TimeoutException: Timeout 60000ms exceeded.
+Call log:
+  -   - waiting for Locator("[data-block-id='cf160000-0000-0000-0000-000000000002'] .tm-notion-editable") to be visible
+  -     - waiting for" https://localhost:7106/notion-editor?user=demo" navigation to finish...
+  -     - navigated to "https://localhost:7106/notion-editor?user=demo"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForSelectorAsync(String selector, FrameWaitForSelectorOptions options) in /_/src/Playwright/Core/Frame.cs:line 670
+   at Tempo.Blazor.E2E.NotionE2ETestBase.SeedPageInfoPageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionE2ETestBase.cs:line 410
+   at Tempo.Blazor.E2E.NotionWatchNotificationsE2ETests.CF21_WatchNotifications_EdgeCases() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionWatchNotificationsE2ETests.cs:line 61
+
+  Skipped Author1_SeesAuthorNav_NotAdminNav [11 ms]
+  Skipped Viewer1_SeesOnlyViewerNav [2 ms]
+  Skipped BearerLeg_ApiRequiresToken_AndBrowserHoldsNoToken [2 ms]
+  Skipped Logout_ClearsSession_AndProtectedPagesRequireLogin [< 1 ms]
+  Skipped Catalog_PortalLoads_CreateFolder_PersistsRow [3 ms]
+  Skipped NewReport_CreatesRealReport_ShownInDesigner_AndPersisted [3 ms]
+  Skipped NewReport_ImportsRdl_CreatesRealReport_ShownInDesigner_AndPersisted [5 ms]
+  Skipped Favorites_ToggleRoundTrips_AndPersists [< 1 ms]
+  Skipped Render_WithParameter_RecordsRunInHistory [< 1 ms]
+  Skipped EdgeCases_InvalidUploadBlocks_AndDirectReportHitBouncesToLogin [5 ms]
+  Failed SpreadsheetBlock_Modal_SaveButton_ClosesAndShowsEmbed [29 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.SpreadsheetBlock_Modal_SaveButton_ClosesAndShowsEmbed threw exception: 
+System.TimeoutException: Timeout 15000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-notion-spreadsheet-block").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.ScrollToSpreadsheetBlockAsync(IPage page) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetBlockE2ETests.cs:line 35
+   at Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.SpreadsheetBlock_Modal_SaveButton_ClosesAndShowsEmbed() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetBlockE2ETests.cs:line 126
+
+  Failed SpreadsheetBlock_Edit_OpensSameModal [28 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.SpreadsheetBlock_Edit_OpensSameModal threw exception: 
+System.TimeoutException: Timeout 10000ms exceeded.
+Call log:
+  -   - waiting for Locator(".tm-notion-spreadsheet-edit-modal").First to be visible
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal) in /_/src/Playwright/Transport/Connection.cs:line 535
+   at Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.OpenSpreadsheetModalFromCreateAsync(IPage page, ILocator block) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetBlockE2ETests.cs:line 52
+   at Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.SpreadsheetBlock_Edit_OpensSameModal() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetBlockE2ETests.cs:line 157
+
+  Failed SpreadsheetBlock_SlashMenu_InsertsBlock [54 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.SpreadsheetBlock_SlashMenu_InsertsBlock threw exception: 
+System.TimeoutException: Timeout 30000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.SpreadsheetBlockE2ETests.SpreadsheetBlock_SlashMenu_InsertsBlock() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/SpreadsheetBlockE2ETests.cs:line 218
+
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/full-run-20260924/e2e-shard-6.trx
+
+Failed!  - Failed:    14, Passed:   147, Skipped:    10, Total:   171, Duration: 1 h 2 m - Tempo.Blazor.E2E.dll (net10.0)

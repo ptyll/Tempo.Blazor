@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="339e1247-be59-4591-b966-4505a5c29ed3" name="@vmi3495495 2026-09-24 13:32:15" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-24T13:32:15.7860603+02:00" queuing="2026-09-24T13:32:15.7860604+02:00" start="2026-09-24T13:31:39.4914547+02:00" finish="2026-09-24T13:32:40.7840755+02:00" />
+  <TestSettings name="default" id="f0d22f5b-20f7-4c45-99ce-72729e76f2f4">
+    <Deployment runDeploymentRoot="_vmi3495495_2026-09-24_13_32_15" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="ecd8a27b-d29f-40fa-b2c7-40f8589324bb" testId="43340a9a-5036-eb26-b241-350bbb07efc9" testName="DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload" computerName="vmi3495495" duration="00:00:24.6692771" startTime="2026-09-24T13:32:15.7380034+02:00" endTime="2026-09-24T13:32:40.6104809+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ecd8a27b-d29f-40fa-b2c7-40f8589324bb" />
+    <UnitTestResult executionId="ffa52f2a-b84c-4544-b027-27f64c914b80" testId="8a896e4d-d5ad-cbbc-b6c9-6ad084b02227" testName="Phase15_CanvasImages_RenderSelectResizeMoveAndPersist" computerName="vmi3495495" duration="00:00:33.1085367" startTime="2026-09-24T13:31:41.3811726+02:00" endTime="2026-09-24T13:32:15.7133714+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ffa52f2a-b84c-4544-b027-27f64c914b80">
+      <Output>
+        <StdOut>TestContext Messages:
+[baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False</StdOut>
+      </Output>
+      <ResultFiles>
+        <ResultFile path="vmi3495495/00-phase15-images-before.png" />
+        <ResultFile path="vmi3495495/01-phase15-images-selected.png" />
+        <ResultFile path="vmi3495495/02-phase15-images-pointer-move-resize.png" />
+        <ResultFile path="vmi3495495/03-phase15-images-after-reload.png" />
+        <ResultFile path="vmi3495495/manifest.json" />
+      </ResultFiles>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="43340a9a-5036-eb26-b241-350bbb07efc9">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="ecd8a27b-d29f-40fa-b2c7-40f8589324bb" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests" name="DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload" />
+    </UnitTest>
+    <UnitTest name="Phase15_CanvasImages_RenderSelectResizeMoveAndPersist" storage="/root/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="8a896e4d-d5ad-cbbc-b6c9-6ad084b02227">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+        <TestCategoryItem TestCategory="DocumentEditor:CanvasEngine" />
+        <TestCategoryItem TestCategory="DocumentEditor" />
+      </TestCategory>
+      <Execution id="ffa52f2a-b84c-4544-b027-27f64c914b80" />
+      <TestMethod codeBase="/root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.DocumentEditorCanvasImageE2ETests" name="Phase15_CanvasImages_RenderSelectResizeMoveAndPersist" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="43340a9a-5036-eb26-b241-350bbb07efc9" executionId="ecd8a27b-d29f-40fa-b2c7-40f8589324bb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8a896e4d-d5ad-cbbc-b6c9-6ad084b02227" executionId="ffa52f2a-b84c-4544-b027-27f64c914b80" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+</TestRun>
