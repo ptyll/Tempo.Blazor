@@ -1,15 +1,15 @@
 {
-  "commit": "d5e3d5509c349f453fe34f94c42bf624419b00ae",
-  "verifiedDate": "2026-09-23",
+  "commit": "545560a1810f4f1bb007d129e7b6581df2a2f9ad",
+  "verifiedDate": "2026-09-24",
   "verifiedBy": "devin-agent",
-  "runName": "full-run-20260923",
-  "passed": 1259,
-  "failed": 128,
+  "runName": "full-run-20260924",
+  "passed": 1270,
+  "failed": 117,
   "skipped": 69,
   "total": 1456,
-  "serialResidualTotal": 128,
+  "serialResidualTotal": 117,
   "serialResidualFailed": 0,
-  "wallClock": "6h57m",
-  "artifactsPath": "tests/Tempo.Blazor.E2E/TestResults/full-run-20260923",
+  "wallClock": "5h45m",
+  "artifactsPath": "eng/release-evidence/full-run-20260924",
   "hostRestarts": 0
 }
