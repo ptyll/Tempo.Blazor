@@ -10,5 +10,6 @@
   "serialResidualTotal": 128,
   "serialResidualFailed": 0,
   "wallClock": "6h57m",
-  "artifactsPath": "tests/Tempo.Blazor.E2E/TestResults/full-run-20260923"
+  "artifactsPath": "tests/Tempo.Blazor.E2E/TestResults/full-run-20260923",
+  "hostRestarts": 0
 }

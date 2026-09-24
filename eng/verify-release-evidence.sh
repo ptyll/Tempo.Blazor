@@ -12,6 +12,14 @@ set -euo pipefail
 # eng/pack-nuget-packages.sh already make. Every required key missing is a refusal, not a default:
 # an unreadable evidence file must produce red, not silence.
 #
+# THE hostRestarts KEY (N209 wired into the gate, Fáze 20E review F3): PlaywrightTestBase
+# resurrects a dead self-hosted demo host so the suite can finish, appending one JSONL line to
+# TestResults/host-restarts.jsonl per resurrection. The restart is deliberate; what the gate
+# refuses is its invisibility — a run whose hosts needed rescuing is not a clean green. The
+# recorded run copies the JSONL into the committed artifacts dir (eng/release-evidence/<run>/)
+# and reports HostRestartLog.TotalHostRestarts here; any nonzero count refuses, and a missing
+# key refuses by the same fail-closed rule as every other required key.
+#
 # THE STALENESS BOUND — owner decision DEC-TEMPO-RELEASE-EVIDENCE-SCOPE (ptyll, 2026-09-22, F14):
 # the evidence is valid ONLY when every path changed between the run commit and the tagged commit
 # stays OUTSIDE what compiles into the package. The owner's allowed list is exhaustive —
@@ -52,7 +60,7 @@ json_value() {
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^,\"}]*\).*/\1/p" "$RELEASE_EVIDENCE_PATH" | head -n 1
 }
 
-required_keys=(commit verifiedDate verifiedBy runName passed failed skipped total serialResidualTotal serialResidualFailed wallClock artifactsPath)
+required_keys=(commit verifiedDate verifiedBy runName passed failed skipped total serialResidualTotal serialResidualFailed wallClock artifactsPath hostRestarts)
 for key in "${required_keys[@]}"; do
   if [[ -z "$(json_value "$key")" ]]; then
     refuse "release evidence is missing required key '$key' — a partial record is not a recorded run."
@@ -68,8 +76,9 @@ total="$(json_value total)"
 serial_residual_total="$(json_value serialResidualTotal)"
 serial_residual_failed="$(json_value serialResidualFailed)"
 artifacts_path="$(json_value artifactsPath)"
+host_restarts="$(json_value hostRestarts)"
 
-for key in passed failed skipped total serialResidualTotal serialResidualFailed; do
+for key in passed failed skipped total serialResidualTotal serialResidualFailed hostRestarts; do
   value="$(json_value "$key")"
   if ! [[ "$value" =~ ^[0-9]+$ ]]; then
     refuse "release evidence key '$key' is '$value', not a non-negative integer — a count that cannot be read cannot be checked."
@@ -116,6 +125,10 @@ done <<<"$changed_paths"
 
 if [[ "$serial_residual_failed" != "0" ]]; then
   refuse "the recorded run has $serial_residual_failed test(s) still red after serial re-measurement — a deterministic failure cannot ship under DEC-TEMPO-RELEASE-GATE."
+fi
+
+if (( host_restarts != 0 )); then
+  refuse "the recorded run resurrected a dead demo host $host_restarts time(s) — a suite that needed rescuing is a finding, not a clean green (see host-restarts.jsonl in the run artifacts)."
 fi
 
 if (( failed > serial_residual_total )); then

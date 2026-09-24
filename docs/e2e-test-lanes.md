@@ -80,3 +80,13 @@ change under test before merging.
   its first locator.
 - Delete `tests/Tempo.Blazor.E2E/TestResults` between long runs to keep disk
   usage bounded.
+- **Host resurrections are evidence, not noise (N209):** `PlaywrightTestBase`
+  appends every demo-host resurrection to `TestResults/host-restarts.jsonl`
+  (repo root) and counts them in `HostRestartLog.TotalHostRestarts`. When
+  recording a release-evidence run, copy the JSONL into the run's artifacts
+  dir and report the count in `eng/release-evidence/e2e-full-run.json` under
+  `hostRestarts` — `eng/verify-release-evidence.sh` refuses any nonzero count
+  and also refuses when `artifactsPath` does not exist where the gate runs,
+  which is why release-run artifacts ship in the committed
+  `eng/release-evidence/<run>/` tree rather than the gitignored `TestResults/`
+  dir a fresh CI checkout cannot see.

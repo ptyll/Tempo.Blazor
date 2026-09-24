@@ -30,7 +30,8 @@ public sealed class ReleaseEvidenceTests
 
     private static string EvidenceTemplate(string commit, int serialResidualFailed = 0,
         int passed = 1, int failed = 0, int skipped = 0, int total = 1,
-        int serialResidualTotal = 0, string artifactsPath = "fixture") => $$"""
+        int serialResidualTotal = 0, string artifactsPath = "fixture",
+        int hostRestarts = 0) => $$"""
         {
           "commit": "{{commit}}",
           "verifiedDate": "2026-09-23",
@@ -43,7 +44,8 @@ public sealed class ReleaseEvidenceTests
           "serialResidualTotal": {{serialResidualTotal}},
           "serialResidualFailed": {{serialResidualFailed}},
           "wallClock": "0h0m",
-          "artifactsPath": "{{artifactsPath}}"
+          "artifactsPath": "{{artifactsPath}}",
+          "hostRestarts": {{hostRestarts}}
         }
         """;
 
@@ -97,7 +99,8 @@ public sealed class ReleaseEvidenceTests
     private static string WriteEvidence(
         string directory, string commit, int serialResidualFailed = 0,
         int passed = 1, int failed = 0, int skipped = 0, int total = 1,
-        int serialResidualTotal = 0, string? artifactsPath = null)
+        int serialResidualTotal = 0, string? artifactsPath = null,
+        int hostRestarts = 0)
     {
         // The verifier now requires artifactsPath to name an existing directory (F2): default to
         // the fixture dir itself. Forward slashes keep the flat-JSON sed reader honest on
@@ -107,7 +110,7 @@ public sealed class ReleaseEvidenceTests
         File.WriteAllText(
             path,
             EvidenceTemplate(commit, serialResidualFailed, passed, failed, skipped, total,
-                serialResidualTotal, artifactsPath));
+                serialResidualTotal, artifactsPath, hostRestarts));
         return path;
     }
 
@@ -261,8 +264,10 @@ public sealed class ReleaseEvidenceTests
     /// <summary>
     /// The fail-closed input arms: a missing evidence file, a missing key, a count that is not an
     /// integer, unresolved-by-omission parallel reds (failed &gt; serialResidualTotal), an
-    /// internally inconsistent sum, a vacuous all-zero record (F2), and an artifactsPath naming
-    /// a directory that does not exist (F2) must each refuse — none may read as a green run.
+    /// internally inconsistent sum, a vacuous all-zero record (F2), an artifactsPath naming
+    /// a directory that does not exist (F2), a nonzero hostRestarts count and a record that
+    /// omits the hostRestarts key entirely (F3, N209 wired into the gate) must each refuse —
+    /// none may read as a green run.
     /// </summary>
     [BashScriptFact]
     public void Verifier_RefusesUnreadableOrInconsistentEvidence()
@@ -333,6 +338,45 @@ public sealed class ReleaseEvidenceTests
                     "an artifactsPath that does not exist must refuse");
                 missingArtifactsResult.Combined.Should().Contain("artifactsPath",
                     "the refusal must name the offending key");
+
+                // F3: a run whose demo hosts needed resurrecting is not a clean green — the N209
+                // counter wired into the gate refuses any nonzero hostRestarts count.
+                string rescued = WriteEvidence(fixtureDir, head, hostRestarts: 2);
+                ReleaseScriptInputReadTests.ScriptResult rescuedResult =
+                    RunVerifier(worktree, rescued);
+                Dump("hostRestarts=2", rescuedResult);
+                rescuedResult.Exit.Should().Be(1,
+                    "a recorded run with resurrected hosts must refuse — a rescue is a finding, "
+                    + "not a clean green");
+
+                // F3, fail-closed half: a record that simply omits hostRestarts refuses on the
+                // missing key like every other required key — absence is not a zero.
+                string noRestartKey = Path.Combine(fixtureDir, "no-restart-key.json");
+                File.WriteAllText(
+                    noRestartKey,
+                    $$"""
+                    {
+                      "commit": "{{head}}",
+                      "verifiedDate": "2026-09-23",
+                      "verifiedBy": "ptyll",
+                      "runName": "fixture",
+                      "passed": 1,
+                      "failed": 0,
+                      "skipped": 0,
+                      "total": 1,
+                      "serialResidualTotal": 0,
+                      "serialResidualFailed": 0,
+                      "wallClock": "0h0m",
+                      "artifactsPath": "{{fixtureDir.Replace('\\', '/') }}"
+                    }
+                    """ + "\n");
+                ReleaseScriptInputReadTests.ScriptResult noRestartKeyResult =
+                    RunVerifier(worktree, noRestartKey);
+                Dump("missing hostRestarts key", noRestartKeyResult);
+                noRestartKeyResult.Exit.Should().Be(1,
+                    "a record without hostRestarts must refuse on the missing key");
+                noRestartKeyResult.Combined.Should().Contain("hostRestarts",
+                    "the refusal must name the absent key");
             }
         }
         finally
