@@ -312,10 +312,18 @@ public sealed class MsSqlTestDatabase : IAsyncLifetime
         }
     }
 
+    /// <summary>
+    /// SQL Server error 262 is exactly <c>CREATE DATABASE permission denied in database '…'</c> —
+    /// matched by number (locale-independent, and covering batches where 262 is not the first
+    /// error) plus the canonical English phrase for drivers that only surface text. The earlier
+    /// broad <c>permission</c>/<c>denied</c> substring match could mislabel a transient failure
+    /// as a missing CREATE DATABASE grant — it still threw, so the direction was safe, but the
+    /// diagnosis was wrong (Fáze 20E review F7).
+    /// </summary>
     private static bool IsCreateDatabaseDenied(SqlException ex) =>
-        ex.Message.Contains("CREATE DATABASE permission", StringComparison.OrdinalIgnoreCase)
-        || ex.Message.Contains("permission", StringComparison.OrdinalIgnoreCase)
-        || ex.Message.Contains("denied", StringComparison.OrdinalIgnoreCase);
+        ex.Number == 262
+        || ex.Errors.Cast<SqlError>().Any(error => error.Number == 262)
+        || ex.Message.Contains("CREATE DATABASE permission denied", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Runs <paramref name="commandText"/> against <c>master</c> on the resolved server — shared
