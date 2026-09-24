@@ -1373,6 +1373,15 @@ public sealed class ReleaseGateFilterTests
     /// unfiltered invocation runs the E2E assembly and everything else the gate exists to
     /// exclude; spelling the filter on the next line of a block scalar does not exist in these
     /// workflows today and would be reported here as an offender rather than silently honoured.
+    /// <para>
+    /// BLIND SPOT, NAMED (Fáze 20E review F6): the check is per-LINE, so a second
+    /// <c>dotnet test</c> chained after <c>;</c> on a line that already carries a
+    /// <c>--filter</c> is invisible — <c>dotnet test --filter A; dotnet test</c> reports no
+    /// offender. Same class of limit as the unrecognised runsettings/colon spellings named in
+    /// <see cref="ReadFilters"/>: no such line exists in these workflows today (the reader sees
+    /// the whole file), and a one-command-per-line addition is caught; if a chained invocation
+    /// ever appears, split lines on <c>;</c> here before matching.
+    /// </para>
     /// </summary>
     internal static IReadOnlyList<string> DotnetTestLinesWithoutAFilter(string workflowCode) =>
         [.. workflowCode
