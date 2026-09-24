@@ -67,6 +67,7 @@ skipped="$(json_value skipped)"
 total="$(json_value total)"
 serial_residual_total="$(json_value serialResidualTotal)"
 serial_residual_failed="$(json_value serialResidualFailed)"
+artifacts_path="$(json_value artifactsPath)"
 
 for key in passed failed skipped total serialResidualTotal serialResidualFailed; do
   value="$(json_value "$key")"
@@ -74,6 +75,22 @@ for key in passed failed skipped total serialResidualTotal serialResidualFailed;
     refuse "release evidence key '$key' is '$value', not a non-negative integer — a count that cannot be read cannot be checked."
   fi
 done
+
+# A RECORD OF NOTHING IS NOT A RECORDED RUN (Fáze 20E review F2): an all-zero record satisfies
+# every other clause — integer shape, a commit that exists, an empty diff, a consistent sum —
+# while describing no suite at all. total must be a positive count, not merely well-formed.
+if (( total == 0 )); then
+  refuse "release evidence reports total=0 — a vacuous record (0 run, 0 passed, 0 failed) is not a recorded green run."
+fi
+
+# artifactsPath is the forensic half of the record — the trx/log bundle the numbers were
+# counted from. Required-nonempty only proved a string was written; the directory must exist
+# where the gate runs (the repo root in the publish workflows). That is why recorded runs keep
+# their artifacts inside the committed eng/release-evidence/<run>/ tree: a gitignored
+# TestResults/ path a fresh CI checkout can never see would make this refusal permanent.
+if [[ ! -d "$artifacts_path" ]]; then
+  refuse "release evidence artifactsPath '$artifacts_path' does not exist — the run's artifacts must ship where the gate can check them (the committed eng/release-evidence/<run>/ dir), not only on the machine that ran the suite."
+fi
 
 if ! git cat-file -e "${commit}^{commit}" 2>/dev/null; then
   refuse "evidence commit '$commit' does not exist in this clone — the run it claims cannot be tied to this repository."

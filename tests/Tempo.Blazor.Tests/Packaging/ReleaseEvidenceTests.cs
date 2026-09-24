@@ -29,8 +29,8 @@ public sealed class ReleaseEvidenceTests
         ReleaseScriptInputReadTests.FindRepoRoot(), "eng", "verify-release-evidence.sh");
 
     private static string EvidenceTemplate(string commit, int serialResidualFailed = 0,
-        int passed = 0, int failed = 0, int skipped = 0, int total = 0,
-        int serialResidualTotal = 0) => $$"""
+        int passed = 1, int failed = 0, int skipped = 0, int total = 1,
+        int serialResidualTotal = 0, string artifactsPath = "fixture") => $$"""
         {
           "commit": "{{commit}}",
           "verifiedDate": "2026-09-23",
@@ -43,7 +43,7 @@ public sealed class ReleaseEvidenceTests
           "serialResidualTotal": {{serialResidualTotal}},
           "serialResidualFailed": {{serialResidualFailed}},
           "wallClock": "0h0m",
-          "artifactsPath": "fixture"
+          "artifactsPath": "{{artifactsPath}}"
         }
         """;
 
@@ -96,14 +96,18 @@ public sealed class ReleaseEvidenceTests
 
     private static string WriteEvidence(
         string directory, string commit, int serialResidualFailed = 0,
-        int passed = 0, int failed = 0, int skipped = 0, int total = 0,
-        int serialResidualTotal = 0)
+        int passed = 1, int failed = 0, int skipped = 0, int total = 1,
+        int serialResidualTotal = 0, string? artifactsPath = null)
     {
+        // The verifier now requires artifactsPath to name an existing directory (F2): default to
+        // the fixture dir itself. Forward slashes keep the flat-JSON sed reader honest on
+        // Windows paths (a backslash would escape the next character).
+        artifactsPath ??= directory.Replace('\\', '/');
         string path = Path.Combine(directory, $"evidence-{Guid.NewGuid():N}.json");
         File.WriteAllText(
             path,
             EvidenceTemplate(commit, serialResidualFailed, passed, failed, skipped, total,
-                serialResidualTotal));
+                serialResidualTotal, artifactsPath));
         return path;
     }
 
@@ -256,8 +260,9 @@ public sealed class ReleaseEvidenceTests
 
     /// <summary>
     /// The fail-closed input arms: a missing evidence file, a missing key, a count that is not an
-    /// integer, unresolved-by-omission parallel reds (failed &gt; serialResidualTotal), and an
-    /// internally inconsistent sum must each refuse — none may read as a green run.
+    /// integer, unresolved-by-omission parallel reds (failed &gt; serialResidualTotal), an
+    /// internally inconsistent sum, a vacuous all-zero record (F2), and an artifactsPath naming
+    /// a directory that does not exist (F2) must each refuse — none may read as a green run.
     /// </summary>
     [BashScriptFact]
     public void Verifier_RefusesUnreadableOrInconsistentEvidence()
@@ -305,6 +310,29 @@ public sealed class ReleaseEvidenceTests
                 Dump("sum mismatch", inconsistentResult);
                 inconsistentResult.Exit.Should().Be(1,
                     "an internally inconsistent record must refuse");
+
+                // F2: a vacuous record — every count 0 — used to pass every clause and exit 0
+                // while describing no suite at all.
+                string vacuous = WriteEvidence(
+                    fixtureDir, head, passed: 0, failed: 0, skipped: 0, total: 0);
+                ReleaseScriptInputReadTests.ScriptResult vacuousResult =
+                    RunVerifier(worktree, vacuous);
+                Dump("vacuous record", vacuousResult);
+                vacuousResult.Exit.Should().Be(1,
+                    "an all-zero record is not a recorded run and must refuse");
+
+                // F2: artifactsPath must name a directory that exists where the gate runs —
+                // required-nonempty only proved a string was written.
+                string missingArtifacts = WriteEvidence(
+                    fixtureDir, head,
+                    artifactsPath: fixtureDir.Replace('\\', '/') + "/no-such-artifacts-dir");
+                ReleaseScriptInputReadTests.ScriptResult missingArtifactsResult =
+                    RunVerifier(worktree, missingArtifacts);
+                Dump("nonexistent artifactsPath", missingArtifactsResult);
+                missingArtifactsResult.Exit.Should().Be(1,
+                    "an artifactsPath that does not exist must refuse");
+                missingArtifactsResult.Combined.Should().Contain("artifactsPath",
+                    "the refusal must name the offending key");
             }
         }
         finally
