@@ -48,12 +48,18 @@ public sealed class ReleaseEvidenceTests
         """;
 
     private static ReleaseScriptInputReadTests.ScriptResult RunVerifier(
-        string workDir, string evidencePath)
+        string workDir, string evidencePath, IReadOnlyDictionary<string, string>? extraEnv = null)
     {
-        return ReleaseScriptInputReadTests.RunBash(
-            ScriptPath,
-            workDir,
-            new Dictionary<string, string> { ["RELEASE_EVIDENCE_PATH"] = evidencePath });
+        var env = new Dictionary<string, string> { ["RELEASE_EVIDENCE_PATH"] = evidencePath };
+        if (extraEnv is not null)
+        {
+            foreach (KeyValuePair<string, string> pair in extraEnv)
+            {
+                env[pair.Key] = pair.Value;
+            }
+        }
+
+        return ReleaseScriptInputReadTests.RunBash(ScriptPath, workDir, env);
     }
 
     private void Dump(string label, ReleaseScriptInputReadTests.ScriptResult result)
@@ -306,6 +312,84 @@ public sealed class ReleaseEvidenceTests
             RemoveWorktree(root, worktree);
             ReleaseScriptInputReadTests.TryDeleteDir(fixtureDir);
         }
+    }
+
+    /// <summary>
+    /// Fáze 20E review F1 — the staleness bound used to read <c>git diff</c> through a process
+    /// substitution, so a git that fails on <c>diff</c> produced an EMPTY changed-path list and
+    /// the script exited 0: the bound silently skipped itself. This arm puts a fake <c>git</c>
+    /// on PATH that exits 128 on <c>diff</c> (delegating everything else to the real binary) and
+    /// requires the verifier to go nonzero; the unshadowed control over the same evidence stays
+    /// green, so the red is attributed to the broken read and not to the fixture.
+    /// </summary>
+    [BashScriptFact]
+    public void Verifier_RefusesWhenTheGitDiffReadFails()
+    {
+        string root = ReleaseScriptInputReadTests.FindRepoRoot();
+        string worktree = Path.Combine(Path.GetTempPath(), $"tm-evidence-wt-{Guid.NewGuid():N}");
+        string fixtureDir = Path.Combine(Path.GetTempPath(), $"tm-evidence-fx-{Guid.NewGuid():N}");
+        string fakeBin = Path.Combine(Path.GetTempPath(), $"tm-fake-git-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(fixtureDir);
+        Directory.CreateDirectory(fakeBin);
+
+        try
+        {
+            AddWorktree(root, worktree);
+            string head = FullCloneFactAttribute.RunGit(worktree, "rev-parse", "HEAD").StandardOutput;
+            string evidence = WriteEvidence(fixtureDir, head);
+
+            WriteFakeGit(Path.Combine(fakeBin, "git"));
+            var shadowedEnv = new Dictionary<string, string>
+            {
+                ["PATH"] = fakeBin + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+            };
+
+            ReleaseScriptInputReadTests.ScriptResult shadowed =
+                RunVerifier(worktree, evidence, shadowedEnv);
+            Dump("PATH-shadowed git diff", shadowed);
+            shadowed.Exit.Should().NotBe(0,
+                "a git that exits 128 on 'diff' must turn the staleness bound red — the process "
+                + $"substitution version swallowed it and exited 0 ({shadowed.Combined})");
+
+            ReleaseScriptInputReadTests.ScriptResult control = RunVerifier(worktree, evidence);
+            Dump("unshadowed control", control);
+            control.Exit.Should().Be(0,
+                $"the same evidence over a healthy git must stay green ({control.Combined})");
+        }
+        finally
+        {
+            RemoveWorktree(root, worktree);
+            ReleaseScriptInputReadTests.TryDeleteDir(fixtureDir);
+            ReleaseScriptInputReadTests.TryDeleteDir(fakeBin);
+        }
+    }
+
+    /// <summary>
+    /// The PATH-shadow fixture for <see cref="Verifier_RefusesWhenTheGitDiffReadFails"/>: fails on
+    /// <c>git diff</c> exactly the way the measured mutation did, and forwards every other
+    /// subcommand to the first real <c>git</c> found on PATH outside its own directory — so
+    /// cat-file/merge-base still answer honestly and only the diff read is broken.
+    /// </summary>
+    private static void WriteFakeGit(string path)
+    {
+        File.WriteAllText(path, """
+            #!/usr/bin/env bash
+            set -u
+            if [[ "${1:-}" == "diff" ]]; then
+              echo "fake-git: refusing diff (F1 mutation)" >&2
+              exit 128
+            fi
+            self_dir="$(cd "$(dirname "$0")" && pwd)"
+            IFS=':' read -ra dirs <<<"${PATH:-}"
+            real=""
+            for d in "${dirs[@]}"; do
+              [[ "$d" == "$self_dir" ]] && continue
+              if [[ -x "$d/git" ]]; then real="$d/git"; break; fi
+            done
+            [[ -n "$real" ]] || { echo "fake-git: real git not found" >&2; exit 127; }
+            exec "$real" "$@"
+            """);
+        ReleaseScriptInputReadTests.MakeExecutable(path);
     }
 
     /// <summary>

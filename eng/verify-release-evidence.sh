@@ -83,12 +83,19 @@ if ! git merge-base --is-ancestor "$commit" HEAD; then
   refuse "evidence commit '$commit' is not an ancestor of the HEAD being published — the green run belongs to a side line, not to this release."
 fi
 
+# THE DIFF IS CAPTURED BEFORE THE LOOP, not streamed into it: <(git diff …) runs the command in
+# a process substitution whose failure nothing observes — a broken git (measured with a
+# PATH-shadowed fake that exits 128 on `diff`) produced an EMPTY list, so the staleness bound
+# iterated nothing and the run read as clean. In a command substitution the failure becomes this
+# assignment's exit status, which `set -e` turns into a refusal — the same contract every other
+# read in this script already keeps.
+changed_paths="$(git diff --name-only "$commit" HEAD)"
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
   if ! grep -Eq "$STALE_ALLOWED_PATTERN" <<<"$path"; then
     refuse "staleness bound broken: '$path' changed between the verified run ($commit) and HEAD — DEC-TEMPO-RELEASE-EVIDENCE-SCOPE allows only *.md, docs/, eng/release-evidence/ and .github/ to change without re-measuring; any src/ or tests/ change (bUnit included) invalidates the evidence."
   fi
-done < <(git diff --name-only "$commit" HEAD)
+done <<<"$changed_paths"
 
 if [[ "$serial_residual_failed" != "0" ]]; then
   refuse "the recorded run has $serial_residual_failed test(s) still red after serial re-measurement — a deterministic failure cannot ship under DEC-TEMPO-RELEASE-GATE."
