@@ -106,10 +106,10 @@
         EqualityComparer<TValue?>.Default.Equals(optValue, Value);
 
     /// <summary>
-    /// Řetězcová podoba <see cref="Value"/> pro <c>value</c> atribut na <c>&lt;select&gt;</c>. Když je hodnota
-    /// prázdná/výchozí, vrací <c>null</c> (nerenderuje se) a prohlížeč ukáže první možnost (placeholder).
-    /// Musí odpovídat tomu, jak se renderují hodnoty <c>&lt;option&gt;</c> (<see cref="FormatOptionValue"/>),
-    /// aby předvýběr sedl.
+    /// String form of <see cref="Value"/> for the <c>value</c> attribute on <c>&lt;select&gt;</c>. When the
+    /// value is empty/default, returns <c>null</c> (not rendered) so the browser shows the first option
+    /// (placeholder). Must match how <c>&lt;option&gt;</c> values are rendered (<see cref="FormatOptionValue"/>)
+    /// or the preselection will not land on the matching option.
     /// </summary>
     private string? SelectedValueString =>
         Value is null || EqualityComparer<TValue?>.Default.Equals(Value, default)

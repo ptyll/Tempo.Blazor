@@ -186,6 +186,20 @@ which is exactly the red
   round-trips back to the parser verbatim, so render and parse must agree. `string`/`Guid`/enum
   behaviour is unchanged.
 
+  **Impact on `ChildContent` consumers.** This invariant-culture change only covers the `Options`
+  parameter path (`FormatOptionValue`); a hand-written `<option value="@x">` inside `ChildContent`
+  still renders through Blazor's own ambient-culture `ToString()`, unaffected by this fix — only the
+  *parse* side (`HandleChangeAsync`) changed. For `int` (already supported before this release), that
+  is a behaviour change for cultures whose `NegativeSign` is U+2212 MINUS SIGN rather than the ASCII
+  hyphen (e.g. `sv-SE`, `nb-NO`, `fi-FI`): a negative `ChildContent` option used to round-trip only
+  because the old parser also read the ambient culture and accepted `−`; the new invariant parser
+  only accepts ASCII `-`. The newly-supported numeric types (`short`, `ushort`, `long`, `ulong`,
+  `uint`, `byte`, `sbyte`, `decimal`, `double`, `float`) have no such prior behaviour to preserve —
+  they always fell through to `default` via `ChildContent` before this release — but the same rule
+  now applies to them too. Any `ChildContent` author relying on ambient-culture parsing for a numeric
+  `TValue` must write the option value explicitly in the invariant form, e.g.
+  `value="@x.ToString(CultureInfo.InvariantCulture)"`.
+
 - **`TmOverlayPanel` post-migration rework (Fáze 18 review).** One Escape gesture no longer
   closes two layers: `overlay.js` consumes the keydown (preventDefault +
   stopImmediatePropagation) once it has actually dismissed a panel and swallows the matching

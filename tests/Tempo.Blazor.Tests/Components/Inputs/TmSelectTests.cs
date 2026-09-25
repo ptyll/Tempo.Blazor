@@ -263,24 +263,129 @@ public class TmSelectTests : LocalizationTestBase
 
     // ── Numeric TValue round-trip (culture-invariant) ───────────
 
+    private static readonly CultureInfo Czech = CultureInfo.GetCultureInfo("cs-CZ");
+
+    private enum SampleStatus
+    {
+        Draft = 0,
+        Active = 1,
+        Archived = 2,
+    }
+
     /// <summary>
-    /// Runs <paramref name="action"/> with <see cref="CultureInfo.DefaultThreadCurrentCulture"/> pinned
-    /// to <paramref name="culture"/>, restoring the previous default afterwards. Uses the DEFAULT thread
-    /// culture (not <see cref="CultureInfo.CurrentCulture"/> directly) per repo convention for culture-sensitive
-    /// tests, and always restores in a finally so a failing assertion cannot leak culture into later tests.
+    /// Scopes <see cref="CultureInfo.CurrentCulture"/> and <see cref="CultureInfo.CurrentUICulture"/> to
+    /// <paramref name="culture"/> for the duration of <paramref name="action"/>, restoring both in a finally
+    /// so a failing assertion cannot leak culture into later tests. This is the repo convention for
+    /// culture-sensitive tests (<c>TmMoneyDisplayTests.UsesCurrentCultureNumberFormatting</c>,
+    /// <c>TmChartTimeAxisTests.UseCulture</c>): pinning <see cref="CultureInfo.DefaultThreadCurrentCulture"/>
+    /// instead would only seed threads that have not already read/set their own culture, and is not
+    /// guaranteed to reach bUnit's synchronous renderer on the already-running xUnit worker thread.
     /// </summary>
     private static void UnderCulture(CultureInfo culture, Action action)
     {
-        var previous = CultureInfo.DefaultThreadCurrentCulture;
-        CultureInfo.DefaultThreadCurrentCulture = culture;
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+
+        // The pin must actually have taken before the tests below rely on it -- otherwise a broken pin
+        // would leave every "under Czech culture" assertion vacuously true under the machine's own default.
+        CultureInfo.CurrentCulture.Name.Should().Be(culture.Name);
+
         try
         {
             action();
         }
         finally
         {
-            CultureInfo.DefaultThreadCurrentCulture = previous;
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
         }
+    }
+
+    /// <summary>
+    /// Renders a single-option <see cref="TmSelect{TValue}"/> preselected to <paramref name="value"/> under
+    /// <paramref name="culture"/> (Czech by default) and asserts: (1) the rendered <c>&lt;select value&gt;</c>
+    /// preselection attribute matches the actually-rendered <c>&lt;option value&gt;</c> verbatim -- read back
+    /// from the DOM, never a hardcoded literal, so the assertion cannot drift from what the component emits;
+    /// (2) selecting that same raw string fires <c>ValueChanged</c>; and (3) the round-tripped value equals
+    /// the original via <see cref="EqualityComparer{T}.Default"/>, which -- like <see cref="double.Equals(double)"/>
+    /// and <see cref="float.Equals(float)"/> -- treats NaN as equal to NaN, so this also covers the NaN cases.
+    /// </summary>
+    private void AssertRoundTrip<T>(T value, CultureInfo? culture = null)
+    {
+        UnderCulture(culture ?? Czech, () =>
+        {
+            T? captured = default;
+            var hasCaptured = false;
+            var options = new List<SelectOption<T>> { new(value, "V") };
+
+            var cut = Render<TmSelect<T>>(p => p
+                .Add(c => c.Value, value)
+                .Add(c => c.Options, options)
+                .Add(c => c.ValueChanged, EventCallback.Factory.Create<T?>(this, v =>
+                {
+                    captured = v;
+                    hasCaptured = true;
+                })));
+
+            var raw = cut.Find("option").GetAttribute("value");
+
+            cut.Find("select").GetAttribute("value").Should().Be(raw,
+                "the <select value> preselection must match the rendered <option value> exactly");
+
+            cut.Find("select").Change(raw ?? string.Empty);
+
+            hasCaptured.Should().BeTrue("ValueChanged must fire when the rendered option value is re-selected");
+            EqualityComparer<T>.Default.Equals(captured, value).Should().BeTrue(
+                $"round-tripping {typeof(T).Name} value '{value}' through render+parse should yield an equal value, got '{captured}'");
+        });
+    }
+
+    // 11 numeric TValue types the fix added, one representative value each, plus a couple of nullable forms
+    // and the pre-existing string/int/Guid/enum/short? behaviour re-asserted as a regression guard.
+    [Fact] public void TmSelect_Short_RoundTrips() => AssertRoundTrip<short>(-1234);
+    [Fact] public void TmSelect_NullableShort_RoundTrips() => AssertRoundTrip<short?>(3);
+    [Fact] public void TmSelect_UShort_MaxValue_RoundTrips() => AssertRoundTrip(ushort.MaxValue);
+    [Fact] public void TmSelect_Int_RoundTrips_Regression() => AssertRoundTrip(-1);
+    [Fact] public void TmSelect_UInt_MaxValue_RoundTrips() => AssertRoundTrip(uint.MaxValue);
+    [Fact] public void TmSelect_Long_RoundTrips() => AssertRoundTrip(1_234_567_890_123L);
+    [Fact] public void TmSelect_Long_MinValue_RoundTrips() => AssertRoundTrip(long.MinValue);
+    [Fact] public void TmSelect_ULong_MaxValue_RoundTrips() => AssertRoundTrip(ulong.MaxValue);
+    [Fact] public void TmSelect_Byte_RoundTrips() => AssertRoundTrip<byte>(200);
+    [Fact] public void TmSelect_SByte_Negative_RoundTrips() => AssertRoundTrip<sbyte>(-100);
+    [Fact] public void TmSelect_Decimal_RoundTrips_WithoutCommaCorruption() => AssertRoundTrip(1.5m);
+    [Fact] public void TmSelect_Decimal_28DigitScale_RoundTrips() => AssertRoundTrip(1.000000000000000000000000001m);
+    [Fact] public void TmSelect_NullableDecimal_RoundTrips() => AssertRoundTrip<decimal?>(2.5m);
+    [Fact] public void TmSelect_Double_RoundTrips_WithoutCommaCorruption() => AssertRoundTrip(1.5d);
+    [Fact] public void TmSelect_Double_NaN_RoundTrips() => AssertRoundTrip(double.NaN);
+    [Fact] public void TmSelect_Double_PositiveInfinity_RoundTrips() => AssertRoundTrip(double.PositiveInfinity);
+    [Fact] public void TmSelect_Double_NegativeInfinity_RoundTrips() => AssertRoundTrip(double.NegativeInfinity);
+    [Fact] public void TmSelect_Float_RoundTrips() => AssertRoundTrip(0.1f);
+    [Fact] public void TmSelect_NullableFloat_RoundTrips() => AssertRoundTrip<float?>(0.1f);
+    [Fact] public void TmSelect_Guid_RoundTrips_Regression() => AssertRoundTrip(Guid.Parse("a1b2c3d4-0000-0000-0000-000000000001"));
+    [Fact] public void TmSelect_Enum_RoundTrips_Regression() => AssertRoundTrip(SampleStatus.Active);
+    [Fact] public void TmSelect_String_RoundTrips_Regression() => AssertRoundTrip("sales");
+
+    [Fact]
+    public void TmSelect_Double_NegativeZero_PreservesSignBitThroughRoundTrip()
+    {
+        // EqualityComparer<double> (like ==) treats -0.0 and 0.0 as equal, so AssertRoundTrip's generic
+        // assertion above cannot see a sign flip -- 1/x can, since 1/-0.0 == -Infinity but 1/0.0 == +Infinity.
+        UnderCulture(Czech, () =>
+        {
+            double captured = double.NaN;
+            var options = new List<SelectOption<double>> { new(-0.0, "V") };
+            var cut = Render<TmSelect<double>>(p => p
+                .Add(c => c.Value, -0.0)
+                .Add(c => c.Options, options)
+                .Add(c => c.ValueChanged, EventCallback.Factory.Create<double>(this, v => captured = v)));
+
+            var raw = cut.Find("option").GetAttribute("value");
+            cut.Find("select").Change(raw ?? string.Empty);
+
+            double.IsNegative(captured).Should().BeTrue("the sign of zero must survive render + parse");
+        });
     }
 
     [Fact]
@@ -316,99 +421,5 @@ public class TmSelectTests : LocalizationTestBase
         cut.Find("select").Change("");
 
         captured.Should().BeNull();
-    }
-
-    [Fact]
-    public void TmSelect_Long_RoundTrips_UnderCzechCulture()
-    {
-        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
-        {
-            long captured = 0;
-            var options = new List<SelectOption<long>>
-            {
-                new(1_234_567_890_123L, "Big"),
-            };
-            var cut = Render<TmSelect<long>>(p => p
-                .Add(c => c.Options, options)
-                .Add(c => c.ValueChanged, EventCallback.Factory.Create<long>(this, v => captured = v)));
-
-            var rendered = cut.Find("option");
-            rendered.GetAttribute("value").Should().Be("1234567890123");
-
-            cut.Find("select").Change("1234567890123");
-
-            captured.Should().Be(1_234_567_890_123L);
-        });
-    }
-
-    [Fact]
-    public void TmSelect_Byte_RoundTrips_UnderCzechCulture()
-    {
-        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
-        {
-            byte captured = 0;
-            var options = new List<SelectOption<byte>>
-            {
-                new((byte)200, "TwoHundred"),
-            };
-            var cut = Render<TmSelect<byte>>(p => p
-                .Add(c => c.Options, options)
-                .Add(c => c.ValueChanged, EventCallback.Factory.Create<byte>(this, v => captured = v)));
-
-            var rendered = cut.Find("option");
-            rendered.GetAttribute("value").Should().Be("200");
-
-            cut.Find("select").Change("200");
-
-            captured.Should().Be((byte)200);
-        });
-    }
-
-    [Fact]
-    public void TmSelect_Decimal_RoundTrips_UnderCzechCulture_WithoutCommaCorruption()
-    {
-        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
-        {
-            decimal captured = 0m;
-            var options = new List<SelectOption<decimal>>
-            {
-                new(1.5m, "OneHalf"),
-            };
-            var cut = Render<TmSelect<decimal>>(p => p
-                .Add(c => c.Options, options)
-                .Add(c => c.ValueChanged, EventCallback.Factory.Create<decimal>(this, v => captured = v)));
-
-            // Rendered option value must stay invariant ("1.5"), never the Czech decimal comma ("1,5"),
-            // otherwise the browser <select> would carry a value the parser below cannot read back.
-            var rendered = cut.Find("option");
-            rendered.GetAttribute("value").Should().Be("1.5");
-
-            cut.Find("select").Change("1.5");
-
-            captured.Should().Be(1.5m);
-        });
-    }
-
-    [Fact]
-    public void TmSelect_Double_RoundTrips_UnderCzechCulture_WithoutCommaCorruption()
-    {
-        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
-        {
-            double captured = 0d;
-            var options = new List<SelectOption<double>>
-            {
-                new(1.5d, "OneHalf"),
-            };
-            var cut = Render<TmSelect<double>>(p => p
-                .Add(c => c.Options, options)
-                .Add(c => c.ValueChanged, EventCallback.Factory.Create<double>(this, v => captured = v)));
-
-            var rendered = cut.Find("option");
-            rendered.GetAttribute("value").Should().Be("1.5");
-
-            cut.Find("select").Change("1.5");
-
-            captured.Should().Be(1.5d);
-        });
     }
 }
