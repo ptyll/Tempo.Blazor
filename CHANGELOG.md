@@ -169,6 +169,23 @@ which is exactly the red
 
 ### Fixed
 
+- **`TmSelect<TValue>` now round-trips numeric value types.** `HandleChangeAsync` previously
+  parsed only `string`, `int`, `Guid` and enum back from the raw `<select>` change event —
+  `TmSelect<short?>`, `TmSelect<byte>`, `TmSelect<decimal>` and every other numeric `TValue`
+  (`short`, `ushort`, `long`, `ulong`, `uint`, `sbyte`, `float`, `double`, plus their nullable
+  forms) silently fell through to `default`, so a selected option was reported back as `null`/`0`.
+  Both directions are fixed and kept symmetric: `HandleChangeAsync` now parses every integral type
+  with `NumberStyles.Integer` and every floating type (`decimal`/`double`/`float`) with
+  `NumberStyles.Float`, both against `CultureInfo.InvariantCulture` (the existing `int` branch was
+  switched to the same invariant overload); and the rendered `<option value>` /
+  `<select value>` (`FormatOptionValue`, used by both `SelectedValueString` and the options
+  `@foreach`) formats any `IFormattable` value with `ToString(null, CultureInfo.InvariantCulture)`
+  instead of the ambient-culture default `ToString()`. Without the render half of this fix, a
+  decimal/double option value would have rendered with the current culture's decimal separator
+  (e.g. Czech `1,5`) while the parser only ever accepted the invariant `1.5` — a value the browser
+  round-trips back to the parser verbatim, so render and parse must agree. `string`/`Guid`/enum
+  behaviour is unchanged.
+
 - **`TmOverlayPanel` post-migration rework (Fáze 18 review).** One Escape gesture no longer
   closes two layers: `overlay.js` consumes the keydown (preventDefault +
   stopImmediatePropagation) once it has actually dismissed a panel and swallows the matching

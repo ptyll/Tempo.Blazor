@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
 @using Tempo.Blazor.Models
 @typeparam TValue
 
@@ -30,7 +31,7 @@
             {
                 @foreach (var opt in Options)
                 {
-                    <option value="@opt.Value" disabled="@opt.IsDisabled" selected="@IsSelected(opt.Value)">@opt.Label</option>
+                    <option value="@FormatOptionValue(opt.Value)" disabled="@opt.IsDisabled" selected="@IsSelected(opt.Value)">@opt.Label</option>
                 }
             }
             @ChildContent
@@ -107,12 +108,28 @@
     /// <summary>
     /// Řetězcová podoba <see cref="Value"/> pro <c>value</c> atribut na <c>&lt;select&gt;</c>. Když je hodnota
     /// prázdná/výchozí, vrací <c>null</c> (nerenderuje se) a prohlížeč ukáže první možnost (placeholder).
-    /// Musí odpovídat tomu, jak se renderují hodnoty <c>&lt;option&gt;</c> (ToString), aby předvýběr sedl.
+    /// Musí odpovídat tomu, jak se renderují hodnoty <c>&lt;option&gt;</c> (<see cref="FormatOptionValue"/>),
+    /// aby předvýběr sedl.
     /// </summary>
     private string? SelectedValueString =>
         Value is null || EqualityComparer<TValue?>.Default.Equals(Value, default)
             ? null
-            : Value.ToString();
+            : FormatOptionValue(Value);
+
+    /// <summary>
+    /// Culture-invariant string form of an option/selected value, used both for the rendered
+    /// <c>&lt;option value&gt;</c> attribute and the <c>&lt;select value&gt;</c> preselection. <see cref="IFormattable"/>
+    /// types (numerics, <see cref="decimal"/>, ...) are formatted with <see cref="CultureInfo.InvariantCulture"/> so the
+    /// rendered value never depends on the ambient thread culture (e.g. "1.5", never "1,5"); this must stay symmetric
+    /// with the invariant parsing in <see cref="HandleChangeAsync"/>.
+    /// </summary>
+    private static string? FormatOptionValue(TValue? value) =>
+        value switch
+        {
+            null => null,
+            IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+            _ => value.ToString(),
+        };
 
     private string SelectCssClass =>
         $"tm-select{(string.IsNullOrEmpty(Error) ? "" : " tm-select-error")}{(Disabled ? " tm-select-disabled" : "")}";
@@ -125,10 +142,33 @@
         {
             var targetType = Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue);
 
+            const NumberStyles IntegerStyle = NumberStyles.Integer;
+            const NumberStyles FloatStyle = NumberStyles.Float;
+
             if (targetType == typeof(string))
                 value = (TValue?)(object?)raw;
-            else if (targetType == typeof(int) && int.TryParse(raw, out var i))
+            else if (targetType == typeof(int) && int.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var i))
                 value = (TValue?)(object?)i;
+            else if (targetType == typeof(short) && short.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var sh))
+                value = (TValue?)(object?)sh;
+            else if (targetType == typeof(ushort) && ushort.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var ush))
+                value = (TValue?)(object?)ush;
+            else if (targetType == typeof(long) && long.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var l))
+                value = (TValue?)(object?)l;
+            else if (targetType == typeof(ulong) && ulong.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var ul))
+                value = (TValue?)(object?)ul;
+            else if (targetType == typeof(uint) && uint.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var ui))
+                value = (TValue?)(object?)ui;
+            else if (targetType == typeof(byte) && byte.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var by))
+                value = (TValue?)(object?)by;
+            else if (targetType == typeof(sbyte) && sbyte.TryParse(raw, IntegerStyle, CultureInfo.InvariantCulture, out var sb))
+                value = (TValue?)(object?)sb;
+            else if (targetType == typeof(decimal) && decimal.TryParse(raw, FloatStyle, CultureInfo.InvariantCulture, out var dec))
+                value = (TValue?)(object?)dec;
+            else if (targetType == typeof(double) && double.TryParse(raw, FloatStyle, CultureInfo.InvariantCulture, out var dbl))
+                value = (TValue?)(object?)dbl;
+            else if (targetType == typeof(float) && float.TryParse(raw, FloatStyle, CultureInfo.InvariantCulture, out var fl))
+                value = (TValue?)(object?)fl;
             else if (targetType == typeof(Guid) && Guid.TryParse(raw, out var g))
                 value = (TValue?)(object?)g;
             else if (targetType.IsEnum && Enum.TryParse(targetType, raw, out var en))

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
@@ -258,5 +259,156 @@ public class TmSelectTests : LocalizationTestBase
         var cut = Render<TmSelect<string>>(p => p.Add(c => c.Label, "Status"));
         cut.Find("select").HasAttribute("aria-required").Should().BeFalse();
         cut.Find("label").ClassList.Should().NotContain("tm-input-label-required");
+    }
+
+    // ── Numeric TValue round-trip (culture-invariant) ───────────
+
+    /// <summary>
+    /// Runs <paramref name="action"/> with <see cref="CultureInfo.DefaultThreadCurrentCulture"/> pinned
+    /// to <paramref name="culture"/>, restoring the previous default afterwards. Uses the DEFAULT thread
+    /// culture (not <see cref="CultureInfo.CurrentCulture"/> directly) per repo convention for culture-sensitive
+    /// tests, and always restores in a finally so a failing assertion cannot leak culture into later tests.
+    /// </summary>
+    private static void UnderCulture(CultureInfo culture, Action action)
+    {
+        var previous = CultureInfo.DefaultThreadCurrentCulture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            CultureInfo.DefaultThreadCurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void TmSelect_NullableShort_Selection_ParsesToTypedValue()
+    {
+        short? captured = -1;
+        var options = new List<SelectOption<short?>>
+        {
+            new((short)3, "Three"),
+        };
+        var cut = Render<TmSelect<short?>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<short?>(this, v => captured = v)));
+
+        cut.Find("select").Change("3");
+
+        captured.Should().Be((short?)3);
+    }
+
+    [Fact]
+    public void TmSelect_NullableShort_EmptySelection_ParsesToNull()
+    {
+        short? captured = 3;
+        var options = new List<SelectOption<short?>>
+        {
+            new((short)3, "Three"),
+        };
+        var cut = Render<TmSelect<short?>>(p => p
+            .Add(c => c.Placeholder, "Choose...")
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<short?>(this, v => captured = v)));
+
+        cut.Find("select").Change("");
+
+        captured.Should().BeNull();
+    }
+
+    [Fact]
+    public void TmSelect_Long_RoundTrips_UnderCzechCulture()
+    {
+        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
+        {
+            long captured = 0;
+            var options = new List<SelectOption<long>>
+            {
+                new(1_234_567_890_123L, "Big"),
+            };
+            var cut = Render<TmSelect<long>>(p => p
+                .Add(c => c.Options, options)
+                .Add(c => c.ValueChanged, EventCallback.Factory.Create<long>(this, v => captured = v)));
+
+            var rendered = cut.Find("option");
+            rendered.GetAttribute("value").Should().Be("1234567890123");
+
+            cut.Find("select").Change("1234567890123");
+
+            captured.Should().Be(1_234_567_890_123L);
+        });
+    }
+
+    [Fact]
+    public void TmSelect_Byte_RoundTrips_UnderCzechCulture()
+    {
+        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
+        {
+            byte captured = 0;
+            var options = new List<SelectOption<byte>>
+            {
+                new((byte)200, "TwoHundred"),
+            };
+            var cut = Render<TmSelect<byte>>(p => p
+                .Add(c => c.Options, options)
+                .Add(c => c.ValueChanged, EventCallback.Factory.Create<byte>(this, v => captured = v)));
+
+            var rendered = cut.Find("option");
+            rendered.GetAttribute("value").Should().Be("200");
+
+            cut.Find("select").Change("200");
+
+            captured.Should().Be((byte)200);
+        });
+    }
+
+    [Fact]
+    public void TmSelect_Decimal_RoundTrips_UnderCzechCulture_WithoutCommaCorruption()
+    {
+        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
+        {
+            decimal captured = 0m;
+            var options = new List<SelectOption<decimal>>
+            {
+                new(1.5m, "OneHalf"),
+            };
+            var cut = Render<TmSelect<decimal>>(p => p
+                .Add(c => c.Options, options)
+                .Add(c => c.ValueChanged, EventCallback.Factory.Create<decimal>(this, v => captured = v)));
+
+            // Rendered option value must stay invariant ("1.5"), never the Czech decimal comma ("1,5"),
+            // otherwise the browser <select> would carry a value the parser below cannot read back.
+            var rendered = cut.Find("option");
+            rendered.GetAttribute("value").Should().Be("1.5");
+
+            cut.Find("select").Change("1.5");
+
+            captured.Should().Be(1.5m);
+        });
+    }
+
+    [Fact]
+    public void TmSelect_Double_RoundTrips_UnderCzechCulture_WithoutCommaCorruption()
+    {
+        UnderCulture(CultureInfo.GetCultureInfo("cs-CZ"), () =>
+        {
+            double captured = 0d;
+            var options = new List<SelectOption<double>>
+            {
+                new(1.5d, "OneHalf"),
+            };
+            var cut = Render<TmSelect<double>>(p => p
+                .Add(c => c.Options, options)
+                .Add(c => c.ValueChanged, EventCallback.Factory.Create<double>(this, v => captured = v)));
+
+            var rendered = cut.Find("option");
+            rendered.GetAttribute("value").Should().Be("1.5");
+
+            cut.Find("select").Change("1.5");
+
+            captured.Should().Be(1.5d);
+        });
     }
 }

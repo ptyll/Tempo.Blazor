@@ -15582,7 +15582,7 @@
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "Generic dropdown select component supporting typed options (string, int, Guid), label, placeholder, error/help text, disabled state, and manual option rendering via ChildContent. Uses native HTML <select> element with automatic value conversion. The bound Value is preselected regardless of whether options come from the Options parameter or from ChildContent (raw <option> children) — the component sets the <select> value attribute so the browser reflects the current selection on load.",
+      "description": "Generic dropdown select component supporting typed options (string, Guid, enum, and every built-in numeric type — int, short, ushort, long, ulong, uint, byte, sbyte, decimal, double, float, including their nullable forms), label, placeholder, error/help text, disabled state, and manual option rendering via ChildContent. Uses native HTML <select> element with automatic value conversion. Numeric TValue round-trips are culture-invariant: both the rendered <option>/<select> value attribute and the change-event parser always use CultureInfo.InvariantCulture (e.g. decimal/double values render and parse as \"1.5\", never a culture-specific \"1,5\"), so the ambient thread culture cannot break selection. The bound Value is preselected regardless of whether options come from the Options parameter or from ChildContent (raw <option> children) — the component sets the <select> value attribute so the browser reflects the current selection on load.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmSelect.razor",
       "documentationStatus": "merged",
@@ -15601,7 +15601,7 @@
           "name": "ChildContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Manually rendered &lt;option&gt; elements. Use when you need full control over option markup. The bound Value is still preselected — the component writes the &lt;select&gt; value attribute so the browser selects the matching &lt;option&gt; on load. Each &lt;option&gt; value must match the string form (ToString) of the corresponding Value."
+          "description": "Manually rendered &lt;option&gt; elements. Use when you need full control over option markup. The bound Value is still preselected — the component writes the &lt;select&gt; value attribute so the browser selects the matching &lt;option&gt; on load. Each &lt;option&gt; value must match the string form of the corresponding Value; for IFormattable TValue (numeric types, decimal, ...) that is the CultureInfo.InvariantCulture form (e.g. \"1.5\", not a culture-specific \"1,5\"), matching what the component's own parser accepts."
         },
         {
           "name": "Class",
@@ -15694,6 +15694,10 @@
         {
           "title": "Select with integer value type",
           "code": "<TmSelect TValue=\"int\"\n          @bind-Value=\"_selectedCategoryId\"\n          Label=\"Category\"\n          Placeholder=\"Select category\"\n          Options=\"@_categoryOptions\" />\n\n@code {\n    private int _selectedCategoryId;\n\n    private List<SelectOption<int>> _categoryOptions =\n    [\n        new(1, \"Electronics\"),\n        new(2, \"Books\"),\n        new(3, \"Clothing\"),\n        new(4, \"Sports\")\n    ];\n}"
+        },
+        {
+          "title": "Select with decimal value type (culture-invariant round-trip)",
+          "code": "@* Numeric TValue (short, ushort, long, ulong, uint, byte, sbyte, decimal, double, float —\n   and their nullable forms) round-trips regardless of the ambient thread culture: the option\n   value and the parsed-back value both use CultureInfo.InvariantCulture, so a decimal like\n   1.5 always renders and parses as \"1.5\", never a culture-specific \"1,5\". *@\n\n<TmSelect TValue=\"decimal\"\n          @bind-Value=\"_selectedDiscount\"\n          Label=\"Discount rate\"\n          Placeholder=\"Select discount\"\n          Options=\"@_discountOptions\" />\n\n<p>Selected: @_selectedDiscount</p>\n\n@code {\n    private decimal _selectedDiscount;\n\n    private List<SelectOption<decimal>> _discountOptions =\n    [\n        new(0m, \"None\"),\n        new(1.5m, \"1.5 %\"),\n        new(2.75m, \"2.75 %\")\n    ];\n}"
         },
         {
           "title": "Select with Guid value type",
