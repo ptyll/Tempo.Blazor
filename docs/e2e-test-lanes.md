@@ -68,6 +68,38 @@ the same commit. Phases that change components must keep the smoke lane green
 as pre-existing (tracked in the triage list) or a regression introduced by the
 change under test before merging.
 
+## Environment for the full lane
+
+A verified full-suite run needs a specific machine environment or a subset of
+failures will be environment noise (class E) rather than product signal.
+Recorded 2026-09-26 while investigating 12 deterministically red tests on a
+machine whose defaults differed from the machine that recorded
+`full-run-20260924`:
+
+- **`LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`** — the self-hosted demo apps
+  inherit the process culture, and several full-lane tests (F9, F12, F13,
+  F14) assert against localized text that differs under a non-English
+  system locale (e.g. `cs_CZ.UTF-8`). Export both before the run; do not rely
+  on the shell's ambient locale.
+- **Font substitution pinned to DejaVu** — headless Chromium's PDF/text
+  export path can pick a different font than the one the browser itself
+  renders with when a system font package (e.g. `ttf-mscorefonts`, which
+  substitutes Arial) is installed. `BrowserAndServerExports_AgreeOnPaginationAndTextLayer_AndOpenInTmPdfViewer`
+  compares the two and goes red on font mismatch. Point `FONTCONFIG_FILE` at
+  a fontconfig file that only resolves the DejaVu family before running the
+  full lane, so both paths agree.
+- **`TM_E2E_TRACE_ON_FAILURE=false`** for the acceptance measurement itself
+  (see above) — traces are for triage runs, not the recorded evidence.
+
+Three tests remained red even with the above (`Overlay_Hides_WhenAnchorScrollsFullyOutOfViewport`,
+`EB4_InlineToolbar_BottomEdge_CaptureBaseline`, `PhaseE7_CanvasConnectorEndpointClipboardAndAllDrawingTypesPersistWithScreenshotEvidence`):
+their fixed post-scroll wait windows raced the browser's default smooth-scroll
+animation rather than an environment difference; the tests themselves now
+pass `behavior: 'instant'` to their `scrollTo`/`scrollIntoView` calls (see the
+`test(e2e): make scroll-dependent overlay, EB4 and E7 tests deterministic`
+commit) so this is not a required environment step, just recorded here for
+context on why those three were part of the same investigation.
+
 ## Practical notes for running locally
 
 - All four hosts are auto-started by `PlaywrightTestBase.EnsureDemoHostsAsync`
