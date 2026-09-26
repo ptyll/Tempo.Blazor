@@ -1010,6 +1010,7 @@ public sealed class DocumentEditorCanvasShapesDrawingsE2ETests : WasmTestBase
         await page.WaitForFunctionAsync(
             "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
             new PageWaitForFunctionOptions { Timeout = 20_000 });
+        await page.EvaluateAsync("() => window.scrollTo({ top: 0, behavior: 'instant' })");
         await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={PhaseE7DocumentId}&showToolbar=true&disableCollaboration=true");
         await WaitForPhaseE7ReadyAsync(page);
 

@@ -337,7 +337,7 @@ public class OverlayPanelE2ETests : WasmTestBase
 
         // The page carries 120vh of scroll room below the trigger — scroll to the bottom so the
         // anchor leaves the viewport through the top edge.
-        await page.EvaluateAsync("() => window.scrollTo(0, document.documentElement.scrollHeight)");
+        await page.EvaluateAsync("() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })");
         await page.WaitForTimeoutAsync(200); // placement runs on requestAnimationFrame
 
         var visibility = await panel.EvaluateAsync<string>(
@@ -346,7 +346,7 @@ public class OverlayPanelE2ETests : WasmTestBase
             "panel must hide while its anchor is fully outside the viewport");
 
         // And it must come back when the anchor returns.
-        await page.EvaluateAsync($"() => window.scrollTo(0, {initialScrollY})");
+        await page.EvaluateAsync($"() => window.scrollTo({{ top: {initialScrollY}, behavior: 'instant' }})");
         await page.WaitForTimeoutAsync(200);
         visibility = await panel.EvaluateAsync<string>(
             "el => getComputedStyle(el).visibility");

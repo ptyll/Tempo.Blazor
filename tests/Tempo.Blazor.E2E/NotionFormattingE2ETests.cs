@@ -477,7 +477,7 @@ public class NotionFormattingE2ETests : WasmTestBase
         await page.SetViewportSizeAsync(520, 360);
 
         var block = page.Locator("[data-block-id='eb400000-0000-0000-0000-000000000020']").First;
-        await block.EvaluateAsync("el => el.scrollIntoView({ block: 'end', inline: 'nearest' })");
+        await block.EvaluateAsync("el => el.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'instant' })");
         await page.WaitForTimeoutAsync(200);
         await OpenInlineToolbarForSelectorAsync(page, "[data-block-id='eb400000-0000-0000-0000-000000000020'] .tm-notion-paragraph", "end");
 
@@ -574,7 +574,7 @@ public class NotionFormattingE2ETests : WasmTestBase
         await page.WaitForFunctionAsync(
             "() => window.tmNotionEditor?.hasSelectionWatcher?.(document.querySelector('.tm-notion-page')) === true",
             new PageWaitForFunctionOptions { Timeout = 10000 });
-        await target.EvaluateAsync("(el, block) => el.scrollIntoView({ block, inline: 'nearest' })", scrollBlock);
+        await target.EvaluateAsync("(el, block) => el.scrollIntoView({ block, inline: 'nearest', behavior: 'instant' })", scrollBlock);
         await page.WaitForTimeoutAsync(150);
         await target.EvaluateAsync("""
             el => {
