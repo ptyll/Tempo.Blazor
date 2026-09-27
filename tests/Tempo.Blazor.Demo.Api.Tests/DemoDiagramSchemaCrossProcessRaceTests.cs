@@ -44,6 +44,21 @@ namespace Tempo.Blazor.Demo.Api.Tests;
 /// the same reason the in-process tooth does: that is how the committed file hid the defect.
 /// </para>
 /// <para>
+/// THE POSITIVE CONTROL IS AN EXISTENTIAL CLAIM, AND IT IS TAKEN OVER UP TO
+/// <see cref="BypassArmAttempts"/> INDEPENDENT ARRANGEMENTS. "This arrangement can make two processes
+/// meet" is shown by ONE attempt that meets; an attempt that does not meet is not evidence against it.
+/// A single attempt used to be the whole arm, and on shared CI runners it did not meet often enough to
+/// be a gate: the bypass arm was red on 17 of 64 build-and-test lanes between 2026-09-23 and
+/// 2026-09-26, every time with BOTH hosts listening and the second host's EF HasTables query landing
+/// after the first host's CREATE TABLE — the hosts left the barrier together and drifted apart by more
+/// than EnsureCreated's own check-then-act gap before either reached it. An attempt counts as NOT MET
+/// only in that state (both hosts listening, i.e. both came through EnsureCreated); a host that dies
+/// without the SQLite message, or an attempt that reaches neither state, is still a red on the first
+/// attempt. WHAT THIS DOES NOT CHANGE: the locked arm still runs once, so its single green carries the
+/// per-attempt meeting rate as its power — retrying the control makes the control reliable, it does
+/// not make the locked arm stronger.
+/// </para>
+/// <para>
 /// WHAT A GREEN HERE DOES NOT PROVE. Not that <c>Program</c> routes through the seam — that is a
 /// property of a call site, and an assertion that read source text would prove a line exists,
 /// never that it runs. The hosts below go through <c>Program</c> because they ARE that process;
@@ -102,6 +117,14 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
 
     private static readonly TimeSpan HostStartupTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan AfterReleaseTimeout = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// How many independent two-host arrangements the bypass arm may use to show that the processes MEET.
+    /// Measured single-attempt miss rate on ubuntu-latest: 17 of 64 lanes (about 0.27), so eight
+    /// independent attempts all missing is on the order of 3e-5 at that rate. A missed attempt ends as soon
+    /// as both hosts are listening instead of waiting out <see cref="AfterReleaseTimeout"/>.
+    /// </summary>
+    private const int BypassArmAttempts = 8;
 
     /// <summary>
     /// Asking for this port asks KESTREL to pick one, and the harness learns which by reading the port back
@@ -234,31 +257,79 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
     [Fact]
     public void TwoDemoApiProcesses_BypassingTheLock_NameTheSqliteRace()
     {
-        RunTwoHosts(
-            skipLock: true,
-            onReleased: (hosts, databasePath, output) =>
+        var attemptsThatDidNotMeet = new List<string>();
+        for (var attempt = 1; attempt <= BypassArmAttempts; attempt++)
+        {
+            var met = false;
+            RunTwoHosts(
+                skipLock: true,
+                onReleased: (hosts, databasePath, output) =>
+                {
+                    WaitUntil(
+                        AfterReleaseTimeout,
+                        () => LostTheRace(hosts, output) || BothCameThrough(hosts),
+                        () => "waiting for the lock-bypassing arm to lose the race. If both hosts "
+                              + "stay up, this arrangement never met and a green on the locked arm "
+                              + "would be indistinguishable from that. Output:"
+                              + Environment.NewLine + Snapshot(output));
+
+                    if (!LostTheRace(hosts, output))
+                    {
+                        // Both hosts are listening: both came through EnsureCreated, so neither can
+                        // lose the race any more. This attempt did not meet — the only state that
+                        // earns another attempt.
+                        attemptsThatDidNotMeet.Add(
+                            "attempt " + attempt.ToString(CultureInfo.InvariantCulture)
+                            + ": both hosts listening, no SQLite race message");
+                        return;
+                    }
+
+                    met = true;
+
+                    Snapshot(output).Should().Contain(
+                        SqliteRaceMessage,
+                        "the mutation that walks around the named mutex must fail ON THIS MESSAGE, "
+                        + "which is the defect the lock exists for, not on a timeout or a bind "
+                        + "failure. Looked in the two hosts' combined output");
+
+                    TableExists(databasePath, DiagramSnapshotsTable).Should().BeTrue(
+                        "the loser is only a loser if a neighbour actually created the table. A pair "
+                        + "that crashed before either CREATE would name some other exception and this "
+                        + "would not be a measurement of the race");
+                });
+
+            if (met)
             {
-                WaitUntil(
-                    AfterReleaseTimeout,
-                    () => hosts.Any(h => h.HasExited)
-                          && Snapshot(output).Contains(SqliteRaceMessage, StringComparison.Ordinal),
-                    () => "waiting for the lock-bypassing arm to lose the race. If both hosts "
-                          + "stay up, this arrangement never met and a green on the locked arm "
-                          + "would be indistinguishable from that. Output:"
-                          + Environment.NewLine + Snapshot(output));
+                _output.WriteLine(
+                    "BYPASS ARM MET on attempt " + attempt.ToString(CultureInfo.InvariantCulture)
+                    + " of " + BypassArmAttempts.ToString(CultureInfo.InvariantCulture)
+                    + (attemptsThatDidNotMeet.Count == 0
+                        ? string.Empty
+                        : "; earlier: " + string.Join("; ", attemptsThatDidNotMeet)));
+                return;
+            }
+        }
 
-                Snapshot(output).Should().Contain(
-                    SqliteRaceMessage,
-                    "the mutation that walks around the named mutex must fail ON THIS MESSAGE, "
-                    + "which is the defect the lock exists for, not on a timeout or a bind "
-                    + "failure. Looked in the two hosts' combined output");
-
-                TableExists(databasePath, DiagramSnapshotsTable).Should().BeTrue(
-                    "the loser is only a loser if a neighbour actually created the table. A pair "
-                    + "that crashed before either CREATE would name some other exception and this "
-                    + "would not be a measurement of the race");
-            });
+        attemptsThatDidNotMeet.Should().BeEmpty(
+            "not one of " + BypassArmAttempts.ToString(CultureInfo.InvariantCulture)
+            + " independent arrangements made the two lock-bypassing hosts meet — both came through "
+            + "EnsureCreated every time. The positive control has then shown nothing, and a green on "
+            + "the locked arm would be indistinguishable from 'they never met'");
     }
+
+    /// <summary>
+    /// The bypass arm's MET state: a host is gone AND the combined output names the SQLite race.
+    /// </summary>
+    private static bool LostTheRace(IReadOnlyList<DemoApiHost> hosts, StringBuilder output)
+        => hosts.Any(h => h.HasExited)
+           && Snapshot(output).Contains(SqliteRaceMessage, StringComparison.Ordinal);
+
+    /// <summary>
+    /// The bypass arm's NOT-MET state: every host printed "Now listening on" and none has exited. A host
+    /// that lost the race throws out of EnsureCreated before Kestrel starts, so it never reaches this.
+    /// </summary>
+    private static bool BothCameThrough(IReadOnlyList<DemoApiHost> hosts)
+        => hosts.All(h => h.Listening && !h.HasExited);
 
     /// <summary>
     /// THE OFF-DIAGONAL FOR THE PORT FIX. A green on the two arms above says nothing about ports: they now
