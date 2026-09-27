@@ -351,8 +351,10 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         return await page.EvaluateAsync<ObjectRect>(
             """
             async objectId => {
+                // 'instant': the demo sets `scroll-behavior: smooth` on <html>, so a default scrollIntoView
+                // animates and the two frames below would read the rect mid-scroll.
                 document.querySelector(`[data-canvas-object][data-object-id="${objectId}"]`)
-                    ?.scrollIntoView({ block: 'center', inline: 'center' });
+                    ?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
                 const node = document.querySelector(`[data-canvas-object][data-object-id="${objectId}"]`);
@@ -379,7 +381,9 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
             """
             async objectId => {
                 const metadataNode = document.querySelector(`[data-canvas-object][data-object-id="${objectId}"]`);
-                metadataNode?.scrollIntoView({ block: 'center', inline: 'center' });
+                // 'instant' for the same reason as ReadObjectRectAsync: a smooth scroll still in flight
+                // moves the object after this point is read, and the drag then starts off the image.
+                metadataNode?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
                 const metadataRect = metadataNode?.getBoundingClientRect?.();
                 if (metadataRect && metadataRect.width > 0.5 && metadataRect.height > 0.5) {
@@ -798,6 +802,22 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
             """,
             objectId);
 
+    /// <summary>
+    /// Loads the canvas interop module into <c>window.__tmDocumentCanvasInteropModule</c> so the model waits
+    /// below can poll it from a SYNCHRONOUS predicate. Playwright's <c>WaitForFunctionAsync</c> does not await
+    /// the predicate: an <c>async</c> predicate returns a Promise, which is truthy, so the wait resolved on
+    /// its first poll whatever the model said (measured: <c>async () =&gt; false</c> returned after ~10 ms,
+    /// <c>() =&gt; false</c> timed out). The model waits here were therefore no waits at all, and the drag
+    /// retry in <see cref="DragObjectByMouseUntilModelMovesAsync"/> could never trigger.
+    /// </summary>
+    private static Task EnsureCanvasInteropModuleAsync(IPage page)
+        => page.EvaluateAsync(
+            """
+            async () => {
+                window.__tmDocumentCanvasInteropModule ||= await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+            }
+            """);
+
     private static async Task<ObjectModelLayout> WaitForObjectModelLayoutAsync(
         IPage page,
         string objectId,
@@ -806,12 +826,17 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         double minimumWidth,
         double minimumHeight)
     {
+        await EnsureCanvasInteropModuleAsync(page);
         await page.WaitForFunctionAsync(
             """
-            async args => {
+            args => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!module || !handle) {
+                    return false;
+                }
+
                 const model = JSON.parse(module.getModelJson(handle) || '{}');
                 const source = findObjectSource(model, args.objectId);
                 if (!source) {
@@ -859,12 +884,17 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
 
     private static async Task<ObjectModelLayout> WaitForObjectModelNearAsync(IPage page, string objectId, ObjectModelLayout expected, double tolerance)
     {
+        await EnsureCanvasInteropModuleAsync(page);
         await page.WaitForFunctionAsync(
             """
-            async args => {
+            args => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!module || !handle) {
+                    return false;
+                }
+
                 const model = JSON.parse(module.getModelJson(handle) || '{}');
                 const source = findObjectSource(model, args.objectId);
                 if (!source) {
