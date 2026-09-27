@@ -575,6 +575,11 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         await page.Mouse.UpAsync();
     }
 
+    /// <summary>
+    /// One pointer drag, then a real wait for the model to move. There is deliberately NO retry: with the
+    /// smooth-scroll race fixed the first drag must move the image, and a retry would hide a product defect
+    /// of exactly that shape ("the first drag does nothing"). A miss fails with pointer diagnostics.
+    /// </summary>
     private static async Task<ObjectModelLayout> DragObjectByMouseUntilModelMovesAsync(
         IPage page,
         string objectId,
@@ -582,37 +587,23 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         double deltaX,
         double deltaY)
     {
-        Exception? lastError = null;
-        for (var attempt = 0; attempt < 2; attempt++)
+        await DragObjectByMouseAsync(page, objectId, deltaX, deltaY);
+        try
         {
-            try
-            {
-                if (attempt > 0)
-                {
-                    var hitPoint = await ReadObjectHitPointAsync(page, objectId);
-                    await page.Mouse.ClickAsync((float)hitPoint.X, (float)hitPoint.Y);
-                    await WaitForObjectSelectionAsync(page, objectId);
-                    await page.WaitForTimeoutAsync(150);
-                }
-
-                await DragObjectByMouseAsync(page, objectId, deltaX, deltaY);
-                return await WaitForObjectModelLayoutAsync(
-                    page,
-                    objectId,
-                    minimumX: selectedLayout.X + 24,
-                    minimumY: selectedLayout.Y + 12,
-                    minimumWidth: selectedLayout.Width - 1,
-                    minimumHeight: selectedLayout.Height - 1);
-            }
-            catch (Exception ex) when (attempt == 0 && ex is TimeoutException or PlaywrightException)
-            {
-                lastError = ex;
-            }
+            return await WaitForObjectModelLayoutAsync(
+                page,
+                objectId,
+                minimumX: selectedLayout.X + 24,
+                minimumY: selectedLayout.Y + 12,
+                minimumWidth: selectedLayout.Width - 1,
+                minimumHeight: selectedLayout.Height - 1);
         }
-
-        var current = await ReadObjectModelLayoutAsync(page, objectId);
-        Assert.Fail($"Canvas object drag did not update model layout after retry. Before: x={selectedLayout.X:N1}, y={selectedLayout.Y:N1}; after: x={current.X:N1}, y={current.Y:N1}.{Environment.NewLine}{await ReadPointerDiagnosticsAsync(page, objectId)}");
-        throw new InvalidOperationException("Unreachable object drag retry failure.", lastError);
+        catch (TimeoutException)
+        {
+            var current = await ReadObjectModelLayoutAsync(page, objectId);
+            Assert.Fail($"The first pointer drag did not update the model layout. Before: x={selectedLayout.X:N1}, y={selectedLayout.Y:N1}; after: x={current.X:N1}, y={current.Y:N1}.{Environment.NewLine}{await ReadPointerDiagnosticsAsync(page, objectId)}");
+            throw;
+        }
     }
 
     private static async Task ResizeObjectFromHandleByMouseAsync(IPage page, string objectId, string handleName, double deltaX, double deltaY)
@@ -807,8 +798,8 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
     /// below can poll it from a SYNCHRONOUS predicate. Playwright's <c>WaitForFunctionAsync</c> does not await
     /// the predicate: an <c>async</c> predicate returns a Promise, which is truthy, so the wait resolved on
     /// its first poll whatever the model said (measured: <c>async () =&gt; false</c> returned after ~10 ms,
-    /// <c>() =&gt; false</c> timed out). The model waits here were therefore no waits at all, and the drag
-    /// retry in <see cref="DragObjectByMouseUntilModelMovesAsync"/> could never trigger.
+    /// <c>() =&gt; false</c> timed out). The model waits here were therefore no waits at all: a drag that
+    /// had not (yet) moved the model was read back as its final layout.
     /// </summary>
     private static Task EnsureCanvasInteropModuleAsync(IPage page)
         => page.EvaluateAsync(
