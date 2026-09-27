@@ -21,7 +21,14 @@ namespace Tempo.ReportServer.TestSupport;
 /// reachable, an image that cannot be pulled, a readiness wait that times out on a container that is
 /// still RUNNING — every other failure propagates on the first attempt exactly as before, so "a missing
 /// service is a red, never a skip" still holds. Every candidate that failed is disposed before the next
-/// is built, and the last failure propagates unchanged when all attempts crashed.
+/// is built, and the last failure propagates unchanged when all attempts crashed. The dispose is
+/// best-effort: a container that crashed may also fail to be removed, and that secondary failure must
+/// not replace the start-up exception, which is the finding.
+/// </para>
+/// <para>
+/// A RETRY IS NEVER SILENT. Each replaced container writes one line to standard error (the test output
+/// of the CI log) naming the attempt and Testcontainers' own first message line, which carries the exit
+/// code — so a green run that needed a second container still says so.
 /// </para>
 /// </summary>
 internal static class SqlServerContainerStart
@@ -38,16 +45,18 @@ internal static class SqlServerContainerStart
         => StartAsync(
             build,
             static container => container.StartAsync(),
-            static container => container.DisposeAsync());
+            static container => container.DisposeAsync(),
+            static line => Console.Error.WriteLine(line));
 
     /// <summary>
-    /// The same rule with the start and dispose steps injectable, so the retry decision is testable
+    /// The same rule with the start, dispose and log steps injectable, so the retry decision is testable
     /// without Docker.
     /// </summary>
     internal static async Task<TContainer> StartAsync<TContainer>(
         Func<TContainer> build,
         Func<TContainer, Task> start,
-        Func<TContainer, ValueTask> dispose)
+        Func<TContainer, ValueTask> dispose,
+        Action<string> log)
     {
         for (var attempt = 1; ; attempt++)
         {
@@ -59,12 +68,31 @@ internal static class SqlServerContainerStart
             }
             catch (Exception exception)
             {
-                await dispose(candidate).ConfigureAwait(false);
+                try
+                {
+                    await dispose(candidate).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Best-effort: the start-up exception below is the finding, not the cleanup.
+                }
+
                 if (exception is not ContainerNotRunningException || attempt >= Attempts)
                 {
                     throw;
                 }
+
+                log(
+                    "SqlServerContainerStart: attempt " + attempt + "/" + Attempts
+                    + " exited during start-up, retrying with a fresh container: "
+                    + FirstLine(exception.Message));
             }
         }
+    }
+
+    private static string FirstLine(string message)
+    {
+        var end = message.IndexOfAny(['\r', '\n']);
+        return end < 0 ? message : message[..end];
     }
 }
