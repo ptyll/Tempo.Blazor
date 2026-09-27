@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using Tempo.ReportServer.TestSupport;
 using Testcontainers.MsSql;
 
 namespace Tempo.ReportServer.Api.Tests.MsSql;
@@ -24,9 +25,8 @@ public class MsSqlExternalModeIsolationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _container = new MsSqlBuilder(MsSqlTestDatabase.ContainerImage)
-            .Build();
-        await _container.StartAsync();
+        _container = await SqlServerContainerStart.StartAsync(
+            () => new MsSqlBuilder(MsSqlTestDatabase.ContainerImage).Build());
         _adminConnectionString = new SqlConnectionStringBuilder(_container.GetConnectionString())
         {
             TrustServerCertificate = true,
