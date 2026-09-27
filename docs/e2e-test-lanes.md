@@ -116,7 +116,16 @@ this class of failure, so neither may be used to call a test "fixed":
   machine (load average well above the core count) turned them green again.
   Record the load next to any acceptance run.
 
-What they raced, for anyone writing a similar test:
+One of the four was not a test problem at all: `PasteSpecial_Transpose_SwapsRowToColumn`
+exposed a real `TmSpreadsheet` defect. The canvas engine queued Shift+Arrow selection changes for .NET
+through a debounced command log while Ctrl+C reached .NET at once, so the internal clipboard held the
+previous selection. Fixed in `spreadsheet-canvas.js` (key commands deliver the state queued up to their
+key press first — see the 2.9.0 CHANGELOG entry), guarded by the deterministic
+`PasteSpecial_CopyInTheSameTaskAsTheSelectionChange_CopiesTheExtendedRange`,
+`PasteSpecial_SelectionChangedAfterTheCopy_DoesNotLeakIntoTheCopiedRange` and
+`Delete_InTheSameTaskAsTheSelectionChange_ClearsTheExtendedRange`. Do not read its old red as flakiness.
+
+What the three test-side ones raced, for anyone writing a similar test:
 
 - **`WaitForFunctionAsync` does not await its predicate.** An `async` predicate
   returns a Promise, which is truthy, so the wait resolves on its first poll
