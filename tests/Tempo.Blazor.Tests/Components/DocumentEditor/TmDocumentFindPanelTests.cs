@@ -109,8 +109,7 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
 
         // N3.4: the search is debounced, so the count updates shortly after typing settles.
         cut.WaitForAssertion(
-            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2"),
-            TimeSpan.FromSeconds(3));
+            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2"));
     }
 
     // ─── Debounce (perf plan N3.4) ────────────────────────────────────────────
@@ -185,8 +184,7 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         cut.WaitForAssertion(
-            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2 of 2"),
-            TimeSpan.FromSeconds(3));
+            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2 of 2"));
     }
 
     // ─── Close callback ───────────────────────────────────────────────────────
@@ -276,16 +274,14 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-find-input']").Input("cat");
         cut.WaitForAssertion(
-            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 3"),
-            TimeSpan.FromSeconds(3));
+            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 3"));
 
         var next = cut.Find("[data-testid='document-find-next']");
         next.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         cut.Find("[data-testid='document-find-next']").Click();
 
         cut.WaitForAssertion(
-            () => navigations.Should().Equal(1),
-            TimeSpan.FromSeconds(3));
+            () => navigations.Should().Equal(1));
         cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("2 of 3");
     }
 
@@ -318,14 +314,13 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
 
         cut.Find("[data-testid='document-find-input']").Input("cat");
         cut.WaitForAssertion(
-            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 2"),
-            TimeSpan.FromSeconds(3));
+            () => cut.Find("[data-testid='document-find-count']").TextContent.Should().Contain("1 of 2"));
 
         var close = cut.Find("[data-testid='document-find-close']");
         close.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         cut.Find("[data-testid='document-find-close']").Click();
 
-        cut.WaitForAssertion(() => closes.Should().Be(1), TimeSpan.FromSeconds(3));
+        cut.WaitForAssertion(() => closes.Should().Be(1));
         navigations.Should().Be(0);
     }
 
@@ -342,7 +337,7 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         cut.Find("[data-testid='document-find-close']")
             .KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
-        cut.WaitForAssertion(() => closes.Should().Be(1), TimeSpan.FromSeconds(3));
+        cut.WaitForAssertion(() => closes.Should().Be(1));
     }
 
     [Fact]
@@ -358,7 +353,7 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         cut.Find("[data-testid='document-find-input']")
             .KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
-        cut.WaitForAssertion(() => closes.Should().Be(1), TimeSpan.FromSeconds(3));
+        cut.WaitForAssertion(() => closes.Should().Be(1));
     }
 
     [Fact]
@@ -437,8 +432,7 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         cut.Find("[data-testid='document-find-input']").Input("cat");
         // N3.4: the search is debounced, so the result list appears shortly after typing settles.
         cut.WaitForAssertion(
-            () => cut.FindAll("[data-testid='document-find-result']").Should().HaveCount(2),
-            TimeSpan.FromSeconds(3));
+            () => cut.FindAll("[data-testid='document-find-result']").Should().HaveCount(2));
         cut.FindAll("[data-testid='document-find-result']")[1].Click();
 
         // Load-sensitive: under full-suite CPU contention the click's callback can land a beat after
@@ -448,8 +442,7 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
             {
                 active.Should().NotBeNull();
                 active!.Index.Should().Be(1);
-            },
-            TimeSpan.FromSeconds(3));
+            });
     }
 
     [Fact]

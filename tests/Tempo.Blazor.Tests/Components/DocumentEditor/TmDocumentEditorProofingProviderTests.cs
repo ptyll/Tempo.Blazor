@@ -37,7 +37,7 @@ public class TmDocumentEditorProofingProviderTests : LocalizationTestBase
             proofing.LastRequest.Should().NotBeNull("the editor must run a proofing pass after load");
             CanvasOptionsPayloads().Should().Contain(json => json.Contains("smlouvva"),
                 "provider findings must reach the canvas engine options");
-        }, timeout: TimeSpan.FromSeconds(5));
+        });
 
         proofing.LastRequest!.Text.Should().NotBeNullOrWhiteSpace("the extracted document text is the check input");
         proofing.LastRequest.Language.Should().Be("cs-CZ");
@@ -74,7 +74,7 @@ public class TmDocumentEditorProofingProviderTests : LocalizationTestBase
             var merged = CanvasOptionsPayloads().Where(json => json.Contains("smlouvva")).ToList();
             merged.Should().NotBeEmpty();
             merged[^1].Should().Contain("wrngg", "host base word lists survive the provider merge");
-        }, timeout: TimeSpan.FromSeconds(5));
+        });
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class TmDocumentEditorProofingProviderTests : LocalizationTestBase
                       .Add(p => p.ProofingProvider, proofing));
 
         cut.WaitForElement("[data-testid='document-canvas-engine-host']");
-        cut.WaitForAssertion(() => proofing.LastRequest.Should().NotBeNull(), timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => proofing.LastRequest.Should().NotBeNull());
 
         // The editor keeps rendering and no raw error leaks into the surface.
         cut.FindAll("[data-testid='document-canvas-engine-host']").Should().ContainSingle();

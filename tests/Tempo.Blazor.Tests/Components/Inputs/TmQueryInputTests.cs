@@ -110,7 +110,7 @@ public class TmQueryInputTests : LocalizationTestBase
         cut.Find(".tm-query-input__input").Input("st");
 
         calls.Should().Be(0); // not queried synchronously — debounced
-        cut.WaitForAssertion(() => calls.Should().Be(1), TimeSpan.FromSeconds(2));
+        cut.WaitForAssertion(() => calls.Should().Be(1));
     }
 
     [Fact]

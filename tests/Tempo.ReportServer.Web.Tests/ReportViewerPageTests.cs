@@ -207,8 +207,7 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
         // The drill-through handler is async (the viewer raises OnDrillThrough, the host navigates), so wait
         // for the navigation to settle before asserting the resolved deep link.
         cut.WaitForAssertion(
-            () => navigation.Uri.Should().EndWith("/reports/Finance/Sales%20Register?Region=EU"),
-            TimeSpan.FromSeconds(5));
+            () => navigation.Uri.Should().EndWith("/reports/Finance/Sales%20Register?Region=EU"));
     }
 
     /// <remarks>

@@ -181,7 +181,7 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         {
             autosaves.Should().Be(1);
             cut.Find(".tm-signing-form-runner__autosave").TextContent.Should().Contain("Offline");
-        }, TimeSpan.FromSeconds(5));
+        });
     }
 
     [Fact]
