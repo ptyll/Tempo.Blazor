@@ -1654,7 +1654,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             s.metrics.commandLogBatchItemCount += batch.length;
         }
 
-        invokeDotNet(root, "OnCanvasCommandLogBatch", [batch], false)
+        s.commandLogFlight = invokeDotNet(root, "OnCanvasCommandLogBatch", [batch], false)
             .then(ackRevision => {
                 const nextAck = Number(ackRevision) || Math.max(...batch.map(command => command.id));
                 s.commandLogAckRevision = Math.max(s.commandLogAckRevision || 0, nextAck);
@@ -3069,6 +3069,53 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         flushCommandLog(root);
     }
 
+    // Resolves once no command-log batch is queued, debounced or in flight, i.e. once .NET has
+    // acknowledged every selection/edit this canvas has queued so far. Bounded: a batch that keeps
+    // failing is dropped by flushCommandLog's own retry limit, so a few rounds always suffice.
+    async function whenCommandLogIdle(root) {
+        for (let round = 0; round < 8; round++) {
+            const s = getState(root);
+            if (!s || !s.dotNet) return;
+            if (s.commandLogInFlight) {
+                try { await s.commandLogFlight; } catch { }
+                continue;
+            }
+            if (s.commandLogTimer || s.commandLogPending || (s.commandLog || []).length > 0) {
+                s.commandLogPending = false;
+                flushCommandLog(root);
+                if (s.commandLogInFlight) continue;
+            }
+            return;
+        }
+    }
+
+    // A .NET-side command that reads the grid's selection or cell values (copy/cut into the internal
+    // clipboard, Paste Special, Delete, formatting shortcuts, ...) must not overtake the state the canvas
+    // has only queued so far: selection changes ride a debounced command log (35 ms, longer while an
+    // edit commit is pending) and cell edits a 120 ms commit batch, while key commands were invoked at
+    // once. Shift+Arrow followed quickly by Ctrl+C therefore copied the PREVIOUS selection into the
+    // internal clipboard. Flush everything pending, wait for the ack, then invoke — in call order.
+    function invokeDotNetAfterPendingState(root, method, args, hotPath) {
+        const s = getState(root);
+        if (!s?.dotNet) return Promise.resolve();
+        if (s.selectionSyncFrame) {
+            cancelAnimationFrame(s.selectionSyncFrame);
+            s.selectionSyncFrame = 0;
+        }
+        if (s.selectionSyncTimer) {
+            clearTimeout(s.selectionSyncTimer);
+            s.selectionSyncTimer = 0;
+        }
+        flushCellEditCommitQueue(root);
+        if (!isFormulaPointMode(root)) sendSelection(root);
+        flushCommandLog(root);
+
+        const run = () => whenCommandLogIdle(root).then(() => invokeDotNet(root, method, args, hotPath));
+        const next = (s.pendingStateCommandChain || Promise.resolve()).then(run, run);
+        s.pendingStateCommandChain = next.catch(() => { });
+        return next;
+    }
+
     function scheduleSelectionSync(root) {
         const s = getState(root);
         if (!s || !s.model || s.selectionSyncFrame) return;
@@ -3326,7 +3373,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
 
         if (s.metrics) s.metrics.keyCommandCallbackCount += 1;
-        invokeDotNet(root, "OnCanvasKeyCommand", [
+        invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", [
             key,
             !!ev.shiftKey,
             !!ev.ctrlKey,
@@ -5430,7 +5477,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ev.preventDefault();
             ev.clipboardData?.setData("text/plain", text);
             try { ev.clipboardData?.setData(customClipboardMime, JSON.stringify(payload)); } catch { }
-            invokeDotNet(root, "OnCanvasKeyCommand", ["c", false, true, false, false], true).catch(() => {});
+            invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", ["c", false, true, false, false], true).catch(() => {});
         };
         const onCut = ev => {
             if (!isJsEngine(root)) return;
@@ -5440,7 +5487,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ev.preventDefault();
             ev.clipboardData?.setData("text/plain", text);
             try { ev.clipboardData?.setData(customClipboardMime, JSON.stringify(payload)); } catch { }
-            invokeDotNet(root, "OnCanvasKeyCommand", ["x", false, true, false, false], true).catch(() => {});
+            invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", ["x", false, true, false, false], true).catch(() => {});
         };
         const onPaste = ev => {
             if (!isJsEngine(root)) return;
@@ -5453,7 +5500,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 } catch { }
             }
             if (applyClipboardText(root, text) > 0) return;
-            invokeDotNet(root, "OnCanvasKeyCommand", ["v", false, true, false, false], true).catch(() => {});
+            invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", ["v", false, true, false, false], true).catch(() => {});
         };
         const onFocusOut = ev => {
             const nextTarget = ev?.relatedTarget;
