@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="86192ad9-cb86-4264-8983-88d418125266" name="@pavel-Virtual-Machine 2026-09-27 17:26:49" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-27T17:26:49.6282777+02:00" queuing="2026-09-27T17:26:49.6282778+02:00" start="2026-09-27T17:23:58.8236733+02:00" finish="2026-09-27T17:26:56.8525660+02:00" />
+  <TestSettings name="default" id="b5304f27-8890-40d8-9bb1-4c11a7f2d020">
+    <Deployment runDeploymentRoot="_pavel-Virtual-Machine_2026-09-27_17_26_49" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="f886bba0-5f44-4ec9-ac86-1a36f56a8440" testId="bfc52cff-437f-05e7-17e6-2bc7c457739f" testName="EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:23.4344201" startTime="2026-09-27T17:24:00.0219383+02:00" endTime="2026-09-27T17:26:49.5499267+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f886bba0-5f44-4ec9-ac86-1a36f56a8440">
+      <Output>
+        <StdOut>TestContext Messages:
+[baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+Demo API ready at https://localhost:5100.
+Demo WASM ready at https://localhost:7106, http://localhost:5010.
+Demo Server ready at https://localhost:7107.
+Demo InteractiveAuto ready at https://localhost:7108.</StdOut>
+      </Output>
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/eb5-long-page-chip.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-long-page-chip.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-page-link-menu-open.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-page-link-menu-open.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-page-link-no-results.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-page-link-no-results.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="a6c0c91f-e0b8-4c6f-b021-18839ad01a2e" testId="b7dcfac0-9822-d80f-60b8-00be50a29df7" testName="TmBadge_Renders" computerName="pavel-Virtual-Machine" duration="00:00:03.4951287" startTime="2026-09-27T17:26:49.5796498+02:00" endTime="2026-09-27T17:26:56.6920184+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a6c0c91f-e0b8-4c6f-b021-18839ad01a2e" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="bfc52cff-437f-05e7-17e6-2bc7c457739f">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+      </TestCategory>
+      <Execution id="f886bba0-5f44-4ec9-ac86-1a36f56a8440" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="TmBadge_Renders" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b7dcfac0-9822-d80f-60b8-00be50a29df7">
+      <TestCategory>
+        <TestCategoryItem TestCategory="Server" />
+      </TestCategory>
+      <Execution id="a6c0c91f-e0b8-4c6f-b021-18839ad01a2e" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ServerRenderingTests" name="TmBadge_Renders" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="bfc52cff-437f-05e7-17e6-2bc7c457739f" executionId="f886bba0-5f44-4ec9-ac86-1a36f56a8440" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b7dcfac0-9822-d80f-60b8-00be50a29df7" executionId="a6c0c91f-e0b8-4c6f-b021-18839ad01a2e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+</TestRun>

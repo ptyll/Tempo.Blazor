@@ -1,0 +1,52 @@
+Test run for /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Passed AuditLog_FilterAndDetailWithChangeDiff [14 s]
+  Passed ImageBlock_PasteImage_ReadOnly_DoesNothing [12 s]
+  Passed EB4_InlineToolbar_BottomEdge_CaptureBaseline [12 s]
+  Passed EB4_InlineToolbar_ColorPanelViewportEdge_CaptureBaseline [13 s]
+  Passed EB8_MobileColumnsStackWithoutOverflow_AreCaptured [11 s]
+  Passed MediaLibrary_Search_FiltersItems [13 s]
+  Passed EB6_PasteAndNoFileProviderStates_CaptureBaseline [34 s]
+  Passed MentionMenu_DoubleAt_Opens [8 s]
+  Passed MentionMenu_Click_InsertsUserMention [9 s]
+  Passed PageLinkMenu_TypeName_FiltersPages [10 s]
+  Passed PageLinkMenu_Click_InsertsPageLink [10 s]
+  Passed PageLinkMenu_Escape_Closes [10 s]
+  Passed EB5_MentionMenuNoResultsDiacriticsAndUserChip_CaptureBaseline [17 s]
+  Failed EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline [6 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionMentionMenuE2ETests.EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline threw exception: 
+Microsoft.Playwright.PlaywrightException: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  -   - waiting for navigation until "networkidle"
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Page.ReloadAsync(PageReloadOptions options) in /_/src/Playwright/Core/Page.cs:line 818
+   at Tempo.Blazor.E2E.NotionMentionMenuE2ETests.SeedMentionTokenPageAsync(IPage page) in /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMentionMenuE2ETests.cs:line 354
+   at Tempo.Blazor.E2E.NotionMentionMenuE2ETests.EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline() in /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMentionMenuE2ETests.cs:line 311
+
+  Passed CF4_MyTasks_OpenCompleteNavigateAndCaptureBaseline [16 s]
+  Passed CF4_MyTasks_ProviderlessEntryPointHidden [9 s]
+  Passed CF4_MyTasks_EmptyManyAndOverdueEdges [15 s]
+  Passed ChildPageBlock_Renders_WithTitle [8 s]
+  Passed PageSettings_ExportHtml_DownloadsFile [15 s]
+  Passed TmButton_Renders [3 s]
+  Failed TmBadge_Renders [4 s]
+  Error Message:
+   Assert.IsTrue failed. Expected at least one badge to be rendered
+  Stack Trace:
+     at Tempo.Blazor.E2E.ServerRenderingTests.TmBadge_Renders() in /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/ServerRenderingTests.cs:line 54
+
+  Passed HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport [9 s]
+WARNING: Overwriting results file: /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/e2e-serial-residual.trx
+Results File: /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/e2e-serial-residual.trx
+
+Test Run Failed.
+Total tests: 22
+     Passed: 20
+     Failed: 2
+ Total time: 5.9727 Minutes

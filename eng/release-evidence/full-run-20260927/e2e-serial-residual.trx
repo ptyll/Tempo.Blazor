@@ -1,0 +1,350 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="e46ad4cc-a541-4ad3-a8b2-73ac2d143548" name="@pavel-Virtual-Machine 2026-09-27 17:18:58" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-27T17:18:58.2905984+02:00" queuing="2026-09-27T17:18:58.2905984+02:00" start="2026-09-27T17:17:19.7237962+02:00" finish="2026-09-27T17:23:18.1007398+02:00" />
+  <TestSettings name="default" id="178c4b63-3b6c-4bbf-8517-ab25c4dab625">
+    <Deployment runDeploymentRoot="_pavel-Virtual-Machine_2026-09-27_17_18_58" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="0ebb1bb5-7a15-4f72-937a-3208da6379ee" testId="b7dcfac0-9822-d80f-60b8-00be50a29df7" testName="TmBadge_Renders" computerName="pavel-Virtual-Machine" duration="00:00:04.3162597" startTime="2026-09-27T17:23:01.4041931+02:00" endTime="2026-09-27T17:23:05.7207037+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0ebb1bb5-7a15-4f72-937a-3208da6379ee">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.IsTrue failed. Expected at least one badge to be rendered</Message>
+          <StackTrace>   at Tempo.Blazor.E2E.ServerRenderingTests.TmBadge_Renders() in /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/ServerRenderingTests.cs:line 54
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="4c025e1d-97df-4f12-abf8-0ca69d25c2fd" testId="b750de72-ffc4-2d0a-4a07-865555cf1da2" testName="ChildPageBlock_Renders_WithTitle" computerName="pavel-Virtual-Machine" duration="00:00:08.9359041" startTime="2026-09-27T17:22:32.5475568+02:00" endTime="2026-09-27T17:22:41.4993570+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4c025e1d-97df-4f12-abf8-0ca69d25c2fd">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/navblock_childpage_render_20260927_172241.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="18373600-0dfc-40c4-ae3b-576b928c4408" testId="b65bfd2a-3e12-791a-86f0-ec2d834ef962" testName="PageLinkMenu_TypeName_FiltersPages" computerName="pavel-Virtual-Machine" duration="00:00:10.0884929" startTime="2026-09-27T17:20:54.6717964+02:00" endTime="2026-09-27T17:21:04.7606013+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="18373600-0dfc-40c4-ae3b-576b928c4408">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/pagelink_menu_filtered_20260927_172104.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="bfc48558-715c-4369-b5bc-de03a43e2a2e" testId="1d7e61d6-3547-af9c-b597-a5399e20eb5a" testName="MediaLibrary_Search_FiltersItems" computerName="pavel-Virtual-Machine" duration="00:00:13.3967567" startTime="2026-09-27T17:19:48.4518968+02:00" endTime="2026-09-27T17:20:01.8608522+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bfc48558-715c-4369-b5bc-de03a43e2a2e">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/media_library_search_20260927_172001.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="69c8a32c-e354-4ba7-ac2f-58c097081709" testId="bfc52cff-437f-05e7-17e6-2bc7c457739f" testName="EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:06.9659990" startTime="2026-09-27T17:21:43.1690864+02:00" endTime="2026-09-27T17:21:50.1354591+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="69c8a32c-e354-4ba7-ac2f-58c097081709">
+      <Output>
+        <ErrorInfo>
+          <Message>Test method Tempo.Blazor.E2E.NotionMentionMenuE2ETests.EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline threw exception: &#xD;
+Microsoft.Playwright.PlaywrightException: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  -   - waiting for navigation until "networkidle"</Message>
+          <StackTrace>   at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Page.ReloadAsync(PageReloadOptions options) in /_/src/Playwright/Core/Page.cs:line 818
+   at Tempo.Blazor.E2E.NotionMentionMenuE2ETests.SeedMentionTokenPageAsync(IPage page) in /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMentionMenuE2ETests.cs:line 354
+   at Tempo.Blazor.E2E.NotionMentionMenuE2ETests.EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline() in /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMentionMenuE2ETests.cs:line 311
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3e293d54-3b16-4be3-bc6c-ded763674022" testId="aff6ed25-4142-9d9d-f305-f3784c5074c5" testName="EB8_MobileColumnsStackWithoutOverflow_AreCaptured" computerName="pavel-Virtual-Machine" duration="00:00:11.9345685" startTime="2026-09-27T17:19:36.4929266+02:00" endTime="2026-09-27T17:19:48.4514017+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e293d54-3b16-4be3-bc6c-ded763674022">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/mobile-columns-stacked.png" />
+        <ResultFile path="pavel-Virtual-Machine/mobile-columns-stacked.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="1182d4d5-810c-43e9-bd87-cce7c03db6d9" testId="b559ea1e-924f-e247-4d4c-a3afb9d3c72a" testName="TmButton_Renders" computerName="pavel-Virtual-Machine" duration="00:00:03.9758834" startTime="2026-09-27T17:22:57.3862694+02:00" endTime="2026-09-27T17:23:01.4035244+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1182d4d5-810c-43e9-bd87-cce7c03db6d9">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/buttons_page_20260927_172301.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="9884e01c-a3d8-4e47-bd19-f14a26642250" testId="07cfa4b8-28ad-377f-5311-fdb191838556" testName="PageLinkMenu_Escape_Closes" computerName="pavel-Virtual-Machine" duration="00:00:10.9358395" startTime="2026-09-27T17:21:15.0631243+02:00" endTime="2026-09-27T17:21:25.9992548+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9884e01c-a3d8-4e47-bd19-f14a26642250">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/pagelink_menu_escaped_20260927_172125.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="81c21e38-7be6-484d-b468-e7501d905ffe" testId="8bd16810-197b-d325-4802-cf2c476f2cef" testName="MentionMenu_Click_InsertsUserMention" computerName="pavel-Virtual-Machine" duration="00:00:09.5051886" startTime="2026-09-27T17:20:45.1657185+02:00" endTime="2026-09-27T17:20:54.6711886+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="81c21e38-7be6-484d-b468-e7501d905ffe">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/mention_chip_inserted_20260927_172054.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="719d096d-86b6-4c51-89a1-db2a844ae992" testId="c75d2de3-ecd7-5134-0726-58403f1bfb5b" testName="EB4_InlineToolbar_ColorPanelViewportEdge_CaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:13.2455089" startTime="2026-09-27T17:19:23.2456716+02:00" endTime="2026-09-27T17:19:36.4918066+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="719d096d-86b6-4c51-89a1-db2a844ae992">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/color-panel-viewport-edge.png" />
+        <ResultFile path="pavel-Virtual-Machine/color-panel-viewport-edge.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="50f7310f-79e1-4aae-aa2d-0aa56c4c71ad" testId="d71e8d2f-8247-c10c-6e55-a43507c89662" testName="HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport" computerName="pavel-Virtual-Machine" duration="00:00:09.0039198" startTime="2026-09-27T17:23:05.7211808+02:00" endTime="2026-09-27T17:23:17.9693928+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="50f7310f-79e1-4aae-aa2d-0aa56c4c71ad">
+      <Output>
+        <StdOut>TestContext Messages:
+strip: tab-overview, tab-details, tab-settings, tab-disabled-tab:disabled @ 2026-09-27 17:23:14
+after Home: activeElement=#tab-overview selected=#tab-overview (expected #tab-overview)
+scrollY 100 -&gt; peak 922 -&gt; settled 1950; focused tab rect top=843 bottom=885 viewportHeight=900</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6c887179-a247-479f-bb0f-43012c0d95f4" testId="c8e76a10-bbb5-9392-4ba5-4e2066e6b798" testName="CF4_MyTasks_OpenCompleteNavigateAndCaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:16.6567840" startTime="2026-09-27T17:21:50.1365987+02:00" endTime="2026-09-27T17:22:06.8035784+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6c887179-a247-479f-bb0f-43012c0d95f4">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/cf4-my-tasks-grouped-by-page.png" />
+        <ResultFile path="pavel-Virtual-Machine/cf4-my-tasks-grouped-by-page.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/cf4-my-tasks-panel.png" />
+        <ResultFile path="pavel-Virtual-Machine/cf4-my-tasks-panel.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="cb7e6dc7-26dc-46b2-861d-45df9cbd6b65" testId="9785d0b7-855a-0b6c-7921-3e7314972747" testName="CF4_MyTasks_ProviderlessEntryPointHidden" computerName="pavel-Virtual-Machine" duration="00:00:09.8802350" startTime="2026-09-27T17:22:06.8040104+02:00" endTime="2026-09-27T17:22:16.6845808+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cb7e6dc7-26dc-46b2-861d-45df9cbd6b65" />
+    <UnitTestResult executionId="cf1044a9-4c9a-466c-a177-4bfa59e215b3" testId="d488be98-3466-04e9-b6ac-d36c667168ef" testName="EB5_MentionMenuNoResultsDiacriticsAndUserChip_CaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:17.1687279" startTime="2026-09-27T17:21:25.9996437+02:00" endTime="2026-09-27T17:21:43.1686303+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cf1044a9-4c9a-466c-a177-4bfa59e215b3">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/eb5-at-menu-open.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-at-menu-open.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-at-no-results.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-at-no-results.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-user-chip.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb5-user-chip.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="9743e91e-368c-4588-b589-79fa0cad89c8" testId="68088d1f-69fa-8436-0fe3-5111933415c1" testName="EB6_PasteAndNoFileProviderStates_CaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:34.3328922" startTime="2026-09-27T17:20:01.8614792+02:00" endTime="2026-09-27T17:20:36.2128971+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9743e91e-368c-4588-b589-79fa0cad89c8">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/eb6-no-file-provider-dialog.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-no-file-provider-dialog.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-paste-html.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-paste-html.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-paste-image-uploaded.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-paste-image-uploaded.region.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-paste-plain-text.png" />
+        <ResultFile path="pavel-Virtual-Machine/eb6-paste-plain-text.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="1758d45b-b0b6-4ad1-8e31-bf6f9fa1bc56" testId="559e4fc2-0e34-13e2-42cd-95b65121a735" testName="AuditLog_FilterAndDetailWithChangeDiff" computerName="pavel-Virtual-Machine" duration="00:00:14.9117210" startTime="2026-09-27T17:17:20.7132641+02:00" endTime="2026-09-27T17:18:58.2143542+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1758d45b-b0b6-4ad1-8e31-bf6f9fa1bc56">
+      <Output>
+        <StdOut>TestContext Messages:
+[baseline-sweep] tests/Tempo.Blazor.E2E/__baseline__/*.png: indexed=0 on-disk=0 (expected 0/0); writes allowed = False
+Demo API ready at https://localhost:5100.
+Demo WASM ready at https://localhost:7106, http://localhost:5010.
+Demo Server ready at https://localhost:7107.
+Demo InteractiveAuto ready at https://localhost:7108.</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="fb06b317-6aa8-4e04-b1c9-7bd9d7978a13" testId="194f53bb-ef00-98c1-e826-b274d6ff7013" testName="EB4_InlineToolbar_BottomEdge_CaptureBaseline" computerName="pavel-Virtual-Machine" duration="00:00:12.6110497" startTime="2026-09-27T17:19:10.6126025+02:00" endTime="2026-09-27T17:19:23.2450930+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb06b317-6aa8-4e04-b1c9-7bd9d7978a13">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/bottom-edge-above-selection.png" />
+        <ResultFile path="pavel-Virtual-Machine/bottom-edge-above-selection.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="963a0fd8-c85e-41f9-984c-de2a4ddc2739" testId="813b843a-5f49-589e-c20e-2be9eadc0cc6" testName="ImageBlock_PasteImage_ReadOnly_DoesNothing" computerName="pavel-Virtual-Machine" duration="00:00:12.2988292" startTime="2026-09-27T17:18:58.2333172+02:00" endTime="2026-09-27T17:19:10.6043272+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="963a0fd8-c85e-41f9-984c-de2a4ddc2739">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/image_block_paste_noop_20260927_171910.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="b73f432d-0ca2-423d-9a26-de9bd89fd76f" testId="c6494152-f136-f4dd-6f5c-b81c10c3909e" testName="MentionMenu_DoubleAt_Opens" computerName="pavel-Virtual-Machine" duration="00:00:08.9302102" startTime="2026-09-27T17:20:36.2134492+02:00" endTime="2026-09-27T17:20:45.1650662+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b73f432d-0ca2-423d-9a26-de9bd89fd76f">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/mention_menu_open_20260927_172045.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="2fb399ef-ce02-46cb-b1cf-5bd78227622a" testId="47af1503-3829-542c-2cc4-29f6118e9981" testName="PageLinkMenu_Click_InsertsPageLink" computerName="pavel-Virtual-Machine" duration="00:00:10.3004385" startTime="2026-09-27T17:21:04.7617389+02:00" endTime="2026-09-27T17:21:15.0625247+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2fb399ef-ce02-46cb-b1cf-5bd78227622a">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/pagelink_chip_inserted_20260927_172115.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="b4f3b1e1-28d2-41bc-b580-3506fdafd60a" testId="6fe6a993-430d-4c88-5e0c-001f8551b78a" testName="CF4_MyTasks_EmptyManyAndOverdueEdges" computerName="pavel-Virtual-Machine" duration="00:00:15.8614195" startTime="2026-09-27T17:22:16.6850510+02:00" endTime="2026-09-27T17:22:32.5469036+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b4f3b1e1-28d2-41bc-b580-3506fdafd60a">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/cf4-my-tasks-empty.png" />
+        <ResultFile path="pavel-Virtual-Machine/cf4-my-tasks-empty.region.png" />
+      </ResultFiles>
+    </UnitTestResult>
+    <UnitTestResult executionId="2409a987-a4fb-4302-99f1-292977724e0a" testId="22eab814-f2f8-70c0-112e-ca5236948c84" testName="PageSettings_ExportHtml_DownloadsFile" computerName="pavel-Virtual-Machine" duration="00:00:15.8672341" startTime="2026-09-27T17:22:41.4998112+02:00" endTime="2026-09-27T17:22:57.3858683+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2409a987-a4fb-4302-99f1-292977724e0a">
+      <ResultFiles>
+        <ResultFile path="pavel-Virtual-Machine/pagesettings_export_html_20260927_172257.png" />
+      </ResultFiles>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CF4_MyTasks_EmptyManyAndOverdueEdges" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="6fe6a993-430d-4c88-5e0c-001f8551b78a">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="b4f3b1e1-28d2-41bc-b580-3506fdafd60a" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMyTasksE2ETests" name="CF4_MyTasks_EmptyManyAndOverdueEdges" />
+    </UnitTest>
+    <UnitTest name="EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="bfc52cff-437f-05e7-17e6-2bc7c457739f">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="69c8a32c-e354-4ba7-ac2f-58c097081709" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="EB6_PasteAndNoFileProviderStates_CaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="68088d1f-69fa-8436-0fe3-5111933415c1">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="9743e91e-368c-4588-b589-79fa0cad89c8" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMediaRecoveryE2ETests" name="EB6_PasteAndNoFileProviderStates_CaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="EB4_InlineToolbar_BottomEdge_CaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="194f53bb-ef00-98c1-e826-b274d6ff7013">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="fb06b317-6aa8-4e04-b1c9-7bd9d7978a13" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionFormattingE2ETests" name="EB4_InlineToolbar_BottomEdge_CaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="ChildPageBlock_Renders_WithTitle" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b750de72-ffc4-2d0a-4a07-865555cf1da2">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="4c025e1d-97df-4f12-abf8-0ca69d25c2fd" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionNavBlocksE2ETests" name="ChildPageBlock_Renders_WithTitle" />
+    </UnitTest>
+    <UnitTest name="PageLinkMenu_Escape_Closes" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="07cfa4b8-28ad-377f-5311-fdb191838556">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="9884e01c-a3d8-4e47-bd19-f14a26642250" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="PageLinkMenu_Escape_Closes" />
+    </UnitTest>
+    <UnitTest name="EB4_InlineToolbar_ColorPanelViewportEdge_CaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="c75d2de3-ecd7-5134-0726-58403f1bfb5b">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="719d096d-86b6-4c51-89a1-db2a844ae992" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionFormattingE2ETests" name="EB4_InlineToolbar_ColorPanelViewportEdge_CaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="TmButton_Renders" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b559ea1e-924f-e247-4d4c-a3afb9d3c72a">
+      <TestCategory>
+        <TestCategoryItem TestCategory="Server" />
+      </TestCategory>
+      <Execution id="1182d4d5-810c-43e9-bd87-cce7c03db6d9" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ServerRenderingTests" name="TmButton_Renders" />
+    </UnitTest>
+    <UnitTest name="TmBadge_Renders" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b7dcfac0-9822-d80f-60b8-00be50a29df7">
+      <TestCategory>
+        <TestCategoryItem TestCategory="Server" />
+      </TestCategory>
+      <Execution id="0ebb1bb5-7a15-4f72-937a-3208da6379ee" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.ServerRenderingTests" name="TmBadge_Renders" />
+    </UnitTest>
+    <UnitTest name="MentionMenu_DoubleAt_Opens" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="c6494152-f136-f4dd-6f5c-b81c10c3909e">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="b73f432d-0ca2-423d-9a26-de9bd89fd76f" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="MentionMenu_DoubleAt_Opens" />
+    </UnitTest>
+    <UnitTest name="CF4_MyTasks_OpenCompleteNavigateAndCaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="c8e76a10-bbb5-9392-4ba5-4e2066e6b798">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="6c887179-a247-479f-bb0f-43012c0d95f4" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMyTasksE2ETests" name="CF4_MyTasks_OpenCompleteNavigateAndCaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="AuditLog_FilterAndDetailWithChangeDiff" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="559e4fc2-0e34-13e2-42cd-95b65121a735">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="1758d45b-b0b6-4ad1-8e31-bf6f9fa1bc56" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.AuditLogViewerE2ETests" name="AuditLog_FilterAndDetailWithChangeDiff" />
+    </UnitTest>
+    <UnitTest name="HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="d71e8d2f-8247-c10c-6e55-a43507c89662">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="50f7310f-79e1-4aae-aa2d-0aa56c4c71ad" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests" name="HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport" />
+    </UnitTest>
+    <UnitTest name="PageLinkMenu_TypeName_FiltersPages" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="b65bfd2a-3e12-791a-86f0-ec2d834ef962">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="18373600-0dfc-40c4-ae3b-576b928c4408" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="PageLinkMenu_TypeName_FiltersPages" />
+    </UnitTest>
+    <UnitTest name="EB5_MentionMenuNoResultsDiacriticsAndUserChip_CaptureBaseline" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="d488be98-3466-04e9-b6ac-d36c667168ef">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="cf1044a9-4c9a-466c-a177-4bfa59e215b3" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="EB5_MentionMenuNoResultsDiacriticsAndUserChip_CaptureBaseline" />
+    </UnitTest>
+    <UnitTest name="PageLinkMenu_Click_InsertsPageLink" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="47af1503-3829-542c-2cc4-29f6118e9981">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="2fb399ef-ce02-46cb-b1cf-5bd78227622a" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="PageLinkMenu_Click_InsertsPageLink" />
+    </UnitTest>
+    <UnitTest name="EB8_MobileColumnsStackWithoutOverflow_AreCaptured" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="aff6ed25-4142-9d9d-f305-f3784c5074c5">
+      <TestCategory>
+        <TestCategoryItem TestCategory="NotionUxBaseline" />
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="3e293d54-3b16-4be3-bc6c-ded763674022" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionLayoutRecoveryE2ETests" name="EB8_MobileColumnsStackWithoutOverflow_AreCaptured" />
+    </UnitTest>
+    <UnitTest name="CF4_MyTasks_ProviderlessEntryPointHidden" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="9785d0b7-855a-0b6c-7921-3e7314972747">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="cb7e6dc7-26dc-46b2-861d-45df9cbd6b65" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMyTasksE2ETests" name="CF4_MyTasks_ProviderlessEntryPointHidden" />
+    </UnitTest>
+    <UnitTest name="ImageBlock_PasteImage_ReadOnly_DoesNothing" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="813b843a-5f49-589e-c20e-2be9eadc0cc6">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="963a0fd8-c85e-41f9-984c-de2a4ddc2739" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionClipboardPasteE2ETests" name="ImageBlock_PasteImage_ReadOnly_DoesNothing" />
+    </UnitTest>
+    <UnitTest name="MentionMenu_Click_InsertsUserMention" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="8bd16810-197b-d325-4802-cf2c476f2cef">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="81c21e38-7be6-484d-b468-e7501d905ffe" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMentionMenuE2ETests" name="MentionMenu_Click_InsertsUserMention" />
+    </UnitTest>
+    <UnitTest name="MediaLibrary_Search_FiltersItems" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="1d7e61d6-3547-af9c-b597-a5399e20eb5a">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="bfc48558-715c-4369-b5bc-de03a43e2a2e" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionMediaBlocksE2ETests" name="MediaLibrary_Search_FiltersItems" />
+    </UnitTest>
+    <UnitTest name="PageSettings_ExportHtml_DownloadsFile" storage="/home/pavel/netprojects/tempo.blazor/tempo.blazor/tests/tempo.blazor.e2e/bin/debug/net10.0/tempo.blazor.e2e.dll" id="22eab814-f2f8-70c0-112e-ca5236948c84">
+      <TestCategory>
+        <TestCategoryItem TestCategory="WASM" />
+      </TestCategory>
+      <Execution id="2409a987-a4fb-4302-99f1-292977724e0a" />
+      <TestMethod codeBase="/home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll" adapterTypeName="executor://mstestadapter/v2" className="Tempo.Blazor.E2E.NotionPageSettingsE2ETests" name="PageSettings_ExportHtml_DownloadsFile" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b7dcfac0-9822-d80f-60b8-00be50a29df7" executionId="0ebb1bb5-7a15-4f72-937a-3208da6379ee" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b750de72-ffc4-2d0a-4a07-865555cf1da2" executionId="4c025e1d-97df-4f12-abf8-0ca69d25c2fd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b65bfd2a-3e12-791a-86f0-ec2d834ef962" executionId="18373600-0dfc-40c4-ae3b-576b928c4408" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1d7e61d6-3547-af9c-b597-a5399e20eb5a" executionId="bfc48558-715c-4369-b5bc-de03a43e2a2e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bfc52cff-437f-05e7-17e6-2bc7c457739f" executionId="69c8a32c-e354-4ba7-ac2f-58c097081709" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="aff6ed25-4142-9d9d-f305-f3784c5074c5" executionId="3e293d54-3b16-4be3-bc6c-ded763674022" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b559ea1e-924f-e247-4d4c-a3afb9d3c72a" executionId="1182d4d5-810c-43e9-bd87-cce7c03db6d9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="07cfa4b8-28ad-377f-5311-fdb191838556" executionId="9884e01c-a3d8-4e47-bd19-f14a26642250" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8bd16810-197b-d325-4802-cf2c476f2cef" executionId="81c21e38-7be6-484d-b468-e7501d905ffe" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c75d2de3-ecd7-5134-0726-58403f1bfb5b" executionId="719d096d-86b6-4c51-89a1-db2a844ae992" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d71e8d2f-8247-c10c-6e55-a43507c89662" executionId="50f7310f-79e1-4aae-aa2d-0aa56c4c71ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c8e76a10-bbb5-9392-4ba5-4e2066e6b798" executionId="6c887179-a247-479f-bb0f-43012c0d95f4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9785d0b7-855a-0b6c-7921-3e7314972747" executionId="cb7e6dc7-26dc-46b2-861d-45df9cbd6b65" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d488be98-3466-04e9-b6ac-d36c667168ef" executionId="cf1044a9-4c9a-466c-a177-4bfa59e215b3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="68088d1f-69fa-8436-0fe3-5111933415c1" executionId="9743e91e-368c-4588-b589-79fa0cad89c8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="559e4fc2-0e34-13e2-42cd-95b65121a735" executionId="1758d45b-b0b6-4ad1-8e31-bf6f9fa1bc56" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="194f53bb-ef00-98c1-e826-b274d6ff7013" executionId="fb06b317-6aa8-4e04-b1c9-7bd9d7978a13" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="813b843a-5f49-589e-c20e-2be9eadc0cc6" executionId="963a0fd8-c85e-41f9-984c-de2a4ddc2739" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c6494152-f136-f4dd-6f5c-b81c10c3909e" executionId="b73f432d-0ca2-423d-9a26-de9bd89fd76f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="47af1503-3829-542c-2cc4-29f6118e9981" executionId="2fb399ef-ce02-46cb-b1cf-5bd78227622a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6fe6a993-430d-4c88-5e0c-001f8551b78a" executionId="b4f3b1e1-28d2-41bc-b580-3506fdafd60a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22eab814-f2f8-70c0-112e-ca5236948c84" executionId="2409a987-a4fb-4302-99f1-292977724e0a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="22" executed="22" passed="20" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+</TestRun>

@@ -1,0 +1,14 @@
+Test run for /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Debug/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Passed EB5_PageLinkMenuNoResultsAndLongTitleChip_CaptureBaseline [23 s]
+  Passed TmBadge_Renders [3 s]
+WARNING: Overwriting results file: /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/e2e-serial-residual2.trx
+Results File: /home/pavel/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/e2e-serial-residual2.trx
+
+Test Run Successful.
+Total tests: 2
+     Passed: 2
+ Total time: 2.9667 Minutes
