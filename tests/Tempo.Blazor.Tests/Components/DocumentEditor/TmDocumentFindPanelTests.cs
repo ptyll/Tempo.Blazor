@@ -146,10 +146,13 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
         // The full-document search must NOT run synchronously per keystroke...
         searches.Should().BeEmpty("the find fulltext is debounced, not per-keystroke");
 
-        // ...and after the debounce settles, only the LAST query ran.
-        cut.WaitForAssertion(
-            () => searches.Should().Equal("hel"),
-            TimeSpan.FromSeconds(3));
+        // ...and after the debounce settles, only the LAST query ran. No per-call timeout: the wait
+        // runs on the suite's budget (TestAssemblyInit, TEMPO_BUNIT_WAIT_SECONDS — 10 s in CI). A fixed
+        // 3 s here overrode that budget and was the CI red of run 35924021523 (WaitForFailedException,
+        // check count 1: no render arrived within 3 s on a loaded runner). Reproduced by holding the
+        // renderer's dispatcher for 3.5 s after the keystrokes: red with the fixed 3 s, green on the
+        // 10 s budget.
+        cut.WaitForAssertion(() => searches.Should().Equal("hel"));
     }
 
     [Fact]
