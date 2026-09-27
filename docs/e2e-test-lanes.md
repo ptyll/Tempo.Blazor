@@ -100,6 +100,44 @@ pass `behavior: 'instant'` to their `scrollTo`/`scrollIntoView` calls (see the
 commit) so this is not a required environment step, just recorded here for
 context on why those three were part of the same investigation.
 
+### Timing-masked races (recorded 2026-09-27)
+
+Four more tests (`Phase15_CanvasImages_RenderSelectResizeMoveAndPersist`,
+`Phase17_CommentsRevisionsAndRestrictedEditing_RenderAndReviewFromCanvas`,
+`PasteSpecial_Transpose_SwapsRowToColumn`,
+`WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed`) were red in every
+serial residual yet green whenever they were observed closely. Two things hide
+this class of failure, so neither may be used to call a test "fixed":
+
+- **Failure traces slow the run enough to close the race.** The same four went
+  7/7 green with `TM_E2E_TRACE_ON_FAILURE=true` and red with `false`. Reproduce
+  and accept with traces OFF; use traces only once a failure is reproduced.
+- **CPU contention does the same.** A concurrent build or test run on the
+  machine (load average well above the core count) turned them green again.
+  Record the load next to any acceptance run.
+
+What they raced, for anyone writing a similar test:
+
+- **`WaitForFunctionAsync` does not await its predicate.** An `async` predicate
+  returns a Promise, which is truthy, so the wait resolves on its first poll
+  whatever the page says (`async () => false` returns after ~10 ms;
+  `() => false` times out). Load anything the predicate needs (e.g. the canvas
+  interop module into `window.__tmDocumentCanvasInteropModule`) with an awaited
+  `EvaluateAsync` first, then poll with a synchronous predicate.
+- **The demo host keeps moving after `data-blazor-ready`.** It loads Tailwind
+  from the Play CDN and Inter from Google Fonts at runtime (both need network
+  access); the freshly generated classes start ~40 `transition-all` CSS
+  transitions that shift the page for ~250 ms. Geometry assertions must wait
+  for fonts loaded, no running `CSSTransition`, and a box signature that is
+  stable across frames — not for a fixed delay.
+- **`scroll-behavior: smooth` on `<html>`** (demo `app.css`) turns every
+  `scrollIntoView`/`scrollTo` without `behavior: 'instant'` into an animation;
+  coordinates read a frame or two later are mid-scroll.
+- **Debounced UI state**: the document editor's revision rail is refreshed
+  200 ms after the last model change and then scrolls the selection into view;
+  click review actions only once the rail lists the engine's pending revisions
+  and has stopped moving.
+
 ## Practical notes for running locally
 
 - All four hosts are auto-started by `PlaywrightTestBase.EnsureDemoHostsAsync`
