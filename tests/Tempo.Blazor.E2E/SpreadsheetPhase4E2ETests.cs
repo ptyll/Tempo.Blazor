@@ -232,6 +232,149 @@ public partial class SpreadsheetE2ETests
             grid,
             "D5",
             s => s.Value == "3",
-            "D5 should be 3 — the internal clipboard must hold the range the canvas showed selected at Ctrl+C (D1:F1), not the one .NET had last been told about (D1:E1).");
+            "D5 should be 3 — the internal clipboard must hold the range the canvas showed selected at Ctrl+C (D1:F1), not the one .NET had last been told about (D1 or D1:E1).");
+    }
+
+    /// <summary>
+    /// The other half of the copy/selection ordering contract: a key command must run against the state
+    /// at ITS key press — not against selection changes made after it. Shift+Arrow ×2, copy, one more
+    /// Shift+Arrow and Ctrl+B are dispatched in ONE JS task, so the later selection (D1:G1) is already
+    /// queued while the copy still waits for .NET to acknowledge D1:F1. A flush that waits for an EMPTY
+    /// command log (the first version of the fix) delivers D1:G1 before the copy and the internal
+    /// clipboard gets four cells; the transposed paste then writes G1's 4 into D6. The copy must see
+    /// exactly D1:F1, so D6 stays empty.
+    /// </summary>
+    [TestMethod]
+    public async Task PasteSpecial_SelectionChangedAfterTheCopy_DoesNotLeakIntoTheCopiedRange()
+    {
+        var page = await OpenPhase4DemoAsync();
+        var grid = DemoGrid(page);
+
+        await EditCanvasCellAsync(page, grid, "D1", "1");
+        await EditCanvasCellAsync(page, grid, "E1", "2");
+        await EditCanvasCellAsync(page, grid, "F1", "3");
+        await EditCanvasCellAsync(page, grid, "G1", "4");
+
+        var d1 = await GetCanvasCellCenterAsync(grid, "D1");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d1.X, Y = d1.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D1");
+        await WaitForCanvasCellSnapshotAsync(grid, "G1", s => s.Value == "4", "G1 should hold 4 before the copy.");
+
+        var copiedText = await grid.EvaluateAsync<string>(
+            @"el => {
+                const key = (key, extra) => el.dispatchEvent(new KeyboardEvent('keydown', {
+                    key, code: key.length === 1 ? 'Key' + key.toUpperCase() : key, bubbles: true, cancelable: true, ...extra
+                }));
+                key('ArrowRight', { shiftKey: true });
+                key('ArrowRight', { shiftKey: true });
+                const clipboardData = new DataTransfer();
+                el.dispatchEvent(new ClipboardEvent('copy', { clipboardData, bubbles: true, cancelable: true }));
+                key('ArrowRight', { shiftKey: true });
+                key('b', { ctrlKey: true });
+                return clipboardData.getData('text/plain');
+            }");
+        Assert.AreEqual(
+            "1\t2\t3",
+            copiedText.TrimEnd('\r', '\n'),
+            "precondition: the canvas must hold D1:F1 when the copy handler runs");
+        await WaitForCanvasActiveRefAsync(grid, "G1");
+
+        var d3 = await GetCanvasCellCenterAsync(grid, "D3");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d3.X, Y = d3.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D3");
+        await page.Keyboard.PressAsync("Control+Shift+V");
+
+        var dialog = page.Locator(".tm-spreadsheet-pastespecial");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await dialog.Locator(".tm-spreadsheet-pastespecial__toggles input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
+
+        // One PasteSpecialCommand writes and syncs every target cell together, so once D5 holds its
+        // value D6 is final too.
+        await WaitForCanvasCellSnapshotAsync(grid, "D3", s => s.Value == "1", "D3 should be 1.");
+        await WaitForCanvasCellSnapshotAsync(grid, "D5", s => s.Value == "3", "D5 should be 3.");
+        var d6 = await ReadCanvasCellSnapshotAsync(grid, "D6");
+        Assert.AreEqual(
+            "",
+            d6.Value,
+            "D6 must stay empty — the copy ran against D1:F1 (its key press), so a selection extended to G1 AFTER the copy must not reach the internal clipboard.");
+    }
+
+    /// <summary>
+    /// Deterministic tooth for the key-command path (handleCommandKey), which the copy tests above do not
+    /// reach: Shift+Arrow ×2 and Delete in ONE JS task. Before the fix Delete reached .NET at once, while
+    /// the extended selection was still only queued, so .NET cleared just D1 and E1/F1 kept their values.
+    /// </summary>
+    [TestMethod]
+    public async Task Delete_InTheSameTaskAsTheSelectionChange_ClearsTheExtendedRange()
+    {
+        var page = await OpenPhase4DemoAsync();
+        var grid = DemoGrid(page);
+
+        await EditCanvasCellAsync(page, grid, "D1", "1");
+        await EditCanvasCellAsync(page, grid, "E1", "2");
+        await EditCanvasCellAsync(page, grid, "F1", "3");
+
+        var d1 = await GetCanvasCellCenterAsync(grid, "D1");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d1.X, Y = d1.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D1");
+        await WaitForCanvasCellSnapshotAsync(grid, "F1", s => s.Value == "3", "F1 should hold 3 before the delete.");
+
+        await grid.EvaluateAsync(
+            @"el => {
+                const key = (key, extra) => el.dispatchEvent(new KeyboardEvent('keydown', { key, code: key, bubbles: true, cancelable: true, ...extra }));
+                key('ArrowRight', { shiftKey: true });
+                key('ArrowRight', { shiftKey: true });
+                key('Delete', {});
+            }");
+
+        await WaitForCanvasCellSnapshotAsync(grid, "D1", s => s.Value == "", "D1 should be cleared.");
+        await WaitForCanvasCellSnapshotAsync(
+            grid,
+            "F1",
+            s => s.Value == "",
+            "F1 should be cleared — Delete must act on the selection the canvas showed at the key press (D1:F1), not on the one .NET had last been told about.");
+        await WaitForCanvasCellSnapshotAsync(grid, "E1", s => s.Value == "", "E1 should be cleared.");
+    }
+
+    /// <summary>
+    /// The flush before a key command must only send a selection that has not reached .NET yet. Re-sending
+    /// a settled one costs a round-trip per key and raises a spurious ActiveCellChanged on the public
+    /// component (which also ends a formula-bar editing session). Measured with the engine's own
+    /// selectionCallbackCount: Ctrl+B on a settled single-cell selection must not send the selection again.
+    /// </summary>
+    [TestMethod]
+    public async Task KeyCommand_WithASettledSelection_DoesNotResendTheSelection()
+    {
+        var page = await OpenPhase4DemoAsync();
+        var grid = DemoGrid(page);
+
+        var d1 = await GetCanvasCellCenterAsync(grid, "D1");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d1.X, Y = d1.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D1");
+        await page.WaitForFunctionAsync(
+            @"el => {
+                const s = el.__tmSpreadsheetCanvas;
+                return !!s && !s.commandLogInFlight && !s.commandLogTimer && (s.commandLog || []).length === 0
+                    && !s.selectionSyncFrame && !s.selectionSyncTimer;
+            }",
+            await grid.ElementHandleAsync(),
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        var counts = await grid.EvaluateAsync<int[]>(
+            @"async el => {
+                const s = el.__tmSpreadsheetCanvas;
+                const before = s.metrics.selectionCallbackCount;
+                const keysBefore = s.metrics.keyCommandCallbackCount;
+                el.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', ctrlKey: true, bubbles: true, cancelable: true }));
+                await s.pendingStateCommandChain;
+                return [before, s.metrics.selectionCallbackCount, keysBefore, s.metrics.keyCommandCallbackCount];
+            }");
+        Assert.AreEqual(counts[2] + 1, counts[3], "precondition: Ctrl+B must have gone through the key-command path exactly once");
+        Assert.AreEqual(
+            counts[0],
+            counts[1],
+            "Ctrl+B on a settled selection must not re-send it to .NET (one extra round-trip and a spurious ActiveCellChanged per key)");
     }
 }
