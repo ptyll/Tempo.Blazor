@@ -77,7 +77,7 @@ public class TmDocumentEditorRedactionAndAuditTests : LocalizationTestBase
         {
             var message = cut.Find("[data-testid='document-save-message']").TextContent;
             message.Should().NotContain("Saved", "a save whose audit trail could not be persisted must not report success");
-        }, timeout: TimeSpan.FromSeconds(5));
+        });
         audit.Attempts.Should().BeGreaterThan(0);
     }
 
@@ -102,7 +102,7 @@ public class TmDocumentEditorRedactionAndAuditTests : LocalizationTestBase
         {
             var message = cut.Find("[data-testid='document-save-message']").TextContent;
             message.Should().Contain("Saved", "audit failures must not block workflows by default");
-        }, timeout: TimeSpan.FromSeconds(5));
+        });
         audit.Attempts.Should().BeGreaterThan(0);
     }
 

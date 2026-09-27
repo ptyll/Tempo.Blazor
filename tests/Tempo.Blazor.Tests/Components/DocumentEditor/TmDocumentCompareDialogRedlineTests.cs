@@ -30,7 +30,7 @@ public class TmDocumentCompareDialogRedlineTests : LocalizationTestBase
         cut.Find("[data-testid='document-compare-target-document-id']").Input("doc-v1");
         cut.Find("[data-testid='document-compare-run']").Click();
 
-        var exportButton = cut.WaitForElement("[data-testid='document-compare-export-redline']", TimeSpan.FromSeconds(3));
+        var exportButton = cut.WaitForElement("[data-testid='document-compare-export-redline']");
         exportButton.Click();
 
         cut.WaitForAssertion(() =>

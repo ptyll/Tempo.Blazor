@@ -192,7 +192,7 @@ public class TmMapClusteringTests : LocalizationTestBase
             provider.Calls[0].Viewport.Longitude.Should().Be(15.5);
             provider.Calls[0].Viewport.Zoom.Should().Be(8.0);
             module.Invocations.Should().Contain(i => i.Identifier == "setData");
-        }, TimeSpan.FromSeconds(5));
+        });
     }
 
     // ── CLU-8: debounce — rychlé změny viewportu → jediný dotaz ────────────

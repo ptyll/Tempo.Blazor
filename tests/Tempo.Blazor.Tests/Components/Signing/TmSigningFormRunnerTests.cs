@@ -47,8 +47,17 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         cut.FindAll(".tm-signing-field-overlay")[1].ClassList.Should().Contain("tm-signing-field--selected");
     }
 
+    /// <remarks>
+    /// The Change and the Next click are AWAITED. bUnit's synchronous <c>Change()</c>/<c>Click()</c> only
+    /// hand the event to the renderer's dispatcher; when the dispatcher is busy at that moment — this
+    /// component's own debounced autosave continuation runs on it — the click is queued and the lines
+    /// below read <c>submitted</c> before <c>GoNextAsync</c> ran. That is the CI red
+    /// (<c>NullReferenceException</c> on <c>submitted!</c>, run 35862618640). Reproduced locally by
+    /// holding the dispatcher from a background thread across the click: the synchronous form throws
+    /// that same NullReferenceException, the awaited form passes.
+    /// </remarks>
     [Fact]
-    public void Next_SavesTextAndInvokesStepSubmit()
+    public async Task Next_SavesTextAndInvokesStepSubmit()
     {
         IReadOnlyDictionary<string, object?>? values = null;
         SigningStepItem? submitted = null;
@@ -61,8 +70,8 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             .Add(p => p.ValuesChanged, EventCallback.Factory.Create<IReadOnlyDictionary<string, object?>>(this, v => values = v))
             .Add(p => p.OnStepSubmit, EventCallback.Factory.Create<SigningStepItem>(this, step => submitted = step)));
 
-        cut.Find("input.tm-signing-text-step__input").Change("Alice");
-        cut.Find(".tm-signing-form-runner__next").Click();
+        await cut.Find("input.tm-signing-text-step__input").ChangeAsync(new ChangeEventArgs { Value = "Alice" });
+        await cut.Find(".tm-signing-form-runner__next").ClickAsync(new MouseEventArgs());
 
         values.Should().NotBeNull();
         values!["name"].Should().Be("Alice");
@@ -172,7 +181,7 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         {
             autosaves.Should().Be(1);
             cut.Find(".tm-signing-form-runner__autosave").TextContent.Should().Contain("Offline");
-        }, TimeSpan.FromSeconds(5));
+        });
     }
 
     [Fact]

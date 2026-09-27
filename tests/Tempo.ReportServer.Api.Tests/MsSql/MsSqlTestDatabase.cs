@@ -4,6 +4,7 @@ using Respawn;
 using Tempo.ReportServer.Api;
 using Tempo.ReportServer.Api.Storage;
 using Tempo.Reporting.Abstractions;
+using Tempo.ReportServer.TestSupport;
 using Testcontainers.MsSql;
 
 namespace Tempo.ReportServer.Api.Tests.MsSql;
@@ -54,12 +55,14 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
             return;
         }
 
-        _container = new MsSqlBuilder(MsSqlTestDatabase.ContainerImage)
-            .WithPassword(ContainerPassword)
-            .Build();
         try
         {
-            await _container.StartAsync().ConfigureAwait(false);
+            // A container that dies during start-up is replaced by a fresh one (bounded) — see
+            // SqlServerContainerStart for the observed CI crash and what is NOT retried.
+            _container = await SqlServerContainerStart.StartAsync(
+                () => new MsSqlBuilder(MsSqlTestDatabase.ContainerImage)
+                    .WithPassword(ContainerPassword)
+                    .Build()).ConfigureAwait(false);
         }
         catch (Exception exception)
         {

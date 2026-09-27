@@ -70,14 +70,28 @@ public sealed class FullCloneFactAttribute : ProbeDecidedFactAttribute
     /// clean skip. Outside CI the variable is unset and the skip behaves exactly as before.
     /// </para>
     /// </summary>
-    internal static string? IncompleteCloneSkipReason(string repositoryRoot)
+    internal static string? IncompleteCloneSkipReason(string repositoryRoot) =>
+        IncompleteCloneSkipReason(
+            repositoryRoot,
+            Environment.GetEnvironmentVariable(RequireFullCloneEnvironmentVariable));
+
+    /// <summary>The CI contract variable read by <see cref="IncompleteCloneSkipReason(string)"/>.</summary>
+    internal const string RequireFullCloneEnvironmentVariable = "TEMPO_REQUIRE_FULL_CLONE";
+
+    /// <summary>
+    /// The same decision with the contract value passed in instead of read from the process
+    /// environment. It exists so a test can ask for the "variable unset" answer INSIDE CI: both
+    /// publish workflows export <c>TEMPO_REQUIRE_FULL_CLONE=1</c> at job level, so a test that took
+    /// "unset" from the ambient environment was asking for a state CI never has — that is what
+    /// turned <c>FullCloneWorkflowTests.RequireFullCloneEnv_TurnsAShallowCloneSkip_IntoAThrow</c>
+    /// red on every build-and-test run since the variable was introduced, while it stayed green on
+    /// every developer machine.
+    /// </summary>
+    internal static string? IncompleteCloneSkipReason(string repositoryRoot, string? requireFullClone)
     {
         string? reason = ProbeClone(repositoryRoot);
         if (reason is not null
-            && string.Equals(
-                Environment.GetEnvironmentVariable("TEMPO_REQUIRE_FULL_CLONE"),
-                "1",
-                StringComparison.Ordinal))
+            && string.Equals(requireFullClone, "1", StringComparison.Ordinal))
         {
             throw new InvalidOperationException(reason);
         }

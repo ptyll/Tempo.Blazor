@@ -162,6 +162,16 @@ public sealed class FullCloneWorkflowTests
     /// <c>Skip</c> getter's <c>catch (Exception)</c> converts into "run the member", and the
     /// member then fails on its own git calls. A green skip over a shallow clone is exactly the
     /// silence N208 names.
+    /// <para>
+    /// THE "WITHOUT THE VARIABLE" ARM PASSES THE CONTRACT VALUE EXPLICITLY, it does not read it from
+    /// the process. Both publish workflows export <c>TEMPO_REQUIRE_FULL_CLONE=1</c> at job level, so an
+    /// arm that took "unset" from the ambient environment asked for a state build-and-test never has:
+    /// the probe threw on that arm's first call and this test was red on every CI run from e029dd31 on
+    /// (reproduced locally with <c>TEMPO_REQUIRE_FULL_CLONE=1 dotnet test --filter
+    /// FullCloneWorkflowTests</c>) while green on every machine without the variable. The
+    /// environment-reading overload is still exercised below, with the variable SET — the one value
+    /// this test may impose on the process, because it is the value CI already has.
+    /// </para>
     /// </summary>
     [BashScriptFact]
     public void RequireFullCloneEnv_TurnsAShallowCloneSkip_IntoAThrow()
@@ -178,31 +188,55 @@ public sealed class FullCloneWorkflowTests
                 "file://" + root, clonePath);
             exit.Should().Be(0, $"fixture shallow clone must succeed (stderr: {stderr})");
 
-            string? withoutEnv = FullCloneFactAttribute.IncompleteCloneSkipReason(clonePath);
+            string? withoutEnv = FullCloneFactAttribute.IncompleteCloneSkipReason(
+                clonePath, requireFullClone: null);
             withoutEnv.Should().NotBeNull(
                 "a depth-1 clone must report a skip reason — that is today's documented behaviour "
                 + "outside CI and it must not change");
 
-            string? previous = Environment.GetEnvironmentVariable("TEMPO_REQUIRE_FULL_CLONE");
+            Action explicitContract = () => FullCloneFactAttribute.IncompleteCloneSkipReason(
+                clonePath, requireFullClone: "1");
+            explicitContract.Should().Throw<InvalidOperationException>()
+                .WithMessage("*shallow*",
+                    "with the CI contract set, the same shallow clone must throw rather than "
+                    + "answer a skip reason — the Skip getter reads any probe failure as "
+                    + "'run the member', where the member's own git calls then fail red");
+
+            string? previous = Environment.GetEnvironmentVariable(
+                FullCloneFactAttribute.RequireFullCloneEnvironmentVariable);
             try
             {
-                Environment.SetEnvironmentVariable("TEMPO_REQUIRE_FULL_CLONE", "1");
+                Environment.SetEnvironmentVariable(
+                    FullCloneFactAttribute.RequireFullCloneEnvironmentVariable, "1");
                 Action probe = () => FullCloneFactAttribute.IncompleteCloneSkipReason(clonePath);
                 probe.Should().Throw<InvalidOperationException>()
                     .WithMessage("*shallow*",
-                        "with the CI contract set, the same shallow clone must throw rather than "
-                        + "answer a skip reason — the Skip getter reads any probe failure as "
-                        + "'run the member', where the member's own git calls then fail red");
+                        "the overload the Skip getter actually calls reads the contract from the "
+                        + "process environment; with TEMPO_REQUIRE_FULL_CLONE=1 there it must throw "
+                        + "exactly like the explicit value above");
+
+                // And the counter-arm of the same overload: any value other than "1" is NOT the
+                // contract, so the probe answers the skip reason instead of throwing. Without this
+                // an overload that ignored the environment and always passed "1" would stay green.
+                Environment.SetEnvironmentVariable(
+                    FullCloneFactAttribute.RequireFullCloneEnvironmentVariable, "0");
+                FullCloneFactAttribute.IncompleteCloneSkipReason(clonePath).Should().NotBeNull(
+                    "with TEMPO_REQUIRE_FULL_CLONE=0 in the process the environment-reading overload "
+                    + "must answer the ordinary skip reason, not throw");
             }
             finally
             {
-                Environment.SetEnvironmentVariable("TEMPO_REQUIRE_FULL_CLONE", previous);
+                Environment.SetEnvironmentVariable(
+                    FullCloneFactAttribute.RequireFullCloneEnvironmentVariable, previous);
             }
 
             // And the honest counter-arm: the real repository answers null either way — the
             // variable only sharpens a clone that genuinely cannot answer.
-            FullCloneFactAttribute.IncompleteCloneSkipReason(root).Should().BeNull(
+            FullCloneFactAttribute.IncompleteCloneSkipReason(root, requireFullClone: null).Should().BeNull(
                 "the suite's own clone is full; the probe must not invent a reason over it");
+            FullCloneFactAttribute.IncompleteCloneSkipReason(root, requireFullClone: "1").Should().BeNull(
+                "and the contract must not turn a full clone into a throw — it sharpens only a "
+                + "clone that genuinely cannot answer");
         }
         finally
         {

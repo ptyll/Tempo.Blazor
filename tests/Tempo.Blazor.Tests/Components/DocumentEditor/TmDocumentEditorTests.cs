@@ -126,9 +126,13 @@ public class TmDocumentEditorTests : LocalizationTestBase
         await MarkCanvasReadyAsync(cut);
         await NotifyCanvasChangedAsync(cut);
 
+        // No per-call timeout: the wait runs on the suite's budget (TestAssemblyInit,
+        // TEMPO_BUNIT_WAIT_SECONDS — 10 s in CI). A fixed 3 s here overrode that budget and was the CI
+        // red of run 35851300788 (WaitForFailedException, check count 1). Reproduced by holding the
+        // renderer's dispatcher for 3.5 s after the canvas change: red with the fixed 3 s, green on
+        // the 10 s budget.
         cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='document-editor-live-region']").TextContent.Should().Contain("autosave-boom"),
-            TimeSpan.FromSeconds(3));
+            cut.Find("[data-testid='document-editor-live-region']").TextContent.Should().Contain("autosave-boom"));
     }
 
     [Fact]
@@ -2753,7 +2757,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
         });
 
         cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='document-revision-item']").TextContent.Should().Contain("Remote"), TimeSpan.FromSeconds(5));
+            cut.Find("[data-testid='document-revision-item']").TextContent.Should().Contain("Remote"));
         FindCanvasHost(cut).Instance.Should().BeSameAs(canvasHost);
         module.Invocations.Count(invocation => invocation.Identifier == "replaceModel")
             .Should().BeGreaterThan(snapshotCallsBeforeRemote, "typed collaboration fallback updates the mounted canvas snapshot");
@@ -2799,8 +2803,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
                 invocation.Identifier == "applyRemoteOperationBatch"
                 && invocation.Arguments.Any(argument =>
                     argument != null && argument.ToString()!.Contains("remote-canvas-op", StringComparison.Ordinal)))
-            .Should().BeTrue(),
-            TimeSpan.FromSeconds(5));
+            .Should().BeTrue());
         module.Invocations.Count(invocation => invocation.Identifier == "replaceModel")
             .Should().Be(snapshotCallsBeforeRemote, "opaque canvas relay batches are applied by the engine without typed snapshot refresh");
         JSInterop.Invocations.Should().NotContain(invocation => invocation.Identifier.StartsWith("tmDocumentEditorRuntime.", StringComparison.Ordinal));
@@ -2836,8 +2839,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
         });
 
         cut.WaitForAssertion(() =>
-            module.Invocations.Should().Contain(invocation => invocation.Identifier == "applyRemoteOperationBatch"),
-            TimeSpan.FromSeconds(5));
+            module.Invocations.Should().Contain(invocation => invocation.Identifier == "applyRemoteOperationBatch"));
         JSInterop.Invocations.Should().NotContain(invocation => invocation.Identifier.StartsWith("tmDocumentEditorRuntime.", StringComparison.Ordinal));
     }
 
@@ -2859,7 +2861,7 @@ public class TmDocumentEditorTests : LocalizationTestBase
 
         await MarkCanvasReadyAsync(cut);
         cut.WaitForAssertion(() =>
-            cut.Find("[data-testid='document-save-message']").TextContent.Should().Contain("Collaboration is unavailable"), TimeSpan.FromSeconds(5));
+            cut.Find("[data-testid='document-save-message']").TextContent.Should().Contain("Collaboration is unavailable"));
 
         SetCanvasRuntimeAndAnnotations(runtimeDocument);
         await NotifyCanvasChangedAsync(cut);

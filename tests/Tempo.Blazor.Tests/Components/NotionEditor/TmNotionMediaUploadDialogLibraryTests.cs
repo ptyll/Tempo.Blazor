@@ -112,8 +112,7 @@ public class TmNotionMediaUploadDialogLibraryTests : LocalizationTestBase
         await cut.InvokeAsync(() => libraryTab.Click());
 
         // Wait for items to render
-        cut.WaitForState(() => cut.FindAll(".tm-media-library__item").Count > 0,
-                         timeout: TimeSpan.FromSeconds(3));
+        cut.WaitForState(() => cut.FindAll(".tm-media-library__item").Count > 0);
 
         var btn = cut.Find(".tm-media-library__item");
         await cut.InvokeAsync(() => btn.Click());
@@ -142,8 +141,7 @@ public class TmNotionMediaUploadDialogLibraryTests : LocalizationTestBase
         var libraryTab = cut.Find("[data-tab='library']");
         await cut.InvokeAsync(() => libraryTab.Click());
 
-        cut.WaitForState(() => cut.FindAll(".tm-media-library__item").Count > 0,
-                         timeout: TimeSpan.FromSeconds(3));
+        cut.WaitForState(() => cut.FindAll(".tm-media-library__item").Count > 0);
 
         await cut.InvokeAsync(() => cut.Find(".tm-media-library__item").Click());
 
