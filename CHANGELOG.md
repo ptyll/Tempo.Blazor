@@ -206,14 +206,18 @@ which is exactly the red
   Delete, undo/redo and the formatting shortcuts were sent to .NET immediately. A fast Shift+Arrow →
   Ctrl+C therefore filled the internal clipboard from the PREVIOUS selection, and Paste Special (which
   reads that clipboard) pasted the old, smaller range while the system clipboard held the new one; the
-  same race made Delete or Ctrl+B act on the old range. Key commands now first queue a still-pending
-  selection and edits, deliver exactly the commands queued up to the key press, and only then invoke
-  .NET — chained per grid, so they keep key-press order. Commands queued after the press (a further
-  Shift+Arrow during the round-trip) are held back until the key command has been issued, so they no
-  longer leak into it either. A settled selection is not re-sent (no extra round-trip and no spurious
-  `ActiveCellChanged` per key), and the wait is capped at 2 s so a hung interop call cannot wedge
-  later keys. Guarded by the E2E tests `PasteSpecial_CopyInTheSameTaskAsTheSelectionChange_CopiesTheExtendedRange`,
+  same race made Delete or Ctrl+B act on the old range. Each key command now first queues a
+  still-pending selection and edits and delivers exactly the commands queued up to its key press;
+  anything queued after the press (a further Shift+Arrow during the round-trip) is held back until
+  that key command has been dispatched, so it cannot leak into it — also when several key commands
+  follow each other. Key commands are sent in key-press order, each as soon as the previous one has
+  been dispatched (not completed), so a key command whose .NET call never returns (e.g. during a
+  reconnect) does not block the keys after it; waiting for the pending state itself is capped at 2 s.
+  A settled selection is not re-sent (no extra round-trip and no spurious `ActiveCellChanged` per
+  key). Guarded by the E2E tests `PasteSpecial_CopyInTheSameTaskAsTheSelectionChange_CopiesTheExtendedRange`,
   `PasteSpecial_SelectionChangedAfterTheCopy_DoesNotLeakIntoTheCopiedRange`,
+  `PasteSpecial_CopyQueuedBehindASlowKeyCommand_KeepsItsOwnSelection`,
+  `KeyCommand_AfterAKeyCommandThatNeverCompletes_StillReachesDotNet`,
   `Delete_InTheSameTaskAsTheSelectionChange_ClearsTheExtendedRange` and
   `KeyCommand_WithASettledSelection_DoesNotResendTheSelection`.
 

@@ -339,6 +339,119 @@ public partial class SpreadsheetE2ETests
     }
 
     /// <summary>
+    /// Two key commands in a row must each run against the state at THEIR key press, even while the first
+    /// one's .NET call is still running. The stub makes every <c>OnCanvasKeyCommand</c> call take 300 ms
+    /// to complete (the call itself is forwarded to .NET at once). Shift+Arrow ×2, Ctrl+B, copy and one
+    /// more Shift+Arrow run in ONE task. When key commands were chained on the COMPLETION of the previous
+    /// call and a barrier lapsed once its commands were acknowledged, the later Shift+Arrow (D1:G1)
+    /// reached .NET during Ctrl+B's 300 ms and the copy then took four cells, writing G1's 4 into D6.
+    /// </summary>
+    [TestMethod]
+    public async Task PasteSpecial_CopyQueuedBehindASlowKeyCommand_KeepsItsOwnSelection()
+    {
+        var page = await OpenPhase4DemoAsync();
+        var grid = DemoGrid(page);
+
+        await EditCanvasCellAsync(page, grid, "D1", "1");
+        await EditCanvasCellAsync(page, grid, "E1", "2");
+        await EditCanvasCellAsync(page, grid, "F1", "3");
+        await EditCanvasCellAsync(page, grid, "G1", "4");
+
+        var d1 = await GetCanvasCellCenterAsync(grid, "D1");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d1.X, Y = d1.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D1");
+        await WaitForCanvasCellSnapshotAsync(grid, "G1", s => s.Value == "4", "G1 should hold 4 before the copy.");
+
+        var copiedText = await grid.EvaluateAsync<string>(
+            @"el => {
+                const dotNet = el.__tmSpreadsheetCanvas.dotNet;
+                const original = dotNet.invokeMethodAsync.bind(dotNet);
+                dotNet.invokeMethodAsync = (method, ...args) => {
+                    const call = original(method, ...args);
+                    return method === 'OnCanvasKeyCommand'
+                        ? call.then(result => new Promise(resolve => setTimeout(() => resolve(result), 300)))
+                        : call;
+                };
+                const key = (key, extra) => el.dispatchEvent(new KeyboardEvent('keydown', {
+                    key, code: key.length === 1 ? 'Key' + key.toUpperCase() : key, bubbles: true, cancelable: true, ...extra
+                }));
+                key('ArrowRight', { shiftKey: true });
+                key('ArrowRight', { shiftKey: true });
+                key('b', { ctrlKey: true });
+                const clipboardData = new DataTransfer();
+                el.dispatchEvent(new ClipboardEvent('copy', { clipboardData, bubbles: true, cancelable: true }));
+                key('ArrowRight', { shiftKey: true });
+                return clipboardData.getData('text/plain');
+            }");
+        Assert.AreEqual("1\t2\t3", copiedText.TrimEnd('\r', '\n'), "precondition: the canvas must hold D1:F1 when the copy handler runs");
+        await page.WaitForTimeoutAsync(400); // outlast the stub's 300 ms so both key commands have completed
+        await WaitForCanvasActiveRefAsync(grid, "G1");
+
+        var d3 = await GetCanvasCellCenterAsync(grid, "D3");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d3.X, Y = d3.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D3");
+        await page.Keyboard.PressAsync("Control+Shift+V");
+
+        var dialog = page.Locator(".tm-spreadsheet-pastespecial");
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await dialog.Locator(".tm-spreadsheet-pastespecial__toggles input[type=checkbox]").Nth(1).CheckAsync();
+        await dialog.Locator(".tm-spreadsheet-pastespecial__btn--ok").ClickAsync();
+        await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
+
+        await WaitForCanvasCellSnapshotAsync(grid, "D3", s => s.Value == "1", "D3 should be 1.");
+        await WaitForCanvasCellSnapshotAsync(grid, "D5", s => s.Value == "3", "D5 should be 3.");
+        var d6 = await ReadCanvasCellSnapshotAsync(grid, "D6");
+        Assert.AreEqual(
+            "",
+            d6.Value,
+            "D6 must stay empty — the copy's selection is D1:F1 (its key press); the Shift+Arrow made after it must not overtake it while Ctrl+B's .NET call is still running.");
+    }
+
+    /// <summary>
+    /// A key command whose .NET call never returns (e.g. a circuit reconnect) must not block the keys after
+    /// it. The stub forwards every <c>OnCanvasKeyCommand</c> to .NET but never resolves the returned
+    /// promise; Delete pressed after Ctrl+B must still clear the cell within 3 s.
+    /// </summary>
+    [TestMethod]
+    public async Task KeyCommand_AfterAKeyCommandThatNeverCompletes_StillReachesDotNet()
+    {
+        var page = await OpenPhase4DemoAsync();
+        var grid = DemoGrid(page);
+
+        await EditCanvasCellAsync(page, grid, "D1", "1");
+        var d1 = await GetCanvasCellCenterAsync(grid, "D1");
+        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = d1.X, Y = d1.Y } });
+        await WaitForCanvasActiveRefAsync(grid, "D1");
+        await WaitForCanvasCellSnapshotAsync(grid, "D1", s => s.Value == "1", "D1 should hold 1 before the delete.");
+
+        await grid.EvaluateAsync(
+            @"el => {
+                const dotNet = el.__tmSpreadsheetCanvas.dotNet;
+                const original = dotNet.invokeMethodAsync.bind(dotNet);
+                dotNet.invokeMethodAsync = (method, ...args) => {
+                    const call = original(method, ...args);
+                    return method === 'OnCanvasKeyCommand' ? new Promise(() => { }) : call;
+                };
+                const key = (key, extra) => el.dispatchEvent(new KeyboardEvent('keydown', { key, code: key, bubbles: true, cancelable: true, ...extra }));
+                key('b', { ctrlKey: true });
+                key('Delete', {});
+            }");
+
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        CanvasCellSnapshotResult snapshot;
+        do
+        {
+            snapshot = await ReadCanvasCellSnapshotAsync(grid, "D1");
+            if (snapshot.Value == "")
+                return;
+            await Task.Delay(100);
+        }
+        while (DateTime.UtcNow < deadline);
+
+        Assert.Fail($"Delete pressed after a Ctrl+B whose .NET call never completes must still clear D1 within 3 s; D1 is still '{snapshot.Value}'.");
+    }
+
+    /// <summary>
     /// The flush before a key command must only send a selection that has not reached .NET yet. Re-sending
     /// a settled one costs a round-trip per key and raises a spurious ActiveCellChanged on the public
     /// component (which also ends a formula-bar editing session). Measured with the engine's own
