@@ -150,8 +150,22 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
         cut.Find("[data-testid='param-input-period']").Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Run sends the form's parameter value and the selected format to the render call.
+    /// </summary>
+    /// <remarks>
+    /// THE EVENTS ARE AWAITED FOR THE SAME REASON AS IN
+    /// <see cref="ViewerPage_FavoriteToggle_AddsThenRemovesViaClient"/>. bUnit's synchronous
+    /// <c>Change()</c>/<c>Click()</c> hand the event to the renderer's dispatcher and return without
+    /// waiting for it; while the dispatcher is busy — the demo preview source renders asynchronously on
+    /// this page — the event is only QUEUED, and the assertion below reads <c>RenderRequests</c> before
+    /// <c>RunReportAsync</c> ran. That is the observed CI red ("Expected fake.RenderRequests to contain a
+    /// single item, but the collection is empty") on 4 of 64 build-and-test runs between 2026-09-23 and
+    /// 2026-09-26. Reproduced locally by making the fake's <c>RenderAsync</c> yield once before it records
+    /// the request: the synchronous form is red, the awaited form green.
+    /// </remarks>
     [Fact]
-    public void ViewerPage_Run_SendsFormParameterValueAndSelectedFormatToRender()
+    public async Task ViewerPage_Run_SendsFormParameterValueAndSelectedFormatToRender()
     {
         SignIn();
         var fake = (FakeTempoReportServerClient)Services.GetRequiredService<ITempoReportServerClient>();
@@ -159,9 +173,9 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
         var cut = Render<ReportViewerPage>(parameters => parameters.Add(page => page.Path, ReportPath));
 
         // Enter a parameter value in the page-local form (the single source of truth) then Run.
-        cut.Find("[data-testid='param-input-region']").Change("West");
-        cut.Find("[data-testid='run-format']").Change("Pdf");
-        cut.Find("[data-testid='run-report']").Click();
+        await cut.Find("[data-testid='param-input-region']").ChangeAsync(new ChangeEventArgs { Value = "West" });
+        await cut.Find("[data-testid='run-format']").ChangeAsync(new ChangeEventArgs { Value = "Pdf" });
+        await cut.Find("[data-testid='run-report']").ClickAsync(new MouseEventArgs());
 
         fake.RenderRequests.Should().ContainSingle();
         var request = fake.RenderRequests[0];
@@ -197,8 +211,12 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
             TimeSpan.FromSeconds(5));
     }
 
+    /// <remarks>
+    /// Awaited Run click — same unawaited-dispatch hazard as
+    /// <see cref="ViewerPage_Run_SendsFormParameterValueAndSelectedFormatToRender"/>, on the same page.
+    /// </remarks>
     [Fact]
-    public void ViewerPage_ParameterForm_SeedsInitialValuesFromDeepLinkQuery()
+    public async Task ViewerPage_ParameterForm_SeedsInitialValuesFromDeepLinkQuery()
     {
         SignIn();
         var fake = (FakeTempoReportServerClient)Services.GetRequiredService<ITempoReportServerClient>();
@@ -208,7 +226,7 @@ public sealed class ReportViewerPageTests : ReportServerWebTestBase
         var cut = Render<ReportViewerPage>(parameters => parameters.Add(page => page.Path, ReportPath));
 
         // A shared deep link's parameter is honored: Run without touching the form still sends it.
-        cut.Find("[data-testid='run-report']").Click();
+        await cut.Find("[data-testid='run-report']").ClickAsync(new MouseEventArgs());
 
         fake.RenderRequests.Should().ContainSingle();
         fake.RenderRequests[0].Parameters.Should().Contain(parameter => parameter.Name == "region" && parameter.Values.Contains("North"));
