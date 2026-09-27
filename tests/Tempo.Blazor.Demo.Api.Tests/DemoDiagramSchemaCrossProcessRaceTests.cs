@@ -277,7 +277,14 @@ public sealed class DemoDiagramSchemaCrossProcessRaceTests
                     {
                         // Both hosts are listening: both came through EnsureCreated, so neither can
                         // lose the race any more. This attempt did not meet — the only state that
-                        // earns another attempt.
+                        // earns another attempt. It must also not have LOGGED the race: a host that
+                        // printed the SQLite error and kept serving would be a swallowed race, not a
+                        // missed one, and retrying would hide it.
+                        Snapshot(output).Should().NotContain(
+                            SqliteRaceMessage,
+                            "a race that was logged but did not stop the host is swallowed, not missed. "
+                            + "Output:" + Environment.NewLine + Snapshot(output));
+
                         attemptsThatDidNotMeet.Add(
                             "attempt " + attempt.ToString(CultureInfo.InvariantCulture)
                             + ": both hosts listening, no SQLite race message");
