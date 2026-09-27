@@ -200,6 +200,30 @@ which is exactly the red
   `TValue` must write the option value explicitly in the invariant form, e.g.
   `value="@x.ToString(CultureInfo.InvariantCulture)"`.
 
+- **`TmSpreadsheet` (canvas JS engine): key commands run against the selection at their key press.**
+  The canvas applies selection changes locally and only queues them for .NET (one frame, then a
+  debounced command-log batch; cell edits ride a 120 ms commit batch), but copy/cut, Paste Special,
+  Delete, undo/redo and the formatting shortcuts were sent to .NET immediately. A fast Shift+Arrow →
+  Ctrl+C therefore filled the internal clipboard from the PREVIOUS selection, and Paste Special (which
+  reads that clipboard) pasted the old, smaller range while the system clipboard held the new one; the
+  same race made Delete or Ctrl+B act on the old range. Each key command now first queues a
+  still-pending selection and edits and delivers exactly the commands queued up to its key press;
+  keyboard selection changes and cell edits queued after the press (a further Shift+Arrow during the
+  round-trip) are held back until that key command has been dispatched, so they cannot leak into it —
+  also when several key commands follow each other. Known limitation: pointer input (cell click,
+  double-click, context menu — `OnCanvasCellPointer` / `OnCanvasPointer` / `OnCanvasDoubleClick` /
+  `OnCanvasContextMenu`) calls .NET directly and does not pass through this barrier, so a mouse
+  selection made while a key command is still waiting can still reach .NET before it. Key commands are sent in key-press order, each as soon as the previous one has
+  been dispatched (not completed), so a key command whose .NET call never returns (e.g. during a
+  reconnect) does not block the keys after it; waiting for the pending state itself is capped at 2 s.
+  A settled selection is not re-sent (no extra round-trip and no spurious `ActiveCellChanged` per
+  key). Guarded by the E2E tests `PasteSpecial_CopyInTheSameTaskAsTheSelectionChange_CopiesTheExtendedRange`,
+  `PasteSpecial_SelectionChangedAfterTheCopy_DoesNotLeakIntoTheCopiedRange`,
+  `PasteSpecial_CopyQueuedBehindASlowKeyCommand_KeepsItsOwnSelection`,
+  `KeyCommand_AfterAKeyCommandThatNeverCompletes_StillReachesDotNet`,
+  `Delete_InTheSameTaskAsTheSelectionChange_ClearsTheExtendedRange` and
+  `KeyCommand_WithASettledSelection_DoesNotResendTheSelection`.
+
 - **`TmOverlayPanel` post-migration rework (Fáze 18 review).** One Escape gesture no longer
   closes two layers: `overlay.js` consumes the keydown (preventDefault +
   stopImmediatePropagation) once it has actually dismissed a panel and swallows the matching

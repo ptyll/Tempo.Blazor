@@ -1629,7 +1629,21 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         s.commandLogTimer = setTimeout(() => flushCommandLog(root), delay ?? defaultCommandLogDebounceMs);
     }
 
-    function flushCommandLog(root) {
+    // The highest command id a flush may send right now. A .NET key command waiting in
+    // invokeDotNetAfterPendingState registers the last id queued BEFORE its key press as a barrier; no
+    // flush — timer-driven or not — may carry a later command across it, or .NET would run the key
+    // command against state from after the press. A barrier holds until its key command has been
+    // DISPATCHED (not merely until .NET acked the commands before it): between that ack and the dispatch
+    // the key command may still be queued behind an earlier one.
+    function commandLogFlushLimit(s, uptoSeq) {
+        let limit = uptoSeq == null ? Infinity : uptoSeq;
+        for (const barrier of s.commandLogBarriers || []) {
+            if (barrier.target < limit) limit = barrier.target;
+        }
+        return limit;
+    }
+
+    function flushCommandLog(root, uptoSeq) {
         const s = getState(root);
         if (!s || !s.dotNet) return;
         if (s.commandLogTimer) {
@@ -1642,10 +1656,13 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
 
         const ack = s.commandLogAckRevision || 0;
-        const batch = (s.commandLog || []).filter(command => command.id > ack);
-        const obsoleteCount = (s.commandLog || []).length - batch.length;
+        const limit = commandLogFlushLimit(s, uptoSeq);
+        const live = (s.commandLog || []).filter(command => command.id > ack);
+        const obsoleteCount = (s.commandLog || []).length - live.length;
         if (obsoleteCount > 0 && s.metrics) s.metrics.commandLogObsoleteDropCount += obsoleteCount;
-        s.commandLog = [];
+        const batch = live.filter(command => command.id <= limit);
+        // Commands past the limit stay queued; whoever lifts the barrier reschedules them.
+        s.commandLog = live.filter(command => command.id > limit);
         if (batch.length === 0) return;
 
         s.commandLogInFlight = true;
@@ -1654,7 +1671,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             s.metrics.commandLogBatchItemCount += batch.length;
         }
 
-        invokeDotNet(root, "OnCanvasCommandLogBatch", [batch], false)
+        s.commandLogFlight = invokeDotNet(root, "OnCanvasCommandLogBatch", [batch], false)
             .then(ackRevision => {
                 const nextAck = Number(ackRevision) || Math.max(...batch.map(command => command.id));
                 s.commandLogAckRevision = Math.max(s.commandLogAckRevision || 0, nextAck);
@@ -3069,6 +3086,104 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         flushCommandLog(root);
     }
 
+    const pendingStateWaitLimitMs = 2000;
+
+    // Resolves once .NET has acknowledged every command queued up to and including `target` (the last
+    // id queued before a key press), or when nothing up to `target` is left to deliver. Later commands
+    // are neither waited for nor flushed here — see commandLogFlushLimit. Bounded in time: a batch whose
+    // invokeMethodAsync never settles (e.g. a circuit reconnect) must not wedge every later key
+    // command, so after pendingStateWaitLimitMs the command runs anyway against what .NET has. In that
+    // pathological case the key command can interleave in .NET with the still-awaiting
+    // OnCanvasCommandLogBatch; accepted, the alternative is a keyboard that never answers again.
+    // Returns false when the grid was disposed or re-initialized meanwhile.
+    async function whenCommandLogAcknowledged(root, s, target) {
+        const deadline = performance.now() + pendingStateWaitLimitMs;
+        for (;;) {
+            if (getState(root) !== s || !s.dotNet) return false;
+            const ack = s.commandLogAckRevision || 0;
+            if (ack >= target) return true;
+            if (!s.commandLogInFlight) {
+                const undelivered = (s.commandLog || []).some(command => command.id > ack && command.id <= target);
+                if (!undelivered) return true;
+                flushCommandLog(root, target);
+                if (!s.commandLogInFlight) return true;
+            }
+            const remaining = deadline - performance.now();
+            if (remaining <= 0) return true;
+            let timer = 0;
+            await Promise.race([
+                Promise.resolve(s.commandLogFlight).catch(() => { }),
+                new Promise(resolve => { timer = setTimeout(resolve, remaining); })
+            ]);
+            clearTimeout(timer);
+        }
+    }
+
+    // Idempotent per barrier: a second release must never remove ANOTHER key command's barrier, even one
+    // with the same target.
+    function releaseCommandLogBarrier(root, s, barrier) {
+        if (barrier.released) return;
+        barrier.released = true;
+        const barriers = s.commandLogBarriers || [];
+        const index = barriers.indexOf(barrier);
+        if (index >= 0) barriers.splice(index, 1);
+        if (getState(root) === s && (s.commandLog || []).length > 0 && !s.commandLogTimer) {
+            scheduleCommandLogFlush(root, defaultCommandLogDebounceMs);
+        }
+    }
+
+    // A .NET-side command that reads the grid's selection or cell values (copy/cut into the internal
+    // clipboard, Paste Special, Delete, formatting shortcuts, ...) must run against the state the user
+    // saw WHEN the key was pressed. Selection changes only ride a debounced command log (35 ms, longer
+    // while an edit commit is pending) and cell edits a 120 ms commit batch, while key commands used to be
+    // invoked at once — so Shift+Arrow followed quickly by Ctrl+C copied the PREVIOUS selection into the
+    // internal clipboard. Now: queue a still-pending selection and edits, remember the last queued id as a
+    // barrier, deliver exactly the commands up to it, then invoke. Commands queued after the press (say a
+    // further Shift+Arrow during the round-trip) stay behind the barrier until the key command has been
+    // dispatched. Key commands of one grid are chained on DISPATCH, not on completion: each is sent as soon
+    // as its own state is acknowledged and the previous one has been sent, so .NET receives them in
+    // key-press order and a key command whose .NET call never returns cannot block the keys after it.
+    // The returned promise is the .NET call itself.
+    function invokeDotNetAfterPendingState(root, method, args, hotPath) {
+        const s = getState(root);
+        if (!s?.dotNet) return Promise.resolve();
+
+        // Only a selection that has not reached the command log yet needs sending; re-sending a settled
+        // one would cost a round-trip and raise a spurious ActiveCellChanged (which, among other things,
+        // ends a formula-bar editing session). In formula point mode the scheduled sync is left alone.
+        const hadPendingSelection = !!(s.selectionSyncFrame || s.selectionSyncTimer);
+        if (hadPendingSelection && !isFormulaPointMode(root)) {
+            if (s.selectionSyncFrame) {
+                cancelAnimationFrame(s.selectionSyncFrame);
+                s.selectionSyncFrame = 0;
+            }
+            if (s.selectionSyncTimer) {
+                clearTimeout(s.selectionSyncTimer);
+                s.selectionSyncTimer = 0;
+            }
+            sendSelection(root);
+        }
+        flushCellEditCommitQueue(root);
+
+        const barrier = { target: s.commandLogSeq || 0, released: false };
+        (s.commandLogBarriers || (s.commandLogBarriers = [])).push(barrier);
+        flushCommandLog(root, barrier.target);
+
+        // Resolves right after the .NET call has been DISPATCHED, with the call wrapped in an object so
+        // the chain does not adopt (and wait for) the call's own promise.
+        const dispatch = async () => {
+            try {
+                if (!await whenCommandLogAcknowledged(root, s, barrier.target)) return { call: undefined };
+                return { call: invokeDotNet(root, method, args, hotPath) };
+            } finally {
+                releaseCommandLogBarrier(root, s, barrier);
+            }
+        };
+        const dispatched = (s.pendingStateCommandChain || Promise.resolve()).then(dispatch, dispatch);
+        s.pendingStateCommandChain = dispatched.catch(() => { });
+        return dispatched.then(result => result.call);
+    }
+
     function scheduleSelectionSync(root) {
         const s = getState(root);
         if (!s || !s.model || s.selectionSyncFrame) return;
@@ -3326,7 +3441,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
 
         if (s.metrics) s.metrics.keyCommandCallbackCount += 1;
-        invokeDotNet(root, "OnCanvasKeyCommand", [
+        invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", [
             key,
             !!ev.shiftKey,
             !!ev.ctrlKey,
@@ -5430,7 +5545,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ev.preventDefault();
             ev.clipboardData?.setData("text/plain", text);
             try { ev.clipboardData?.setData(customClipboardMime, JSON.stringify(payload)); } catch { }
-            invokeDotNet(root, "OnCanvasKeyCommand", ["c", false, true, false, false], true).catch(() => {});
+            invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", ["c", false, true, false, false], true).catch(() => {});
         };
         const onCut = ev => {
             if (!isJsEngine(root)) return;
@@ -5440,7 +5555,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ev.preventDefault();
             ev.clipboardData?.setData("text/plain", text);
             try { ev.clipboardData?.setData(customClipboardMime, JSON.stringify(payload)); } catch { }
-            invokeDotNet(root, "OnCanvasKeyCommand", ["x", false, true, false, false], true).catch(() => {});
+            invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", ["x", false, true, false, false], true).catch(() => {});
         };
         const onPaste = ev => {
             if (!isJsEngine(root)) return;
@@ -5453,7 +5568,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 } catch { }
             }
             if (applyClipboardText(root, text) > 0) return;
-            invokeDotNet(root, "OnCanvasKeyCommand", ["v", false, true, false, false], true).catch(() => {});
+            invokeDotNetAfterPendingState(root, "OnCanvasKeyCommand", ["v", false, true, false, false], true).catch(() => {});
         };
         const onFocusOut = ev => {
             const nextTarget = ev?.relatedTarget;
@@ -5544,6 +5659,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         if (accessibility?.liveRegionTimer) clearTimeout(accessibility.liveRegionTimer);
         if (s.commandLogTimer) clearTimeout(s.commandLogTimer);
         if (s.pasteTimer) clearTimeout(s.pasteTimer);
+        // Leaving the page: nothing may stay held behind a key-command barrier, or an edit committed after
+        // the key press would be dropped with the state below.
+        s.commandLogBarriers = [];
         flushCellEditCommitQueue(root);
         flushCommandLog(root);
         closeLocalEditor(root, false);

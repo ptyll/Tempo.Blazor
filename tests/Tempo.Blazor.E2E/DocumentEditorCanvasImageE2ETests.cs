@@ -351,8 +351,10 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         return await page.EvaluateAsync<ObjectRect>(
             """
             async objectId => {
+                // 'instant': the demo sets `scroll-behavior: smooth` on <html>, so a default scrollIntoView
+                // animates and the two frames below would read the rect mid-scroll.
                 document.querySelector(`[data-canvas-object][data-object-id="${objectId}"]`)
-                    ?.scrollIntoView({ block: 'center', inline: 'center' });
+                    ?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
                 const node = document.querySelector(`[data-canvas-object][data-object-id="${objectId}"]`);
@@ -379,7 +381,9 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
             """
             async objectId => {
                 const metadataNode = document.querySelector(`[data-canvas-object][data-object-id="${objectId}"]`);
-                metadataNode?.scrollIntoView({ block: 'center', inline: 'center' });
+                // 'instant' for the same reason as ReadObjectRectAsync: a smooth scroll still in flight
+                // moves the object after this point is read, and the drag then starts off the image.
+                metadataNode?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
                 const metadataRect = metadataNode?.getBoundingClientRect?.();
                 if (metadataRect && metadataRect.width > 0.5 && metadataRect.height > 0.5) {
@@ -571,6 +575,11 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         await page.Mouse.UpAsync();
     }
 
+    /// <summary>
+    /// One pointer drag, then a real wait for the model to move. There is deliberately NO retry: with the
+    /// smooth-scroll race fixed the first drag must move the image, and a retry would hide a product defect
+    /// of exactly that shape ("the first drag does nothing"). A miss fails with pointer diagnostics.
+    /// </summary>
     private static async Task<ObjectModelLayout> DragObjectByMouseUntilModelMovesAsync(
         IPage page,
         string objectId,
@@ -578,37 +587,23 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         double deltaX,
         double deltaY)
     {
-        Exception? lastError = null;
-        for (var attempt = 0; attempt < 2; attempt++)
+        await DragObjectByMouseAsync(page, objectId, deltaX, deltaY);
+        try
         {
-            try
-            {
-                if (attempt > 0)
-                {
-                    var hitPoint = await ReadObjectHitPointAsync(page, objectId);
-                    await page.Mouse.ClickAsync((float)hitPoint.X, (float)hitPoint.Y);
-                    await WaitForObjectSelectionAsync(page, objectId);
-                    await page.WaitForTimeoutAsync(150);
-                }
-
-                await DragObjectByMouseAsync(page, objectId, deltaX, deltaY);
-                return await WaitForObjectModelLayoutAsync(
-                    page,
-                    objectId,
-                    minimumX: selectedLayout.X + 24,
-                    minimumY: selectedLayout.Y + 12,
-                    minimumWidth: selectedLayout.Width - 1,
-                    minimumHeight: selectedLayout.Height - 1);
-            }
-            catch (Exception ex) when (attempt == 0 && ex is TimeoutException or PlaywrightException)
-            {
-                lastError = ex;
-            }
+            return await WaitForObjectModelLayoutAsync(
+                page,
+                objectId,
+                minimumX: selectedLayout.X + 24,
+                minimumY: selectedLayout.Y + 12,
+                minimumWidth: selectedLayout.Width - 1,
+                minimumHeight: selectedLayout.Height - 1);
         }
-
-        var current = await ReadObjectModelLayoutAsync(page, objectId);
-        Assert.Fail($"Canvas object drag did not update model layout after retry. Before: x={selectedLayout.X:N1}, y={selectedLayout.Y:N1}; after: x={current.X:N1}, y={current.Y:N1}.{Environment.NewLine}{await ReadPointerDiagnosticsAsync(page, objectId)}");
-        throw new InvalidOperationException("Unreachable object drag retry failure.", lastError);
+        catch (TimeoutException)
+        {
+            var current = await ReadObjectModelLayoutAsync(page, objectId);
+            Assert.Fail($"The first pointer drag did not update the model layout. Before: x={selectedLayout.X:N1}, y={selectedLayout.Y:N1}; after: x={current.X:N1}, y={current.Y:N1}.{Environment.NewLine}{await ReadPointerDiagnosticsAsync(page, objectId)}");
+            throw;
+        }
     }
 
     private static async Task ResizeObjectFromHandleByMouseAsync(IPage page, string objectId, string handleName, double deltaX, double deltaY)
@@ -798,6 +793,22 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
             """,
             objectId);
 
+    /// <summary>
+    /// Loads the canvas interop module into <c>window.__tmDocumentCanvasInteropModule</c> so the model waits
+    /// below can poll it from a SYNCHRONOUS predicate. Playwright's <c>WaitForFunctionAsync</c> does not await
+    /// the predicate: an <c>async</c> predicate returns a Promise, which is truthy, so the wait resolved on
+    /// its first poll whatever the model said (measured: <c>async () =&gt; false</c> returned after ~10 ms,
+    /// <c>() =&gt; false</c> timed out). The model waits here were therefore no waits at all: a drag that
+    /// had not (yet) moved the model was read back as its final layout.
+    /// </summary>
+    private static Task EnsureCanvasInteropModuleAsync(IPage page)
+        => page.EvaluateAsync(
+            """
+            async () => {
+                window.__tmDocumentCanvasInteropModule ||= await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+            }
+            """);
+
     private static async Task<ObjectModelLayout> WaitForObjectModelLayoutAsync(
         IPage page,
         string objectId,
@@ -806,12 +817,17 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
         double minimumWidth,
         double minimumHeight)
     {
+        await EnsureCanvasInteropModuleAsync(page);
         await page.WaitForFunctionAsync(
             """
-            async args => {
+            args => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!module || !handle) {
+                    return false;
+                }
+
                 const model = JSON.parse(module.getModelJson(handle) || '{}');
                 const source = findObjectSource(model, args.objectId);
                 if (!source) {
@@ -859,12 +875,17 @@ public sealed class DocumentEditorCanvasImageE2ETests : WasmTestBase
 
     private static async Task<ObjectModelLayout> WaitForObjectModelNearAsync(IPage page, string objectId, ObjectModelLayout expected, double tolerance)
     {
+        await EnsureCanvasInteropModuleAsync(page);
         await page.WaitForFunctionAsync(
             """
-            async args => {
+            args => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                const module = await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!module || !handle) {
+                    return false;
+                }
+
                 const model = JSON.parse(module.getModelJson(handle) || '{}');
                 const source = findObjectSource(model, args.objectId);
                 if (!source) {
