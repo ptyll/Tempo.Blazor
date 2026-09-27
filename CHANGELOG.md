@@ -208,9 +208,12 @@ which is exactly the red
   reads that clipboard) pasted the old, smaller range while the system clipboard held the new one; the
   same race made Delete or Ctrl+B act on the old range. Each key command now first queues a
   still-pending selection and edits and delivers exactly the commands queued up to its key press;
-  anything queued after the press (a further Shift+Arrow during the round-trip) is held back until
-  that key command has been dispatched, so it cannot leak into it — also when several key commands
-  follow each other. Key commands are sent in key-press order, each as soon as the previous one has
+  keyboard selection changes and cell edits queued after the press (a further Shift+Arrow during the
+  round-trip) are held back until that key command has been dispatched, so they cannot leak into it —
+  also when several key commands follow each other. Known limitation: pointer input (cell click,
+  double-click, context menu — `OnCanvasCellPointer` / `OnCanvasPointer` / `OnCanvasDoubleClick` /
+  `OnCanvasContextMenu`) calls .NET directly and does not pass through this barrier, so a mouse
+  selection made while a key command is still waiting can still reach .NET before it. Key commands are sent in key-press order, each as soon as the previous one has
   been dispatched (not completed), so a key command whose .NET call never returns (e.g. during a
   reconnect) does not block the keys after it; waiting for the pending state itself is capped at 2 s.
   A settled selection is not re-sent (no extra round-trip and no spurious `ActiveCellChanged` per
