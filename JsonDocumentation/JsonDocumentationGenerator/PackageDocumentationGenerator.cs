@@ -983,12 +983,35 @@ internal static class ComponentDocumentationScanner
         => Path.GetRelativePath(repoRoot, path).Replace('\\', '/');
 }
 
+/// <summary>
+/// The one match timeout the generator's line-scanning regexes share.
+/// <para>
+/// IT IS A RUNAWAY GUARD, NOT A PERFORMANCE BUDGET. Every input it bounds is a single trimmed source line
+/// or one declaration of the repository's own code; matching one takes microseconds. The timeout is
+/// measured in WALL-CLOCK time from the start of the match, though, so a thread that is descheduled or
+/// suspended by a garbage collection mid-match is charged for the pause. At the former 200 ms that turned
+/// scheduler and GC pauses into <see cref="RegexMatchTimeoutException"/> — the
+/// <c>GeneratedDocumentation_MatchesCommitted</c> red on 5 of 64 build-and-test lanes between 2026-09-23
+/// and 2026-09-26, on lines with nothing to backtrack over. Reproduced with the same five patterns over
+/// every <c>public</c> line under <c>src/</c>: no timeout idle (largest single match 36 ms on a loaded
+/// box), and a timeout after 552 ms on <c>public static class DemoJsInterop</c> once a companion thread
+/// forced blocking gen-2 collections over a large heap. Under that same deliberately pathological
+/// pressure the largest pause charged to one match reached 7.4 s. Thirty seconds sits well above that
+/// and still turns a genuinely runaway pattern into an exception rather than a hang. The generator's other
+/// regex calls in this file carry no timeout at all; these five were the only ones a pause could fail.
+/// </para>
+/// </summary>
+internal static class GeneratorRegex
+{
+    internal static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(30);
+}
+
 internal static class PublicApiDocumentationScanner
 {
     private static readonly Regex TypeLineRegex = new(
         @"^\s*public\s+(?:(?:abstract|sealed|static|partial|readonly)\s+)*(?<kind>record\s+struct|record\s+class|record|class|interface|struct|enum)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*(?:<[^>{};()\r\n]+>)?)",
         RegexOptions.Compiled,
-        TimeSpan.FromMilliseconds(200));
+        GeneratorRegex.MatchTimeout);
 
     public static List<GeneratedDocumentationItem> Scan(string sourceRoot, string repoRoot, string packageId, ISet<string> componentBaseNames)
     {
@@ -1164,19 +1187,19 @@ internal static class SourceDocParser
     private static readonly Regex ParameterPropertyRegex = new(
         @"public\s+(?<type>.+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;\s*set;\s*\}\s*(?:=\s*(?<default>.*?);)?",
         RegexOptions.Compiled,
-        TimeSpan.FromMilliseconds(200));
+        GeneratorRegex.MatchTimeout);
     private static readonly Regex PropertyLineRegex = new(
         @"public\s+(?<type>.+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;",
         RegexOptions.Compiled,
-        TimeSpan.FromMilliseconds(200));
+        GeneratorRegex.MatchTimeout);
     private static readonly Regex FieldLineRegex = new(
         @"public\s+(?:const\s+|static\s+readonly\s+|static\s+)?(?<type>.+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?:=.*)?;",
         RegexOptions.Compiled,
-        TimeSpan.FromMilliseconds(200));
+        GeneratorRegex.MatchTimeout);
     private static readonly Regex MethodLineRegex = new(
         @"public\s+(?:static\s+|async\s+|virtual\s+|override\s+|sealed\s+|abstract\s+)*(?<return>[A-Za-z_][A-Za-z0-9_<>.,?\s\[\]]+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\((?<params>[^)]*)\)",
         RegexOptions.Compiled,
-        TimeSpan.FromMilliseconds(200));
+        GeneratorRegex.MatchTimeout);
 
     public static string? ExtractNamespace(string source)
         => NamespaceRegex.Match(source) is { Success: true } match ? match.Groups[1].Value.Trim() : null;
