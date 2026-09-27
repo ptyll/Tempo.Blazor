@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.9.0 (unreleased)
+## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
 (`TmStatCard.SubValueColor` no longer accepts CSS class names — see **Breaking / Migration**
