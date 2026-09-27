@@ -158,6 +158,7 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
             .ToHaveAttributeAsync("aria-selected", "true", new() { Timeout = 10_000 });
         await Assertions.Expect(page.Locator("[data-testid='document-revision-item'][data-revision-id='canvas-phase17-revision-delete']").First)
             .ToHaveClassAsync(new Regex("selected"), new() { Timeout = 10_000 });
+        await WaitForRevisionPanelSettledAsync(page);
         await page.Locator("[data-testid='document-revision-item'][data-revision-id='canvas-phase17-revision-delete'] [data-testid='document-revision-accept']").ClickAsync();
         await WaitForRevisionActionAsync(page, "canvas-phase17-revision-delete", "accepted");
         await Assertions.Expect(page.Locator("[data-testid='document-canvas-revision-marker'][data-revision-id='canvas-phase17-revision-delete']"))
@@ -171,6 +172,7 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
 
         await SetCanvasTrackChangesAsync(page, enabled: false);
         await WaitForCanvasTrackChangesStateAsync(page, enabled: false);
+        await WaitForMirrorToMatchModelAsync(page, "canvas-phase17-protected");
         var beforeProtectedText = await ReadMirrorTextAsync(page, "canvas-phase17-protected");
         var undoBeforeBlocked = await ReadCanvasUndoDepthAsync(page);
         await ClickCanvasBlockAsync(page, "canvas-phase17-protected", 3);
@@ -322,14 +324,16 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
             enabled,
             new PageWaitForFunctionOptions { Timeout = 10_000 });
 
-    private static Task WaitForRevisionActionAsync(IPage page, string revisionId, string expectedAction)
-        => page.WaitForFunctionAsync(
+    private static async Task WaitForRevisionActionAsync(IPage page, string revisionId, string expectedAction)
+    {
+        await EnsureCanvasInteropModuleAsync(page);
+        await page.WaitForFunctionAsync(
             """
-            async ({ revisionId, expectedAction }) => {
+            ({ revisionId, expectedAction }) => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                if (!handle) return false;
-                const module = window.__tmDocumentCanvasInteropModule ||= await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!handle || !module) return false;
                 const model = JSON.parse(module.getModelJson(handle) || '{}');
                 const revision = (Array.isArray(model.revisions) ? model.revisions : [])
                     .find(item => String(item?.id || item?.Id || '') === String(revisionId || ''));
@@ -338,15 +342,18 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
             """,
             new { revisionId, expectedAction },
             new PageWaitForFunctionOptions { Timeout = 30_000 });
+    }
 
-    private static Task WaitForPendingRevisionCountAsync(IPage page, int expectedCount)
-        => page.WaitForFunctionAsync(
+    private static async Task WaitForPendingRevisionCountAsync(IPage page, int expectedCount)
+    {
+        await EnsureCanvasInteropModuleAsync(page);
+        await page.WaitForFunctionAsync(
             """
-            async expectedCount => {
+            expectedCount => {
                 const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
                 const handle = host?.getAttribute('data-canvas-engine-handle') || '';
-                if (!handle) return false;
-                const module = window.__tmDocumentCanvasInteropModule ||= await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!handle || !module) return false;
                 const model = JSON.parse(module.getModelJson(handle) || '{}');
                 const revisions = Array.isArray(model.revisions) ? model.revisions : [];
                 const pending = revisions.filter(item => String(item?.action || item?.Action || '').toLowerCase() === 'pending').length;
@@ -355,6 +362,102 @@ public sealed class DocumentEditorCanvasCommentsRevisionsE2ETests : WasmTestBase
             """,
             expectedCount,
             new PageWaitForFunctionOptions { Timeout = 30_000 });
+    }
+
+    /// <summary>
+    /// Loads the canvas interop module into <c>window.__tmDocumentCanvasInteropModule</c> so the waits in this
+    /// class can read the engine model from a SYNCHRONOUS predicate. Playwright's <c>WaitForFunctionAsync</c>
+    /// does not await its predicate: an <c>async</c> predicate returns a Promise, which is truthy, so such a
+    /// wait resolved on its first poll whatever the model said (measured: <c>async () =&gt; false</c> returned
+    /// after ~10 ms, <c>() =&gt; false</c> timed out) — the revision-review waits here used to be no waits.
+    /// </summary>
+    private static Task EnsureCanvasInteropModuleAsync(IPage page)
+        => page.EvaluateAsync(
+            """
+            async () => {
+                window.__tmDocumentCanvasInteropModule ||= await import('/_content/Tempo.Blazor.DocumentEditor/js/document-editor-canvas/interop.mjs');
+            }
+            """);
+
+    /// <summary>
+    /// The revision rail is refreshed from the engine by a DEBOUNCED annotation pull (200 ms after the last
+    /// model change) and then scrolls the selected item into view. Clicking a marker right after tracked
+    /// typing therefore opens a rail that still lists only the seeded revisions, which a moment later gains
+    /// the new ones at the TOP and scrolls — the row under a pending click moves by several rows (measured:
+    /// the seeded deletion's row went y=563 → 1122 → 812 within ~400 ms of the marker click). An accept
+    /// clicked in that window lands on a neighbouring row, the deletion stays pending, and its markers never
+    /// clear. Wait until the rail lists exactly the engine's pending revisions and has stopped moving.
+    /// </summary>
+    private static async Task WaitForRevisionPanelSettledAsync(IPage page)
+    {
+        await EnsureCanvasInteropModuleAsync(page);
+        var settled = await page.EvaluateAsync<bool>(
+            """
+            async () => {
+                const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
+                const pendingIds = () => {
+                    const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                    const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                    const module = window.__tmDocumentCanvasInteropModule;
+                    if (!handle || !module) return null;
+                    const model = JSON.parse(module.getModelJson(handle) || '{}');
+                    return (Array.isArray(model.revisions) ? model.revisions : [])
+                        .filter(item => String(item?.action || item?.Action || '').toLowerCase() === 'pending')
+                        .map(item => String(item?.id || item?.Id || ''))
+                        .sort()
+                        .join('|');
+                };
+                const rail = () => [...document.querySelectorAll('[data-testid="document-revision-item"]')]
+                    .map(item => ({ id: item.getAttribute('data-revision-id') || '', top: item.getBoundingClientRect().top }));
+                const deadline = performance.now() + 15000;
+                let previous = null;
+                let stableFrames = 0;
+                while (performance.now() < deadline) {
+                    await frame();
+                    const items = rail();
+                    const listed = items.map(item => item.id).sort().join('|');
+                    const signature = items.map(item => `${item.id}@${item.top}`).join(',');
+                    const inSync = listed.length > 0 && listed === pendingIds();
+                    stableFrames = inSync && signature === previous ? stableFrames + 1 : 0;
+                    if (stableFrames >= 3) {
+                        return true;
+                    }
+
+                    previous = signature;
+                }
+
+                return false;
+            }
+            """);
+        Assert.IsTrue(settled, "the revision rail never listed exactly the engine's pending revisions at rest within 15s — a review click now could land on a row that is still moving");
+    }
+
+    /// <summary>
+    /// The accessibility mirror is updated after the canvas render, so right after a review it can still show
+    /// the pre-review text (measured: it read "editable TCX" after Reject All while the model already held
+    /// "editableX", and flipped a moment later — which the protected-typing check below then misread as the
+    /// blocked keystrokes having changed the block). Wait until the mirror shows the model's text for the block.
+    /// </summary>
+    private static async Task WaitForMirrorToMatchModelAsync(IPage page, string blockId)
+    {
+        await EnsureCanvasInteropModuleAsync(page);
+        await page.WaitForFunctionAsync(
+            """
+            blockId => {
+                const host = document.querySelector('[data-testid="document-canvas-engine-host"]');
+                const handle = host?.getAttribute('data-canvas-engine-handle') || '';
+                const module = window.__tmDocumentCanvasInteropModule;
+                if (!handle || !module) return false;
+                const model = JSON.parse(module.getModelJson(handle) || '{}');
+                const block = (model.body?.blocks || []).find(candidate => candidate.id === blockId);
+                const modelText = (block?.content?.runs || []).map(run => run.text || '').join('');
+                const mirrorText = document.querySelector(`[data-testid="document-canvas-a11y-mirror"] [data-block-id="${blockId}"]`)?.textContent;
+                return modelText.length > 0 && mirrorText === modelText;
+            }
+            """,
+            blockId,
+            new PageWaitForFunctionOptions { Timeout = 10_000 });
+    }
 
     private static Task WaitForSaveBoundaryAsync(IPage page)
         => page.WaitForFunctionAsync(
