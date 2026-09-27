@@ -214,6 +214,15 @@ public sealed class FullCloneWorkflowTests
                         "the overload the Skip getter actually calls reads the contract from the "
                         + "process environment; with TEMPO_REQUIRE_FULL_CLONE=1 there it must throw "
                         + "exactly like the explicit value above");
+
+                // And the counter-arm of the same overload: any value other than "1" is NOT the
+                // contract, so the probe answers the skip reason instead of throwing. Without this
+                // an overload that ignored the environment and always passed "1" would stay green.
+                Environment.SetEnvironmentVariable(
+                    FullCloneFactAttribute.RequireFullCloneEnvironmentVariable, "0");
+                FullCloneFactAttribute.IncompleteCloneSkipReason(clonePath).Should().NotBeNull(
+                    "with TEMPO_REQUIRE_FULL_CLONE=0 in the process the environment-reading overload "
+                    + "must answer the ordinary skip reason, not throw");
             }
             finally
             {
