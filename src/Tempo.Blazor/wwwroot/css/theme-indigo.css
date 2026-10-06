@@ -49,9 +49,11 @@
 }
 
 /* Dark half. The same-element forms cover <html data-tm-theme="indigo" data-theme="dark">;
-   the descendant forms cover a dark region nested inside the indigo root. The block
-   re-declares every alias whose var() would otherwise compute against the light values,
-   including the whole gray scale: the light slate scale would invert the dark surfaces. */
+   the descendant forms cover a dark region nested inside the indigo root. This block
+   re-declares only the indigo scale — the primary steps and the gray scale the aliases
+   read. The aliases themselves are re-declared in tokens-dark.css, which already applies to
+   every dark region, so they recompute here without being repeated. The gray scale has to
+   be here too: the light slate scale above would otherwise invert the dark surfaces. */
 :root[data-tm-theme="indigo"][data-theme="dark"],
 :root[data-tm-theme="indigo"].tm-dark,
 :root[data-tm-theme="indigo"] [data-theme="dark"],

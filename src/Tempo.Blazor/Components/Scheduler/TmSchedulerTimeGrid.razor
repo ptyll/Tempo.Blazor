@@ -220,7 +220,7 @@
 
             builder.OpenElement(0, "div");
             builder.AddAttribute(1, "class", $"tm-scheduler-timegrid-event {e.CssClass}");
-            builder.AddAttribute(2, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%; --event-color: {e.Color ?? "var(--tm-color-primary, #3b82f6)"};");
+            builder.AddAttribute(2, "style", $"top: {F(topPct)}%; height: {F(heightPct)}%; width: {F(widthPct)}%; left: {F(leftPct)}%;{(e.Color is not null ? $" --event-color: {e.Color};" : "")}");
             builder.AddAttribute(3, "title", e.Title);
             builder.AddAttribute(4, "data-event-id", e.Id); // For JS resize handling
             builder.AddAttribute(5, "draggable", !ReadOnly && !e.IsReadOnly ? "true" : "false");

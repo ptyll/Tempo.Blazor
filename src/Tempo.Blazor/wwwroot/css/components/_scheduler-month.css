@@ -81,8 +81,8 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    border-left: 3px solid var(--event-color, var(--tm-color-primary, #3b82f6));
-    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary, #3b82f6)) 10%, transparent);
+    border-left: 3px solid var(--event-color, var(--tm-color-primary));
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 10%, transparent);
     transition: background-color 0.1s ease;
 }
 
@@ -91,7 +91,7 @@
 }
 
 .tm-scheduler-month-event--allday {
-    background: var(--event-color, var(--tm-color-primary));
+    background: var(--event-color, var(--tm-scheduler-event-bg));
     color: var(--event-text-color, var(--tm-scheduler-event-fg));
     border-left: none;
     border-radius: var(--tm-radius-xs, 0.125rem);
@@ -121,7 +121,7 @@
 }
 
 .tm-scheduler-month-more:hover {
-    color: var(--tm-color-primary, #3b82f6);
+    color: var(--tm-color-primary);
 }
 
 /* ── Drag & Drop ── */
@@ -138,5 +138,5 @@
 }
 
 .tm-scheduler-month-day--drop-target {
-    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 10%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
 }

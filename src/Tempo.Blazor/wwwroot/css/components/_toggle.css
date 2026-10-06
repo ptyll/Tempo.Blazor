@@ -11,7 +11,7 @@
   transition: background-color var(--tm-transition-normal);
 }
 .tm-toggle-input:focus-visible ~ .tm-toggle-track {
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 .tm-toggle-slider {
   position: absolute;

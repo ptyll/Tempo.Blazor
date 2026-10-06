@@ -27,7 +27,7 @@
   -webkit-user-select: none;
 }
 .tm-btn:focus-visible {
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 .tm-btn:disabled,
 .tm-btn[disabled] {
@@ -138,7 +138,7 @@
   border-color: var(--tm-color-warning-hover);
 }
 .tm-btn.tm-btn-warning:focus-visible {
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-btn-outline {

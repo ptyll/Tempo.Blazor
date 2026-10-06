@@ -35,6 +35,30 @@
   fragment is passed or `ShowDefaultFooterButtons` is set. A modal that relied on the empty bar's
   border must pass its own footer.
 
+- **Core controls adopt the two-layer focus ring.** `.tm-btn:focus-visible`, `.tm-input:focus`,
+  `.tm-select:focus`, `.tm-textarea` (it compounds on `.tm-input`), `.tm-search-input:focus`, and the
+  checkbox, radio and toggle `focus-visible` rules used to paint `box-shadow: var(--tm-shadow-focus)`,
+  a single soft glow. They now paint `box-shadow: var(--tm-focus-ring)`, the two-layer ring that holds
+  3:1 against the surface in both themes. The glow token is unchanged and still available.
+
+  ```css
+  /* before */
+  .tm-btn:focus-visible { box-shadow: var(--tm-shadow-focus); }
+  /* after */
+  .tm-btn:focus-visible { box-shadow: var(--tm-focus-ring); }
+  ```
+
+  To restore the old glow everywhere, override the ring token:
+
+  ```css
+  :root { --tm-focus-ring: var(--tm-shadow-focus); }
+  ```
+
+- **A scheduler event without its own colour now fills with `--tm-scheduler-event-bg`.** In the dark
+  theme that token is `primary-600`, where it used to be `primary-400`. White event text holds AA on
+  `primary-600` and did not on `primary-400` (2.54:1 default, 2.98:1 indigo). Light is unchanged,
+  because `primary-600` was already the light fill. An event that sets `Color` is unaffected.
+
 - **`--tm-priority-critical` is now `--tm-priority-highest`, and `--tm-priority-lowest` is new.**
   The suffix matches the lower-cased `TmWorkItemPriority` member. A stylesheet referencing
   `--tm-priority-critical` must switch to `--tm-priority-highest`.

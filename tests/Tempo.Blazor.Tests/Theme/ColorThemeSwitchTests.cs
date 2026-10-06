@@ -24,8 +24,9 @@ public class ColorThemeSwitchTests : BunitContext
     {
         var cut = Render<ColorThemeSwitch>();
 
-        cut.Find("button[aria-pressed]").TextContent.Should().Contain("Blue");
-        cut.FindAll("button").Should().HaveCount(2);
+        cut.Find("button[aria-pressed='true']").TextContent.Should().Contain("Blue");
+        cut.FindAll("button[aria-pressed]").Should().HaveCount(2,
+            "both buttons carry aria-pressed, so the pressed state is explicit rather than implied");
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public class ColorThemeSwitchTests : BunitContext
 
         cut.FindAll("button")[1].Click();
 
-        cut.Find("button[aria-pressed]").TextContent.Should().Contain("Indigo");
+        cut.Find("button[aria-pressed='true']").TextContent.Should().Contain("Indigo");
         JSInterop.VerifyInvoke("tmColorTheme.apply")
             .Arguments[0].Should().Be("indigo");
     }
@@ -57,7 +58,7 @@ public class ColorThemeSwitchTests : BunitContext
         var cut = Render<ColorThemeSwitch>();
 
         cut.WaitForAssertion(() =>
-            cut.Find("button[aria-pressed]").TextContent.Should().Contain("Indigo"));
+            cut.Find("button[aria-pressed='true']").TextContent.Should().Contain("Indigo"));
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class ColorThemeSwitchTests : BunitContext
 
         first.FindAll("button")[1].Click();
 
-        second.Find("button[aria-pressed]").TextContent.Should().Contain("Indigo",
+        second.Find("button[aria-pressed='true']").TextContent.Should().Contain("Indigo",
             "both copies share one scoped state, so the sidebar and the header cannot disagree");
     }
 }

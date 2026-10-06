@@ -49,9 +49,10 @@
                     var e = evt;
                     var leftPct = GetMinuteLeftPercent(GetEventStartMinutes(e));
                     var widthPct = GetEventWidthPercent(e);
+                    var eventColor = e.Color ?? r.Color;
 
                     <div class="tm-scheduler-timeline-event @e.CssClass"
-                         style="left: @F(leftPct)%; width: @F(widthPct)%; --event-color: @(e.Color ?? r.Color ?? "var(--tm-color-primary, #3b82f6)");"
+                         style="left: @F(leftPct)%; width: @F(widthPct)%;@(eventColor is not null ? $" --event-color: {eventColor};" : "")"
                          title="@e.Title"
                          data-event-id="@e.Id"
                          draggable="@(!ReadOnly && !e.IsReadOnly ? "true" : "false")"

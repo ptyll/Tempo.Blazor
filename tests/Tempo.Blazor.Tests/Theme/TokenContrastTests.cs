@@ -326,12 +326,97 @@ public sealed class TokenContrastTests
             light.Should().ContainKey(token, "{0} must be declared in tokens.css", token);
 
             // A var()-valued token computes where it is declared, so it must be repeated. A literal
-            // may differ between themes (a dark priority glyph is brighter) and only has to exist.
-            dark.Should().ContainKey(token,
-                "{0} must be declared in tokens-dark.css — a :root-only alias computes with the light value",
-                token);
+            // computes to the same value everywhere, so repeating it in the dark file adds nothing —
+            // it only has to exist in tokens.css.
+            if (light[token].Contains("var(", StringComparison.Ordinal))
+            {
+                dark.Should().ContainKey(token,
+                    "{0} must be declared in tokens-dark.css — a :root-only alias computes with the light value",
+                    token);
+            }
         }
     }
+
+    /// <summary>
+    /// The nested topology the demo actually uses: <c>&lt;html data-tm-theme="indigo"&gt;</c> with a
+    /// <c>&lt;div data-theme="dark"&gt;</c> inside it. A custom property substitutes its <c>var()</c>
+    /// where it is declared, so an alias declared only on <c>:root</c> computes with the light value and
+    /// the dark region inherits that finished colour. Every alias whose chain reaches a token the dark or
+    /// indigo theme re-declares must therefore be repeated in <c>tokens-dark.css</c>. The allowlist is
+    /// empty on purpose: a new alias of that shape should fail here, not ship.
+    /// </summary>
+    [Fact]
+    public void Aliases_WhoseChainReachesAThemedToken_AreRedeclaredInDark()
+    {
+        var light = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        var dark = ThemeCss.Declarations(ThemeCss.CssPath("tokens-dark.css"));
+        var indigo = ThemeCss.Declarations(ThemeCss.CssPath("theme-indigo.css"));
+        var redeclared = dark.Keys.Concat(indigo.Keys).ToHashSet(StringComparer.Ordinal);
+
+        var missing = light
+            .Where(pair => pair.Value.Contains("var(", StringComparison.Ordinal))
+            .Where(pair => Closure(pair.Key, light).Any(token => token != pair.Key && redeclared.Contains(token)))
+            .Select(pair => pair.Key)
+            .Where(token => !dark.ContainsKey(token))
+            .OrderBy(token => token, StringComparer.Ordinal)
+            .ToList();
+
+        missing.Should().BeEmpty(
+            "these aliases compute on :root with the light value, so a nested dark region inherits the wrong colour: {0}",
+            string.Join(", ", missing));
+    }
+
+    /// <summary>
+    /// <c>--tm-border-color-focus</c> is the focus outline (<c>base.css</c>). Resolved the way the dark
+    /// region resolves it — the dark graph, with the indigo scale layered on for the indigo case — it must
+    /// clear 3:1 against the dark surface. The light value inherited into the dark region does not.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FocusBorder_HoldsThreeToOne_AgainstTheDarkSurface(bool indigo)
+    {
+        var tokens = ThemeCss.TokenGraph(dark: true);
+        if (indigo)
+        {
+            foreach (var (name, value) in ThemeCss.Declarations(ThemeCss.CssPath("theme-indigo.css")))
+            {
+                tokens[name] = value;
+            }
+        }
+
+        var ring = ThemeCss.ResolveColour("var(--tm-border-color-focus)", tokens);
+        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+
+        ThemeCss.Contrast(ring, surface).Should().BeGreaterThanOrEqualTo(3,
+            "{0} on {1} ({2} dark) must clear 3:1 — it is the focus outline",
+            ring, surface, indigo ? "indigo" : "default");
+    }
+
+    private static HashSet<string> Closure(string token, Dictionary<string, string> light)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var pending = new Stack<string>();
+        pending.Push(token);
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            if (!seen.Add(current) || !light.TryGetValue(current, out var value))
+            {
+                continue;
+            }
+
+            foreach (Match reference in VarReference.Matches(value))
+            {
+                pending.Push(reference.Groups[1].Value);
+            }
+        }
+
+        return seen;
+    }
+
+    private static readonly Regex VarReference =
+        new(@"var\(\s*(--tm-[\w-]+)", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
 
     [Fact]
     public void StatusChipText_KeepsAaContrast_OnItsFill()
@@ -376,7 +461,7 @@ public sealed class TokenContrastTests
                 ThemeCss.ResolveColour("var(--tm-color-primary)", tokens))
                 .Should().BeGreaterThanOrEqualTo(4.5, "bílý text na indigo primary musí držet AA ({0})", dark ? "dark" : "light");
 
-            var subtle = ThemeCss.Luminance(ThemeCss.ResolveColour("var(--tm-color-primary-subtle)", tokens));
+            var subtle = ThemeCss.Luminance(PaintedColour("var(--tm-color-primary-subtle)", tokens));
             var page = ThemeCss.Luminance(ThemeCss.ResolveColour("var(--tm-bg-page)", tokens));
             Math.Abs(subtle - page).Should().BeGreaterThan(0.02,
                 "primary-subtle pill se nesmí ztratit na pozadí stránky ({0})", dark ? "dark" : "light");
@@ -492,43 +577,75 @@ public sealed class TokenContrastTests
     private static double PaintedRatio(string foreground, string surface, bool dark)
     {
         var tokens = ThemeCss.TokenGraph(dark);
-        var declared = ThemeCss.ResolveColour(surface, tokens);
-        var token = Regex.Match(surface, @"--tm-[\w-]+", RegexOptions.None, TimeSpan.FromSeconds(5)).Value;
-        var alpha = Regex.Match(
-            tokens.GetValueOrDefault(token, ""),
-            @"/\s*([0-9.]+)\s*\)", RegexOptions.None, TimeSpan.FromSeconds(5));
-        var painted = alpha.Success
-            ? ThemeCss.Composite(declared, double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture),
-                ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
-            : declared;
-        return ThemeCss.Contrast(ThemeCss.ResolveColour(foreground, tokens), painted);
+        return ThemeCss.Contrast(ThemeCss.ResolveColour(foreground, tokens), PaintedColour(surface, tokens));
+    }
+
+    /// <summary>
+    /// The colour a viewer sees for a token. A translucent wash declares its alpha as
+    /// <c>rgb(from … / a)</c> somewhere along the <c>var()</c> chain; that colour is composited over the
+    /// surface, because the bare colour is not what gets painted.
+    /// </summary>
+    private static string PaintedColour(string tokenExpr, Dictionary<string, string> tokens)
+    {
+        var colour = ThemeCss.ResolveColour(tokenExpr, tokens);
+        var alpha = AlphaAlongChain(tokenExpr, tokens);
+        return alpha is null
+            ? colour
+            : ThemeCss.Composite(colour, alpha.Value, ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens));
+    }
+
+    private static double? AlphaAlongChain(string value, Dictionary<string, string> tokens, int depth = 0)
+    {
+        if (depth > 16)
+        {
+            return null;
+        }
+
+        var alpha = Regex.Match(value, @"/\s*([0-9.]+)\s*\)", RegexOptions.None, TimeSpan.FromSeconds(5));
+        if (alpha.Success)
+        {
+            return double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture);
+        }
+
+        var reference = ThemeCss.FirstVar(value);
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var name = ThemeCss.SplitOnTopLevelComma(reference[4..^1]).Name.Trim();
+        return tokens.TryGetValue(name, out var referenced) ? AlphaAlongChain(referenced, tokens, depth + 1) : null;
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void PrimaryText_HoldsAa_OnTheSubtleWash(bool dark)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void PrimaryText_HoldsAa_OnTheSubtleWash(bool indigo, bool dark)
     {
-        var tokens = ThemeCss.TokenGraph(dark);
-        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
 
-        // Dark declares the wash as `rgb(from var(--x) r g b / 0.15)`, so the colour a viewer sees is
-        // that colour at 0.15 over the surface, not the bare colour.
-        var declared = tokens["--tm-color-primary-subtle"];
-        var alpha = Regex.Match(declared, @"/\s*([0-9.]+)\s*\)", RegexOptions.None, TimeSpan.FromSeconds(5));
-        var wash = ThemeCss.ResolveColour(declared, tokens);
-        var painted = alpha.Success
-            ? ThemeCss.Composite(wash, double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture), surface)
-            : wash;
-
-        ThemeCss.Contrast(ThemeCss.ResolveColour("var(--tm-color-primary-text)", tokens), painted)
-            .Should().BeGreaterThanOrEqualTo(4.5, "primary-text na subtle wash ({0})", dark ? "dark" : "light");
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-color-primary-text)", tokens),
+                PaintedColour("var(--tm-color-primary-subtle)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "primary-text na subtle wash ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
     }
 
-    [Fact]
-    public void SchedulerEventText_HoldsAa_OnTheDefaultEventColour()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void SchedulerEventText_HoldsAa_OnTheDefaultEventColour(bool indigo, bool dark)
     {
-        ThemeCss.Ratio("var(--tm-scheduler-event-fg)", "var(--tm-color-primary)", false)
-            .Should().BeGreaterThanOrEqualTo(4.5, "text události na výchozí barvě události musí držet AA");
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-scheduler-event-fg)", tokens),
+                ThemeCss.ResolveColour("var(--tm-scheduler-event-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text události na výchozí výplni události ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
     }
 }

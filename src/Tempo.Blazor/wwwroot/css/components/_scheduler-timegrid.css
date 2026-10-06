@@ -72,7 +72,7 @@
     color: var(--tm-text-secondary, #64748b);
     padding: var(--tm-space-1, 0.25rem);
     border-right: 1px solid var(--tm-border-color, #f1f5f9);
-    border-bottom: 3px solid var(--tm-color-primary, #3b82f6);
+    border-bottom: 3px solid var(--tm-color-primary);
 }
 
 .tm-scheduler-timegrid-resource-label:last-child {
@@ -111,7 +111,7 @@
 }
 
 .tm-scheduler-timegrid-allday-event {
-    background: var(--event-color, var(--tm-color-primary));
+    background: var(--event-color, var(--tm-scheduler-event-bg));
     color: var(--event-text-color, var(--tm-scheduler-event-fg));
     font-size: 0.6875rem;
     padding: 1px var(--tm-space-2, 0.5rem);
@@ -258,7 +258,7 @@
 }
 
 .tm-scheduler-timegrid-slot--drop-target {
-    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 10%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
 }
 
 /* ── Resize handles ── */
@@ -280,21 +280,21 @@
 /* Top resize handle (start time) */
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--top {
     top: 0;
-    border-top: 2px solid rgba(255, 255, 255, 0.5);
+    border-top: 2px solid transparent;
     border-radius: 2px 2px 0 0;
 }
 
-.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--top:hover {
-    border-top-color: var(--tm-bg-surface);
+.tm-scheduler-timegrid-event:hover .tm-scheduler-event-resize-handle--top {
+    border-top-color: color-mix(in srgb, var(--tm-bg-surface) 60%, transparent);
 }
 
 /* Bottom resize handle (end time) */
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--bottom {
     bottom: 0;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+    border-bottom: 2px solid transparent;
     border-radius: 0 0 2px 2px;
 }
 
-.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--bottom:hover {
-    border-bottom-color: var(--tm-bg-surface);
+.tm-scheduler-timegrid-event:hover .tm-scheduler-event-resize-handle--bottom {
+    border-bottom-color: color-mix(in srgb, var(--tm-bg-surface) 60%, transparent);
 }

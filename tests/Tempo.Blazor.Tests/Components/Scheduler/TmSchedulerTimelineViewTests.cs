@@ -144,4 +144,23 @@ public class TmSchedulerTimelineViewTests : LocalizationTestBase
         // Should show at least one default row
         cut.FindAll(".tm-scheduler-timeline-row").Count.Should().BeGreaterThanOrEqualTo(1);
     }
+
+    [Fact]
+    public void Colourless_Event_CarriesNoInlineFallback()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            new() { Title = "Plain", Start = new DateTime(2025, 6, 10, 10, 0, 0), End = new DateTime(2025, 6, 10, 11, 0, 0), ResourceId = "room-a" },
+        };
+
+        var cut = Render<TmSchedulerTimelineView>(p => p
+            .Add(c => c.CurrentDate, new DateTime(2025, 6, 10))
+            .Add(c => c.Resources, [new TmScheduleResource { Id = "room-a", Name = "Room A" }])
+            .Add(c => c.Events, events));
+
+        var style = cut.Find(".tm-scheduler-timeline-event").GetAttribute("style") ?? "";
+        style.Should().NotContain("--event-color",
+            "an event without a colour takes the theme's event fill from CSS, not an inline fallback");
+        style.Should().NotContain("#3b82f6");
+    }
 }

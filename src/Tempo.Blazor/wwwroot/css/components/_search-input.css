@@ -24,7 +24,7 @@
   transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
 .tm-search-input::placeholder { color: var(--tm-text-secondary); }
-.tm-search-input:focus { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-shadow-focus); }
+.tm-search-input:focus { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-focus-ring); }
 .tm-search-input-clear {
   position: absolute;
   right: var(--tm-space-2);

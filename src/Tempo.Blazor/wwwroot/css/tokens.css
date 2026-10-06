@@ -386,6 +386,10 @@
   --tm-priority-high:          #c2410c;
   --tm-priority-highest:       var(--tm-color-danger);
 
+  /* The solid event fill when the consumer sets no colour. -600, not the theme's
+     primary step: in dark the primary step is -400, and white text on it falls short
+     of 3:1. -600 holds in both themes. */
+  --tm-scheduler-event-bg:     var(--tm-color-primary-600);
   /* Text on an event whose fill is a consumer-supplied colour. White holds on the
      default event colour; a consumer that paints a light fill sets --event-text-color. */
   --tm-scheduler-event-fg:     var(--tm-color-white);

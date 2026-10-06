@@ -47,5 +47,5 @@
   border-width: 2.5px;
   background-color: var(--tm-control-hover-fill, var(--tm-bg-surface));
 }
-.tm-radio-input:focus-visible ~ .tm-radio-custom { box-shadow: var(--tm-shadow-focus); }
+.tm-radio-input:focus-visible ~ .tm-radio-custom { box-shadow: var(--tm-focus-ring); }
 .tm-radio-text { font-size: var(--tm-font-size-sm); color: var(--tm-text-primary); line-height: 1.375; }

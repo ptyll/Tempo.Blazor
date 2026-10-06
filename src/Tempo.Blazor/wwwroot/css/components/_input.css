@@ -41,7 +41,7 @@
 .tm-input::-webkit-search-results-decoration { display: none; }
 .tm-input:focus {
   border-color: var(--tm-border-color-focus);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 /* Validation states */
 .tm-input-valid {
@@ -174,7 +174,7 @@
 }
 .tm-search-clear:focus {
   outline: none;
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 /* TextArea — .tm-textarea is always emitted alongside .tm-input (TmTextArea.razor), so it
@@ -207,7 +207,7 @@
   cursor: pointer;
   transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
-.tm-select:focus   { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-shadow-focus); }
+.tm-select:focus   { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-focus-ring); }
 .tm-select-error   { border-color: var(--tm-color-danger) !important; }
 .tm-select-disabled, .tm-select[disabled] { background-color: var(--tm-color-gray-50); cursor: not-allowed; }
 .tm-select-arrow {

@@ -80,11 +80,6 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
                         await AssertWorkspaceAsync(page, dark, indigo);
                     }
 
-                    // A hover or a focused control paints a state that is not the theme. Park the
-                    // pointer and drop focus so the shot shows the resting page.
-                    await page.Mouse.MoveAsync(0, 0);
-                    await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
-
                     var theme = (dark ? "dark" : "light") + "-" + (indigo ? "indigo" : "default");
                     await SaveAsync(page, $"{name}--{theme}", fullPage: name != "modal");
                 }
@@ -101,8 +96,15 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
     {
         foreach (var dark in new[] { false, true })
         {
-            var page = await OpenAsync("/data-table", ".tm-data-table", dark, indigo: false, 390, 844);
-            await SaveAsync(page, "datatable--card--" + (dark ? "dark" : "light"), fullPage: false);
+            var page = await OpenAsync("/data-table", ".tm-data-table-wrapper--card", dark, indigo: false, 390, 844);
+            var card = page.Locator(".tm-data-table-wrapper--card").First;
+            await card.ScrollIntoViewIfNeededAsync();
+            await page.Mouse.MoveAsync(0, 0);
+            await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
+            var cardPath = Path.Combine(FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "TestResults",
+                "theme-matrix", "datatable--card--" + (dark ? "dark" : "light") + ".png");
+            await card.ScreenshotAsync(new LocatorScreenshotOptions { Path = cardPath, Timeout = 60_000 });
+            TestContext.AddResultFile(cardPath);
         }
     }
 
@@ -211,6 +213,11 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
 
     private async Task SaveAsync(IPage page, string name, bool fullPage = true)
     {
+        // A hover or a focused control paints a state that is not the theme. Every capture parks
+        // the pointer and drops focus, so the shot shows the resting page.
+        await page.Mouse.MoveAsync(0, 0);
+        await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
+
         var directory = Path.Combine(
             FindRepoRoot(), "tests", "Tempo.Blazor.E2E", "TestResults", "theme-matrix");
         Directory.CreateDirectory(directory);

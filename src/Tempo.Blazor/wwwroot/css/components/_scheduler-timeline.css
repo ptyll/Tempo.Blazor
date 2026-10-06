@@ -57,7 +57,7 @@
     font-weight: var(--tm-font-weight-medium, 500);
     color: var(--tm-text-primary, #0f172a);
     border-right: 1px solid var(--tm-border-color, #e2e8f0);
-    border-left: 3px solid var(--tm-color-primary, #3b82f6);
+    border-left: 3px solid var(--tm-color-primary);
     display: flex;
     align-items: center;
     background: var(--tm-bg-surface-secondary, #f8fafc);
@@ -96,7 +96,7 @@
     cursor: pointer;
     overflow: visible;
     z-index: 1;
-    background: var(--event-color, var(--tm-color-primary));
+    background: var(--event-color, var(--tm-scheduler-event-bg));
     color: var(--event-text-color, var(--tm-scheduler-event-fg));
     font-size: var(--tm-font-size-xs, 0.75rem);
     transition: filter 0.1s ease;
@@ -134,31 +134,31 @@
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--left {
     left: 0;
     cursor: w-resize;
-    border-left: 2px solid rgba(255, 255, 255, 0.5);
+    border-left: 2px solid transparent;
     border-radius: 2px 0 0 2px;
 }
 
-.tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--left:hover {
-    border-left-color: var(--tm-bg-surface);
+.tm-scheduler-timeline-event:hover .tm-scheduler-event-resize-handle--left {
+    border-left-color: color-mix(in srgb, var(--tm-bg-surface) 60%, transparent);
 }
 
 /* Right resize handle (end time) */
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--right {
     right: 0;
     cursor: e-resize;
-    border-right: 2px solid rgba(255, 255, 255, 0.5);
+    border-right: 2px solid transparent;
     border-radius: 0 2px 2px 0;
 }
 
-.tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--right:hover {
-    border-right-color: var(--tm-bg-surface);
+.tm-scheduler-timeline-event:hover .tm-scheduler-event-resize-handle--right {
+    border-right-color: color-mix(in srgb, var(--tm-bg-surface) 60%, transparent);
 }
 
 /* Drop target highlighting */
 .tm-scheduler-timeline-row-body--drop-target {
-    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 10%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
 }
 
 .tm-scheduler-timeline-slot--drop-target {
-    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 20%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 20%, transparent);
 }

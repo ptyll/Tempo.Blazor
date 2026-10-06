@@ -135,17 +135,17 @@ internal static class ScopedCssOwnership
 
             void Judge(string item)
             {
-            var key = KeyCompound(item);
-            foreach (Match match in ClassName.Matches(key))
-            {
-                var className = match.Groups[1].Value;
-                if (ownerClasses.Contains(className) || !renderedElsewhere.Contains(className))
+                var key = KeyCompound(item);
+                foreach (Match match in ClassName.Matches(key))
                 {
-                    continue;
-                }
+                    var className = match.Groups[1].Value;
+                    if (ownerClasses.Contains(className) || !renderedElsewhere.Contains(className))
+                    {
+                        continue;
+                    }
 
-                findings.Add(new ForeignClass(className, item.Trim()));
-            }
+                    findings.Add(new ForeignClass(className, item.Trim()));
+                }
             }
         }
 

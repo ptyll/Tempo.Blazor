@@ -160,7 +160,6 @@
   --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);
   --tm-shadow-popover:         var(--tm-shadow-lg);
-  --tm-touch-target:           2.75rem;
   --tm-focus-ring:             0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-primary);
   /* gray-400 is inverted to #94a3b8 here, which holds 5.7:1 on the dark surface. */
   --tm-border-color-strong:    var(--tm-color-gray-400);
@@ -188,5 +187,48 @@
   --tm-priority-high:          #fb923c;
   --tm-priority-highest:       var(--tm-color-danger);
 
+  /* Same expression as tokens.css, repeated so it recomputes in a nested dark region.
+     -600 is the step white text clears 3:1 on; the dark primary step (-400) does not. */
+  --tm-scheduler-event-bg:     var(--tm-color-primary-600);
   --tm-scheduler-event-fg:     var(--tm-color-white);
+
+  /* ── Aliases that read a theme-dependent token ──────────────── */
+  /* Each one is the SAME expression tokens.css declares on :root, repeated here for the
+     reason documented above: a custom property substitutes its var() where it is declared,
+     so an alias declared only on :root computes with the light value and the dark region
+     inherits that finished colour. These are exactly the aliases whose var() chain reaches a
+     token this file or theme-indigo.css re-declares. TokenContrastTests pins the closure, so
+     a new alias of that shape fails until it is added here. */
+  --tm-bg-elevated:                var(--tm-color-surface-elevated);
+  --tm-bg-primary:                 var(--tm-bg-surface);
+  --tm-bg-tertiary:                var(--tm-bg-muted);
+  --tm-border-color-focus:         var(--tm-color-primary);
+  --tm-border-default:             var(--tm-border-color);
+  --tm-border-hover:               var(--tm-color-gray-300);
+  --tm-color-bg:                   var(--tm-bg-surface);
+  --tm-color-danger-soft:          var(--tm-color-danger-subtle);
+  --tm-color-error:                var(--tm-color-danger);
+  --tm-color-neutral-900:          var(--tm-color-gray-900);
+  --tm-color-primary-active:       var(--tm-color-primary-800);
+  --tm-color-primary-bg:           var(--tm-color-primary);
+  --tm-color-primary-bg-subtle:    var(--tm-color-primary-subtle);
+  --tm-color-primary-light:        var(--tm-color-primary-300);
+  --tm-color-primary-lighter:      var(--tm-color-primary-100);
+  --tm-color-primary-soft:         var(--tm-color-primary-subtle);
+  --tm-color-success-soft:         var(--tm-color-success-subtle);
+  --tm-color-surface-muted:        var(--tm-bg-muted);
+  --tm-color-surface-secondary:    var(--tm-bg-surface-secondary);
+  --tm-color-surface-subtle:       var(--tm-color-gray-50);
+  --tm-color-text-disabled:        var(--tm-text-disabled);
+  --tm-color-text-secondary:       var(--tm-text-secondary);
+  --tm-color-text-subtle:          var(--tm-text-tertiary);
+  --tm-color-warning-bg-subtle:    var(--tm-color-warning-subtle);
+  --tm-color-warning-soft:         var(--tm-color-warning-subtle);
+  --tm-shadow-focus-danger:        0 0 0 3px rgb(from var(--tm-color-danger) r g b / 0.3);
+  --tm-surface:                    var(--tm-bg-surface);
+  --tm-surface-100:                var(--tm-color-gray-100);
+  --tm-surface-200:                var(--tm-color-gray-200);
+  --tm-surface-secondary:          var(--tm-bg-surface-secondary);
+  --tm-text-link:                  var(--tm-color-primary);
+  --tm-text-muted:                 var(--tm-text-secondary);
 }

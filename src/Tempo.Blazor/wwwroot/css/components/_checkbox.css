@@ -90,7 +90,7 @@
   background-color: var(--tm-control-hover-fill, var(--tm-bg-surface));
 }
 .tm-checkbox-input:focus-visible ~ .tm-checkbox-custom {
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 /* Both glyphs sit on the primary fill, so both take the shared control-glyph token; the dark theme
    flips it once in tokens-dark.css (which covers [data-theme="dark"] AND .tm-dark) instead of every

@@ -4,12 +4,12 @@
 
 <div role="group" aria-label="@Label" data-testid="color-theme-switch" class="inline-flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
     <button @onclick="() => ApplyAsync(ColorThemeState.Default)"
-            aria-pressed="@(_theme == ColorThemeState.Default)"
+            aria-pressed="@(_theme == ColorThemeState.Default ? "true" : "false")"
             class="px-2 py-1 text-xs font-medium transition-colors @(_theme == ColorThemeState.Default ? "bg-primary-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800")">
         @BlueLabel
     </button>
     <button @onclick="() => ApplyAsync(ColorThemeState.Indigo)"
-            aria-pressed="@(_theme == ColorThemeState.Indigo)"
+            aria-pressed="@(_theme == ColorThemeState.Indigo ? "true" : "false")"
             class="px-2 py-1 text-xs font-medium transition-colors @(_theme == ColorThemeState.Indigo ? "bg-primary-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800")">
         @IndigoLabel
     </button>

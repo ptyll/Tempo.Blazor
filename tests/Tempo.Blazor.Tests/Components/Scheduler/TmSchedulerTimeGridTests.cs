@@ -216,4 +216,22 @@ public class TmSchedulerTimeGridTests : LocalizationTestBase
         var eventEl = cut.Find(".tm-scheduler-timegrid-event");
         eventEl.GetAttribute("style").Should().Contain("--event-color: #ff5722");
     }
+
+    [Fact]
+    public void Colourless_Event_CarriesNoInlineFallback()
+    {
+        var events = new List<TmScheduleEvent>
+        {
+            Evt("Plain", new DateTime(2025, 6, 10, 9, 0, 0), new DateTime(2025, 6, 10, 10, 0, 0))
+        };
+
+        var cut = Render<TmSchedulerTimeGrid>(p => p
+            .Add(c => c.Dates, [new DateOnly(2025, 6, 10)])
+            .Add(c => c.Events, events));
+
+        var style = cut.Find(".tm-scheduler-timegrid-event").GetAttribute("style") ?? "";
+        style.Should().NotContain("--event-color",
+            "an event without a colour takes the theme's event fill from CSS, not an inline fallback");
+        style.Should().NotContain("#3b82f6");
+    }
 }

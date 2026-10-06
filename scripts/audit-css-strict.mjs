@@ -18,14 +18,106 @@ import { collectCssFiles, collectRuntimeSourceFiles, findRepoRoot, parseDefiniti
 const BASELINE_FILE = 'scripts/css-token-baseline.json';
 
 const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|(?<![\w-])(?:white|black)(?![\w-])/g;
-const WHITE_COLOR = /(?:#fff\b|#ffffff\b|\bwhite\b|var\(\s*--tm-color-white\s*\))/i;
+const NAMED_COLOUR = /^(?:white|black)$/i;
+const WHITE_COLOR = /(?<![\w-])(?:#fff|#ffffff|white)(?![\w-])|var\(\s*--tm-color-white\s*\)/i;
 const COMPONENT_DARK = /\[data-theme\s*=\s*["']dark["']\]|\.tm-dark\b/g;
+// A primary fill is a solid primary step. A wash (color-mix, -subtle, -50) is not white-on-primary.
+const PRIMARY_FILL = /var\(\s*--tm-color-primary(?:-hover|-active|-[5-9]00)?\s*[,)]/i;
 
 /**
  * A custom-property definition that is a data palette entry — a literal there is a data
  * value, not drift. Matches `--tm-<name>-(palette|option|role|annotation|category)-<name>:`.
  */
-const DATA_PALETTE_DEFINITION = /^\s*--tm-[a-z0-9-]+-(palette|option|role|annotation|category)-[a-z0-9-]+\s*:/i;
+// A data palette entry may hold a literal. option/role entries are palettes too, but a state or
+// part suffix (-hover, -bg, …) is a component token wearing a palette-shaped name, not data.
+const DATA_PALETTE_DEFINITION = /^\s*--tm-[a-z0-9-]+-(palette|option|role|annotation|category)-[a-z0-9-]+(?<!-(?:hover|active|selected|focus|disabled|bg|fg|text|border))\s*:/i;
+
+/** The declarations of a rule body, property lower-cased and trimmed. */
+function declarations(body) {
+  return body.split(';').flatMap(part => {
+    const separator = part.indexOf(':');
+    if (separator < 0) {
+      return [];
+    }
+    return [{ property: part.slice(0, separator).trim().toLowerCase(), value: part.slice(separator + 1) }];
+  });
+}
+
+/**
+ * Colour literals on a line that count as drift. A named colour inside an attribute selector or a
+ * quoted string is a selector, not a colour — `rect[fill="white"]` is not a literal.
+ */
+function colourLiterals(line) {
+  return [...line.matchAll(COLOR_LITERAL)].filter(match =>
+    !(NAMED_COLOUR.test(match[0]) && insideSelectorOrQuote(line, match.index)));
+}
+
+function insideSelectorOrQuote(line, index) {
+  let brackets = 0;
+  let quote = null;
+  for (let i = 0; i < index; i++) {
+    const ch = line[i];
+    if (quote) {
+      if (ch === quote && line[i - 1] !== '\\') {
+        quote = null;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === '[') {
+      brackets++;
+    } else if (ch === ']') {
+      brackets = Math.max(0, brackets - 1);
+    }
+  }
+  return brackets > 0 || quote !== null;
+}
+
+/**
+ * Tokens a .cs/.razor/.js file actually sets at runtime. Only a setProperty('--tm-x') call or a
+ * `--tm-x:` declaration inside a string literal counts — a mention in a comment or a doc is not a
+ * definition, and counting it hid undefined tokens.
+ */
+export function runtimeTokenDefinitions(source) {
+  const stripped = source
+    .replace(/\/\*[\s\S]*?\*\//g, match => match.replace(/[^\n]/g, ' '))
+    .replace(/@\*[\s\S]*?\*@/g, match => match.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:"'`])\/\/[^\n]*/g, '$1');
+
+  const definitions = new Set();
+  for (const match of stripped.matchAll(/setProperty\(\s*['"](--tm-[a-zA-Z0-9-]+)['"]/g)) {
+    definitions.add(match[1]);
+  }
+
+  let quote = null;
+  for (let i = 0; i < stripped.length; i++) {
+    const ch = stripped[i];
+    if (quote) {
+      if (ch === '\\') {
+        i++;
+        continue;
+      }
+      if (ch === quote) {
+        quote = null;
+        continue;
+      }
+      if (ch === '-' && stripped[i + 1] === '-') {
+        const token = /^--tm-[a-zA-Z0-9-]+/.exec(stripped.slice(i));
+        if (token && stripped[i + token[0].length] === ':') {
+          definitions.add(token[0]);
+        }
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch;
+    }
+  }
+  return definitions;
+}
 
 /** A token or theme stylesheet is allowed to contain colour literals — they are definitions. */
 export function isAllowlisted(relativePath) {
@@ -61,22 +153,24 @@ export function auditCssStrict(files) {
 
     const lines = stripped.split('\n');
     lines.forEach((line, index) => {
-      if (COLOR_LITERAL.test(line) && !DATA_PALETTE_DEFINITION.test(line)) {
+      if (colourLiterals(line).length > 0 && !DATA_PALETTE_DEFINITION.test(line)) {
         violations.push({ kind: 'color-literal', file, line: index + 1, text: line.trim() });
       }
-      COLOR_LITERAL.lastIndex = 0;
       if (COMPONENT_DARK.test(line)) {
         violations.push({ kind: 'component-dark', file, line: index + 1, text: line.trim() });
       }
       COMPONENT_DARK.lastIndex = 0;
     });
 
-    // White on a primary fill is judged per rule, not per line: the fill and the colour are
-    // usually on different lines of the same block.
+    // White on a primary fill is judged per declaration, not per block of text: `color` must be
+    // the property itself (white-space or border-color do not qualify) and the fill must be a
+    // solid primary step (a wash does not).
     for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const body = match[2];
-      const paintsPrimary = /background(-color)?\s*:[^;]*primary/i.test(body);
-      const paintsWhite = WHITE_COLOR.test(body) && /color\s*:/.test(body);
+      const declared = declarations(match[2]);
+      const paintsPrimary = declared.some(declaration =>
+        /^background(-color)?$/.test(declaration.property) && PRIMARY_FILL.test(declaration.value));
+      const paintsWhite = declared.some(declaration =>
+        declaration.property === 'color' && WHITE_COLOR.test(declaration.value));
       if (paintsPrimary && paintsWhite) {
         const line = stripped.slice(0, match.index).split('\n').length;
         violations.push({ kind: 'white-on-primary', file, line, text: match[1].trim() });
@@ -104,7 +198,7 @@ export function auditRepository(repoRoot) {
   // every hex in a .js or .cs file.
   const runtimeDefinitions = new Set();
   for (const file of collectRuntimeSourceFiles(repoRoot)) {
-    for (const definition of parseDefinitions(readFileSync(file, 'utf8'))) {
+    for (const definition of runtimeTokenDefinitions(readFileSync(file, 'utf8'))) {
       runtimeDefinitions.add(definition);
     }
   }

@@ -2,7 +2,7 @@
 .tm-scheduler {
     display: flex;
     flex-direction: column;
-    background: var(--tm-bg-surface, #fff);
+    background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color, #e2e8f0);
     border-radius: var(--tm-radius-lg, 0.5rem);
     overflow: hidden;
@@ -39,7 +39,7 @@
     padding: 0 var(--tm-space-2, 0.5rem);
     border: 1px solid var(--tm-border-color, #e2e8f0);
     border-radius: var(--tm-radius-sm, 0.25rem);
-    background: var(--tm-bg-surface, #fff);
+    background: var(--tm-bg-surface);
     color: var(--tm-text-primary, #0f172a);
     font-size: var(--tm-font-size-sm, 0.875rem);
     cursor: pointer;
@@ -48,7 +48,7 @@
 
 .tm-scheduler-toolbar-nav-btn:hover {
     background: var(--tm-color-surface-hover, #f1f5f9);
-    border-color: var(--tm-color-primary, #3b82f6);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-scheduler-toolbar-today-btn {
@@ -78,7 +78,7 @@
     padding: var(--tm-space-1, 0.25rem) var(--tm-space-3, 0.75rem);
     border: none;
     border-right: 1px solid var(--tm-border-color, #e2e8f0);
-    background: var(--tm-bg-surface, #fff);
+    background: var(--tm-bg-surface);
     color: var(--tm-text-secondary, #475569);
     font-size: var(--tm-font-size-xs, 0.75rem);
     font-weight: var(--tm-font-weight-medium, 500);
