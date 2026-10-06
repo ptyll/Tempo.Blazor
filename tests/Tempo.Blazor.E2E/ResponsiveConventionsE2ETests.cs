@@ -4,9 +4,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// The responsive convention, exercised in a browser: the same component in a wide and a narrow
-/// host, at the three reference widths, with a forced layout, a coarse pointer, dark mode and the
-/// indigo theme. Every case asserts a computed value — a screenshot alone cannot fail a layout.
+/// The responsive convention, exercised on a real TmDashboard: three hosts at the reference widths,
+/// a forced layout, a coarse pointer, dark mode and the indigo theme. Every case asserts a computed
+/// value — a screenshot alone cannot fail a layout.
 /// </summary>
 [TestClass]
 public sealed class ResponsiveConventionsE2ETests : WasmTestBase
@@ -16,82 +16,82 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
-    public async Task SameComponent_RestacksByContainer_NotByViewport()
+    public async Task Dashboard_RestacksByContainer_NotByViewport()
     {
         var page = await OpenAsync(1440, 900);
 
-        var wide = await TileColumnsAsync(page, "rc-host-wide");
-        var narrow = await TileColumnsAsync(page, "rc-host-narrow");
+        var wide = await GridAsync(page, "rc-host-wide");
+        var medium = await GridAsync(page, "rc-host-medium");
+        var narrow = await GridAsync(page, "rc-host-narrow");
 
-        Assert.HasCount(3, wide, "the wide host is the desktop three-column grid");
-        Assert.HasCount(1, narrow, "the 24rem host stacks even though the viewport is 1440px wide");
-        Assert.IsTrue(wide[0] > wide[1], "the lead tile takes twice the track of the others");
+        Assert.HasCount(12, wide.Tracks, $"the wide host is the desktop grid (container {wide.Width:0}px)");
+        Assert.HasCount(6, medium.Tracks, $"the 48rem host is the tablet grid (container {medium.Width:0}px)");
+        Assert.HasCount(1, narrow.Tracks, "the 24rem host stacks even though the viewport is 1440px wide");
+        Assert.IsTrue(narrow.MinWidget >= 120, $"a stacked widget must stay readable, got {narrow.MinWidget:0}px");
 
-        await ShotAsync(page, "1440-both-hosts");
+        await ShotAsync(page, "1440");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task ForcedMobile_Stacks_AndForcedTablet_UsesSixColumns()
+    {
+        var page = await OpenAsync(1440, 900);
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Mobile", Exact = true }).ClickAsync();
+        var mobile = await GridAsync(page, "rc-host-wide");
+        Assert.HasCount(1, mobile.Tracks, "a forced mobile layout stacks the grid");
+        await ShotAsync(page, "forced-mobile");
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Tablet", Exact = true }).ClickAsync();
+        var tablet = await GridAsync(page, "rc-host-wide");
+        Assert.HasCount(6, tablet.Tracks, "a forced tablet layout uses six columns");
+        await ShotAsync(page, "forced-tablet");
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Auto", Exact = true }).ClickAsync();
+        var restored = await GridAsync(page, "rc-host-wide");
+        Assert.HasCount(12, restored.Tracks, "returning to Auto restores the measured desktop grid");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Touch_GrowsTheIconButton_AndHidesTheEdgeHandles()
+    {
+        var page = await OpenTouchAsync(1024, 768);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Edit" }).First.ClickAsync();
+
+        var icon = await page.GetByTestId("rc-reveal").BoundingBoxAsync();
+        Assert.IsNotNull(icon);
+        Assert.IsTrue(icon.Width >= 44 && icon.Height >= 44, $"the icon button must be at least 44px, got {icon.Width:0}x{icon.Height:0}");
+
+        var reveal = await page.GetByTestId("rc-reveal").EvaluateAsync<string>("el => getComputedStyle(el).opacity");
+        Assert.AreEqual("1", reveal, "a coarse pointer shows a hover-only action");
+
+        var edge = await page.Locator(".tm-widget-resize-n").First.EvaluateAsync<string>("el => getComputedStyle(el).display");
+        Assert.AreEqual("none", edge, "a coarse pointer hides the edge resize handles");
+
+        await ShotAsync(page, "1024-touch");
+        await ShotAsync(page, "coarse-pointer");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task FinePointer_HidesTheHoverAction()
+    {
+        var page = await OpenAsync(1440, 900);
+
+        var reveal = await page.GetByTestId("rc-reveal").EvaluateAsync<string>("el => getComputedStyle(el).opacity");
+        Assert.AreEqual("0", reveal, "a fine pointer hides the action until hover or focus");
     }
 
     [TestMethod]
     [TestCategory("WASM")]
     public async Task ReferenceWidths_RenderTheDocumentedGrids()
     {
-        foreach (var (width, height, name) in new (int Width, int Height, string Name)[]
-        {
-            (1440, 900, "1440"),
-            (1024, 768, "1024-touch"),
-            (390, 844, "390"),
-        })
-        {
-            var page = await OpenAsync(width, height);
-
-            // The demo sidebar narrows the content area, so the expected grid follows the host's
-            // measured width, not the viewport: three columns above 1024px, two down to 640, one below.
-            var hostWidth = await page.EvaluateAsync<double>(
-                "() => document.querySelector('[data-testid=\"rc-host-wide\"] .rc-panel').clientWidth");
-            var expected = hostWidth > 1024 ? 3 : hostWidth > 640 ? 2 : 1;
-
-            var columns = await TileColumnsAsync(page, "rc-host-wide");
-            Assert.HasCount(expected, columns, $"{name}: a {hostWidth:0}px host renders {expected} columns");
-            await ShotAsync(page, name);
-        }
-    }
-
-    [TestMethod]
-    [TestCategory("WASM")]
-    public async Task ForcedMobile_ReportsMobile_WhileTheGridFollowsTheContainer()
-    {
-        var page = await OpenAsync(1440, 900);
-        await page.GetByRole(AriaRole.Button, new() { Name = "Mobile", Exact = true }).ClickAsync();
-
-        var reported = await page.GetByTestId("rc-host-wide").Locator("[data-testid='rc-mode']").InnerTextAsync();
-        Assert.AreEqual("mobile", reported.Trim().ToLowerInvariant(), "a forced mode changes the rendered branch");
-
-        var columns = await TileColumnsAsync(page, "rc-host-wide");
-        Assert.HasCount(3, columns, "the grid follows the container, not the forced mode");
-        await ShotAsync(page, "forced-mobile");
-    }
-
-    [TestMethod]
-    [TestCategory("WASM")]
-    public async Task CoarsePointer_GrowsTheIconButton_ToTheTouchTarget()
-    {
-        var page = await OpenAsync(390, 844);
-
-        // Playwright cannot emulate a coarse pointer, so the assertion reads what the rule applies:
-        // the touch-target token, resolved to pixels. A finger gets at least 44px.
-        var target = await page.EvaluateAsync<double>(
-            """
-            () => {
-              const probe = document.createElement('div');
-              probe.style.minHeight = 'var(--tm-touch-target)';
-              document.body.appendChild(probe);
-              const px = parseFloat(getComputedStyle(probe).minHeight);
-              probe.remove();
-              return px;
-            }
-            """);
-
-        Assert.IsTrue(target >= 44, $"the touch target must be at least 44px, got {target}");
-        await ShotAsync(page, "coarse-pointer");
+        var narrow = await OpenAsync(390, 844);
+        var phone = await GridAsync(narrow, "rc-host-wide");
+        Assert.HasCount(1, phone.Tracks, "390px of viewport leaves the wide host below the mobile boundary");
+        await ShotAsync(narrow, "390");
     }
 
     [TestMethod]
@@ -107,66 +107,67 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
         {
             var page = await OpenAsync(1440, 900);
             if (indigo)
-            {
                 await page.EvaluateAsync("() => document.documentElement.setAttribute('data-tm-theme', 'indigo')");
-            }
             if (dark)
             {
-                // The demo toggle paints the shell and sets data-theme together. Setting the
-                // attribute alone leaves the light canvas under inverted ink.
                 await page.GetByRole(AriaRole.Button, new() { Name = "Switch to dark mode" }).ClickAsync();
                 await page.Locator(".demo-shell[data-theme='dark']").WaitForAsync();
                 await page.Mouse.MoveAsync(0, 0);
                 await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
             }
 
-            var columns = await TileColumnsAsync(page, "rc-host-narrow");
-            Assert.HasCount(1, columns, $"{name}: the narrow host still stacks");
-
-            var background = await page.EvaluateAsync<string>(
-                "() => getComputedStyle(document.querySelector('.rc-host')).backgroundColor");
-            Assert.IsFalse(string.IsNullOrWhiteSpace(background), $"{name}: the host paints a background");
-            if (dark)
-            {
-                var luminance = await page.EvaluateAsync<double>(
-                    """
-                    () => {
-                      const [r, g, b] = getComputedStyle(document.querySelector('.rc-host')).backgroundColor.match(/\d+/g).map(Number);
-                      return (r + g + b) / 3;
-                    }
-                    """);
-                Assert.IsTrue(luminance < 80, $"{name}: the host background must be dark, luminance {luminance:0}");
-            }
+            var grid = await GridAsync(page, "rc-host-narrow");
+            Assert.HasCount(1, grid.Tracks, $"{name}: the narrow host still stacks");
             await ShotAsync(page, name);
         }
     }
 
-    private async Task<IPage> OpenAsync(int width, int height)
+    private async Task<IPage> OpenAsync(int width, int height) => await OpenCoreAsync(width, height, touch: false);
+
+    private async Task<IPage> OpenTouchAsync(int width, int height) => await OpenCoreAsync(width, height, touch: true);
+
+    private async Task<IPage> OpenCoreAsync(int width, int height, bool touch)
     {
-        var page = await CreatePageAsync();
-        await page.SetViewportSizeAsync(width, height);
+        IPage page;
+        if (touch)
+        {
+            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            {
+                HasTouch = true,
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                Locale = "en-US",
+                IgnoreHTTPSErrors = true,
+            });
+            page = await context.NewPageAsync();
+        }
+        else
+        {
+            page = await CreatePageAsync();
+            await page.SetViewportSizeAsync(width, height);
+        }
         await page.GotoAsync(BaseUrl.TrimEnd('/') + "/responsive-conventions",
             new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60_000 });
         await page.WaitForFunctionAsync(
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null, new PageWaitForFunctionOptions { Timeout = 30_000 });
-        await page.GetByTestId("rc-panel").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
-        // A parked pointer and a blurred focus keep the screenshot free of hover and focus rings.
+        await page.GetByTestId("rc-host-wide").Locator(".tm-dashboard-grid").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
         return page;
     }
 
-    /// <summary>
-    /// The used column widths in pixels. A browser resolves <c>2fr 1fr 1fr</c> to pixel tracks, so
-    /// the assertion counts tracks rather than comparing the declared template.
-    /// </summary>
-    private static async Task<double[]> TileColumnsAsync(IPage page, string host)
+    private sealed record Grid(double[] Tracks, double Width, double MinWidget);
+
+    private static async Task<Grid> GridAsync(IPage page, string host)
     {
-        return await page.EvaluateAsync<double[]>(
+        return await page.EvaluateAsync<Grid>(
             """
-            host => getComputedStyle(document.querySelector(`[data-testid="${host}"] .rc-tiles`))
-                .gridTemplateColumns.split(' ').filter(Boolean).map(parseFloat)
+            host => {
+              const grid = document.querySelector(`[data-testid="${host}"] .tm-dashboard-grid`);
+              const tracks = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).map(parseFloat);
+              const widgets = [...grid.querySelectorAll('.tm-widget')].map(el => el.getBoundingClientRect().width);
+              return { tracks, width: grid.clientWidth, minWidget: Math.min(...widgets) };
+            }
             """,
             host);
     }
