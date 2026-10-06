@@ -229,14 +229,14 @@ public class TmDashboardTests : LocalizationTestBase
         css.Should().NotContain("560px",
             "560 is not a TmBreakpoints value; the single-column rule is the 640px container query");
         css.Should().MatchRegex(
-            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*640px\s*\)[\s\S]*?grid-template-columns:\s*1fr",
-            "below 640px of container the grid is one column");
+            @"\[data-layout=.mobile.\]\s+\.tm-dashboard-grid\s*\{[^}]*grid-template-columns:\s*1fr",
+            "the mobile branch is one column");
         css.Should().MatchRegex(
-            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*1024px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*6\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
-            "below 1024px of container the grid is six columns");
+            @"\[data-layout=.tablet.\]\s+\.tm-dashboard-grid\s*\{[^}]*grid-template-columns:\s*repeat\(\s*6\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
+            "the tablet branch is six columns");
         css.Should().MatchRegex(
-            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*768px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*2\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
-            "below 768px of container the grid is two columns");
+            @"@container\s+tm-dashboard\s*\(\s*width\s*<\s*768px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*2\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
+            "inside tablet, below 768px of container the grid is two columns");
     }
 
     [Fact]
@@ -278,7 +278,8 @@ public class TmDashboardTests : LocalizationTestBase
         narrow.ClassList.Should().NotContain("tm-widget--wide");
         wide.GetAttribute("style").Should().Contain("--tm-w-span-md: 6",
             "wider than half the desktop grid, so it takes the whole tablet row");
-        narrow.GetAttribute("style").Should().Contain("--tm-w-span-md: 2");
+        narrow.GetAttribute("style").Should().Contain("--tm-w-span-md: 3",
+            "four of twelve columns is wider than a quarter, so it takes half a tablet row");
     }
 
     [Fact]

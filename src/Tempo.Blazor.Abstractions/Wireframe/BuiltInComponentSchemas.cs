@@ -170,6 +170,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmCommandPalette"] = ["command-palette", "search-input"],
             ["TmKeyboardShortcutsHelp"] = ["keyboard-shortcuts"],
             ["TmStackLayout"] = ["section"],
+            ["TmLayoutObserver"] = ["layout-observer"],
             ["TmSplitter"] = ["section"],
             ["TmDockManager"] = ["dashboard", "section"],
             ["TmToolbar"] = ["toolbar"],
@@ -1522,6 +1523,18 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Type = "TmKeyboardShortcutsHelp", Category = "Layout", DisplayName = "Keyboard Shortcuts",
             DefaultWidth = 360, DefaultHeight = 280,
             Props = [P("shortcuts", "Shortcuts", PropType.StringList, cat: "Content")]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmLayoutObserver", Category = "Layout", DisplayName = "Layout Observer",
+            DefaultWidth = 320, DefaultHeight = 180,
+            Props =
+            [
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
+                P("isContainer", "Is Container", PropType.Bool, true, cat: "Behavior"),
+            ]
         };
 
         yield return new WireframeComponentSchema

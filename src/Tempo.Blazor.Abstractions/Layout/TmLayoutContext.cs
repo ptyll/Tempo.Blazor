@@ -8,6 +8,12 @@ namespace Tempo.Blazor.Abstractions.Layout;
 /// <param name="Resolved">The mode actually rendered. Never <see cref="TmLayoutMode.Auto"/>.</param>
 public sealed record TmLayoutContext(TmLayoutMode Mode, TmLayoutMode Resolved)
 {
+    /// <summary>A resolved layout is desktop, tablet or mobile. Auto means "not resolved yet".</summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="Resolved"/> is <see cref="TmLayoutMode.Auto"/>.</exception>
+    public TmLayoutMode Resolved { get; init; } = Resolved == TmLayoutMode.Auto
+        ? throw new ArgumentException("A resolved layout is desktop, tablet or mobile.", nameof(Resolved))
+        : Resolved;
+
     /// <summary>The BEM modifier for <see cref="Resolved"/>: <c>desktop</c>, <c>tablet</c> or <c>mobile</c>.</summary>
     public string CssModifier => Resolved switch
     {

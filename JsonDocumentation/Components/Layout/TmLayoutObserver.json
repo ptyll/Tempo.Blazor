@@ -2,7 +2,7 @@
   "itemName": "TmLayoutObserver",
   "kind": "Component",
   "category": "Layout",
-  "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, so a host or a test can render a layout without a DOM. The root carries tm-layout, tm-layout--{mode} and data-layout.",
+  "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, and neither does Auto under a forced ancestor. The root carries tm-layout, tm-layout--{mode} and data-layout, which Blazor renders — the script never writes them.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout"
   ],
@@ -12,7 +12,7 @@
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Auto",
-      "description": "Auto measures the root. Desktop, Tablet or Mobile force that layout and skip the observer."
+      "description": "Auto measures the root unless a forced ancestor has decided. Desktop, Tablet or Mobile force that layout and skip the observer."
     },
     {
       "name": "LayoutModeChanged",
@@ -22,9 +22,9 @@
     },
     {
       "name": "ChildContent",
-      "type": "RenderFragment?",
+      "type": "RenderFragment<TmLayoutContext>?",
       "isRequired": false,
-      "description": "Content rendered inside the observed container. Reads the cascaded TmLayoutContext."
+      "description": "Content rendered inside the observed container. The context argument is the resolved layout, so Context=\"layout\" works; plain child content keeps working."
     },
     {
       "name": "Class",
@@ -37,18 +37,33 @@
       "type": "string?",
       "isRequired": false,
       "description": "Inline style appended to the root."
+    },
+    {
+      "name": "IsContainer",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When false the root does not establish a containment context. Shrink-to-fit hosts such as a popover pass false."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The mode rendered before the first measurement: static SSR, prerender and the first frame."
     }
   ],
   "cssClasses": [
     "tm-layout",
     "tm-layout--desktop",
     "tm-layout--tablet",
-    "tm-layout--mobile"
+    "tm-layout--mobile",
+    "tm-layout--shrink"
   ],
   "examples": [
     {
       "title": "Force the mobile layout",
-      "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <Child />\n</TmLayoutObserver>"
+      "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <MyPane />\n</TmLayoutObserver>"
     }
   ]
 }

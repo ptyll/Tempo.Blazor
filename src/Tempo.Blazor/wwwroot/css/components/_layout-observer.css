@@ -9,6 +9,12 @@
   container-name: tm-layout;
 }
 
+/* A shrink-to-fit host (a popover) must not establish a containment context. */
+.tm-layout.tm-layout--shrink {
+  container-type: normal;
+  container-name: none;
+}
+
 /* The resolved mode is also a class (tm-layout--mobile/tablet/desktop) and a data-layout
    attribute, so a child can branch in CSS without reading the cascaded context. */
 

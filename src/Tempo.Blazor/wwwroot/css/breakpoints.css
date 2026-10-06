@@ -28,7 +28,9 @@
   .tm-reveal-on-hover:hover,
   .tm-reveal-on-hover:focus-within,
   .tm-reveal-on-hover:focus-visible,
-  :focus-within > .tm-reveal-on-hover {
+  :focus-within > .tm-reveal-on-hover,
+  .tm-reveal-host:hover .tm-reveal-on-hover,
+  .tm-reveal-host:focus-within .tm-reveal-on-hover {
     opacity: 1;
   }
 }
@@ -38,11 +40,11 @@
    whatever padding the component already has. */
 
 .tm-safe-area-bottom {
-  padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-bottom, 0px));
 }
 
 .tm-safe-area-top {
-  padding-top: calc(var(--tm-space-2) + env(safe-area-inset-top));
+  padding-top: calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-top, 0px));
 }
 
 /* ── Coarse pointer ─────────────────────────────────────────────
@@ -51,7 +53,12 @@
 
 @media (pointer: coarse) {
   .tm-btn-icon,
-  .tm-touch-target {
+  .tm-modal-close,
+  .tm-toast-dismiss,
+  .tm-topbar-icon-btn,
+  .tm-command-palette-close,
+  .tm-lightbox-close,
+  .tm-keyboard-shortcuts-close {
     min-width: var(--tm-touch-target);
     min-height: var(--tm-touch-target);
   }
@@ -65,11 +72,11 @@
 
 /* ── Mobile-first responsive helpers ──────────────────────────── */
 
-@media (max-width: 640px) {
+@media (width < 640px) {
   .tm-hide-sm { display: none !important; }
 }
 
-@media (max-width: 768px) {
+@media (width < 768px) {
   .tm-hide-mobile { display: none !important; }
 
   /* Data table horizontal scroll */
@@ -83,37 +90,37 @@
   .tm-form-row { flex-direction: column; }
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .tm-hide-desktop { display: none !important; }
 }
 
-@media (min-width: 1024px) {
+@media (width >= 1024px) {
   .tm-hide-lg-up { display: none !important; }
 }
 
-@media (min-width: 1280px) {
+@media (width >= 1280px) {
   .tm-hide-xl-up { display: none !important; }
 }
 
 /* Container-query twins of the viewport helpers. A component that sets
    `container-type: inline-size; container-name: tm-layout` on its root can hide parts by its own
    width instead of the viewport. The widths are the TmBreakpoints literals. */
-@container tm-layout (max-width: 640px) {
+@container tm-layout (width < 640px) {
   .tm-hide-sm { display: none !important; }
 }
 
-@container tm-layout (max-width: 768px) {
+@container tm-layout (width < 768px) {
   .tm-hide-mobile { display: none !important; }
 }
 
-@container tm-layout (min-width: 768px) {
+@container tm-layout (width >= 768px) {
   .tm-hide-desktop { display: none !important; }
 }
 
-@container tm-layout (min-width: 1024px) {
+@container tm-layout (width >= 1024px) {
   .tm-hide-lg-up { display: none !important; }
 }
 
-@container tm-layout (min-width: 1280px) {
+@container tm-layout (width >= 1280px) {
   .tm-hide-xl-up { display: none !important; }
 }

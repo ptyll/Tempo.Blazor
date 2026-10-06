@@ -26,13 +26,24 @@ reads the stylesheets to prove they match.
 A new `@media` or `@container` condition uses one of these four widths. `TmBreakpointsTests`
 fails when `breakpoints.css` or `_dashboard.css` uses another.
 
-Write the boundary as the named width itself (`max-width: 640px`), not `639px`. The one pixel of
-overlap with the next range is the documented choice; it keeps the literal identical to the
-constant the test compares.
+Conditions are half-open, identical to `TmBreakpoints.Classify`: `@media (width < 768px)` and
+`@media (width >= 768px)`, never `max-width` or `min-width`. The boundary belongs to exactly one
+side, so nothing is hidden twice at 768.
+
+## Container query or `TmLayoutMode`
+
+| Question | Use |
+|----------|-----|
+| Must the rule agree with a markup branch, or define the structural layout? | `[data-layout=…]` on the component root. Blazor renders it from the resolved mode. |
+| Is it presentation that cannot conflict with markup, or a finer step inside one mode? | A container query. The dashboard's two-column step inside tablet is one. |
+
+A container query styles descendants of the container, never the container itself — put
+`container-type` on an ancestor of the elements you style. A query on `.tm-dashboard-grid` that
+restyles `.tm-dashboard-grid` matches nothing.
 
 ## Container queries
 
-A component that adapts sets both on its root:
+A component that adapts sets both on an ancestor of the elements the queries style:
 
 ```css
 .tm-example {
@@ -41,13 +52,13 @@ A component that adapts sets both on its root:
 }
 ```
 
-Rules then read `@container tm-example (max-width: 640px)`. The name is the component's, so two
+Rules then read `@container tm-example (width < 640px)`. The name is the component's, so two
 nested components do not steal each other's queries.
 
 `container-type: inline-size` removes the element's intrinsic inline size. Do not set it on a
 component whose parent sizes it with `fit-content`, `width: auto` inside a shrink-to-fit context,
-or `display: inline-block` — the element collapses to nothing. For those, gate the container on an
-opt-in class (the data table does this; see its own plan).
+or `display: inline-block` — the element collapses to nothing. `TmLayoutObserver` takes
+`IsContainer="false"` for those hosts. A data-table opt-in is not part of this convention yet.
 
 Placement that must change per container **cannot** be an inline `grid-column` or `grid-row`: an
 inline style beats every container query. Emit the placement as variables (`--tm-w-x`,
@@ -60,20 +71,44 @@ pane, swap a dialog for a sheet) uses the mode, because a container query cannot
 
 ```razor
 <TmLayoutObserver LayoutMode="LayoutMode" LayoutModeChanged="OnLayoutChanged">
-    <LayoutBranch />
+    <MyPane />
 </TmLayoutObserver>
+```
+
+```razor
+@* MyPane.razor *@
+@if (Layout?.IsMobile == true)
+{
+    <Sheet />
+}
+else
+{
+    <Pane />
+}
 
 @code {
     [CascadingParameter] private TmLayoutContext? Layout { get; set; }
 }
 ```
 
-`LayoutBranch` reads the cascaded `TmLayoutContext` and renders its mobile or desktop markup. The
-observer does not expose the context as a `RenderFragment` argument.
+`MyPane` reads the cascaded `TmLayoutContext`. An icon-only button is
+`<TmButton Class="tm-btn-icon" />`: the size modifier drives the square.
+
+Resolution order, in `TmLayout.Resolve`: an explicit (non-Auto) parameter, then a forced ancestor
+(a cascaded context whose `Mode` is not Auto), then this component's own measurement, then
+`InitialMode`. An Auto component under a forced ancestor adopts the ancestor's resolved mode and
+does not import the observer.
+
+The pre-measure mode — static SSR, prerender, and the first frame — is `InitialMode`, which
+defaults to Desktop. Desktop markup must degrade acceptably through the `data-layout` CSS, because
+that frame has no measurement yet.
+
+An overlay, sheet or dropdown must not measure its own root. It resolves from the trigger's
+cascaded context, and falls back to an app-level `<TmLayoutObserver>` in the host layout (the
+viewport) when the trigger cascaded nothing.
 
 - `LayoutMode="Auto"` measures the component root with `layout-observer.js` (`ResizeObserver`) and
-  calls .NET only when the resolved mode changes. The first frame, before a measurement, renders
-  `Desktop`.
+  calls .NET only when the resolved mode changes. The script never writes `data-layout`; Blazor does.
 - `LayoutMode="Mobile"`, `Tablet` or `Desktop` forces that layout and **never imports the
   observer**. A test renders a mode without a DOM, and a host can pin a layout.
 - Children read the cascaded `TmLayoutContext` (`Mode`, `Resolved`, `IsMobile`, `IsTablet`,
@@ -81,11 +116,12 @@ observer does not expose the context as a `RenderFragment` argument.
   can branch without the context.
 - `LayoutModeChanged` fires when the rendered mode changes. The initial value is not a change.
 
-`TmDashboard` is the pilot consumer. Its grid follows the container, not the viewport: 12 columns
-at desktop, six below 1024px, two below 768px, one below 640px. A widget wider than half the
-desktop grid spans the full row in the two-column layout. Its `LayoutMode` parameter reports the
-measured mode (or a forced one) on `data-layout`; it does not itself restack the grid, because the
-grid is CSS.
+`TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
+on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid
+becomes two columns. A widget wider than half the desktop grid spans the full tablet row. Forcing
+`LayoutMode` restacks the grid, because the grid reads `data-layout`. Drag and resize are desktop
+only. The placement variables (`--tm-w-x`, `--tm-w-span`, `--tm-w-span-md`, `--tm-w-y`,
+`--tm-w-rows`, `--tm-w-order`) are scoped to `TmDashboard`; another component does not read them.
 
 ## Touch
 

@@ -5,11 +5,11 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
-@* The root is the container. Children read the cascaded TmLayoutContext and branch in markup;
-   the modifier class and data-layout let CSS do the same without a .NET round-trip. *@
+@* The root is what this component measures. Blazor owns data-layout and the modifier class; the
+   observer script only reports a width. Children read the cascaded context. *@
 <div @ref="_root"
      id="@_id"
-     class="tm-layout tm-layout--@Context.CssModifier @Class"
+     class="tm-layout tm-layout--@Context.CssModifier @(IsContainer ? null : "tm-layout--shrink") @Class"
      data-layout="@Context.CssModifier"
      data-testid="@RootTestId("tm-layout")"
      style="@Style"
@@ -23,25 +23,33 @@
     private const string ModulePath = "./_content/Tempo.Blazor/js/layout-observer.js";
 
     private readonly string _id = $"tm-layout-{Guid.NewGuid():n}";
-    private readonly SemaphoreSlim _jsSync = new(1, 1);
     private ElementReference _root;
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmLayoutObserver>? _dotNetRef;
     private bool _observing;
     private bool _disposed;
-    private TmLayoutMode _rendered = TmLayoutMode.Desktop;
+    private TmLayoutMode? _measured;
+    private TmLayoutMode _resolved;
+    private bool _resolvedInitialised;
+    private TmLayoutContext? _context;
+
+    /// <summary>The layout cascaded by an ancestor observer, when this one is nested.</summary>
+    [CascadingParameter] public TmLayoutContext? Parent { get; set; }
 
     /// <summary>
-    /// The layout to render. <see cref="TmLayoutMode.Auto"/> measures this component's own root;
-    /// any other value forces that layout and never imports the observer, so a test can render a
-    /// mode without a DOM.
+    /// The layout to render. <see cref="TmLayoutMode.Auto"/> measures this component's own root
+    /// unless a forced ancestor has already decided; any other value forces that layout and never
+    /// imports the observer, so a test can render a mode without a DOM.
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Raised when the rendered layout changes. The initial value is not a change.</summary>
     [Parameter] public EventCallback<TmLayoutMode> LayoutModeChanged { get; set; }
 
-    /// <summary>Content rendered inside the observed container.</summary>
+    /// <summary>
+    /// Content rendered inside the observed container. The context argument is the layout this
+    /// observer has resolved, so <c>Context="layout"</c> works. Plain child content keeps working.
+    /// </summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     /// <summary>Extra CSS classes appended to the root.</summary>
@@ -50,58 +58,84 @@
     /// <summary>Inline style appended to the root. Use it to give the container a width in a demo.</summary>
     [Parameter] public string? Style { get; set; }
 
+    /// <summary>
+    /// Whether the root is a container. Shrink-to-fit hosts such as a popover pass false so the
+    /// root does not establish a containment context.
+    /// </summary>
+    [Parameter] public bool IsContainer { get; set; } = true;
+
+    /// <summary>
+    /// The mode rendered before the first measurement: static SSR, prerender, and the first frame.
+    /// A cascaded app-level context beats it; see <see cref="TmLayout.Resolve"/>.
+    /// </summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
     /// <summary>Unmatched attributes forwarded to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>The layout currently rendered. Never <see cref="TmLayoutMode.Auto"/>.</summary>
-    public TmLayoutMode Resolved => _rendered;
+    public TmLayoutMode Resolved => Context.Resolved;
 
-    private TmLayoutContext Context => new(LayoutMode, _rendered);
+    /// <summary>
+    /// The cascaded context. The same instance is reused until the mode or the resolved layout
+    /// changes, so a subscriber does not re-render on an unrelated render of this observer.
+    /// </summary>
+    private TmLayoutContext Context
+    {
+        get
+        {
+            var resolved = Current();
+            if (_context is null || _context.Mode != LayoutMode || _context.Resolved != resolved)
+                _context = new TmLayoutContext(LayoutMode, resolved);
+            return _context;
+        }
+    }
+
+    private TmLayoutMode Current() => TmLayout.Resolve(LayoutMode, Parent, _measured, InitialMode);
 
     protected override async Task OnParametersSetAsync()
     {
-        if (LayoutMode == TmLayoutMode.Auto) return;
-        if (LayoutMode == _rendered) return;
+        var resolved = Current();
+        if (!_resolvedInitialised)
+        {
+            _resolved = resolved;
+            _resolvedInitialised = true;
+            return;
+        }
 
-        var previous = _rendered;
-        _rendered = LayoutMode;
-        if (previous != _rendered)
-            await LayoutModeChanged.InvokeAsync(_rendered);
+        if (resolved == _resolved) return;
+
+        _resolved = resolved;
+        await LayoutModeChanged.InvokeAsync(resolved);
     }
+
+    /// <summary>True when this observer measures its own root. A forced mode, or Auto under a forced ancestor, does not.</summary>
+    private bool Measures => LayoutMode == TmLayoutMode.Auto && Parent is not { Mode: not TmLayoutMode.Auto };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (LayoutMode != TmLayoutMode.Auto || _observing || _disposed) return;
+        if (!Measures || _observing || _disposed) return;
 
-        await _jsSync.WaitAsync();
-        try
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+        // Dispose may have run while the import was awaiting. Release what it could not see.
+        if (_disposed)
         {
-            if (LayoutMode != TmLayoutMode.Auto || _observing || _disposed) return;
+            await ReleaseAsync();
+            return;
+        }
 
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-            // Dispose may have run while the import was awaiting. Release what it could not see.
-            if (_disposed)
-            {
-                ReleaseObserver();
-                return;
-            }
-            // A loose or substituted runtime (bUnit's default, a prerender) resolves the import to
-            // null. There is nothing to observe then, and nothing to leak on dispose.
-            if (_module is null) return;
-            _observing = true;
-            await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id);
-            if (_disposed) ReleaseObserver();
-        }
-        catch (JSDisconnectedException)
+        // A loose or substituted runtime (bUnit's default) resolves the import to null. There is
+        // nothing to observe then, and nothing to leak on dispose.
+        if (_module is null) return;
+
+        _observing = true;
+        await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, new
         {
-            // The circuit went away between render and attach; dispose owns the cleanup.
-        }
-        finally
-        {
-            _jsSync.Release();
-        }
+            breakpoints = new { sm = TmBreakpoints.Sm, md = TmBreakpoints.Md, lg = TmBreakpoints.Lg },
+        });
+        if (_disposed) await ReleaseAsync();
     }
 
     /// <summary>Called by layout-observer.js when the measured mode changes. An unchanged mode is ignored.</summary>
@@ -109,7 +143,7 @@
     [JSInvokable]
     public Task OnLayoutModeChanged(string mode)
     {
-        var resolved = mode switch
+        var measured = mode switch
         {
             "mobile" => TmLayoutMode.Mobile,
             "tablet" => TmLayoutMode.Tablet,
@@ -117,45 +151,61 @@
             _ => throw new ArgumentException($"'{mode}' is not a layout mode. Expected desktop, tablet or mobile.", nameof(mode)),
         };
 
-        if (LayoutMode != TmLayoutMode.Auto || resolved == _rendered) return Task.CompletedTask;
-
-        _rendered = resolved;
+        // The measurement is recorded even while a forced mode hides it, so returning to Auto
+        // restores the mode the container actually has.
         return InvokeAsync(async () =>
         {
+            _measured = measured;
+            var resolved = Current();
+            if (resolved == _resolved) return;
+
+            _resolved = resolved;
             await LayoutModeChanged.InvokeAsync(resolved);
             StateHasChanged();
         });
     }
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        if (_disposed) return ValueTask.CompletedTask;
+        if (_disposed) return;
         _disposed = true;
 
-        // Synchronous on purpose. Waiting for the attach lock deadlocks: that lock is held by the
-        // render that is itself waiting for this dispose to finish. When dispose wins that race the
-        // resumed render sees _disposed and releases the module it imported.
-        ReleaseObserver();
-        return ValueTask.CompletedTask;
-    }
-
-    private void ReleaseObserver()
-    {
-        if (_module is not null && _observing)
-        {
-            try { _ = _module.InvokeVoidAsync("disconnect", _id); }
-            catch (JSDisconnectedException) { }
-        }
-
+        var module = _module;
+        var observing = _observing;
+        _module = null;
+        _observing = false;
         _dotNetRef?.Dispose();
         _dotNetRef = null;
-        if (_module is not null)
+        if (module is null) return;
+
+        try
         {
-            try { _ = _module.DisposeAsync(); }
-            catch (JSDisconnectedException) { }
-            _module = null;
+            if (observing) await module.InvokeVoidAsync("disconnect", _id);
+            await module.DisposeAsync();
         }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
 
+    private async Task ReleaseAsync()
+    {
+        var module = _module;
+        var observing = _observing;
+        _module = null;
+        _observing = false;
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+        if (module is null) return;
+
+        try
+        {
+            if (observing) await module.InvokeVoidAsync("disconnect", _id);
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
 }

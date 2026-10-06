@@ -183,10 +183,10 @@
                     <div class="tm-widget-header"
                          @ondragstart="(e) => OnDragStart(e, widget)"
                          @ondragend="OnDragEnd"
-                         draggable="@(_isEditMode && IsDraggable(widget) ? "true" : "false")">
+                         draggable="@(_isEditMode && CanDrag(widget) ? "true" : "false")">
                         
                         <div class="tm-widget-header-left">
-                            @if (_isEditMode && IsDraggable(widget))
+                            @if (_isEditMode && CanDrag(widget))
                             {
                                 <span class="tm-widget-drag-handle" title="@Loc["TmDashboard_DragToMove"]">
                                     <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
@@ -226,7 +226,7 @@
                     }
                     
                     @* Resize Handles (edit mode only) ─────────────── *@
-                    @if (_isEditMode && IsResizable(widget))
+                    @if (_isEditMode && CanResize(widget))
                     {
                         <div class="tm-widget-resize-handle tm-widget-resize-se"
                              @onmousedown="@(e => OnResizeStart(e, widget, "se"))"></div>
@@ -329,22 +329,25 @@
     [Parameter] public RenderFragment<WidgetInstance>? WidgetTemplate { get; set; }
 
     /// <summary>
-    /// The layout reported on the root. <see cref="TmLayoutMode.Auto"/> measures the dashboard's own
-    /// width and writes <c>data-layout</c>; the grid itself restacks by container query regardless
-    /// of this value (12 columns, six below 1024px, two below 768px, one below 640px). A forced value never measures,
-    /// so a test can render a reported mode without a DOM.
+    /// The layout the dashboard renders. <see cref="TmLayoutMode.Auto"/> measures the dashboard's own
+    /// width; a forced value never measures, so a test can render a mode without a DOM. The grid
+    /// follows the resolved mode (12 columns on desktop, six on tablet, one on mobile), and the
+    /// two-column step inside tablet follows the container.
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Raised when the rendered layout changes. The initial value is not a change.</summary>
     [Parameter] public EventCallback<TmLayoutMode> LayoutModeChanged { get; set; }
 
-    private TmLayoutContext Layout { get; set; } = new(TmLayoutMode.Auto, TmLayoutMode.Desktop);
+    private TmLayoutMode? _measured;
+
+    /// <summary>The layout rendered now, derived from the parameter and the last measurement.</summary>
+    private TmLayoutContext Layout => new(LayoutMode, TmLayout.Resolve(LayoutMode, parent: null, _measured, TmLayoutMode.Desktop));
 
     private Task OnLayoutObservedAsync(TmLayoutMode mode)
     {
-        Layout = new TmLayoutContext(LayoutMode, mode);
-        return LayoutModeChanged.HasDelegate ? LayoutModeChanged.InvokeAsync(mode) : Task.CompletedTask;
+        _measured = mode;
+        return Task.CompletedTask;
     }
 
     [Inject] public IDashboardProvider? DashboardProvider { get; set; }
@@ -636,8 +639,26 @@
     {
         // Variables, not grid-column: an inline grid-column beats every @container rule, so the
         // container query in _dashboard.css is what turns these into 12, 2 or 1 column.
-        var order = WidgetOrder(widget);
-        return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {order}; z-index: {widget.ZIndex};";
+        var order = _order.TryGetValue(widget.InstanceId, out var known) ? known : WidgetOrder(widget);
+        // Tablet span: wider than half the desktop grid takes the whole row, wider than a quarter
+        // takes half, anything narrower takes a third. Two widgets then share a tablet row.
+        var spanMd = widget.Width > Columns / 2 ? 6 : widget.Width > Columns / 4 ? 3 : 2;
+        return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-span-md: {spanMd}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {order}; z-index: {widget.ZIndex};";
+    }
+
+    private Dictionary<string, int> _order = new(StringComparer.Ordinal);
+
+    protected override void OnParametersSet() => RebuildOrder();
+
+    /// <summary>1-based visual order, row then column, computed once per render.</summary>
+    private void RebuildOrder()
+    {
+        _order = _widgets
+            .OrderBy(item => item.Y)
+            .ThenBy(item => item.X)
+            .ThenBy(item => item.InstanceId, StringComparer.Ordinal)
+            .Select((item, index) => (item.InstanceId, index + 1))
+            .ToDictionary(item => item.InstanceId, item => item.Item2, StringComparer.Ordinal);
     }
 
     /// <summary>1-based visual order, row then column, so a stacked layout reads like the desktop.</summary>
@@ -661,11 +682,17 @@
     {
         return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsDraggable ?? true;
     }
+
+    /// <summary>Drag is a desktop gesture. Below desktop the grid has restacked and the coordinates no longer match.</summary>
+    private bool CanDrag(WidgetInstance widget) => IsDraggable(widget) && Layout.IsDesktop;
     
     private bool IsResizable(WidgetInstance widget)
     {
         return WidgetRegistry?.GetWidget(widget.WidgetId)?.IsResizable ?? true;
     }
+
+    /// <summary>Resize handles follow the desktop grid. Below desktop they would resize a track that is no longer there.</summary>
+    private bool CanResize(WidgetInstance widget) => IsResizable(widget) && Layout.IsDesktop;
     
     private bool CanCollapse(WidgetInstance widget)
     {

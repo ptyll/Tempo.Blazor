@@ -1,8 +1,12 @@
 @page "/responsive-conventions"
 @using Tempo.Blazor.Abstractions.Layout
-@using Tempo.Blazor.Components.Layout
-@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
 @inject ITmLocalizer Loc
+@inject IDashboardProvider Dashboards
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>@Loc["TmResponsiveDemo_Title"] – Tempo.Blazor</PageTitle>
 
@@ -12,29 +16,44 @@
         <p>@Loc["TmResponsiveDemo_Intro"]</p>
     </header>
 
-    <div class="rc-controls" role="group" aria-label="@Loc["TmResponsiveDemo_ForcedLayout"]">
-        @foreach (var mode in _modes)
-        {
-            <button type="button"
-                    class="tm-btn tm-btn-sm @(mode == _mode ? "tm-btn-primary" : "tm-btn-secondary")"
-                    aria-pressed="@(_mode == mode ? "true" : "false")"
-                    @onclick="() => _mode = mode">
-                @mode
-            </button>
-        }
-        <span class="rc-resolved" data-testid="rc-resolved">@Loc["TmResponsiveDemo_Resolved", _resolved]</span>
+    <div class="rc-controls">
+        <span class="rc-force-label">@Loc["TmResponsiveDemo_ForceLabel"]</span>
+        <div role="group" aria-label="@Loc["TmResponsiveDemo_ForcedLayout"]">
+            @foreach (var mode in _modes)
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-sm @(mode == _mode ? "tm-btn-primary" : "tm-btn-secondary")"
+                        aria-pressed="@(_mode == mode ? "true" : "false")"
+                        @onclick="() => _mode = mode">
+                    @ModeName(mode)
+                </button>
+            }
+        </div>
+        <span class="rc-resolved" data-testid="rc-resolved">@Loc["TmResponsiveDemo_Resolved", ModeName(_resolved)]</span>
     </div>
 
     <div class="rc-stage">
         <section class="rc-host rc-host--wide" data-testid="rc-host-wide">
-            <h2>@Loc["TmResponsiveDemo_WideHost"]</h2>
-            <ConventionPanel LayoutMode="_mode" LayoutModeChanged="OnResolved" />
+            <h2 data-testid="rc-host-wide-heading">@HostHeading("TmResponsiveDemo_WideHost", "rc-host-wide")</h2>
+            <TmDashboard DashboardId="rc-wide" UserId="rc" LayoutMode="_mode" LayoutModeChanged="OnResolved" Class="rc-dashboard" />
+        </section>
+
+        <section class="rc-host rc-host--medium" data-testid="rc-host-medium">
+            <h2 data-testid="rc-host-medium-heading">@HostHeading("TmResponsiveDemo_MediumHost", "rc-host-medium")</h2>
+            <TmDashboard DashboardId="rc-medium" UserId="rc" Class="rc-dashboard" />
         </section>
 
         <section class="rc-host rc-host--narrow" data-testid="rc-host-narrow">
-            <h2>@Loc["TmResponsiveDemo_NarrowHost"]</h2>
-            <ConventionPanel LayoutMode="TmLayoutMode.Auto" />
+            <h2 data-testid="rc-host-narrow-heading">@HostHeading("TmResponsiveDemo_NarrowHost", "rc-host-narrow")</h2>
+            <TmDashboard DashboardId="rc-narrow" UserId="rc" Class="rc-dashboard" />
         </section>
+    </div>
+
+    <div class="rc-reveal tm-reveal-host">
+        <span>@Loc["TmResponsiveDemo_RevealHint"]</span>
+        <button type="button" class="tm-btn tm-btn-icon tm-btn-secondary tm-reveal-on-hover" data-testid="rc-reveal" aria-label="@Loc["TmResponsiveDemo_Details"]">
+            @Loc["TmResponsiveDemo_Details"]
+        </button>
     </div>
 </div>
 
@@ -42,8 +61,50 @@
     private static readonly TmLayoutMode[] _modes =
         [TmLayoutMode.Auto, TmLayoutMode.Desktop, TmLayoutMode.Tablet, TmLayoutMode.Mobile];
 
+    private readonly Dictionary<string, int> _widths = new(StringComparer.Ordinal);
+    private IJSObjectReference? _module;
     private TmLayoutMode _mode = TmLayoutMode.Auto;
     private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+
+    private bool _seeded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_seeded) return;
+        _seeded = true;
+        foreach (var id in new[] { "rc-wide", "rc-medium", "rc-narrow" })
+            await Dashboards.SaveDashboardAsync(ResponsiveConventionsProvider.Create(id));
+    }
+
+    private string ModeName(TmLayoutMode mode) => Loc[$"TmLayoutMode_{mode}"];
+
+    private string HostHeading(string hostKey, string testId)
+    {
+        var width = _widths.TryGetValue(testId, out var measured) ? $"{measured} px" : Loc["TmResponsiveDemo_Measuring"];
+        var mode = testId == "rc-host-wide" ? _resolved : ModeFor(_widths.GetValueOrDefault(testId));
+        return $"{Loc[hostKey]} · {width} · {ModeName(mode)}";
+    }
+
+    private static TmLayoutMode ModeFor(int widthPx) =>
+        widthPx <= 0 ? TmLayoutMode.Auto : TmBreakpoints.Classify(widthPx);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor.Demo.SharedUI/js/responsive-conventions.js");
+        if (_module is null) return;
+        var measured = await _module.InvokeAsync<Dictionary<string, int>>("measure", new[] { "rc-host-wide", "rc-host-medium", "rc-host-narrow" });
+        if (measured.Count == _widths.Count && measured.All(pair => _widths.TryGetValue(pair.Key, out var width) && width == pair.Value))
+            return;
+        foreach (var pair in measured) _widths[pair.Key] = pair.Value;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is null) return;
+        try { await _module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
 
     private Task OnResolved(TmLayoutMode mode)
     {

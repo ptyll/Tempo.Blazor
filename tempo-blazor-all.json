@@ -17322,7 +17322,7 @@
           "kind": "Component",
           "category": "Layout",
           "namespace": "Tempo.Blazor.Components.Layout",
-          "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, so a host or a test can render a layout without a DOM. The root carries tm-layout, tm-layout--{mode} and data-layout.",
+          "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, and neither does Auto under a forced ancestor. The root carries tm-layout, tm-layout--{mode} and data-layout, which Blazor renders — the script never writes them.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Layout/TmLayoutObserver.razor",
           "documentationStatus": "merged",
@@ -17334,7 +17334,7 @@
               "name": "ChildContent",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "Content rendered inside the observed container. Reads the cascaded TmLayoutContext."
+              "description": "Content rendered inside the observed container. The context argument is the resolved layout, so Context=\"layout\" works; plain child content keeps working."
             },
             {
               "name": "Class",
@@ -17343,11 +17343,25 @@
               "description": "Extra CSS classes appended to the root."
             },
             {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The mode rendered before the first measurement: static SSR, prerender and the first frame."
+            },
+            {
+              "name": "IsContainer",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When false the root does not establish a containment context. Shrink-to-fit hosts such as a popover pass false."
+            },
+            {
               "name": "LayoutMode",
               "type": "TmLayoutMode",
               "isRequired": false,
               "default": "TmLayoutMode.Auto",
-              "description": "Auto measures the root. Desktop, Tablet or Mobile force that layout and skip the observer."
+              "description": "Auto measures the root unless a forced ancestor has decided. Desktop, Tablet or Mobile force that layout and skip the observer."
             },
             {
               "name": "LayoutModeChanged",
@@ -17366,12 +17380,13 @@
             "tm-layout",
             "tm-layout--desktop",
             "tm-layout--tablet",
-            "tm-layout--mobile"
+            "tm-layout--mobile",
+            "tm-layout--shrink"
           ],
           "examples": [
             {
               "title": "Force the mobile layout",
-              "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <Child />\n</TmLayoutObserver>"
+              "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <MyPane />\n</TmLayoutObserver>"
             }
           ]
         },
@@ -72029,12 +72044,6 @@
           "documentationStatus": "merged",
           "members": [
             {
-              "name": "All",
-              "kind": "Field",
-              "type": "int[]",
-              "description": "Every width a new @media or @container condition may use, in ascending order."
-            },
-            {
               "name": "Lg",
               "kind": "Field",
               "type": "int",
@@ -72069,8 +72078,24 @@
                   "type": "double"
                 }
               ]
+            },
+            {
+              "name": "All",
+              "kind": "Property",
+              "type": "static IReadOnlyList<int>",
+              "description": "Every width a new @media or @container condition may use, in ascending order."
             }
           ]
+        },
+        {
+          "kind": "Class",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Abstractions.Layout",
+          "description": "Resolves which layout a component renders. The order is fixed so a host, an overlay and a test all reach the same answer: an explicit mode, then a forced ancestor, then this component's own measurement, then the initial mode.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayout.cs",
+          "documentationStatus": "generated",
+          "itemName": "TmLayout"
         },
         {
           "itemName": "TmLayoutContext",
@@ -72099,6 +72124,12 @@
               "kind": "Field",
               "type": "bool",
               "description": "True when the rendered layout is the compact one."
+            },
+            {
+              "name": "Resolved",
+              "kind": "Property",
+              "type": "TmLayoutMode",
+              "description": "A resolved layout is desktop, tablet or mobile. Auto means \"not resolved yet\"."
             }
           ]
         },
@@ -96323,12 +96354,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1475,
+        "itemCount": 1476,
         "manualItemCount": 1475,
-        "generatedItemCount": 1458,
-        "generatedOnlyItemCount": 0,
+        "generatedItemCount": 1459,
+        "generatedOnlyItemCount": 1,
         "componentCount": 0,
-        "publicApiTypeCount": 1458
+        "publicApiTypeCount": 1459
       }
     },
     {
@@ -110379,10 +110410,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3169,
+    "itemCount": 3170,
     "manualItemCount": 3169,
-    "generatedOnlyItemCount": 0,
+    "generatedOnlyItemCount": 1,
     "componentCount": 467,
-    "publicApiTypeCount": 2649
+    "publicApiTypeCount": 2650
   }
 }

@@ -282,8 +282,8 @@ window.tempoDashboard = {
         }
 
         if (dashboard.draggedWidget) {
-            const width = parseInt(dashboard.draggedWidget.style.gridColumnEnd?.split(' ')[1] || 4);
-            const height = parseInt(dashboard.draggedWidget.style.gridRowEnd?.split(' ')[1] || 4);
+            const width = parseInt(dashboard.draggedWidget.style.getPropertyValue('--tm-w-span')) || 4;
+            const height = parseInt(dashboard.draggedWidget.style.getPropertyValue('--tm-w-rows')) || 4;
 
             preview.style.gridColumn = `${col + 1} / span ${width}`;
             preview.style.gridRow = `${row + 1} / span ${height}`;

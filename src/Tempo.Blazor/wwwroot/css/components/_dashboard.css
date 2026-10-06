@@ -123,19 +123,21 @@
   flex: 1;
   position: relative;
   overflow-x: auto;
+  /* The container is the ancestor of the grid it styles. A container query never styles its own
+     container, so container-type must not live on .tm-dashboard-grid. */
+  container-type: inline-size;
+  container-name: tm-dashboard;
 }
 
 .tm-dashboard-grid {
   display: grid;
-  /* Desktop: 12 columns. The container queries below restack this same grid; an inline
-     grid-column would win over them, so placement comes from --tm-w-* (see TmDashboard). */
+  /* Desktop: 12 columns. Placement comes from --tm-w-* (see TmDashboard) so a data-layout rule can
+     restack without fighting an inline grid-column. */
   grid-template-columns: repeat(var(--grid-columns, 12), minmax(0, 1fr));
   grid-auto-rows: var(--row-height, 60px);
   gap: var(--grid-gap, 16px);
   position: relative;
   min-height: 100%;
-  container-type: inline-size;
-  container-name: tm-dashboard;
 }
 
 .tm-dashboard-grid .tm-widget {
@@ -864,41 +866,60 @@
   }
 }
 
-/* The grid follows the dashboard's own width, not the viewport: a narrow dashboard inside a
-   wide page is still one column. 640/768/1024 are the TmBreakpoints.Sm/Md/Lg widths (a container
-   query cannot read a custom property, and max-width is inclusive, so the boundary itself is the
-   literal). Placement uses the --tm-w-* variables, so no !important is needed to beat an inline
-   grid-column. */
-@container tm-dashboard (max-width: 1024px) {
-  .tm-dashboard-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+/* Structural layout follows data-layout, which Blazor renders from the resolved mode. A container
+   query is only the finer step inside one mode: below 768px of container a tablet grid becomes
+   two columns. The query styles the grid, which is a descendant of the container. */
+.tm-dashboard[data-layout="tablet"] .tm-dashboard-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget {
+  grid-column: auto / span var(--tm-w-span-md, 3);
+  grid-row: auto / span var(--tm-w-rows, 1);
+}
+
+.tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget--wide {
+  grid-column: 1 / -1;
+}
+
+@container tm-dashboard (width < 768px) {
+  .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget {
+    grid-column: auto / span min(var(--tm-w-span-md, 2), 2);
   }
 }
 
-@container tm-dashboard (max-width: 768px) {
-  .tm-dashboard-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: auto;
-  }
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-grid {
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
+}
 
-  .tm-dashboard-grid .tm-widget {
-    grid-column: auto / span 1;
-    grid-row: auto;
-    min-height: calc(var(--tm-w-rows, 1) * var(--row-height, 60px));
-  }
-
-  /* Wider than half the desktop grid: take the full compact row instead of one of the two. */
-  .tm-dashboard-grid .tm-widget--wide {
-    grid-column: 1 / -1;
-  }
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-grid .tm-widget,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-grid .tm-widget--wide {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  min-height: calc(var(--tm-w-rows, 1) * var(--row-height, 60px));
 }
 
 /* A finger cannot aim at a 12px handle or a 24px add button, and a device without hover can
    never reveal an action that starts at opacity 0. */
 @media (pointer: coarse) {
-  .tm-widget-resize-handle {
-    min-width: var(--tm-touch-target);
-    min-height: var(--tm-touch-target);
+  .tm-widget-resize-n,
+  .tm-widget-resize-s,
+  .tm-widget-resize-e,
+  .tm-widget-resize-w,
+  .tm-widget-resize-ne,
+  .tm-widget-resize-nw,
+  .tm-widget-resize-sw {
+    display: none;
+  }
+
+  .tm-widget-resize-se {
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
   }
 
   .tm-widget-card-add,
@@ -909,7 +930,7 @@
   }
 }
 
-@media (hover: none) {
+@media (hover: none), (pointer: coarse) {
   .tm-widget-resize-handle,
   .tm-widget-card-add,
   .tm-dashboard-menu-action {
@@ -926,14 +947,4 @@
   }
 }
 
-@container tm-dashboard (max-width: 640px) {
-  .tm-dashboard-grid {
-    grid-template-columns: 1fr;
-  }
 
-  .tm-dashboard-grid .tm-widget,
-  .tm-dashboard-grid .tm-widget--wide {
-    grid-column: 1 / -1;
-    grid-row: auto;
-  }
-}

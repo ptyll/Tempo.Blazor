@@ -22,7 +22,7 @@ public static class TmBreakpoints
     public const int Xl = 1280;
 
     /// <summary>Every width a new <c>@media</c> or <c>@container</c> condition may use, in ascending order.</summary>
-    public static readonly int[] All = [Sm, Md, Lg, Xl];
+    public static IReadOnlyList<int> All { get; } = new[] { Sm, Md, Lg, Xl };
 
     /// <summary>
     /// The layout a measured container width resolves to. A non-finite or negative width is rejected:

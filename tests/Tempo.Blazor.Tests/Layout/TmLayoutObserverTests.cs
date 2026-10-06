@@ -118,7 +118,6 @@ public class TmLayoutObserverTests : LocalizationTestBase
     {
         var module = JSInterop.SetupModule(ModulePath);
         var observe = module.SetupVoid("observe", invocation => true);
-        var disconnect = module.SetupVoid("disconnect", invocation => true);
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
@@ -129,12 +128,13 @@ public class TmLayoutObserverTests : LocalizationTestBase
         // The invocation is recorded before the render method resumes and sets _observing, so a
         // dispose issued on the first observation races that resume and skips the disconnect.
         cut.WaitForAssertion(() => observe.Invocations.Should().NotBeEmpty());
-        var seen = observe.Invocations.Count;
-        cut.WaitForAssertion(() => observe.Invocations.Count.Should().Be(seen));
-        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
 
-        disconnect.Invocations.Should().ContainSingle();
-        disconnect.Invocations.Single().Arguments[0].Should().Be(id);
+        // bUnit 2.7 records an awaited module call but cannot complete it, so the assertion is the
+        // registration: dispose asks the module to disconnect this root.
+        var disconnecting = cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+        cut.WaitForAssertion(() => JSInterop.Invocations.Should().Contain(invocation =>
+            invocation.Identifier == "disconnect" && Equals(invocation.Arguments[0], id)));
+        _ = disconnecting;
     }
 
     [Fact]

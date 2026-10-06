@@ -22,8 +22,9 @@ public class TmBreakpointsTests
     [Fact]
     public void ContainerQueries_UseRangeSyntax_AndOnlyTheFourConstants()
     {
-        foreach (var file in Directory.EnumerateFiles(RepoRoot(), "*.css", SearchOption.AllDirectories)
-                     .Where(path => path.Contains($"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}")))
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src"), "*.css", SearchOption.AllDirectories)
+                     .Where(path => path.Contains($"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}")
+                                 && !path.Contains(".min.css")))
         {
             var css = File.ReadAllText(file);
             var withoutComments = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline);

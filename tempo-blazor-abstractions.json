@@ -11729,12 +11729,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "All",
-          "kind": "Field",
-          "type": "int[]",
-          "description": "Every width a new @media or @container condition may use, in ascending order."
-        },
-        {
           "name": "Lg",
           "kind": "Field",
           "type": "int",
@@ -11769,8 +11763,24 @@
               "type": "double"
             }
           ]
+        },
+        {
+          "name": "All",
+          "kind": "Property",
+          "type": "static IReadOnlyList<int>",
+          "description": "Every width a new @media or @container condition may use, in ascending order."
         }
       ]
+    },
+    {
+      "kind": "Class",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "Resolves which layout a component renders. The order is fixed so a host, an overlay and a test all reach the same answer: an explicit mode, then a forced ancestor, then this component's own measurement, then the initial mode.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayout.cs",
+      "documentationStatus": "generated",
+      "itemName": "TmLayout"
     },
     {
       "itemName": "TmLayoutContext",
@@ -11799,6 +11809,12 @@
           "kind": "Field",
           "type": "bool",
           "description": "True when the rendered layout is the compact one."
+        },
+        {
+          "name": "Resolved",
+          "kind": "Property",
+          "type": "TmLayoutMode",
+          "description": "A resolved layout is desktop, tablet or mobile. Auto means \"not resolved yet\"."
         }
       ]
     },
@@ -36023,11 +36039,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1475,
+    "itemCount": 1476,
     "manualItemCount": 1475,
-    "generatedItemCount": 1458,
-    "generatedOnlyItemCount": 0,
+    "generatedItemCount": 1459,
+    "generatedOnlyItemCount": 1,
     "componentCount": 0,
-    "publicApiTypeCount": 1458
+    "publicApiTypeCount": 1459
   }
 }

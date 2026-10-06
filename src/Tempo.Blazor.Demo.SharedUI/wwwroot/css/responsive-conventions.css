@@ -59,10 +59,19 @@
   color: var(--tm-text-primary);
 }
 
+.rc-host--wide { width: 100%; }
+
+.rc-host--medium {
+  width: 48rem;
+  max-width: 100%;
+}
+
 .rc-host--narrow {
   width: 24rem;
   max-width: 100%;
 }
+
+.rc-dashboard { min-height: 0; }
 
 .rc-panel {
   container-type: inline-size;
@@ -116,7 +125,7 @@
   color: var(--tm-text-secondary);
 }
 
-@container rc-panel (max-width: 1024px) {
+@container rc-panel (width < 1024px) {
   .rc-tiles {
     grid-template-columns: 1fr 1fr;
   }
@@ -126,7 +135,7 @@
   }
 }
 
-@container rc-panel (max-width: 640px) {
+@container rc-panel (width < 640px) {
   .rc-tiles {
     grid-template-columns: 1fr;
   }

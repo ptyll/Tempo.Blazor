@@ -27,9 +27,35 @@
   step through `.tm-layout.tm-dashboard-layout` first. That wrapper resets `container-type` so
   the grid's own `container-name: tm-dashboard` stays the one the queries match.
 
-- **`.tm-hide-desktop` now hides from 768px, not 769px.** The helper used `min-width: 769px`, one
-  pixel off the documented `Md` breakpoint. It now uses `768px`, matching `TmBreakpoints.Md`. A
-  viewport of exactly 768px that previously showed `.tm-hide-desktop` content now hides it.
+- **`.tm-hide-mobile` hides below 768px and `.tm-hide-desktop` hides from 768px up.** Both used to
+  be off by a pixel (`max-width: 768px` hides 768, `min-width: 769px` hides from 769), so 768px was
+  hidden by neither. The conditions are now half-open and complementary: `(width < 768px)` and
+  `(width >= 768px)`. A viewport of exactly 768px that previously showed `.tm-hide-desktop` content
+  now hides it.
+
+- **Structural layout follows `data-layout`, not a container query.** `TmDashboard` renders
+  `data-layout="desktop|tablet|mobile"` from the resolved mode, and the grid reads that: 12 columns
+  on desktop, 6 on tablet, 1 on mobile. The two-column step is a container query inside tablet,
+  below 768px of the dashboard's own container. Forcing `LayoutMode="Mobile"` now stacks the grid;
+  previously a forced mode only changed the reported attribute.
+
+- **Drag and resize are desktop only.** Below the desktop layout the grid has restacked, so the
+  drag handle and the resize handles are not rendered. Add and remove stay available.
+
+- **`.tm-btn-icon` is a square driven by the size modifier.** It used to fix the width at the md
+  height. It is now `width: auto; aspect-ratio: 1`, so `tm-btn-sm` is 32×32 and `tm-btn-lg` follows
+  the lg height. A coarse pointer still grows it to `--tm-touch-target`.
+
+- **Safe-area helpers add to padding instead of replacing it.** `.tm-safe-area-bottom` and
+  `.tm-safe-area-top` use `calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-*, 0px))`.
+  Set `--tm-safe-area-base` to the component's own padding. The inset is zero unless the host page
+  sets `viewport-fit=cover`.
+
+- **`TmLayoutObserver.ChildContent` is `RenderFragment<TmLayoutContext>`.** Markup is unchanged:
+  plain child content still works, and `Context="layout"` now works too. A caller that assigned
+  `ChildContent` programmatically with a `RenderFragment` must pass a
+  `RenderFragment<TmLayoutContext>` (the context argument may be ignored). The component also gains
+  `IsContainer` (default true) and `InitialMode` (default Desktop, the pre-measure and prerender mode).
 
 - **`TmDialog` default button texts now come from the localizer.** `OkButtonText` and
   `CancelButtonText` used to default to the English literals `"OK"` and `"Cancel"`, so a Czech
