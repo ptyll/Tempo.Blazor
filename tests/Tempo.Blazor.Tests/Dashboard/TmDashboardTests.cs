@@ -214,14 +214,61 @@ public class TmDashboardTests : LocalizationTestBase
     // override the widget placement itself with `grid-column: 1 / -1 !important`.
 
     [Fact]
-    public void Dashboard_Css_MobileBreakpoint_StacksWidgets_OverridingInlineGridColumn()
+    public void Dashboard_Css_ContainerQuery_StacksByContainerWidth_NotViewport()
     {
         var css = DashboardCss();
 
-        css.Should().MatchRegex(@"@media[^{]*max-width:\s*560px",
-            "a narrow-viewport breakpoint must exist to stack widgets");
-        css.Should().MatchRegex(@"\.tm-dashboard-grid\s+\.tm-widget\s*\{[^}]*grid-column:\s*1\s*/\s*-1\s*!important",
-            "the mobile rule must override the inline grid-column so widgets span the full width");
+        // The grid must follow the width of the dashboard, not the browser viewport: a 390px
+        // dashboard embedded in a 1440px page is one column.
+        css.Should().Contain("container-type: inline-size");
+        css.Should().Contain("container-name: tm-dashboard");
+        css.Should().NotContain("560px",
+            "560 is not a TmBreakpoints value; the single-column rule is the 640px container query");
+        css.Should().MatchRegex(
+            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*639px\s*\)[\s\S]*?grid-template-columns:\s*1fr",
+            "below 640px of container the grid is one column");
+        css.Should().MatchRegex(
+            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*1023px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*2\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
+            "640–1023px of container is the compact two-column grid");
+    }
+
+    [Fact]
+    public void Dashboard_WidgetStyles_EmitCssVariables_NotLiteralGridColumn()
+    {
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+        var dashboard = new DashboardConfig
+        {
+            Id = "d1",
+            Name = "Pilot",
+            Widgets =
+            [
+                new WidgetInstance { InstanceId = "w-wide", WidgetId = "kpi", X = 0, Y = 0, Width = 8, Height = 2, ZIndex = 1 },
+                new WidgetInstance { InstanceId = "w-narrow", WidgetId = "kpi", X = 8, Y = 0, Width = 4, Height = 3, ZIndex = 2 },
+            ],
+        };
+        provider.GetDashboardAsync("d1", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DashboardConfig?>(dashboard));
+
+        var cut = Render<TmDashboard>(parameters => parameters.Add(p => p.DashboardId, "d1"));
+
+        var wide = cut.Find("[data-instance-id='w-wide']");
+        wide.GetAttribute("style").Should().NotContain("grid-column",
+            "an inline grid-column beats every container query, so placement must be variables");
+        wide.GetAttribute("style").Should().Contain("--tm-w-x: 1");
+        wide.GetAttribute("style").Should().Contain("--tm-w-span: 8");
+        wide.GetAttribute("style").Should().Contain("--tm-w-y: 1");
+        wide.GetAttribute("style").Should().Contain("--tm-w-rows: 2");
+        wide.GetAttribute("style").Should().Contain("--tm-w-order: 1");
+        wide.ClassList.Should().Contain("tm-widget--wide",
+            "a widget wider than half the desktop grid takes the full compact row");
+
+        var narrow = cut.Find("[data-instance-id='w-narrow']");
+        narrow.GetAttribute("style").Should().Contain("--tm-w-x: 9");
+        narrow.GetAttribute("style").Should().Contain("--tm-w-span: 4");
+        narrow.GetAttribute("style").Should().Contain("--tm-w-order: 2");
+        narrow.ClassList.Should().NotContain("tm-widget--wide");
     }
 
     [Fact]
