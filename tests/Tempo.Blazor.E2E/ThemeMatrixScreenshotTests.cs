@@ -97,7 +97,7 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
         foreach (var dark in new[] { false, true })
         {
             var page = await OpenAsync("/data-table", ".tm-data-table-wrapper--card", dark, indigo: false, 390, 844);
-            var card = page.Locator(".tm-data-table-wrapper--card").First;
+            var card = page.Locator("[data-testid='dt-card-section'] .tm-data-table-wrapper--card");
             await card.ScrollIntoViewIfNeededAsync();
             await page.Mouse.MoveAsync(0, 0);
             await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
@@ -202,6 +202,17 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
             "() => getComputedStyle(document.querySelector('[data-theme]') || document.documentElement).getPropertyValue('--tm-bg-workspace').trim()");
         var expectedWorkspace = indigo ? (dark ? "#0b1120" : "#f7f8fc") : (dark ? "#0f172a" : "#ffffff");
         Assert.AreEqual(expectedWorkspace, workspace, "--tm-bg-workspace must follow the combination");
+
+        // The painted background, not the token: a `dark:` utility never matches the element that
+        // carries `.dark` itself, so the shell's own class has to paint the dark default.
+        var expectedPainted = indigo
+            ? (dark ? "rgb(11, 17, 32)" : "rgb(247, 248, 252)")
+            : (dark ? "rgb(2, 6, 23)" : "rgb(248, 250, 252)");
+        // The shell carries transition-colors, so a theme change animates the background for 300ms.
+        // Wait for it to settle rather than reading an in-between frame.
+        await page.WaitForFunctionAsync(
+            "expected => getComputedStyle(document.querySelector('.demo-shell')).backgroundColor === expected",
+            expectedPainted, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
     private static async Task ApplyIndigoAsync(IPage page)

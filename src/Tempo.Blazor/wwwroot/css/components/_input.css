@@ -49,13 +49,13 @@
   background-color: var(--tm-bg-surface);
 }
 .tm-input-valid:focus {
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15) !important;
+  box-shadow: var(--tm-focus-ring-success) !important;
 }
 .tm-input-error, .tm-input.input-error {
   border-color: var(--tm-color-danger) !important;
 }
 .tm-input-error:focus {
-  box-shadow: var(--tm-shadow-focus-danger) !important;
+  box-shadow: var(--tm-focus-ring-danger) !important;
 }
 
 /* Validation icons — padding modifiers compound onto .tm-input for the same reason the measured
@@ -172,7 +172,7 @@
   color: var(--tm-text-primary);
   background-color: var(--tm-bg-surface-secondary);
 }
-.tm-search-clear:focus {
+.tm-search-clear:focus-visible {
   outline: none;
   box-shadow: var(--tm-focus-ring);
 }
@@ -209,6 +209,7 @@
 }
 .tm-select:focus   { border-color: var(--tm-border-color-focus); box-shadow: var(--tm-focus-ring); }
 .tm-select-error   { border-color: var(--tm-color-danger) !important; }
+.tm-select-error:focus { box-shadow: var(--tm-focus-ring-danger); }
 .tm-select-disabled, .tm-select[disabled] { background-color: var(--tm-color-gray-50); cursor: not-allowed; }
 .tm-select-arrow {
   position: absolute;

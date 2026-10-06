@@ -364,6 +364,75 @@ public sealed class TokenContrastTests
         missing.Should().BeEmpty(
             "these aliases compute on :root with the light value, so a nested dark region inherits the wrong colour: {0}",
             string.Join(", ", missing));
+
+        // The stricter gate: a :root custom property declared in a component stylesheet computes on
+        // <html> and escapes this closure entirely. Every token belongs in the token files.
+        var componentRoot = ThemeCss.CssPath("components");
+        var offenders = Directory.EnumerateFiles(componentRoot, "*.css")
+            .Select(file => (file, css: ThemeCss.StripComments(File.ReadAllText(file))))
+            .SelectMany(item => RootCustomProperties(item.css).Select(token => $"{Path.GetFileName(item.file)}: {token}"))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToList();
+
+        offenders.Should().BeEmpty(
+            "a component stylesheet must not declare :root custom properties — they belong in tokens.css: {0}",
+            string.Join(", ", offenders));
+
+        // A dark re-declaration that drifts from the light expression computes a different colour than
+        // the light theme for no reason. Differences are allowed only when they are named here.
+        // The dark palette legitimately points these at a different step or a literal. Anything else
+        // that drifts is an alias that should have repeated the light expression and did not.
+        var intentionalDifferences = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
+            "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
+            "--tm-color-border-subtle", "--tm-color-primary", "--tm-color-primary-hover",
+            "--tm-color-primary-soft-border", "--tm-color-primary-subtle", "--tm-color-primary-text",
+            "--tm-color-surface-elevated", "--tm-color-surface-hover", "--tm-control-hover-fill",
+            "--tm-priority-lowest", "--tm-shadow-focus", "--tm-sort-indicator-idle",
+            "--tm-status-closed-bg", "--tm-status-closed-fg", "--tm-status-done-bg",
+            "--tm-status-inprogress-bg", "--tm-status-inprogress-fg",
+            "--tm-status-open-bg", "--tm-status-open-fg",
+            "--tm-text-disabled", "--tm-text-inverse", "--tm-text-primary",
+            "--tm-text-secondary", "--tm-text-tertiary",
+        };
+        var drifted = light.Keys
+            .Where(token => light[token].Contains("var(", StringComparison.Ordinal))
+            .Where(token => dark.TryGetValue(token, out var darkValue) && darkValue != light[token])
+            .Where(token => !intentionalDifferences.Contains(token))
+            .OrderBy(token => token, StringComparer.Ordinal)
+            .Select(token => $"{token}: light '{light[token]}' vs dark '{dark[token]}'")
+            .ToList();
+
+        drifted.Should().BeEmpty(
+            "a dark alias must repeat the tokens.css expression unless it is on the intentional-difference list: {0}",
+            string.Join(", ", drifted));
+    }
+
+    /// <summary>The <c>--tm-*</c> names declared inside <c>:root</c> blocks of a stylesheet.</summary>
+    private static IEnumerable<string> RootCustomProperties(string css)
+    {
+        foreach (Match block in Regex.Matches(
+            css, @"(^|[\s{])\:root\s*\{", RegexOptions.None, TimeSpan.FromSeconds(5)))
+        {
+            var open = css.IndexOf('{', block.Index);
+            var depth = 0;
+            var close = open;
+            for (; close < css.Length; close++)
+            {
+                depth += css[close] == '{' ? 1 : css[close] == '}' ? -1 : 0;
+                if (depth == 0)
+                {
+                    break;
+                }
+            }
+
+            foreach (Match property in Regex.Matches(
+                css[open..close], @"--tm-[\w-]+", RegexOptions.None, TimeSpan.FromSeconds(5)))
+            {
+                yield return property.Value;
+            }
+        }
     }
 
     /// <summary>
@@ -647,5 +716,40 @@ public sealed class TokenContrastTests
                 ThemeCss.ResolveColour("var(--tm-scheduler-event-bg)", tokens))
             .Should().BeGreaterThanOrEqualTo(4.5,
                 "text události na výchozí výplni události ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CalendarSelectedDay_HoldsAa(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-cal-selected-fg)", tokens),
+                ThemeCss.ResolveColour("var(--tm-cal-selected-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text vybraného dne na jeho výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void StateFocusRings_HoldThreeToOne_AgainstTheSurface(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+
+        foreach (var ring in new[] { "--tm-focus-ring-danger", "--tm-focus-ring-success" })
+        {
+            ThemeCss.Contrast(ThemeCss.LastShadowColour(tokens[ring], tokens), surface)
+                .Should().BeGreaterThanOrEqualTo(3,
+                    "{0} je non-text indikátor a musí držet 3:1 proti povrchu ({1} {2})",
+                    ring, indigo ? "indigo" : "default", dark ? "dark" : "light");
+        }
     }
 }

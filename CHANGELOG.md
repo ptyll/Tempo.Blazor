@@ -35,11 +35,20 @@
   fragment is passed or `ShowDefaultFooterButtons` is set. A modal that relied on the empty bar's
   border must pass its own footer.
 
-- **Core controls adopt the two-layer focus ring.** `.tm-btn:focus-visible`, `.tm-input:focus`,
-  `.tm-select:focus`, `.tm-textarea` (it compounds on `.tm-input`), `.tm-search-input:focus`, and the
-  checkbox, radio and toggle `focus-visible` rules used to paint `box-shadow: var(--tm-shadow-focus)`,
-  a single soft glow. They now paint `box-shadow: var(--tm-focus-ring)`, the two-layer ring that holds
-  3:1 against the surface in both themes. The glow token is unchanged and still available.
+- **Core controls adopt the two-layer focus ring.** These rules used to paint
+  `box-shadow: var(--tm-shadow-focus)`, a single soft glow, and now paint `box-shadow:
+  var(--tm-focus-ring)`, the two-layer ring that holds 3:1 against the surface in both themes:
+  `.tm-btn:focus-visible`, `.tm-btn.tm-btn-warning:focus-visible`, `.tm-input:focus` (which also
+  covers `.tm-textarea`, since it compounds on `.tm-input`), `.tm-select:focus`,
+  `.tm-search-input:focus`, `.tm-search-clear:focus-visible`, and the checkbox, radio and toggle
+  `focus-visible` rules.
+
+  Invalid and valid states get their own rings instead of the glow or a hardcoded green:
+  `.tm-btn-danger:focus-visible`, `.tm-input-error:focus`, `.tm-select-error:focus`,
+  `.tm-number-input--error:focus-within` and `.tm-decimal-input__control--error:focus-within` paint
+  `var(--tm-focus-ring-danger)`; `.tm-input-valid:focus` paints `var(--tm-focus-ring-success)`. The
+  success ring uses `--tm-color-success-strong`, because `--tm-color-success` (`#22c55e`) measures
+  2.28:1 on white, under the 3:1 floor. The glow tokens are unchanged and still available.
 
   ```css
   /* before */
@@ -48,16 +57,25 @@
   .tm-btn:focus-visible { box-shadow: var(--tm-focus-ring); }
   ```
 
-  To restore the old glow everywhere, override the ring token:
+  To restore the old glow everywhere, override the ring token on all three selectors a theme block
+  uses. A consumer override of a `var()`-valued token has to target the same three selectors,
+  because a custom property substitutes its `var()` where it is declared and a dark region does not
+  see an override that lives only on `:root`:
 
   ```css
-  :root { --tm-focus-ring: var(--tm-shadow-focus); }
+  :root, [data-theme="dark"], .tm-dark { --tm-focus-ring: var(--tm-shadow-focus); }
   ```
 
 - **A scheduler event without its own colour now fills with `--tm-scheduler-event-bg`.** In the dark
   theme that token is `primary-600`, where it used to be `primary-400`. White event text holds AA on
   `primary-600` and did not on `primary-400` (2.54:1 default, 2.98:1 indigo). Light is unchanged,
   because `primary-600` was already the light fill. An event that sets `Color` is unaffected.
+
+- **The calendar picker's selected day fills with `--tm-cal-selected-bg`, now `primary-600`.** It was
+  `var(--tm-color-primary)`, whose dark step is `primary-400`, and white day text on that falls short
+  of 3:1. `primary-600` holds AA in both themes. The `--tm-cal-*` tokens moved from
+  `_picker-shared.css` into `tokens.css`, and the unused `--tm-cal-today-border` is removed. A
+  stylesheet that referenced `--tm-cal-today-border` must drop it.
 
 - **`--tm-priority-critical` is now `--tm-priority-highest`, and `--tm-priority-lowest` is new.**
   The suffix matches the lower-cased `TmWorkItemPriority` member. A stylesheet referencing

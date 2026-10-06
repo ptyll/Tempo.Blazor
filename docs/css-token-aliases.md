@@ -72,6 +72,15 @@ nested inside the indigo root is covered by the descendant selectors. The theme 
 The demo exposes the switch and persists the choice under `tm-demo-color-theme` in
 `localStorage`.
 
+A consumer override of a `var()`-valued token must target all three selectors a theme block uses —
+`:root`, `[data-theme="dark"]` and `.tm-dark`. A custom property substitutes its `var()` where it is
+declared, so an override that lives only on `:root` computes with the light value and a dark region
+never sees it:
+
+```css
+:root, [data-theme="dark"], .tm-dark { --tm-focus-ring: var(--tm-shadow-focus); }
+```
+
 ## Translucent fills
 
 Write a translucent fill as `color-mix(in srgb, var(--tm-color-primary) 15%, transparent)`, not as

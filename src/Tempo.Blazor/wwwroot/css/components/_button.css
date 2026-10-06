@@ -125,7 +125,7 @@
   background-color: var(--tm-color-danger-hover);
 }
 .tm-btn-danger:focus-visible {
-  box-shadow: var(--tm-shadow-focus-danger);
+  box-shadow: var(--tm-focus-ring-danger);
 }
 
 .tm-btn.tm-btn-warning {

@@ -106,7 +106,7 @@
 }
 
 .tm-number-input--error:focus-within {
-    box-shadow: var(--tm-shadow-focus-danger);
+    box-shadow: var(--tm-focus-ring-danger);
 }
 
 /* ── Disabled state ────────────────────────────────────── */

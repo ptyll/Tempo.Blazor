@@ -22,7 +22,7 @@ const NAMED_COLOUR = /^(?:white|black)$/i;
 const WHITE_COLOR = /(?<![\w-])(?:#fff|#ffffff|white)(?![\w-])|var\(\s*--tm-color-white\s*\)/i;
 const COMPONENT_DARK = /\[data-theme\s*=\s*["']dark["']\]|\.tm-dark\b/g;
 // A primary fill is a solid primary step. A wash (color-mix, -subtle, -50) is not white-on-primary.
-const PRIMARY_FILL = /var\(\s*--tm-color-primary(?:-hover|-active|-[5-9]00)?\s*[,)]/i;
+const PRIMARY_FILL = /var\(\s*--tm-(?:color-|brand-)?primary(?:-hover|-active|-[4-9]00)?\s*[,)]/i;
 
 /**
  * A custom-property definition that is a data palette entry — a literal there is a data
@@ -89,6 +89,11 @@ export function runtimeTokenDefinitions(source) {
 
   const definitions = new Set();
   for (const match of stripped.matchAll(/setProperty\(\s*['"](--tm-[a-zA-Z0-9-]+)['"]/g)) {
+    definitions.add(match[1]);
+  }
+
+  // Razor attribute-embedded interpolation, e.g. style="@(c ? $"--tm-a: {c}" : null)".
+  for (const match of stripped.matchAll(/\$?@?"\s*(--tm-[a-zA-Z0-9-]+)\s*:/g)) {
     definitions.add(match[1]);
   }
 

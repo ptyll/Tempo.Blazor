@@ -54,7 +54,7 @@ public sealed class MockTmLocalizer : ITmLocalizer
         ["ReportServer_NewReport_RdlFile"] = "Soubor RDL (.rdl, .xml)",
         ["ReportServer_NewReport_RdlImported"] = "Importováno {0}.",
         ["ReportServer_NewReport_InvalidRdl"] = "Nahraný soubor RDL se nepodařilo importovat.",
-        ["ReportServer_NewReport_RdlWarnings"] = "Prvky RDL: {0} nebylo plně importováno. Po vytvoření sestavu zkontrolujte.",
+        ["ReportServer_NewReport_RdlWarnings"] = "Některé prvky RDL se nepodařilo plně importovat (počet: {0}). Po vytvoření sestavu zkontrolujte.",
         ["ReportServer_NewReport_RdlRequired"] = "Pro pokračování nahrajte soubor RDL.",
     });
 }

@@ -1,13 +1,3 @@
-:root {
-  --tm-picker-border-radius:   var(--tm-radius-md);
-  --tm-cal-cell-size:          2.25rem;
-  --tm-cal-range-bg:           var(--tm-color-primary-100);
-  --tm-cal-selected-bg:        var(--tm-color-primary);
-  --tm-cal-selected-fg:        var(--tm-color-white);
-  --tm-cal-today-border:       2px solid var(--tm-color-primary);
-  --tm-cal-disabled-opacity:   0.35;
-}
-
 .tm-picker-label {
   display: block;
   font-size: var(--tm-font-size-sm);

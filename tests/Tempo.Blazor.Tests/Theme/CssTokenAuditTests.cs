@@ -18,7 +18,7 @@ public sealed class CssTokenAuditTests
     /// Hard ceiling. Raising it is a visible code change, which is the point: the baseline file can
     /// be regenerated, but growing past this number has to be argued for in review.
     /// </summary>
-    private const int StrictAuditCeiling = 5858;
+    private const int StrictAuditCeiling = 5871;
 
     [Fact]
     public void StrictAudit_DoesNotExceedTheBaseline()

@@ -358,6 +358,10 @@
      keeps the ring visible on any fill, and the primary step clears 3:1 against the
      surface in both themes. */
   --tm-focus-ring:             0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-primary);
+  /* The same two-layer ring in the state's own colour, for a control that is invalid or valid. */
+  --tm-focus-ring-danger:      0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-danger);
+  /* success-strong, not success: #22c55e measures 2.28:1 on white, under the 3:1 floor. */
+  --tm-focus-ring-success:     0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-success-strong);
   /* A separator that has to stay visible on a muted panel, where --tm-border-color
      (gray-200) measures only ~1.2:1. gray-400 is 2.54:1, under the 3:1 floor, so the
      strong step is gray-500. */
@@ -393,6 +397,16 @@
   /* Text on an event whose fill is a consumer-supplied colour. White holds on the
      default event colour; a consumer that paints a light fill sets --event-text-color. */
   --tm-scheduler-event-fg:     var(--tm-color-white);
+
+  /* Calendar picker. The selected day fills with -600, not the theme's primary step:
+     white text on the dark primary step (-400) falls short of 3:1, and -600 holds in
+     both themes. --tm-cal-today-border was declared and never read, so it is gone. */
+  --tm-picker-border-radius:   var(--tm-radius-md);
+  --tm-cal-cell-size:          2.25rem;
+  --tm-cal-range-bg:           var(--tm-color-primary-100);
+  --tm-cal-selected-bg:        var(--tm-color-primary-600);
+  --tm-cal-selected-fg:        var(--tm-color-white);
+  --tm-cal-disabled-opacity:   0.35;
 }
 
 /* Pod 768 px se `__inner` láme do sloupce (viz TmFormActionBar.razor.css), takže se k rezervě

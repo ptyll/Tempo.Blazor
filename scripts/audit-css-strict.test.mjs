@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditCssStrict } from './audit-css-strict.mjs';
+import { auditCssStrict, runtimeTokenDefinitions } from './audit-css-strict.mjs';
 
 // RED contract for the strict audit (00-cross-cutting §7.3). The lenient audit ignores a
 // var(--tm-*) that carries a fallback and ignores colour literals entirely, which is exactly
@@ -144,4 +144,22 @@ test('a dark-theme block inside a component stylesheet is reported', () => {
   assert.ok(
     violations.some(violation => violation.kind === 'component-dark'),
     `a component dark block must be a violation, got: ${JSON.stringify(violations)}`);
+});
+
+test('a razor attribute-embedded interpolation defines its token', () => {
+  const definitions = runtimeTokenDefinitions('style="@(c ? $"--tm-a: {c}" : null)"');
+
+  assert.ok(definitions.has('--tm-a'),
+    `an interpolated attribute must define --tm-a, got: ${JSON.stringify(definitions)}`);
+});
+
+test('white text on a primary alias with a fallback is white-on-primary', () => {
+  const violations = auditCssStrict({
+    'components/panel.css': '.panel { background: var(--tm-primary, #3b82f6); color: #fff; }',
+    'tokens.css': ':root { --tm-color-primary: #2563eb; }'
+  });
+
+  assert.ok(
+    violations.some(violation => violation.kind === 'white-on-primary'),
+    `white on a primary alias must be reported, got: ${JSON.stringify(violations)}`);
 });

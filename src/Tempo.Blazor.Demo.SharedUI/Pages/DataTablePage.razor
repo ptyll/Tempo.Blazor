@@ -14,8 +14,8 @@
     <p class="text-slate-600 dark:text-slate-400">Advanced data tables with sorting, filtering, pagination, and selection capabilities.</p>
 </div>
 
-<!-- Advanced ergonomics: pin, resize, multi-sort, master-detail -->
-<section class="demo-section" data-testid="dt-ergonomics-section">
+<!-- Forced card layout -->
+<section class="demo-section" data-testid="dt-card-section">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Card mode</h2>
     </div>
@@ -23,7 +23,7 @@
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Forced card layout: each row becomes a card with its column title as a label, for narrow screens.
         </p>
-        <TmDataTable TItem="Employee" Items="_employees" CardMode="true" DefaultPageSize="4">
+        <TmDataTable TItem="Employee" Items="_employees" CardMode="true" ViewContext="card-mode-demo" DefaultPageSize="4">
             <ChildContent>
                 <TmDataTableColumn TItem="Employee" Title="Name" PropertyName="Name" Field="e => e.Name" />
                 <TmDataTableColumn TItem="Employee" Title="Role" PropertyName="Role" Field="e => e.Role" />
@@ -31,7 +31,10 @@
             </ChildContent>
         </TmDataTable>
     </div>
+</section>
 
+<!-- Advanced ergonomics: pin, resize, multi-sort, master-detail -->
+<section class="demo-section" data-testid="dt-ergonomics-section">
     <div class="flex items-center gap-3 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Ergonomics — Pin, Resize, Multi-sort</h2>
         <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">K2</span>

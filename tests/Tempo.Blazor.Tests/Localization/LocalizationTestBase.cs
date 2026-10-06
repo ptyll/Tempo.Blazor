@@ -5884,7 +5884,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmAuditLogViewer_SeverityCritical"] = "Kritická",
         ["TmAuditLogViewer_SeverityInfo"] = "Informace",
         ["TmAuditLogViewer_SeverityWarning"] = "Varování",
-        ["TmAuditLogViewer_TimelineBucketTitle"] = "{0} – {1}: události: {2}",
+        ["TmAuditLogViewer_TimelineBucketTitle"] = "{0} – {1} (události: {2})",
         ["TmAuditLogViewer_TimelineLabel"] = "Časová osa událostí",
         ["TmAuditLogViewer_To"] = "Do",
         ["TmAuditLogViewer_ToolbarLabel"] = "Nástroje auditního záznamu",
