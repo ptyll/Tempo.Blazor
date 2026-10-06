@@ -28,7 +28,7 @@
   color: var(--tm-text-primary);
   background-color: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md);
+  border-radius: var(--tm-radius-control);
   outline: none;
   transition: border-color var(--tm-transition-fast),
               box-shadow var(--tm-transition-fast);
@@ -200,7 +200,7 @@
   color: var(--tm-text-primary);
   background-color: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
-  border-radius: var(--tm-radius-md);
+  border-radius: var(--tm-radius-control);
   outline: none;
   appearance: none;
   -webkit-appearance: none;

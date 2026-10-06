@@ -18,6 +18,48 @@ public class TmModalTests : LocalizationTestBase
         Services.AddSingleton(jsRuntime);
     }
 
+    [Fact]
+    public void Footer_IsAbsent_WhenThereIsNothingToShow()
+    {
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test Modal")
+            .AddChildContent("<p>Modal content</p>"));
+
+        cut.FindAll(".tm-modal-footer").Should().BeEmpty(
+            "an empty footer bar is a stray border; it renders only with a footer fragment or the default buttons");
+    }
+
+    [Fact]
+    public void Footer_Renders_WhenTheDefaultButtonsAreOn()
+    {
+        UseCzechLocalization();
+
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test Modal")
+            .Add(m => m.ShowDefaultFooterButtons, true)
+            .AddChildContent("<p>Modal content</p>"));
+
+        cut.Find(".tm-modal-btn-cancel").TextContent.Trim().Should().Be("Zrušit");
+        cut.Find(".tm-modal-btn-ok").TextContent.Trim().Should().Be("OK");
+    }
+
+    [Fact]
+    public void FooterButtons_UseTheCallerText_WhenOneIsPassed()
+    {
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Test Modal")
+            .Add(m => m.ShowDefaultFooterButtons, true)
+            .Add(m => m.OkButtonText, "Uložit")
+            .Add(m => m.CancelButtonText, "Zpět")
+            .AddChildContent("<p>Modal content</p>"));
+
+        cut.Find(".tm-modal-btn-ok").TextContent.Trim().Should().Be("Uložit");
+        cut.Find(".tm-modal-btn-cancel").TextContent.Trim().Should().Be("Zpět");
+    }
+
     #region Rendering Tests
 
     [Fact]

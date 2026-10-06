@@ -1,6 +1,6 @@
 .tm-card {
   background-color: var(--tm-bg-surface);
-  border-radius: var(--tm-radius-lg);
+  border-radius: var(--tm-radius-card);
   overflow: hidden;
 }
 .tm-card-default  { border: 1px solid var(--tm-border-color); }

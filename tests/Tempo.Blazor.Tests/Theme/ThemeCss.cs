@@ -128,6 +128,14 @@ internal static class ThemeCss
         depth.Should().BeLessThan(16, "a var() chain must not be cyclic");
         value = value.Trim();
 
+        // `rgb(from var(--x) r g b / a)` is the relative-colour form the dark theme uses for
+        // translucent fills. It resolves to the referenced colour at alpha, composited later.
+        var relative = Regex.Match(value, @"rgba?\(\s*from\s+(var\([^)]*\))", RegexOptions.None, RegexTimeout);
+        if (relative.Success)
+        {
+            return ResolveColour(relative.Groups[1].Value, tokens, depth + 1);
+        }
+
         var reference = FirstVar(value);
         if (reference is null)
         {
@@ -274,6 +282,29 @@ internal static class ThemeCss
         return Enumerable.Range(0, 3)
             .Select(i => int.Parse(hex.Substring(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture))
             .ToArray();
+    }
+
+    /// <summary>
+    /// The colour a viewer sees from a box-shadow value. The last layer paints on top, so that is the
+    /// one that counts — a focus ring is a surface gap followed by a primary ring.
+    /// </summary>
+    public static string LastShadowColour(string shadow, Dictionary<string, string> tokens)
+    {
+        var last = shadow;
+        var remainder = shadow;
+        while (true)
+        {
+            var split = SplitOnTopLevelComma(remainder);
+            if (split.Fallback is null)
+            {
+                last = split.Name;
+                break;
+            }
+
+            remainder = split.Fallback;
+        }
+
+        return ResolveColour(last, tokens);
     }
 
     /// <summary>WCAG relative luminance of an opaque <c>#rrggbb</c> colour.</summary>

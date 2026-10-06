@@ -20,6 +20,25 @@
   A caller that relied on the English literal while running under another culture must now pass
   `CancelButtonText="Cancel"` explicitly.
 
+- **`TmDialog.PromptPlaceholder`, `TmModal.OkButtonText` and `TmModal.CancelButtonText` follow the
+  same rule.** Each was a non-nullable string defaulting to an English literal. Each is now
+  nullable and falls back to the localizer (`TmDialog_PromptPlaceholder`, `Tm_Ok`, `Tm_Cancel`).
+
+  ```razor
+  @* before: the prompt input showed "Enter value..." in every culture *@
+  <TmDialog Type="DialogType.Prompt" Show="true" Title="Název" />
+  @* after: "Zadejte hodnotu…" under cs, "Saisissez une valeur…" under fr *@
+  <TmDialog Type="DialogType.Prompt" Show="true" Title="Název" />
+  ```
+
+- **`TmModal` no longer renders an empty footer.** The footer bar appears only when a `Footer`
+  fragment is passed or `ShowDefaultFooterButtons` is set. A modal that relied on the empty bar's
+  border must pass its own footer.
+
+- **`--tm-priority-critical` is now `--tm-priority-highest`, and `--tm-priority-lowest` is new.**
+  The suffix matches the lower-cased `TmWorkItemPriority` member. A stylesheet referencing
+  `--tm-priority-critical` must switch to `--tm-priority-highest`.
+
 ### Added
 
 - Semantic tokens for the redesign, in both `tokens.css` and `tokens-dark.css`: `--tm-bg-workspace`,
@@ -31,16 +50,21 @@
   scale stays the default. The demo exposes a switch that persists the choice in `localStorage`.
 - Shared keys `Tm_Ok`, `Tm_Done` and `Tm_More` in en/cs/fr.
 - `scripts/audit-css-strict.mjs` with a shrink-only baseline, gated by `CssTokenAuditTests`, and
-  `ScopedCssOwnershipTests` with its own shrink-only baseline. See `docs/css-token-aliases.md`
-  and `docs/scoped-css-ownership.md`.
+  `ScopedCssOwnershipTests` with its own shrink-only baseline. The audit now also flags the named
+  colours `white` and `black`, and judges white-on-primary per rule rather than per line. See
+  `docs/css-token-aliases.md` and `docs/scoped-css-ownership.md`.
 
 ### Changed
 
 - Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
   `{0} čekajících změn`, `{0} řádků`) now use a neutral phrasing (`Počet: {0}`, `Komentáře: {0}`,
   `Čekající změny: {0}`), so a count of one no longer reads as a plural.
-- Scheduler event text and the filter-builder apply button use `--tm-color-on-primary` instead of
-  a hardcoded white. The data-table card mode drops its hardcoded white and gray fallbacks, and the
+- Czech count strings for a further 30 keys now use the same neutral phrasing (`Nálezy: {0}`,
+  `Stránky: {0}`, `Prvky: {0}`, and the rest listed in the review of B16). `Tm_More` is `Více`.
+- Scheduler event text on a consumer-supplied fill uses `--tm-scheduler-event-fg`, and the
+  time-grid event wash mixes the event colour into `--tm-bg-surface` instead of white. The
+  filter-builder apply button uses `--tm-color-on-primary`. The data-table card mode drops its
+  hardcoded white and gray fallbacks, and the
   dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 

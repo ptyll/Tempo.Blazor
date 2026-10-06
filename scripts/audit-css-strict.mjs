@@ -13,13 +13,19 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectCssFiles, findRepoRoot, parseDefinitions, parseUsages, stripCssComments } from './audit-css-tokens.mjs';
+import { collectCssFiles, collectRuntimeSourceFiles, findRepoRoot, parseDefinitions, parseUsages, stripCssComments } from './audit-css-tokens.mjs';
 
 const BASELINE_FILE = 'scripts/css-token-baseline.json';
 
-const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/g;
-const WHITE_ON_PRIMARY = /color\s*:\s*(#fff\b|#ffffff\b|white\b|var\(\s*--tm-color-white\s*\))/gi;
+const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|(?<![\w-])(?:white|black)(?![\w-])/g;
+const WHITE_COLOR = /(?:#fff\b|#ffffff\b|\bwhite\b|var\(\s*--tm-color-white\s*\))/i;
 const COMPONENT_DARK = /\[data-theme\s*=\s*["']dark["']\]|\.tm-dark\b/g;
+
+/**
+ * A custom-property definition that is a data palette entry — a literal there is a data
+ * value, not drift. Matches `--tm-<name>-(palette|option|role|annotation|category)-<name>:`.
+ */
+const DATA_PALETTE_DEFINITION = /^\s*--tm-[a-z0-9-]+-(palette|option|role|annotation|category)-[a-z0-9-]+\s*:/i;
 
 /** A token or theme stylesheet is allowed to contain colour literals — they are definitions. */
 export function isAllowlisted(relativePath) {
@@ -55,19 +61,27 @@ export function auditCssStrict(files) {
 
     const lines = stripped.split('\n');
     lines.forEach((line, index) => {
-      if (COLOR_LITERAL.test(line)) {
+      if (COLOR_LITERAL.test(line) && !DATA_PALETTE_DEFINITION.test(line)) {
         violations.push({ kind: 'color-literal', file, line: index + 1, text: line.trim() });
       }
       COLOR_LITERAL.lastIndex = 0;
-      if (WHITE_ON_PRIMARY.test(line) && /primary/i.test(line)) {
-        violations.push({ kind: 'white-on-primary', file, line: index + 1, text: line.trim() });
-      }
-      WHITE_ON_PRIMARY.lastIndex = 0;
       if (COMPONENT_DARK.test(line)) {
         violations.push({ kind: 'component-dark', file, line: index + 1, text: line.trim() });
       }
       COMPONENT_DARK.lastIndex = 0;
     });
+
+    // White on a primary fill is judged per rule, not per line: the fill and the colour are
+    // usually on different lines of the same block.
+    for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const body = match[2];
+      const paintsPrimary = /background(-color)?\s*:[^;]*primary/i.test(body);
+      const paintsWhite = WHITE_COLOR.test(body) && /color\s*:/.test(body);
+      if (paintsPrimary && paintsWhite) {
+        const line = stripped.slice(0, match.index).split('\n').length;
+        violations.push({ kind: 'white-on-primary', file, line, text: match[1].trim() });
+      }
+    }
   }
 
   return violations;
@@ -84,7 +98,19 @@ export function auditRepository(repoRoot) {
     }
     files[path.relative(repoRoot, file).split(path.sep).join('/')] = readFileSync(file, 'utf8');
   }
-  return auditCssStrict(files);
+
+  // Tokens set from script at runtime are defined, just not in a stylesheet. Their source is not
+  // a stylesheet, so only the definitions count — scanning it for colour literals would report
+  // every hex in a .js or .cs file.
+  const runtimeDefinitions = new Set();
+  for (const file of collectRuntimeSourceFiles(repoRoot)) {
+    for (const definition of parseDefinitions(readFileSync(file, 'utf8'))) {
+      runtimeDefinitions.add(definition);
+    }
+  }
+
+  return auditCssStrict(files).filter(
+    violation => violation.kind !== 'undefined-token' || !runtimeDefinitions.has(violation.token));
 }
 
 /**
@@ -93,7 +119,8 @@ export function auditRepository(repoRoot) {
  * more still fails; reformatting does not.
  */
 export function violationKey(violation) {
-  return `${violation.kind}|${violation.file}|${violation.token ?? violation.text ?? ''}`;
+  const text = (violation.token ?? violation.text ?? '').replace(/\s+/g, ' ').trim();
+  return `${violation.kind}|${violation.file}|${text}`;
 }
 
 export function countByKey(violations) {

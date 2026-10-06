@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Buttons
 
+
 <PageTitle>Modal & Dialog – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -159,8 +160,7 @@
           Title="@_confirmTitle"
           Message="@_confirmMessage"
           IsDangerous="_confirmIsDangerous"
-          OkButtonText="@(_confirmIsDangerous ? "Delete" : "OK")"
-          CancelButtonText="Cancel"
+          OkButtonText="@(_confirmIsDangerous ? "Delete" : null)"
           OnResult="OnConfirmResult" />
 
 <!-- Prompt Dialog -->

@@ -68,6 +68,15 @@
          exists and renders plain, readable code otherwise. Grammars must load synchronously, so the
          autoloader plugin is deliberately not used. -->
     <script defer src="https://cdn.jsdelivr.net/combine/npm/prismjs@1.29.0/prism.min.js,npm/prismjs@1.29.0/components/prism-markup-templating.min.js,npm/prismjs@1.29.0/components/prism-csharp.min.js,npm/prismjs@1.29.0/components/prism-c.min.js,npm/prismjs@1.29.0/components/prism-cpp.min.js,npm/prismjs@1.29.0/components/prism-typescript.min.js,npm/prismjs@1.29.0/components/prism-python.min.js,npm/prismjs@1.29.0/components/prism-json.min.js,npm/prismjs@1.29.0/components/prism-yaml.min.js,npm/prismjs@1.29.0/components/prism-bash.min.js,npm/prismjs@1.29.0/components/prism-sql.min.js,npm/prismjs@1.29.0/components/prism-java.min.js,npm/prismjs@1.29.0/components/prism-go.min.js,npm/prismjs@1.29.0/components/prism-rust.min.js,npm/prismjs@1.29.0/components/prism-markdown.min.js,npm/prismjs@1.29.0/components/prism-docker.min.js,npm/prismjs@1.29.0/components/prism-powershell.min.js,npm/prismjs@1.29.0/components/prism-php.min.js,npm/prismjs@1.29.0/components/prism-ruby.min.js" crossorigin="anonymous"></script>
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('tm-demo-color-theme') === 'indigo') {
+                    document.documentElement.setAttribute('data-tm-theme', 'indigo');
+                }
+            } catch (e) { }
+        })();
+    </script>
     <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
     <link href="_content/Tempo.Blazor.Signing/css/tempo-blazor-signing.css" rel="stylesheet" />
     <link href="_content/Tempo.Blazor.Maps/css/tempo-blazor-maps.css" rel="stylesheet" />
@@ -161,6 +170,7 @@
     <script src="_content/Tempo.Blazor.PdfViewer/js/pdf-annotator.js"></script>
     <script src="_content/Tempo.Blazor.PdfViewer/js/pdf-redaction.js"></script>
     <script src="_content/Tempo.Blazor.NotionEditor/js/notion-editor.js"></script>
+    <script src="_content/Tempo.Blazor.Demo.SharedUI/js/color-theme.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

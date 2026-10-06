@@ -346,20 +346,22 @@
      theme-indigo.css is what paints the off-white workspace. Re-declared in
      tokens-dark.css because a :root-only alias computes with the light value. */
   --tm-bg-workspace:           var(--tm-bg-page);
-  /* Cards take the xl step (12px), controls the lg step (8px). Components opt in;
-     existing rules keep --tm-radius-md, so nothing changes appearance by default. */
-  --tm-radius-card:            var(--tm-radius-xl);
-  --tm-radius-control:         var(--tm-radius-lg);
+  /* Equal to the radii components use today, so consuming them changes nothing
+     until a theme overrides them. Cards take the lg step, controls the md step. */
+  --tm-radius-card:            var(--tm-radius-lg);
+  --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);
   --tm-shadow-popover:         var(--tm-shadow-lg);
   /* WCAG 2.5.5 target size. A minimum, not a height: a control may be taller. */
   --tm-touch-target:           2.75rem;
-  /* The non-text focus indicator. Same hue and weight as --tm-shadow-focus, named
-     for the thing it is so a component does not have to reach for a shadow token. */
-  --tm-focus-ring:             var(--tm-shadow-focus);
+  /* A whole box-shadow value: a 2px surface gap, then a 2px primary ring. The gap
+     keeps the ring visible on any fill, and the primary step clears 3:1 against the
+     surface in both themes. */
+  --tm-focus-ring:             0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-primary);
   /* A separator that has to stay visible on a muted panel, where --tm-border-color
-     (gray-200) measures only ~1.2:1. gray-400 holds 2.9:1 on white. */
-  --tm-border-color-strong:    var(--tm-color-gray-400);
+     (gray-200) measures only ~1.2:1. gray-400 is 2.54:1, under the 3:1 floor, so the
+     strong step is gray-500. */
+  --tm-border-color-strong:    var(--tm-color-gray-500);
 
   /* ── Task status chips ──────────────────────────────────────── */
   /* Text on the fill must hold WCAG AA (4.5:1) — pinned by TokenContrastTests.
@@ -369,18 +371,24 @@
   --tm-status-open-fg:         var(--tm-color-gray-700);
   --tm-status-inprogress-bg:   var(--tm-color-primary-100);
   --tm-status-inprogress-fg:   var(--tm-color-primary-800);
-  --tm-status-done-bg:         #dcfce7;
-  --tm-status-done-fg:         #166534;
+  --tm-status-done-bg:         var(--tm-color-success-subtle);
+  --tm-status-done-fg:         var(--tm-color-success-text);
   --tm-status-closed-bg:       var(--tm-color-gray-100);
   --tm-status-closed-fg:       var(--tm-color-gray-800);
 
   /* ── Task priority ──────────────────────────────────────────── */
   /* Dots and icons, not text fills, so they are held to the 3:1 a glyph needs
-     against the page rather than to text AA. */
+     against the page rather than to text AA. The suffix is the lower-cased
+     TmWorkItemPriority member. */
+  --tm-priority-lowest:        var(--tm-color-gray-500);
   --tm-priority-low:           #15803d;
   --tm-priority-medium:        #a16207;
   --tm-priority-high:          #c2410c;
-  --tm-priority-critical:      var(--tm-color-danger);
+  --tm-priority-highest:       var(--tm-color-danger);
+
+  /* Text on an event whose fill is a consumer-supplied colour. White holds on the
+     default event colour; a consumer that paints a light fill sets --event-text-color. */
+  --tm-scheduler-event-fg:     var(--tm-color-white);
 }
 
 /* Pod 768 px se `__inner` láme do sloupce (viz TmFormActionBar.razor.css), takže se k rezervě

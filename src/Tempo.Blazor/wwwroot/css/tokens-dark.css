@@ -156,12 +156,12 @@
      declared, so a dark theme switched on a parent element would otherwise keep the
      light value. Same convention as --tm-text-placeholder above. */
   --tm-bg-workspace:           var(--tm-bg-page);
-  --tm-radius-card:            var(--tm-radius-xl);
-  --tm-radius-control:         var(--tm-radius-lg);
+  --tm-radius-card:            var(--tm-radius-lg);
+  --tm-radius-control:         var(--tm-radius-md);
   --tm-shadow-card:            var(--tm-shadow-md);
   --tm-shadow-popover:         var(--tm-shadow-lg);
   --tm-touch-target:           2.75rem;
-  --tm-focus-ring:             var(--tm-shadow-focus);
+  --tm-focus-ring:             0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-primary);
   /* gray-400 is inverted to #94a3b8 here, which holds 5.7:1 on the dark surface. */
   --tm-border-color-strong:    var(--tm-color-gray-400);
 
@@ -170,17 +170,23 @@
      (TokenContrastTests); the fills stay distinguishable from the dark surface. */
   --tm-status-open-bg:         #334155;
   --tm-status-open-fg:         #e2e8f0;
-  --tm-status-inprogress-bg:   #1e3a8a;
-  --tm-status-inprogress-fg:   #dbeafe;
+  /* Follows the primary scale, so the indigo theme recolours it without an override. */
+  --tm-status-inprogress-bg:   var(--tm-color-primary-900);
+  --tm-status-inprogress-fg:   var(--tm-color-primary-100);
   --tm-status-done-bg:         #14532d;
-  --tm-status-done-fg:         #dcfce7;
+  --tm-status-done-fg:         var(--tm-color-success-text);
   --tm-status-closed-bg:       #334155;
   --tm-status-closed-fg:       #f1f5f9;
 
   /* ── Task priority ──────────────────────────────────────────── */
   /* Brightened so a small glyph keeps 3:1 against the dark page. */
+  /* lowest is pinned to #94a3b8: gray-500 inverts to a near-white in dark, which
+     would not read as the quiet end of the scale. #94a3b8 holds 3:1 on the dark page. */
+  --tm-priority-lowest:        #94a3b8;
   --tm-priority-low:           #4ade80;
   --tm-priority-medium:        #facc15;
   --tm-priority-high:          #fb923c;
-  --tm-priority-critical:      #f87171;
+  --tm-priority-highest:       var(--tm-color-danger);
+
+  --tm-scheduler-event-fg:     var(--tm-color-white);
 }

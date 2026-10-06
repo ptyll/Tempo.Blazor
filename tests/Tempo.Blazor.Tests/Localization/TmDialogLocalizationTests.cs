@@ -37,6 +37,35 @@ public class TmDialogLocalizationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void PromptPlaceholder_UsesTheLocalizedDefault()
+    {
+        UseCzechLocalization();
+
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Prompt)
+            .Add(d => d.Title, "Název"));
+
+        cut.Find("input").GetAttribute("placeholder")
+            .Should().Be("Zadejte hodnotu…",
+                "B1: the prompt placeholder must come from Loc[\"TmDialog_PromptPlaceholder\"], not an English literal");
+    }
+
+    [Fact]
+    public void ExplicitPromptPlaceholder_OverridesTheLocalizer()
+    {
+        UseCzechLocalization();
+
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Prompt)
+            .Add(d => d.Title, "Název")
+            .Add(d => d.PromptPlaceholder, "Vlastní nápověda"));
+
+        cut.Find("input").GetAttribute("placeholder").Should().Be("Vlastní nápověda");
+    }
+
+    [Fact]
     public void ExplicitButtonTexts_OverrideTheLocalizer()
     {
         UseCzechLocalization();

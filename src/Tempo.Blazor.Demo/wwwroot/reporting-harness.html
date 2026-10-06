@@ -4,6 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>tempo reporting harness</title>
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('tm-demo-color-theme') === 'indigo') {
+                    document.documentElement.setAttribute('data-tm-theme', 'indigo');
+                }
+            } catch (e) { }
+        })();
+    </script>
     <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
     <style>
         html,

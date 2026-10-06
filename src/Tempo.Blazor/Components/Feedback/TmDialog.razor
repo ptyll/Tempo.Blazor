@@ -40,7 +40,7 @@
                     {
                         <div class="tm-dialog-input-wrapper">
                             <TmTextInput @bind-Value="_promptValue"
-                                         Placeholder="@PromptPlaceholder"
+                                         Placeholder="@ResolvedPromptPlaceholder"
                                          Class="tm-dialog-input"
                                          @onkeyup="HandlePromptKeyUp" />
                         </div>
@@ -94,7 +94,8 @@
     [Parameter] public string Title { get; set; } = string.Empty;
     [Parameter] public string Message { get; set; } = string.Empty;
     [Parameter] public string? DefaultValue { get; set; }
-    [Parameter] public string PromptPlaceholder { get; set; } = "Enter value...";
+    /// <summary>Placeholder of the prompt input. Null falls back to the localized text.</summary>
+    [Parameter] public string? PromptPlaceholder { get; set; }
     [Parameter] public bool IsDangerous { get; set; } = false;
     
     /// <summary>
@@ -132,6 +133,9 @@
 
     /// <summary>The dismiss label: the caller's text, or the localized default when none was passed.</summary>
     private string ResolvedCancelText => string.IsNullOrEmpty(CancelButtonText) ? Loc["Tm_Cancel"] : CancelButtonText;
+
+    /// <summary>The prompt placeholder: the caller's text, or the localized default when none was passed.</summary>
+    private string ResolvedPromptPlaceholder => string.IsNullOrEmpty(PromptPlaceholder) ? Loc["TmDialog_PromptPlaceholder"] : PromptPlaceholder;
 
     private ElementReference _dialogElement;
     private string _titleId = Guid.NewGuid().ToString("N");

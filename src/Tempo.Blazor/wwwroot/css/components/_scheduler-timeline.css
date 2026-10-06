@@ -96,8 +96,8 @@
     cursor: pointer;
     overflow: visible;
     z-index: 1;
-    background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    color: var(--tm-color-on-primary, #fff);
+    background: var(--event-color, var(--tm-color-primary));
+    color: var(--event-text-color, var(--tm-scheduler-event-fg));
     font-size: var(--tm-font-size-xs, 0.75rem);
     transition: filter 0.1s ease;
 }
@@ -139,7 +139,7 @@
 }
 
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--left:hover {
-    border-left-color: #fff;
+    border-left-color: var(--tm-bg-surface);
 }
 
 /* Right resize handle (end time) */
@@ -151,7 +151,7 @@
 }
 
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--right:hover {
-    border-right-color: #fff;
+    border-right-color: var(--tm-bg-surface);
 }
 
 /* Drop target highlighting */

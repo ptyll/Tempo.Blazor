@@ -135,7 +135,7 @@
 .tm-notion-audit__download:focus-visible {
     outline: none;
     border-color: var(--tm-color-primary);
-    box-shadow: 0 0 0 3px var(--tm-color-primary-focus, var(--tm-color-primary-subtle));
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-notion-audit__filter-actions,

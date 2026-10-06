@@ -32,6 +32,7 @@ src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__export-opti
 src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__export-options
 src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__export-preview
 src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__export-select
+src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__filter-field
 src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__filter-op
 src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__filter-panel-actions
 src/Tempo.Blazor/Components/Scheduler/TmGantt.razor.css :: tm-gantt__filter-panel-close

@@ -111,8 +111,8 @@
 }
 
 .tm-scheduler-timegrid-allday-event {
-    background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    color: var(--tm-color-on-primary, #fff);
+    background: var(--event-color, var(--tm-color-primary));
+    color: var(--event-text-color, var(--tm-scheduler-event-fg));
     font-size: 0.6875rem;
     padding: 1px var(--tm-space-2, 0.5rem);
     border-radius: var(--tm-radius-xs, 0.125rem);
@@ -197,13 +197,13 @@
     overflow: hidden;
     cursor: pointer;
     z-index: 1;
-    border-left: 3px solid var(--event-color, var(--tm-color-primary, #3b82f6));
-    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary, #3b82f6)) 15%, white);
+    border-left: 3px solid var(--event-color, var(--tm-color-primary));
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 15%, var(--tm-bg-surface));
     transition: box-shadow 0.1s ease;
 }
 
 .tm-scheduler-timegrid-event:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-md);
     z-index: 2;
 }
 
@@ -285,7 +285,7 @@
 }
 
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--top:hover {
-    border-top-color: #fff;
+    border-top-color: var(--tm-bg-surface);
 }
 
 /* Bottom resize handle (end time) */
@@ -296,5 +296,5 @@
 }
 
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--bottom:hover {
-    border-bottom-color: #fff;
+    border-bottom-color: var(--tm-bg-surface);
 }

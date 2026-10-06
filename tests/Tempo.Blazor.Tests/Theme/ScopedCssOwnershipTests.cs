@@ -40,11 +40,30 @@ public sealed class ScopedCssOwnershipTests
     }
 
     [Fact]
+    public void CommaGroup_DoesNotLetADeepItemHideAPlainSibling()
+    {
+        const string parentCss = """.tm-parent__child-only, .tm-parent {}""";
+        const string parentRazor = """<div class="tm-parent"><Child /></div>""";
+        const string childRazor = """<div class="tm-parent__child-only"></div>""";
+
+        var findings = ScopedCssOwnership
+            .FindForeignClasses(parentCss, parentRazor, [childRazor])
+            .Select(finding => finding.ClassName)
+            .ToList();
+
+        findings.Should().Equal(["tm-parent__child-only"],
+            "a comma group is several selectors, and a ::deep-free item must be judged on its own");
+    }
+
+    [Fact]
     public void Repository_ForeignClasses_DoNotExceedTheBaseline()
     {
         var root = ThemeCss.RepositoryRoot().FullName;
         var findings = ScopedCssOwnership.Scan(root);
         var baseline = ScopedCssOwnership.Baseline(root);
+
+        findings.Count.Should().BeLessThanOrEqualTo(77,
+            "growing past the hard ceiling is a code change, not a baseline edit");
 
         findings.Should().NotBeEmpty(
             "the baseline exists because Gantt/Notion/Modeling already have foreign classes; "
@@ -102,12 +121,21 @@ internal static class ScopedCssOwnership
         var findings = new List<ForeignClass>();
         foreach (var selector in Selectors(scopedCss))
         {
-            if (DeepMarker.IsMatch(selector))
+            // A comma group is several selectors. Judging the group as a whole lets a
+            // ::deep item hide a plain sibling, so each item is judged on its own.
+            foreach (var item in SelectorItems(selector))
             {
-                continue;
+                if (DeepMarker.IsMatch(item))
+                {
+                    continue;
+                }
+
+                Judge(item);
             }
 
-            var key = KeyCompound(selector);
+            void Judge(string item)
+            {
+            var key = KeyCompound(item);
             foreach (Match match in ClassName.Matches(key))
             {
                 var className = match.Groups[1].Value;
@@ -116,7 +144,8 @@ internal static class ScopedCssOwnership
                     continue;
                 }
 
-                findings.Add(new ForeignClass(className, selector.Trim()));
+                findings.Add(new ForeignClass(className, item.Trim()));
+            }
             }
         }
 
@@ -186,6 +215,31 @@ internal static class ScopedCssOwnership
     private static bool IsBuildOutput(string path) =>
         path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
         || path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Splits a selector group on top-level commas, ignoring commas inside parentheses.</summary>
+    private static IEnumerable<string> SelectorItems(string selector)
+    {
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < selector.Length; i++)
+        {
+            switch (selector[i])
+            {
+                case '(':
+                    depth++;
+                    break;
+                case ')':
+                    depth = Math.Max(0, depth - 1);
+                    break;
+                case ',' when depth == 0:
+                    yield return selector[start..i];
+                    start = i + 1;
+                    break;
+            }
+        }
+
+        yield return selector[start..];
+    }
 
     private static IEnumerable<string> Selectors(string css)
     {

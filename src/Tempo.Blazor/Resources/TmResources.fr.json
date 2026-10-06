@@ -5127,6 +5127,7 @@
   "Tm_Apply": "Appliquer",
   "Tm_Back": "Retour",
   "Tm_Cancel": "Annuler",
+  "TmDialog_PromptPlaceholder": "Saisissez une valeur…",
   "Tm_Clear": "Effacer",
   "Tm_Close": "Fermer",
   "Tm_Confirm": "Confirmer",

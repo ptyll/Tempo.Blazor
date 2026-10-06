@@ -48,12 +48,12 @@
 }
 
 .tm-scheduler-month-day--today {
-    background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 5%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
 }
 
 .tm-scheduler-month-day--today .tm-scheduler-month-day-number {
-    background: var(--tm-color-primary, #3b82f6);
-    color: var(--tm-color-on-primary, #fff);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
     border-radius: 50%;
     width: 1.5rem;
     height: 1.5rem;
@@ -87,12 +87,12 @@
 }
 
 .tm-scheduler-month-event:hover {
-    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary, #3b82f6)) 20%, transparent);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 20%, transparent);
 }
 
 .tm-scheduler-month-event--allday {
-    background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    color: var(--tm-color-on-primary, #fff);
+    background: var(--event-color, var(--tm-color-primary));
+    color: var(--event-text-color, var(--tm-scheduler-event-fg));
     border-left: none;
     border-radius: var(--tm-radius-xs, 0.125rem);
     padding: 1px var(--tm-space-2, 0.5rem);

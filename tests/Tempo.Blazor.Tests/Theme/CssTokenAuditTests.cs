@@ -14,6 +14,14 @@ public sealed class CssTokenAuditTests
 {
     private static readonly TimeSpan AuditTimeout = TimeSpan.FromMinutes(2);
 
+    /// <summary>
+    /// Hard ceiling. Raising it is a visible code change, which is the point: the baseline file can
+    /// be regenerated, but growing past this number has to be argued for in review.
+    /// </summary>
+    private const int StrictAuditCeiling = 5909;
+
+
+
     [Fact]
     public void StrictAudit_DoesNotExceedTheBaseline()
     {
@@ -27,6 +35,8 @@ public sealed class CssTokenAuditTests
         var (exitCode, output) = Run(root, "scripts/audit-css-strict.mjs");
 
         var reported = ReportedCount(output);
+        reported.Should().BeLessThanOrEqualTo(StrictAuditCeiling,
+            "growing past the hard ceiling is a code change, not a baseline edit");
         reported.Should().BeLessThanOrEqualTo(allowed,
             "the strict audit baseline may only shrink — a new hex literal, an undefined --tm-* alias "
             + "(even with a fallback) or a [data-theme=dark] block in a component stylesheet fails here. "
@@ -35,7 +45,7 @@ public sealed class CssTokenAuditTests
     }
 
     [Fact]
-    public void StrictAudit_BaselineMatchesTheReport()
+    public void StrictAudit_StillSeesTheExistingDebt()
     {
         var root = ThemeCss.RepositoryRoot().FullName;
         var (exitCode, output) = Run(root, "scripts/audit-css-strict.mjs");
@@ -44,6 +54,15 @@ public sealed class CssTokenAuditTests
         ReportedCount(output).Should().BeGreaterThan(0,
             "the baseline exists because core stylesheets still contain colour literals; "
             + "a zero means the audit stopped seeing them");
+    }
+
+    [Fact]
+    public void StrictAudit_FixtureSuitePasses()
+    {
+        var root = ThemeCss.RepositoryRoot().FullName;
+        var (exitCode, output) = Run(root, "--test scripts/audit-css-strict.test.mjs");
+
+        exitCode.Should().Be(0, output);
     }
 
     private static int ReportedCount(string output)

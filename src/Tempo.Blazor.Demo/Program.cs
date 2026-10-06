@@ -92,6 +92,7 @@ builder.Services.AddScoped<SignalRCollaborationProvider>();
 
 // Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
 builder.Services.AddTempoBlazor();
+builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();
 builder.Services.AddTempoBlazorDocumentEditor();
@@ -121,6 +122,25 @@ builder.Services.AddTempoEmailTemplates();
 builder.Services.AddScoped<Tempo.Blazor.Demo.Services.IEmailTemplateApiClient, Tempo.Blazor.Demo.Services.EmailTemplateApiClient>();
 builder.Services.AddScoped<DemoReportEmbeddingSourceFactory>();
 
+// The renderer captures its execution context, culture included, when the host is built. Reading
+// the preference here, before that, is the only point a persisted culture reaches component renders.
+try
+{
+    var early = Tempo.Blazor.Demo.EarlyCulture.ReadStoredCulture("tm-demo-culture");
+    if (!string.IsNullOrEmpty(early))
+    {
+        var earlyCulture = new CultureInfo(early);
+        CultureInfo.DefaultThreadCurrentCulture = earlyCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = earlyCulture;
+        CultureInfo.CurrentCulture = earlyCulture;
+        CultureInfo.CurrentUICulture = earlyCulture;
+    }
+}
+catch
+{
+    // localStorage is unavailable this early (prerender) — the post-build read below still applies it.
+}
+
 var host = builder.Build();
 
 // Initialize E2E test helper
@@ -134,8 +154,14 @@ try
     if (!string.IsNullOrEmpty(storedCulture))
     {
         var culture = new CultureInfo(storedCulture);
+        // DefaultThread* only reaches threads started afterwards. Blazor WebAssembly renders on this
+        // thread, so the current culture has to move too or the switch never changes a string.
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        // The renderer does not inherit the startup thread's culture, so the layout reapplies this.
+        Tempo.Blazor.Demo.SharedUI.Layout.DemoCulture.Applied = culture;
     }
 }
 catch

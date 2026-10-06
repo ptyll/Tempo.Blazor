@@ -97,13 +97,13 @@
 }
 
 .tm-scheduler-toolbar-view-btn--active {
-    background: var(--tm-color-primary, #3b82f6);
-    color: var(--tm-color-on-primary, #fff);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-scheduler-toolbar-view-btn--active:hover {
-    background: var(--tm-color-primary, #2563eb);
-    color: var(--tm-color-on-primary, #fff);
+    background: var(--tm-color-primary-hover);
+    color: var(--tm-color-on-primary);
 }
 
 /* ── Context Menu ──────────────────────────────── */
@@ -111,7 +111,7 @@
     position: fixed;
     z-index: 1000;
     min-width: 160px;
-    background: var(--tm-bg-surface, #ffffff);
+    background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color, #e2e8f0);
     border-radius: var(--tm-radius-md, 0.375rem);
     box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));

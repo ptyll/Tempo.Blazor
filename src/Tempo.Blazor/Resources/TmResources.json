@@ -5127,6 +5127,7 @@
   "Tm_Apply": "Apply",
   "Tm_Back": "Back",
   "Tm_Cancel": "Cancel",
+  "TmDialog_PromptPlaceholder": "Enter a value…",
   "Tm_Clear": "Clear",
   "Tm_Close": "Close",
   "Tm_Confirm": "Confirm",

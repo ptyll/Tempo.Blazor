@@ -64,6 +64,15 @@
         }
     </script>
     
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('tm-demo-color-theme') === 'indigo') {
+                    document.documentElement.setAttribute('data-tm-theme', 'indigo');
+                }
+            } catch (e) { }
+        })();
+    </script>
     <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
     <link href="_content/Tempo.Blazor.Signing/css/tempo-blazor-signing.css" rel="stylesheet" />
     <link href="_content/Tempo.Blazor.Maps/css/tempo-blazor-maps.css" rel="stylesheet" />
@@ -122,6 +131,7 @@
     <script src="_content/Tempo.Blazor.PdfViewer/js/pdf-annotator.js"></script>
     <script src="_content/Tempo.Blazor.PdfViewer/js/pdf-redaction.js"></script>
     <script src="_content/Tempo.Blazor.NotionEditor/js/notion-editor.js"></script>
+    <script src="_content/Tempo.Blazor.Demo.SharedUI/js/color-theme.js"></script>
     <script src="_framework/blazor.server.js"></script>
 </body>
 </html>

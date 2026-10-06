@@ -24,10 +24,11 @@ must be rendered by the component that owns the stylesheet. When it is not, eith
 
 ## What the test checks
 
-`ScopedCssOwnershipTests` scans every `*.razor.css` under `src/`. For each selector that does
-not use `::deep` / `:deep()`, it takes the classes of the key compound and reports any class
-that the owner does not render and some other component does. A class rendered by nobody is
-reported by nothing — it may be a typo, but it is not this bug.
+`ScopedCssOwnershipTests` scans every `*.razor.css` under `src/`. A comma group is several
+selectors, so each item is judged on its own after the `::deep` / `:deep()` opt-out is stripped —
+a deep item must not hide a plain sibling. For each remaining item it takes the classes of the
+key compound and reports any class that the owner does not render and some other component does.
+A class rendered by nobody is reported by nothing — it may be a typo, but it is not this bug.
 
 The current findings are frozen in
 `tests/Tempo.Blazor.Tests/Theme/scoped-css-ownership-baseline.txt`. The baseline may only

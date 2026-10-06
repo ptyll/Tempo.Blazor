@@ -1,52 +1,61 @@
 @inject IJSRuntime JS
+@inject ColorThemeState State
+@implements IDisposable
 
-<button @onclick="ToggleAsync"
-        data-testid="color-theme-switch"
-        data-tm-theme="@_theme"
-        class="px-2 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        title="@(_theme == Indigo ? "Switch to the default blue theme" : "Switch to the indigo theme")"
-        aria-label="@(_theme == Indigo ? "Switch to the default blue theme" : "Switch to the indigo theme")">
-    @(_theme == Indigo ? "Indigo" : "Blue")
-</button>
+<div role="group" aria-label="@Label" data-testid="color-theme-switch" class="inline-flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+    <button @onclick="() => ApplyAsync(ColorThemeState.Default)"
+            aria-pressed="@(_theme == ColorThemeState.Default)"
+            class="px-2 py-1 text-xs font-medium transition-colors @(_theme == ColorThemeState.Default ? "bg-primary-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800")">
+        @BlueLabel
+    </button>
+    <button @onclick="() => ApplyAsync(ColorThemeState.Indigo)"
+            aria-pressed="@(_theme == ColorThemeState.Indigo)"
+            class="px-2 py-1 text-xs font-medium transition-colors @(_theme == ColorThemeState.Indigo ? "bg-primary-600 text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800")">
+        @IndigoLabel
+    </button>
+</div>
 
 @code {
-    /// <summary>localStorage key. Mirrors the culture switcher's <c>tm-demo-culture</c>.</summary>
-    public const string StorageKey = "tm-demo-color-theme";
+    private string _theme = ColorThemeState.Default;
 
-    public const string Default = "default";
-    public const string Indigo = "indigo";
+    private string Label => "Color theme";
+    private string BlueLabel => "Blue";
+    private string IndigoLabel => "Indigo";
 
-    private string _theme = Default;
-    private bool _applied;
-
-    private async Task ToggleAsync()
+    protected override void OnInitialized()
     {
-        await ApplyAsync(_theme == Indigo ? Default : Indigo);
+        _theme = State.Current;
+        State.Changed += OnChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _applied)
+        if (!firstRender)
         {
             return;
         }
 
-        var stored = await JS.InvokeAsync<string?>("localStorage.getItem", StorageKey);
-        if (stored is Indigo)
+        var stored = await JS.InvokeAsync<string?>("tmColorTheme.stored");
+        if (stored is ColorThemeState.Indigo)
         {
-            await ApplyAsync(Indigo);
+            State.Set(ColorThemeState.Indigo);
         }
+    }
+
+    private void OnChanged()
+    {
+        _theme = State.Current;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task ApplyAsync(string theme)
     {
-        _theme = theme;
-        _applied = true;
-        await JS.InvokeVoidAsync("localStorage.setItem", StorageKey, theme);
-        await JS.InvokeVoidAsync("eval",
-            theme == Indigo
-                ? "document.documentElement.setAttribute('data-tm-theme','indigo')"
-                : "document.documentElement.removeAttribute('data-tm-theme')");
-        StateHasChanged();
+        State.Set(theme);
+        await JS.InvokeVoidAsync("tmColorTheme.apply", theme);
+    }
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
     }
 }

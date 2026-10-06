@@ -9851,9 +9851,9 @@
             },
             {
               "name": "PromptPlaceholder",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"Enter value...\""
+              "description": "Prompt input placeholder. Defaults to the localized TmDialog_PromptPlaceholder when not set."
             },
             {
               "name": "Show",
@@ -9936,9 +9936,9 @@
             },
             {
               "name": "CancelButtonText",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"Cancel\""
+              "description": "Dismiss button text. Defaults to the localized Tm_Cancel when not set."
             },
             {
               "name": "ChildContent",
@@ -9980,9 +9980,9 @@
             },
             {
               "name": "OkButtonText",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"OK\""
+              "description": "Confirm button text. Defaults to the localized Tm_Ok when not set."
             },
             {
               "name": "OkButtonVariant",

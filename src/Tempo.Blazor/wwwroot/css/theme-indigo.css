@@ -1,11 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
    Tempo.Blazor — Indigo theme (opt-in, decision G4)
-   Activate with <html data-tm-theme="indigo">. It layers over the default
-   tokens, so the blue scale stays the library default and a consumer opts in.
-   Dark is the same attribute plus data-theme="dark" (or .tm-dark).
+   Set data-tm-theme="indigo" on <html>, the same element that carries the
+   :root aliases in tokens.css, so every alias derived from the primary and gray
+   scales recomputes. Subtree theming is not supported: portaled overlays and
+   sheets render outside the subtree and would keep the default scale.
+   Dark is the same element plus data-theme="dark" (or .tm-dark), or a dark
+   region nested inside the indigo root.
    ═══════════════════════════════════════════════════════════════ */
 
-[data-tm-theme="indigo"] {
+:root[data-tm-theme="indigo"] {
   /* Primary scale — Tailwind indigo. -600 is the filled-button step: white text
      on #4f46e5 measures 6.3:1, which clears WCAG AA. */
   --tm-color-primary-50:   #eef2ff;
@@ -35,26 +38,24 @@
   --tm-color-gray-800:  #1e293b;
   --tm-color-gray-900:  #0f172a;
 
-  /* The off-white workspace the references are built on. Cards stay white
-     (--tm-bg-surface), so the page/card contrast is the point of the theme. */
+  /* The off-white workspace the references are built on. Only the workspace token
+     moves; --tm-bg-page stays the library default and the demo paints the workspace
+     itself. Cards stay white, so the page/card contrast is the point of the theme. */
   --tm-bg-workspace: #f7f8fc;
-  --tm-bg-page:      var(--tm-bg-workspace);
 
   /* Cards 12px, controls 8px — the reference radii, not the library default. */
   --tm-radius-card:    0.75rem;
   --tm-radius-control: 0.5rem;
-
-  /* Status chips re-point at the indigo scale so an in-progress chip matches the
-     theme instead of staying Tempo blue. */
-  --tm-status-inprogress-bg: var(--tm-color-primary-100);
-  --tm-status-inprogress-fg: var(--tm-color-primary-800);
 }
 
-/* Dark half. Both attributes must match so a light indigo page does not inherit
-   these; the dark block re-declares every alias whose var() would otherwise
-   compute against the light values. */
-[data-tm-theme="indigo"][data-theme="dark"],
-[data-tm-theme="indigo"].tm-dark {
+/* Dark half. The same-element forms cover <html data-tm-theme="indigo" data-theme="dark">;
+   the descendant forms cover a dark region nested inside the indigo root. The block
+   re-declares every alias whose var() would otherwise compute against the light values,
+   including the whole gray scale: the light slate scale would invert the dark surfaces. */
+:root[data-tm-theme="indigo"][data-theme="dark"],
+:root[data-tm-theme="indigo"].tm-dark,
+:root[data-tm-theme="indigo"] [data-theme="dark"],
+:root[data-tm-theme="indigo"] .tm-dark {
   /* The dark primary step shifts to -400, same convention as tokens-dark.css,
      so white-on-primary is not what dark paints — dark ink sits on the lighter step. */
   --tm-color-primary:        var(--tm-color-primary-400);
@@ -63,17 +64,23 @@
   --tm-color-primary-subtle: rgb(from var(--tm-color-primary-500) r g b / 0.15);
   --tm-color-primary-500-rgb: 129, 140, 248;
 
+  /* Dark slate scale, copied from tokens-dark.css. The light block above declares the
+     light slate scale, and a custom property substitutes where it is declared, so the
+     dark theme has to re-declare every step or the dark surfaces keep light values. */
+  --tm-color-gray-50:   #1e293b;
+  --tm-color-gray-100:  #334155;
+  --tm-color-gray-200:  #475569;
+  --tm-color-gray-300:  #64748b;
+  --tm-color-gray-400:  #94a3b8;
+  --tm-color-gray-500:  #cbd5e1;
+  --tm-color-gray-600:  #e2e8f0;
+  --tm-color-gray-700:  #f1f5f9;
+  --tm-color-gray-800:  #f8fafc;
+  --tm-color-gray-900:  #ffffff;
+
   /* Slate workspace, one step below the dark surface so cards still lift off it. */
   --tm-bg-workspace: #0b1120;
-  --tm-bg-page:      var(--tm-bg-workspace);
 
   --tm-radius-card:    0.75rem;
   --tm-radius-control: 0.5rem;
-
-  /* The dark in-progress chip must re-point too: the light indigo wash would be
-     unreadable on the dark surface. */
-  --tm-status-inprogress-bg: var(--tm-color-primary-900);
-  --tm-status-inprogress-fg: var(--tm-color-primary-100);
-
-  --tm-focus-ring: var(--tm-shadow-focus);
 }

@@ -310,7 +310,9 @@ public sealed class TokenContrastTests
         "--tm-status-inprogress-bg", "--tm-status-inprogress-fg",
         "--tm-status-done-bg", "--tm-status-done-fg",
         "--tm-status-closed-bg", "--tm-status-closed-fg",
-        "--tm-priority-low", "--tm-priority-medium", "--tm-priority-high", "--tm-priority-critical",
+        "--tm-priority-lowest", "--tm-priority-low", "--tm-priority-medium",
+        "--tm-priority-high", "--tm-priority-highest",
+        "--tm-scheduler-event-fg",
     ];
 
     [Fact]
@@ -322,8 +324,11 @@ public sealed class TokenContrastTests
         foreach (var token in SemanticTokens)
         {
             light.Should().ContainKey(token, "{0} must be declared in tokens.css", token);
+
+            // A var()-valued token computes where it is declared, so it must be repeated. A literal
+            // may differ between themes (a dark priority glyph is brighter) and only has to exist.
             dark.Should().ContainKey(token,
-                "{0} must be re-declared in tokens-dark.css — a :root-only alias computes with the light value",
+                "{0} must be declared in tokens-dark.css — a :root-only alias computes with the light value",
                 token);
         }
     }
@@ -343,7 +348,7 @@ public sealed class TokenContrastTests
         {
             foreach (var (foreground, surface) in pairs)
             {
-                ThemeCss.Ratio(foreground, surface, dark).Should().BeGreaterThanOrEqualTo(
+                PaintedRatio(foreground, surface, dark).Should().BeGreaterThanOrEqualTo(
                     4.5,
                     "{0} na {1} ({2}) musí držet 4.5:1 — status chip je text na výplni",
                     foreground, surface, dark ? "dark" : "light");
@@ -376,7 +381,7 @@ public sealed class TokenContrastTests
             Math.Abs(subtle - page).Should().BeGreaterThan(0.02,
                 "primary-subtle pill se nesmí ztratit na pozadí stránky ({0})", dark ? "dark" : "light");
 
-            var ring = RingInk(tokens);
+            var ring = ThemeCss.LastShadowColour(tokens["--tm-focus-ring"], tokens);
             ThemeCss.Contrast(ring, ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
                 .Should().BeGreaterThanOrEqualTo(3,
                     "focus ring je non-text indikátor a musí držet 3:1 proti povrchu ({0})", dark ? "dark" : "light");
@@ -420,17 +425,110 @@ public sealed class TokenContrastTests
         return declarations;
     }
 
-    /// <summary>The solid colour a 3px ring paints, taken from the first <c>rgb()</c> of the ring token.</summary>
-    private static string RingInk(Dictionary<string, string> tokens)
+    [Fact]
+    public void IndigoDarkSelectors_CoverANestedDarkRegion()
     {
-        var declared = ThemeCss.ResolveColour(tokens["--tm-focus-ring"], tokens);
-        var rgb = Regex.Match(declared, @"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", RegexOptions.None, TimeSpan.FromSeconds(5));
-        if (!rgb.Success)
-        {
-            return declared;
-        }
+        var css = ThemeCss.StripComments(File.ReadAllText(ThemeCss.CssPath("theme-indigo.css")));
+        var marker = css.IndexOf("data-theme=\"dark\"", StringComparison.Ordinal);
+        var selector = css[..css.IndexOf('{', marker)].Trim();
 
-        return "#" + string.Concat(rgb.Groups.Cast<Group>().Skip(1)
-            .Select(group => int.Parse(group.Value, CultureInfo.InvariantCulture).ToString("x2", CultureInfo.InvariantCulture)));
+        selector.Should().Contain(":root[data-tm-theme=\"indigo\"] [data-theme=\"dark\"]",
+            "a dark region nested inside the indigo root must pick up the dark indigo scale");
+        selector.Should().Contain(":root[data-tm-theme=\"indigo\"] .tm-dark");
+    }
+
+    [Fact]
+    public void IndigoDarkBlock_RedeclaresTheWholeGrayScale()
+    {
+        var light = IndigoTokens(false);
+        var dark = IndigoTokens(true);
+
+        foreach (var step in new[] { "50", "100", "200", "300", "400", "500", "600", "700", "800", "900" })
+        {
+            var token = $"--tm-color-gray-{step}";
+            light.Should().ContainKey(token);
+            dark.Should().ContainKey(token);
+            (dark[token] != light[token]
+                || ThemeCss.TokenGraph(true).GetValueOrDefault(token) == light[token])
+                .Should().BeTrue(
+                    "{0} must come from the dark indigo block unless the dark theme already declares the same value",
+                    token);
+        }
+    }
+
+    [Fact]
+    public void IndigoDark_GrayHoldsOnTheSurface_AndPrimaryChannelsFollowTheStep()
+    {
+        var tokens = IndigoTokens(true);
+
+        ThemeCss.Contrast(
+            ThemeCss.ResolveColour("var(--tm-color-gray-800)", tokens),
+            ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+            .Should().BeGreaterThanOrEqualTo(3, "gray-800 na tmavém povrchu musí držet 3:1");
+
+        tokens["--tm-color-primary-500-rgb"].Should().Be("129, 140, 248",
+            "the dark primary step is -400, so the channels must be 129, 140, 248");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FocusRing_HoldsThreeToOne_AgainstTheSurface(bool dark)
+    {
+        foreach (var indigo in new[] { false, true })
+        {
+            var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+            var ring = ThemeCss.LastShadowColour(tokens["--tm-focus-ring"], tokens);
+            ThemeCss.Contrast(ring, ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+                .Should().BeGreaterThanOrEqualTo(3,
+                    "focus ring proti povrchu ({0}, {1})", dark ? "dark" : "light", indigo ? "indigo" : "default");
+        }
+    }
+
+    /// <summary>
+    /// Contrast of text on a fill, compositing the fill over the surface when it is a translucent
+    /// <c>rgb(from …)</c> wash. A translucent fill is not a colour a viewer sees on its own.
+    /// </summary>
+    private static double PaintedRatio(string foreground, string surface, bool dark)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var declared = ThemeCss.ResolveColour(surface, tokens);
+        var token = Regex.Match(surface, @"--tm-[\w-]+", RegexOptions.None, TimeSpan.FromSeconds(5)).Value;
+        var alpha = Regex.Match(
+            tokens.GetValueOrDefault(token, ""),
+            @"/\s*([0-9.]+)\s*\)", RegexOptions.None, TimeSpan.FromSeconds(5));
+        var painted = alpha.Success
+            ? ThemeCss.Composite(declared, double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture),
+                ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+            : declared;
+        return ThemeCss.Contrast(ThemeCss.ResolveColour(foreground, tokens), painted);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PrimaryText_HoldsAa_OnTheSubtleWash(bool dark)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+
+        // Dark declares the wash as `rgb(from var(--x) r g b / 0.15)`, so the colour a viewer sees is
+        // that colour at 0.15 over the surface, not the bare colour.
+        var declared = tokens["--tm-color-primary-subtle"];
+        var alpha = Regex.Match(declared, @"/\s*([0-9.]+)\s*\)", RegexOptions.None, TimeSpan.FromSeconds(5));
+        var wash = ThemeCss.ResolveColour(declared, tokens);
+        var painted = alpha.Success
+            ? ThemeCss.Composite(wash, double.Parse(alpha.Groups[1].Value, CultureInfo.InvariantCulture), surface)
+            : wash;
+
+        ThemeCss.Contrast(ThemeCss.ResolveColour("var(--tm-color-primary-text)", tokens), painted)
+            .Should().BeGreaterThanOrEqualTo(4.5, "primary-text na subtle wash ({0})", dark ? "dark" : "light");
+    }
+
+    [Fact]
+    public void SchedulerEventText_HoldsAa_OnTheDefaultEventColour()
+    {
+        ThemeCss.Ratio("var(--tm-scheduler-event-fg)", "var(--tm-color-primary)", false)
+            .Should().BeGreaterThanOrEqualTo(4.5, "text události na výchozí barvě události musí držet AA");
     }
 }

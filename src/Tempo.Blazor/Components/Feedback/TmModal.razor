@@ -54,8 +54,9 @@
                     @ChildContent
                 </div>
                 
-                @* Footer *@
-                @if (ShowFooter)
+                @* Footer: only when there is something to put in it. An empty footer bar is a
+                   stray border under the body. *@
+                @if (ShowFooter && (Footer is not null || ShowDefaultFooterButtons))
                 {
                     <div class="tm-modal-footer">
                         @if (Footer is not null)
@@ -69,7 +70,7 @@
                                 <TmButton Variant="ButtonVariant.Ghost"
                                           OnClick="OnClose"
                                           Class="tm-modal-btn-cancel">
-                                    @CancelButtonText
+                                    @ResolvedCancelText
                                 </TmButton>
                             }
                             @if (ShowOkButton)
@@ -78,7 +79,7 @@
                                           OnClick="OnOkClick"
                                           Disabled="OkButtonDisabled"
                                           Class="tm-modal-btn-ok">
-                                    @OkButtonText
+                                    @ResolvedOkText
                                 </TmButton>
                             }
                         }
@@ -106,8 +107,10 @@
     [Parameter] public bool ShowDefaultFooterButtons { get; set; } = false;
     [Parameter] public bool ShowOkButton { get; set; } = true;
     [Parameter] public bool ShowCancelButton { get; set; } = true;
-    [Parameter] public string OkButtonText { get; set; } = "OK";
-    [Parameter] public string CancelButtonText { get; set; } = "Cancel";
+    /// <summary>Label of the OK button. Null falls back to the localized "OK".</summary>
+    [Parameter] public string? OkButtonText { get; set; }
+    /// <summary>Label of the cancel button. Null falls back to the localized "Cancel".</summary>
+    [Parameter] public string? CancelButtonText { get; set; }
     [Parameter] public ButtonVariant OkButtonVariant { get; set; } = ButtonVariant.Primary;
     [Parameter] public bool OkButtonDisabled { get; set; } = false;
     
@@ -122,6 +125,9 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
     
     [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private string ResolvedOkText => string.IsNullOrEmpty(OkButtonText) ? Loc["Tm_Ok"] : OkButtonText;
+    private string ResolvedCancelText => string.IsNullOrEmpty(CancelButtonText) ? Loc["Tm_Cancel"] : CancelButtonText;
 
     private ElementReference _modalElement;
     private ElementReference _overlayElement;
