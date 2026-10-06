@@ -16,7 +16,7 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
     [
         ("/buttons", "button", ".tm-btn"),
         ("/forms", "input", ".tm-input, input"),
-        ("/feedback", "modal", ".tm-modal, .tm-dialog, .tm-alert"),
+        ("/modal-dialog", "modal", "[data-testid='open-basic-modal']"),
         ("/data-table", "datatable", ".tm-data-table"),
         ("/dashboard", "dashboard", ".tm-dashboard"),
         ("/scheduler", "scheduler", ".tm-scheduler"),
@@ -31,12 +31,18 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
             foreach (var indigo in new[] { false, true })
             {
                 var page = await CreatePageAsync();
+                // Desktop width, so the sidebar (and its theme toggle) is shown rather than the
+                // mobile header, whose copy of the toggle is hidden and not clickable.
+                await page.SetViewportSizeAsync(1440, 900);
                 await page.GotoAsync(BaseUrl);
                 await page.WaitForFunctionAsync(
                     "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
                     null, new PageWaitForFunctionOptions { Timeout = 30000 });
 
-                await ApplyThemeAsync(page, dark, indigo);
+                if (indigo)
+                {
+                    await ApplyIndigoAsync(page);
+                }
 
                 foreach (var (route, name, ready) in Pages)
                 {
@@ -47,6 +53,24 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
                     await page.Locator(ready).First.WaitForAsync(
                         new LocatorWaitForOptions { Timeout = 30000 });
 
+                    // Dark mode lives in the in-memory ThemeService, which a full navigation resets,
+                    // so it has to be toggled on every page. The sidebar copy is the visible one.
+                    if (dark)
+                    {
+                        await page.Locator("aside [data-testid='theme-toggle']").ClickAsync();
+                        await page.WaitForFunctionAsync(
+                            "() => document.querySelector('[data-theme=\"dark\"]') !== null",
+                            null, new PageWaitForFunctionOptions { Timeout = 10000 });
+                    }
+
+                    // A closed modal screenshots as a button row. Open it so the shot shows the dialog.
+                    if (name == "modal")
+                    {
+                        await page.Locator(ready).First.ClickAsync();
+                        await page.Locator(".tm-modal").First.WaitForAsync(
+                            new LocatorWaitForOptions { Timeout = 15000 });
+                    }
+
                     var theme = (dark ? "dark" : "light") + "-" + (indigo ? "indigo" : "default");
                     await SaveAsync(page, $"{name}--{theme}");
                 }
@@ -54,22 +78,11 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
         }
     }
 
-    private static async Task ApplyThemeAsync(IPage page, bool dark, bool indigo)
+    private static async Task ApplyIndigoAsync(IPage page)
     {
-        if (dark)
-        {
-            var toggle = page.Locator("[data-testid='theme-toggle']").First;
-            await toggle.ClickAsync();
-            await page.WaitForFunctionAsync(
-                "() => document.querySelector('[data-theme=\"dark\"]') !== null",
-                null, new PageWaitForFunctionOptions { Timeout = 10000 });
-        }
-
-        if (indigo)
-        {
-            await page.EvaluateAsync(
-                "() => { localStorage.setItem('tm-demo-color-theme','indigo'); document.documentElement.setAttribute('data-tm-theme','indigo'); }");
-        }
+        // The switch restores this from localStorage on every load, so one write covers the run.
+        await page.EvaluateAsync(
+            "() => { localStorage.setItem('tm-demo-color-theme','indigo'); document.documentElement.setAttribute('data-tm-theme','indigo'); }");
     }
 
     private async Task SaveAsync(IPage page, string name)
