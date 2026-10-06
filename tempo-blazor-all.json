@@ -6437,6 +6437,19 @@
               "isRequired": false
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto measures the dashboard and reports the mode on data-layout. The grid restacks by container query regardless (12 columns, 6 below 1024px, 2 below 768px, 1 below 640px). A forced value reports that mode without measuring."
+            },
+            {
+              "name": "LayoutModeChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the rendered layout changes."
+            },
+            {
               "name": "OnDashboardChanged",
               "type": "EventCallback<DashboardConfig>",
               "isRequired": false
@@ -6461,6 +6474,10 @@
           "cssClasses": [
             "tm-dashboard",
             "tm-dashboard--edit",
+            "tm-dashboard--desktop",
+            "tm-dashboard--tablet",
+            "tm-dashboard--mobile",
+            "tm-dashboard-layout",
             "tm-dashboard-toolbar",
             "tm-dashboard-toolbar-left",
             "tm-dashboard-toolbar-right",
@@ -17301,6 +17318,64 @@
           ]
         },
         {
+          "itemName": "TmLayoutObserver",
+          "kind": "Component",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, so a host or a test can render a layout without a DOM. The root carries tm-layout, tm-layout--{mode} and data-layout.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/TmLayoutObserver.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Layout"
+          ],
+          "parameters": [
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content rendered inside the observed container. Reads the cascaded TmLayoutContext."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra CSS classes appended to the root."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto measures the root. Desktop, Tablet or Mobile force that layout and skip the observer."
+            },
+            {
+              "name": "LayoutModeChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the rendered mode changes. The initial value is not a change."
+            },
+            {
+              "name": "Style",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Inline style appended to the root."
+            }
+          ],
+          "cssClasses": [
+            "tm-layout",
+            "tm-layout--desktop",
+            "tm-layout--tablet",
+            "tm-layout--mobile"
+          ],
+          "examples": [
+            {
+              "title": "Force the mobile layout",
+              "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <Child />\n</TmLayoutObserver>"
+            }
+          ]
+        },
+        {
           "itemName": "TmSection",
           "kind": "Component",
           "category": "Layout",
@@ -24329,6 +24404,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_layout-observer.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_ledger-grid.css",
           "kind": "Css"
         },
@@ -24673,6 +24752,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/layout-observer.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/markdownEditor.js",
           "kind": "JavaScript"
         },
@@ -24717,6 +24800,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/layout-observer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/overlay-lifecycle.test.mjs",
           "kind": "JavaScript"
         },
@@ -24726,11 +24813,11 @@
         }
       ],
       "summary": {
-        "itemCount": 345,
-        "manualItemCount": 345,
-        "generatedItemCount": 337,
+        "itemCount": 346,
+        "manualItemCount": 346,
+        "generatedItemCount": 338,
         "generatedOnlyItemCount": 0,
-        "componentCount": 195,
+        "componentCount": 196,
         "publicApiTypeCount": 142
       }
     },
@@ -60243,6 +60330,7 @@
         "projectReferences": [],
         "namespaces": [
           "Tempo.Blazor.Abstractions.Interfaces",
+          "Tempo.Blazor.Abstractions.Layout",
           "Tempo.Blazor.Abstractions.Models",
           "Tempo.Blazor.Abstractions.PivotTable",
           "Tempo.Blazor.Abstractions.Shared",
@@ -71929,6 +72017,100 @@
               "description": "Maximum number of matching entries to return. MaxValue means \"return everything that matches\" (used when no page size is configured)."
             }
           ]
+        },
+        {
+          "itemName": "TmBreakpoints",
+          "kind": "Class",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Abstractions.Layout",
+          "description": "The shared responsive widths in CSS pixels: Sm 640, Md 768, Lg 1024, Xl 1280. A custom property cannot appear in an @media or @container condition, so stylesheets repeat these as literals and a test proves they match.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmBreakpoints.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "All",
+              "kind": "Field",
+              "type": "int[]",
+              "description": "Every width a new @media or @container condition may use, in ascending order."
+            },
+            {
+              "name": "Lg",
+              "kind": "Field",
+              "type": "int",
+              "description": "1024px. At this width a container becomes Desktop."
+            },
+            {
+              "name": "Md",
+              "kind": "Field",
+              "type": "int",
+              "description": "768px. A named step between mobile and tablet; not a layout-mode boundary."
+            },
+            {
+              "name": "Sm",
+              "kind": "Field",
+              "type": "int",
+              "description": "640px. Below this a container is Mobile."
+            },
+            {
+              "name": "Xl",
+              "kind": "Field",
+              "type": "int",
+              "description": "1280px. The wide desktop step."
+            },
+            {
+              "name": "Classify",
+              "kind": "Method",
+              "type": "TmLayoutMode",
+              "description": "The layout a measured container width resolves to. A non-finite or negative width is rejected: guessing a mode from a broken measurement would silently render the wrong branch.",
+              "parameters": [
+                {
+                  "name": "widthPx",
+                  "type": "double"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "itemName": "TmLayoutContext",
+          "kind": "Record",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Abstractions.Layout",
+          "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Resolved is never Auto.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutContext.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "IsDesktop",
+              "kind": "Field",
+              "type": "bool",
+              "description": "True when the rendered layout is the wide one."
+            },
+            {
+              "name": "IsMobile",
+              "kind": "Field",
+              "type": "bool",
+              "description": "True when the rendered layout is the narrow one."
+            },
+            {
+              "name": "IsTablet",
+              "kind": "Field",
+              "type": "bool",
+              "description": "True when the rendered layout is the compact one."
+            }
+          ]
+        },
+        {
+          "itemName": "TmLayoutMode",
+          "kind": "Enum",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Abstractions.Layout",
+          "description": "How a component decides its responsive layout. Auto measures the component's own container; Desktop, Tablet and Mobile force a layout so a host or a test can render a mode without a DOM.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutMode.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "ITmLocalizer",
@@ -96141,12 +96323,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1472,
-        "manualItemCount": 1472,
-        "generatedItemCount": 1455,
+        "itemCount": 1475,
+        "manualItemCount": 1475,
+        "generatedItemCount": 1458,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1455
+        "publicApiTypeCount": 1458
       }
     },
     {
@@ -110197,10 +110379,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3165,
-    "manualItemCount": 3165,
+    "itemCount": 3169,
+    "manualItemCount": 3169,
     "generatedOnlyItemCount": 0,
-    "componentCount": 466,
-    "publicApiTypeCount": 2646
+    "componentCount": 467,
+    "publicApiTypeCount": 2649
   }
 }

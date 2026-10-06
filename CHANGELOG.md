@@ -4,6 +4,33 @@
 
 ### Breaking / Migration
 
+- **`TmDashboard` widget placement is no longer an inline `grid-column`.** A widget used to carry
+  `style="grid-column: X / span W; grid-row: Y / span H"`. It now carries the placement as custom
+  properties (`--tm-w-x`, `--tm-w-span`, `--tm-w-y`, `--tm-w-rows`, `--tm-w-order`) and the grid
+  stylesheet turns them into columns. The desktop result is the same 12-column grid. Below 1024px
+  of the dashboard's own width the grid becomes six columns, two below 768px, and one below 640px — a widget
+  wider than half the desktop grid spans the full row in the two-column layout.
+
+  ```css
+  /* before: an inline style, so no container query could restack the widget */
+  .tm-widget { grid-column: 1 / span 8; }
+  /* after: the stylesheet reads the variables */
+  .tm-widget { grid-column: var(--tm-w-x) / span var(--tm-w-span); }
+  ```
+
+  A host rule that targeted the inline `grid-column` must target the variables or the
+  `.tm-widget--wide` class instead. The old `@media (max-width: 560px)` stacking rule is gone;
+  the restack follows the dashboard container, so a narrow dashboard on a wide page stacks too.
+
+  The dashboard root is no longer the outermost element. `TmDashboard` now renders inside a
+  `TmLayoutObserver`, so a selector that assumed `.tm-dashboard` was the component root must
+  step through `.tm-layout.tm-dashboard-layout` first. That wrapper resets `container-type` so
+  the grid's own `container-name: tm-dashboard` stays the one the queries match.
+
+- **`.tm-hide-desktop` now hides from 768px, not 769px.** The helper used `min-width: 769px`, one
+  pixel off the documented `Md` breakpoint. It now uses `768px`, matching `TmBreakpoints.Md`. A
+  viewport of exactly 768px that previously showed `.tm-hide-desktop` content now hides it.
+
 - **`TmDialog` default button texts now come from the localizer.** `OkButtonText` and
   `CancelButtonText` used to default to the English literals `"OK"` and `"Cancel"`, so a Czech
   UI that did not pass its own text rendered "Cancel". Both parameters are now nullable and fall

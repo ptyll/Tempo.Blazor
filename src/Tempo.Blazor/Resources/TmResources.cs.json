@@ -5287,5 +5287,17 @@
   "TmCalendarHeatmapDemo_AnnualTitle": "Roční výdaje — primární",
   "TmCalendarHeatmapDemo_RangeTitle": "Leden až březen — výstražné schéma",
   "TmCalendarHeatmapDemo_ClickPrompt": "Vyberte den a zobrazte jeho výdaj.",
-  "TmCalendarHeatmapDemo_Clicked": "Vybráno {0}: {1}"
+  "TmCalendarHeatmapDemo_Clicked": "Vybráno {0}: {1}",
+  "TmResponsiveDemo_Title": "Responzivní konvence",
+  "TmResponsiveDemo_Intro": "Stejná komponenta ve dvou hostitelích. Široký hostitel je stránka, úzký je sloupec o šířce 24rem. Změňte velikost okna nebo níže vynuťte rozložení — mřížka se řídí svým kontejnerem, ne oknem prohlížeče.",
+  "TmResponsiveDemo_ForcedLayout": "Vynucené rozložení",
+  "TmResponsiveDemo_Resolved": "Rozlišeno: {0}",
+  "TmResponsiveDemo_WideHost": "Široký hostitel",
+  "TmResponsiveDemo_NarrowHost": "Úzký hostitel",
+  "TmResponsiveDemo_Revenue": "Tržby",
+  "TmResponsiveDemo_Orders": "Objednávky",
+  "TmResponsiveDemo_Returns": "Vratky",
+  "TmResponsiveDemo_WideHint": "Širší než polovina řádku, takže v kompaktní mřížce zabere celý řádek.",
+  "TmResponsiveDemo_Add": "Přidat",
+  "TmResponsiveDemo_Details": "Podrobnosti"
 }

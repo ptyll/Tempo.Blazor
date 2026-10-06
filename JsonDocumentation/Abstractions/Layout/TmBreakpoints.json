@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "description": "The shared responsive widths in CSS pixels: Sm 640, Md 768, Lg 1024, Xl 1280. A custom property cannot appear in an @media or @container condition, so stylesheets repeat these as literals and a test proves they match.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmBreakpoints.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmBreakpoints"
+}

@@ -1,0 +1,20 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmLayoutObserver — the container a component measures
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-layout {
+  display: block;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: tm-layout;
+}
+
+/* The resolved mode is also a class (tm-layout--mobile/tablet/desktop) and a data-layout
+   attribute, so a child can branch in CSS without reading the cascaded context. */
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-layout,
+  .tm-layout * {
+    scroll-behavior: auto;
+  }
+}

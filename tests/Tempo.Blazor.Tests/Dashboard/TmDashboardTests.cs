@@ -225,11 +225,14 @@ public class TmDashboardTests : LocalizationTestBase
         css.Should().NotContain("560px",
             "560 is not a TmBreakpoints value; the single-column rule is the 640px container query");
         css.Should().MatchRegex(
-            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*639px\s*\)[\s\S]*?grid-template-columns:\s*1fr",
+            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*640px\s*\)[\s\S]*?grid-template-columns:\s*1fr",
             "below 640px of container the grid is one column");
         css.Should().MatchRegex(
-            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*1023px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*2\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
-            "640–1023px of container is the compact two-column grid");
+            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*1024px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*6\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
+            "below 1024px of container the grid is six columns");
+        css.Should().MatchRegex(
+            @"@container\s+tm-dashboard\s*\(\s*max-width:\s*768px\s*\)[\s\S]*?grid-template-columns:\s*repeat\(\s*2\s*,\s*minmax\(0\s*,\s*1fr\)\s*\)",
+            "below 768px of container the grid is two columns");
     }
 
     [Fact]

@@ -6435,6 +6435,19 @@
           "isRequired": false
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Auto measures the dashboard and reports the mode on data-layout. The grid restacks by container query regardless (12 columns, 6 below 1024px, 2 below 768px, 1 below 640px). A forced value reports that mode without measuring."
+        },
+        {
+          "name": "LayoutModeChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the rendered layout changes."
+        },
+        {
           "name": "OnDashboardChanged",
           "type": "EventCallback<DashboardConfig>",
           "isRequired": false
@@ -6459,6 +6472,10 @@
       "cssClasses": [
         "tm-dashboard",
         "tm-dashboard--edit",
+        "tm-dashboard--desktop",
+        "tm-dashboard--tablet",
+        "tm-dashboard--mobile",
+        "tm-dashboard-layout",
         "tm-dashboard-toolbar",
         "tm-dashboard-toolbar-left",
         "tm-dashboard-toolbar-right",
@@ -17299,6 +17316,64 @@
       ]
     },
     {
+      "itemName": "TmLayoutObserver",
+      "kind": "Component",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Components.Layout",
+      "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, so a host or a test can render a layout without a DOM. The root carries tm-layout, tm-layout--{mode} and data-layout.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Layout/TmLayoutObserver.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Layout"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content rendered inside the observed container. Reads the cascaded TmLayoutContext."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra CSS classes appended to the root."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Auto measures the root. Desktop, Tablet or Mobile force that layout and skip the observer."
+        },
+        {
+          "name": "LayoutModeChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the rendered mode changes. The initial value is not a change."
+        },
+        {
+          "name": "Style",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Inline style appended to the root."
+        }
+      ],
+      "cssClasses": [
+        "tm-layout",
+        "tm-layout--desktop",
+        "tm-layout--tablet",
+        "tm-layout--mobile"
+      ],
+      "examples": [
+        {
+          "title": "Force the mobile layout",
+          "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <Child />\n</TmLayoutObserver>"
+        }
+      ]
+    },
+    {
       "itemName": "TmSection",
       "kind": "Component",
       "category": "Layout",
@@ -24327,6 +24402,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_layout-observer.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_ledger-grid.css",
       "kind": "Css"
     },
@@ -24671,6 +24750,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/layout-observer.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/markdownEditor.js",
       "kind": "JavaScript"
     },
@@ -24715,6 +24798,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/layout-observer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/overlay-lifecycle.test.mjs",
       "kind": "JavaScript"
     },
@@ -24724,11 +24811,11 @@
     }
   ],
   "summary": {
-    "itemCount": 345,
-    "manualItemCount": 345,
-    "generatedItemCount": 337,
+    "itemCount": 346,
+    "manualItemCount": 346,
+    "generatedItemCount": 338,
     "generatedOnlyItemCount": 0,
-    "componentCount": 195,
+    "componentCount": 196,
     "publicApiTypeCount": 142
   }
 }

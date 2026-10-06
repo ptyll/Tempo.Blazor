@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Resolved is never Auto.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutContext.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmLayoutContext"
+}

@@ -2,13 +2,66 @@
    Tempo.Blazor — Responsive Breakpoints & Utilities
    ═══════════════════════════════════════════════════════════════ */
 
-/* Breakpoints:
-   --tm-bp-sm:  640px
-   --tm-bp-md:  768px
-   --tm-bp-lg:  1024px
-   --tm-bp-xl:  1280px
-   --tm-bp-2xl: 1536px
-*/
+/* Breakpoints — literals, because a custom property is illegal in an @media or @container
+   condition. The same numbers are TmBreakpoints (Sm 640, Md 768, Lg 1024, Xl 1280) and
+   docs/responsive-conventions.md is the contract. 1536 is intentionally not in that set. */
+
+/* ── Touch target ───────────────────────────────────────────────
+   Opt-in 44px target. Coarse pointers (a finger) get it automatically on the controls listed
+   below; fine pointers keep the compact size. The size is the --tm-touch-target token. */
+
+.tm-touch-target {
+  min-width: var(--tm-touch-target);
+  min-height: var(--tm-touch-target);
+}
+
+/* ── Hover-only actions ─────────────────────────────────────────
+   An action that appears only on hover is unreachable on a touch screen and on keyboard focus.
+   Mark it .tm-reveal-on-hover; it stays visible when the device cannot hover, and while the
+   control or its container has focus. */
+
+@media (hover: hover) and (pointer: fine) {
+  .tm-reveal-on-hover {
+    opacity: 0;
+  }
+
+  .tm-reveal-on-hover:hover,
+  .tm-reveal-on-hover:focus-within,
+  .tm-reveal-on-hover:focus-visible,
+  :focus-within > .tm-reveal-on-hover {
+    opacity: 1;
+  }
+}
+
+/* ── Safe area ──────────────────────────────────────────────────
+   Sticky bars and sheets sit under the home indicator and the notch. The padding adds to
+   whatever padding the component already has. */
+
+.tm-safe-area-bottom {
+  padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom));
+}
+
+.tm-safe-area-top {
+  padding-top: calc(var(--tm-space-2) + env(safe-area-inset-top));
+}
+
+/* ── Coarse pointer ─────────────────────────────────────────────
+   A finger cannot hit a 28px icon button. These are the shared icon-sized controls; a component
+   with its own control adds the same min-size in its own stylesheet. */
+
+@media (pointer: coarse) {
+  .tm-btn-icon,
+  .tm-touch-target {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-reveal-on-hover {
+    transition: none;
+  }
+}
 
 /* ── Mobile-first responsive helpers ──────────────────────────── */
 
@@ -30,10 +83,37 @@
   .tm-form-row { flex-direction: column; }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   .tm-hide-desktop { display: none !important; }
 }
 
 @media (min-width: 1024px) {
   .tm-hide-lg-up { display: none !important; }
+}
+
+@media (min-width: 1280px) {
+  .tm-hide-xl-up { display: none !important; }
+}
+
+/* Container-query twins of the viewport helpers. A component that sets
+   `container-type: inline-size; container-name: tm-layout` on its root can hide parts by its own
+   width instead of the viewport. The widths are the TmBreakpoints literals. */
+@container tm-layout (max-width: 640px) {
+  .tm-hide-sm { display: none !important; }
+}
+
+@container tm-layout (max-width: 768px) {
+  .tm-hide-mobile { display: none !important; }
+}
+
+@container tm-layout (min-width: 768px) {
+  .tm-hide-desktop { display: none !important; }
+}
+
+@container tm-layout (min-width: 1024px) {
+  .tm-hide-lg-up { display: none !important; }
+}
+
+@container tm-layout (min-width: 1280px) {
+  .tm-hide-xl-up { display: none !important; }
 }

@@ -1,0 +1,54 @@
+{
+  "itemName": "TmLayoutObserver",
+  "kind": "Component",
+  "category": "Layout",
+  "description": "Measures its own width and cascades the resolved TmLayoutMode to its children. Auto registers a shared ResizeObserver and reports a change only when the mode changes; a forced Desktop, Tablet or Mobile never imports the observer, so a host or a test can render a layout without a DOM. The root carries tm-layout, tm-layout--{mode} and data-layout.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout"
+  ],
+  "parameters": [
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Auto measures the root. Desktop, Tablet or Mobile force that layout and skip the observer."
+    },
+    {
+      "name": "LayoutModeChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the rendered mode changes. The initial value is not a change."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content rendered inside the observed container. Reads the cascaded TmLayoutContext."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra CSS classes appended to the root."
+    },
+    {
+      "name": "Style",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Inline style appended to the root."
+    }
+  ],
+  "cssClasses": [
+    "tm-layout",
+    "tm-layout--desktop",
+    "tm-layout--tablet",
+    "tm-layout--mobile"
+  ],
+  "examples": [
+    {
+      "title": "Force the mobile layout",
+      "code": "<TmLayoutObserver LayoutMode=\"TmLayoutMode.Mobile\">\n    <Child />\n</TmLayoutObserver>"
+    }
+  ]
+}

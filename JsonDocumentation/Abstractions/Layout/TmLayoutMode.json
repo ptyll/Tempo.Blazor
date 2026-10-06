@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "description": "How a component decides its responsive layout. Auto measures the component's own container; Desktop, Tablet and Mobile force a layout so a host or a test can render a mode without a DOM.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutMode.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmLayoutMode"
+}

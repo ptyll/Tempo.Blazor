@@ -101,6 +101,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("stepper", "Stepper", "Shows progress through ordered steps.", "wizard steps", "kroky", "TmStepper"),
         R("scheduler", "Scheduler", "Displays calendar-based events or resources.", "schedule", "planovac", "TmScheduler"),
         R("dashboard", "Dashboard", "Displays a workspace of metrics and widgets.", "analytics board", "prehled", "TmDashboard", "TmWidgetSelector"),
+        R("layout-observer", "Layout observer", "Resolves a container's responsive layout mode and cascades it to its children.", "responsive container", "pozorovatel rozlozeni", "TmLayoutObserver"),
         R("markdown-editor", "Markdown editor", "Edits markdown text.", "markdown input", "markdown editor", "TmMarkdownEditor"),
         R("code-editor", "Code editor", "Edits source code or JSON with monospace font and optional syntax highlighting.", "json editor", "editor kodu", "TmCodeEditor"),
         R("rich-text-editor", "Rich text editor", "Edits formatted rich text content.", "wysiwyg editor", "editor textu", "TmRichEditorFull", "TmRichEditorSimple"),

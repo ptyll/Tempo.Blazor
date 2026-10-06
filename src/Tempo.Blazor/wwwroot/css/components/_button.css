@@ -45,6 +45,13 @@
 .tm-btn.tm-btn-md { height: var(--tm-input-height-md); padding: 0 var(--tm-space-4);   font-size: var(--tm-font-size-sm); }
 .tm-btn.tm-btn-lg { height: var(--tm-input-height-lg); padding: 0 var(--tm-space-5);   font-size: var(--tm-font-size-md); }
 
+/* Icon-only. The coarse-pointer rule in breakpoints.css grows it to --tm-touch-target. */
+.tm-btn.tm-btn-icon {
+  width: var(--tm-input-height-md);
+  padding: 0;
+  aspect-ratio: 1;
+}
+
 /* Block — markup always emits it next to .tm-btn (TmButton.Block, TmViewManager), so it
    compounds like every other same-element modifier. */
 .tm-btn.tm-btn-block { width: 100%; }

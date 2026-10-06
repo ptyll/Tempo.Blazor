@@ -1,0 +1,53 @@
+@page "/responsive-conventions"
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Buttons
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmResponsiveDemo_Title"] – Tempo.Blazor</PageTitle>
+
+<div class="rc-page">
+    <header class="rc-header">
+        <h1>@Loc["TmResponsiveDemo_Title"]</h1>
+        <p>@Loc["TmResponsiveDemo_Intro"]</p>
+    </header>
+
+    <div class="rc-controls" role="group" aria-label="@Loc["TmResponsiveDemo_ForcedLayout"]">
+        @foreach (var mode in _modes)
+        {
+            <button type="button"
+                    class="tm-btn tm-btn-sm @(mode == _mode ? "tm-btn-primary" : "tm-btn-secondary")"
+                    aria-pressed="@(_mode == mode ? "true" : "false")"
+                    @onclick="() => _mode = mode">
+                @mode
+            </button>
+        }
+        <span class="rc-resolved" data-testid="rc-resolved">@Loc["TmResponsiveDemo_Resolved", _resolved]</span>
+    </div>
+
+    <div class="rc-stage">
+        <section class="rc-host rc-host--wide" data-testid="rc-host-wide">
+            <h2>@Loc["TmResponsiveDemo_WideHost"]</h2>
+            <ConventionPanel LayoutMode="_mode" LayoutModeChanged="OnResolved" />
+        </section>
+
+        <section class="rc-host rc-host--narrow" data-testid="rc-host-narrow">
+            <h2>@Loc["TmResponsiveDemo_NarrowHost"]</h2>
+            <ConventionPanel LayoutMode="TmLayoutMode.Auto" />
+        </section>
+    </div>
+</div>
+
+@code {
+    private static readonly TmLayoutMode[] _modes =
+        [TmLayoutMode.Auto, TmLayoutMode.Desktop, TmLayoutMode.Tablet, TmLayoutMode.Mobile];
+
+    private TmLayoutMode _mode = TmLayoutMode.Auto;
+    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+
+    private Task OnResolved(TmLayoutMode mode)
+    {
+        _resolved = mode;
+        return Task.CompletedTask;
+    }
+}

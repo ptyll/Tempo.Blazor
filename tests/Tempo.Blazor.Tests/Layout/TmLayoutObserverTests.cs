@@ -56,7 +56,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public void Auto_RegistersTheObserver_AgainstTheComponentRoot()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", invocation => true);
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)
@@ -76,8 +76,8 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task OnLayoutModeChanged_RerendersOnlyWhenTheModeChanges()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", _ => true);
-        module.SetupVoid("disconnect", _ => true);
+        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("disconnect", invocation => true);
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
@@ -100,7 +100,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task OnLayoutModeChanged_RejectsAnUnknownMode_AndDoesNotRerender()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", _ => true);
+        module.SetupVoid("observe", invocation => true);
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
@@ -117,14 +117,21 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task Dispose_DisconnectsTheObserver()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", _ => true);
-        var disconnect = module.SetupVoid("disconnect", _ => true);
+        var observe = module.SetupVoid("observe", invocation => true);
+        var disconnect = module.SetupVoid("disconnect", invocation => true);
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
         var id = cut.Find(".tm-layout").Id;
 
-        await cut.InvokeAsync(() => ((IAsyncDisposable)cut.Instance).DisposeAsync());
+        // Wait out the render that registers the observer, then dispose. Disposing earlier races
+        // that render and the disconnect is never recorded.
+        // The invocation is recorded before the render method resumes and sets _observing, so a
+        // dispose issued on the first observation races that resume and skips the disconnect.
+        cut.WaitForAssertion(() => observe.Invocations.Should().NotBeEmpty());
+        var seen = observe.Invocations.Count;
+        cut.WaitForAssertion(() => observe.Invocations.Count.Should().Be(seen));
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
 
         disconnect.Invocations.Should().ContainSingle();
         disconnect.Invocations.Single().Arguments[0].Should().Be(id);
@@ -151,7 +158,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
 
         reported.Should().BeNull("the initial forced value is the caller's own value, not a change");
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
             .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
 

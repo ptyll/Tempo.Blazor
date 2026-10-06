@@ -30,6 +30,7 @@
     "projectReferences": [],
     "namespaces": [
       "Tempo.Blazor.Abstractions.Interfaces",
+      "Tempo.Blazor.Abstractions.Layout",
       "Tempo.Blazor.Abstractions.Models",
       "Tempo.Blazor.Abstractions.PivotTable",
       "Tempo.Blazor.Abstractions.Shared",
@@ -11716,6 +11717,100 @@
           "description": "Maximum number of matching entries to return. MaxValue means \"return everything that matches\" (used when no page size is configured)."
         }
       ]
+    },
+    {
+      "itemName": "TmBreakpoints",
+      "kind": "Class",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "The shared responsive widths in CSS pixels: Sm 640, Md 768, Lg 1024, Xl 1280. A custom property cannot appear in an @media or @container condition, so stylesheets repeat these as literals and a test proves they match.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmBreakpoints.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "All",
+          "kind": "Field",
+          "type": "int[]",
+          "description": "Every width a new @media or @container condition may use, in ascending order."
+        },
+        {
+          "name": "Lg",
+          "kind": "Field",
+          "type": "int",
+          "description": "1024px. At this width a container becomes Desktop."
+        },
+        {
+          "name": "Md",
+          "kind": "Field",
+          "type": "int",
+          "description": "768px. A named step between mobile and tablet; not a layout-mode boundary."
+        },
+        {
+          "name": "Sm",
+          "kind": "Field",
+          "type": "int",
+          "description": "640px. Below this a container is Mobile."
+        },
+        {
+          "name": "Xl",
+          "kind": "Field",
+          "type": "int",
+          "description": "1280px. The wide desktop step."
+        },
+        {
+          "name": "Classify",
+          "kind": "Method",
+          "type": "TmLayoutMode",
+          "description": "The layout a measured container width resolves to. A non-finite or negative width is rejected: guessing a mode from a broken measurement would silently render the wrong branch.",
+          "parameters": [
+            {
+              "name": "widthPx",
+              "type": "double"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "TmLayoutContext",
+      "kind": "Record",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Resolved is never Auto.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutContext.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsDesktop",
+          "kind": "Field",
+          "type": "bool",
+          "description": "True when the rendered layout is the wide one."
+        },
+        {
+          "name": "IsMobile",
+          "kind": "Field",
+          "type": "bool",
+          "description": "True when the rendered layout is the narrow one."
+        },
+        {
+          "name": "IsTablet",
+          "kind": "Field",
+          "type": "bool",
+          "description": "True when the rendered layout is the compact one."
+        }
+      ]
+    },
+    {
+      "itemName": "TmLayoutMode",
+      "kind": "Enum",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "How a component decides its responsive layout. Auto measures the component's own container; Desktop, Tablet and Mobile force a layout so a host or a test can render a mode without a DOM.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutMode.cs",
+      "documentationStatus": "merged"
     },
     {
       "itemName": "ITmLocalizer",
@@ -35928,11 +36023,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1472,
-    "manualItemCount": 1472,
-    "generatedItemCount": 1455,
+    "itemCount": 1475,
+    "manualItemCount": 1475,
+    "generatedItemCount": 1458,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1455
+    "publicApiTypeCount": 1458
   }
 }

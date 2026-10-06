@@ -311,6 +311,9 @@ public abstract class LocalizationTestBase : BunitContext
         // Shared
         ["Tm_Loading"]          = "Loading...",
         ["Tm_Close"]            = "Close",
+        ["TmResponsiveDemo_Title"] = "Responsive conventions",
+        ["TmResponsiveDemo_Add"] = "Add",
+        ["TmResponsiveDemo_Details"] = "Details",
         ["Tm_Ok"]               = "OK",
         ["TmDialog_PromptPlaceholder"] = "Enter a value…",
         ["Tm_Done"]             = "Done",
@@ -3884,6 +3887,9 @@ public abstract class LocalizationTestBase : BunitContext
         // Shared
         ["Tm_Loading"]     = "Načítání...",
         ["Tm_Close"]       = "Zavřít",
+        ["TmResponsiveDemo_Title"] = "Responzivní konvence",
+        ["TmResponsiveDemo_Add"] = "Přidat",
+        ["TmResponsiveDemo_Details"] = "Podrobnosti",
         ["Tm_Ok"]          = "OK",
         ["TmDialog_PromptPlaceholder"] = "Zadejte hodnotu…",
         ["Tm_Done"]        = "Hotovo",

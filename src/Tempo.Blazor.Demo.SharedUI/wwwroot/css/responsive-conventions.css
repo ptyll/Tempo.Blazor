@@ -1,0 +1,148 @@
+/* Demo-only layout for the responsive conventions page. Colours come from the library tokens, so
+   the page follows data-theme and data-tm-theme without a second palette. Do not re-declare the
+   gray scale here: dark mode inverts it, and a var() substitutes where it is declared. */
+
+.rc-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-4);
+  color: var(--tm-text-primary);
+}
+
+.rc-header h1 {
+  margin: 0 0 var(--tm-space-2);
+  font-size: var(--tm-font-size-2xl);
+  color: var(--tm-text-primary);
+}
+
+.rc-header p {
+  margin: 0;
+  max-width: 46rem;
+  color: var(--tm-text-secondary);
+}
+
+.rc-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+.rc-resolved {
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+}
+
+/* The wide host must stay wider than the 1024px container step, so the stage only sits the two
+   hosts side by side once the content area can hold both. Below that they stack. */
+.rc-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-4);
+}
+
+.rc-host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+  min-width: 0;
+  padding: var(--tm-space-4);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-card);
+  box-shadow: var(--tm-shadow-card);
+}
+
+.rc-host h2 {
+  margin: 0;
+  font-size: var(--tm-font-size-lg);
+  color: var(--tm-text-primary);
+}
+
+.rc-host--narrow {
+  width: 24rem;
+  max-width: 100%;
+}
+
+.rc-panel {
+  container-type: inline-size;
+  container-name: rc-panel;
+}
+
+.rc-tiles {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--tm-space-3);
+}
+
+.rc-tile {
+  padding: var(--tm-space-3);
+  background: var(--tm-bg-workspace);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+}
+
+.rc-tile h3 {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+
+.rc-value {
+  margin: var(--tm-space-1) 0 0;
+  font-size: var(--tm-font-size-xl);
+  font-weight: var(--tm-font-weight-bold);
+  color: var(--tm-text-primary);
+}
+
+.rc-hint {
+  margin: var(--tm-space-1) 0 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+}
+
+.rc-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  margin-top: var(--tm-space-3);
+}
+
+.rc-mode {
+  margin-left: auto;
+  font-size: var(--tm-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tm-text-secondary);
+}
+
+@container rc-panel (max-width: 1024px) {
+  .rc-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rc-tile--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@container rc-panel (max-width: 640px) {
+  .rc-tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1536px) {
+  .rc-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24rem;
+    align-items: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-page,
+  .rc-page * {
+    transition: none;
+  }
+}
