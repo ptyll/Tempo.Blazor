@@ -217,6 +217,30 @@
     </div>
 </section>
 
+<!-- Redesign tokens: status chips, priority glyphs and the opt-in radii. Painted from the tokens
+     so the indigo switch and dark mode are visible here rather than described. -->
+<section class="demo-section">
+    <div class="showcase-card">
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Status and priority</h3>
+        <div class="flex flex-wrap gap-3 mb-6">
+            @foreach (var (label, token) in _statusChips)
+            {
+                <span style="background: var(--tm-status-@(token)-bg); color: var(--tm-status-@(token)-fg); padding: 2px 10px; border-radius: var(--tm-radius-control); font-size: var(--tm-font-size-sm);">@label</span>
+            }
+        </div>
+        <div class="flex flex-wrap gap-4 mb-6">
+            @foreach (var (label, token) in _priorities)
+            {
+                <span style="color: var(--tm-priority-@token); font-weight: var(--tm-font-weight-medium);">@label</span>
+            }
+        </div>
+        <div style="background: var(--tm-bg-workspace); border: 1px solid var(--tm-border-color-strong); border-radius: var(--tm-radius-card); box-shadow: var(--tm-shadow-card); padding: var(--tm-space-4); max-width: 24rem;">
+            <p style="color: var(--tm-text-primary); margin: 0;">Card on the workspace canvas</p>
+            <p style="color: var(--tm-text-secondary); margin: 4px 0 0; font-size: var(--tm-font-size-sm);">Uses --tm-bg-workspace, --tm-radius-card and --tm-shadow-card. Switch the theme to see indigo.</p>
+        </div>
+    </div>
+</section>
+
 <!-- Copy Toast -->
 @if (_showCopyToast)
 {
@@ -254,6 +278,22 @@
         ("Warning", "--tm-color-warning", "Yellow for cautions"),
         ("Danger", "--tm-color-danger", "Red for errors"),
         ("Info", "--tm-color-info", "Blue for information"),
+    };
+
+    private static readonly (string Label, string Token)[] _statusChips =
+    {
+        ("Open", "open"),
+        ("In progress", "inprogress"),
+        ("Done", "done"),
+        ("Closed", "closed"),
+    };
+
+    private static readonly (string Label, string Token)[] _priorities =
+    {
+        ("Low", "low"),
+        ("Medium", "medium"),
+        ("High", "high"),
+        ("Critical", "critical"),
     };
 
     private static readonly (string Label, string Token)[] _fontSizes =

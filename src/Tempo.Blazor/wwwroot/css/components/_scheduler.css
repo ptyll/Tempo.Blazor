@@ -98,12 +98,12 @@
 
 .tm-scheduler-toolbar-view-btn--active {
     background: var(--tm-color-primary, #3b82f6);
-    color: #fff;
+    color: var(--tm-color-on-primary, #fff);
 }
 
 .tm-scheduler-toolbar-view-btn--active:hover {
     background: var(--tm-color-primary, #2563eb);
-    color: #fff;
+    color: var(--tm-color-on-primary, #fff);
 }
 
 /* ── Context Menu ──────────────────────────────── */

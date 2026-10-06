@@ -9783,9 +9783,9 @@
           "parameters": [
             {
               "name": "CancelButtonText",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"Cancel\""
+              "description": "Dismiss button text. Defaults to the localized Tm_Cancel when not set."
             },
             {
               "name": "ChildContent",
@@ -9835,9 +9835,9 @@
             },
             {
               "name": "OkButtonText",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"OK\""
+              "description": "Confirm button text. Defaults to the localized Tm_Ok when not set."
             },
             {
               "name": "OnPromptResult",
@@ -24614,6 +24614,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/css/tempo-blazor.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/css/theme-indigo.css",
           "kind": "Css"
         },
         {

@@ -53,7 +53,7 @@
 
 .tm-scheduler-month-day--today .tm-scheduler-month-day-number {
     background: var(--tm-color-primary, #3b82f6);
-    color: #fff;
+    color: var(--tm-color-on-primary, #fff);
     border-radius: 50%;
     width: 1.5rem;
     height: 1.5rem;
@@ -92,7 +92,7 @@
 
 .tm-scheduler-month-event--allday {
     background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    color: #fff;
+    color: var(--tm-color-on-primary, #fff);
     border-left: none;
     border-radius: var(--tm-radius-xs, 0.125rem);
     padding: 1px var(--tm-space-2, 0.5rem);

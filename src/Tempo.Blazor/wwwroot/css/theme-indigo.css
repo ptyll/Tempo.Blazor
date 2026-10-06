@@ -1,0 +1,79 @@
+/* ═══════════════════════════════════════════════════════════════
+   Tempo.Blazor — Indigo theme (opt-in, decision G4)
+   Activate with <html data-tm-theme="indigo">. It layers over the default
+   tokens, so the blue scale stays the library default and a consumer opts in.
+   Dark is the same attribute plus data-theme="dark" (or .tm-dark).
+   ═══════════════════════════════════════════════════════════════ */
+
+[data-tm-theme="indigo"] {
+  /* Primary scale — Tailwind indigo. -600 is the filled-button step: white text
+     on #4f46e5 measures 6.3:1, which clears WCAG AA. */
+  --tm-color-primary-50:   #eef2ff;
+  --tm-color-primary-100:  #e0e7ff;
+  --tm-color-primary-200:  #c7d2fe;
+  --tm-color-primary-300:  #a5b4fc;
+  --tm-color-primary-400:  #818cf8;
+  --tm-color-primary-500:  #6366f1;
+  --tm-color-primary-600:  #4f46e5;
+  --tm-color-primary-700:  #4338ca;
+  --tm-color-primary-800:  #3730a3;
+  --tm-color-primary-900:  #312e81;
+
+  /* Channels of the light 500 step, so rgba() compositing follows the rebrand.
+     TokenContrastTests pins the triplet against the step it shadows. */
+  --tm-color-primary-500-rgb: 99, 102, 241;
+
+  /* Neutrals — Tailwind slate, slightly cooler than the default gray. */
+  --tm-color-gray-50:   #f8fafc;
+  --tm-color-gray-100:  #f1f5f9;
+  --tm-color-gray-200:  #e2e8f0;
+  --tm-color-gray-300:  #cbd5e1;
+  --tm-color-gray-400:  #94a3b8;
+  --tm-color-gray-500:  #64748b;
+  --tm-color-gray-600:  #475569;
+  --tm-color-gray-700:  #334155;
+  --tm-color-gray-800:  #1e293b;
+  --tm-color-gray-900:  #0f172a;
+
+  /* The off-white workspace the references are built on. Cards stay white
+     (--tm-bg-surface), so the page/card contrast is the point of the theme. */
+  --tm-bg-workspace: #f7f8fc;
+  --tm-bg-page:      var(--tm-bg-workspace);
+
+  /* Cards 12px, controls 8px — the reference radii, not the library default. */
+  --tm-radius-card:    0.75rem;
+  --tm-radius-control: 0.5rem;
+
+  /* Status chips re-point at the indigo scale so an in-progress chip matches the
+     theme instead of staying Tempo blue. */
+  --tm-status-inprogress-bg: var(--tm-color-primary-100);
+  --tm-status-inprogress-fg: var(--tm-color-primary-800);
+}
+
+/* Dark half. Both attributes must match so a light indigo page does not inherit
+   these; the dark block re-declares every alias whose var() would otherwise
+   compute against the light values. */
+[data-tm-theme="indigo"][data-theme="dark"],
+[data-tm-theme="indigo"].tm-dark {
+  /* The dark primary step shifts to -400, same convention as tokens-dark.css,
+     so white-on-primary is not what dark paints — dark ink sits on the lighter step. */
+  --tm-color-primary:        var(--tm-color-primary-400);
+  --tm-color-primary-hover:  var(--tm-color-primary-300);
+  --tm-color-primary-text:   var(--tm-color-primary-300);
+  --tm-color-primary-subtle: rgb(from var(--tm-color-primary-500) r g b / 0.15);
+  --tm-color-primary-500-rgb: 129, 140, 248;
+
+  /* Slate workspace, one step below the dark surface so cards still lift off it. */
+  --tm-bg-workspace: #0b1120;
+  --tm-bg-page:      var(--tm-bg-workspace);
+
+  --tm-radius-card:    0.75rem;
+  --tm-radius-control: 0.5rem;
+
+  /* The dark in-progress chip must re-point too: the light indigo wash would be
+     unreadable on the dark surface. */
+  --tm-status-inprogress-bg: var(--tm-color-primary-900);
+  --tm-status-inprogress-fg: var(--tm-color-primary-100);
+
+  --tm-focus-ring: var(--tm-shadow-focus);
+}

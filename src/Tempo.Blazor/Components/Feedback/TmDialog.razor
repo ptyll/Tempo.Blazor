@@ -60,7 +60,7 @@
                         <TmButton Variant="GetOkButtonVariant()"
                                   OnClick="OnOkClick"
                                   Class="tm-dialog-btn-ok">
-                            @OkButtonText
+                            @ResolvedOkText
                         </TmButton>
                     }
                     else if (Type == DialogType.Confirm || Type == DialogType.Prompt)
@@ -68,13 +68,13 @@
                         <TmButton Variant="ButtonVariant.Ghost"
                                   OnClick="OnCancelClick"
                                   Class="tm-dialog-btn-cancel">
-                            @CancelButtonText
+                            @ResolvedCancelText
                         </TmButton>
                         <TmButton Variant="GetOkButtonVariant()"
                                   OnClick="OnOkClick"
                                   Disabled="IsOkDisabled()"
                                   Class="tm-dialog-btn-ok">
-                            @OkButtonText
+                            @ResolvedOkText
                         </TmButton>
                     }
                     else if (Type == DialogType.Custom && FooterContent is not null)
@@ -97,8 +97,15 @@
     [Parameter] public string PromptPlaceholder { get; set; } = "Enter value...";
     [Parameter] public bool IsDangerous { get; set; } = false;
     
-    [Parameter] public string OkButtonText { get; set; } = "OK";
-    [Parameter] public string CancelButtonText { get; set; } = "Cancel";
+    /// <summary>
+    /// Text of the confirm button. Defaults to the localized <c>Tm_Ok</c> — pass a value to override it.
+    /// </summary>
+    [Parameter] public string? OkButtonText { get; set; }
+
+    /// <summary>
+    /// Text of the dismiss button. Defaults to the localized <c>Tm_Cancel</c> — pass a value to override it.
+    /// </summary>
+    [Parameter] public string? CancelButtonText { get; set; }
     
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? FooterContent { get; set; }
@@ -119,6 +126,12 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    /// <summary>The confirm label: the caller's text, or the localized default when none was passed.</summary>
+    private string ResolvedOkText => string.IsNullOrEmpty(OkButtonText) ? Loc["Tm_Ok"] : OkButtonText;
+
+    /// <summary>The dismiss label: the caller's text, or the localized default when none was passed.</summary>
+    private string ResolvedCancelText => string.IsNullOrEmpty(CancelButtonText) ? Loc["Tm_Cancel"] : CancelButtonText;
 
     private ElementReference _dialogElement;
     private string _titleId = Guid.NewGuid().ToString("N");

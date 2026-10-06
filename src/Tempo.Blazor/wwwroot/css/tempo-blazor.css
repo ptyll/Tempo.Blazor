@@ -8,6 +8,8 @@
 /* 1. Design Tokens */
 @import "tokens.css";
 @import "tokens-dark.css";
+/* Opt-in theme (decision G4): does nothing until [data-tm-theme="indigo"] is set. */
+@import "theme-indigo.css";
 
 /* 2. Base & Reset */
 @import "base.css";

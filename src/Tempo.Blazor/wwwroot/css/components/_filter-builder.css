@@ -33,7 +33,7 @@
 }
 .tm-filter-apply {
   padding: var(--tm-space-1) var(--tm-space-3); background: var(--tm-color-primary);
-  color: white; border: none; border-radius: var(--tm-radius-md); cursor: pointer; font-size: var(--tm-font-size-sm);
+  color: var(--tm-color-on-primary); border: none; border-radius: var(--tm-radius-md); cursor: pointer; font-size: var(--tm-font-size-sm);
 }
 .tm-filter-cancel {
   padding: var(--tm-space-1) var(--tm-space-3); background: none;

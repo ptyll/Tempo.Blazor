@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 
 namespace Tempo.Blazor.Tests.Theme;
@@ -287,5 +288,149 @@ public sealed class TokenContrastTests
             4.5,
             "mutace na hodnotu, která na tmavém povrchu AA nedrží, musí být červená — "
             + "sonda, která tohle propustí, nehlídá kontrast ale existenci tokenu");
+    }
+
+    /// <summary>
+    /// F0 semantic tokens (00-cross-cutting §1 and §7.3). Each one must exist in BOTH themes:
+    /// a token declared only on <c>:root</c> substitutes its <c>var()</c> where it is declared, so a
+    /// dark theme switched on a parent element would inherit the light value. Status and priority
+    /// pairs are held to AA because chips paint their text on the status fill.
+    /// </summary>
+    private static readonly string[] SemanticTokens =
+    [
+        "--tm-bg-workspace",
+        "--tm-radius-card",
+        "--tm-radius-control",
+        "--tm-shadow-card",
+        "--tm-shadow-popover",
+        "--tm-touch-target",
+        "--tm-focus-ring",
+        "--tm-border-color-strong",
+        "--tm-status-open-bg", "--tm-status-open-fg",
+        "--tm-status-inprogress-bg", "--tm-status-inprogress-fg",
+        "--tm-status-done-bg", "--tm-status-done-fg",
+        "--tm-status-closed-bg", "--tm-status-closed-fg",
+        "--tm-priority-low", "--tm-priority-medium", "--tm-priority-high", "--tm-priority-critical",
+    ];
+
+    [Fact]
+    public void SemanticTokens_ExistInBothThemes()
+    {
+        var light = ThemeCss.Declarations(ThemeCss.CssPath("tokens.css"));
+        var dark = ThemeCss.Declarations(ThemeCss.CssPath("tokens-dark.css"));
+
+        foreach (var token in SemanticTokens)
+        {
+            light.Should().ContainKey(token, "{0} must be declared in tokens.css", token);
+            dark.Should().ContainKey(token,
+                "{0} must be re-declared in tokens-dark.css — a :root-only alias computes with the light value",
+                token);
+        }
+    }
+
+    [Fact]
+    public void StatusChipText_KeepsAaContrast_OnItsFill()
+    {
+        var pairs = new[]
+        {
+            ("var(--tm-status-open-fg)", "var(--tm-status-open-bg)"),
+            ("var(--tm-status-inprogress-fg)", "var(--tm-status-inprogress-bg)"),
+            ("var(--tm-status-done-fg)", "var(--tm-status-done-bg)"),
+            ("var(--tm-status-closed-fg)", "var(--tm-status-closed-bg)"),
+        };
+
+        foreach (var dark in new[] { false, true })
+        {
+            foreach (var (foreground, surface) in pairs)
+            {
+                ThemeCss.Ratio(foreground, surface, dark).Should().BeGreaterThanOrEqualTo(
+                    4.5,
+                    "{0} na {1} ({2}) musí držet 4.5:1 — status chip je text na výplni",
+                    foreground, surface, dark ? "dark" : "light");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Decision G4: indigo is an opt-in theme layered over the defaults, not a replacement. White
+    /// text on the indigo primary must keep AA, the subtle wash must stay distinguishable from the
+    /// page, and the focus ring must keep the 3:1 a non-text indicator needs against the surface.
+    /// </summary>
+    [Fact]
+    public void IndigoTheme_KeepsContrast_ForTextWashAndFocusRing()
+    {
+        var path = ThemeCss.CssPath("theme-indigo.css");
+        File.Exists(path).Should().BeTrue("theme-indigo.css is the opt-in theme (decision G4)");
+
+        foreach (var dark in new[] { false, true })
+        {
+            var tokens = IndigoTokens(dark);
+
+            ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-color-on-primary)", tokens),
+                ThemeCss.ResolveColour("var(--tm-color-primary)", tokens))
+                .Should().BeGreaterThanOrEqualTo(4.5, "bílý text na indigo primary musí držet AA ({0})", dark ? "dark" : "light");
+
+            var subtle = ThemeCss.Luminance(ThemeCss.ResolveColour("var(--tm-color-primary-subtle)", tokens));
+            var page = ThemeCss.Luminance(ThemeCss.ResolveColour("var(--tm-bg-page)", tokens));
+            Math.Abs(subtle - page).Should().BeGreaterThan(0.02,
+                "primary-subtle pill se nesmí ztratit na pozadí stránky ({0})", dark ? "dark" : "light");
+
+            var ring = RingInk(tokens);
+            ThemeCss.Contrast(ring, ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+                .Should().BeGreaterThanOrEqualTo(3,
+                    "focus ring je non-text indikátor a musí držet 3:1 proti povrchu ({0})", dark ? "dark" : "light");
+        }
+    }
+
+    /// <summary>The indigo file layered over the theme it customises, exactly as a consumer loads it.</summary>
+    private static Dictionary<string, string> IndigoTokens(bool dark)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var css = ThemeCss.StripComments(File.ReadAllText(ThemeCss.CssPath("theme-indigo.css")));
+        var marker = css.IndexOf("data-theme=\"dark\"", StringComparison.Ordinal);
+        var lightBlock = marker < 0 ? css : css[..marker];
+        var darkBlock = marker < 0 ? string.Empty : css[marker..];
+
+        foreach (var (name, value) in DeclarationsOf(lightBlock))
+        {
+            tokens[name] = value;
+        }
+
+        if (dark)
+        {
+            foreach (var (name, value) in DeclarationsOf(darkBlock))
+            {
+                tokens[name] = value;
+            }
+        }
+
+        return tokens;
+    }
+
+    private static Dictionary<string, string> DeclarationsOf(string css)
+    {
+        var declarations = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (Match match in Regex.Matches(
+            css, @"(?<name>--tm-[\w-]+)\s*:\s*(?<value>[^;{}]+);", RegexOptions.None, TimeSpan.FromSeconds(5)))
+        {
+            declarations[match.Groups["name"].Value] = ThemeCss.Normalise(match.Groups["value"].Value);
+        }
+
+        return declarations;
+    }
+
+    /// <summary>The solid colour a 3px ring paints, taken from the first <c>rgb()</c> of the ring token.</summary>
+    private static string RingInk(Dictionary<string, string> tokens)
+    {
+        var declared = ThemeCss.ResolveColour(tokens["--tm-focus-ring"], tokens);
+        var rgb = Regex.Match(declared, @"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", RegexOptions.None, TimeSpan.FromSeconds(5));
+        if (!rgb.Success)
+        {
+            return declared;
+        }
+
+        return "#" + string.Concat(rgb.Groups.Cast<Group>().Skip(1)
+            .Select(group => int.Parse(group.Value, CultureInfo.InvariantCulture).ToString("x2", CultureInfo.InvariantCulture)));
     }
 }

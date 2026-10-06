@@ -1,5 +1,49 @@
 # Changelog
 
+## Unreleased
+
+### Breaking / Migration
+
+- **`TmDialog` default button texts now come from the localizer.** `OkButtonText` and
+  `CancelButtonText` used to default to the English literals `"OK"` and `"Cancel"`, so a Czech
+  UI that did not pass its own text rendered "Cancel". Both parameters are now nullable and fall
+  back to `Loc["Tm_Ok"]` / `Loc["Tm_Cancel"]` when no value is passed. An explicit value still
+  wins, so callers that already pass their own text see no change.
+
+  ```razor
+  @* before: rendered "Cancel" in every culture *@
+  <TmDialog Type="DialogType.Confirm" Show="true" Title="Smazat" />
+  @* after: renders "Zrušit" under cs, "Annuler" under fr, "Cancel" under en *@
+  <TmDialog Type="DialogType.Confirm" Show="true" Title="Smazat" />
+  ```
+
+  A caller that relied on the English literal while running under another culture must now pass
+  `CancelButtonText="Cancel"` explicitly.
+
+### Added
+
+- Semantic tokens for the redesign, in both `tokens.css` and `tokens-dark.css`: `--tm-bg-workspace`,
+  `--tm-radius-card`, `--tm-radius-control`, `--tm-shadow-card`, `--tm-shadow-popover`,
+  `--tm-touch-target`, `--tm-focus-ring`, `--tm-border-color-strong`, the `--tm-status-*` chip
+  pairs and the `--tm-priority-*` glyphs. Existing components do not reference them yet, so the
+  default appearance is unchanged.
+- Opt-in indigo theme (`theme-indigo.css`, activated with `data-tm-theme="indigo"`). The blue
+  scale stays the default. The demo exposes a switch that persists the choice in `localStorage`.
+- Shared keys `Tm_Ok`, `Tm_Done` and `Tm_More` in en/cs/fr.
+- `scripts/audit-css-strict.mjs` with a shrink-only baseline, gated by `CssTokenAuditTests`, and
+  `ScopedCssOwnershipTests` with its own shrink-only baseline. See `docs/css-token-aliases.md`
+  and `docs/scoped-css-ownership.md`.
+
+### Changed
+
+- Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
+  `{0} čekajících změn`, `{0} řádků`) now use a neutral phrasing (`Počet: {0}`, `Komentáře: {0}`,
+  `Čekající změny: {0}`), so a count of one no longer reads as a plural.
+- Scheduler event text and the filter-builder apply button use `--tm-color-on-primary` instead of
+  a hardcoded white. The data-table card mode drops its hardcoded white and gray fallbacks, and the
+  dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
+  instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

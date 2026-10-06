@@ -97,7 +97,7 @@
     overflow: visible;
     z-index: 1;
     background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    color: #fff;
+    color: var(--tm-color-on-primary, #fff);
     font-size: var(--tm-font-size-xs, 0.75rem);
     transition: filter 0.1s ease;
 }

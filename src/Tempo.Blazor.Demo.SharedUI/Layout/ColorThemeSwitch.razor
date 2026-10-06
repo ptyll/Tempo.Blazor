@@ -1,0 +1,52 @@
+@inject IJSRuntime JS
+
+<button @onclick="ToggleAsync"
+        data-testid="color-theme-switch"
+        data-tm-theme="@_theme"
+        class="px-2 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        title="@(_theme == Indigo ? "Switch to the default blue theme" : "Switch to the indigo theme")"
+        aria-label="@(_theme == Indigo ? "Switch to the default blue theme" : "Switch to the indigo theme")">
+    @(_theme == Indigo ? "Indigo" : "Blue")
+</button>
+
+@code {
+    /// <summary>localStorage key. Mirrors the culture switcher's <c>tm-demo-culture</c>.</summary>
+    public const string StorageKey = "tm-demo-color-theme";
+
+    public const string Default = "default";
+    public const string Indigo = "indigo";
+
+    private string _theme = Default;
+    private bool _applied;
+
+    private async Task ToggleAsync()
+    {
+        await ApplyAsync(_theme == Indigo ? Default : Indigo);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _applied)
+        {
+            return;
+        }
+
+        var stored = await JS.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+        if (stored is Indigo)
+        {
+            await ApplyAsync(Indigo);
+        }
+    }
+
+    private async Task ApplyAsync(string theme)
+    {
+        _theme = theme;
+        _applied = true;
+        await JS.InvokeVoidAsync("localStorage.setItem", StorageKey, theme);
+        await JS.InvokeVoidAsync("eval",
+            theme == Indigo
+                ? "document.documentElement.setAttribute('data-tm-theme','indigo')"
+                : "document.documentElement.removeAttribute('data-tm-theme')");
+        StateHasChanged();
+    }
+}

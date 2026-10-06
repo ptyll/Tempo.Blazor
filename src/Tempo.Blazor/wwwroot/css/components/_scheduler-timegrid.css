@@ -112,7 +112,7 @@
 
 .tm-scheduler-timegrid-allday-event {
     background: var(--event-color, var(--tm-color-primary, #3b82f6));
-    color: #fff;
+    color: var(--tm-color-on-primary, #fff);
     font-size: 0.6875rem;
     padding: 1px var(--tm-space-2, 0.5rem);
     border-radius: var(--tm-radius-xs, 0.125rem);

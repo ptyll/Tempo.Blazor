@@ -340,6 +340,47 @@
 
   /* ── Charts ── */
   --tm-chart-area-fill-opacity: 0.25;
+
+  /* ── Redesign surfaces (F0) ─────────────────────────────────── */
+  /* The canvas behind cards. The default theme keeps the page white (decision G4);
+     theme-indigo.css is what paints the off-white workspace. Re-declared in
+     tokens-dark.css because a :root-only alias computes with the light value. */
+  --tm-bg-workspace:           var(--tm-bg-page);
+  /* Cards take the xl step (12px), controls the lg step (8px). Components opt in;
+     existing rules keep --tm-radius-md, so nothing changes appearance by default. */
+  --tm-radius-card:            var(--tm-radius-xl);
+  --tm-radius-control:         var(--tm-radius-lg);
+  --tm-shadow-card:            var(--tm-shadow-md);
+  --tm-shadow-popover:         var(--tm-shadow-lg);
+  /* WCAG 2.5.5 target size. A minimum, not a height: a control may be taller. */
+  --tm-touch-target:           2.75rem;
+  /* The non-text focus indicator. Same hue and weight as --tm-shadow-focus, named
+     for the thing it is so a component does not have to reach for a shadow token. */
+  --tm-focus-ring:             var(--tm-shadow-focus);
+  /* A separator that has to stay visible on a muted panel, where --tm-border-color
+     (gray-200) measures only ~1.2:1. gray-400 holds 2.9:1 on white. */
+  --tm-border-color-strong:    var(--tm-color-gray-400);
+
+  /* ── Task status chips ──────────────────────────────────────── */
+  /* Text on the fill must hold WCAG AA (4.5:1) — pinned by TokenContrastTests.
+     Open/closed share the neutral wash; in-progress and done take the accent steps
+     already used by the Gantt badges these tokens will replace. */
+  --tm-status-open-bg:         var(--tm-color-gray-100);
+  --tm-status-open-fg:         var(--tm-color-gray-700);
+  --tm-status-inprogress-bg:   var(--tm-color-primary-100);
+  --tm-status-inprogress-fg:   var(--tm-color-primary-800);
+  --tm-status-done-bg:         #dcfce7;
+  --tm-status-done-fg:         #166534;
+  --tm-status-closed-bg:       var(--tm-color-gray-100);
+  --tm-status-closed-fg:       var(--tm-color-gray-800);
+
+  /* ── Task priority ──────────────────────────────────────────── */
+  /* Dots and icons, not text fills, so they are held to the 3:1 a glyph needs
+     against the page rather than to text AA. */
+  --tm-priority-low:           #15803d;
+  --tm-priority-medium:        #a16207;
+  --tm-priority-high:          #c2410c;
+  --tm-priority-critical:      var(--tm-color-danger);
 }
 
 /* Pod 768 px se `__inner` láme do sloupce (viz TmFormActionBar.razor.css), takže se k rezervě

@@ -1195,9 +1195,9 @@
   .tm-data-table-wrapper--card .tm-data-table tbody tr {
     margin-bottom: var(--tm-space-3, 0.75rem);
     padding: var(--tm-space-2, 0.5rem);
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg, 0.5rem);
-    background: var(--tm-bg-surface, #ffffff);
+    background: var(--tm-bg-surface);
   }
 
   .tm-data-table-wrapper--card .tm-data-table tbody td {
@@ -1213,7 +1213,7 @@
     content: attr(data-label);
     flex: 0 0 auto;
     font-weight: var(--tm-font-weight-semibold, 600);
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     text-align: left;
   }
 }
