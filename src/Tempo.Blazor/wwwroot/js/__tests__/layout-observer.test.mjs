@@ -87,14 +87,30 @@ test('observe reports the initial width and a later width only when the mode cha
     assert.equal(dotnet.calls.length, 3);
 });
 
-test('observe writes the resolved mode onto the root for CSS and tests', async () => {
+test('observe does not write the mode onto the element — Blazor owns data-layout', async () => {
     __resetForTests();
     installFakeResizeObserver();
     const root = element('pane');
 
-    await observe(root, dotNet(), 'pane', { initialWidth: 700 });
+    await observe(root, dotNet(), 'pane', { initialWidth: 700, breakpoints: { sm: 640, lg: 1024 } });
 
-    assert.equal(root.dataset.layout, 'tablet');
+    assert.equal(root.dataset.layout, undefined);
+});
+
+test('observe classifies with the breakpoints the caller passed, not with literals of its own', async () => {
+    __resetForTests();
+    const instances = installFakeResizeObserver();
+    const dotnet = dotNet();
+
+    await observe(element('pane'), dotnet, 'pane', {
+        initialWidth: 500,
+        breakpoints: { sm: 400, lg: 800 },
+    });
+
+    assert.deepEqual(dotnet.calls.at(-1), { name: 'OnLayoutModeChanged', args: ['tablet'] },
+        '500 is below the caller lg and at or above the caller sm');
+    instances[0].emit(399);
+    assert.deepEqual(dotnet.calls.at(-1), { name: 'OnLayoutModeChanged', args: ['mobile'] });
 });
 
 test('disconnect releases the observer and ignores a later resize', async () => {

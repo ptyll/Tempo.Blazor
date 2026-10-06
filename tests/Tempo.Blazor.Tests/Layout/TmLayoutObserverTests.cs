@@ -165,6 +165,45 @@ public class TmLayoutObserverTests : LocalizationTestBase
         reported.Should().Be(TmLayoutMode.Mobile);
     }
 
+    [Fact]
+    public async Task AutoToForcedToAuto_ReturnsToMeasuredMode()
+    {
+        var module = JSInterop.SetupModule(ModulePath);
+        module.SetupVoid("observe", invocation => true);
+
+        TmLayoutMode? reported = null;
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Auto)
+            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnLayoutModeChanged("desktop"));
+        reported = null;
+
+        cut.Render(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+        reported.Should().Be(TmLayoutMode.Mobile);
+
+        reported = null;
+        cut.Render(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Auto)
+            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+
+        cut.Find(".tm-layout").GetAttribute("data-layout").Should().Be("desktop",
+            "switching back to Auto returns to the mode measured while the layout was forced");
+        reported.Should().Be(TmLayoutMode.Desktop);
+    }
+
+    [Fact]
+    public void PlainChildContent_StillRenders()
+    {
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .AddChildContent("<span class=\"plain\">kept</span>"));
+
+        cut.Find(".plain").TextContent.Should().Be("kept");
+    }
+
     /// <summary>Renders the cascaded resolved mode, proving the context is consumable without a DOM measurement.</summary>
     private sealed class ContextProbe : ComponentBase
     {

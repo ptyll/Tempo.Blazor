@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Dashboard;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
@@ -222,6 +223,9 @@ public class TmDashboardTests : LocalizationTestBase
         // dashboard embedded in a 1440px page is one column.
         css.Should().Contain("container-type: inline-size");
         css.Should().Contain("container-name: tm-dashboard");
+        css.Should().NotMatchRegex(
+            @"\.tm-dashboard-grid\s*\{[^}]*container-type",
+            "a container query never styles its own container; the container is the grid's ancestor");
         css.Should().NotContain("560px",
             "560 is not a TmBreakpoints value; the single-column rule is the 640px container query");
         css.Should().MatchRegex(
@@ -272,6 +276,34 @@ public class TmDashboardTests : LocalizationTestBase
         narrow.GetAttribute("style").Should().Contain("--tm-w-span: 4");
         narrow.GetAttribute("style").Should().Contain("--tm-w-order: 2");
         narrow.ClassList.Should().NotContain("tm-widget--wide");
+        wide.GetAttribute("style").Should().Contain("--tm-w-span-md: 6",
+            "wider than half the desktop grid, so it takes the whole tablet row");
+        narrow.GetAttribute("style").Should().Contain("--tm-w-span-md: 2");
+    }
+
+    [Fact]
+    public void Dashboard_ForcedMobile_RendersTheMobileBranch_WithoutImportingTheObserver()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+        provider.GetDashboardAsync("d1", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DashboardConfig?>(new DashboardConfig
+            {
+                Id = "d1",
+                Name = "Forced",
+                Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }],
+            }));
+
+        var cut = Render<TmDashboard>(parameters => parameters
+            .Add(p => p.DashboardId, "d1")
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        var root = cut.Find(".tm-dashboard");
+        root.ClassList.Should().Contain("tm-dashboard--mobile");
+        root.GetAttribute("data-layout").Should().Be("mobile");
+        JSInterop.VerifyNotInvoke("import");
     }
 
     [Fact]

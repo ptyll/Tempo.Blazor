@@ -20,6 +20,35 @@ public class TmBreakpointsTests
     };
 
     [Fact]
+    public void ContainerQueries_UseRangeSyntax_AndOnlyTheFourConstants()
+    {
+        foreach (var file in Directory.EnumerateFiles(RepoRoot(), "*.css", SearchOption.AllDirectories)
+                     .Where(path => path.Contains($"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}")))
+        {
+            var css = File.ReadAllText(file);
+            var withoutComments = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline);
+            foreach (System.Text.RegularExpressions.Match container in System.Text.RegularExpressions.Regex.Matches(withoutComments, @"@container\b(?<condition>[^{]*)\{"))
+            {
+                var condition = container.Groups["condition"].Value;
+                condition.Should().NotContain("max-width", $"{file} must use half-open range syntax, not max-width");
+                condition.Should().NotContain("min-width", $"{file} must use half-open range syntax, not min-width");
+                foreach (System.Text.RegularExpressions.Match width in System.Text.RegularExpressions.Regex.Matches(condition, @"\b(\d+)px\b"))
+                    Allowed.Should().Contain(int.Parse(width.Groups[1].Value), $"{file} uses a container width outside TmBreakpoints");
+            }
+        }
+    }
+
+    [Fact]
+    public void LayoutObserverJs_HasNoBreakpointLiterals()
+    {
+        var js = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "js", "layout-observer.js"));
+        var withoutComments = System.Text.RegularExpressions.Regex.Replace(js, @"//.*?$|/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        withoutComments.Should().NotMatchRegex(@"\b(640|768|1024|1280)\b",
+            "the observer receives TmBreakpoints from C#; a literal here would drift from Classify");
+    }
+
+    [Fact]
     public void Constants_AreTheDocumentedSet()
     {
         TmBreakpoints.Sm.Should().Be(640);
