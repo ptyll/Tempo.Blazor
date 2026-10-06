@@ -347,7 +347,7 @@
     private Task OnLayoutObservedAsync(TmLayoutMode mode)
     {
         _measured = mode;
-        return Task.CompletedTask;
+        return LayoutModeChanged.InvokeAsync(mode);
     }
 
     [Inject] public IDashboardProvider? DashboardProvider { get; set; }

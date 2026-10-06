@@ -26,8 +26,8 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
         var narrow = await GridAsync(page, "rc-host-narrow");
 
         Assert.HasCount(12, wide.Tracks, $"the wide host is the desktop grid (container {wide.Width:0}px)");
-        Assert.HasCount(6, medium.Tracks, $"the 44rem host is the six-column tablet grid (container {medium.Width:0}px)");
-        Assert.HasCount(2, compact.Tracks, $"the 40rem host is the two-column step inside tablet (container {compact.Width:0}px)");
+        Assert.HasCount(6, medium.Tracks, $"the 58rem host is the six-column tablet grid (container {medium.Width:0}px)");
+        Assert.HasCount(2, compact.Tracks, $"the 50rem host is the two-column step inside tablet (container {compact.Width:0}px)");
         Assert.HasCount(1, narrow.Tracks, "the 24rem host stacks even though the viewport is 1440px wide");
         Assert.IsTrue(narrow.MinWidget >= 120, $"a stacked widget must stay readable, got {narrow.MinWidget:0}px");
 
@@ -165,6 +165,7 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
                 Locale = "en-US",
                 IgnoreHTTPSErrors = true,
             });
+            RegisterContext(context);
             page = await context.NewPageAsync();
         }
         else
@@ -178,12 +179,18 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null, new PageWaitForFunctionOptions { Timeout = 30_000 });
         await page.GetByTestId("rc-host-wide").Locator(".tm-dashboard-grid").WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+        await page.GetByTestId("rc-host-wide-heading").GetByText("px").WaitForAsync(new LocatorWaitForOptions { Timeout = 15_000 });
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync("() => document.activeElement && document.activeElement.blur()");
         return page;
     }
 
-    private sealed record Grid(double[] Tracks, double Width, double MinWidget);
+    private sealed class Grid
+    {
+        public double[] Tracks { get; set; } = [];
+        public double Width { get; set; }
+        public double MinWidget { get; set; }
+    }
 
     private static async Task<Grid> GridAsync(IPage page, string host)
     {

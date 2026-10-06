@@ -5340,7 +5340,7 @@
   "TmLayoutMode_Tablet": "Tablet",
   "TmLayoutMode_Mobile": "Mobile",
   "TmResponsiveDemo_Title": "Responsive conventions",
-  "TmResponsiveDemo_Intro": "The same dashboard in four containers: 80rem, 44rem, 40rem and a 24rem column. Resize the browser, or force the wide container's layout below — the grid follows its container, not the browser window.",
+  "TmResponsiveDemo_Intro": "The same dashboard in four containers: 80rem, 58rem, 50rem and a 24rem column. Resize the browser, or force the wide container's layout below — the grid follows its container, not the browser window.",
   "TmResponsiveDemo_ForcedLayout": "Forced layout",
   "TmResponsiveDemo_ForceLabel": "Force the wide host's layout:",
   "TmResponsiveDemo_Resolved": "Current layout: {0}",

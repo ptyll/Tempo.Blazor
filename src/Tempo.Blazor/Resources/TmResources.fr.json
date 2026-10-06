@@ -5340,7 +5340,7 @@
   "TmLayoutMode_Tablet": "Tablette",
   "TmLayoutMode_Mobile": "Mobile",
   "TmResponsiveDemo_Title": "Conventions de mise en page adaptative",
-  "TmResponsiveDemo_Intro": "Le même composant dans quatre conteneurs : 80rem, 44rem, 40rem et une colonne de 24rem. Redimensionnez la fenêtre, ou forcez la disposition du conteneur large — la grille suit son conteneur, pas la fenêtre.",
+  "TmResponsiveDemo_Intro": "Le même composant dans quatre conteneurs : 80rem, 58rem, 50rem et une colonne de 24rem. Redimensionnez la fenêtre, ou forcez la disposition du conteneur large — la grille suit son conteneur, pas la fenêtre.",
   "TmResponsiveDemo_ForcedLayout": "Disposition forcée",
   "TmResponsiveDemo_ForceLabel": "Forcer la disposition du conteneur large :",
   "TmResponsiveDemo_Resolved": "Disposition appliquée : {0}",

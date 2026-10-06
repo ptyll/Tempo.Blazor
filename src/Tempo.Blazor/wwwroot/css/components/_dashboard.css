@@ -888,7 +888,11 @@
   }
 
   .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget {
-    grid-column: auto / span min(var(--tm-w-span-md, 2), 2);
+    grid-column: auto / span 1;
+  }
+
+  .tm-dashboard[data-layout="tablet"] .tm-dashboard-grid .tm-widget--wide {
+    grid-column: 1 / -1;
   }
 }
 

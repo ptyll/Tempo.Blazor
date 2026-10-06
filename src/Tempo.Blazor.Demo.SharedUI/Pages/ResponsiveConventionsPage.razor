@@ -1,12 +1,13 @@
 @page "/responsive-conventions"
 @using Tempo.Blazor.Abstractions.Layout
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 @using Tempo.Blazor.Components.Dashboard
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @inject ITmLocalizer Loc
 @inject IDashboardProvider Dashboards
-@inject IJSRuntime JS
-@implements IAsyncDisposable
+@inject IWidgetRegistry Widgets
 
 <PageTitle>@Loc["TmResponsiveDemo_Title"] – Tempo.Blazor</PageTitle>
 
@@ -66,8 +67,6 @@
     private static readonly TmLayoutMode[] _modes =
         [TmLayoutMode.Auto, TmLayoutMode.Desktop, TmLayoutMode.Tablet, TmLayoutMode.Mobile];
 
-    private readonly Dictionary<string, int> _widths = new(StringComparer.Ordinal);
-    private IJSObjectReference? _module;
     private TmLayoutMode _mode = TmLayoutMode.Auto;
     private TmLayoutMode _resolved = TmLayoutMode.Desktop;
 
@@ -79,36 +78,46 @@
         _seeded = true;
         foreach (var id in new[] { "rc-wide", "rc-medium", "rc-compact", "rc-narrow" })
             await Dashboards.SaveDashboardAsync(ResponsiveConventionsProvider.Create(id));
+        foreach (var widget in ResponsiveConventionsProvider.Widgets)
+            Widgets.RegisterWidget(widget);
     }
 
     private string ModeName(TmLayoutMode mode) => Loc[$"TmLayoutMode_{mode}"];
 
+    private readonly Dictionary<string, int> _widths = new(StringComparer.Ordinal);
+
     private string HostHeading(string hostKey, string testId)
     {
-        var width = _widths.TryGetValue(testId, out var measured) ? $"{measured} px" : Loc["TmResponsiveDemo_Measuring"];
         var mode = testId == "rc-host-wide" ? _resolved : ModeFor(_widths.GetValueOrDefault(testId));
-        return $"{Loc[hostKey]} · {width} · {ModeName(mode)}";
+        var width = _widths.TryGetValue(testId, out var measured) && measured > 0 ? $" · {measured} px" : "";
+        return $"{Loc[hostKey]}{width} · {ModeName(mode)}";
     }
 
     private static TmLayoutMode ModeFor(int widthPx) =>
-        widthPx <= 0 ? TmLayoutMode.Auto : TmBreakpoints.Classify(widthPx);
+        widthPx <= 0 ? TmLayoutMode.Desktop : TmBreakpoints.Classify(widthPx);
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private bool _watching;
+    private DotNetObjectReference<ResponsiveConventionsPage>? _self;
+
+    protected override void OnAfterRender(bool firstRender)
     {
-        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor.Demo.SharedUI/js/responsive-conventions.js");
-        if (_module is null) return;
-        var measured = await _module.InvokeAsync<Dictionary<string, int>>("measure", new[] { "rc-host-wide", "rc-host-medium", "rc-host-compact", "rc-host-narrow" });
-        if (measured.Count == _widths.Count && measured.All(pair => _widths.TryGetValue(pair.Key, out var width) && width == pair.Value))
-            return;
+        if (_watching || JS is not IJSInProcessRuntime sync) return;
+        _watching = true;
+        _self = DotNetObjectReference.Create(this);
+        sync.InvokeVoid("tmResponsiveConventions.watch", _self);
+    }
+
+    [JSInvokable]
+    public void OnMeasured(Dictionary<string, int> measured)
+    {
         foreach (var pair in measured) _widths[pair.Key] = pair.Value;
         StateHasChanged();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_module is null) return;
-        try { await _module.DisposeAsync(); }
-        catch (JSDisconnectedException) { }
+        _self?.Dispose();
+        return ValueTask.CompletedTask;
     }
 
     private Task OnResolved(TmLayoutMode mode)

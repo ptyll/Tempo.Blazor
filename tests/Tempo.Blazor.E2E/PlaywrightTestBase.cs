@@ -186,6 +186,9 @@ public abstract class PlaywrightTestBase
         return context;
     }
 
+    /// <summary>Tracks a context this test opened itself, so cleanup closes it.</summary>
+    protected void RegisterContext(IBrowserContext context) => _contextsToDispose.Add(context);
+
     /// <summary>
     /// Creates a new page and navigates to the base URL.
     /// </summary>

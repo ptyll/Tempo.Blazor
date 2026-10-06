@@ -9,7 +9,7 @@ namespace Tempo.Blazor.Demo.SharedUI.Pages;
 /// </summary>
 public sealed class ResponsiveConventionsProvider : IDashboardProvider
 {
-    private static readonly WidgetInstance[] Widgets =
+    private static readonly WidgetInstance[] Instances =
     [
         new() { InstanceId = "rc-revenue", WidgetId = "rc-revenue", X = 0, Y = 0, Width = 8, Height = 3 },
         new() { InstanceId = "rc-orders", WidgetId = "rc-orders", X = 8, Y = 0, Width = 4, Height = 3 },
@@ -20,6 +20,16 @@ public sealed class ResponsiveConventionsProvider : IDashboardProvider
 
     /// <summary>The dashboard the page seeds into the host's provider, once per host id.</summary>
     public static DashboardConfig Create(string id) => Dashboard(id);
+
+    /// <summary>The definitions the page registers so the cards show a name instead of "Unknown Widget".</summary>
+    public static IReadOnlyList<WidgetDefinition> Widgets { get; } =
+    [
+        new() { Id = "rc-revenue", Name = "Revenue", DefaultWidth = 8, DefaultHeight = 3 },
+        new() { Id = "rc-orders", Name = "Orders", DefaultWidth = 4, DefaultHeight = 3 },
+        new() { Id = "rc-returns", Name = "Returns", DefaultWidth = 4, DefaultHeight = 3 },
+        new() { Id = "rc-margin", Name = "Margin", DefaultWidth = 4, DefaultHeight = 3 },
+        new() { Id = "rc-queue", Name = "Queue", DefaultWidth = 4, DefaultHeight = 3 },
+    ];
 
     /// <inheritdoc />
     public Task<IEnumerable<DashboardConfig>> GetDashboardsAsync(string? userId = null, CancellationToken ct = default) =>
@@ -49,7 +59,7 @@ public sealed class ResponsiveConventionsProvider : IDashboardProvider
         Id = id,
         Name = id,
         Grid = new GridConfig { Columns = 12, RowHeight = 48, Gap = 12 },
-        Widgets = Widgets.Select(widget => new WidgetInstance
+        Widgets = Instances.Select(widget => new WidgetInstance
         {
             InstanceId = widget.InstanceId,
             WidgetId = widget.WidgetId,

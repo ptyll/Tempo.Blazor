@@ -66,13 +66,16 @@
   max-width: 100%;
 }
 
+/* Host padding and the dashboard chrome eat about 5rem, so these widths are the host, not the
+   grid. 58rem leaves the grid above 768 (six columns); 50rem leaves it inside tablet but below
+   768 (two columns). */
 .rc-host--medium {
-  width: 44rem;
+  width: 58rem;
   max-width: 100%;
 }
 
 .rc-host--compact {
-  width: 40rem;
+  width: 50rem;
   max-width: 100%;
 }
 
