@@ -59,10 +59,20 @@
   color: var(--tm-text-primary);
 }
 
-.rc-host--wide { width: 100%; }
+/* Widths are fixed, not inferred from the viewport: the demo sidebar makes a 1024px viewport's
+   content area narrower than 1024, so a percentage host would land in the wrong mode. */
+.rc-host--wide {
+  width: 80rem;
+  max-width: 100%;
+}
 
 .rc-host--medium {
-  width: 48rem;
+  width: 44rem;
+  max-width: 100%;
+}
+
+.rc-host--compact {
+  width: 40rem;
   max-width: 100%;
 }
 
@@ -141,13 +151,7 @@
   }
 }
 
-@media (min-width: 1536px) {
-  .rc-stage {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 24rem;
-    align-items: start;
-  }
-}
+
 
 @media (prefers-reduced-motion: reduce) {
   .rc-page,

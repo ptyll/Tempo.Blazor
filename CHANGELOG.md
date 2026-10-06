@@ -47,15 +47,14 @@
   the lg height. A coarse pointer still grows it to `--tm-touch-target`.
 
 - **Safe-area helpers add to padding instead of replacing it.** `.tm-safe-area-bottom` and
-  `.tm-safe-area-top` use `calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-*, 0px))`.
-  The inset is zero unless the host page
-  sets `viewport-fit=cover`.
+  `.tm-safe-area-top` use `calc(var(--tm-space-2) + env(safe-area-inset-*, 0px))`.
+  The inset is zero unless the host page sets `viewport-fit=cover`.
 
-- **`TmLayoutObserver.ChildContent` is `RenderFragment<TmLayoutContext>`.** Markup is unchanged:
-  plain child content still works, and `Context="layout"` now works too. A caller that assigned
-  `ChildContent` programmatically with a `RenderFragment` must pass a
-  `RenderFragment<TmLayoutContext>` (the context argument may be ignored). The component also gains
-  `IsContainer` (default true) and `InitialMode` (default Desktop, the pre-measure and prerender mode).
+- **`TmLayoutObserver` gains `IsContainer` and `InitialMode`.** `IsContainer` defaults to true;
+  shrink-to-fit hosts such as a popover pass false so the root does not establish a containment
+  context. `InitialMode` defaults to Desktop and is the mode rendered before the first measurement
+  (static SSR, prerender, the first frame). `ChildContent` stays a `RenderFragment`; the resolved
+  layout is cascaded as `TmLayoutContext`, so a child reads it with `[CascadingParameter]`.
 
 - **`TmDialog` default button texts now come from the localizer.** `OkButtonText` and
   `CancelButtonText` used to default to the English literals `"OK"` and `"Cancel"`, so a Czech

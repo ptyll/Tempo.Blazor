@@ -22,9 +22,9 @@
     },
     {
       "name": "ChildContent",
-      "type": "RenderFragment<TmLayoutContext>?",
+      "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Content rendered inside the observed container. The context argument is the resolved layout, so Context=\"layout\" works; plain child content keeps working."
+      "description": "Content rendered inside the observed container. The resolved layout is cascaded as TmLayoutContext, so a child reads it with a CascadingParameter."
     },
     {
       "name": "Class",

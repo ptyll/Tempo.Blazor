@@ -43,6 +43,11 @@
             <TmDashboard DashboardId="rc-medium" UserId="rc" Class="rc-dashboard" />
         </section>
 
+        <section class="rc-host rc-host--compact" data-testid="rc-host-compact">
+            <h2 data-testid="rc-host-compact-heading">@HostHeading("TmResponsiveDemo_CompactHost", "rc-host-compact")</h2>
+            <TmDashboard DashboardId="rc-compact" UserId="rc" Class="rc-dashboard" />
+        </section>
+
         <section class="rc-host rc-host--narrow" data-testid="rc-host-narrow">
             <h2 data-testid="rc-host-narrow-heading">@HostHeading("TmResponsiveDemo_NarrowHost", "rc-host-narrow")</h2>
             <TmDashboard DashboardId="rc-narrow" UserId="rc" Class="rc-dashboard" />
@@ -72,7 +77,7 @@
     {
         if (_seeded) return;
         _seeded = true;
-        foreach (var id in new[] { "rc-wide", "rc-medium", "rc-narrow" })
+        foreach (var id in new[] { "rc-wide", "rc-medium", "rc-compact", "rc-narrow" })
             await Dashboards.SaveDashboardAsync(ResponsiveConventionsProvider.Create(id));
     }
 
@@ -92,7 +97,7 @@
     {
         _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor.Demo.SharedUI/js/responsive-conventions.js");
         if (_module is null) return;
-        var measured = await _module.InvokeAsync<Dictionary<string, int>>("measure", new[] { "rc-host-wide", "rc-host-medium", "rc-host-narrow" });
+        var measured = await _module.InvokeAsync<Dictionary<string, int>>("measure", new[] { "rc-host-wide", "rc-host-medium", "rc-host-compact", "rc-host-narrow" });
         if (measured.Count == _widths.Count && measured.All(pair => _widths.TryGetValue(pair.Key, out var width) && width == pair.Value))
             return;
         foreach (var pair in measured) _widths[pair.Key] = pair.Value;

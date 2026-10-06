@@ -195,6 +195,18 @@ public class TmLayoutObserverTests : LocalizationTestBase
     }
 
     [Fact]
+    public void NestedAuto_UnderForcedMobile_ResolvesMobile_WithoutJs()
+    {
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .AddChildContent(NestedAuto.Fragment));
+
+        cut.Find(".nested").GetAttribute("data-layout").Should().Be("mobile",
+            "Auto under a forced ancestor adopts the ancestor and does not measure");
+        JSInterop.VerifyNotInvoke("import");
+    }
+
+    [Fact]
     public void PlainChildContent_StillRenders()
     {
         var cut = Render<TmLayoutObserver>(parameters => parameters
@@ -202,6 +214,24 @@ public class TmLayoutObserverTests : LocalizationTestBase
             .AddChildContent("<span class=\"plain\">kept</span>"));
 
         cut.Find(".plain").TextContent.Should().Be("kept");
+    }
+
+    /// <summary>An Auto observer nested under the component under test.</summary>
+    private sealed class NestedAuto : ComponentBase
+    {
+        public static RenderFragment Fragment => builder =>
+        {
+            builder.OpenComponent<NestedAuto>(0);
+            builder.CloseComponent();
+        };
+
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<TmLayoutObserver>(0);
+            builder.AddComponentParameter(1, nameof(TmLayoutObserver.LayoutMode), TmLayoutMode.Auto);
+            builder.AddComponentParameter(2, nameof(TmLayoutObserver.Class), "nested");
+            builder.CloseComponent();
+        }
     }
 
     /// <summary>Renders the cascaded resolved mode, proving the context is consumable without a DOM measurement.</summary>

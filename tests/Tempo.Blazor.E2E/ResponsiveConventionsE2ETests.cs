@@ -22,10 +22,12 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
 
         var wide = await GridAsync(page, "rc-host-wide");
         var medium = await GridAsync(page, "rc-host-medium");
+        var compact = await GridAsync(page, "rc-host-compact");
         var narrow = await GridAsync(page, "rc-host-narrow");
 
         Assert.HasCount(12, wide.Tracks, $"the wide host is the desktop grid (container {wide.Width:0}px)");
-        Assert.HasCount(6, medium.Tracks, $"the 48rem host is the tablet grid (container {medium.Width:0}px)");
+        Assert.HasCount(6, medium.Tracks, $"the 44rem host is the six-column tablet grid (container {medium.Width:0}px)");
+        Assert.HasCount(2, compact.Tracks, $"the 40rem host is the two-column step inside tablet (container {compact.Width:0}px)");
         Assert.HasCount(1, narrow.Tracks, "the 24rem host stacks even though the viewport is 1440px wide");
         Assert.IsTrue(narrow.MinWidget >= 120, $"a stacked widget must stay readable, got {narrow.MinWidget:0}px");
 
@@ -59,6 +61,7 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
     {
         var page = await OpenTouchAsync(1024, 768);
         await page.GetByRole(AriaRole.Button, new() { Name = "Edit" }).First.ClickAsync();
+        await page.Locator(".tm-dashboard--edit").First.WaitForAsync();
 
         var icon = await page.GetByTestId("rc-reveal").BoundingBoxAsync();
         Assert.IsNotNull(icon);
@@ -67,11 +70,35 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
         var reveal = await page.GetByTestId("rc-reveal").EvaluateAsync<string>("el => getComputedStyle(el).opacity");
         Assert.AreEqual("1", reveal, "a coarse pointer shows a hover-only action");
 
-        var edge = await page.Locator(".tm-widget-resize-n").First.EvaluateAsync<string>("el => getComputedStyle(el).display");
-        Assert.AreEqual("none", edge, "a coarse pointer hides the edge resize handles");
+        var edge = await page.Locator(".tm-widget-resize-n").CountAsync();
+        Assert.AreEqual(0, edge, "below desktop the edge handles are not rendered");
+        var se = await page.Locator(".tm-widget-resize-se").CountAsync();
+        Assert.AreEqual(0, se, "resize is desktop only, so a coarse pointer below desktop has no handle");
 
         await ShotAsync(page, "1024-touch");
         await ShotAsync(page, "coarse-pointer");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task EditMode_ShowsTheGrid_AndACoarsePointerHidesTheEdgeHandles()
+    {
+        var desktop = await OpenAsync(1440, 900);
+        await desktop.GetByRole(AriaRole.Button, new() { Name = "Edit" }).First.ClickAsync();
+        await desktop.Locator(".tm-dashboard--edit").First.WaitForAsync();
+        var se = await desktop.Locator(".tm-widget-resize-se").First.BoundingBoxAsync();
+        Assert.IsNotNull(se, "desktop edit mode renders the corner handle");
+        await ShotAsync(desktop, "edit-desktop");
+
+        var touch = await OpenTouchAsync(1440, 900);
+        await touch.GetByRole(AriaRole.Button, new() { Name = "Edit" }).First.ClickAsync();
+        await touch.Locator(".tm-dashboard--edit").First.WaitForAsync();
+        var corner = await touch.Locator(".tm-widget-resize-se").First.BoundingBoxAsync();
+        Assert.IsNotNull(corner);
+        Assert.IsTrue(corner.Width >= 44 && corner.Height >= 44, $"the corner handle must be at least 44px, got {corner.Width:0}x{corner.Height:0}");
+        var edge = await touch.Locator(".tm-widget-resize-n").First.EvaluateAsync<string>("el => getComputedStyle(el).display");
+        Assert.AreEqual("none", edge, "a coarse pointer hides the edge resize handles");
+        await ShotAsync(touch, "edit-touch");
     }
 
     [TestMethod]
