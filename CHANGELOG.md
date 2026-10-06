@@ -48,7 +48,7 @@
 
 - **Safe-area helpers add to padding instead of replacing it.** `.tm-safe-area-bottom` and
   `.tm-safe-area-top` use `calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-*, 0px))`.
-  Set `--tm-safe-area-base` to the component's own padding. The inset is zero unless the host page
+  The inset is zero unless the host page
   sets `viewport-fit=cover`.
 
 - **`TmLayoutObserver.ChildContent` is `RenderFragment<TmLayoutContext>`.** Markup is unchanged:

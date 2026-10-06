@@ -1528,6 +1528,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
         yield return new WireframeComponentSchema
         {
             Type = "TmLayoutObserver", Category = "Layout", DisplayName = "Layout Observer",
+            IsContainer = true,
             DefaultWidth = 320, DefaultHeight = 180,
             Props =
             [
