@@ -75,7 +75,8 @@ public sealed class ModelingSourcePanelM9E2ETests : WasmTestBase
 
         // ?delay=6000 holds the loading state ~6s, but the element can only appear after WASM
         // boot — the default 5s window expires before the first render on a cold runtime.
-        await ExpectVisibleAsync(page, "[data-testid='modeling-editor-loading']", timeout: 30_000);
+        // 60 s because a contended runner has pushed WASM instantiation past 30 s.
+        await ExpectVisibleAsync(page, "[data-testid='modeling-editor-loading']", timeout: 60_000);
         await ExpectVisibleAsync(page, "[data-testid='modeling-editor-timeout-message']", timeout: 15_000);
         await ExpectVisibleAsync(page, "[data-testid='modeling-editor-loading']");
     }
