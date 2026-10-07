@@ -123,7 +123,7 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
                 var layout = await page.GetByTestId(host).Locator(".tm-dashboard").GetAttributeAsync("data-layout");
                 var heading = await page.GetByTestId($"{host}-heading").InnerTextAsync();
                 StringAssert.Contains(heading, $"{grid} px", $"{host} at {width}: the heading must name the measured width");
-                StringAssert.Contains(heading, layout!, $"{host} at {width}: the heading must name the dashboard's own data-layout");
+                Assert.IsTrue(heading.Contains(layout!, StringComparison.OrdinalIgnoreCase), $"{host} at {width}: the heading '{heading}' must name the dashboard's own data-layout '{layout}'");
             }
         }
     }
@@ -240,15 +240,17 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
 
         // A full-page or element screenshot resets Playwright's touch emulation, so the capture
         // would show a fine pointer. Grow the viewport to the document instead, then restore it.
-        var viewport = page.ViewportSize ?? new ViewportSize { Width = 1440, Height = 900 };
+        var viewport = page.ViewportSize;
+        var viewportWidth = viewport?.Width ?? 1440;
+        var viewportHeight = viewport?.Height ?? 900;
         var height = await page.EvaluateAsync<int>("() => document.documentElement.scrollHeight");
         await page.AddStyleTagAsync(new PageAddStyleTagOptions
         {
             Content = "*, *::before, *::after { transition: none !important; animation: none !important; }",
         });
-        await page.SetViewportSizeAsync(viewport.Width, Math.Max(viewport.Height, height));
+        await page.SetViewportSizeAsync(viewportWidth, Math.Max(viewportHeight, height));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false, Type = ScreenshotType.Png });
-        await page.SetViewportSizeAsync(viewport.Width, viewport.Height);
+        await page.SetViewportSizeAsync(viewportWidth, viewportHeight);
 
         if (name.Contains("touch", StringComparison.Ordinal))
         {

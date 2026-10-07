@@ -66,9 +66,13 @@ export function observe(element, dotnet, id, options) {
     const entry = { element, dotnet, id, mode: null, breakpoints: options?.breakpoints };
     tracked.set(element, entry);
 
-    // ResizeObserver fires an initial observation, so a clientWidth report here would measure a
-    // different box than the one the observer reports.
+    // ResizeObserver fires an initial observation, so there is no clientWidth fallback: that box
+    // differs from the content box the observer reports. initialWidth is only the caller's own
+    // measurement, used by tests.
     sharedObserver()?.observe(element);
+    if (typeof options?.initialWidth === 'number' && Number.isFinite(options.initialWidth)) {
+        report(entry, options.initialWidth);
+    }
     return Promise.resolve();
 }
 
