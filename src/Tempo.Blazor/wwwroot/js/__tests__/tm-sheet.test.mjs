@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keyboardOffset, settle, trackViewport } from '../tm-sheet.js';
+import { attachGesture, keyboardOffset, settle, trackViewport } from '../tm-sheet.js';
 
 const snaps = [0.5, 1];
 
@@ -85,5 +85,134 @@ test('trackViewport writes lengths, so the sheet is usable before the module run
     assert.equal(root.props.get('--tm-sheet-viewport'), '430px', 'the viewport variable is a length, not a bare number');
     assert.equal(root.props.get('--tm-sheet-keyboard'), '402px');
     stop();
+    delete globalThis.window;
+});
+
+function panel(height) {
+    const props = new Map();
+    const inline = {};
+    return {
+        props,
+        inline,
+        style: {
+            set height(value) { inline.height = value; },
+            get height() { return inline.height ?? ''; },
+            set transition(value) { inline.transition = value; },
+            get transition() { return inline.transition ?? ''; },
+            setProperty(name, value) { props.set(name, value); },
+            removeProperty(name) { props.delete(name); },
+        },
+        getBoundingClientRect: () => ({ height }),
+        closest: () => null,
+    };
+}
+
+function handle() {
+    const listeners = new Map();
+    return {
+        listeners,
+        addEventListener(type, fn) { listeners.set(type, fn); },
+        removeEventListener(type) { listeners.delete(type); },
+        setPointerCapture() {},
+        dispatch(type, event) { listeners.get(type)?.(event); },
+    };
+}
+
+function host() {
+    const calls = [];
+    return { calls, invokeMethodAsync(name, ...args) { calls.push([name, ...args]); return Promise.resolve(); } };
+}
+
+function installWindow(height = 800) {
+    const viewport = { height, offsetTop: 0, addEventListener() {}, removeEventListener() {} };
+    globalThis.window = {
+        innerHeight: height,
+        visualViewport: viewport,
+        addEventListener() {},
+        removeEventListener() {},
+    };
+}
+
+test('a drag writes only an inline height and clears the height variable on release', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    attachGesture(grab, sheet, [0.5, 1], true, host(), 'sheet');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 140 });
+    assert.equal(sheet.inline.height, '360px');
+    assert.equal(sheet.props.has('--tm-sheet-height'), false, 'a gesture must not freeze the snap variable');
+
+    sheet.getBoundingClientRect = () => ({ height: 400 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 140 });
+    assert.equal(sheet.inline.height, '', 'releasing on the same snap clears the inline height');
+    assert.equal(sheet.inline.transition, '');
+    assert.equal(sheet.props.has('--tm-sheet-height'), false);
+    delete globalThis.window;
+});
+
+test('pointercancel and a vetoed dismiss both clear the inline gesture state', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], false, sink, 'veto');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 500 });
+    sheet.style.setProperty('--tm-sheet-height', '0.1');
+    grab.dispatch('pointercancel', { pointerId: 1 });
+
+    assert.equal(sheet.inline.height, '');
+    assert.equal(sheet.inline.transition, '');
+    assert.equal(sheet.props.has('--tm-sheet-height'), false, 'pointercancel must not leave the height variable');
+    assert.equal(sink.calls.length, 0, 'a cancelled gesture reports nothing');
+    delete globalThis.window;
+});
+
+test('a release is measured before the inline height is cleared', () => {
+    installWindow(800);
+    const grab = handle();
+    let reads = 0;
+    const sheet = panel(400);
+    sheet.getBoundingClientRect = () => {
+        reads++;
+        // The first read is the start height. A later read that sees the cleared inline height is wrong.
+        return { height: sheet.inline.height === '' && reads > 1 ? 0 : 240 };
+    };
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'measure');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 260 });
+
+    assert.equal(sink.calls[0][0], 'HandleSheetSnappedAsync', '240px of 800 is the half snap, not a dismiss');
+    delete globalThis.window;
+});
+
+test('a header ignores pointerdown on an interactive target until the finger moves', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    attachGesture(grab, sheet, [0.5, 1], true, host(), 'header');
+
+    const button = { closest: () => button };
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, target: button });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 102 });
+    assert.equal(sheet.inline.height ?? '', '', 'a click on the close button must not drag the sheet');
+
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 112 });
+    assert.equal(sheet.inline.height, '388px', 'a real drag from the header still moves the sheet');
+    delete globalThis.window;
+});
+
+test('a null handle still tracks the viewport', async () => {
+    installWindow(430);
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(null, sheet, [1], false, sink, 'track-only');
+
+    assert.equal(sheet.props.get('--tm-sheet-viewport'), '430px', 'a modal sheet with no gesture still lifts for the keyboard');
     delete globalThis.window;
 });
