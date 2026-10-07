@@ -180,6 +180,29 @@
     </div>
 </section>
 
+<!-- Height cap regrowth -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Constrained height</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            A long list inside a <code>ConstrainHeight</code> panel: while the trigger sits where
+            little room is left below, the panel is capped — scrolling the page so room returns
+            must let the list grow back to its stylesheet max-height.
+        </p>
+        <div class="w-64">
+            <TmFilterableDropdown TItem="SelectOption<string>" TValue="string"
+                                  Items="_longOptions"
+                                  @bind-Value="_longValue"
+                                  DisplayField="@(o => o.Label)"
+                                  IdField="@(o => o.Value)"
+                                  Placeholder="Pick an option..."
+                                  data-testid="overlay-constrain-height-dropdown" />
+        </div>
+    </div>
+</section>
+
 @* Scroll room below the edge section: without it the document ends right after the trigger, so
    scrollIntoView({block:'end'}) cannot pin the trigger's bottom edge to the viewport bottom and
    the flip demo/test would have nothing to prove. It also gives the "anchor scrolled fully out of
@@ -211,6 +234,11 @@
         new("beta", "Beta"),
         new("gamma", "Gamma"),
     ];
+
+    private SelectOption<string>? _longValue;
+
+    private static readonly List<SelectOption<string>> _longOptions =
+        [.. Enumerable.Range(1, 40).Select(i => new SelectOption<string>($"opt-{i}", $"Option {i}"))];
 
     private ElementReference _scrollAnchor;
     private ElementReference _modalAnchor;

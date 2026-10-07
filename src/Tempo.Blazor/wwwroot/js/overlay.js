@@ -183,6 +183,14 @@ function place(entry) {
 
     const anchorRect = anchorEl.getBoundingClientRect();
 
+    // N318: drop the previous pass's inline height cap BEFORE measuring. Left in place it would
+    // shrink offsetHeight (the flip decision would then reason about the capped size) — and it is
+    // also the value getComputedStyle would resolve again below, which is exactly why a shrunk
+    // cap used to never regrow. The stylesheet's own max-height still applies to the measurement;
+    // it is remembered per-entry as entry.cssMaxHeight.
+    panel.style.maxHeight = '';
+    panel.style.overflowY = '';
+
     // Measure the LAYOUT box, not getBoundingClientRect: a transform on the panel's open
     // animation scales the rect (e.g. .tm-popover__body grows from scale(0.95)) and place()
     // runs at t≈0 — the mis-measurement would then stick for the panel's whole open life.
@@ -237,8 +245,9 @@ function place(entry) {
         const room = result.side === 'bottom'
             ? (block ? Math.min(block.bottom, window.innerHeight) : window.innerHeight) - anchorRect.bottom - options.offset - options.margin
             : anchorRect.top - (block ? Math.max(block.top, 0) : 0) - options.offset - options.margin;
-        const cssCap = parseFloat(getComputedStyle(panel).maxHeight);
-        const cap = Number.isNaN(cssCap) ? room : Math.min(room, cssCap);
+        // The stylesheet cap captured in open() — getComputedStyle here would resolve our own
+        // previous inline maxHeight (N318: cap could only ever shrink for the panel's open life).
+        const cap = Number.isNaN(entry.cssMaxHeight) ? room : Math.min(room, entry.cssMaxHeight);
         panel.style.maxHeight = `${Math.max(cap, 0)}px`;
         panel.style.overflowY = 'auto';
     } else {
@@ -519,6 +528,9 @@ export function open(key, panel, anchor, dotNetRef, options) {
         if (existing.panel !== panel) {
             resizeObserver?.unobserve(existing.panel);
             resizeObserver?.observe(panel);
+            // Fresh element, fresh stylesheet cap (N318) — the previous element's value may not
+            // apply, and this element has no overlay-written inline style yet.
+            existing.cssMaxHeight = parseFloat(getComputedStyle(panel).maxHeight);
         }
         existing.panel = panel;
         existing.anchor = anchor;
@@ -540,6 +552,9 @@ export function open(key, panel, anchor, dotNetRef, options) {
         anchor,
         dotNetRef,
         options: normalizeOptions(options),
+        // N318: the STYLESHEET's own max-height, read once before place() writes any inline cap —
+        // from the first place() on, getComputedStyle resolves our inline override instead.
+        cssMaxHeight: parseFloat(getComputedStyle(panel).maxHeight),
         usesPopover: supportsPopover,
         dismissed: false,
     };

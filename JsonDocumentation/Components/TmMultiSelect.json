@@ -2,7 +2,7 @@
   "itemName": "TmMultiSelect",
   "kind": "Component",
   "category": "Inputs",
-  "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates.",
+  "description": "Multi-value selection dropdown with chip, delimiter, or checkbox display modes, filtering, grouping, select-all, max selection limit, server-side data provider, and custom item/value templates. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs",
     "@using Tempo.Blazor.Models"

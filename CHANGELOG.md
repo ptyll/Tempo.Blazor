@@ -110,6 +110,18 @@
   dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 
+### Fixed
+
+- **`ConstrainHeight` panels can now grow back after the room returns (N318).** `overlay.js`
+  used to read `getComputedStyle(panel).maxHeight` on every placement pass — which resolves the
+  panel's own *inline* `max-height` written by the previous pass. Once the available room
+  shrank (scrolling, a mobile keyboard opening), the cap could only ever get smaller until the
+  panel was closed. The stylesheet cap is now captured once per entry in `open()`
+  (`entry.cssMaxHeight`), and `place()` clears the inline `max-height`/`overflow-y` before
+  measuring, so `offsetHeight` — and therefore the flip decision — sees the panel's natural
+  height again. Affects every `ConstrainHeight` consumer: TmFilterableDropdown, TmEntityPicker,
+  TmQueryInput, TmMultiSelect, TmTagPicker and TmMultiColumnComboBox.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

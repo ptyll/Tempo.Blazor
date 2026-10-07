@@ -2,7 +2,7 @@
   "itemName": "TmTagPicker",
   "kind": "Component",
   "category": "Tags",
-  "description": "Tag selection component displaying selected tags as colored chips with a dropdown for adding more. Supports inline search with filtering, optional inline tag creation via OnCreateTag callback, and disabled state.",
+  "description": "Tag selection component displaying selected tags as colored chips with a dropdown for adding more. Supports inline search with filtering, optional inline tag creation via OnCreateTag callback, and disabled state. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
   "requiredImports": [
     "@using Tempo.Blazor.Abstractions.Shared",
     "@using Tempo.Blazor.Components.Tags",
