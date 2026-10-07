@@ -8,7 +8,7 @@ namespace Tempo.Blazor.Helpers;
 /// The layout an overlay renders. A modal, a dialog and a drawer all resolve the same way, so the
 /// decision lives here instead of in three copies.
 /// </summary>
-public sealed class OverlayLayout
+internal sealed class OverlayLayout
 {
     private static bool _hinted;
     private TmLayoutMode? _lastReported;

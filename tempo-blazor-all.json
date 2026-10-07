@@ -111,7 +111,6 @@
           "Tempo.Blazor.Components.TreeView",
           "Tempo.Blazor.Components.Workflow",
           "Tempo.Blazor.Configuration",
-          "Tempo.Blazor.Helpers",
           "Tempo.Blazor.Resources",
           "Tempo.Blazor.Services"
         ]
@@ -12614,96 +12613,6 @@
               "code": "<TmLightbox IsOpen=\"true\" ImageUrl=\"/img/photo.jpg\" ImageAlt=\"Vacation\" IsFirst=\"false\" IsLast=\"false\" CurrentIndex=\"2\" TotalCount=\"10\" CanDelete=\"true\" OnClose=\"@Close\" OnPrev=\"@Prev\" OnNext=\"@Next\" OnDelete=\"@Delete\" />"
             }
           ]
-        },
-        {
-          "kind": "Class",
-          "category": "Helpers",
-          "namespace": "Tempo.Blazor.Helpers",
-          "description": "The layout an overlay renders. A modal, a dialog and a drawer all resolve the same way, so the decision lives here instead of in three copies.",
-          "packageId": "Tempo.Blazor",
-          "sourcePath": "src/Tempo.Blazor/Helpers/OverlayLayout.cs",
-          "documentationStatus": "generated",
-          "members": [
-            {
-              "name": "HintOnce",
-              "kind": "Method",
-              "type": "void",
-              "description": "Logs the missing-viewport hint once per process. Development logs at Information, so a host that forgot the scope sees it; every other environment stays at Debug.",
-              "parameters": [
-                {
-                  "name": "logger",
-                  "type": "ILogger"
-                },
-                {
-                  "name": "services",
-                  "type": "IServiceProvider?",
-                  "default": "null"
-                }
-              ]
-            },
-            {
-              "name": "Measured",
-              "kind": "Method",
-              "type": "void",
-              "description": "Records a probe measurement. The first resolution is not a change.",
-              "parameters": [
-                {
-                  "name": "mode",
-                  "type": "TmLayoutMode"
-                }
-              ]
-            },
-            {
-              "name": "ReportAsync",
-              "kind": "Method",
-              "type": "Task",
-              "description": "Reports a change of the resolved mode. The first resolution is not reported: a host that renders before any measurement must not see a spurious change.",
-              "parameters": [
-                {
-                  "name": "resolved",
-                  "type": "TmLayoutMode"
-                },
-                {
-                  "name": "changed",
-                  "type": "Task>"
-                },
-                {
-                  "name": "logger",
-                  "type": "ILogger"
-                },
-                {
-                  "name": "hint",
-                  "type": "bool"
-                },
-                {
-                  "name": "services",
-                  "type": "IServiceProvider?",
-                  "default": "null"
-                }
-              ]
-            },
-            {
-              "name": "Resolve",
-              "kind": "Method",
-              "type": "TmLayoutContext",
-              "description": "The mode to render, and the context the overlay's own markup reads.",
-              "parameters": [
-                {
-                  "name": "layoutMode",
-                  "type": "TmLayoutMode"
-                },
-                {
-                  "name": "viewport",
-                  "type": "TmLayoutContext?"
-                },
-                {
-                  "name": "initial",
-                  "type": "TmLayoutMode"
-                }
-              ]
-            }
-          ],
-          "itemName": "OverlayLayout"
         },
         {
           "itemName": "TmIcon",
@@ -25370,12 +25279,12 @@
         }
       ],
       "summary": {
-        "itemCount": 353,
+        "itemCount": 352,
         "manualItemCount": 352,
-        "generatedItemCount": 345,
-        "generatedOnlyItemCount": 1,
+        "generatedItemCount": 344,
+        "generatedOnlyItemCount": 0,
         "componentCount": 199,
-        "publicApiTypeCount": 146
+        "publicApiTypeCount": 145
       }
     },
     {
@@ -110964,10 +110873,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3178,
+    "itemCount": 3177,
     "manualItemCount": 3177,
-    "generatedOnlyItemCount": 1,
+    "generatedOnlyItemCount": 0,
     "componentCount": 470,
-    "publicApiTypeCount": 2655
+    "publicApiTypeCount": 2654
   }
 }
