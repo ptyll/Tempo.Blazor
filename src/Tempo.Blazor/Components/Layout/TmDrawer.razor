@@ -3,10 +3,16 @@
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Helpers
+@using Microsoft.Extensions.Logging
 @inherits Tempo.Blazor.Components.TmComponentBase
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject ILogger<TmDrawer> Logger
 
+@if (IsOpen && Modal && Viewport is null && LayoutMode == TmLayoutMode.Auto)
+{
+    <TmLayoutObserver @ref="_fallback" Class="tm-layout--fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+}
 @if (IsOpen)
 {
     @if (ShowOverlay && Modal)
@@ -193,7 +199,14 @@
     private bool _disposed;
     private TmFocusScope? _scope;
     private TmLayoutMode? _lastReported;
+    private TmLayoutMode? _fallbackMeasured;
+    private TmLayoutObserver? _fallback;
+
+    private TmLayoutContext? FallbackContext => Viewport is null && _fallbackMeasured is TmLayoutMode measured
+        ? new TmLayoutContext(TmLayoutMode.Auto, measured)
+        : null;
     private int _snapIndex;
+    private int? _snapBeforeKeyboard;
     private double[] _sortedSnaps = DefaultSnaps;
 
     private bool IsSheet => Position == DrawerPosition.Bottom;
@@ -211,7 +224,7 @@
             // A non-modal sheet is positioned against its container, so the unnamed context wins.
             // A modal one is positioned against the viewport.
             var resolved = Modal
-                ? TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode)
+                ? TmLayout.Resolve(LayoutMode, Viewport ?? FallbackContext, null, InitialMode)
                 : TmLayout.Resolve(LayoutMode, Container, null, InitialMode);
             return new TmLayoutContext(LayoutMode, resolved);
         }
@@ -317,18 +330,47 @@
     [JSInvokable]
     public Task HandleSheetSnappedAsync(int index) => InvokeAsync(() => SetSnapAsync(index));
 
+    /// <summary>Invoked when the keyboard opens or closes. An open keyboard uses the highest snap.</summary>
+    [JSInvokable]
+    public Task HandleSheetKeyboardAsync(bool open) => InvokeAsync(() =>
+    {
+        if (!IsSheet || _snaps.Length == 0) return Task.CompletedTask;
+        if (open)
+        {
+            _snapBeforeKeyboard ??= _snapIndex;
+            return SetSnapAsync(_snaps.Length - 1);
+        }
+        var restore = _snapBeforeKeyboard ?? _snapIndex;
+        _snapBeforeKeyboard = null;
+        return SetSnapAsync(restore);
+    });
+
     /// <inheritdoc />
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         _sortedSnaps = SnapPoints
             .Where(s => s > 0 && s <= 1)
             .OrderBy(s => s)
             .ToArray();
         if (SnapIndex != _snapIndex) _snapIndex = Math.Clamp(SnapIndex, 0, Math.Max(0, _sortedSnaps.Length - 1));
-        ReportResolved();
+        await ReportResolved();
     }
 
-    private void ReportResolved()
+    private Task OnFallbackMeasured(TmLayoutMode mode)
+    {
+        if (_fallbackMeasured is null) HintMissingViewportScope();
+        _fallbackMeasured = mode;
+        return ReportResolved();
+    }
+
+    private void HintMissingViewportScope()
+    {
+#if DEBUG
+        Logger.LogDebug("TmDrawer has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
+#endif
+    }
+
+    private async Task ReportResolved()
     {
         var resolved = Context.Resolved;
         if (_lastReported == resolved) return;
@@ -337,7 +379,7 @@
         _lastReported = resolved;
         if (!first)
         {
-            _ = ResolvedLayoutChanged.InvokeAsync(resolved);
+            await ResolvedLayoutChanged.InvokeAsync(resolved);
         }
     }
 

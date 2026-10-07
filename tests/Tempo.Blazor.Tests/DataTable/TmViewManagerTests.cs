@@ -109,7 +109,7 @@ public class TmViewManagerTests : LocalizationTestBase
         cut.Find("input[type=text]").Change("My View");
         
         // Save the view
-        cut.Find(".tm-view-modal-footer .tm-btn-primary").Click();
+        cut.Find(".tm-modal-footer .tm-btn-primary").Click();
 
         await cut.InvokeAsync(() => { });
 
@@ -224,7 +224,7 @@ public class TmViewManagerTests : LocalizationTestBase
         cut.Find("input[type=text]").Change("Failing View");
 
         // Click the Save button
-        cut.Find(".tm-view-modal-footer .tm-btn-primary").Click();
+        cut.Find(".tm-modal-footer .tm-btn-primary").Click();
         await cut.InvokeAsync(() => { });
 
         // The error message element should be visible.

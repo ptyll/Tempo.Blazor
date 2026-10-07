@@ -48,6 +48,11 @@
 /* Tabular (monospaced) figures — keeps numeric columns vertically aligned. */
 .tm-tabular-nums { font-variant-numeric: tabular-nums; }
 
+/* A modal overlay locks the page behind it. The focus trap adds this while a modal is open. */
+html.tm-scroll-lock {
+  overflow: hidden;
+}
+
 /* Scrollbar (Webkit) */
 .tm-root ::-webkit-scrollbar       { width: 6px; height: 6px; }
 .tm-root ::-webkit-scrollbar-track  { background: var(--tm-bg-muted); }

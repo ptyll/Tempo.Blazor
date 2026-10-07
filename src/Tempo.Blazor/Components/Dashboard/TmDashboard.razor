@@ -83,6 +83,8 @@
                 {
                     <div class="tm-dashboard-views">
                         <button type="button" class="tm-btn tm-btn-ghost"
+                                @ref="_dashboardsButton"
+                                id="@_dashboardsButtonId"
                                 @onclick="ToggleDashboardMenu"
                                 title="@Loc["TmDashboard_Dashboards"]">
                             <TmIcon Name="layout" Size="IconSize.Sm" />
@@ -296,12 +298,16 @@
 <TmModal Show="_showNewDashboardDialog"
          Title="@Loc["TmDashboard_CreateNewDashboard"]"
          OnClose="CancelNewDashboard"
+         RestoreFocusTarget="_dashboardsButton"
+         RestoreFocusTargetId="@_dashboardsButtonId"
+         InitialFocusTargetId="@_newDashboardNameId"
          ShowFooter="true"
          ShowDefaultFooterButtons="false"
          MobilePresentation="MobilePresentation.Auto">
     <ChildContent>
         <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
-            <TmTextInput @bind-Value="_newDashboardName"
+            <TmTextInput Id="@_newDashboardNameId"
+                         @bind-Value="_newDashboardName"
                          Placeholder="@Loc["TmDashboard_DashboardName"]" />
         </TmFormField>
     </ChildContent>
@@ -318,6 +324,8 @@
 <TmDialog Type="DialogType.Confirm"
           Show="_showDeleteDialog"
           Title="@Loc["TmDashboard_DeleteDashboard"]"
+          RestoreFocusTarget="_dashboardsButton"
+          RestoreFocusTargetId="@_dashboardsButtonId"
           Message="@string.Format(Loc["TmDashboard_DeleteDashboardConfirm"], _dashboardToDeleteName)"
           OnResult="HandleDeleteDialogResult"
           OkButtonText="@Loc["Tm_Delete"]"
@@ -382,6 +390,9 @@
     
     // New dashboard dialog
     private bool _showNewDashboardDialog;
+    private ElementReference _dashboardsButton;
+    private readonly string _dashboardsButtonId = $"tm-dashboard-views-{Guid.NewGuid():N}";
+    private readonly string _newDashboardNameId = $"tm-dashboard-name-{Guid.NewGuid():N}";
     private string _newDashboardName = "";
     
     // Delete dashboard dialog

@@ -124,18 +124,10 @@
 <TmModal Show="_showModal"
          Title="@(_editingView == null ? Loc["TmViewManager_CreateTitle"] : Loc["TmViewManager_EditTitle"])"
          OnClose="CloseModal"
-         ShowFooter="false"
-         ShowCloseButton="false"
+         ShowFooter="true"
+         ShowCloseButton="true"
          MobilePresentation="MobilePresentation.Auto">
-    <div class="tm-view-modal">
-            <div class="tm-view-modal-header">
-                <h3>@(_editingView == null
-                    ? (Loc["TmViewManager_CreateTitle"])
-                    : (Loc["TmViewManager_EditTitle"]))</h3>
-                <button type="button" class="tm-view-modal-close" @onclick="CloseModal">&times;</button>
-            </div>
-
-            <div class="tm-view-modal-body">
+    <ChildContent>
                 @* View Name *@
                 <div class="tm-form-group tm-mb-4">
                     <label class="tm-form-label">@(Loc["TmViewManager_ViewName"])</label>
@@ -215,18 +207,16 @@
                                          ShowClearAll="true" />
                     </div>
                 }
-            </div>
-
-            <div class="tm-view-modal-footer">
-                <button type="button" class="tm-btn tm-btn-ghost" @onclick="CloseModal">
-                    @(Loc["TmViewManager_Cancel"])
-                </button>
-                <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveViewAsync"
-                        disabled="@(string.IsNullOrWhiteSpace(_viewName) || !_selectedColumns.Any())">
-                    @(_editingView == null
-                        ? (Loc["TmViewManager_Create"])
-                        : (Loc["TmViewManager_Save"]))
-                </button>
-            </div>
-    </div>
+    </ChildContent>
+    <Footer>
+        <button type="button" class="tm-btn tm-btn-ghost" @onclick="CloseModal">
+            @(Loc["TmViewManager_Cancel"])
+        </button>
+        <button type="button" class="tm-btn tm-btn-primary" @onclick="SaveViewAsync"
+                disabled="@(string.IsNullOrWhiteSpace(_viewName) || !_selectedColumns.Any())">
+            @(_editingView == null
+                ? (Loc["TmViewManager_Create"])
+                : (Loc["TmViewManager_Save"]))
+        </button>
+    </Footer>
 </TmModal>

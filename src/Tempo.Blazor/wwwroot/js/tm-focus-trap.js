@@ -180,14 +180,14 @@ export function deactivate(id) {
 const scrollLocks = [];
 
 function lockScroll(lock) {
-    const body = document.body;
-    if (!body || !body.style) return;
+    const root = document.documentElement;
+    if (!root || !root.classList) return;
     if (lock) {
-        scrollLocks.push(body.style.overflow ?? '');
-        body.style.overflow = 'hidden';
+        scrollLocks.push(root.classList.contains('tm-scroll-lock'));
+        root.classList.add('tm-scroll-lock');
         return;
     }
-    body.style.overflow = scrollLocks.pop() ?? '';
+    if (scrollLocks.pop() !== true) root.classList.remove('tm-scroll-lock');
 }
 
 function restoreFocus(trap) {
@@ -195,6 +195,7 @@ function restoreFocus(trap) {
     if (named && named.isConnected !== false && typeof named.focus === 'function') {
         try { named.focus(); return; } catch { /* disconnected or unfocusable */ }
     }
+    if (trap.element && trap.element.dataset && trap.element.dataset.restoreFocus === 'false') return;
     const id = trap.element && trap.element.dataset ? trap.element.dataset.restoreTarget : null;
     const byId = id && document.getElementById ? document.getElementById(id) : null;
     const fallback = byId || document.body;

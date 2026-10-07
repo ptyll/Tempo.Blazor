@@ -178,6 +178,8 @@
 
 /* ── Body ──────────────────────────────────────────────── */
 .tm-drawer__body {
+    overscroll-behavior: contain;
+    overflow-y: auto;
     flex: 1;
     overflow-y: auto;
     padding: 1.25rem;

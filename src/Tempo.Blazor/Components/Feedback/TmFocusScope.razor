@@ -18,7 +18,8 @@
      aria-labelledby="@AriaLabelledBy"
      aria-label="@AriaLabel"
      tabindex="@TabIndex"
-     data-restore-target="@RestoreFocusTargetId"
+     data-restore-target="@(RestoreFocus ? RestoreFocusTargetId : null)"
+     data-restore-focus="@(RestoreFocus ? null : "false")"
      data-initial-focus="@InitialFocusTargetId"
      data-testid="@RootTestId("tm-focus-scope")"
      @attributes="AdditionalAttributes">
@@ -59,11 +60,20 @@
     /// <summary>An accessible name for the scope, wired to <c>aria-label</c>.</summary>
     [Parameter] public string? AriaLabel { get; set; }
 
-    /// <summary>The dialog role. A dangerous confirm passes <c>alertdialog</c>. Not wired yet.</summary>
+    /// <summary>The dialog role. A dangerous confirm passes <c>alertdialog</c>.</summary>
     [Parameter] public string DialogRole { get; set; } = "dialog";
+
+    /// <summary>The element that receives focus on activation. Null focuses the first focusable.</summary>
+    [Parameter] public ElementReference? InitialFocusTarget { get; set; }
 
     /// <summary>The id of the element that receives focus on activation.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }
+
+    /// <summary>Whether deactivation restores focus. False leaves focus where the close action put it.</summary>
+    [Parameter] public bool RestoreFocus { get; set; } = true;
+
+    /// <summary>Raised after the trap deactivates and focus has been restored.</summary>
+    [Parameter] public EventCallback OnDeactivated { get; set; }
 
     /// <summary>
     /// Close on Escape. The listener is document-level, so Escape closes the scope wherever focus
@@ -83,7 +93,6 @@
     /// </summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    /// <summary>The scope this one is nested in, when there is one.</summary>
     /// <summary>The scope this one is nested in. Internal: a host nests scopes by rendering them, not by setting this.</summary>
     [CascadingParameter] internal TmFocusScope? Parent { get; set; }
 
@@ -105,7 +114,6 @@
     // reader announces the dialog the user is actually in.
     private string? AriaModal => Active ? (Modal && !HasActiveDescendant ? "true" : "false") : null;
 
-    /// <inheritdoc />
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
@@ -148,6 +156,7 @@
         {
             await _trap.DeactivateAsync();
         }
+        await OnDeactivated.InvokeAsync();
     }
 
     private void RegisterDescendant()
@@ -168,7 +177,9 @@
     [JSInvokable]
     public async Task HandleFocusTrapEscapeAsync()
     {
-        if (CloseOnEscape && !HasActiveDescendant)
+        // JS already delivers Escape only to the topmost trap. The descendant counter stays for
+        // aria-modal, so a nested scope does not also gate the callback.
+        if (CloseOnEscape)
         {
             await OnEscape.InvokeAsync();
         }

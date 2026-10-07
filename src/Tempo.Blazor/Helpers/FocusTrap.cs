@@ -24,6 +24,7 @@ internal sealed class FocusTrap : IAsyncDisposable
     private readonly string _id = Guid.NewGuid().ToString("N");
     private IJSObjectReference? _module;
     private bool _active;
+    private bool _disposed;
 
     public FocusTrap(IJSRuntime js) => _js = js;
 
@@ -42,6 +43,11 @@ internal sealed class FocusTrap : IAsyncDisposable
         try
         {
             _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            if (_disposed)
+            {
+                await DeactivateOrDropAsync();
+                return;
+            }
             if (_module is null)
             {
                 // JS unavailable (bUnit loose interop / prerender) — best-effort focus.
@@ -49,6 +55,11 @@ internal sealed class FocusTrap : IAsyncDisposable
                 return;
             }
             await _module.InvokeVoidAsync("activate", element, _id, escapeHandler, closeOnEscape, restoreTarget, modal);
+            if (_disposed)
+            {
+                await DeactivateOrDropAsync();
+                return;
+            }
             _active = true;
         }
         catch (JSException) { await FallbackFocusAsync(element); }
@@ -78,6 +89,15 @@ internal sealed class FocusTrap : IAsyncDisposable
         try { await element.FocusAsync(); } catch { /* JS unavailable — best effort */ }
     }
 
+    private async Task DeactivateOrDropAsync()
+    {
+        if (_module is null) return;
+        try { await _module.InvokeVoidAsync("deactivate", _id); }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (InvalidOperationException) { }
+    }
+
     public async ValueTask DisposeAsync()
     {
         // The scope that owns this trap is disposed both by its host and by the renderer.
@@ -94,5 +114,4 @@ internal sealed class FocusTrap : IAsyncDisposable
         catch (TaskCanceledException) { }
     }
 
-    private bool _disposed;
 }

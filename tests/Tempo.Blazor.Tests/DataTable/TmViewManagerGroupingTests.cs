@@ -113,7 +113,7 @@ public class TmViewManagerGroupingTests : LocalizationTestBase
         groupCheckboxes.First().Change(true);
 
         // Save
-        cut.Find(".tm-view-modal-footer .tm-btn-primary").Click();
+        cut.Find(".tm-modal-footer .tm-btn-primary").Click();
         await cut.InvokeAsync(() => { });
 
         await provider.Received(1).SaveViewAsync(

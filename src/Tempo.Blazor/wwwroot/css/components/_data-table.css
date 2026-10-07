@@ -783,63 +783,7 @@
   border-top: 1px solid var(--tm-border-color); 
 }
 
-/* View Modal */
-.tm-view-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--tm-space-4);
-}
-.tm-view-modal {
-  background: var(--tm-bg-surface);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: var(--tm-shadow-xl);
-  width: 100%;
-  max-width: 40rem;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-.tm-view-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--tm-space-4);
-  border-bottom: 1px solid var(--tm-border-color);
-}
-.tm-view-modal-header h3 {
-  font-size: var(--tm-font-size-lg);
-  font-weight: var(--tm-font-weight-semibold);
-  margin: 0;
-}
-.tm-view-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--tm-text-secondary);
-  cursor: pointer;
-  padding: var(--tm-space-1);
-  line-height: 1;
-}
-.tm-view-modal-close:hover { 
-  color: var(--tm-text-primary); 
-}
-.tm-view-modal-body {
-  padding: var(--tm-space-4);
-  overflow-y: auto;
-  flex: 1;
-}
-.tm-view-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--tm-space-2);
-  padding: var(--tm-space-4);
-  border-top: 1px solid var(--tm-border-color);
-}
+/* The create/edit view dialog is a TmModal. The old .tm-view-modal frame was a second dialog. */
 .tm-view-columns-list {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -947,12 +891,6 @@
   .tm-pagination-right {
     width: 100%;
     justify-content: center;
-  }
-  
-  .tm-view-modal {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 0;
   }
   
   .tm-view-columns-list {

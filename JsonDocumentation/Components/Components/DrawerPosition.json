@@ -2,7 +2,7 @@
   "kind": "Enum",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.Layout",
-  "description": "Side from which the drawer slides in.",
+  "description": "Side from which the drawer slides in. Bottom anchors a sheet to the viewport edge.",
   "packageId": "Tempo.Blazor",
   "sourcePath": "src/Tempo.Blazor/Components/Layout/DrawerPosition.cs",
   "documentationStatus": "generated",

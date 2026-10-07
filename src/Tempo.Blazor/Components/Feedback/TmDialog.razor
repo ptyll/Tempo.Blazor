@@ -5,11 +5,13 @@
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Helpers
+@using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
+@inject ILogger<TmDialog> Logger
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
-    <TmLayoutObserver @ref="_fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+    <TmLayoutObserver @ref="_fallback" Class="tm-layout--fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
 }
 @if (Show)
 {
@@ -240,7 +242,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        ReportResolved();
+        await ReportResolved();
 
         if (Show && !_wasShown)
         {
@@ -253,7 +255,7 @@
         }
     }
 
-    private void ReportResolved()
+    private async Task ReportResolved()
     {
         var resolved = Context.Resolved;
         if (_lastReported == resolved) return;
@@ -310,11 +312,18 @@
     [JSInvokable]
     public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
 
-    private Task OnFallbackMeasured(TmLayoutMode mode)
+    private async Task OnFallbackMeasured(TmLayoutMode mode)
     {
+        if (_fallbackMeasured is null) HintMissingViewportScope();
         _fallbackMeasured = mode;
-        ReportResolved();
-        return Task.CompletedTask;
+        await ReportResolved();
+    }
+
+    private void HintMissingViewportScope()
+    {
+#if DEBUG
+        Logger.LogDebug("TmDialog has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
+#endif
     }
 
     /// <inheritdoc />

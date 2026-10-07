@@ -4,13 +4,15 @@
 @using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Helpers
+@using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
+@inject ILogger<TmModal> Logger
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
     @* No viewport scope: measure the fixed overlay itself, so the first frame is not stuck on the
        initial mode. The observer renders nothing visible; the overlay below is what the user sees. *@
-    <TmLayoutObserver @ref="_fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+    <TmLayoutObserver @ref="_fallback" Class="tm-layout--fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
 }
 @if (Show)
 {
@@ -28,7 +30,8 @@
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
                           RestoreFocusTarget="RestoreFocusTarget"
-                          RestoreFocusTargetId="@RestoreFocusTargetId">
+                          RestoreFocusTargetId="@RestoreFocusTargetId"
+                          InitialFocusTargetId="@InitialFocusTargetId">
                 
                 @if (IsSheet)
                 {
@@ -171,6 +174,9 @@
     /// <summary>The id of the restore target, for a target rendered outside this modal.</summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
+    /// <summary>The id of the element that receives focus when the modal opens.</summary>
+    [Parameter] public string? InitialFocusTargetId { get; set; }
+
     /// <summary>The viewport's layout. A modal is positioned against the viewport, not its container.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
@@ -220,7 +226,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        ReportResolved();
+        await ReportResolved();
 
         if (Show && !_wasShown)
         {
@@ -233,7 +239,7 @@
         }
     }
 
-    private void ReportResolved()
+    private async Task ReportResolved()
     {
         var resolved = Context.Resolved;
         if (_lastReported == resolved) return;
@@ -242,7 +248,7 @@
         _lastReported = resolved;
         if (!first)
         {
-            _ = ResolvedLayoutChanged.InvokeAsync(resolved);
+            await ResolvedLayoutChanged.InvokeAsync(resolved);
         }
     }
 
@@ -286,11 +292,18 @@
     public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
 
     /// <summary>Called by the fallback observer when no viewport scope exists.</summary>
-    private Task OnFallbackMeasured(TmLayoutMode mode)
+    private async Task OnFallbackMeasured(TmLayoutMode mode)
     {
+        if (_fallbackMeasured is null) HintMissingViewportScope();
         _fallbackMeasured = mode;
-        ReportResolved();
-        return Task.CompletedTask;
+        await ReportResolved();
+    }
+
+    private void HintMissingViewportScope()
+    {
+#if DEBUG
+        Logger.LogDebug("TmModal has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
+#endif
     }
 
     /// <inheritdoc />

@@ -58,7 +58,7 @@ export function keyboardOffset(layoutHeight, viewport) {
  * @param {HTMLElement} root the sheet root
  * @returns {() => void} stop
  */
-export function trackViewport(root) {
+export function trackViewport(root, host) {
     if (!root) return () => {};
 
     const apply = () => {
@@ -67,6 +67,12 @@ export function trackViewport(root) {
         const offset = keyboardOffset(window.innerHeight, viewport);
         root.style.setProperty('--tm-sheet-viewport', offset.viewport);
         root.style.setProperty('--tm-sheet-keyboard', offset.keyboard);
+        const open = Number.parseFloat(offset.keyboard) > 0;
+        if (root.classList) {
+            if (root.classList.contains('tm-sheet--keyboard') === open) return;
+            root.classList.toggle('tm-sheet--keyboard', open);
+            host?.invokeMethodAsync('HandleSheetKeyboardAsync', open).catch(() => {});
+        }
     };
 
     apply();
@@ -158,7 +164,7 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
     handle.addEventListener('pointerup', onUp);
     handle.addEventListener('pointercancel', onCancel);
 
-    const stopViewport = trackViewport(panel.closest('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel);
+    const stopViewport = trackViewport(panel.closest('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel, host);
     gestures.set(id, { handle, onDown, onMove, onUp, onCancel, stopViewport });
 }
 
