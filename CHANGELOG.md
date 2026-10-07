@@ -437,6 +437,45 @@
   no longer move the count (CF19h). Covered by seven new verifier/fixture arms
   over real worktrees and evidence fixtures.
 
+### Erratum 2.9.0
+
+Two changes shipped in 2.9.0 under routine fix/feature sections but are
+retroactively **Breaking / Migration** — each can silently lose a host
+override, and each was discovered only when a downstream application hit it.
+They are recorded here, in the release that publishes the correction notice,
+rather than retro-edited into the released 2.9.0 section.
+
+- **Button and input modifier selectors moved from (0,1,0) to (0,2,0)
+  (`c67cd2cc`).** The bare-modifier tie — `.tm-btn-sm` at (0,1,0) competing
+  with `.tm-btn` at (0,1,0) on import order — was fixed by compounding the
+  modifiers onto their base: `.tm-btn.tm-btn-{xs,sm,md,lg}`,
+  `.tm-btn.tm-btn-primary`, `.tm-btn.tm-btn-secondary`,
+  `.tm-btn.tm-btn-outline-secondary`, `.tm-btn.tm-btn-ghost` and the
+  `.tm-input.tm-*` input modifiers now sit at specificity (0,2,0). A host
+  stylesheet that overrode a Tempo button or input modifier through a
+  single-class selector (`.my-btn { height: … }`, still (0,1,0)) used to win
+  or tie and now silently loses — nothing at build or test time flags it.
+  **Migration:** override with an equally compound selector
+  (`.tm-btn.my-btn`), or prefer the documented `--tm-*` design tokens
+  (e.g. `--tm-input-height-md`), which change the declaration instead of
+  fighting the selector.
+
+- **Migrated floating panels position inline in the browser top layer
+  (`7196e8b2`).** The migrated set — `TmPopover`, `TmDropdown`,
+  `TmFilterableDropdown`, `TmContextMenu`, `TmSplitButton`, `TmDatePicker`,
+  `TmDateRangePicker`, `TmDateTimePicker`, `TmMultiSelect`, `TmTagPicker`,
+  `TmEntityPicker`, `TmNotificationBell`, `TmColorPicker`,
+  `TmMultiColumnComboBox`, `TmQueryInput`, plus the panels inside
+  `TmDataTable` — no longer positions panels through the stylesheet cascade
+  alone: `overlay.js` writes `top`/`left`/`width` inline (inline style beats
+  any non-`!important` rule), and the `:where()` panel reset carries
+  specificity (0,0,0). A host rule that positioned, sized or offset a
+  dropdown, calendar or menu panel can now conflict with the inline values
+  or stop applying without any error. **Migration:** position through the
+  component parameters — `Placement`, `Align`, `Offset`, `ViewportMargin`,
+  `MatchAnchorWidth`, `ConstrainHeight` — not through host CSS targeting the
+  panel's box.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
