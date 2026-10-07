@@ -215,6 +215,14 @@
   (`OverlayPanelScopedCssTests`) fails closed on any scoped rule targeting a class passed to
   `TmOverlayPanel` without `::deep`.
 
+- **A panel whose anchor scrolled out of the viewport no longer traps focus (N329).** `overlay.js`
+  used to park the panel `visibility:hidden` and leave it open — focus inside (e.g. the
+  TmFilterableDropdown filter input) kept accepting keystrokes on an invisible surface. Now, when
+  the hide condition coincides with focus inside, the panel is dismissed through the normal
+  accepted-dismissal path (`OnDismissed` reports the new `"anchor-hidden"` reason) and focus
+  returns to the anchor. A hidden panel that does NOT hold focus keeps the old
+  park-and-reappear behaviour unchanged.
+
 - **Every `Role="dialog"` overlay panel now exposes an accessible name (N326).** `TmOverlayPanel`
   gained `AriaLabel`/`AriaLabelledBy`; the seven dialog-role consumers ship names — both
   notification centers point `aria-labelledby` at their visible title, the date pickers point at

@@ -217,7 +217,19 @@ function place(entry) {
     // Anchor scrolled fully out of the viewport: park the panel invisible rather than clamp it
     // against an edge — it reappears on the next pass once the anchor is back. ('' restores the
     // stylesheet value; hidePanel's cssText reset already covers the closed path.)
-    panel.style.visibility = anchorIntersectsViewport(anchorRect, viewW, viewH) ? '' : 'hidden';
+    // N329: …unless focus sits INSIDE the panel — a hidden surface would keep swallowing keys
+    // (e.g. the TmFilterableDropdown filter input). That panel is dismissed instead, through the
+    // same accepted-dismissal path as an outside pointerdown ('anchor-hidden' reaches
+    // OnDismissed), and focus returns to the anchor via the shared restore.
+    const anchorVisible = anchorIntersectsViewport(anchorRect, viewW, viewH);
+    if (!anchorVisible && panel.contains(document.activeElement)) {
+        panel.style.visibility = 'hidden';
+        if (dismiss(entry, 'anchor-hidden')) {
+            maybeRestoreAnchorFocus(entry, null);
+        }
+        return;
+    }
+    panel.style.visibility = anchorVisible ? '' : 'hidden';
 
     // Top layer: containing block is the viewport. Fallback: nearest transformed-ish ancestor.
     const block = entry.usesPopover ? null : containingBlockOf(panel);

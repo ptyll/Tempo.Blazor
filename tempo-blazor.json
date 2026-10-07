@@ -18672,7 +18672,7 @@
       "kind": "Component",
       "category": "Overlay",
       "namespace": "Tempo.Blazor.Components.Overlay",
-      "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups.",
+      "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups. When the anchor scrolls fully out of the viewport the panel is parked with visibility:hidden and reappears on the anchor's return — unless focus sits inside it, in which case the panel is dismissed ('anchor-hidden') and focus returns to the anchor.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Overlay/TmOverlayPanel.razor",
       "documentationStatus": "merged",
@@ -18782,7 +18782,7 @@
           "name": "OnDismissed",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\" or \"outside\". Programmatic closes do not raise it."
+          "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\", \"outside\" or \"anchor-hidden\" (the anchor scrolled fully out of the viewport while focus sat inside the panel — hiding alone would keep swallowing keystrokes, so the panel closes and focus returns to the anchor since 2.9.1). Programmatic closes do not raise it."
         },
         {
           "name": "Placement",

@@ -96,8 +96,11 @@
 
     /// <summary>
     /// Fires when the panel is dismissed by a user gesture rather than by the consumer:
-    /// <c>"escape"</c> or <c>"outside"</c>. Programmatic closes (<see cref="CloseAsync"/>,
-    /// <see cref="IsOpen"/> turning false) do not raise it — the consumer already knows.
+    /// <c>"escape"</c>, <c>"outside"</c> or <c>"anchor-hidden"</c> (the anchor scrolled fully out
+    /// of the viewport while focus sat inside the panel — the hidden panel would keep swallowing
+    /// keys, so it is closed and focus returns to the anchor). Programmatic closes
+    /// (<see cref="CloseAsync"/>, <see cref="IsOpen"/> turning false) do not raise it — the
+    /// consumer already knows.
     /// </summary>
     [Parameter] public EventCallback<string> OnDismissed { get; set; }
 
