@@ -10,9 +10,10 @@
     <div class="tm-filterable-dropdown-trigger"
          role="combobox"
          tabindex="0"
-         aria-label="@AriaLabel"
+         aria-label="@(AriaLabel ?? GetAccessibleName())"
          aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
          aria-haspopup="listbox"
+         aria-controls="@(_isOpen ? _listboxId : null)"
          @ref="_triggerRef"
          @onclick="ToggleAsync"
          @onkeydown="HandleTriggerKeyDownAsync"
@@ -44,6 +45,7 @@
        documented) and outside every ancestor's overflow/transform clipping. Bottom + Start +
        4px + MatchAnchorWidth replaces the old top:calc(100%+space-1);left:0;right:0. *@
     <TmOverlayPanel Anchor="_triggerRef"
+                    Id="@_listboxId"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenFromJs"
                     Placement="OverlayPlacement.Bottom"
@@ -51,7 +53,6 @@
                     Offset="4"
                     MatchAnchorWidth="true"
                     ConstrainHeight="true"
-                    Role="listbox"
                     Class="tm-filterable-dropdown-menu"
                     @onkeydown="HandleKeyDownAsync">
             <div class="tm-filterable-dropdown-filter">
@@ -60,17 +61,19 @@
                        @ref="_filterInput"
                        placeholder="@(FilterPlaceholder ?? Loc["TmFilterableDropdown_Search"])"
                        value="@_filterText"
+                       aria-controls="@_listboxId"
+                       aria-activedescendant="@(_selectedIndex >= 0 ? $"{_listboxId}-opt-{_selectedIndex}" : null)"
                        @oninput="OnFilterInput"
                        @onkeydown="HandleFilterKeyDownAsync" />
             </div>
 
             @if (_isLoading)
             {
-                <div class="tm-filterable-dropdown-loading">@(LoadingMessage ?? Loc["TmFilterableDropdown_Loading"])</div>
+                <div class="tm-filterable-dropdown-loading" role="status">@(LoadingMessage ?? Loc["TmFilterableDropdown_Loading"])</div>
             }
             else if (_hasError)
             {
-                <div class="tm-filterable-dropdown-error">
+                <div class="tm-filterable-dropdown-error" role="alert">
                     <span>@(ErrorMessage ?? Loc["TmFilterableDropdown_Error"])</span>
                     <button type="button" @onclick="RetryAsync">@Loc["TmFilterableDropdown_Retry"]</button>
                 </div>
@@ -80,15 +83,19 @@
                 var filtered = GetFilteredItems().ToList();
                 @if (filtered.Count == 0)
                 {
-                    <div class="tm-filterable-dropdown-empty">@(EmptyMessage ?? Loc["TmFilterableDropdown_NoResults"])</div>
+                    <div class="tm-filterable-dropdown-empty" role="status">@(EmptyMessage ?? Loc["TmFilterableDropdown_NoResults"])</div>
                 }
                 else
                 {
+                    @* ARIA listbox must own only options — the filter input and
+                       state messages live outside it, inside the popup. *@
+                    <div role="listbox" id="@($"{_listboxId}-opts")" aria-label="@Loc["TmFilterableDropdown_Options"]">
                     @for (int i = 0; i < filtered.Count; i++)
                     {
                         var item = filtered[i];
                         var idx = i;
                         <div class="tm-filterable-dropdown-item @(idx == _selectedIndex ? "tm-filterable-dropdown-item-selected" : "")"
+                             id="@($"{_listboxId}-opt-{idx}")"
                              role="option"
                              aria-selected="@IsValue(item).ToString().ToLowerInvariant()"
                              @key="GetItemKey(item)"
@@ -103,6 +110,7 @@
                             }
                         </div>
                     }
+                    </div>
                 }
             }
     </TmOverlayPanel>
@@ -172,6 +180,7 @@
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
+    private readonly string _listboxId = $"tm-fdd-{Guid.NewGuid():n}";
     private bool _isLoading;
     private bool _hasError;
     private string _filterText = string.Empty;
@@ -368,6 +377,13 @@
 
     private bool IsEmptyValue(TItem value) =>
         value is null || (value is string s && string.IsNullOrEmpty(s));
+
+    // The combobox trigger needs an accessible name even when AriaLabel is
+    // unset — the visible placeholder/value text is its natural label.
+    private string GetAccessibleName() =>
+        Value is null || IsEmptyValue(Value)
+            ? (Placeholder ?? Loc["TmFilterableDropdown_Placeholder"])
+            : GetDisplayText(Value);
 
     // aria-selected on a listbox option reflects the selected VALUE — the
     // _selectedIndex highlight (tm-…-item-selected class) is the keyboard

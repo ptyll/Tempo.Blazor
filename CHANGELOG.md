@@ -346,6 +346,32 @@
   hosting defect: `dotnetReady` resolves, all ~300 runtime assets fetch 200, and the
   second navigation does hydrate on `WebAssembly`.
 
+- **`TmFilterableDropdown` wires its combobox/listbox ARIA relationships (CF18-5a).**
+  The closed trigger no longer emits `aria-controls` (it pointed at a popup that does not
+  exist); once open it names the `TmOverlayPanel`'s generated id. The filter input —
+  the element that actually holds focus — gets `aria-controls` for the popup and
+  `aria-activedescendant` tracking the ArrowUp/ArrowDown highlight through stable
+  per-option ids (`<popup-id>-opt-<index>`). Because ARIA `listbox` may own only
+  `option` children, the popup keeps the stable id and `role="listbox"` moves to an
+  inner wrapper around the options alone; the filter input and the loading/error/empty
+  messages live outside it as siblings, and the messages now announce themselves via
+  `role="status"`/`role="alert"`. The trigger and the listbox both carry accessible
+  names — the trigger falls back to its visible placeholder/value text when
+  `AriaLabel` is unset, and the listbox uses the new `TmFilterableDropdown_Options`
+  resource. Verified by two bUnit tests plus an axe-core E2E scan of the open dropdown
+  on the demo page (0 critical/serious violations).
+
+- **`TmMultiViewList` list view exposes listbox semantics (CF18-5b).** The `<ul>` is
+  now `role="listbox"` with `aria-multiselectable` bound to `AllowSelection` and an
+  accessible name from the new `TmMvl_ListOptions` resource; each `<li>` is
+  `role="option"` with `aria-selected`. Custom status-badge colors now pair the
+  background with a luminance-picked ink (`--tm-text-primary` on light fills,
+  `--tm-text-inverse` on dark) instead of the muted-secondary default that failed
+  WCAG AA on saturated colors — mid-luminance fills remain the caller's choice.
+  The demo page's palette moves to darker shades so the badges meet 4.5:1. Verified
+  by a bUnit selection-state test plus an axe-core E2E scan of the list view
+  (0 critical/serious violations).
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

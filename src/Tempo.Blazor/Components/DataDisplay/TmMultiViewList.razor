@@ -188,7 +188,7 @@
                 }
                 else if (IsVirtualized)
                 {
-                    <ul class="tm-mvl-list">
+                    <ul class="tm-mvl-list" role="listbox" aria-label="@Loc["TmMvl_ListOptions"]" aria-multiselectable="@AllowSelection.ToString().ToLowerInvariant()">
                         <Virtualize Items="FilteredItems" Context="item" ItemSize="VirtualListItemHeight">
                             @RenderListItem(item)
                         </Virtualize>
@@ -196,7 +196,7 @@
                 }
                 else
                 {
-                    <ul class="tm-mvl-list">
+                    <ul class="tm-mvl-list" role="listbox" aria-label="@Loc["TmMvl_ListOptions"]" aria-multiselectable="@AllowSelection.ToString().ToLowerInvariant()">
                         @foreach (var item in FilteredItems!)
                         {
                             @RenderListItem(item)
@@ -545,6 +545,41 @@
     private string? GetStatusColor(TItem item) =>
         StatusColorField is not null ? StatusColorField(item) :
         item is IMultiViewListItem mvl ? mvl.StatusColor : null;
+
+    // A custom badge background must ship a paired text color — the default
+    // --tm-text-secondary ink fails WCAG AA on most saturated fills. Hex
+    // colors get a luminance-based pick between primary/dark ink and inverse
+    // ink; any other color syntax falls back to inverse ink. Mid-luminance
+    // backgrounds (where neither ink reaches 4.5:1) remain the caller's
+    // responsibility.
+    private string? GetStatusStyle(TItem item)
+    {
+        if (GetStatusColor(item) is not { } c) return null;
+        var ink = TryLuminance(c, out var lum) && lum > 0.25
+            ? "var(--tm-text-primary)"
+            : "var(--tm-text-inverse)";
+        return $"background:{c};color:{ink}";
+    }
+
+    private static bool TryLuminance(string color, out double luminance)
+    {
+        luminance = 0;
+        if (color.Length != 4 && color.Length != 7 || color[0] != '#') return false;
+        var n = color.Length == 4 ? 1 : 2;
+        if (!int.TryParse(color.AsSpan(1, n), System.Globalization.NumberStyles.HexNumber, null, out var r) ||
+            !int.TryParse(color.AsSpan(1 + n, n), System.Globalization.NumberStyles.HexNumber, null, out var g) ||
+            !int.TryParse(color.AsSpan(1 + 2 * n, n), System.Globalization.NumberStyles.HexNumber, null, out var b))
+            return false;
+        if (n == 1) { r *= 17; g *= 17; b *= 17; }
+        luminance = 0.2126 * Lin(r) + 0.7152 * Lin(g) + 0.0722 * Lin(b);
+        return true;
+
+        static double Lin(int v)
+        {
+            var c = v / 255.0;
+            return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+    }
 
     private DateTimeOffset? GetDate(TItem item) =>
         DateField is not null ? DateField(item) :
@@ -1100,6 +1135,7 @@
         var selected = AllowSelection && IsSelected(item);
         var dragging = IsDragging(item);
         <tr class="tm-mvl-row @(selected ? "tm-mvl-row--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
+            aria-selected="@(AllowSelection ? selected.ToString().ToLowerInvariant() : null)"
             tabindex="0"
             draggable="@(AllowDrag ? "true" : "false")"
             @onclick="() => OnItemClick.InvokeAsync(item)"
@@ -1129,7 +1165,7 @@
                     <td>
                         @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
                         {
-                            <span class="tm-mvl-status" style="@(GetStatusColor(item) is { } c ? $"background:{c}" : "")">
+                            <span class="tm-mvl-status" style="@GetStatusStyle(item)">
                                 @GetStatusLabel(item)
                             </span>
                         }
@@ -1174,7 +1210,7 @@
                     }
                     else
                     {
-                        <ul class="tm-mvl-list">
+                        <ul class="tm-mvl-list" role="listbox" aria-label="@Loc["TmMvl_ListOptions"]" aria-multiselectable="@AllowSelection.ToString().ToLowerInvariant()">
                             @foreach (var item in group.Items)
                             {
                                 @RenderListItem(item)
@@ -1279,7 +1315,7 @@
                     }
                     @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
                     {
-                        <span class="tm-mvl-status" style="@(GetStatusColor(item) is { } c ? $"background:{c}" : "")">
+                        <span class="tm-mvl-status" style="@GetStatusStyle(item)">
                             @GetStatusLabel(item)
                         </span>
                     }
@@ -1293,6 +1329,8 @@
         var selected = AllowSelection && IsSelected(item);
         var dragging = IsDragging(item);
         <li class="tm-mvl-list-item @(selected ? "tm-mvl-list-item--selected" : "") @(dragging ? "tm-mvl-item--dragging" : "")"
+            role="option"
+            aria-selected="@selected.ToString().ToLowerInvariant()"
             tabindex="0"
             draggable="@(AllowDrag ? "true" : "false")"
             @onclick="() => OnItemClick.InvokeAsync(item)"
@@ -1328,7 +1366,7 @@
                 </div>
                 @if (!string.IsNullOrEmpty(GetStatusLabel(item)))
                 {
-                    <span class="tm-mvl-status" style="@(GetStatusColor(item) is { } c ? $"background:{c}" : "")">
+                    <span class="tm-mvl-status" style="@GetStatusStyle(item)">
                         @GetStatusLabel(item)
                     </span>
                 }
