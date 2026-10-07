@@ -2,6 +2,14 @@
    TmLayoutObserver — the container a component measures
    ═══════════════════════════════════════════════════════════════ */
 
+/* The probe is a fixed, hidden box. The inline style hides it; this rule is what the coverage sweep
+   requires of every class the markup emits. */
+.tm-viewport-probe {
+    position: fixed;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .tm-layout {
   display: block;
   min-width: 0;

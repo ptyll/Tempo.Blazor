@@ -32,6 +32,12 @@
       "description": "Raised when the keyboard moves the slider to another snap."
     },
     {
+      "name": "SnapValue",
+      "type": "double",
+      "isRequired": false,
+      "description": "The fraction the sheet currently renders, spoken as the slider's value text."
+    },
+    {
       "name": "OnDismiss",
       "type": "EventCallback",
       "isRequired": false,

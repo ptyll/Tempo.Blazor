@@ -578,7 +578,7 @@
 
     <div class="showcase-card">
         <div class="flex flex-wrap gap-3">
-            <TmButton Variant="ButtonVariant.Primary" OnClick="@(() => _drawerRightOpen = true)">
+            <TmButton Variant="ButtonVariant.Primary" data-testid="open-right-drawer" OnClick="@(() => _drawerRightOpen = true)">
                 Open Right Drawer
             </TmButton>
             <TmButton Variant="ButtonVariant.Secondary" OnClick="@(() => _drawerLeftOpen = true)">

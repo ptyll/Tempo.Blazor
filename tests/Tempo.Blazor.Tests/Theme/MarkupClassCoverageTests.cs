@@ -133,8 +133,6 @@ public sealed class MarkupClassCoverageTests
         "tm-export-options-section",
         "tm-fab__item-label",
         "tm-file-manager__upload",
-        // TmFocusScope is a behavior wrapper: it traps focus and carries no chrome of its own.
-        "tm-focus-scope",
         "tm-file-versions__action--compare",
         "tm-file-versions__header",
         "tm-filter-chip-label",
@@ -369,7 +367,7 @@ public sealed class MarkupClassCoverageTests
     [
         new Scope("Tempo.Blazor", "Tempo.Blazor", UnstyledMarkupClasses,
             MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false,
-            ExpectedUnmeasurableStems: 36),
+            ExpectedUnmeasurableStems: 37),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

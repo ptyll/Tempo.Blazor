@@ -91,8 +91,11 @@
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* The settled transform of .tm-modal--visible .tm-modal lives in _sheet.css. An identity transform is
-   a containing block, so a nested fixed sheet would otherwise anchor to this modal. */
+.tm-modal--visible .tm-modal {
+  /* none, not scale(1): an identity transform is still a containing block, and a sheet opened
+     inside the modal would then anchor to the modal instead of the viewport. */
+  transform: none;
+}
 
 /* Modal Sizes */
 .tm-modal--sm {
@@ -220,7 +223,9 @@
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* The settled transform of .tm-modal--visible .tm-dialog lives in _sheet.css, for the same reason. */
+.tm-modal--visible .tm-dialog {
+  transform: none;
+}
 
 /* Dialog Icon */
 .tm-dialog-icon {
@@ -407,8 +412,6 @@
   flex: 1 1 8rem;
   min-width: fit-content;
   max-width: 100%;
-  white-space: normal;
-  height: auto;
 }
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer {

@@ -199,8 +199,8 @@ public class TmGanttImportDialogTests : LocalizationTestBase
 
         var calls = activate.Invocations["activate"];
         calls.Should().HaveCount(1);
-        calls[0].Arguments.Should().HaveCount(6,
-            "activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal) — an escape " +
+        calls[0].Arguments.Should().HaveCount(7,
+            "activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal, initialTarget) — an escape " +
             "handler and the closeOnEscape flag must reach the shared focus-trap module");
         calls[0].Arguments[3].Should().Be(true);
     }

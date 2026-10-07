@@ -33,6 +33,8 @@ public sealed class SheetRound2E2ETests : WasmTestBase
     [TestMethod]
     [DataRow(390, "/feedback", "open-bottom-sheet", ".tm-drawer--bottom")]
     [DataRow(1440, "/feedback", "open-bottom-sheet", ".tm-drawer--bottom")]
+    [DataRow(390, "/feedback", "open-right-drawer", ".tm-drawer--right")]
+    [DataRow(1440, "/feedback", "open-right-drawer", ".tm-drawer--right")]
     public async Task BackdropClick_ClosesTheDrawer_AndRestoresFocus(int width, string route, string triggerId, string drawer)
     {
         var page = await OpenAsync(route, width, 844);

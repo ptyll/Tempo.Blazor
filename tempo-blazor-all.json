@@ -111,6 +111,7 @@
           "Tempo.Blazor.Components.TreeView",
           "Tempo.Blazor.Components.Workflow",
           "Tempo.Blazor.Configuration",
+          "Tempo.Blazor.Helpers",
           "Tempo.Blazor.Resources",
           "Tempo.Blazor.Services"
         ]
@@ -10644,6 +10645,12 @@
               "type": "EventCallback<int>",
               "isRequired": false,
               "description": "Raised when the keyboard moves the slider to another snap."
+            },
+            {
+              "name": "SnapValue",
+              "type": "double",
+              "isRequired": false,
+              "description": "The fraction the sheet currently renders, spoken as the slider's value text."
             }
           ],
           "cssClasses": [
@@ -12607,6 +12614,96 @@
               "code": "<TmLightbox IsOpen=\"true\" ImageUrl=\"/img/photo.jpg\" ImageAlt=\"Vacation\" IsFirst=\"false\" IsLast=\"false\" CurrentIndex=\"2\" TotalCount=\"10\" CanDelete=\"true\" OnClose=\"@Close\" OnPrev=\"@Prev\" OnNext=\"@Next\" OnDelete=\"@Delete\" />"
             }
           ]
+        },
+        {
+          "kind": "Class",
+          "category": "Helpers",
+          "namespace": "Tempo.Blazor.Helpers",
+          "description": "The layout an overlay renders. A modal, a dialog and a drawer all resolve the same way, so the decision lives here instead of in three copies.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Helpers/OverlayLayout.cs",
+          "documentationStatus": "generated",
+          "members": [
+            {
+              "name": "HintOnce",
+              "kind": "Method",
+              "type": "void",
+              "description": "Logs the missing-viewport hint once per process. Development logs at Information, so a host that forgot the scope sees it; every other environment stays at Debug.",
+              "parameters": [
+                {
+                  "name": "logger",
+                  "type": "ILogger"
+                },
+                {
+                  "name": "services",
+                  "type": "IServiceProvider?",
+                  "default": "null"
+                }
+              ]
+            },
+            {
+              "name": "Measured",
+              "kind": "Method",
+              "type": "void",
+              "description": "Records a probe measurement. The first resolution is not a change.",
+              "parameters": [
+                {
+                  "name": "mode",
+                  "type": "TmLayoutMode"
+                }
+              ]
+            },
+            {
+              "name": "ReportAsync",
+              "kind": "Method",
+              "type": "Task",
+              "description": "Reports a change of the resolved mode. The first resolution is not reported: a host that renders before any measurement must not see a spurious change.",
+              "parameters": [
+                {
+                  "name": "resolved",
+                  "type": "TmLayoutMode"
+                },
+                {
+                  "name": "changed",
+                  "type": "Task>"
+                },
+                {
+                  "name": "logger",
+                  "type": "ILogger"
+                },
+                {
+                  "name": "hint",
+                  "type": "bool"
+                },
+                {
+                  "name": "services",
+                  "type": "IServiceProvider?",
+                  "default": "null"
+                }
+              ]
+            },
+            {
+              "name": "Resolve",
+              "kind": "Method",
+              "type": "TmLayoutContext",
+              "description": "The mode to render, and the context the overlay's own markup reads.",
+              "parameters": [
+                {
+                  "name": "layoutMode",
+                  "type": "TmLayoutMode"
+                },
+                {
+                  "name": "viewport",
+                  "type": "TmLayoutContext?"
+                },
+                {
+                  "name": "initial",
+                  "type": "TmLayoutMode"
+                }
+              ]
+            }
+          ],
+          "itemName": "OverlayLayout"
         },
         {
           "itemName": "TmIcon",
@@ -18253,6 +18350,28 @@
               "code": "<TmTopBar BrandTitle=\"Admin\">\n    <CenterContent>\n        <TmBreadcrumbs Items=\"breadcrumbs\" />\n    </CenterContent>\n    <ActionsContent>\n        <TmNotificationBell CurrentUserId=\"current-user\" />\n    </ActionsContent>\n</TmTopBar>"
             }
           ]
+        },
+        {
+          "itemName": "TmViewportProbe",
+          "kind": "Component",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "Internal. A fixed, hidden box the size of the viewport, rendered by an overlay that has no viewport scope. A host does not render it; TmModal, TmDialog and TmDrawer do. The Razor generator emits a public class, so it is documented here rather than hidden.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/TmViewportProbe.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Layout"
+          ],
+          "parameters": [
+            {
+              "name": "OnMeasured",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised for every measurement, including the first. The mode is the viewport's."
+            }
+          ],
+          "examples": []
         },
         {
           "itemName": "TmLedgerGrid",
@@ -25251,12 +25370,12 @@
         }
       ],
       "summary": {
-        "itemCount": 351,
-        "manualItemCount": 351,
-        "generatedItemCount": 343,
-        "generatedOnlyItemCount": 0,
-        "componentCount": 198,
-        "publicApiTypeCount": 145
+        "itemCount": 353,
+        "manualItemCount": 352,
+        "generatedItemCount": 345,
+        "generatedOnlyItemCount": 1,
+        "componentCount": 199,
+        "publicApiTypeCount": 146
       }
     },
     {
@@ -110845,10 +110964,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3176,
-    "manualItemCount": 3176,
-    "generatedOnlyItemCount": 0,
-    "componentCount": 469,
-    "publicApiTypeCount": 2654
+    "itemCount": 3178,
+    "manualItemCount": 3177,
+    "generatedOnlyItemCount": 1,
+    "componentCount": 470,
+    "publicApiTypeCount": 2655
   }
 }

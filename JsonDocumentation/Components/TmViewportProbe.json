@@ -1,0 +1,18 @@
+{
+  "itemName": "TmViewportProbe",
+  "kind": "Component",
+  "category": "Layout",
+  "description": "Internal. A fixed, hidden box the size of the viewport, rendered by an overlay that has no viewport scope. A host does not render it; TmModal, TmDialog and TmDrawer do. The Razor generator emits a public class, so it is documented here rather than hidden.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout"
+  ],
+  "parameters": [
+    {
+      "name": "OnMeasured",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised for every measurement, including the first. The mode is the viewport's."
+    }
+  ],
+  "examples": []
+}

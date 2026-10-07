@@ -29,12 +29,7 @@
     height: auto;
 }
 
-/* A nested fixed sheet spans the viewport. An identity transform is still a containing block, so the
-   settled state is none rather than translate(0). The keyframes own the slide; this owns the rest. */
-.tm-modal--visible .tm-modal,
-.tm-modal--visible .tm-dialog {
-    transform: none;
-}
+
 
 .tm-sheet__handle {
     display: flex;
