@@ -135,6 +135,8 @@ public class TmDrawerTests : LocalizationTestBase
             .AddChildContent("Content"));
 
         cut.FindAll(".tm-drawer__overlay").Should().HaveCount(1);
+        cut.Find(".tm-focus-scope").QuerySelector(".tm-drawer__overlay").Should().NotBeNull(
+            "the backdrop is a child of the trapped root, so the trap cannot mark it inert");
     }
 
     [Fact]

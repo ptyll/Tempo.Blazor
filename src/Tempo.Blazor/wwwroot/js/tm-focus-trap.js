@@ -132,12 +132,9 @@ export function isTopmost(id) {
 const inertedByTrap = new Map();
 
 function isBackdrop(element) {
-    // A backdrop rendered as a sibling of the trap root (TmDrawer's overlay) still belongs to the
-    // overlay. Inerting it swallows the click that should close the sheet.
-    return !!element && (
-        element.hasAttribute?.('data-tm-backdrop')
-        || element.dataset?.tmBackdrop !== undefined
-    );
+    // data-tm-backdrop is the only contract. A class name is not recognised: a backdrop the walk
+    // would otherwise inert swallows the click that should close the overlay.
+    return !!element && element.hasAttribute?.('data-tm-backdrop');
 }
 
 function releaseAncestors(element) {

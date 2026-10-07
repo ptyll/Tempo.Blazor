@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -109,7 +110,9 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
             .Add(c => c.IsVisible, true)
             .Add(c => c.OnClose, EventCallback.Factory.Create(this, () => closed = true)));
 
-        cut.Find(".tm-keyboard-shortcuts-modal").KeyUp(new KeyboardEventArgs { Key = "Escape" });
+        // Escape is the focus trap's document listener. bUnit has no document, so the test invokes the
+        // same callback the trap would.
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync()).GetAwaiter().GetResult();
 
         closed.Should().BeTrue();
     }

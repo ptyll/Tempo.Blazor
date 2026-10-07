@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Gallery;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Tests.Localization;
@@ -98,7 +99,7 @@ public class TmImageGalleryLightboxTests : LocalizationTestBase
         var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, images));
 
         cut.Find(".tm-gallery-item").Click();
-        cut.Find(".tm-lightbox").KeyDown(Key.Escape);
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync()).GetAwaiter().GetResult();
 
         cut.FindAll(".tm-lightbox").Should().BeEmpty();
     }

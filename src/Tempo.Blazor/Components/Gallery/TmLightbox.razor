@@ -3,16 +3,14 @@
 
 @if (IsOpen)
 {
-    <div class="tm-lightbox"
-         role="dialog"
-         aria-modal="true"
-         aria-label="@Loc["TmLightbox_Aria"]"
-         tabindex="-1"
-         @onkeydown="HandleKeyAsync"
-         @onkeydown:stopPropagation="true">
+    <TmFocusScope Active="true"
+                  Class="tm-lightbox"
+                  AriaLabel="@Loc["TmLightbox_Aria"]"
+                  CloseOnEscape="true"
+                  OnEscape="OnClose">
         <div class="tm-lightbox-backdrop" aria-hidden="true" @onclick="async () => await OnClose.InvokeAsync()"></div>
 
-        <div class="tm-lightbox-content">
+        <div class="tm-lightbox-content" @onkeydown="HandleKeyAsync" @onkeydown:stopPropagation="true">
             <button type="button"
                     class="tm-lightbox-close"
                     aria-label="@Loc["TmImageGallery_Close"]"
@@ -62,7 +60,7 @@
                 }
             </div>
         </div>
-    </div>
+    </TmFocusScope>
 }
 
 @code {

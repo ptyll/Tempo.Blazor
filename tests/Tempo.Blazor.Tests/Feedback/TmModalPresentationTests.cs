@@ -41,8 +41,8 @@ public class TmModalPresentationTests : LocalizationTestBase
         overlay.GetAttribute("data-layout").Should().Be("desktop");
         overlay.ClassList.Should().Contain("tm-modal--dialog");
         overlay.ClassList.Should().NotContain("tm-modal--sheet");
-        cut.FindAll(".tm-layout").Should().ContainSingle(
-            "with no viewport scope an Auto overlay measures its own fixed root, so the first frame is not stuck on InitialMode");
+        cut.FindAll(".tm-viewport-probe").Should().ContainSingle(
+            "with no viewport scope an Auto overlay measures the viewport itself, so the first frame is not stuck on InitialMode");
     }
 
     [Fact]

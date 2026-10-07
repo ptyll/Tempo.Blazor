@@ -26,7 +26,7 @@ it.
 
 ## Backdrop and nesting
 
-The drawer's backdrop is a sibling of the focus-scope root and carries `data-tm-backdrop`. A backdrop
+The drawer's backdrop is rendered inside the focus-scope root and carries `data-tm-backdrop`. A backdrop
 without that marker is marked `inert` and swallows the click that should close the sheet. A dialog
 declared in page content can open while a drawer is open: the trap releases the ancestor it had
 inerted, so the dialog is reachable, and closing it hands the drawer back.

@@ -144,9 +144,11 @@ that frame has no measurement yet.
     as the outermost full-viewport layout element (decision `F2-VIEWPORT-HOST-REQUIREMENT`: should,
     not must). `IsContainer="false"` is mandatory on that scope. An overlay with no viewport scope
     measures the viewport itself through an internal probe, so a phone still gets the sheet; the first
-    frame uses `InitialMode` until that measurement arrives. With no viewport scope, an open Auto
-    overlay measures its own fixed root, so mobile presentation still happens; the first frame can
-    flash the initial mode. Set `InitialMode` on the app scope when that first frame matters.
+    frame uses `InitialMode` until that measurement arrives. The probe is internal and reads no cascade:
+    a fixed, hidden box the size of the viewport, reported on every measurement including the first.
+    `TmModal`, `TmDialog` and `TmDrawer` share one helper for that resolution. Set `InitialMode` on the
+    overlay when that first frame matters. A Development host logs the missing scope once, at
+    Information.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid

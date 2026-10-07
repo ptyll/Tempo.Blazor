@@ -24,7 +24,11 @@ function element(parent = null) {
         },
         querySelectorAll() { return []; },
         hasAttribute(name) { return el.attributes.has(name); },
-        toggleAttribute(name, on) { if (on) el.attributes.add(name); else el.attributes.delete(name); },
+        toggleAttribute(name, force) {
+            const on = force === undefined ? !el.attributes.has(name) : force;
+            if (on) el.attributes.add(name); else el.attributes.delete(name);
+            return on;
+        },
         get children() { return el._children; },
         set children(value) { el._children = value; },
         dataset: {},
@@ -242,14 +246,14 @@ test('a dialog declared in page content becomes reachable when it opens', () => 
 });
 
 test('a backdrop rendered as a sibling of the trap root stays clickable', () => {
-    // TmDrawer renders .tm-drawer__overlay as a sibling of the TmFocusScope root. The walk that
-    // inerts the page must not inert a backdrop that belongs to the overlay, or a click on it never
-    // reaches the close handler.
+    // A host that still renders the backdrop beside the trap root marks it data-tm-backdrop. The walk
+    // that inerts the page must not inert it, or a click on it never reaches the close handler. TmDrawer
+    // renders its overlay inside the trap instead, so this is the fallback, not the layout.
     const body = element();
     const app = element(body);
     const page = element(app);
     const backdrop = element(app);
-    backdrop.dataset = { tmBackdrop: '' };
+    backdrop.toggleAttribute('data-tm-backdrop', true);
     const scope = element(app);
     installDom(body);
 

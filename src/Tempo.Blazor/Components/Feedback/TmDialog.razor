@@ -8,6 +8,7 @@
 @using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 @inject ILogger<TmDialog> Logger
+@inject IServiceProvider HostServices
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
@@ -243,7 +244,7 @@
     }
 
     private Task ReportResolved() => _layout.ReportAsync(
-        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: false);
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: Viewport is null, HostServices);
 
     private Task OnProbed(TmLayoutMode mode)
     {

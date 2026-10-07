@@ -97,6 +97,8 @@
 }
 
 .tm-drawer--inline .tm-sheet__panel {
+    /* The shared sheet rule sizes a panel from the viewport. An inline sheet is a fraction of its
+       host instead, so it overrides that one length. */
     height: calc(var(--tm-sheet-height, 0.5) * 100%);
     max-height: calc(var(--tm-sheet-max, 0.85) * 100%);
     pointer-events: auto;

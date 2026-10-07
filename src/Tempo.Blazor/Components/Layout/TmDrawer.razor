@@ -8,6 +8,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 @inject ILogger<TmDrawer> Logger
+@inject IServiceProvider HostServices
 
 @if (IsOpen && Modal && Viewport is null && LayoutMode == TmLayoutMode.Auto)
 {
@@ -15,11 +16,6 @@
 }
 @if (IsOpen)
 {
-    @if (ShowOverlay && Modal)
-    {
-        <div class="tm-drawer__overlay" data-tm-backdrop @onclick="HandleOverlayClick"></div>
-    }
-
     <TmFocusScope @ref="_scope"
                   Active="true"
                   Modal="Modal"
@@ -31,6 +27,12 @@
                   RestoreFocusTargetId="@RestoreFocusTargetId"
                   DataTestId="@DataTestId"
                   AdditionalAttributes="RootAttributes">
+        @* The overlay is a child of the trapped root. A sibling gets marked inert, and an inert
+           backdrop swallows the click that should close the drawer. *@
+        @if (ShowOverlay && Modal)
+        {
+            <div class="tm-drawer__overlay" data-tm-backdrop @onclick="HandleOverlayClick"></div>
+        }
 
         <div @ref="_panel" class="tm-drawer__panel tm-sheet__panel" style="@PanelStyle">
             @if (IsSheet && ShowHandle)
@@ -355,7 +357,7 @@
     }
 
     private Task ReportResolved() => _layout.ReportAsync(
-        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: Viewport is null);
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: Viewport is null, HostServices);
 
     private async Task SetSnapAsync(int index)
     {

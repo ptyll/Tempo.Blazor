@@ -4,13 +4,12 @@
 
 @if (IsVisible)
 {
-    <div class="tm-keyboard-shortcuts-overlay @Class" @onclick="OnClose">
-        <div class="tm-keyboard-shortcuts-modal"
-             role="dialog"
-             aria-modal="true"
-             tabindex="-1"
-             @onclick:stopPropagation
-             @onkeyup="HandleKeyUp">
+    <div class="tm-keyboard-shortcuts-overlay @Class" data-tm-backdrop @onclick="OnClose">
+        <TmFocusScope Active="true"
+                      Class="tm-keyboard-shortcuts-modal"
+                      CloseOnEscape="true"
+                      OnEscape="OnClose"
+                      @onclick:stopPropagation>
             <div class="tm-keyboard-shortcuts-header">
                 <h2 class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
                 <button type="button" class="tm-keyboard-shortcuts-close" @onclick="OnClose" aria-label="@Loc["Tm_Close"]">
@@ -42,7 +41,7 @@
                     }
                 }
             </div>
-        </div>
+        </TmFocusScope>
     </div>
 }
 
@@ -63,12 +62,4 @@
     [Parameter] public string? Class { get; set; }
 
     private string DisplayTitle => Title ?? Loc["TmKeyboardShortcutsHelp_Title"];
-
-    private async Task HandleKeyUp(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            await OnClose.InvokeAsync();
-        }
-    }
 }

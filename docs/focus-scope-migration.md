@@ -25,9 +25,9 @@ innermost active scope handles Tab, and only the topmost one handles Escape.
 the scope does not land focus back on the trigger that opened it. Leave it unset and the scope
 restores whatever was focused when it opened, which is what an overlay wants.
 
-A backdrop rendered as a sibling of the scope root must carry `data-tm-backdrop`. The module inerts
-every sibling it walks, and a backdrop without the marker swallows the click that should close the
-overlay. The attribute is the only contract; a class name is not recognised.
+A backdrop belongs inside the scope root, and it carries `data-tm-backdrop`. The module inerts every
+sibling it walks, so a backdrop left outside the root is inert and swallows the click that should
+close the overlay. The attribute is the only contract; a class name is not recognised.
 
 The cycling, the initial-focus move, the inert background and the restore are things Blazor cannot do
 itself, so they live in `wwwroot/js/tm-focus-trap.js`. Everything else — the dialog role, `aria-modal`,
@@ -42,10 +42,11 @@ looked for `role="dialog"` on the old element finds it on this root.
 
 ## Still claiming a modal without a trap
 
-`TmLightbox`, `TmKeyboardShortcutsHelp`, `TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker`
-set `aria-modal="true"` on a popup that is not a `TmFocusScope`. Each one is a positioned popup with
-its own open and close path, so moving it onto the scope is its own change and is not part of the
-sheet work. Until that move, a keyboard user can Tab out of them.
+`TmLightbox` and `TmKeyboardShortcutsHelp` wrap their content in a `TmFocusScope`, so Tab stays inside
+and Escape closes them. `TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` still set
+`aria-modal="true"` on a `TmOverlayPanel` popup that is not a `TmFocusScope`. The popup is a positioned
+panel with its own open and close path (the top layer, the flip, the anchor), so moving it onto the
+scope would drop that positioning. Until that move, a keyboard user can Tab out of the calendar.
 
 ## Packages that keep their own trap
 
