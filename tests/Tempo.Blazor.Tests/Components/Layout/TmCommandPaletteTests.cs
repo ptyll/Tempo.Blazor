@@ -198,10 +198,8 @@ public class TmCommandPaletteTests : LocalizationTestBase
             .Add(c => c.IsOpenChanged,
                 EventCallback.Factory.Create<bool>(this, v => isOpen = v)));
 
-        var close = cut.Find(".tm-command-palette-close");
-        // Real browser sequence for Enter on a focused <button>:
-        // keydown -> native click on the same element.
-        close.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        // Enter on a native <button> is the button's own click. The palette no longer has a container
+        // keydown handler, so there is nothing to also run the highlighted action.
         cut.Find(".tm-command-palette-close").Click();
 
         executed.Should().Be(0);
@@ -218,7 +216,10 @@ public class TmCommandPaletteTests : LocalizationTestBase
             .Add(c => c.IsOpenChanged,
                 EventCallback.Factory.Create<bool>(this, v => isOpen = v)));
 
-        cut.Find(".tm-command-palette").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        // Escape is the focus scope's document listener, not a container keydown: a container handler
+        // on top of it closed the palette twice.
+        cut.InvokeAsync(() => cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>().Instance
+            .HandleFocusTrapEscapeAsync()).GetAwaiter().GetResult();
 
         isOpen.Should().BeFalse();
     }

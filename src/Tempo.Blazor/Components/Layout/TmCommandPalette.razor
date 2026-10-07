@@ -7,14 +7,13 @@
 
 @if (IsOpen)
 {
-    <div class="tm-command-palette-backdrop @Class" @attributes="AdditionalAttributes">
+    <div class="tm-command-palette-backdrop @Class" data-tm-backdrop @attributes="AdditionalAttributes">
         <TmFocusScope @ref="_scope"
                       Class="tm-command-palette"
                       Active="true"
                       CloseOnEscape="true"
                       OnEscape="CloseAsync"
-                      AriaLabel="@Loc["TmCommandPalette_Aria"]"
-                      @onkeydown="HandleKeyDownAsync">
+                      AriaLabel="@Loc["TmCommandPalette_Aria"]">
             <div class="tm-command-palette-header">
                 <input class="tm-command-palette-input"
                        value="@_query"
@@ -122,20 +121,10 @@
         }
     }
 
-    // Escape stays container-level so it works wherever focus sits inside the
-    // dialog (input, close button). Arrow/Enter navigation is handled on the
-    // search input itself (HandleInputKeyDownAsync): the close control is a
-    // native <button>, and a container-level Enter case ran the highlighted
-    // action when the user actually pressed Enter on "close" — the button's
-    // own click then ALSO closed the palette.
-    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-        {
-            await CloseAsync();
-        }
-    }
-
+    // Escape is the focus scope's, document-level, so it closes the palette wherever focus sits.
+    // A container-level Escape handler on top of it closed the palette twice. Arrow/Enter
+    // navigation stays on the search input: the close control is a native <button>, and a
+    // container-level Enter case ran the highlighted action when the user pressed Enter on "close".
     // Arrow/Enter keydowns inside a text input produce no native click, so
     // this input-level handler is where list navigation + execution belong.
     private async Task HandleInputKeyDownAsync(KeyboardEventArgs e)

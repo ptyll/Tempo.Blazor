@@ -55,7 +55,7 @@
     width: var(--tm-drawer-width, 400px);
     max-width: 100vw;
     background-color: var(--tm-bg-surface);
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12), -1px 0 8px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--tm-shadow-xl);
     overflow: hidden;
 }
 
@@ -65,7 +65,7 @@
 
 .tm-drawer--left .tm-drawer__panel {
     animation: tm-drawer-slide-left 0.25s ease;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12), 1px 0 8px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--tm-shadow-xl);
 }
 
 .tm-drawer--bottom .tm-drawer__panel {
@@ -131,6 +131,12 @@
 }
 
 /* ── Header ────────────────────────────────────────────── */
+/* The header is the gesture target when the sheet has no handle, so the cursor says so. */
+.tm-drawer--bottom .tm-drawer__header {
+    cursor: grab;
+    touch-action: none;
+}
+
 .tm-drawer__header {
     display: flex;
     align-items: center;
@@ -209,16 +215,6 @@
 [data-theme="dark"] .tm-drawer__overlay,
 .tm-dark .tm-drawer__overlay {
     background-color: rgba(0, 0, 0, 0.7);
-}
-
-[data-theme="dark"] .tm-drawer__panel,
-.tm-dark .tm-drawer__panel {
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] .tm-drawer--left .tm-drawer__panel,
-.tm-dark .tm-drawer--left .tm-drawer__panel {
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
 }
 
 /* ═══════════════════════════════════════════════════════

@@ -16,13 +16,17 @@
  * @param {boolean} swipeToDismiss whether a release below the lowest snap closes the sheet
  * @returns {{ dismiss: boolean, snap: number|null, index: number }} the snap to settle to
  */
-export function settle(snaps, released, swipeToDismiss) {
+export function settle(snaps, released, swipeToDismiss, velocity = 0) {
     if (!Array.isArray(snaps) || snaps.length === 0) {
         return { dismiss: false, snap: null, index: -1 };
     }
 
     const lowest = snaps[0];
-    if (swipeToDismiss && released < lowest) {
+    // A one-snap sheet dismisses from a real drag (below the snap). A multi-snap sheet dismisses
+    // only past the lowest snap by a margin, or on a downward flick — a release between snaps
+    // settles to the nearest one.
+    const dismissAt = snaps.length === 1 ? lowest : lowest - 0.15;
+    if (swipeToDismiss && (released < dismissAt || velocity > 0.5)) {
         return { dismiss: true, snap: lowest, index: 0 };
     }
 
@@ -105,51 +109,84 @@ const gestures = new Map();
  * @param {{ invokeMethodAsync: Function }|null} host the component to tell about a snap or a dismiss
  * @param {string} id the sheet's id, so a second attach replaces the first
  */
+const INTERACTIVE = 'button, a, input, select, textarea, [role="button"]';
+
+function isInteractive(target) {
+    return !!target && typeof target.closest === 'function' && !!target.closest(INTERACTIVE);
+}
+
 export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
-    if (!handle || !panel) return;
+    if (!panel) return;
     detach(id);
 
     const sorted = Array.isArray(snaps) ? snaps : [];
     let startY = 0;
     let startHeight = 0;
+    let lastY = 0;
+    let lastTime = 0;
     let dragging = false;
+    let armed = false;
     let pointerId = null;
 
     const resetInline = () => {
         panel.style.height = '';
         panel.style.transition = '';
+        panel.style.removeProperty?.('--tm-sheet-height');
     };
 
-    const onDown = (event) => {
-        if (event.button !== undefined && event.button !== 0) return;
-        dragging = true;
-        pointerId = event.pointerId;
-        startY = event.clientY;
-        startHeight = panel.getBoundingClientRect().height;
-        panel.style.transition = 'none';
+    const capture = (event) => {
         if (typeof handle.setPointerCapture === 'function' && event.pointerId !== undefined) {
             try { handle.setPointerCapture(event.pointerId); } catch { /* already released */ }
         }
     };
 
+    const onDown = (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        dragging = true;
+        armed = !isInteractive(event.target);
+        pointerId = event.pointerId;
+        startY = event.clientY;
+        lastY = event.clientY;
+        lastTime = event.timeStamp ?? 0;
+        startHeight = panel.getBoundingClientRect().height;
+        if (armed) {
+            panel.style.transition = 'none';
+            capture(event);
+        }
+    };
+
     const onMove = (event) => {
         if (!dragging || (pointerId !== null && event.pointerId !== pointerId)) return;
-        const viewport = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        if (!armed) {
+            // A press on the close button stays a click until the finger actually moves.
+            if (Math.abs(event.clientY - startY) < 6) return;
+            armed = true;
+            panel.style.transition = 'none';
+            capture(event);
+        }
+        lastY = event.clientY;
+        lastTime = event.timeStamp ?? lastTime;
         const next = Math.max(0, startHeight - (event.clientY - startY));
         panel.style.height = `${next}px`;
-        if (viewport > 0) panel.style.setProperty('--tm-sheet-height', String(next / viewport));
     };
 
     const finish = (event, cancelled) => {
         if (!dragging || (pointerId !== null && event.pointerId !== undefined && event.pointerId !== pointerId)) return;
+        const wasArmed = armed;
         dragging = false;
+        armed = false;
         pointerId = null;
-        resetInline();
-        if (cancelled || sorted.length === 0) return;
 
+        // Measure before clearing: resetInline drops the inline height, and a read after it sees 0.
         const viewport = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const released = viewport > 0 ? panel.getBoundingClientRect().height / viewport : 0;
-        const result = settle(sorted, released, swipeToDismiss);
+        const height = panel.getBoundingClientRect().height;
+        const elapsed = Math.max(1, (event.timeStamp ?? lastTime) - lastTime);
+        const velocity = (event.clientY - lastY) / elapsed;
+        resetInline();
+        if (cancelled || !wasArmed || sorted.length === 0) return;
+
+        const released = viewport > 0 ? height / viewport : 0;
+        const result = settle(sorted, released, swipeToDismiss, velocity);
         if (result.dismiss) {
             host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
             return;
@@ -159,12 +196,14 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
 
     const onUp = (event) => finish(event, false);
     const onCancel = (event) => finish(event, true);
-    handle.addEventListener('pointerdown', onDown);
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', onUp);
-    handle.addEventListener('pointercancel', onCancel);
+    if (handle) {
+        handle.addEventListener('pointerdown', onDown);
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onCancel);
+    }
 
-    const stopViewport = trackViewport(panel.closest('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel, host);
+    const stopViewport = trackViewport(panel.closest?.('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel, host);
     gestures.set(id, { handle, onDown, onMove, onUp, onCancel, stopViewport });
 }
 
@@ -173,10 +212,12 @@ export function detach(id) {
     const gesture = gestures.get(id);
     if (!gesture) return;
     gestures.delete(id);
-    gesture.handle.removeEventListener('pointerdown', gesture.onDown);
-    gesture.handle.removeEventListener('pointermove', gesture.onMove);
-    gesture.handle.removeEventListener('pointerup', gesture.onUp);
-    gesture.handle.removeEventListener('pointercancel', gesture.onCancel);
+    if (gesture.handle) {
+        gesture.handle.removeEventListener('pointerdown', gesture.onDown);
+        gesture.handle.removeEventListener('pointermove', gesture.onMove);
+        gesture.handle.removeEventListener('pointerup', gesture.onUp);
+        gesture.handle.removeEventListener('pointercancel', gesture.onCancel);
+    }
     gesture.stopViewport?.();
 }
 

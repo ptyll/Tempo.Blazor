@@ -17,7 +17,7 @@
 {
     @if (ShowOverlay && Modal)
     {
-        <div class="tm-drawer__overlay" @onclick="HandleOverlayClick"></div>
+        <div class="tm-drawer__overlay" data-tm-backdrop @onclick="HandleOverlayClick"></div>
     }
 
     <TmFocusScope @ref="_scope"

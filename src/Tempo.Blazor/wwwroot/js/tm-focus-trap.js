@@ -33,9 +33,9 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         deactivate(id);
     }
 
-    // A caller that names a restore target (a canvas editor handing focus back to its canvas) wins
-    // over the element that happened to be focused when the trap opened.
-    const returnTarget = restoreTarget || document.activeElement;
+    // The opener is whatever held focus when the trap opened. An explicit restore target and a named
+    // id both outrank it; they are resolved at deactivation, because the target may not exist yet.
+    const returnTarget = document.activeElement;
 
     const tabHandler = function (e) {
         if (e.key !== 'Tab' || !modal) return;
@@ -71,14 +71,14 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         document.addEventListener('keydown', escHandler);
     }
 
-    traps.set(id, { element, tabHandler, escHandler, returnTarget, modal });
+    traps.set(id, { element, tabHandler, escHandler, returnTarget, restoreTarget, modal });
 
     // A modal trap makes the rest of the page unreachable, not only invisible. `inert` is a DOM
     // attribute Blazor cannot keep in sync with the page around the overlay, so the module owns it.
     // The overlay's own ancestors stay reachable, otherwise the trap would inert itself. A non-modal
     // surface (an inline drawer) leaves the page usable.
     if (modal) {
-        markBackgroundInert(element, true);
+        markBackgroundInert(element, id);
         lockScroll(true);
     }
 
@@ -119,40 +119,59 @@ export function isTopmost(id) {
     return ids.length > 0 && ids[ids.length - 1] === id;
 }
 
-// The elements the module itself marked inert, so deactivation clears exactly those and never an
-// `inert` a host set for its own reasons.
-const inerted = new Set();
+// id -> Set of elements THAT trap marked inert. A trap never clears an element another trap (or the
+// host) marked, and it never marks an element that was already inert when it activated.
+const inertedByTrap = new Map();
 
-function markBackgroundInert(element, inert) {
+function isBackdrop(element) {
+    // A backdrop rendered as a sibling of the trap root (TmDrawer's overlay) still belongs to the
+    // overlay. Inerting it swallows the click that should close the sheet.
+    return !!element && (
+        element.hasAttribute?.('data-tm-backdrop')
+        || element.dataset?.tmBackdrop !== undefined
+        || element.classList?.contains('tm-drawer__overlay')
+        || element.classList?.contains('tm-command-palette-backdrop')
+    );
+}
+
+function markBackgroundInert(element, id) {
     if (!element || !document.body) return;
+    const marked = new Set();
     // Walk every ancestor up to body. A Blazor host is body > #app > page, and the overlay is a
     // descendant of #app, so inerting only body's children leaves the page reachable.
     for (let node = element.parentElement; node; node = node.parentElement) {
         for (const child of node.children) {
             if (child === element || child.contains(element)) continue;
-            setInert(child, inert);
+            if (isBackdrop(child)) continue;
+            // Another open trap, or a host that set inert for its own reasons, owns this element.
+            if (child.hasAttribute('inert')) continue;
+            child.toggleAttribute('inert', true);
+            marked.add(child);
         }
         if (node === document.body) break;
     }
+    inertedByTrap.set(id, marked);
 }
 
-function setInert(child, inert) {
-    if (inert) {
-        if (!child.hasAttribute('inert')) {
-            child.toggleAttribute('inert', true);
-            inerted.add(child);
+function releaseBackground(id) {
+    const marked = inertedByTrap.get(id);
+    inertedByTrap.delete(id);
+    if (!marked) return;
+    for (const child of marked) {
+        let stillOwned = false;
+        for (const others of inertedByTrap.values()) {
+            if (others.has(child)) { stillOwned = true; break; }
         }
-    } else if (inerted.has(child)) {
-        child.toggleAttribute('inert', false);
-        inerted.delete(child);
+        if (!stillOwned) child.toggleAttribute('inert', false);
     }
 }
 
 /** Drops every trap without touching the DOM. The node tests call it between cases. */
 export function __resetForTests() {
     traps.clear();
-    inerted.clear();
-    scrollLocks.length = 0;
+    inertedByTrap.clear();
+    scrollLockCount = 0;
+    scrollLockWasPresent = false;
 }
 
 export function deactivate(id) {
@@ -166,40 +185,57 @@ export function deactivate(id) {
     if (trap.escHandler) {
         document.removeEventListener('keydown', trap.escHandler);
     }
-    // Only the last modal trap releases the background. A nested dialog closing must not make the
-    // page reachable again while the sheet that opened it is still up.
-    const stillModal = Array.from(traps.values()).some(other => other.modal);
-    if (trap.modal && !stillModal) {
-        markBackgroundInert(trap.element, false);
+    if (trap.modal) {
+        releaseBackground(id);
         lockScroll(false);
+        // The trap that remains is now topmost. Re-apply its inert set so a nested dialog that
+        // marked the drawer's own content does not leave that content unreachable.
+        const remaining = Array.from(traps.entries()).filter(([, other]) => other.modal);
+        if (remaining.length > 0) {
+            const [topId, top] = remaining[remaining.length - 1];
+            releaseBackground(topId);
+            markBackgroundInert(top.element, topId);
+        }
     }
 
     restoreFocus(trap);
 }
 
-const scrollLocks = [];
+// A ref count, not a stack of snapshots. Two modal traps add the class once and the last one to
+// close removes it, unless the host already had it.
+let scrollLockCount = 0;
+let scrollLockWasPresent = false;
 
 function lockScroll(lock) {
     const root = document.documentElement;
     if (!root || !root.classList) return;
     if (lock) {
-        scrollLocks.push(root.classList.contains('tm-scroll-lock'));
+        if (scrollLockCount === 0) scrollLockWasPresent = root.classList.contains('tm-scroll-lock');
+        scrollLockCount++;
         root.classList.add('tm-scroll-lock');
         return;
     }
-    if (scrollLocks.pop() !== true) root.classList.remove('tm-scroll-lock');
+    scrollLockCount = Math.max(0, scrollLockCount - 1);
+    if (scrollLockCount === 0 && !scrollLockWasPresent) root.classList.remove('tm-scroll-lock');
+}
+
+function focusOf(target) {
+    if (!target || target.isConnected === false || typeof target.focus !== 'function') return false;
+    try { target.focus(); return true; } catch { return false; }
 }
 
 function restoreFocus(trap) {
-    const named = trap.returnTarget;
-    if (named && named.isConnected !== false && typeof named.focus === 'function') {
-        try { named.focus(); return; } catch { /* disconnected or unfocusable */ }
-    }
-    if (trap.element && trap.element.dataset && trap.element.dataset.restoreFocus === 'false') return;
-    const id = trap.element && trap.element.dataset ? trap.element.dataset.restoreTarget : null;
+    // Resolved at deactivation: an explicit false restores nothing; an explicit element wins; then
+    // the id recorded on the root; then the opener captured at activation; then body.
+    const dataset = trap.element && trap.element.dataset;
+    if (dataset && dataset.restoreFocus === 'false') return;
+
+    if (focusOf(trap.restoreTarget)) return;
+
+    const id = dataset ? dataset.restoreTarget : null;
     const byId = id && document.getElementById ? document.getElementById(id) : null;
-    const fallback = byId || document.body;
-    if (fallback && typeof fallback.focus === 'function') {
-        try { fallback.focus(); } catch { /* nothing to restore to */ }
-    }
+    if (focusOf(byId)) return;
+
+    if (focusOf(trap.returnTarget)) return;
+    focusOf(document.body);
 }

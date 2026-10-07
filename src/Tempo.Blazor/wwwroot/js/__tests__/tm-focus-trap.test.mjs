@@ -27,6 +27,7 @@ function element(parent = null) {
         toggleAttribute(name, on) { if (on) el.attributes.add(name); else el.attributes.delete(name); },
         get children() { return el._children; },
         set children(value) { el._children = value; },
+        dataset: {},
         focus() { el.focusCalls++; },
         dispatch(type, event) { listeners.get(type)?.(event); },
     };
@@ -325,7 +326,7 @@ test('RestoreFocus=false restores nothing, not even the opener', () => {
     deactivate('scope');
 
     assert.equal(opener.focusCalls, 0);
-    assert.equal(body.focusCalls, undefined);
+    assert.equal(body.focusCalls, 0, 'RestoreFocus=false restores nothing at all');
 });
 
 test('initial focus lands on the named target, not the first focusable', () => {

@@ -305,7 +305,7 @@
    Responsive
    ═══════════════════════════════════════════════════════════════ */
 
-@media (max-width: 640px) {
+@media (width < 640px) {
   .tm-modal-overlay {
     padding: var(--tm-space-2);
   }
@@ -375,7 +375,9 @@
 
 .tm-modal-overlay.tm-modal--sheet {
   align-items: flex-end;
-  padding: 0;
+  /* The keyboard gap pads the overlay, so the whole sheet lifts and the panel keeps its own
+     safe-area padding. Padding the panel instead ate the dialog's bottom padding. */
+  padding: 0 0 var(--tm-sheet-keyboard, 0px);
 }
 
 /* The container fills the overlay and anchors the panel to the bottom edge. overflow: visible so the
@@ -423,7 +425,6 @@
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal,
 .tm-modal-overlay.tm-modal--sheet .tm-dialog {
-  padding-bottom: var(--tm-sheet-keyboard, 0px);
   max-width: 100%;
   width: 100%;
   margin: 0;
@@ -467,9 +468,6 @@
   margin: 0;
   border-radius: 0;
 }
-
-/* The grabber is the shared .tm-sheet__handle. These selectors stay so a host that styled the old
-   classes keeps a bar, but the components no longer render them. */
 
 /* An inline dialog puts its icon beside the content instead of above it. */
 .tm-dialog--inline {

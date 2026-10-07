@@ -178,16 +178,19 @@ test('a release is measured before the inline height is cleared', () => {
     const sheet = panel(400);
     sheet.getBoundingClientRect = () => {
         reads++;
-        // The first read is the start height. A later read that sees the cleared inline height is wrong.
-        return { height: sheet.inline.height === '' && reads > 1 ? 0 : 240 };
+        const dragged = Number.parseFloat(sheet.inline.height);
+        // A read after resetInline sees the cleared height. The gesture must have measured before that.
+        return { height: Number.isFinite(dragged) ? dragged : 0 };
     };
     const sink = host();
     attachGesture(grab, sheet, [0.5, 1], true, sink, 'measure');
 
     grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 260 });
     grab.dispatch('pointerup', { pointerId: 1, clientY: 260 });
 
-    assert.equal(sink.calls[0][0], 'HandleSheetSnappedAsync', '240px of 800 is the half snap, not a dismiss');
+    assert.equal(sink.calls[0][0], 'HandleSheetDismissedAsync',
+        '240px of 800 is below the lowest snap by more than the margin, so it dismisses — and only because the height was read before the reset');
     delete globalThis.window;
 });
 

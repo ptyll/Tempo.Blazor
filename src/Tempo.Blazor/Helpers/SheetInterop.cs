@@ -41,19 +41,19 @@ internal sealed class SheetInterop : IAsyncDisposable
         if (_disposed) return;
         try
         {
-            _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
             if (_disposed)
             {
-                await ReleaseAsync();
+                await ReleaseAsync(module);
                 return;
             }
 
-            if (_module is null) return;
+            if (module is null) return;
 
-            await _module.InvokeVoidAsync("attachGesture", handle, panel, snaps, swipeToDismiss, host, _id);
+            await module.InvokeVoidAsync("attachGesture", handle, panel, snaps, swipeToDismiss, host, _id);
             if (_disposed)
             {
-                await _module.InvokeVoidAsync("detach", _id);
+                await module.InvokeVoidAsync("detach", _id);
                 return;
             }
 
@@ -90,16 +90,18 @@ internal sealed class SheetInterop : IAsyncDisposable
         await ReleaseAsync();
     }
 
-    private async Task ReleaseAsync()
+    private Task ReleaseAsync() => ReleaseAsync(_module);
+
+    private async Task ReleaseAsync(IJSObjectReference? module)
     {
-        if (_module is null) return;
+        if (module is null) return;
+        if (ReferenceEquals(_module, module)) _module = null;
         try
         {
-            await _module.DisposeAsync();
+            await module.DisposeAsync();
         }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
         catch (ObjectDisposedException) { }
-        _module = null;
     }
 }

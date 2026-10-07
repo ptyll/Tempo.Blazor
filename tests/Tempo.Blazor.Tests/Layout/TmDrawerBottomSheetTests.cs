@@ -115,15 +115,17 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Bottom_SwipeToDismiss_IsOnByDefault_AndCanBeTurnedOff()
+    public void Bottom_SwipeToDismiss_ReachesTheGestureAsAnArgument()
     {
+        // The gesture engine owns the behaviour, so the markup carries no test-only attribute. What
+        // is observable is the argument the drawer hands attachGesture: true unless the host opts out.
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        module.SetupVoid("attachGesture", _ => true).SetVoidResult();
+
         var on = Render<TmDrawer>(p => p
             .Add(x => x.IsOpen, true)
             .Add(x => x.Position, DrawerPosition.Bottom)
             .AddChildContent("Body"));
-
-        on.Find(".tm-drawer").GetAttribute("data-swipe-to-dismiss").Should().BeNull(
-            "swipe-to-dismiss is a behaviour the gesture engine owns, not a test-only attribute");
 
         var off = Render<TmDrawer>(p => p
             .Add(x => x.IsOpen, true)
@@ -131,7 +133,11 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.SwipeToDismiss, false)
             .AddChildContent("Body"));
 
-        off.Find(".tm-drawer").GetAttribute("data-swipe-to-dismiss").Should().BeNull();
+        var swipes = module.Invocations
+            .Where(i => i.Identifier == "attachGesture")
+            .Select(i => (bool)i.Arguments[3]!)
+            .ToList();
+        swipes.Should().Equal(true, false);
     }
 
     [Fact]

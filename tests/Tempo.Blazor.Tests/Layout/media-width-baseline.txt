@@ -18,7 +18,6 @@ src/Tempo.Blazor/wwwroot/css/components/_data-table.css | 640
 src/Tempo.Blazor/wwwroot/css/components/_data-table.css | 768
 src/Tempo.Blazor/wwwroot/css/components/_dynamic-form.css | 640
 src/Tempo.Blazor/wwwroot/css/components/_lightbox.css | 768
-src/Tempo.Blazor/wwwroot/css/components/_modal.css | 640
 src/Tempo.Blazor/wwwroot/css/components/_notification-toast.css | 640
 src/Tempo.Blazor/wwwroot/css/components/_pivot-table.css | 768
 src/Tempo.Blazor/wwwroot/css/components/_stepper.css | 768

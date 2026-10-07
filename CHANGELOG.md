@@ -211,6 +211,16 @@
 
 ### Fixed
 
+- **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
+  `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
+  `data-tm-backdrop` (or `.tm-drawer__overlay` / `.tm-command-palette-backdrop`), and re-applies the
+  inert set of the trap that remains when the topmost one closes. The scroll lock is a ref count, so
+  two open modals no longer leave `html.tm-scroll-lock` behind. A sheet gesture writes only an inline
+  height and clears it — and the `--tm-sheet-height` variable — on release, cancel and a vetoed
+  dismiss. The keyboard gap pads the sheet overlay, so a dialog sheet keeps its own safe-area
+  padding. `TmDialog` awaits its result callbacks, and `TmCommandPalette` lets the focus scope own
+  Escape instead of closing twice.
+
 - **`ConstrainHeight` panels can now grow back after the room returns (N318).** `overlay.js`
   used to read `getComputedStyle(panel).maxHeight` on every placement pass — which resolves the
   panel's own *inline* `max-height` written by the previous pass. Once the available room

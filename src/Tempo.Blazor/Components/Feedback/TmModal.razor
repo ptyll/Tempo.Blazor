@@ -275,9 +275,11 @@
         _sheet ??= new SheetInterop(JS);
         _dotNetRef ??= DotNetObjectReference.Create(this);
         // The visible panel is the gesture target, not the container: the container fills the
-        // viewport, so a swipe on it would dismiss from anywhere on the screen.
+        // viewport, so a swipe on it would dismiss from anywhere on the screen. A null handle still
+        // tracks the viewport, so the sheet lifts for the keyboard even when it cannot be swiped.
         ElementReference? handle = CloseOnOverlayClick && _handle is not null ? _handle.Element : null;
-        await _sheet.AttachAsync(handle, _panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
+        var panel = _scope?.Element ?? _panel;
+        await _sheet.AttachAsync(handle, panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
         if (_disposed) await _sheet.DetachAsync();
     }
 

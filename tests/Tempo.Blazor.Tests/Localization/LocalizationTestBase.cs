@@ -888,6 +888,15 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSheet_SnapHalf"] = "Half",
         ["TmSheet_SnapFull"] = "Full",
         ["TmSheet_SnapIndex"] = "Snap {0} of {1}",
+        ["TmDemo_SheetSection"] = "Sheet, footer and focus",
+        ["TmDemo_OpenSheet"] = "Open sheet",
+        ["TmDemo_StackedFooter"] = "Stacked footer",
+        ["TmDemo_InlineSheet"] = "Inline sheet",
+        ["TmDemo_CanvasBehind"] = "Canvas behind the sheet",
+        ["TmDemo_InlineSheetBody"] = "The canvas behind this sheet stays clickable.",
+        ["TmDemo_ToggleFocusScope"] = "Toggle focus scope",
+        ["TmDemo_FocusScopeLabel"] = "Standalone focus scope",
+        ["TmDemo_FocusScopeInput"] = "Name",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Bulk actions",
@@ -4424,6 +4433,15 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSheet_SnapHalf"] = "Polovina",
         ["TmSheet_SnapFull"] = "Celá výška",
         ["TmSheet_SnapIndex"] = "Krok {0} z {1}",
+        ["TmDemo_SheetSection"] = "Panel, zápatí a fokus",
+        ["TmDemo_OpenSheet"] = "Otevřít panel",
+        ["TmDemo_StackedFooter"] = "Skládané zápatí",
+        ["TmDemo_InlineSheet"] = "Vložený panel",
+        ["TmDemo_CanvasBehind"] = "Plátno za panelem",
+        ["TmDemo_InlineSheetBody"] = "Plátno za tímto panelem zůstává klikatelné.",
+        ["TmDemo_ToggleFocusScope"] = "Přepnout oblast fokusu",
+        ["TmDemo_FocusScopeLabel"] = "Samostatná oblast fokusu",
+        ["TmDemo_FocusScopeInput"] = "Název",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Hromadné akce",

@@ -97,6 +97,9 @@
     [CascadingParameter] internal TmFocusScope? Parent { get; set; }
 
     private ElementReference _element;
+
+    /// <summary>The root element. A sheet gesture binds to it, because it is the visible panel.</summary>
+    public ElementReference Element => _element;
     private FocusTrap? _trap;
     private DotNetObjectReference<TmFocusScope>? _dotNetRef;
     private bool _wasActive;

@@ -297,8 +297,11 @@
         if (_disposed) return;
         _sheet ??= new SheetInterop(JS);
         _dotNetRef ??= DotNetObjectReference.Create(this);
+        // The scope element is the visible panel. A null handle still tracks the viewport, so a
+        // sheet that cannot be swiped still lifts above the keyboard.
         ElementReference? handle = CloseOnOverlayClick && _handle is not null ? _handle.Element : null;
-        await _sheet.AttachAsync(handle, _panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
+        var panel = _scope?.Element ?? _panel;
+        await _sheet.AttachAsync(handle, panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
         if (_disposed) await _sheet.DetachAsync();
     }
 
@@ -401,43 +404,37 @@
         return Type == DialogType.Prompt && string.IsNullOrWhiteSpace(_promptValue);
     }
     
-    private void OnOkClick()
+    private async Task OnOkClick()
     {
         if (Type == DialogType.Prompt)
         {
-            OnPromptResult.InvokeAsync(_promptValue);
+            await OnPromptResult.InvokeAsync(_promptValue);
         }
         else
         {
-            OnResult.InvokeAsync(true);
+            await OnResult.InvokeAsync(true);
         }
     }
     
-    private void OnCancelClick()
+    private async Task OnCancelClick()
     {
         if (Type == DialogType.Prompt)
         {
-            OnPromptResult.InvokeAsync(null);
+            await OnPromptResult.InvokeAsync(null);
         }
         else
         {
-            OnResult.InvokeAsync(false);
+            await OnResult.InvokeAsync(false);
         }
     }
     
-    private void HandleEscape()
-    {
-        if (CloseOnEscape)
-        {
-            OnCancelClick();
-        }
-    }
+    private Task HandleEscape() => CloseOnEscape ? OnCancelClick() : Task.CompletedTask;
     
-    private void HandlePromptKeyUp(KeyboardEventArgs e)
+    private async Task HandlePromptKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_promptValue))
         {
-            OnOkClick();
+            await OnOkClick();
         }
     }
 }

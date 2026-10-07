@@ -25,6 +25,10 @@ innermost active scope handles Tab, and only the topmost one handles Escape.
 the scope does not land focus back on the trigger that opened it. Leave it unset and the scope
 restores whatever was focused when it opened, which is what an overlay wants.
 
+A backdrop rendered as a sibling of the scope root must carry `data-tm-backdrop`. The module inerts
+every sibling it walks, and a backdrop without the marker swallows the click that should close the
+overlay. `.tm-drawer__overlay` and `.tm-command-palette-backdrop` are recognised without the attribute.
+
 The cycling, the initial-focus move, the inert background and the restore are things Blazor cannot do
 itself, so they live in `wwwroot/js/tm-focus-trap.js`. Everything else — the dialog role, `aria-modal`,
 the labelled-by wiring — is markup the scope renders.

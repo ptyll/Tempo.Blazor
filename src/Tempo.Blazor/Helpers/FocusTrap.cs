@@ -43,10 +43,13 @@ internal sealed class FocusTrap : IAsyncDisposable
     {
         try
         {
-            _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
             if (_disposed)
             {
-                await DeactivateOrDropAsync();
+                // The import outlived the owner. Deactivate on the captured module, then drop it:
+                // a deactivate against a field a racing dispose already nulled would leak the trap.
+                await DeactivateOrDropAsync(module);
+                await ReleaseAsync(module);
                 return;
             }
             if (_module is null)
@@ -73,12 +76,15 @@ internal sealed class FocusTrap : IAsyncDisposable
     /// <summary>Deactivates the trap and restores focus to the previously-focused element.</summary>
     public async Task DeactivateAsync()
     {
-        if (!_active) return;
+        // Dispose always deactivates, even when activation never reported success: the module's
+        // deactivate is idempotent, and a trap that attached before the flag flipped would leak.
+        if (!_active && !_disposed) return;
         _active = false;
-        if (_module is null) return;
+        var module = _module;
+        if (module is null) return;
         try
         {
-            await _module.InvokeVoidAsync("deactivate", _id);
+            await module.InvokeVoidAsync("deactivate", _id);
         }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
@@ -90,13 +96,26 @@ internal sealed class FocusTrap : IAsyncDisposable
         try { await element.FocusAsync(); } catch { /* JS unavailable — best effort */ }
     }
 
-    private async Task DeactivateOrDropAsync()
+    private Task DeactivateOrDropAsync() => DeactivateOrDropAsync(_module);
+
+    private async Task DeactivateOrDropAsync(IJSObjectReference? module)
     {
-        if (_module is null) return;
-        try { await _module.InvokeVoidAsync("deactivate", _id); }
+        if (module is null) return;
+        try { await module.InvokeVoidAsync("deactivate", _id); }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
         catch (InvalidOperationException) { }
+    }
+
+    private async Task ReleaseAsync(IJSObjectReference? module)
+    {
+        if (module is null) return;
+        if (ReferenceEquals(_module, module)) _module = null;
+        try { await module.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
 
     public async ValueTask DisposeAsync()
@@ -113,6 +132,7 @@ internal sealed class FocusTrap : IAsyncDisposable
         }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
 
 }
