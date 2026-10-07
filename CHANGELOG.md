@@ -290,6 +290,17 @@
   `_saving` as a second line of defense for any path that skips the disabled/Escape gates.
   A successful save still re-issues the blocked navigation unchanged.
 
+- **A pending debounce can no longer reopen a dismissed dropdown (N323).** `TmQueryInput`'s
+  close path bumped `_requestVersion` but left the `System.Timers.Timer` armed — type, Escape
+  inside the debounce window, and the pending timer still fired `LoadSuggestionsAsync`, which
+  stamps its own fresh version and re-set `_isOpen`, reopening the dropdown the user just
+  closed. `CloseDropdown()` now stops and disposes the timer alongside the version bump.
+  `TmEntityPicker` had the same hole on the other side of the mechanism: `SetShowDropdown(false)`
+  (overlay.js Escape / outside pointerdown) flipped only the flag while the awaited
+  `Task.Delay(Debounce, _debounceToken.Token)` kept running into a search that re-set
+  `_showDropdown`. Closing now cancels `_debounceToken`, and the delayed blur-close cancels it
+  too.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

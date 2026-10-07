@@ -206,6 +206,40 @@ public class TmQueryInputTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task QueryInput_Dismissal_CancelsPendingDebounce_DropdownStaysClosed()
+    {
+        // N323: CloseDropdown bumped _requestVersion but left the debounce timer armed — type,
+        // Escape inside the debounce window, and the pending timer still fired
+        // LoadSuggestionsAsync, reopening the dropdown the user just closed (the new load
+        // stamps its own fresh version, so the version bump cannot catch it).
+        var calls = 0;
+        var cut = Render<TmQueryInput>(p => p
+            .Add(c => c.DebounceMs, 80)
+            .Add(c => c.SuggestionsProvider, _ =>
+            {
+                calls++;
+                return Task.FromResult<IReadOnlyList<QuerySuggestion>>(Sample);
+            }));
+
+        var input = cut.Find(".tm-query-input__input");
+        input.Input("st");
+        cut.WaitForAssertion(() => cut.FindAll("[role='listbox']").Should().HaveCount(1));
+
+        // Re-arm the debounce while the dropdown is open…
+        input.Input("sta");
+
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+        cut.FindAll("[role='listbox']").Should().BeEmpty();
+
+        // …and the armed timer must be dead: no second provider call, no reopen.
+        await Task.Delay(250);
+        calls.Should().Be(1,
+            "the dismissal must cancel the pending debounce — letting it fire reopens the dropdown (N323)");
+        cut.FindAll("[role='listbox']").Should().BeEmpty();
+    }
+
+    [Fact]
     public void QueryInput_Enter_WhenClosed_FiresOnSubmit()
     {
         string? submitted = null;

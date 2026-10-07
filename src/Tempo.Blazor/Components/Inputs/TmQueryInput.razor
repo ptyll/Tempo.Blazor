@@ -384,6 +384,12 @@
 
     private void CloseDropdown()
     {
+        // N323: an armed debounce is a future open — the timer fires LoadSuggestionsAsync, which
+        // stamps its own fresh version and re-sets _isOpen, reopening the dropdown the dismissal
+        // just closed. Kill it alongside the version bump that invalidates in-flight loads.
+        _debounce?.Stop();
+        _debounce?.Dispose();
+        _debounce = null;
         _requestVersion++; // invalidate any in-flight suggestion request
         _isOpen = false;
         _isLoading = false;

@@ -386,13 +386,26 @@
         // Delay to allow click on dropdown items
         _ = Task.Delay(200).ContinueWith(_ =>
         {
+            _debounceToken?.Cancel();
             _showDropdown = false;
             InvokeAsync(StateHasChanged);
         });
     }
 
-    /// <summary>JS-driven dismissal (Escape or outside pointerdown from overlay.js).</summary>
-    private void SetShowDropdown(bool open) => _showDropdown = open;
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js). Closing cancels the
+    /// armed debounce (N323): a delayed <see cref="SearchProvider"/> call landing after dismissal
+    /// would re-set <c>_showDropdown</c> and reopen the panel the user just closed.
+    /// </summary>
+    private void SetShowDropdown(bool open)
+    {
+        if (!open)
+        {
+            _debounceToken?.Cancel();
+        }
+
+        _showDropdown = open;
+    }
 
     private void CacheItem(TItem item)
     {
