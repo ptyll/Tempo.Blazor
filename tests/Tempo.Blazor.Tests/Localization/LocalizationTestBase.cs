@@ -898,6 +898,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDemo_ToggleFocusScope"] = "Toggle focus scope",
         ["TmDemo_FocusScopeLabel"] = "Standalone focus scope",
         ["TmDemo_FocusScopeInput"] = "Name",
+        ["TmDemo_ToggleInline"] = "Inline layout",
+        ["TmDemo_ToggleSheet"] = "Sheet presentation",
+        ["TmDemo_ToggleContentHeight"] = "Size to content",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Bulk actions",
@@ -4444,6 +4447,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDemo_ToggleFocusScope"] = "Přepnout oblast fokusu",
         ["TmDemo_FocusScopeLabel"] = "Samostatná oblast fokusu",
         ["TmDemo_FocusScopeInput"] = "Název",
+        ["TmDemo_ToggleInline"] = "Řádkové rozložení",
+        ["TmDemo_ToggleSheet"] = "Prezentace jako panel",
+        ["TmDemo_ToggleContentHeight"] = "Výška podle obsahu",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Hromadné akce",

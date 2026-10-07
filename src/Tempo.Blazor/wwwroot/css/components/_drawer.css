@@ -82,6 +82,11 @@
     pointer-events: auto;
 }
 
+[data-theme="dark"] .tm-drawer--bottom .tm-drawer__panel,
+.tm-dark .tm-drawer--bottom .tm-drawer__panel {
+    box-shadow: var(--tm-shadow-xl);
+}
+
 .tm-drawer--bottom .tm-drawer__overlay {
     pointer-events: auto;
 }

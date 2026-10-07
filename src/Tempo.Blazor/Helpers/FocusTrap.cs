@@ -61,7 +61,8 @@ internal sealed class FocusTrap : IAsyncDisposable
             await _module.InvokeVoidAsync("activate", element, _id, escapeHandler, closeOnEscape, restoreTarget, modal);
             if (_disposed)
             {
-                await DeactivateOrDropAsync();
+                await DeactivateOrDropAsync(module);
+                await ReleaseAsync(module);
                 return;
             }
             _active = true;

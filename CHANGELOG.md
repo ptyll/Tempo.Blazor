@@ -211,6 +211,11 @@
 
 ### Fixed
 
+- **Sheet chrome moved to the shared handle (F2 review).** The `*DragHandle` resource keys are
+  `TmSheet_*`. `.tm-modal__handle` and `.tm-dialog__handle` are gone; the grabber is `.tm-sheet__handle`.
+  The page scroll lock is `html.tm-scroll-lock`. A desktop sheet caps at 48rem. The command palette and
+  the gantt roots are `.tm-focus-scope`.
+
 - **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
   `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
   `data-tm-backdrop` (or `.tm-drawer__overlay` / `.tm-command-palette-backdrop`), and re-applies the
