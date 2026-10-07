@@ -362,7 +362,7 @@
 /* The margin 2.8.25 painted below 768px came from a stray @media rule in _dashboard.css —
    the only declaration of it anywhere, so it applied despite sitting in a foreign file.
    Restored here on the owning class (2.9.0 regression fix). */
-@media (width < 768px) {
+@media (max-width: 767.98px) {
   .tm-modal {
     margin: var(--tm-space-4);
   }
@@ -373,6 +373,10 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .tm-modal-overlay.tm-modal--sheet {
+  /* The sheet module overwrites both from visualViewport. Declared here so the values count as
+     component-local rather than tokens. */
+  --tm-sheet-viewport: 100;
+  --tm-sheet-keyboard: 0;
   align-items: flex-end;
   padding: 0;
   /* The sheet module measures how much of the layout viewport the on-screen keyboard hides, and

@@ -74,7 +74,7 @@ public sealed class MarkupClassCoverageTests
         new(@"\.(tm-[a-zA-Z][\w-]*)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
-    /// The 147 classes core markup emits with no rule anywhere in the library's stylesheets —
+    /// The 148 classes core markup emits with no rule anywhere in the library's stylesheets —
     /// the 2.8.26 inventory held 148 and <c>tm-dropdown-wrapper</c> left it in 18.2, when the
     /// overlay migration gave it a real <c>position: relative</c> rule in _dropdown.css.
     /// Each remaining entry is named. None of these is a promise that they SHOULD stay unstyled —
@@ -133,6 +133,8 @@ public sealed class MarkupClassCoverageTests
         "tm-export-options-section",
         "tm-fab__item-label",
         "tm-file-manager__upload",
+        // TmFocusScope is a behavior wrapper: it traps focus and carries no chrome of its own.
+        "tm-focus-scope",
         "tm-file-versions__action--compare",
         "tm-file-versions__header",
         "tm-filter-chip-label",

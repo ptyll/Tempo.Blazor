@@ -24,7 +24,14 @@
       "type": "DrawerPosition",
       "isRequired": false,
       "default": "Right",
-      "description": "Side from which the drawer slides in."
+      "description": "Side from which the drawer slides in. Bottom renders the drawer as a sheet."
+    },
+    {
+      "name": "ShowHandle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether a bottom sheet shows its drag handle. The gesture follows the panel itself when the handle is hidden."
     },
     {
       "name": "Width",

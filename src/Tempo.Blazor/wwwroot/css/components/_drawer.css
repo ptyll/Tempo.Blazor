@@ -28,7 +28,11 @@
     left: 0;
 }
 
+/* The sheet module overwrites both from visualViewport. Declared here so a sheet has a defined
+   height before the module runs, and so the values count as component-local rather than tokens. */
 .tm-drawer--bottom {
+    --tm-sheet-viewport: 100;
+    --tm-sheet-keyboard: 0;
     top: 0;
     right: 0;
     bottom: 0;

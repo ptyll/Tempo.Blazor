@@ -17417,7 +17417,7 @@
               "type": "DrawerPosition",
               "isRequired": false,
               "default": "DrawerPosition.Right",
-              "description": "Side from which the drawer slides in."
+              "description": "Side from which the drawer slides in. Bottom renders the drawer as a sheet."
             },
             {
               "name": "ResolvedLayoutChanged",
@@ -17437,7 +17437,7 @@
               "type": "bool",
               "isRequired": false,
               "default": "true",
-              "description": "Whether a bottom sheet renders its drag handle. The handle is also the keyboard control for the snap points, so turning it off removes both. A side drawer never renders one."
+              "description": "Whether a bottom sheet shows its drag handle. The gesture follows the panel itself when the handle is hidden."
             },
             {
               "name": "ShowOverlay",

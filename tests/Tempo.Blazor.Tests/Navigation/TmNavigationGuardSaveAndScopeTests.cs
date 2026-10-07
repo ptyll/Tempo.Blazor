@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Navigation;
 using Tempo.Blazor.Tests.Localization;
 
@@ -111,7 +112,9 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
         cut.Find(".tm-dialog").Should().NotBeNull();
 
         // Escape in the three-choice variant maps to "stay" (like the two-choice variant), not save/leave.
-        await cut.InvokeAsync(() => cut.Find(".tm-dialog").KeyUp(new KeyboardEventArgs { Key = "Escape" }));
+        // The focus-trap module delivers Escape at the document level and calls back into the scope,
+        // so there is no key handler on the dialog element itself.
+        await cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         saved.Should().BeFalse();
         Nav.History.Should().HaveCount(1, "Escape must stay on the page and not re-issue navigation");
