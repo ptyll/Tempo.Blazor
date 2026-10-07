@@ -202,6 +202,16 @@
   overhung the viewport's right edge. The width write now happens before `offsetWidth` is
   measured, so align, shift and the viewport clamp all use the *rendered* width.
 
+- **TmNotionNotificationCenter's panel width rule now actually applies (N325).** It sat in the
+  component's scoped `.razor.css`, but the panel element is rendered by `TmOverlayPanel` and
+  carries that component's scope attribute — the scoped selector could never match, so the
+  panel silently fell back to the global `.tm-notification-bell__dropdown` (360px instead of
+  the declared `min(24rem, 100vw − 1.5rem)`). The rule moved to the NotionEditor global
+  stylesheet (`_notion-notifications.css`, the N197 pattern) as `width: 24rem;
+  max-width: calc(100vw − 1.5rem)`, and a new source sweep
+  (`OverlayPanelScopedCssTests`) fails closed on any scoped rule targeting a class passed to
+  `TmOverlayPanel` without `::deep`.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

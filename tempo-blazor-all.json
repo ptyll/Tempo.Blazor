@@ -54761,7 +54761,7 @@
           "category": "Notion Editor",
           "subcategory": "UI",
           "namespace": "Tempo.Blazor.Components.NotionEditor",
-          "description": "Notification bell button with an unread badge and a dropdown of notifications (with an unread filter and mark-all-read); clicking an item marks it read and navigates. Polls the notification service on an interval.",
+          "description": "Notification bell button with an unread badge and a dropdown of notifications (with an unread filter and mark-all-read); clicking an item marks it read and navigates. Polls the notification service on an interval. Its panel is a TmOverlayPanel — it carries the overlay's scope attribute, so the panel width rule lives in the global _notion-notifications.css (width 24rem, max-width 100vw−1.5rem); scoped rules on the panel class can never match.",
           "packageId": "Tempo.Blazor.NotionEditor",
           "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionNotificationCenter.razor",
           "documentationStatus": "merged",
@@ -57333,6 +57333,10 @@
         },
         {
           "path": "src/Tempo.Blazor.NotionEditor/wwwroot/css/components/_notion-dark.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.NotionEditor/wwwroot/css/components/_notion-notifications.css",
           "kind": "Css"
         },
         {
