@@ -2,7 +2,7 @@
   "kind": "Record",
   "category": "Layout",
   "namespace": "Tempo.Blazor.Abstractions.Layout",
-  "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Resolved is never Auto.",
+  "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Mode = requested mode (Auto when measuring); Resolved = rendered mode, never Auto; CssModifier = desktop|tablet|mobile.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutContext.cs",
   "documentationStatus": "authored",

@@ -12,7 +12,7 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 
-<TmLayoutObserver LayoutMode="LayoutMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false" Class="tm-dashboard-layout">
+<TmLayoutObserver LayoutMode="LayoutMode" InitialMode="InitialMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false" Class="tm-dashboard-layout">
 <LayoutContent Context="mode">
 <div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") tm-dashboard--@mode.CssModifier @Class"
      data-layout="@mode.CssModifier"
@@ -173,10 +173,11 @@
             }
             
             @* Widgets ───────────────────────────────────────────── *@
+            @{ var order = BuildOrder(); }
             @foreach (var widget in _widgets)
             {
                 <div class="tm-widget @GetWidgetClasses(widget)"
-                     style="@GetWidgetStyles(widget)"
+                     style="@GetWidgetStyles(widget, order)"
                      @key="widget.InstanceId"
                      data-instance-id="@widget.InstanceId">
                     
@@ -338,7 +339,12 @@
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
-    /// <summary>Raised when the rendered layout changes. The initial value is not a change.</summary>
+    /// <summary>
+    /// The layout rendered before the first measurement. Desktop unless the host says otherwise,
+    /// forwarded to the observer so an owner can start from tablet or mobile.
+    /// </summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
     /// <summary>
     /// Raised when the rendered layout changes. Never pair <see cref="LayoutMode"/> with this
     /// callback: it reports the resolved mode, and a two-way bind would pin that mode.
@@ -632,28 +638,25 @@
 
     private int Columns => _currentDashboard?.Grid.Columns ?? 12;
 
-    private string GetWidgetStyles(WidgetInstance widget)
+    private string GetWidgetStyles(WidgetInstance widget, Dictionary<string, int> order)
     {
         // Variables, not grid-column: an inline grid-column beats every @container rule, so the
         // container query in _dashboard.css is what turns these into 12, 2 or 1 column.
-        var order = OrderFor(widget);
-        // Tablet span: wider than half the desktop grid takes the whole row, wider than a quarter
-        // takes half, anything narrower takes a third. Two widgets then share a tablet row.
-        var spanMd = widget.Width > Columns / 2 ? 6 : widget.Width > Columns / 4 ? 3 : 2;
-        return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-span-md: {spanMd}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {order}; z-index: {widget.ZIndex};";
+        var position = order[widget.InstanceId];
+        // Tablet span: wider than half the desktop grid takes the whole row, a quarter or wider
+        // takes half, anything narrower takes a third. A width of three and four both take half, so
+        // the demo's second row fills the six tablet tracks instead of leaving a one-track hole.
+        var spanMd = widget.Width > Columns / 2 ? 6 : widget.Width >= Columns / 4 ? 3 : 2;
+        return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-span-md: {spanMd}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {position}; z-index: {widget.ZIndex};";
     }
 
-    /// <summary>1-based visual order, row then column, computed from the widgets as they are now.</summary>
-    private int OrderFor(WidgetInstance widget)
-    {
-        var index = _widgets
-            .OrderBy(item => item.Y)
-            .ThenBy(item => item.X)
-            .ThenBy(item => item.InstanceId, StringComparer.Ordinal)
-            .ToList()
-            .FindIndex(item => item.InstanceId == widget.InstanceId);
-        return index + 1;
-    }
+    /// <summary>1-based visual order, row then column, built once per render from the widgets as they are now.</summary>
+    private Dictionary<string, int> BuildOrder() => _widgets
+        .OrderBy(widget => widget.Y)
+        .ThenBy(widget => widget.X)
+        .ThenBy(widget => widget.InstanceId, StringComparer.Ordinal)
+        .Select((widget, index) => (widget.InstanceId, index + 1))
+        .ToDictionary(item => item.InstanceId, item => item.Item2, StringComparer.Ordinal);
     
     private string GetWidgetName(WidgetInstance widget)
     {

@@ -37,15 +37,7 @@ window.tempoDashboard = {
 
         dashboard._grid = grid;
 
-        // The grid publishes its own metrics as custom properties. Reading them keeps the drag
-        // math on the same columns, row height and gap the stylesheet renders.
-        const gridStyle = getComputedStyle(grid);
-        const columns = parseFloat(gridStyle.getPropertyValue('--grid-columns'));
-        const rowHeight = parseFloat(gridStyle.getPropertyValue('--row-height'));
-        const gap = parseFloat(gridStyle.getPropertyValue('--grid-gap'));
-        if (Number.isFinite(columns) && columns > 0) dashboard.gridColumns = columns;
-        if (Number.isFinite(rowHeight) && rowHeight > 0) dashboard.rowHeight = rowHeight;
-        if (Number.isFinite(gap) && gap >= 0) dashboard.gap = gap;
+        this.readGridMetrics(dashboard);
 
         // Store bound handlers for cleanup
         dashboard._onDragStart = (e) => this.onDragStart(e, dashboard);
@@ -74,6 +66,20 @@ window.tempoDashboard = {
         grid.addEventListener('dragleave', dashboard._onDragLeave);
     },
 
+    // The grid publishes its own metrics as custom properties. Reading them at the start of a drag
+    // or resize keeps the math on the columns, row height and gap the stylesheet renders now.
+    readGridMetrics: function (dashboard) {
+        const grid = dashboard._grid || dashboard.element.querySelector('.tm-dashboard-grid');
+        if (!grid) return;
+        const gridStyle = getComputedStyle(grid);
+        const columns = parseFloat(gridStyle.getPropertyValue('--grid-columns'));
+        const rowHeight = parseFloat(gridStyle.getPropertyValue('--row-height'));
+        const gap = parseFloat(gridStyle.getPropertyValue('--grid-gap'));
+        if (Number.isFinite(columns) && columns > 0) dashboard.gridColumns = columns;
+        if (Number.isFinite(rowHeight) && rowHeight > 0) dashboard.rowHeight = rowHeight;
+        if (Number.isFinite(gap) && gap >= 0) dashboard.gap = gap;
+    },
+
     onDragStart: function (e, dashboard) {
         const widget = e.target.closest('.tm-widget');
         if (!widget) return;
@@ -84,6 +90,7 @@ window.tempoDashboard = {
             return;
         }
 
+        this.readGridMetrics(dashboard);
         dashboard.isDragging = true;
         dashboard.draggedWidget = widget;
         dashboard.dragStartX = e.clientX;
@@ -165,6 +172,7 @@ window.tempoDashboard = {
         e.preventDefault();
         e.stopPropagation();
 
+        this.readGridMetrics(dashboard);
         dashboard.isResizing = true;
         dashboard.resizeWidget = widget;
         dashboard.resizeDirection = this.getResizeDirection(handle);

@@ -3,7 +3,8 @@ namespace Tempo.Blazor.Abstractions.Layout;
 /// <summary>
 /// Resolves which layout a component renders. The order is fixed so a host, an overlay and a test
 /// all reach the same answer: an explicit mode, then a forced ancestor, then this component's own
-/// measurement, then the initial mode.
+/// measurement, then an Auto ancestor's resolved mode, then the initial mode. An overlay measures
+/// nothing, so it passes the viewport-scope context and a null measurement.
 /// </summary>
 public static class TmLayout
 {

@@ -24,8 +24,9 @@
 
   The dashboard root is no longer the outermost element. `TmDashboard` now renders inside a
   `TmLayoutObserver`, so a selector that assumed `.tm-dashboard` was the component root must
-  step through `.tm-layout.tm-dashboard-layout` first. That wrapper resets `container-type` so
-  the grid's own `container-name: tm-dashboard` stays the one the queries match.
+  step through `.tm-layout.tm-dashboard-layout` first. That wrapper is `IsContainer="false"`, so it
+  carries `tm-layout--no-container` and the grid's own `container-name: tm-dashboard` stays the one
+  the queries match.
 
 - **`.tm-hide-mobile` hides below 768px and `.tm-hide-desktop` hides from 768px up.** Both used to
   be off by a pixel (`max-width: 768px` hides 768, `min-width: 769px` hides from 769), so 768px was
@@ -47,15 +48,18 @@
   the lg height. A coarse pointer still grows it to `--tm-touch-target`.
 
 - **Safe-area helpers add to padding instead of replacing it.** `.tm-safe-area-bottom` and
-  `.tm-safe-area-top` use `calc(var(--tm-space-2) + env(safe-area-inset-*, 0px))`.
-  The inset is zero unless the host page sets `viewport-fit=cover`.
+  `.tm-safe-area-top` use `calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-*, 0px))`.
+  Set `--tm-safe-area-base` to the component's own padding. The inset is zero unless the host page
+  sets `viewport-fit=cover`.
 
 - **`TmLayoutObserver.LayoutModeChanged` is now `ResolvedLayoutChanged`.** The callback reports the
   resolved mode, so pairing it with `LayoutMode` in a two-way bind would pin that mode. `TmDashboard`
   renames its callback the same way. An owner that must branch its own markup uses the new
   `LayoutContent` (`RenderFragment<TmLayoutContext>`) instead of keeping a copy of the mode; setting
-  both `ChildContent` and `LayoutContent` throws. `IsViewportScope` also cascades the context under
-  `TmLayoutScopes.Viewport` for overlays positioned against the viewport. The no-container modifier
+  both `ChildContent` and `LayoutContent` throws. `TmDashboard` also forwards `InitialMode`.
+  `IsViewportScope` also cascades the context under `TmLayoutScopes.Viewport`, which a surface
+  positioned against the viewport reads; an in-container surface reads the unnamed context. The
+  no-container modifier
   is `tm-layout--no-container` (it was `tm-layout--shrink`).
 
 - **`TmLayoutObserver` gains `IsContainer` and `InitialMode`.** `IsContainer` defaults to true;

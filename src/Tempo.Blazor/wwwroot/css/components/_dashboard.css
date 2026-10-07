@@ -53,8 +53,15 @@
   padding: var(--tm-space-3);
 }
 
-.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar {
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-left,
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-right {
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar-right {
+  flex-basis: 100%;
 }
 
 .tm-dashboard-edit-badge {

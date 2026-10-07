@@ -5343,7 +5343,6 @@
   "TmResponsiveDemo_Intro": "The same dashboard in four containers: 80rem, 58rem, 50rem and a 24rem column. Resize the browser, or force the wide container's layout below — the grid follows its container, not the browser window.",
   "TmResponsiveDemo_ForcedLayout": "Forced layout",
   "TmResponsiveDemo_ForceLabel": "Force the wide container's layout:",
-  "TmResponsiveDemo_Resolved": "Current layout: {0}",
   "TmResponsiveDemo_WideHost": "Wide container",
   "TmResponsiveDemo_MediumHost": "Medium container",
   "TmResponsiveDemo_CompactHost": "Compact container",

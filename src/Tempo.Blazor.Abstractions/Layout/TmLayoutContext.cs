@@ -14,11 +14,7 @@ public sealed record TmLayoutContext(TmLayoutMode Mode, TmLayoutMode Resolved)
 
     /// <summary>A resolved layout is desktop, tablet or mobile. Auto means "not resolved yet".</summary>
     /// <exception cref="ArgumentException">Thrown when the value is <see cref="TmLayoutMode.Auto"/>, including through a <c>with</c> expression.</exception>
-    public TmLayoutMode Resolved
-    {
-        get => _resolved;
-        init => _resolved = Valid(value);
-    }
+    public TmLayoutMode Resolved { get => _resolved; init => _resolved = Valid(value); }
 
     private static TmLayoutMode Valid(TmLayoutMode value) => value == TmLayoutMode.Auto
         ? throw new ArgumentException("A resolved layout is desktop, tablet or mobile.", nameof(value))

@@ -98,8 +98,9 @@
     public TmLayoutMode Resolved => Context.Resolved;
 
     /// <summary>
-    /// The cascaded context, reused until the mode or the resolved layout changes.
-    /// CascadingValue compares records by value, so instance identity does not decide who re-renders.
+    /// The cascaded context. CascadingValue treats any record as possibly changed
+    /// (ChangeDetection.MayHaveChanged), so every subscriber is notified whenever the observer
+    /// re-renders; the cache only keeps one instance per render.
     /// </summary>
     private TmLayoutContext Context
     {

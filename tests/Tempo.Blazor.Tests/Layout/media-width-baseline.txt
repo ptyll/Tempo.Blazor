@@ -1,7 +1,11 @@
 # @media width debt in authored wwwroot CSS. An entry is debt when its condition uses
 # min-width/max-width instead of range syntax, or a width outside TmBreakpoints.
-# The list may only shrink: a new entry and a stale entry both fail the test.
+# One line per occurrence, so two identical conditions count twice. The list may only shrink.
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 1024
+src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
+src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
+src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
+src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.Demo/wwwroot/css/app.css | 768
 src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css | 480
 src/Tempo.Blazor.DiagramEditor/wwwroot/css/components/_diagram-editor.css | 640

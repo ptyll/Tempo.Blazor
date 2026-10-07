@@ -333,7 +333,7 @@ public class TmDashboardTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Dashboard_UnderMeasuredMobileAncestor_RendersMobile()
+    public async Task Dashboard_UnderMeasuredMobileAncestor_RendersMobile()
     {
         var provider = CreateMockProvider();
         var registry = CreateMockRegistry();
@@ -347,7 +347,7 @@ public class TmDashboardTests : LocalizationTestBase
             }));
 
         var host = Render<MeasuredMobileHost>();
-        host.FindComponent<TmLayoutObserver>().InvokeAsync(async () =>
+        await host.FindComponent<TmLayoutObserver>().InvokeAsync(async () =>
             await host.FindComponent<TmLayoutObserver>().Instance.OnLayoutModeChanged("mobile"));
 
         host.Find(".tm-dashboard").GetAttribute("data-layout").Should().Be("mobile",
@@ -378,7 +378,7 @@ public class TmDashboardTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Dashboard_Order_UpdatesAfterAMove()
+    public async Task Dashboard_Order_UpdatesAfterAMove()
     {
         var provider = CreateMockProvider();
         var registry = CreateMockRegistry();
@@ -398,7 +398,7 @@ public class TmDashboardTests : LocalizationTestBase
         var cut = Render<TmDashboard>(parameters => parameters.Add(p => p.DashboardId, "d1"));
         cut.Find("[data-instance-id='first']").GetAttribute("style").Should().Contain("--tm-w-order: 1");
 
-        cut.InvokeAsync(() => cut.Instance.OnGridPositionChanged("first", 8, 0));
+        await cut.InvokeAsync(() => cut.Instance.OnGridPositionChanged("first", 8, 0));
 
         cut.Find("[data-instance-id='first']").GetAttribute("style").Should().Contain("--tm-w-order: 2",
             "a move changes the visual order, so the dictionary computed at the last parameter set is stale");

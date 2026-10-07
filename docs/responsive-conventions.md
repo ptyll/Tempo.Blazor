@@ -23,8 +23,9 @@ reads the stylesheets to prove they match.
 - **Tablet** — from 640px up to, but not including, 1024px
 - **Desktop** — 1024px and above
 
-A new `@media` or `@container` condition uses one of these four widths. `TmBreakpointsTests`
-fails when `breakpoints.css` or `_dashboard.css` uses another.
+A new `@media` or `@container` condition uses one of these four widths. `TmBreakpointsTests` scans
+every `src/**/wwwroot/**/*.css` for `@container` widths; `@media` widths are held by
+`media-width-baseline.txt`, which is shrink-only and counts each occurrence.
 
 Conditions are half-open, identical to `TmBreakpoints.Classify`: `@media (width < 768px)` and
 `@media (width >= 768px)`, never `max-width` or `min-width`. The boundary belongs to exactly one
@@ -72,29 +73,29 @@ pane, swap a dialog for a sheet) uses the mode, because a container query cannot
 ```razor
 <TmLayoutObserver LayoutMode="LayoutMode" ResolvedLayoutChanged="OnLayoutChanged">
     <LayoutContent Context="layout">
-        <MyPane Layout="layout" />
+        @if (layout.IsMobile)
+        {
+            <Sheet />
+        }
+        else
+        {
+            <Pane />
+        }
     </LayoutContent>
 </TmLayoutObserver>
 ```
 
+The owner branches on the `layout` context directly. Passing it as a parameter to a component that
+only declares `[CascadingParameter]` throws. A child that should read the cascade goes under
+`ChildContent` instead, where the context reaches it:
+
 ```razor
-@* MyPane.razor *@
-@if (Layout?.IsMobile == true)
-{
-    <Sheet />
-}
-else
-{
-    <Pane />
-}
-
-@code {
-    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
-}
+<TmLayoutObserver>
+    <ChildContent>
+        <MyPane />
+    </ChildContent>
+</TmLayoutObserver>
 ```
-
-`MyPane` reads the cascaded `TmLayoutContext`. An icon-only button is
-`<TmButton Class="tm-btn-icon" />`: the size modifier drives the square.
 
 Resolution order, in `TmLayout.Resolve`: an explicit (non-Auto) parameter, then a forced ancestor
 (a cascaded context whose `Mode` is not Auto), then this component's own measurement, then the
@@ -105,10 +106,6 @@ does not import the observer.
 The pre-measure mode — static SSR, prerender, and the first frame — is `InitialMode`, which
 defaults to Desktop. Desktop markup must degrade acceptably through the `data-layout` CSS, because
 that frame has no measurement yet.
-
-An overlay, sheet or dropdown must not measure its own root. It resolves from the trigger's
-cascaded context, and falls back to an app-level `<TmLayoutObserver>` in the host layout (the
-viewport) when the trigger cascaded nothing.
 
 - `LayoutMode="Auto"` measures the component root with `layout-observer.js` (`ResizeObserver`) and
   calls .NET only when the resolved mode changes. The script never writes `data-layout`; Blazor does.
@@ -121,10 +118,26 @@ viewport) when the trigger cascaded nothing.
   Never pair `LayoutMode` with `ResolvedLayoutChanged`: the callback reports the resolved mode, and a
   two-way bind would pin that mode. An owner that must branch its own markup uses `LayoutContent`,
   which receives the context; it does not keep a copy of the mode.
-- An app-level `<TmLayoutObserver IsViewportScope="true">` also cascades its context under
-  `TmLayoutScopes.Viewport`. Anything positioned against the viewport (a modal, a dialog, a bottom
-  sheet, an action bar) resolves `explicit parameter > that viewport context > InitialMode`. The
-  trigger's own container only sizes inline content, such as a popover's width.
+- What a surface resolves from depends on what it is positioned against.
+  - Positioned against the viewport — a modal, a dialog, a modal bottom sheet, a dropdown or popover
+    presented as a sheet, an action bar with `Placement=FixedViewport` — resolves
+    `explicit parameter > the TmLayoutScopes.Viewport context > InitialMode`.
+  - Positioned against its container — a `StickyContainer` or `Inline` action bar, a non-modal sheet
+    inside a container, a `TmSidePanel` choosing docked or sheet, a popover's width, a menu's density
+    — resolves from the nearest unnamed context. The popover-versus-sheet choice follows the
+    viewport; the popover's size follows the trigger's container.
+  - Read the viewport context by name and pass it, not the container context:
+
+    ```razor
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    var mode = TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode);
+    ```
+
+  - With no viewport scope, an Auto overlay renders `InitialMode` (Desktop). A host must place an
+    app-level `<TmLayoutObserver IsViewportScope="true">` as the outermost full-viewport layout
+    element, wrapping the sidebar too. Whether hosts must do this, or the library grows a built-in
+    viewport fallback, is F2's decision; the F1 API does not change.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid
@@ -147,8 +160,8 @@ only. The placement variables (`--tm-w-x`, `--tm-w-span`, `--tm-w-span-md`, `--t
   hover. `.tm-reveal-on-hover` does this and stays visible under `:focus-within` and
   `:focus-visible`, so keyboard users reach it too. On `(hover: none)` the action is always
   visible — a touch screen has no hover to reveal it.
-- `.tm-reveal-host` is the container for a `.tm-reveal-on-hover` action. The action stays hidden
-  until hover or focus on a fine pointer, and is always visible on `(hover: none)`.
+- `.tm-reveal-host` is the hover and focus-within scope for a `.tm-reveal-on-hover` action: the
+  action reveals when the pointer or focus is anywhere inside the host, not only on the action.
 - `.tm-safe-area-bottom` and `.tm-safe-area-top` add `env(safe-area-inset-*)` on top of
   `--tm-safe-area-base` (which falls back to `--tm-space-2`), for bars and sheets that sit under the
   home indicator or the notch. The inset is zero unless the host page sets `viewport-fit=cover`; set
@@ -167,8 +180,13 @@ Anything these utilities animate (the reveal, the dashboard handles) drops its t
 2. Write `@container` and `@media` rules at 640, 768, 1024 or 1280 only, in range syntax. A width
    outside that set, or `min-width`/`max-width`, is debt tracked by `media-width-baseline.txt`,
    which may only shrink.
-3. An owner reads its own resolved mode only through `LayoutContent`. Never derive state from
-   `ResolvedLayoutChanged`: the callback reports the resolved mode, and a two-way bind would pin it.
-4. Anything positioned against the viewport resolves from the `TmLayoutScopes.Viewport` cascade, not
-   from the trigger's container. Add the coarse-pointer minimum and the `(hover: none)` reveal to
-   every hover-only action.
+3. An owner exposes and forwards `LayoutMode`, `ResolvedLayoutChanged` and `InitialMode`. Its markup
+   reads the resolved mode only through `LayoutContent`. A `ResolvedLayoutChanged` handler may react
+   to a transition — restore focus, close a pane — but must not keep a copy of the mode as something
+   it renders from. Never pair `LayoutMode` with `ResolvedLayoutChanged`: the callback reports the
+   resolved mode, and a two-way bind would pin it.
+4. Resolve from what the surface is positioned against: the `TmLayoutScopes.Viewport` cascade for a
+   viewport surface, the nearest unnamed context for an in-container one. A `[CascadingParameter]
+   TmLayoutContext` subscriber re-renders on every owner render; an expensive leaf takes `IsMobile`
+   as a value parameter or overrides `ShouldRender`. Add the coarse-pointer minimum and the
+   `(hover: none)` reveal to every hover-only action.

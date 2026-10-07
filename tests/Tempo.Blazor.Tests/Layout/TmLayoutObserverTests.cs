@@ -149,7 +149,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     }
 
     [Fact]
-    public void LayoutModeChanged_FiresWhenTheResolvedModeChanges()
+    public void ResolvedLayoutChanged_FiresWhenTheResolvedModeChanges()
     {
         TmLayoutMode? reported = null;
         var cut = Render<TmLayoutObserver>(parameters => parameters
