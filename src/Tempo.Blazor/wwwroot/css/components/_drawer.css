@@ -211,8 +211,8 @@
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-[data-theme="dark"] .tm-drawer:not(.tm-drawer--bottom) .tm-drawer__panel,
-.tm-dark .tm-drawer:not(.tm-drawer--bottom) .tm-drawer__panel {
+[data-theme="dark"] .tm-drawer__panel,
+.tm-dark .tm-drawer__panel {
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
 }
 

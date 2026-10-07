@@ -167,7 +167,9 @@ public sealed class BottomSheetE2ETests : WasmTestBase
         Assert.IsNotNull(rootBox);
         Assert.AreEqual(rootBox.Y + rootBox.Height, box.Y + box.Height, 2,
             "a wide touch viewport still anchors the sheet to the bottom of its root: " + wideDiag);
-        Assert.AreEqual(1024, box.Width, 2);
+        // A desktop-width sheet is a panel, not a full-bleed page: 48rem, centered.
+        Assert.AreEqual(768, box.Width, 2, "a desktop sheet caps at 48rem");
+        Assert.AreEqual(rootBox.X + (rootBox.Width - box.Width) / 2, box.X, 2, "the desktop sheet is centered");
 
         await SaveSheetScreenshotAsync(page, "sheet-1024-touch");
     }

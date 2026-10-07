@@ -1,5 +1,5 @@
 {
-  "count": 5871,
+  "count": 5870,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2199,7 +2199,6 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-data-table td.tm-col-pinned-left { box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18); }": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-data-table td.tm-col-pinned-right { box-shadow: -2px 0 3px -2px rgba(0, 0, 0, 0.18); }": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|background: color-mix(in srgb, var(--tm-color-primary, #3b82f6) 5%, transparent);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|background: rgba(0, 0, 0, 0.5);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|background: rgba(255, 255, 255, 0.25);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|background: rgba(255, 255, 255, 0.4);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|background: var(--tm-bg-surface-secondary, #e5e7eb);": 1,
