@@ -34,7 +34,16 @@ function element(parent = null) {
     return el;
 }
 
-function installDom(body) {
+function classList(initial = []) {
+    const classes = new Set(initial);
+    return {
+        contains: name => classes.has(name),
+        add: name => classes.add(name),
+        remove: name => classes.delete(name),
+    };
+}
+
+function installDom(body, documentElement = null) {
     body.children = body.children ?? [];
     // A list per type: nested traps each register their own listener, and the real document keeps
     // all of them.
@@ -54,6 +63,7 @@ function installDom(body) {
         dispatch(type, event) {
             for (const fn of documentListeners.get(type) ?? []) fn(event);
         },
+        documentElement: documentElement ?? { classList: classList() },
     };
 }
 
@@ -197,6 +207,88 @@ test('deactivation resolves a restore target by id when the element reference is
     deactivate('scope');
 
     assert.equal(canvas.focusCalls, 1, 'the id recorded on the root must win over a disconnected reference');
+});
+
+test('a backdrop rendered as a sibling of the trap root stays clickable', () => {
+    // TmDrawer renders .tm-drawer__overlay as a sibling of the TmFocusScope root. The walk that
+    // inerts the page must not inert a backdrop that belongs to the overlay, or a click on it never
+    // reaches the close handler.
+    const body = element();
+    const app = element(body);
+    const page = element(app);
+    const backdrop = element(app);
+    backdrop.dataset = { tmBackdrop: '' };
+    const scope = element(app);
+    installDom(body);
+
+    activate(scope, 'drawer', null, false, null, true);
+
+    assert.equal(backdrop.hasAttribute('inert'), false, 'the overlay backdrop must stay clickable');
+    assert.equal(page.hasAttribute('inert'), true, 'the page behind the overlay is still inert');
+});
+
+test('a nested dialog restores the outer drawer and releases the scroll lock only once', () => {
+    // The inner trap walks up through the drawer and inerts the drawer's own content. Closing it
+    // must hand the page back to the outer trap, and two modal traps must not leak html.tm-scroll-lock.
+    const root = { classList: classList() };
+    const body = element();
+    const app = element(body);
+    const page = element(app);
+    const drawer = element(app);
+    const header = element(drawer);
+    const drawerBody = element(drawer);
+    const drawerText = element(drawerBody);
+    const overlay = element(drawerBody);
+    const dialog = element(overlay);
+    const opener = element(drawer);
+    opener.focus = () => { opener.focusCalls++; };
+    installDom(body, root);
+    document.activeElement = opener;
+
+    activate(drawer, 'drawer', null, false, null, true);
+    activate(dialog, 'dialog', null, false, null, true);
+    assert.equal(root.classList.contains('tm-scroll-lock'), true);
+
+    deactivate('dialog');
+
+    assert.equal(header.hasAttribute('inert'), false, 'the outer drawer is usable after the dialog closes');
+    assert.equal(drawerText.hasAttribute('inert'), false);
+    assert.equal(page.hasAttribute('inert'), true, 'the page stays inert while the drawer is still open');
+    assert.equal(root.classList.contains('tm-scroll-lock'), true, 'one modal is still open');
+    assert.equal(opener.focusCalls, 1, 'focus returns to the opener inside the outer trap');
+
+    deactivate('drawer');
+    assert.equal(page.hasAttribute('inert'), false);
+    assert.equal(root.classList.contains('tm-scroll-lock'), false, 'the last modal releases the lock');
+});
+
+test('a sibling dialog does not leave the outer drawer inert', () => {
+    const body = element();
+    const app = element(body);
+    const drawer = element(app);
+    const overlay = element(app);
+    const dialog = element(overlay);
+    installDom(body);
+
+    activate(drawer, 'drawer', null, false, null, true);
+    activate(dialog, 'dialog', null, false, null, true);
+    deactivate('dialog');
+
+    assert.equal(drawer.hasAttribute('inert'), false, 'closing the topmost trap re-inerts for the one that remains');
+});
+
+test('an element that was already inert is not cleared by a trap that did not set it', () => {
+    const body = element();
+    const app = element(body);
+    const hostInert = element(app);
+    hostInert.toggleAttribute('inert', true);
+    const scope = element(app);
+    installDom(body);
+
+    activate(scope, 'sheet', null, false, null, true);
+    deactivate('sheet');
+
+    assert.equal(hostInert.hasAttribute('inert'), true, 'a host-owned inert survives the trap');
 });
 
 test('deactivation falls back when the restore target is disconnected and has no id', () => {
