@@ -1,13 +1,13 @@
 .tm-npsd-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 10030;
+    z-index: calc(var(--tm-z-modal, 1040) - 1);
     background: color-mix(in srgb, var(--tm-bg-overlay) 76%, transparent);
 }
 
 .tm-npsd {
     position: fixed;
-    z-index: 10031;
+    z-index: var(--tm-z-modal, 1040);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);

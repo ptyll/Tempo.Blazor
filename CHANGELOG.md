@@ -236,6 +236,17 @@
   to a present element while open, and fails closed on unnamed sites — including sites it cannot
   render (`unmeasurable:`).
 
+- **All NotionEditor floating surfaces now ride the `--tm-z-*` token bands (CF10n).** The
+  z-band sweep in `TmNotionFloatingZBandTests` used to cover only `UI/**/*.razor.css`; widened
+  to the whole `Components/NotionEditor` tree it exposed bare band-level levels elsewhere —
+  Share/Restrictions dialogs (10030/10020), db record detail and template editor and
+  import/export overlays (1200/1210), page-tree and database context menus (1000/299-300),
+  page settings menu (9999) and the three TempoBlocks edit modals (1000). Dialogs and
+  full-screen take-overs now sit on `var(--tm-z-modal)` (backdrops `calc(... - 1)`), anchored
+  and context menus on `var(--tm-z-dropdown)`/`var(--tm-z-popover)`, and two in-flow overlays
+  that only needed local stacking dropped under 100. Any future bare `z-index: NNN` or
+  `+ 9000`-style arithmetic escape anywhere in the NotionEditor fails the sweep.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

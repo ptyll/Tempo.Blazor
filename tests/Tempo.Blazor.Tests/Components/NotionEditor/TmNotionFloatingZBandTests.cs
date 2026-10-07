@@ -42,17 +42,21 @@ public sealed class TmNotionFloatingZBandTests
         new(@"/\*.*?\*/", RegexOptions.Compiled | RegexOptions.Singleline, RegexTimeout);
 
     /// <summary>
-    /// Every <c>UI/*.razor.css</c> must declare z-index through tokens — a floating surface
-    /// with a bare band-level number, or an offset that escapes its band, is a red build.
+    /// Every <c>Components/NotionEditor/**/*.razor.css</c> must declare z-index through tokens —
+    /// a floating surface with a bare band-level number, or an offset that escapes its band, is
+    /// a red build. CF10n: the sweep used to stop at <c>UI/</c>, which let five surfaces outside
+    /// it (Share/Restrictions dialogs, DbRecord detail, page-tree context menu, TempoBlocks edit
+    /// modals) keep bare band levels.
     /// </summary>
     [Fact]
-    public void NoUiSurfaceDeclaresABareBandLevel()
+    public void NoNotionSurfaceDeclaresABareBandLevel()
     {
-        var uiDir = Path.Combine(
+        var notionDir = Path.Combine(
             FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
-            "Components", "NotionEditor", "UI");
+            "Components", "NotionEditor");
 
-        var stylesheets = Directory.EnumerateFiles(uiDir, "*.razor.css").ToList();
+        var stylesheets = Directory.EnumerateFiles(
+            notionDir, "*.razor.css", SearchOption.AllDirectories).ToList();
         stylesheets.Should().NotBeEmpty(
             "the z-band sweep must read a real stylesheet population — an empty UI/ "
             + "directory (moved folder, renamed pattern) would pass vacuously");
@@ -71,7 +75,7 @@ public sealed class TmNotionFloatingZBandTests
             "a floating surface's z-index goes through --tm-z-* tokens (popover for anchored "
             + "surfaces, modal for dialogs, overlay for take-overs) — never a bare band-level "
             + "number or a +9000-style escape (N191 class). In-flow layering under 100 is not "
-            + "a band claim and stays numeric. Porušení: {0}",
+            + "a band claim and stays numeric. Findings: {0}",
             string.Join(" | ", offenders));
     }
 
