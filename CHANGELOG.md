@@ -418,6 +418,19 @@
   `ReleaseGateFilterTests.EveryPublishTestStep_SetsTempoRequireFeed` (step-, job-
   and workflow-level env reach) plus three `DecideSkip` unit cells.
 
+- **Release evidence: `total` counts distinct test names, and duplicate keys
+  refuse (CF15).** The counting convention is now written into
+  `eng/verify-release-evidence.sh`'s header and `docs/e2e-test-lanes.md`:
+  `total`/`passed`/`failed`/`skipped` count DISTINCT test names in the TRX —
+  data-row instances sharing a name count once — not the number of `testId`
+  elements the file happens to carry, so the consistency sum compares like
+  with like (CF15a). The verifier rejects a second occurrence of any required
+  flat-JSON key rather than trusting that two copies of the number agree
+  (CF15b). And the lanes doc now records that `hostRestarts: 0` is vacuous
+  under `TM_E2E_SELF_HOST=false` — the counter only measures hosts the suite
+  itself started, so external-host evidence carries the watch-log requirement
+  instead (CF15c).
+
 - **Release evidence: eight fail-closed holes in the gate are closed (CF19).**
   `eng/verify-release-evidence.sh` now diffs with `--no-renames`, so a
   `git mv src/X docs/X` can no longer read as a prose-only change (CF19a);
@@ -488,6 +501,42 @@ rather than retro-edited into the released 2.9.0 section.
   component parameters — `Placement`, `Align`, `Offset`, `ViewportMargin`,
   `MatchAnchorWidth`, `ConstrainHeight` — not through host CSS targeting the
   panel's box.
+
+### Release checklist
+
+Every implementation step of the 2.9.1 development line, mapped to the commit
+that landed it. Steps whose deliverable is a measurement or a ledger row rather
+than a code change name the evidence instead of a hash.
+
+| Step | Item | Commit |
+|------|------|--------|
+| announce | `2.9.1 (unreleased)` announced across the packable set | `7d7823ae` |
+| 16.1 | N318 — `ConstrainHeight` cap grows back with the room | `4af89a0c` |
+| 16.2 | N319 — menus close before invoking the item handler | `c2b2dcf6` |
+| 16.3 | N324 — `MatchAnchorWidth` respects the panel `min-width` | `927e1e20` |
+| 16.4 | N325 — `TmNotionNotificationCenter` width rule applies | `e32ea9fa` |
+| 16.5 | N326 — `Role="dialog"` panels expose an accessible name | `844cb2b0` |
+| 16.6 | N329 — hidden panel releases focus | `d96ee971` |
+| 16.7 | CF03c — `.tm-overlay-panel` bundle rule inventory pinned | `2d25ff1b` |
+| 16.8 | CF10n — Notion floating surfaces on `--tm-z-*` bands | `c27b2399` |
+| 16.9 | CF18-7 — AI/mention menus in the top layer (+ the degenerate-viewport dismissal fix) | `a145bdf0` |
+| 17.1 | N320 — `TmValidatedField` green state tracks the field | `7e7246ac` |
+| 17.2 | N321 — `TmNavigationGuard` dialog inert during an in-flight save | `879c85e8` |
+| 17.3 | N323 — dismissal cancels the armed debounce | `aa5bc776` |
+| 17.4 | CF09b2 — track-changes toggle syncs the canvas engine flag | `54587a7e`, `e9729a1f` |
+| 17.5 | CF18-1/CF18-2 — submenu focus on Enter/Space and mouseleave | `282ac3ca` |
+| 17.6 | CF18-3 — `focusMenuInput` yields to deliberate focus moves | `e2b15022` |
+| 17.7 | CF18-4 — InteractiveAuto E2E proves the WASM renderer | `1eb10ceb` |
+| 17.8 | CF18-5a/CF18-5b — combobox/listbox ARIA wiring | `7fa79e52` |
+| 17.9 | CF18-6 — monotonic RenderTreeBuilder sequence numbers | `7dc81fa1` |
+| 17.10 | CF29 + ddfb:N273 — keystrokes buffered across the Enter split | `99870388` |
+| 17.11 | CF06e1 — undocumented-parameter ratchet | `88e9b003` |
+| 17.12 | CF06e2/F13 — `TmDataTable.razor.cs` file budget | verified unchanged at 2418 lines under the list frozen by `29172da2` |
+| 18.1 | N276 — `TEMPO_REQUIRE_FEED` fails the feed guard | `43d28201` |
+| 18.2 | CF15a/CF15b/CF15c — evidence totals, duplicate keys, vacuous restarts | `27975543` |
+| 18.3 | CF19a–h — eight fail-closed gate holes closed | `2eede79c` |
+| 18.4 | N327 — retroactive 2.9.0 erratum | `1dcf2c5f` |
+| 18.5 | N328 — same-commit JSON documentation guard | `c4471191` |
 
 ## 2.9.0 - 2026-09-27
 
