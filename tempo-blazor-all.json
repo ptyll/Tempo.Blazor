@@ -51072,7 +51072,7 @@
           "category": "Notion Editor",
           "subcategory": "Blocks",
           "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks",
-          "description": "Dropdown context menu for a single block — provides Delete, Duplicate, Turn into, Move to, Copy link, Comment, and Color actions.",
+          "description": "Dropdown context menu for a single block — provides Delete, Duplicate, Turn into, Move to, Copy link, Comment, and Color actions. Submenu activation follows the APG menu-button pattern: ArrowRight and keyboard/programmatic clicks (Detail == 0) land focus on the first submenu item, while pointer-driven open/close never steals or strands focus inside a submenu (mouseleave keeps a focused submenu open, a sibling mouseenter returns focus to the focused submenu's trigger first).",
           "packageId": "Tempo.Blazor.NotionEditor",
           "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TmNotionBlockContextMenu.razor",
           "documentationStatus": "merged",

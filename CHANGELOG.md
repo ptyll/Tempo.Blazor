@@ -309,6 +309,15 @@
   flag alongside `_trackChangesEnabled`, whether or not the host is mounted (a host mounting
   later boots with the same expression).
 
+- **`TmNotionBlockContextMenu` submenus no longer strand keyboard focus (CF18).** Enter/Space
+  on a submenu trigger is a native button click arriving with `MouseEventArgs.Detail == 0` —
+  it opened the panel but never set `_pendingSubFocus`, so focus stayed on the trigger while
+  ArrowRight did both (an APG asymmetry). The click path now detects `Detail == 0` and queues
+  the same first-item focus; pointer clicks (`Detail >= 1`) are untouched. Separately, each
+  `.tm-notion-ctx__sub` wrapper tracks `focusin`/`focusout`: `mouseleave` no longer unmounts a
+  submenu that still holds keyboard focus (focus fell to `<body>`), and a sibling's
+  `mouseenter` hands focus back to the focused submenu's trigger before the swap.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
