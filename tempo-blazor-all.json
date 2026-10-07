@@ -44217,7 +44217,7 @@
               "name": "TrackChangesEnabled",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether track changes starts enabled."
+              "description": "Whether track changes starts enabled. With the canvas engine the effective flag (this value, or forced on by SuggestOnly / provider-backed suggestions) is pushed to the engine via setTrackChangesEnabled only on real deltas — the toolbar toggle and the parameter pass share one applied-state, so each value reaches the engine exactly once."
             },
             {
               "name": "UseLocalComparisonFallback",
