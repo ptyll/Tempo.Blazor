@@ -12,9 +12,10 @@
 - **`TmDrawer` with `Position="Bottom"` is a sheet, and a non-modal drawer renders inside its
   container.** A bottom drawer anchors to the bottom edge, caps at 85% of the visible viewport,
   renders a drag handle and snaps between half and full height. A host that used a bottom drawer
-  as a full-height panel must set `SnapPoints` to `1` and `ShowHandle="false"`. `Modal="false"`
-  drops the overlay and positions the drawer absolutely inside its container, so the page behind
-  it stays usable; a modal drawer stays `position: fixed`.
+  as a full-height panel sets `SnapPoints` to `1` and `ShowHandle="false"`. `Modal="false"`
+  drops the overlay and positions the drawer absolutely inside a positioned container, so the page
+  behind it stays usable; a modal drawer stays `position: fixed`. Below 640px a side drawer's
+  `Width` is overridden to full width through `--tm-drawer-width`.
 
 - **A modal or dialog footer no longer stacks its buttons below 640px.** The old rule turned every
   footer into a `column-reverse` stack on a narrow viewport, which pushed the confirm action below
@@ -24,10 +25,19 @@
 - **`TmModal` and `TmDialog` present as a bottom sheet on a mobile viewport.** `MobilePresentation`
   defaults to `Auto`, which follows the viewport scope: a sheet below 640px, the centered dialog
   otherwise. A host that wants the centered dialog at every width sets
-  `MobilePresentation="Dialog"`. With no viewport scope the overlay renders its `InitialMode`
-  (desktop), so an app must place an app-level `<TmLayoutObserver IsViewportScope="true"
-  IsContainer="false">` as its outermost layout element. See
+  `MobilePresentation="Dialog"`. An app should place `<TmLayoutObserver IsViewportScope="true"
+  IsContainer="false">` as its outermost layout element. Without it, an open overlay measures its
+  own fixed root, so the sheet still appears, but the first frame can flash. See
   [docs/responsive-conventions.md](docs/responsive-conventions.md).
+
+- **`TmModal`, `TmDialog` and `TmDrawer` render a `TmFocusScope` root.** The dialog role, `tabindex`
+  and `data-testid` now sit on `div.tm-focus-scope`. Escape is a document keydown handled by the
+  topmost overlay only. A modal marks the page behind it `inert` and locks document scroll. A
+  drawer title id is unique per instance. The focus ring on a sheet handle paints the bar only.
+
+- **`TmViewManager` no longer renders `.tm-view-modal`.** The create/edit form is a `TmModal`: the
+  title and close button are the modal's, and Cancel/Create sit in its footer. Host CSS that
+  targeted `.tm-view-modal`, `.tm-view-modal-overlay` or `.tm-view-modal-footer` no longer matches.
 
 - **`TmDashboard` widget placement is no longer an inline `grid-column`.** A widget used to carry
   `style="grid-column: X / span W; grid-row: Y / span H"`. It now carries the placement as custom

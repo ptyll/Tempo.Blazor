@@ -31,9 +31,10 @@ the labelled-by wiring — is markup the scope renders.
 
 ## Who already uses it
 
-`TmModal`, `TmDialog`, `TmDrawer`, `TmCommandPalette` and `TmGanttImportDialog` delegate to the scope.
+`TmModal`, `TmDialog`, `TmDrawer`, `TmCommandPalette` and `TmGanttImportDialog` render a `TmFocusScope`.
 A host of those components changes nothing: Escape, the focus restore and the inert background behave
-as before.
+as before. The scope root is a `div.tm-focus-scope` with `tabindex="-1"` while active, so a test that
+looked for `role="dialog"` on the old element finds it on this root.
 
 ## Packages that keep their own trap
 

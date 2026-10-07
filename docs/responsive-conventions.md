@@ -135,23 +135,16 @@ that frame has no measurement yet.
     ```
 
   - A sheet caps at 85% of the visible viewport, so the content behind it stays a sliver and the
-    gesture reads as a sheet. The sheet module measures `visualViewport` and writes two unitless
-    custom properties on the sheet root: `--tm-sheet-viewport` (the visible height in pixels) and
-    `--tm-sheet-keyboard` (how many pixels the keyboard hides). The stylesheet turns them back into
-    pixels. The snap height is a fraction of the visible viewport, and the keyboard offset pads the
-    sheet root so the whole sheet lifts above the keyboard. Subtracting the offset from the height
-    instead collapses a half snap, and `100dvh` does not follow a faked `visualViewport`. The offset
-    is a custom property, never an inline height.
-  - With no viewport scope, an Auto overlay renders `InitialMode` (Desktop). The library ships no
-    built-in viewport fallback and does not observe the window itself (decision
-    `F2-VIEWPORT-HOST-REQUIREMENT`): a second observer would be a second source of truth next to the
-    host's scope. A host places an app-level `<TmLayoutObserver IsViewportScope="true"
-    IsContainer="false">` as the outermost full-viewport layout element, wrapping the sidebar too.
-    `IsContainer="false"` is mandatory. The default root sets `container-type: inline-size`, and a
-    containment context becomes the containing block for every `position: fixed` descendant, which
-    would pin a sheet or a dialog to the app shell instead of the viewport. Set `InitialMode` on that
-    scope when the first frame matters: a phone host that leaves the default renders Desktop until
-    the first measurement.
+    gesture reads as a sheet. The sheet module measures `visualViewport` and writes two lengths on
+    the sheet root: `--tm-sheet-viewport` (`${height}px`, default `100dvh`) and `--tm-sheet-keyboard`
+    (`${hidden}px`, default `0px`). The snap height is a fraction of that length, and the keyboard
+    length pads the sheet so it lifts above the keyboard. Both are lengths, so the sheet is usable
+    before the module runs. The offset is a custom property, never an inline height.
+  - A host should place an app-level `<TmLayoutObserver IsViewportScope="true" IsContainer="false">`
+    as the outermost full-viewport layout element (decision `F2-VIEWPORT-HOST-REQUIREMENT`: should,
+    not must). `IsContainer="false"` is mandatory on that scope. With no viewport scope, an open Auto
+    overlay measures its own fixed root, so mobile presentation still happens; the first frame can
+    flash the initial mode. Set `InitialMode` on the app scope when that first frame matters.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid

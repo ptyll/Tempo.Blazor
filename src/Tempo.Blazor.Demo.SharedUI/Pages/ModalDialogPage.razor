@@ -1,5 +1,6 @@
 @page "/modal-dialog"
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Buttons
 
 
@@ -107,6 +108,28 @@
     }
 </section>
 
+<!-- Sheet, footer and focus-scope examples -->
+<section class="demo-section" data-testid="sheet-examples">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Sheet, footer and focus</h2>
+    <div class="flex flex-wrap gap-3">
+        <TmButton OnClick="() => _showSheet = true" data-testid="open-sheet">Open sheet</TmButton>
+        <TmButton OnClick="() => _showStacked = true" Variant="ButtonVariant.Secondary" data-testid="open-stacked">Stacked footer</TmButton>
+        <TmButton OnClick="() => _showInlineDrawer = true" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer">Inline sheet</TmButton>
+    </div>
+    <div class="mt-4 p-6 border border-slate-200 dark:border-slate-700 rounded-lg" style="position: relative; min-height: 16rem;">
+        <button type="button" id="sheet-canvas" data-testid="sheet-canvas" class="tm-btn tm-btn-secondary">Canvas behind the sheet</button>
+        <TmDrawer IsOpen="_showInlineDrawer" IsOpenChanged="open => _showInlineDrawer = open" Position="DrawerPosition.Bottom" Modal="false" Title="Inline sheet">
+            <p>The canvas behind this sheet stays clickable.</p>
+        </TmDrawer>
+    </div>
+    <div class="mt-4">
+        <TmFocusScope Active="_scopeActive" InitialFocusTargetId="scope-input" RestoreFocusTargetId="scope-trigger" AriaLabel="Standalone focus scope">
+            <input id="scope-input" data-testid="scope-input" class="tm-input" />
+        </TmFocusScope>
+        <button type="button" id="scope-trigger" data-testid="scope-trigger" class="tm-btn tm-btn-ghost" @onclick="() => _scopeActive = !_scopeActive">Toggle focus scope</button>
+    </div>
+</section>
+
 <!-- Custom Modal Content -->
 <section class="demo-section">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Custom Modal Content</h2>
@@ -120,6 +143,9 @@
 <!-- ═══════════════════════════════════════════════════════════════
    MODALS & DIALOGS
    ═══════════════════════════════════════════════════════════════ -->
+
+<TmModal Show="_showSheet" OnClose="() => _showSheet = false" Title="Sheet" MobilePresentation="MobilePresentation.Sheet" FooterLayout="FooterLayout.Inline" ShowDefaultFooterButtons="true" />
+<TmModal Show="_showStacked" OnClose="() => _showStacked = false" Title="Stacked footer" FooterLayout="FooterLayout.Stacked" ShowDefaultFooterButtons="true" />
 
 <!-- Basic Modal -->
 <TmModal Show="_showBasicModal"
@@ -237,6 +263,10 @@
     
     // Custom Modal
     private bool _showCustomModal;
+    private bool _showSheet;
+    private bool _showStacked;
+    private bool _showInlineDrawer;
+    private bool _scopeActive;
     
     private void ShowAlert(DialogVariant variant)
     {

@@ -1,0 +1,45 @@
+{
+  "itemName": "TmSheetHandle",
+  "kind": "Component",
+  "category": "Feedback",
+  "description": "The shared sheet grabber. A drawer renders it as a slider; a modal or dialog renders it decorative so it stays out of the Tab order.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Feedback"
+  ],
+  "parameters": [
+    {
+      "name": "Decorative",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the handle is decorative. A decorative handle is not focusable and carries no label."
+    },
+    {
+      "name": "SnapCount",
+      "type": "int",
+      "isRequired": false,
+      "description": "How many snap points the sheet has."
+    },
+    {
+      "name": "SnapIndex",
+      "type": "int",
+      "isRequired": false,
+      "description": "The snap the sheet currently renders."
+    },
+    {
+      "name": "SnapIndexChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when the keyboard moves the slider to another snap."
+    },
+    {
+      "name": "OnDismiss",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when ArrowDown is pressed at the lowest snap."
+    }
+  ],
+  "cssClasses": [
+    "tm-sheet__handle",
+    "tm-sheet__handle-bar"
+  ]
+}

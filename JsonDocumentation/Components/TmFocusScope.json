@@ -45,6 +45,44 @@
       "description": "The id of the element that names the scope, wired to aria-labelledby."
     },
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An accessible name for the scope, wired to aria-label."
+    },
+    {
+      "name": "DialogRole",
+      "type": "string",
+      "isRequired": false,
+      "default": "dialog",
+      "description": "The dialog role. A dangerous confirm passes alertdialog."
+    },
+    {
+      "name": "InitialFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element that receives focus on activation. Null focuses the first focusable."
+    },
+    {
+      "name": "InitialFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element that receives focus on activation."
+    },
+    {
+      "name": "RestoreFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether deactivation restores focus."
+    },
+    {
+      "name": "OnDeactivated",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after the trap deactivates."
+    },
+    {
       "name": "CloseOnEscape",
       "type": "bool",
       "isRequired": false,

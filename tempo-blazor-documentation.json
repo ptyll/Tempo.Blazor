@@ -4452,7 +4452,7 @@
       "kind": "Enum",
       "category": "Components",
       "namespace": "Tempo.Blazor.Components.Layout",
-      "description": "Side from which the drawer slides in.",
+      "description": "Side from which the drawer slides in. Bottom anchors a sheet to the viewport edge.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Layout/DrawerPosition.cs",
       "documentationStatus": "merged"
@@ -9955,6 +9955,18 @@
           "description": "Raised when the rendered layout changes. The initial value is not a change."
         },
         {
+          "name": "RestoreFocusTarget",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "The element focus returns to when the dialog closes."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the restore target."
+        },
+        {
           "name": "Show",
           "type": "bool",
           "isRequired": false
@@ -10034,6 +10046,12 @@
           "description": "Whether the trap is active. An inactive scope renders its content without trapping."
         },
         {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An accessible name for the scope, wired to aria-label."
+        },
+        {
           "name": "AriaLabelledBy",
           "type": "string?",
           "isRequired": false,
@@ -10058,6 +10076,25 @@
           "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits."
         },
         {
+          "name": "DialogRole",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"dialog\"",
+          "description": "The dialog role. A dangerous confirm passes alertdialog."
+        },
+        {
+          "name": "InitialFocusTarget",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "The element that receives focus on activation. Null focuses the first focusable."
+        },
+        {
+          "name": "InitialFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element that receives focus on activation."
+        },
+        {
           "name": "Modal",
           "type": "bool",
           "isRequired": false,
@@ -10065,10 +10102,23 @@
           "description": "Whether the scope is modal. A non-modal scope reports aria-modal false and leaves the background usable."
         },
         {
+          "name": "OnDeactivated",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after the trap deactivates."
+        },
+        {
           "name": "OnEscape",
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised when Escape is pressed and CloseOnEscape is true."
+        },
+        {
+          "name": "RestoreFocus",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether deactivation restores focus."
         },
         {
           "name": "RestoreFocusTarget",
@@ -10152,6 +10202,12 @@
           "isRequired": false
         },
         {
+          "name": "InitialFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element that receives focus when the modal opens."
+        },
+        {
           "name": "InitialMode",
           "type": "TmLayoutMode",
           "isRequired": false,
@@ -10216,6 +10272,18 @@
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
           "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
+        },
+        {
+          "name": "RestoreFocusTarget",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "The element focus returns to when the modal closes."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the restore target."
         },
         {
           "name": "Show",
@@ -10530,6 +10598,55 @@
           "title": "Multi-segment bar",
           "code": "<TmProgressBar Segments=\"@(new List<ProgressSegment>\n{\n    new() { Value = 30, Color = \"#22c55e\", Label = \"Done\" },\n    new() { Value = 20, Color = \"#f59e0b\", Label = \"In Progress\" },\n    new() { Value = 10, Color = \"#ef4444\", Label = \"Blocked\" }\n})\" />"
         }
+      ]
+    },
+    {
+      "itemName": "TmSheetHandle",
+      "kind": "Component",
+      "category": "Feedback",
+      "namespace": "Tempo.Blazor.Components.Feedback",
+      "description": "The shared sheet grabber. A drawer renders it as a slider; a modal or dialog renders it decorative so it stays out of the Tab order.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Feedback/TmSheetHandle.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Feedback"
+      ],
+      "parameters": [
+        {
+          "name": "Decorative",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the handle is decorative. A decorative handle is not focusable and carries no label."
+        },
+        {
+          "name": "OnDismiss",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when ArrowDown is pressed at the lowest snap."
+        },
+        {
+          "name": "SnapCount",
+          "type": "int",
+          "isRequired": false,
+          "description": "How many snap points the sheet has."
+        },
+        {
+          "name": "SnapIndex",
+          "type": "int",
+          "isRequired": false,
+          "description": "The snap the sheet currently renders."
+        },
+        {
+          "name": "SnapIndexChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised when the keyboard moves the slider to another snap."
+        }
+      ],
+      "cssClasses": [
+        "tm-sheet__handle",
+        "tm-sheet__handle-bar"
       ]
     },
     {
@@ -17404,6 +17521,13 @@
           "description": "The layout the sheet renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
         },
         {
+          "name": "MaxHeight",
+          "type": "double",
+          "isRequired": false,
+          "default": "0.85",
+          "description": "The sheet cap as a fraction of the visible viewport, between 0 and 1."
+        },
+        {
           "name": "Modal",
           "type": "bool",
           "isRequired": false,
@@ -17422,6 +17546,18 @@
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
           "description": "Raised when the rendered layout changes. The initial value is not a change."
+        },
+        {
+          "name": "RestoreFocusTarget",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "The element focus returns to when the drawer closes."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the restore target."
         },
         {
           "name": "ShowCloseButton",
@@ -17445,11 +17581,23 @@
           "description": "Show a semi-transparent backdrop behind the drawer."
         },
         {
+          "name": "SnapIndex",
+          "type": "int",
+          "isRequired": false,
+          "description": "The snap the sheet renders. Two-way with SnapIndexChanged."
+        },
+        {
+          "name": "SnapIndexChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised when the rendered snap changes."
+        },
+        {
           "name": "SnapPoints",
           "type": "IReadOnlyList<double>",
           "isRequired": false,
           "default": "DefaultSnaps",
-          "description": "Fractions of the viewport height a bottom sheet snaps to, in ascending order. A sheet needs at least one."
+          "description": "Fractions of the viewport height a bottom sheet snaps to. Null or empty is content height under the max-height cap."
         },
         {
           "name": "SwipeToDismiss",
@@ -24840,6 +24988,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_sheet.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_sidebar-nav.css",
       "kind": "Css"
     },
@@ -25097,11 +25249,11 @@
     }
   ],
   "summary": {
-    "itemCount": 350,
-    "manualItemCount": 350,
-    "generatedItemCount": 342,
+    "itemCount": 351,
+    "manualItemCount": 351,
+    "generatedItemCount": 343,
     "generatedOnlyItemCount": 0,
-    "componentCount": 197,
+    "componentCount": 198,
     "publicApiTypeCount": 145
   }
 }

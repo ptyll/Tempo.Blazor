@@ -147,6 +147,18 @@
       "description": "Raised when the rendered layout changes. The initial value is not a change."
     },
     {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element focus returns to when the dialog closes."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the restore target."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false

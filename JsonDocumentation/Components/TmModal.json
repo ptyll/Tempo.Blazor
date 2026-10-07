@@ -172,6 +172,24 @@
       "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
     },
     {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element focus returns to when the modal closes."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the restore target."
+    },
+    {
+      "name": "InitialFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the element that receives focus when the modal opens."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false

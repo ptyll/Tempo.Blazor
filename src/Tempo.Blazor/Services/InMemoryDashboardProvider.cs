@@ -56,6 +56,16 @@ public class InMemoryDashboardProvider : IDashboardProvider
 
         _dashboards[defaultDashboard.Id] = defaultDashboard;
         _defaultDashboards["system"] = defaultDashboard.Id;
+
+        // A second, non-default dashboard so the delete confirmation can be reviewed.
+        _dashboards["operations"] = new DashboardConfig
+        {
+            Id = "operations",
+            Name = "Operations",
+            IsDefault = false,
+            CreatedBy = "system",
+            Grid = new GridConfig { Columns = 12, RowHeight = 60, Gap = 16 }
+        };
     }
 
     /// <summary>Retrieves all dashboards for a user or system dashboards.</summary>

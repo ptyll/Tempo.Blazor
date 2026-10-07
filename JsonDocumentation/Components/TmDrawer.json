@@ -104,7 +104,38 @@
       "type": "IReadOnlyList<double>",
       "isRequired": false,
       "default": "[0.5, 1.0]",
-      "description": "Fractions of the viewport height a bottom sheet snaps to, in ascending order. A sheet needs at least one."
+      "description": "Fractions of the viewport height a bottom sheet snaps to. Null or empty is content height under the max-height cap."
+    },
+    {
+      "name": "SnapIndex",
+      "type": "int",
+      "isRequired": false,
+      "description": "The snap the sheet renders. Two-way with SnapIndexChanged."
+    },
+    {
+      "name": "SnapIndexChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when the rendered snap changes."
+    },
+    {
+      "name": "MaxHeight",
+      "type": "double",
+      "isRequired": false,
+      "default": "0.85",
+      "description": "The sheet cap as a fraction of the visible viewport, between 0 and 1."
+    },
+    {
+      "name": "RestoreFocusTarget",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element focus returns to when the drawer closes."
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id of the restore target."
     },
     {
       "name": "SwipeToDismiss",

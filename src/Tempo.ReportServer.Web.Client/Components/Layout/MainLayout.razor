@@ -1,5 +1,9 @@
 @namespace Tempo.ReportServer.Web.Components
+@using Tempo.Blazor.Components.Layout
 @inherits LayoutComponentBase
 
-<RenderModeMarker />
-@Body
+@* The viewport scope lets an overlay present as a sheet without measuring itself. *@
+<TmLayoutObserver IsViewportScope="true" IsContainer="false">
+    <RenderModeMarker />
+    @Body
+</TmLayoutObserver>
