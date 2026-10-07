@@ -97,7 +97,12 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
     /// <summary>Image validation options used by upload and clipboard image flows.</summary>
     [Parameter] public DocumentImageValidationOptions ImageValidation { get; set; } = new();
 
-    /// <summary>Whether track changes starts enabled.</summary>
+    /// <summary>
+    /// Whether track changes starts enabled. With the canvas engine the effective flag
+    /// (this value, or forced on by SuggestOnly / provider-backed suggestions) is pushed to the
+    /// engine via <c>setTrackChangesEnabled</c> only on real deltas — the toolbar toggle and the
+    /// parameter pass share one applied-state, so each value reaches the engine exactly once.
+    /// </summary>
     [Parameter] public bool TrackChangesEnabled { get; set; }
 
     /// <summary>Whether provider-backed suggestions start enabled.</summary>
@@ -6614,6 +6619,11 @@ public partial class TmDocumentEditor : TmComponentBase, IDisposable, IAsyncDisp
         }
 
         _trackChangesEnabled = !_trackChangesEnabled;
+        // CF09b2: the toggle IS the applier of this value — leave _appliedCanvasEngineTrackChanges
+        // stale and the next OnParametersSetAsync reads the same flag as a "delta" and pushes it a
+        // second time. Update it regardless of whether the host is mounted (it boots with this
+        // value, so marking it applied is correct either way).
+        _appliedCanvasEngineTrackChanges = CanvasEngineTracksChanges;
         _revisionMessage = _trackChangesEnabled
             ? Loc["TmDocumentEditor_TrackChangesOn"]
             : Loc["TmDocumentEditor_TrackChangesOff"];

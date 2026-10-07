@@ -301,6 +301,14 @@
   `_showDropdown`. Closing now cancels `_debounceToken`, and the delayed blur-close cancels it
   too.
 
+- **Track-changes toggle no longer double-pushes the canvas engine (CF09b2).**
+  `ToggleTrackChanges` sent `setTrackChangesEnabled(CanvasEngineTracksChanges)` to the engine
+  but never updated `_appliedCanvasEngineTrackChanges` — the next `OnParametersSetAsync` read
+  the SAME value as a delta and pushed it again, so every user toggle cost two interop calls
+  (and any param-pass observer saw a phantom "change"). The toggle now records the applied
+  flag alongside `_trackChangesEnabled`, whether or not the host is mounted (a host mounting
+  later boots with the same expression).
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

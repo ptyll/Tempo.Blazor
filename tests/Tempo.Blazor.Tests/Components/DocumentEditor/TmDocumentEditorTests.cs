@@ -2722,6 +2722,48 @@ public class TmDocumentEditorTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task ToggleTrackChanges_ThenParameterPass_PushesSetTrackChangesEnabledOnce()
+    {
+        // CF09b2: ToggleTrackChanges pushed SetTrackChangesEnabledAsync(CanvasEngineTracksChanges)
+        // to the engine but never updated _appliedCanvasEngineTrackChanges — so the next
+        // OnParametersSetAsync saw the SAME value as a "delta" and pushed it a second time.
+        var provider = new InMemoryDocumentEditorProvider();
+        provider.SeedContractDocument("doc-1");
+        var module = SetupDocumentCanvasModule();
+
+        var cut = RenderDocumentEditor(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider));
+
+        await MarkCanvasReadyAsync(cut);
+
+        cut.Find("[data-testid='document-ribbon-tab-review']").Click();
+        var toggle = cut.Find("[data-testid='document-track-changes']");
+        toggle.Click();
+
+        // Count only enabled=true pushes — mount/ready legitimately re-asserts the boot-time
+        // false once (N192), which is not part of this defect.
+        static bool IsEnablePush(JSRuntimeInvocation invocation) =>
+            invocation.Identifier == "setTrackChangesEnabled"
+            && invocation.Arguments.Count >= 2
+            && Equals(invocation.Arguments[1], true);
+
+        cut.WaitForAssertion(() => module.Invocations.Count(IsEnablePush)
+            .Should().Be(1, "the toggle pushes the new effective flag to the engine once"));
+
+        // An unrelated parameter pass must not re-push: the applied flag already holds the value
+        // the toggle sent.
+        cut.Render(parameters =>
+            parameters.Add(p => p.DocumentId, "doc-1")
+                      .Add(p => p.Provider, provider));
+
+        module.Invocations.Count(IsEnablePush)
+            .Should().Be(1,
+                "the parameter pass re-asserts only real deltas — the toggle already applied this " +
+                "value, so a second push here means _appliedCanvasEngineTrackChanges was stale (CF09b2)");
+    }
+
+    [Fact]
     public async Task Collaboration_RemoteRevisionUpdateRefreshesPanelWithoutReplacingCanvasHost()
     {
         var provider = new InMemoryDocumentEditorProvider();
