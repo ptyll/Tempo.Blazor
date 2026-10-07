@@ -463,6 +463,21 @@
   one commit later in `ca00f94d`. Shallow clones fail as
   `unmeasurable:shallow-clone` under `TEMPO_REQUIRE_FULL_CLONE`.
 
+- **The Notion aggregate session can no longer deadlock on its own
+  overlapping saves.** `NotionEditorAggregateSession.ApplyAsync` cloned the
+  current snapshot per call, so two mutations that overlapped across a
+  network await both carried the same base concurrency token — the second
+  save returned 409, parked `_pendingMutation`, and every later mutation
+  was refused with `editor_conflict_pending` until manual resolution. The
+  deterministic symptom was `/wireframe` + Enter inserting nothing: the
+  blur-save and the conversion save raced, one lost, and the menu's
+  conversion was blocked by the self-inflicted conflict
+  (`DocLib2/DocLib4/Mcp4/DocLibShot2` E2E). `LoadAsync`, `ApplyAsync` and
+  `ReapplyAsync` now run one-at-a-time through `_mutationGate`, so queued
+  mutations build on the freshly committed token; genuine cross-actor
+  conflicts still produce the pending-conflict resolve flow. Regression
+  coverage: `OverlappingApplyAsync_QueuesSecondMutationBehindInFlightSave`.
+
 ### Erratum 2.9.0
 
 Two changes shipped in 2.9.0 under routine fix/feature sections but are

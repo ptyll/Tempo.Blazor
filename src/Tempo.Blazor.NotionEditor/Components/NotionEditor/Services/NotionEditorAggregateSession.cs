@@ -12,6 +12,10 @@ public sealed class NotionEditorAggregateSession(
     INotionAggregateProvider provider,
     Func<string?>? currentUserId = null)
 {
+    // Mutations from the same editor must apply one at a time. A second ApplyAsync that clones the
+    // pre-save snapshot while the first save is still in flight would carry a stale base token and
+    // conflict with the editor's own write — a self-inflicted conflict, not a remote one.
+    private readonly SemaphoreSlim _mutationGate = new(1, 1);
     private Func<NotionPageSnapshot, NotionPageSnapshot>? _pendingMutation;
 
     /// <summary>The currently displayed canonical snapshot, including an unsaved conflict candidate.</summary>
@@ -25,28 +29,36 @@ public sealed class NotionEditorAggregateSession(
         Guid pageId,
         CancellationToken cancellationToken = default)
     {
-        var load = await provider.LoadPageAsync(pageId, cancellationToken);
-        if (!load.Found || load.Snapshot is null)
+        await _mutationGate.WaitAsync(cancellationToken);
+        try
         {
-            return Failure("page_not_found", $"Page '{pageId}' was not found.", "$.pageId");
-        }
+            var load = await provider.LoadPageAsync(pageId, cancellationToken);
+            if (!load.Found || load.Snapshot is null)
+            {
+                return Failure("page_not_found", $"Page '{pageId}' was not found.", "$.pageId");
+            }
 
-        var issues = load.Issues
-            .Concat(NotionAggregateValidator.Validate([load.Snapshot]))
-            .ToList();
-        if (issues.Any(issue => issue.Severity == NotionIssueSeverity.Error))
-        {
-            return new NotionEditorAggregateSaveResult { Issues = issues };
-        }
+            var issues = load.Issues
+                .Concat(NotionAggregateValidator.Validate([load.Snapshot]))
+                .ToList();
+            if (issues.Any(issue => issue.Severity == NotionIssueSeverity.Error))
+            {
+                return new NotionEditorAggregateSaveResult { Issues = issues };
+            }
 
-        CurrentSnapshot = Clone(load.Snapshot);
-        _pendingMutation = null;
-        return new NotionEditorAggregateSaveResult
+            CurrentSnapshot = Clone(load.Snapshot);
+            _pendingMutation = null;
+            return new NotionEditorAggregateSaveResult
+            {
+                Success = true,
+                Snapshot = CurrentSnapshot,
+                Issues = issues
+            };
+        }
+        finally
         {
-            Success = true,
-            Snapshot = CurrentSnapshot,
-            Issues = issues
-        };
+            _mutationGate.Release();
+        }
     }
 
     /// <summary>
@@ -58,29 +70,37 @@ public sealed class NotionEditorAggregateSession(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(mutation);
-        if (CurrentSnapshot is null)
+        await _mutationGate.WaitAsync(cancellationToken);
+        try
         {
-            return Failure(
-                "editor_snapshot_not_loaded",
-                "Load a page snapshot before applying editor mutations.",
-                "$.snapshot");
-        }
-        if (_pendingMutation is not null)
-        {
-            return Failure(
-                "editor_conflict_pending",
-                "Resolve the pending conflict before applying another editor mutation.",
-                "$.conflict");
-        }
+            if (CurrentSnapshot is null)
+            {
+                return Failure(
+                    "editor_snapshot_not_loaded",
+                    "Load a page snapshot before applying editor mutations.",
+                    "$.snapshot");
+            }
+            if (_pendingMutation is not null)
+            {
+                return Failure(
+                    "editor_conflict_pending",
+                    "Resolve the pending conflict before applying another editor mutation.",
+                    "$.conflict");
+            }
 
-        var baseline = Clone(CurrentSnapshot);
-        var candidate = mutation(Clone(baseline)) ??
-            throw new InvalidOperationException("The editor mutation returned null.");
-        return await SaveCandidateAsync(
-            baseline,
-            candidate,
-            mutation,
-            cancellationToken);
+            var baseline = Clone(CurrentSnapshot);
+            var candidate = mutation(Clone(baseline)) ??
+                throw new InvalidOperationException("The editor mutation returned null.");
+            return await SaveCandidateAsync(
+                baseline,
+                candidate,
+                mutation,
+                cancellationToken);
+        }
+        finally
+        {
+            _mutationGate.Release();
+        }
     }
 
     /// <summary>Discards the conflicted local candidate and reloads the provider snapshot.</summary>
@@ -100,42 +120,50 @@ public sealed class NotionEditorAggregateSession(
     public async Task<NotionEditorAggregateSaveResult> ReapplyAsync(
         CancellationToken cancellationToken = default)
     {
-        if (CurrentSnapshot is null || _pendingMutation is null)
+        await _mutationGate.WaitAsync(cancellationToken);
+        try
         {
-            return Failure(
-                "editor_conflict_not_pending",
-                "There is no conflicted editor mutation to reapply.",
-                "$.conflict");
-        }
-
-        var mutation = _pendingMutation;
-        var pageId = CurrentSnapshot.Page.Id;
-        var load = await provider.LoadPageAsync(pageId, cancellationToken);
-        if (!load.Found || load.Snapshot is null)
-        {
-            return Failure("page_not_found", $"Page '{pageId}' was not found.", "$.pageId");
-        }
-
-        var baseline = Clone(load.Snapshot);
-        var issues = load.Issues
-            .Concat(NotionAggregateValidator.Validate([baseline]))
-            .ToList();
-        if (issues.Any(issue => issue.Severity == NotionIssueSeverity.Error))
-        {
-            return new NotionEditorAggregateSaveResult
+            if (CurrentSnapshot is null || _pendingMutation is null)
             {
-                Snapshot = CurrentSnapshot,
-                Issues = issues
-            };
-        }
+                return Failure(
+                    "editor_conflict_not_pending",
+                    "There is no conflicted editor mutation to reapply.",
+                    "$.conflict");
+            }
 
-        var candidate = mutation(Clone(baseline)) ??
-            throw new InvalidOperationException("The editor mutation returned null.");
-        return await SaveCandidateAsync(
-            baseline,
-            candidate,
-            mutation,
-            cancellationToken);
+            var mutation = _pendingMutation;
+            var pageId = CurrentSnapshot.Page.Id;
+            var load = await provider.LoadPageAsync(pageId, cancellationToken);
+            if (!load.Found || load.Snapshot is null)
+            {
+                return Failure("page_not_found", $"Page '{pageId}' was not found.", "$.pageId");
+            }
+
+            var baseline = Clone(load.Snapshot);
+            var issues = load.Issues
+                .Concat(NotionAggregateValidator.Validate([baseline]))
+                .ToList();
+            if (issues.Any(issue => issue.Severity == NotionIssueSeverity.Error))
+            {
+                return new NotionEditorAggregateSaveResult
+                {
+                    Snapshot = CurrentSnapshot,
+                    Issues = issues
+                };
+            }
+
+            var candidate = mutation(Clone(baseline)) ??
+                throw new InvalidOperationException("The editor mutation returned null.");
+            return await SaveCandidateAsync(
+                baseline,
+                candidate,
+                mutation,
+                cancellationToken);
+        }
+        finally
+        {
+            _mutationGate.Release();
+        }
     }
 
     private async Task<NotionEditorAggregateSaveResult> SaveCandidateAsync(
