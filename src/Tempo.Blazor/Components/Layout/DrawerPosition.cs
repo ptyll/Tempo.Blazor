@@ -9,5 +9,11 @@ public enum DrawerPosition
     Right,
 
     /// <summary>Slide in from the left edge.</summary>
-    Left
+    Left,
+
+    /// <summary>
+    /// Slide up from the bottom edge as a sheet: a drag handle, snap points, a sticky footer and
+    /// safe-area insets. The sheet is positioned against the viewport, not the container it sits in.
+    /// </summary>
+    Bottom
 }

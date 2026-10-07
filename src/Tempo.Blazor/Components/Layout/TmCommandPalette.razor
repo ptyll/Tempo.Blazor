@@ -106,10 +106,10 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Activate the trap AFTER the palette has rendered so the input element exists. FocusTrap
-        // moves initial focus to the first focusable (the search input = autofocus), traps Tab, and
-        // restores focus to the trigger on deactivate. Escape is handled at element level below, so
-        // no document-level listener / DotNetObjectReference is needed (mirrors TmModal, not TmDrawer).
+        // Activate the trap AFTER the palette has rendered so the input element exists. The shared
+        // trap moves initial focus to the first focusable (the search input), traps Tab, and restores
+        // focus to the trigger on deactivate. Escape stays on the palette's own keydown, which also
+        // drives its arrow navigation, so no document-level listener is needed.
         if (_shouldActivateTrap && IsOpen)
         {
             _shouldActivateTrap = false;

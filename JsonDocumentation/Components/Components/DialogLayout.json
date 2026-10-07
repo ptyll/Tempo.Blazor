@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Feedback",
+  "description": "Where a dialog places its icon relative to its content. Centered keeps it above the title; Inline places it beside the content.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Feedback/ModalEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "DialogLayout"
+}

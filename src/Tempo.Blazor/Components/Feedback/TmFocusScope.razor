@@ -1,0 +1,192 @@
+@namespace Tempo.Blazor.Components.Feedback
+@using System.Collections.Generic
+@using Tempo.Blazor.Helpers
+@inherits Tempo.Blazor.Components.TmComponentBase
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    The public focus-trap primitive. It wraps arbitrary content, so a package can trap focus without
+    copying the JS module. The cycling, the initial-focus move, the inert background and the focus
+    restore are things Blazor cannot do itself, so they live in the shared tm-focus-trap module; the
+    markup contract (role, aria-modal, the restore target) is Blazor's.
+*@
+<div @ref="_element"
+     class="tm-focus-scope @Class"
+     role="@Role"
+     aria-modal="@AriaModal"
+     aria-labelledby="@AriaLabelledBy"
+     tabindex="@TabIndex"
+     data-restore-target="@RestoreFocusTargetId"
+     data-testid="@RootTestId("tm-focus-scope")"
+     @attributes="AdditionalAttributes">
+    <CascadingValue Value="this" IsFixed="true">
+        @ChildContent
+    </CascadingValue>
+</div>
+
+@code {
+    /// <summary>Whether the trap is active. An inactive scope renders its content without trapping.</summary>
+    [Parameter] public bool Active { get; set; }
+
+    /// <summary>
+    /// Whether the scope is modal. A non-modal surface keeps the page behind it usable, so it reports
+    /// <c>aria-modal="false"</c> and the module leaves the background alone.
+    /// </summary>
+    [Parameter] public bool Modal { get; set; } = true;
+
+    /// <summary>Content trapped while <see cref="Active"/> is true.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// The element focus returns to on deactivation. A canvas editor passes its canvas here so focus
+    /// does not land back on the trigger that opened the scope. Null restores the previously focused
+    /// element, which is what an overlay wants.
+    /// </summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
+
+    /// <summary>
+    /// The id of the restore target, recorded on the root so a test and the module can both find it.
+    /// Set it when the target is rendered outside this scope.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>The id of the element that names the scope, wired to <c>aria-labelledby</c>.</summary>
+    [Parameter] public string? AriaLabelledBy { get; set; }
+
+    /// <summary>
+    /// Close on Escape. The listener is document-level, so Escape closes the scope wherever focus
+    /// sits. Only the topmost active scope handles it.
+    /// </summary>
+    [Parameter] public bool CloseOnEscape { get; set; }
+
+    /// <summary>Raised when Escape is pressed and <see cref="CloseOnEscape"/> is true.</summary>
+    [Parameter] public EventCallback OnEscape { get; set; }
+
+    /// <summary>Extra CSS classes appended to the root.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Additional HTML attributes splatted onto the root. A capture, so an owner can forward its own
+    /// unmatched attributes; the owner must pass them as a dictionary, never as individual attributes.
+    /// </summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The scope this one is nested in, when there is one.</summary>
+    [CascadingParameter] public TmFocusScope? Parent { get; set; }
+
+    private ElementReference _element;
+    private FocusTrap? _trap;
+    private DotNetObjectReference<TmFocusScope>? _dotNetRef;
+    private bool _wasActive;
+    private bool _shouldActivate;
+    private int _activeDescendants;
+
+    /// <summary>True when an active scope is nested inside this one.</summary>
+    private bool HasActiveDescendant => _activeDescendants > 0;
+
+    private string? Role => Active ? "dialog" : null;
+
+    private string? TabIndex => Active ? "-1" : null;
+
+    // A scope with an active descendant yields the modal semantics to the innermost one, so a screen
+    // reader announces the dialog the user is actually in.
+    private string? AriaModal => Active ? (Modal && !HasActiveDescendant ? "true" : "false") : null;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        if (Active)
+        {
+            Parent?.RegisterDescendant();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Active && !_wasActive)
+        {
+            _wasActive = true;
+            _shouldActivate = true;
+            Parent?.RegisterDescendant();
+        }
+        else if (!Active && _wasActive)
+        {
+            _wasActive = false;
+            Parent?.UnregisterDescendant();
+            await DeactivateAsync();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldActivate && Active)
+        {
+            _shouldActivate = false;
+            await ActivateAsync();
+        }
+    }
+
+    private async Task ActivateAsync()
+    {
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        _trap ??= new FocusTrap(JS);
+        await _trap.ActivateAsync(_element, _dotNetRef, CloseOnEscape, RestoreFocusTarget, Modal);
+    }
+
+    private async Task DeactivateAsync()
+    {
+        if (_trap is not null)
+        {
+            await _trap.DeactivateAsync();
+        }
+    }
+
+    private void RegisterDescendant()
+    {
+        _activeDescendants++;
+        StateHasChanged();
+    }
+
+    private void UnregisterDescendant()
+    {
+        _activeDescendants = Math.Max(0, _activeDescendants - 1);
+        StateHasChanged();
+    }
+
+    /// <summary>Invoked by the focus-trap module when Escape is pressed at the document level.</summary>
+    [JSInvokable]
+    public async Task HandleFocusTrapEscapeAsync()
+    {
+        if (CloseOnEscape && !HasActiveDescendant)
+        {
+            await OnEscape.InvokeAsync();
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        // A host that owns the scope disposes it itself, and the renderer disposes it again when the
+        // component leaves the tree. Both paths must be safe.
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_wasActive)
+        {
+            Parent?.UnregisterDescendant();
+            _wasActive = false;
+        }
+
+        if (_trap is not null)
+        {
+            await _trap.DisposeAsync();
+        }
+
+        _dotNetRef?.Dispose();
+    }
+
+    private bool _disposed;
+}

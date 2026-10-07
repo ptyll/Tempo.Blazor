@@ -138,6 +138,40 @@
       "isRequired": false
     },
     {
+      "name": "MobilePresentation",
+      "type": "MobilePresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring."
+    },
+    {
+      "name": "FooterLayout",
+      "type": "FooterLayout",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "How the footer buttons are arranged. Inline keeps them side by side at every width; Stacked stacks them full width."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the modal renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement, and the layout rendered when no viewport scope exists."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false
@@ -145,6 +179,13 @@
   ],
   "cssClasses": [
     "tm-modal-overlay",
+    "tm-modal--sheet",
+    "tm-modal--dialog",
+    "tm-modal--fullscreen-presentation",
+    "tm-modal--bottom-anchored",
+    "tm-modal__handle",
+    "tm-modal-footer--inline",
+    "tm-modal-footer--stacked",
     "tm-modal--visible",
     "tm-modal--animated",
     "tm-modal-container",

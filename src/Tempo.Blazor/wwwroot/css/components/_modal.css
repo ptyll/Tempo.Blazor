@@ -57,6 +57,17 @@
   padding-bottom: var(--tm-space-16);
 }
 
+/* Anchored: the panel sits flush with the bottom edge. The old bottom position left a gap below the
+   panel, so a host that asked for a bottom modal still saw it floating. */
+.tm-modal-container.tm-modal--bottom-anchored {
+  padding-bottom: 0;
+}
+
+.tm-modal-container.tm-modal--bottom-anchored .tm-modal {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 /* Modal Base */
 .tm-modal {
   position: relative;
@@ -320,10 +331,15 @@
 
   .tm-modal-footer {
     padding: var(--tm-space-3) var(--tm-space-4);
+  }
+
+  /* Stacking is opt-in. The old rule stacked every footer's buttons below 640px, which pushed the
+     confirm action below the fold on a phone; a host that wants the stack sets FooterLayout. */
+  .tm-modal-footer--stacked {
     flex-direction: column-reverse;
   }
 
-  .tm-modal-footer .tm-btn {
+  .tm-modal-footer--stacked .tm-btn {
     width: 100%;
     min-width: auto;
   }
@@ -334,11 +350,11 @@
     margin: var(--tm-space-4);
   }
 
-  .tm-dialog-footer {
+  .tm-dialog-footer.tm-modal-footer--stacked {
     flex-direction: column-reverse;
   }
 
-  .tm-dialog-footer .tm-btn {
+  .tm-dialog-footer.tm-modal-footer--stacked .tm-btn {
     width: 100%;
   }
 }
@@ -346,8 +362,89 @@
 /* The margin 2.8.25 painted below 768px came from a stray @media rule in _dashboard.css —
    the only declaration of it anywhere, so it applied despite sitting in a foreign file.
    Restored here on the owning class (2.9.0 regression fix). */
-@media (max-width: 768px) {
+@media (width < 768px) {
   .tm-modal {
     margin: var(--tm-space-4);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Sheet presentation — a modal or dialog anchored to the bottom edge
+   ═══════════════════════════════════════════════════════════════ */
+
+.tm-modal-overlay.tm-modal--sheet {
+  align-items: flex-end;
+  padding: 0;
+  /* The sheet module measures how much of the layout viewport the on-screen keyboard hides, and
+     padding the overlay lifts the sheet above it instead of shrinking the panel to nothing. */
+  padding-bottom: calc(var(--tm-sheet-keyboard, 0) * 1px);
+}
+
+.tm-modal-overlay.tm-modal--sheet .tm-modal,
+.tm-modal-overlay.tm-modal--sheet .tm-dialog {
+  /* The sheet module sets this to the on-screen keyboard's height, so the footer stays visible. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  /* A sheet never covers the whole screen: the content behind it stays a sliver. */
+  max-height: calc(0.85 * var(--tm-sheet-viewport, 100) * 1px);
+}
+
+.tm-modal-overlay.tm-modal--fullscreen-presentation {
+  padding: 0;
+}
+
+.tm-modal-overlay.tm-modal--fullscreen-presentation .tm-modal,
+.tm-modal-overlay.tm-modal--fullscreen-presentation .tm-dialog {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.tm-modal__handle,
+.tm-dialog__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--tm-touch-target);
+  padding: var(--tm-space-2);
+  background: transparent;
+  border: none;
+  cursor: grab;
+}
+
+.tm-modal__handle-bar,
+.tm-dialog__handle-bar {
+  width: var(--tm-space-10);
+  height: var(--tm-space-1);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-border-color-strong);
+}
+
+/* An inline dialog puts its icon beside the content instead of above it. */
+.tm-dialog--inline {
+  flex-direction: row;
+  align-items: flex-start;
+  text-align: start;
+  gap: var(--tm-space-4);
+}
+
+.tm-dialog--inline .tm-dialog-icon {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-modal,
+  .tm-dialog,
+  .tm-modal-overlay {
+    transition: none;
+    animation: none;
   }
 }

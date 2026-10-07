@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Helpers
@@ -7,19 +8,29 @@
 @if (Show)
 {
     <div class="tm-modal-overlay @GetOverlayClasses() @Class"
+         data-layout="@Context.CssModifier"
          @attributes="AdditionalAttributes"
          @onclick="HandleOverlayClick"
          @ref="_overlayElement">
         
-        <div class="tm-modal-container @GetContainerClasses()" @onclick:stopPropagation>
-            <div class="tm-modal @GetModalClasses()"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-labelledby="@_titleId"
-                 tabindex="-1"
-                 @ref="_modalElement"
-                 @onkeyup="HandleKeyUp">
+        <div @ref="_panel" class="tm-modal-container @GetContainerClasses()" @onclick:stopPropagation>
+            <TmFocusScope @ref="_scope"
+                          Active="true"
+                          Class="@($"tm-modal {GetModalClasses()}")"
+                          AriaLabelledBy="@_titleId"
+                          CloseOnEscape="CloseOnEscape"
+                          OnEscape="HandleEscape">
                 
+                @if (IsSheet)
+                {
+                    <button type="button"
+                            @ref="_handle"
+                            class="tm-modal__handle"
+                            aria-label="@Loc["TmModal_DragHandle"]">
+                        <span class="tm-modal__handle-bar"></span>
+                    </button>
+                }
+
                 @* Header *@
                 <div class="tm-modal-header">
                     @if (!string.IsNullOrEmpty(Icon))
@@ -58,7 +69,7 @@
                    stray border under the body. *@
                 @if (ShowFooter && (Footer is not null || ShowDefaultFooterButtons))
                 {
-                    <div class="tm-modal-footer">
+                    <div class="tm-modal-footer @FooterClass">
                         @if (Footer is not null)
                         {
                             @Footer
@@ -85,7 +96,7 @@
                         }
                     </div>
                 }
-            </div>
+            </TmFocusScope>
         </div>
     </div>
 }
@@ -100,6 +111,32 @@
     
     [Parameter] public ModalSize Size { get; set; } = ModalSize.Medium;
     [Parameter] public ModalPosition Position { get; set; } = ModalPosition.Center;
+
+    /// <summary>
+    /// How the modal presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> follows the
+    /// viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that
+    /// presentation without measuring, so a test can render it without a DOM.
+    /// </summary>
+    [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
+
+    /// <summary>How the footer buttons are arranged. Inline keeps them side by side at every width.</summary>
+    [Parameter] public FooterLayout FooterLayout { get; set; } = FooterLayout.Inline;
+
+    /// <summary>
+    /// The layout the modal renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value never measures, so a test can render a mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the rendered layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
+    /// would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
     [Parameter] public bool Animated { get; set; } = true;
     
     [Parameter] public bool ShowCloseButton { get; set; } = true;
@@ -124,64 +161,129 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
     
+    /// <summary>The viewport's layout. A modal is positioned against the viewport, not its container.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
     private string ResolvedOkText => string.IsNullOrEmpty(OkButtonText) ? Loc["Tm_Ok"] : OkButtonText;
     private string ResolvedCancelText => string.IsNullOrEmpty(CancelButtonText) ? Loc["Tm_Cancel"] : CancelButtonText;
 
-    private ElementReference _modalElement;
+    private const string SheetModulePath = "./_content/Tempo.Blazor/js/tm-sheet.js";
+
     private ElementReference _overlayElement;
+    private ElementReference _panel;
+    private ElementReference _handle;
     private string _titleId = Guid.NewGuid().ToString("N");
+    private readonly string _sheetId = Guid.NewGuid().ToString("N");
     private bool _wasShown;
-    private bool _shouldActivateTrap;
-    private FocusTrap? _focusTrap;
+    private bool _gestureAttached;
+    private IJSObjectReference? _sheetModule;
+    private TmFocusScope? _scope;
+    private TmLayoutMode? _lastReported;
+
+    private TmLayoutContext Context
+    {
+        get
+        {
+            var resolved = TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode);
+            return new TmLayoutContext(LayoutMode, resolved);
+        }
+    }
+
+    private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
+
+    private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
+        ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
+        : MobilePresentation;
+
+    private string FooterClass => FooterLayout == FooterLayout.Stacked
+        ? "tm-modal-footer--stacked"
+        : "tm-modal-footer--inline";
 
     protected override async Task OnParametersSetAsync()
     {
+        ReportResolved();
+
         if (Show && !_wasShown)
         {
             _wasShown = true;
-            _shouldActivateTrap = true;
             await OnOpen.InvokeAsync();
         }
         else if (!Show && _wasShown)
         {
             _wasShown = false;
-            await DeactivateTrapAsync();
         }
     }
 
+    private void ReportResolved()
+    {
+        var resolved = Context.Resolved;
+        if (_lastReported == resolved) return;
+
+        var first = _lastReported is null;
+        _lastReported = resolved;
+        if (!first)
+        {
+            _ = ResolvedLayoutChanged.InvokeAsync(resolved);
+        }
+    }
+
+    /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_shouldActivateTrap && Show)
+        // The sheet module tracks the on-screen keyboard so the footer stays visible. A modal sheet
+        // has no snap points, so the module only ever applies the keyboard offset.
+        if (Show && IsSheet && !_gestureAttached)
         {
-            _shouldActivateTrap = false;
-            await ActivateTrapAsync();
+            _gestureAttached = true;
+            await AttachGestureAsync();
+        }
+        else if ((!Show || !IsSheet) && _gestureAttached)
+        {
+            _gestureAttached = false;
+            await DetachGestureAsync();
         }
     }
 
-    // Traps Tab focus inside the modal and remembers the trigger to restore on close.
-    // Escape is handled at element level (HandleKeyUp) — focus is trapped inside the modal.
-    private async Task ActivateTrapAsync()
+    private async Task AttachGestureAsync()
     {
-        _focusTrap ??= new FocusTrap(JS);
-        await _focusTrap.ActivateAsync<TmModal>(_modalElement);
+        try
+        {
+            _sheetModule ??= await JS.InvokeAsync<IJSObjectReference>("import", SheetModulePath);
+            // The keyboard offset belongs on the panel, not the overlay: resizing the overlay would
+            // shrink the backdrop and leave the panel where it was.
+            await _sheetModule.InvokeVoidAsync("attach", _handle, _panel, new[] { 1d }, false, null, _sheetId);
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
     }
 
-    private async Task DeactivateTrapAsync()
+    private async Task DetachGestureAsync()
     {
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DeactivateAsync();
-        }
+        if (_sheetModule is null) return;
+        try { await _sheetModule.InvokeVoidAsync("detach", _sheetId); }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_focusTrap is not null)
+        await DetachGestureAsync();
+        if (_sheetModule is not null)
         {
-            await _focusTrap.DisposeAsync();
+            try { await _sheetModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            catch (TaskCanceledException) { }
+        }
+
+        if (_scope is not null)
+        {
+            await _scope.DisposeAsync();
         }
     }
 
@@ -194,11 +296,11 @@
         }
     }
 
-    private void HandleKeyUp(KeyboardEventArgs e)
+    private async Task HandleEscape()
     {
-        if (CloseOnEscape && e.Key == "Escape")
+        if (CloseOnEscape)
         {
-            OnClose.InvokeAsync();
+            await OnClose.InvokeAsync();
         }
     }
     
@@ -212,6 +314,12 @@
         var classes = new List<string>();
         if (Animated) classes.Add("tm-modal--animated");
         if (Show) classes.Add("tm-modal--visible");
+        classes.Add(ResolvedPresentation switch
+        {
+            MobilePresentation.Sheet => "tm-modal--sheet",
+            MobilePresentation.Fullscreen => "tm-modal--fullscreen-presentation",
+            _ => "tm-modal--dialog"
+        });
         return string.Join(" ", classes);
     }
     
@@ -221,7 +329,8 @@
         classes.Add(Position switch
         {
             ModalPosition.Top => "tm-modal--top",
-            ModalPosition.Bottom => "tm-modal--bottom",
+            // Anchored: the panel sits flush with the bottom edge, with no gap below it.
+            ModalPosition.Bottom => "tm-modal--bottom tm-modal--bottom-anchored",
             _ => "tm-modal--center"
         });
         return string.Join(" ", classes);

@@ -4,6 +4,31 @@
 
 ### Breaking / Migration
 
+- **`ModalPosition.Bottom` anchors the panel flush with the bottom edge.** It used to sit a margin
+  above the edge (`align-self: flex-end` plus the overlay padding), so a bottom modal read as a
+  floating card. It now carries `tm-modal--bottom-anchored` and sits flush, with no gap below it.
+  A host that relied on the gap must add its own margin.
+
+- **`TmDrawer` with `Position="Bottom"` is a sheet, and a non-modal drawer renders inside its
+  container.** A bottom drawer anchors to the bottom edge, caps at 85% of the visible viewport,
+  renders a drag handle and snaps between half and full height. A host that used a bottom drawer
+  as a full-height panel must set `SnapPoints` to `1` and `ShowHandle="false"`. `Modal="false"`
+  drops the overlay and positions the drawer absolutely inside its container, so the page behind
+  it stays usable; a modal drawer stays `position: fixed`.
+
+- **A modal or dialog footer no longer stacks its buttons below 640px.** The old rule turned every
+  footer into a `column-reverse` stack on a narrow viewport, which pushed the confirm action below
+  the fold. Buttons stay side by side at every width unless the host sets `FooterLayout="Stacked"`.
+  A host that relied on the stack must set that parameter.
+
+- **`TmModal` and `TmDialog` present as a bottom sheet on a mobile viewport.** `MobilePresentation`
+  defaults to `Auto`, which follows the viewport scope: a sheet below 640px, the centered dialog
+  otherwise. A host that wants the centered dialog at every width sets
+  `MobilePresentation="Dialog"`. With no viewport scope the overlay renders its `InitialMode`
+  (desktop), so an app must place an app-level `<TmLayoutObserver IsViewportScope="true"
+  IsContainer="false">` as its outermost layout element. See
+  [docs/responsive-conventions.md](docs/responsive-conventions.md).
+
 - **`TmDashboard` widget placement is no longer an inline `grid-column`.** A widget used to carry
   `style="grid-column: X / span W; grid-row: Y / span H"`. It now carries the placement as custom
   properties (`--tm-w-x`, `--tm-w-span`, `--tm-w-y`, `--tm-w-rows`, `--tm-w-order`) and the grid

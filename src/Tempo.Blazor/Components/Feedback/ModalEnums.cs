@@ -48,6 +48,48 @@ public enum DialogType
     Custom
 }
 
+/// <summary>
+/// How a viewport-positioned overlay presents itself on a narrow viewport. A forced value renders
+/// that presentation regardless of the viewport; <see cref="Auto"/> follows the viewport scope.
+/// </summary>
+public enum MobilePresentation
+{
+    /// <summary>The centered dialog, at every viewport width.</summary>
+    Dialog,
+
+    /// <summary>A bottom sheet anchored to the viewport's bottom edge.</summary>
+    Sheet,
+
+    /// <summary>A panel that fills the viewport.</summary>
+    Fullscreen,
+
+    /// <summary>
+    /// Follows the viewport scope: a sheet on mobile, a dialog otherwise. With no viewport scope it
+    /// renders the component's initial mode.
+    /// </summary>
+    Auto
+}
+
+/// <summary>How the footer buttons of a modal or dialog are arranged.</summary>
+public enum FooterLayout
+{
+    /// <summary>Buttons sit side by side, at every width. The default.</summary>
+    Inline,
+
+    /// <summary>Buttons stack vertically, full width, with the confirm action at the bottom.</summary>
+    Stacked
+}
+
+/// <summary>Where a dialog places its icon relative to its content.</summary>
+public enum DialogLayout
+{
+    /// <summary>The icon sits above the title, centered. The default.</summary>
+    Centered,
+
+    /// <summary>The icon sits beside the content, in a row.</summary>
+    Inline
+}
+
 /// <summary>Visual variant for the dialog indicating severity or purpose.</summary>
 public enum DialogVariant
 {

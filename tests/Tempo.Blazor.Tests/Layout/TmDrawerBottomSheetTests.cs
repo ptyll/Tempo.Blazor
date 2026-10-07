@@ -192,6 +192,30 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Bottom_CapsItsHeightAt85Percent_SoTheContentBehindItStaysVisible()
+    {
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .AddChildContent("Body"));
+
+        cut.Find(".tm-drawer").GetAttribute("data-max-height").Should().Be("85",
+            "a sheet never covers the whole viewport; the stylesheet caps it at 85dvh");
+    }
+
+    [Fact]
+    public void Bottom_ShowHandleFalse_RemovesTheGrabber()
+    {
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.ShowHandle, false)
+            .AddChildContent("Body"));
+
+        cut.FindAll(".tm-drawer__handle").Should().BeEmpty();
+    }
+
+    [Fact]
     public void SideDrawer_DoesNotGrowAHandle()
     {
         var cut = Render<TmDrawer>(p => p

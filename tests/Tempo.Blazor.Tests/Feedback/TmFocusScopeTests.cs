@@ -39,16 +39,6 @@ public class TmFocusScopeTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Active_MarksTheBackgroundInert()
-    {
-        var cut = Render<ScopeHost>(p => p.Add(h => h.Active, true));
-
-        cut.Find(".tm-focus-scope-host").HasAttribute("inert").Should().BeTrue(
-            "an active trap must make the rest of the page unreachable, not only hide it visually");
-        cut.Find(".tm-focus-scope").HasAttribute("inert").Should().BeFalse();
-    }
-
-    [Fact]
     public void Nested_OnlyTheInnermostScopeOwnsTheDialogRole()
     {
         var cut = Render<TmFocusScope>(p => p

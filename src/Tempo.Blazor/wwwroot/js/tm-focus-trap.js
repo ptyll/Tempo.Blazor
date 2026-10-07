@@ -25,7 +25,7 @@ function visibleFocusable(element) {
         .filter(el => el.offsetParent !== null && !el.hasAttribute('disabled'));
 }
 
-export function activate(element, id, escapeHandler, closeOnEscape) {
+export function activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal = true) {
     if (!element) return;
 
     // Deactivate any stale trap reusing this id before re-registering.
@@ -33,10 +33,15 @@ export function activate(element, id, escapeHandler, closeOnEscape) {
         deactivate(id);
     }
 
-    const returnTarget = document.activeElement;
+    // A caller that names a restore target (a canvas editor handing focus back to its canvas) wins
+    // over the element that happened to be focused when the trap opened.
+    const returnTarget = restoreTarget || document.activeElement;
 
     const tabHandler = function (e) {
         if (e.key !== 'Tab') return;
+        // Only the innermost active trap cycles Tab. An outer one that also handled it would pull
+        // focus out of the dialog the user is actually in.
+        if (!isInnermost(id)) return;
         const list = visibleFocusable(element);
         if (list.length === 0) { e.preventDefault(); element.focus(); return; }
         const first = list[0];
@@ -59,12 +64,20 @@ export function activate(element, id, escapeHandler, closeOnEscape) {
             // preventDefault (plus stopImmediatePropagation at window capture). Honour the flag so
             // one gesture still means one layer if ordering ever lets this listener run anyway.
             if (e.key !== 'Escape' || e.defaultPrevented) return;
+            // Only the topmost trap closes. A sheet behind a dialog must not close on the same key.
+            if (!isTopmost(id)) return;
             escapeHandler.invokeMethodAsync('HandleFocusTrapEscapeAsync');
         };
         document.addEventListener('keydown', escHandler);
     }
 
-    traps.set(id, { element, tabHandler, escHandler, returnTarget });
+    traps.set(id, { element, tabHandler, escHandler, returnTarget, modal });
+
+    // A modal trap makes the rest of the page unreachable, not only invisible. `inert` is a DOM
+    // attribute Blazor cannot keep in sync with the page around the overlay, so the module owns it.
+    // The overlay's own ancestors stay reachable, otherwise the trap would inert itself. A non-modal
+    // surface (an inline drawer) leaves the page usable.
+    if (modal) markBackgroundInert(element, true);
 
     // ARIA wants initial focus INSIDE the overlay, but only when it is not already there.
     // Activation is gated on a lazy ES-module import (FocusTrap.ActivateAsync), so it can land an
@@ -84,6 +97,50 @@ export function activate(element, id, escapeHandler, closeOnEscape) {
     }
 }
 
+/** True when no other trap is nested inside this one's element. */
+export function isInnermost(id) {
+    const trap = traps.get(id);
+    if (!trap) return false;
+    for (const [otherId, other] of traps) {
+        if (otherId !== id && trap.element.contains(other.element)) return false;
+    }
+    return true;
+}
+
+/** True when this trap was activated last. Escape closes the most recently opened layer. */
+export function isTopmost(id) {
+    const ids = Array.from(traps.keys());
+    return ids.length > 0 && ids[ids.length - 1] === id;
+}
+
+// The elements the module itself marked inert, so deactivation clears exactly those and never an
+// `inert` a host set for its own reasons.
+const inerted = new Set();
+
+function markBackgroundInert(element, inert) {
+    if (!element || !document.body) return;
+    const excluded = new Set();
+    for (let node = element; node; node = node.parentElement) excluded.add(node);
+    for (const child of document.body.children) {
+        if (excluded.has(child)) continue;
+        if (inert) {
+            if (!child.hasAttribute('inert')) {
+                child.toggleAttribute('inert', true);
+                inerted.add(child);
+            }
+        } else if (inerted.has(child)) {
+            child.toggleAttribute('inert', false);
+            inerted.delete(child);
+        }
+    }
+}
+
+/** Drops every trap without touching the DOM. The node tests call it between cases. */
+export function __resetForTests() {
+    traps.clear();
+    inerted.clear();
+}
+
 export function deactivate(id) {
     const trap = traps.get(id);
     if (!trap) return;
@@ -95,6 +152,11 @@ export function deactivate(id) {
     if (trap.escHandler) {
         document.removeEventListener('keydown', trap.escHandler);
     }
+    // Only the last modal trap releases the background. A nested dialog closing must not make the
+    // page reachable again while the sheet that opened it is still up.
+    const stillModal = Array.from(traps.values()).some(other => other.modal);
+    if (trap.modal && !stillModal) markBackgroundInert(trap.element, false);
+
     const target = trap.returnTarget;
     if (target && typeof target.focus === 'function') {
         try { target.focus(); } catch (e) { /* element gone */ }

@@ -583,6 +583,9 @@
             <TmButton Variant="ButtonVariant.Secondary" OnClick="@(() => _drawerLeftOpen = true)">
                 Open Left Drawer
             </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" data-testid="open-bottom-sheet" OnClick="@(() => { _sheetOpen = true; StateHasChanged(); })">
+                Open Bottom Sheet
+            </TmButton>
         </div>
     </div>
 </section>
@@ -603,6 +606,22 @@
     <ChildContent>
         <p class="text-sm text-slate-600 dark:text-slate-400">Left-side drawer with a footer action.</p>
     </ChildContent>
+</TmDrawer>
+
+<TmDrawer IsOpen="@_sheetOpen" IsOpenChanged="@(v => { _sheetOpen = v; StateHasChanged(); })"
+          Title="Filters" Position="DrawerPosition.Bottom" data-testid="bottom-sheet">
+    <ChildContent>
+        <div class="space-y-3" style="min-height: 24rem;">
+            @for (var i = 1; i <= 12; i++)
+            {
+                <p class="text-sm text-slate-600 dark:text-slate-400">Filter row @i — the body scrolls, the footer stays put.</p>
+            }
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" data-testid="sheet-apply"
+                  OnClick="@(() => { _sheetOpen = false; StateHasChanged(); })">Apply</TmButton>
+    </FooterContent>
 </TmDrawer>
 
 <!-- Context Menu & Split Button -->
@@ -975,6 +994,7 @@
     private bool _stepperVertical = false;
     private bool _drawerRightOpen;
     private bool _drawerLeftOpen;
+    private bool _sheetOpen;
     private int _bulkCount;
     private int? _quantity = 1;
     private int? _amount = 100;

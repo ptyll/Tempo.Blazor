@@ -217,7 +217,10 @@ public class TmModalTests : LocalizationTestBase
             .Add(m => m.OnClose, EventCallback.Factory.Create(this, () => closeCalled = true)));
 
         // Act
-        cut.Find(".tm-modal").KeyUp(new KeyboardEventArgs { Key = "Escape" });
+        // Escape is delivered by the focus-trap module at the document level; the module calls back
+        // into the scope's JSInvokable, which the modal wires to OnClose.
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync())
+            .GetAwaiter().GetResult();
 
         // Assert
         closeCalled.Should().BeTrue();

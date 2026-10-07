@@ -100,6 +100,53 @@
       "description": "When true, clicking the backdrop cancels the dialog. Defaults to false so a decision prompt is not dismissed by an accidental outside click (current behavior)."
     },
     {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An icon name from the registry. Null keeps the icon the variant and type imply."
+    },
+    {
+      "name": "Layout",
+      "type": "DialogLayout",
+      "isRequired": false,
+      "default": "Centered",
+      "description": "Where the icon sits relative to the content. Centered keeps it above the title; Inline places it beside the content."
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "MobilePresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise."
+    },
+    {
+      "name": "FooterLayout",
+      "type": "FooterLayout",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "How the footer buttons are arranged. Inline keeps them side by side at every width."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the dialog renders. A forced value renders that mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement, and the layout rendered when no viewport scope exists."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the rendered layout changes. The initial value is not a change."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false

@@ -292,11 +292,13 @@
 }
 
 @* ── New Dashboard Name Modal ────────────────────────────────── *@
+@* Auto presents this as a bottom sheet on a mobile viewport and a centered dialog otherwise. *@
 <TmModal Show="_showNewDashboardDialog"
          Title="@Loc["TmDashboard_CreateNewDashboard"]"
          OnClose="CancelNewDashboard"
          ShowFooter="true"
-         ShowDefaultFooterButtons="false">
+         ShowDefaultFooterButtons="false"
+         MobilePresentation="MobilePresentation.Auto">
     <ChildContent>
         <TmFormField Label="@Loc["TmDashboard_DashboardName"]">
             <TmTextInput @bind-Value="_newDashboardName"
@@ -312,13 +314,16 @@
 </TmModal>
 
 @* ── Delete Dashboard Confirmation Dialog ───────────────────── *@
+@* A destructive confirm stacks its buttons and presents as a sheet on a phone. *@
 <TmDialog Type="DialogType.Confirm"
           Show="_showDeleteDialog"
           Title="@Loc["TmDashboard_DeleteDashboard"]"
           Message="@string.Format(Loc["TmDashboard_DeleteDashboardConfirm"], _dashboardToDeleteName)"
           OnResult="HandleDeleteDialogResult"
           OkButtonText="@Loc["Tm_Delete"]"
-          IsDangerous="true" />
+          IsDangerous="true"
+          MobilePresentation="MobilePresentation.Auto"
+          FooterLayout="FooterLayout.Stacked" />
 </LayoutContent>
 </TmLayoutObserver>
 

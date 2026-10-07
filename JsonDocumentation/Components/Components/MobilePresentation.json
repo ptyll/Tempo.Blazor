@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Feedback",
+  "description": "How a viewport-positioned overlay presents itself on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Feedback/ModalEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "MobilePresentation"
+}

@@ -23,7 +23,10 @@ public class TmDialogInteractionTests : LocalizationTestBase
             .Add(d => d.Type, DialogType.Confirm)
             .Add(d => d.OnResult, EventCallback.Factory.Create<bool?>(this, v => result = v)));
 
-        cut.Find(".tm-dialog").KeyUp(new KeyboardEventArgs { Key = "Escape" });
+        // Escape is delivered by the focus-trap module at the document level; the module calls back
+        // into the scope's JSInvokable, which the dialog wires to its cancel.
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync())
+            .GetAwaiter().GetResult();
 
         result.Should().BeFalse();
     }
@@ -38,7 +41,8 @@ public class TmDialogInteractionTests : LocalizationTestBase
             .Add(d => d.CloseOnEscape, false)
             .Add(d => d.OnResult, EventCallback.Factory.Create<bool?>(this, _ => invoked = true)));
 
-        cut.Find(".tm-dialog").KeyUp(new KeyboardEventArgs { Key = "Escape" });
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync())
+            .GetAwaiter().GetResult();
 
         invoked.Should().BeFalse();
     }

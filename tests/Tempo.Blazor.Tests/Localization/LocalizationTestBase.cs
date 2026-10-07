@@ -883,6 +883,9 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmDrawer
         ["TmDrawer_Close"] = "Close panel",
+        ["TmDrawer_DragHandle"] = "Drag to resize the panel",
+        ["TmModal_DragHandle"] = "Drag to resize the panel",
+        ["TmDialog_DragHandle"] = "Drag to resize the panel",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Bulk actions",
@@ -4414,6 +4417,9 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmDrawer
         ["TmDrawer_Close"] = "Zavřít panel",
+        ["TmDrawer_DragHandle"] = "Posunout panel",
+        ["TmModal_DragHandle"] = "Posunout panel",
+        ["TmDialog_DragHandle"] = "Posunout panel",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Hromadné akce",

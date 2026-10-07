@@ -59,6 +59,25 @@ builder.Services.AddTempoBlazorAll();
 
 `Tempo.Blazor.All` includes `Tempo.Blazor.Signing` and calls `AddTempoBlazorSigning()` automatically.
 
+### Viewport scope
+
+A modal, a dialog and a bottom sheet resolve their layout from the viewport, not from the container
+their trigger sits in. Place one viewport scope as the outermost element of your layout, wrapping the
+sidebar too:
+
+```razor
+<TmLayoutObserver IsViewportScope="true" IsContainer="false">
+    @Body
+</TmLayoutObserver>
+```
+
+`IsContainer="false"` is required: a containment context on this element would become the containing
+block for every `position: fixed` overlay and pin a sheet to the app shell instead of the viewport.
+With no viewport scope an overlay renders its `InitialMode`, which is desktop, so a phone would show
+the desktop dialog until you add the scope. Set `InitialMode="TmLayoutMode.Mobile"` on the scope when
+the first frame must already be the phone layout. See
+[docs/responsive-conventions.md](docs/responsive-conventions.md).
+
 For a lean app, reference and register only the feature packages you use:
 
 ```csharp

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Feedback",
+  "description": "How the footer buttons of a modal or dialog are arranged. Inline keeps them side by side at every width; Stacked stacks them full width.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Feedback/ModalEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "FooterLayout"
+}

@@ -18,9 +18,11 @@ public class TmDrawerAccessibilityTests : LocalizationTestBase
             .AddChildContent("Body content"));
 
         var dialog = cut.Find("div[role='dialog']");
-        dialog.GetAttribute("aria-labelledby").Should().Be("tm-drawer-title");
+        var labelledBy = dialog.GetAttribute("aria-labelledby");
+        labelledBy.Should().StartWith("tm-drawer-title",
+            "the drawer names itself from its title, with a unique suffix so two open drawers do not share an id");
 
-        var heading = cut.Find("h2#tm-drawer-title");
+        var heading = cut.Find($"h2#{labelledBy}");
         heading.Should().NotBeNull();
         heading.TextContent.Should().Contain("Test Drawer");
     }

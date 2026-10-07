@@ -51,19 +51,21 @@ public class TmDialogPresentationTests : LocalizationTestBase
     [Fact]
     public void Icon_RendersTheNamedIcon_AndKeepsTheDefaultWhenUnset()
     {
-        var withIcon = Render<TmDialog>(p => p
-            .Add(d => d.Show, true)
-            .Add(d => d.Title, "Saved")
-            .Add(d => d.Icon, "check"));
-
-        withIcon.Find(".tm-dialog-icon svg").ClassList.Should().Contain("tm-icon-check");
-
         var without = Render<TmDialog>(p => p
             .Add(d => d.Show, true)
             .Add(d => d.Title, "Saved")
             .Add(d => d.Variant, DialogVariant.Success));
 
-        without.Find(".tm-dialog-icon .tm-icon").Should().NotBeNull(
+        var withIcon = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Saved")
+            .Add(d => d.Icon, "check"));
+
+        withIcon.Find(".tm-dialog-icon svg").InnerHtml.Should().NotBe(
+            without.Find(".tm-dialog-icon svg").InnerHtml,
+            "a named Icon replaces the variant's default icon");
+
+        without.Find(".tm-dialog-icon svg").Should().NotBeNull(
             "an unset Icon keeps the variant's default icon");
     }
 

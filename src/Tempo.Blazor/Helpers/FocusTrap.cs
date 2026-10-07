@@ -35,7 +35,9 @@ internal sealed class FocusTrap : IAsyncDisposable
     public async Task ActivateAsync<T>(
         ElementReference element,
         DotNetObjectReference<T>? escapeHandler = null,
-        bool closeOnEscape = false) where T : class
+        bool closeOnEscape = false,
+        ElementReference? restoreTarget = null,
+        bool modal = true) where T : class
     {
         try
         {
@@ -46,7 +48,7 @@ internal sealed class FocusTrap : IAsyncDisposable
                 await FallbackFocusAsync(element);
                 return;
             }
-            await _module.InvokeVoidAsync("activate", element, _id, escapeHandler, closeOnEscape);
+            await _module.InvokeVoidAsync("activate", element, _id, escapeHandler, closeOnEscape, restoreTarget, modal);
             _active = true;
         }
         catch (JSException) { await FallbackFocusAsync(element); }
@@ -78,6 +80,10 @@ internal sealed class FocusTrap : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // The scope that owns this trap is disposed both by its host and by the renderer.
+        if (_disposed) return;
+        _disposed = true;
+
         await DeactivateAsync();
         if (_module is null) return;
         try
@@ -87,4 +93,6 @@ internal sealed class FocusTrap : IAsyncDisposable
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
     }
+
+    private bool _disposed;
 }

@@ -4374,6 +4374,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "DialogLayout",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Feedback",
+          "description": "Where a dialog places its icon relative to its content. Centered keeps it above the title; Inline places it beside the content.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Feedback/ModalEnums.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "DialogType",
           "kind": "Enum",
           "category": "Components",
@@ -4681,6 +4691,16 @@
           "description": "Filter input type for a TmDataTableColumn.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTableEnums.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "FooterLayout",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Feedback",
+          "description": "How the footer buttons of a modal or dialog are arranged. Inline keeps them side by side at every width; Stacked stacks them full width.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Feedback/ModalEnums.cs",
           "documentationStatus": "merged"
         },
         {
@@ -5594,6 +5614,16 @@
           "description": "Defines the orientation of a menu.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Navigation/MenuItem.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "MobilePresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Feedback",
+          "description": "How a viewport-positioned overlay presents itself on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Feedback/ModalEnums.cs",
           "documentationStatus": "merged"
         },
         {
@@ -9846,16 +9876,57 @@
               "isRequired": false
             },
             {
+              "name": "FooterLayout",
+              "type": "FooterLayout",
+              "isRequired": false,
+              "default": "FooterLayout.Inline",
+              "description": "How the footer buttons are arranged. Inline keeps them side by side at every width."
+            },
+            {
+              "name": "Icon",
+              "type": "string?",
+              "isRequired": false,
+              "description": "An icon name from the registry. Null keeps the icon the variant and type imply."
+            },
+            {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout rendered before the first measurement, and the layout rendered when no viewport scope exists."
+            },
+            {
               "name": "IsDangerous",
               "type": "bool",
               "isRequired": false,
               "default": "false"
             },
             {
+              "name": "Layout",
+              "type": "DialogLayout",
+              "isRequired": false,
+              "default": "DialogLayout.Centered",
+              "description": "Where the icon sits relative to the content. Centered keeps it above the title; Inline places it beside the content."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the dialog renders. A forced value renders that mode without a DOM."
+            },
+            {
               "name": "Message",
               "type": "string",
               "isRequired": false,
               "default": "\"\""
+            },
+            {
+              "name": "MobilePresentation",
+              "type": "MobilePresentation",
+              "isRequired": false,
+              "default": "MobilePresentation.Auto",
+              "description": "How the dialog presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise."
             },
             {
               "name": "OkButtonText",
@@ -9878,6 +9949,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Prompt input placeholder. Defaults to the localized TmDialog_PromptPlaceholder when not set."
+            },
+            {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the rendered layout changes. The initial value is not a change."
             },
             {
               "name": "Show",
@@ -9940,6 +10017,79 @@
           ]
         },
         {
+          "itemName": "TmFocusScope",
+          "kind": "Component",
+          "category": "Feedback",
+          "namespace": "Tempo.Blazor.Components.Feedback",
+          "description": "Public focus-trap primitive. Wraps arbitrary content, cycles Tab and Shift+Tab inside it, moves initial focus in on activation, restores focus on deactivation, and marks the background inert while modal. Only the innermost active scope handles Tab and only the topmost handles Escape. A canvas editor passes RestoreFocusTarget so focus returns to the canvas instead of the trigger.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Feedback/TmFocusScope.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Feedback"
+          ],
+          "parameters": [
+            {
+              "name": "Active",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the trap is active. An inactive scope renders its content without trapping."
+            },
+            {
+              "name": "AriaLabelledBy",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the element that names the scope, wired to aria-labelledby."
+            },
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content trapped while Active is true."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra CSS classes appended to the root."
+            },
+            {
+              "name": "CloseOnEscape",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Close on Escape. The listener is document-level, so Escape closes the scope wherever focus sits."
+            },
+            {
+              "name": "Modal",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the scope is modal. A non-modal scope reports aria-modal false and leaves the background usable."
+            },
+            {
+              "name": "OnEscape",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when Escape is pressed and CloseOnEscape is true."
+            },
+            {
+              "name": "RestoreFocusTarget",
+              "type": "ElementReference?",
+              "isRequired": false,
+              "description": "The element focus returns to on deactivation. Null restores whatever was focused when the scope opened."
+            },
+            {
+              "name": "RestoreFocusTargetId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The id of the restore target, recorded on the root so a test and the module can both find it."
+            }
+          ],
+          "cssClasses": [
+            "tm-focus-scope"
+          ]
+        },
+        {
           "itemName": "TmModal",
           "kind": "Component",
           "category": "Feedback",
@@ -9992,9 +10142,37 @@
               "isRequired": false
             },
             {
+              "name": "FooterLayout",
+              "type": "FooterLayout",
+              "isRequired": false,
+              "default": "FooterLayout.Inline",
+              "description": "How the footer buttons are arranged. Inline keeps them side by side at every width; Stacked stacks them full width."
+            },
+            {
               "name": "Icon",
               "type": "string?",
               "isRequired": false
+            },
+            {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout rendered before the first measurement, and the layout rendered when no viewport scope exists."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the modal renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
+            },
+            {
+              "name": "MobilePresentation",
+              "type": "MobilePresentation",
+              "isRequired": false,
+              "default": "MobilePresentation.Auto",
+              "description": "How the modal presents on a narrow viewport. Auto follows the viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that presentation without measuring."
             },
             {
               "name": "OkButtonDisabled",
@@ -10034,6 +10212,12 @@
               "type": "ModalPosition",
               "isRequired": false,
               "default": "ModalPosition.Center"
+            },
+            {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the rendered layout changes. The initial value is not a change. Never pair it with LayoutMode."
             },
             {
               "name": "Show",
@@ -10090,6 +10274,13 @@
           ],
           "cssClasses": [
             "tm-modal-overlay",
+            "tm-modal--sheet",
+            "tm-modal--dialog",
+            "tm-modal--fullscreen-presentation",
+            "tm-modal--bottom-anchored",
+            "tm-modal__handle",
+            "tm-modal-footer--inline",
+            "tm-modal-footer--stacked",
             "tm-modal--visible",
             "tm-modal--animated",
             "tm-modal-container",
@@ -17189,6 +17380,13 @@
               "description": "Custom header content (replaces Title)."
             },
             {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout rendered before the first measurement."
+            },
+            {
               "name": "IsOpen",
               "type": "bool",
               "isRequired": false,
@@ -17201,11 +17399,31 @@
               "description": "Fires when the drawer should open or close."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the sheet renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
+            },
+            {
+              "name": "Modal",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the drawer is modal. A non-modal drawer renders inside its container with no overlay and no inert background."
+            },
+            {
               "name": "Position",
               "type": "DrawerPosition",
               "isRequired": false,
               "default": "DrawerPosition.Right",
               "description": "Side from which the drawer slides in."
+            },
+            {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the rendered layout changes. The initial value is not a change."
             },
             {
               "name": "ShowCloseButton",
@@ -17215,11 +17433,32 @@
               "description": "Show the X close button in the header."
             },
             {
+              "name": "ShowHandle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether a bottom sheet renders its drag handle. The handle is also the keyboard control for the snap points, so turning it off removes both. A side drawer never renders one."
+            },
+            {
               "name": "ShowOverlay",
               "type": "bool",
               "isRequired": false,
               "default": "true",
               "description": "Show a semi-transparent backdrop behind the drawer."
+            },
+            {
+              "name": "SnapPoints",
+              "type": "IReadOnlyList<double>",
+              "isRequired": false,
+              "default": "DefaultSnaps",
+              "description": "Fractions of the viewport height a bottom sheet snaps to, in ascending order. A sheet needs at least one."
+            },
+            {
+              "name": "SwipeToDismiss",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether a downward swipe past the lowest snap dismisses the sheet."
             },
             {
               "name": "Title",
@@ -24831,6 +25070,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-sheet.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/workflow-designer.js",
           "kind": "JavaScript"
         },
@@ -24845,15 +25088,23 @@
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/overlay.test.mjs",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-focus-trap.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-sheet.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 346,
-        "manualItemCount": 346,
-        "generatedItemCount": 338,
+        "itemCount": 350,
+        "manualItemCount": 350,
+        "generatedItemCount": 342,
         "generatedOnlyItemCount": 0,
-        "componentCount": 196,
-        "publicApiTypeCount": 142
+        "componentCount": 197,
+        "publicApiTypeCount": 145
       }
     },
     {
@@ -110442,10 +110693,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3171,
-    "manualItemCount": 3171,
+    "itemCount": 3175,
+    "manualItemCount": 3175,
     "generatedOnlyItemCount": 0,
-    "componentCount": 467,
-    "publicApiTypeCount": 2651
+    "componentCount": 468,
+    "publicApiTypeCount": 2654
   }
 }

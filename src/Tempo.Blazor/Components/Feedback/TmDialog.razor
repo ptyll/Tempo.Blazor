@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Inputs
@@ -7,17 +8,25 @@
 
 @if (Show)
 {
-    <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass() @Class"
+    <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass() @PresentationClass @Class"
+         data-layout="@Context.CssModifier"
+         @ref="_overlayElement"
          @attributes="AdditionalAttributes"
          @onclick="HandleOverlayClick">
-        <div class="tm-modal-container tm-modal--center" @onclick:stopPropagation="true">
-            <div class="tm-dialog @GetDialogClasses()"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-labelledby="@_titleId"
-                 tabindex="-1"
-                 @ref="_dialogElement"
-                 @onkeyup="HandleKeyUp">
+        <div @ref="_panel" class="tm-modal-container tm-modal--center" @onclick:stopPropagation="true">
+            <TmFocusScope @ref="_scope"
+                          Active="true"
+                          Class="@($"tm-dialog {GetDialogClasses()}")"
+                          AriaLabelledBy="@_titleId"
+                          CloseOnEscape="CloseOnEscape"
+                          OnEscape="HandleEscape">
+
+                @if (IsSheet)
+                {
+                    <button type="button" @ref="_handle" class="tm-dialog__handle" aria-label="@Loc["TmDialog_DragHandle"]">
+                        <span class="tm-dialog__handle-bar"></span>
+                    </button>
+                }
                 
                 @* Icon *@
                 <div class="tm-dialog-icon">
@@ -54,7 +63,7 @@
                 </div>
                 
                 @* Footer Buttons *@
-                <div class="tm-dialog-footer">
+                <div class="tm-dialog-footer @FooterClass">
                     @if (Type == DialogType.Alert)
                     {
                         <TmButton Variant="GetOkButtonVariant()"
@@ -82,7 +91,7 @@
                         @FooterContent
                     }
                 </div>
-            </div>
+            </TmFocusScope>
         </div>
     </div>
 }
@@ -97,6 +106,36 @@
     /// <summary>Placeholder of the prompt input. Null falls back to the localized text.</summary>
     [Parameter] public string? PromptPlaceholder { get; set; }
     [Parameter] public bool IsDangerous { get; set; } = false;
+
+    /// <summary>
+    /// An icon name from the registry. Null keeps the icon the variant and type imply, so an existing
+    /// dialog looks exactly as it did.
+    /// </summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Where the icon sits relative to the content. Centered keeps it above the title.</summary>
+    [Parameter] public DialogLayout Layout { get; set; } = DialogLayout.Centered;
+
+    /// <summary>
+    /// How the dialog presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> follows the
+    /// viewport scope: a sheet on mobile, a dialog otherwise.
+    /// </summary>
+    [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
+
+    /// <summary>How the footer buttons are arranged. Inline keeps them side by side at every width.</summary>
+    [Parameter] public FooterLayout FooterLayout { get; set; } = FooterLayout.Inline;
+
+    /// <summary>The layout the dialog renders. A forced value renders that mode without a DOM.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the rendered layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
     
     /// <summary>
     /// Text of the confirm button. Defaults to the localized <c>Tm_Ok</c> — pass a value to override it.
@@ -126,6 +165,9 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The viewport's layout. A dialog is positioned against the viewport, not its container.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
     /// <summary>The confirm label: the caller's text, or the localized default when none was passed.</summary>
@@ -137,45 +179,71 @@
     /// <summary>The prompt placeholder: the caller's text, or the localized default when none was passed.</summary>
     private string ResolvedPromptPlaceholder => string.IsNullOrEmpty(PromptPlaceholder) ? Loc["TmDialog_PromptPlaceholder"] : PromptPlaceholder;
 
-    private ElementReference _dialogElement;
+    private const string SheetModulePath = "./_content/Tempo.Blazor/js/tm-sheet.js";
+
     private string _titleId = Guid.NewGuid().ToString("N");
+    private readonly string _sheetId = Guid.NewGuid().ToString("N");
+    private ElementReference _handle;
+    private ElementReference _panel;
+    private ElementReference _overlayElement;
     private string _promptValue = string.Empty;
     private bool _wasShown;
-    private bool _shouldActivateTrap;
-    private FocusTrap? _focusTrap;
+    private bool _gestureAttached;
+    private IJSObjectReference? _sheetModule;
+    private TmFocusScope? _scope;
+    private TmLayoutMode? _lastReported;
+
+    private TmLayoutContext Context
+    {
+        get
+        {
+            var resolved = TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode);
+            return new TmLayoutContext(LayoutMode, resolved);
+        }
+    }
+
+    private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
+        ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
+        : MobilePresentation;
+
+    private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
+
+    private string PresentationClass => ResolvedPresentation switch
+    {
+        MobilePresentation.Sheet => "tm-modal--sheet",
+        MobilePresentation.Fullscreen => "tm-modal--fullscreen-presentation",
+        _ => "tm-modal--dialog"
+    };
+
+    private string FooterClass => FooterLayout == FooterLayout.Stacked
+        ? "tm-modal-footer--stacked"
+        : "tm-modal-footer--inline";
 
     protected override async Task OnParametersSetAsync()
     {
+        ReportResolved();
+
         if (Show && !_wasShown)
         {
             _wasShown = true;
-            _shouldActivateTrap = true;
             _promptValue = DefaultValue ?? string.Empty;
         }
         else if (!Show && _wasShown)
         {
             _wasShown = false;
-            await DeactivateTrapAsync();
         }
     }
 
-    // Traps Tab focus inside the dialog and restores focus to the trigger on close.
-    // Escape is handled at element level (HandleKeyUp) — focus is trapped inside the dialog.
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private void ReportResolved()
     {
-        if (_shouldActivateTrap && Show)
-        {
-            _shouldActivateTrap = false;
-            _focusTrap ??= new FocusTrap(JS);
-            await _focusTrap.ActivateAsync<TmDialog>(_dialogElement);
-        }
-    }
+        var resolved = Context.Resolved;
+        if (_lastReported == resolved) return;
 
-    private async Task DeactivateTrapAsync()
-    {
-        if (_focusTrap is not null)
+        var first = _lastReported is null;
+        _lastReported = resolved;
+        if (!first)
         {
-            await _focusTrap.DeactivateAsync();
+            _ = ResolvedLayoutChanged.InvokeAsync(resolved);
         }
     }
 
@@ -188,11 +256,57 @@
     }
 
     /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var sheet = Show && ResolvedPresentation == MobilePresentation.Sheet;
+        if (sheet && !_gestureAttached)
+        {
+            _gestureAttached = true;
+            await AttachGestureAsync();
+        }
+        else if (!sheet && _gestureAttached)
+        {
+            _gestureAttached = false;
+            await DetachGestureAsync();
+        }
+    }
+
+    private async Task AttachGestureAsync()
+    {
+        try
+        {
+            _sheetModule ??= await JS.InvokeAsync<IJSObjectReference>("import", SheetModulePath);
+            await _sheetModule.InvokeVoidAsync("attach", _handle, _panel, new[] { 1d }, false, null, _sheetId);
+        }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task DetachGestureAsync()
+    {
+        if (_sheetModule is null) return;
+        try { await _sheetModule.InvokeVoidAsync("detach", _sheetId); }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
+
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_focusTrap is not null)
+        await DetachGestureAsync();
+        if (_sheetModule is not null)
         {
-            await _focusTrap.DisposeAsync();
+            try { await _sheetModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            catch (TaskCanceledException) { }
+        }
+
+        if (_scope is not null)
+        {
+            await _scope.DisposeAsync();
         }
     }
     
@@ -200,7 +314,11 @@
     
     private string GetDialogClasses()
     {
-        var classes = new List<string> { $"tm-dialog--{Type.ToString().ToLowerInvariant()}" };
+        var classes = new List<string>
+        {
+            $"tm-dialog--{Type.ToString().ToLowerInvariant()}",
+            Layout == DialogLayout.Inline ? "tm-dialog--inline" : "tm-dialog--centered"
+        };
         
         if (IsDangerous)
         {
@@ -222,6 +340,7 @@
     
     private string GetIconName()
     {
+        if (!string.IsNullOrEmpty(Icon)) return Icon;
         if (IsDangerous) return "alert-triangle";
         
         return Type switch
@@ -280,9 +399,9 @@
         }
     }
     
-    private void HandleKeyUp(KeyboardEventArgs e)
+    private void HandleEscape()
     {
-        if (CloseOnEscape && e.Key == "Escape")
+        if (CloseOnEscape)
         {
             OnCancelClick();
         }

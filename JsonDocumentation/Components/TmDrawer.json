@@ -86,6 +86,47 @@
       "description": "Optional footer with action buttons."
     },
     {
+      "name": "Modal",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the drawer is modal. A non-modal drawer renders inside its container with no overlay and no inert background."
+    },
+    {
+      "name": "SnapPoints",
+      "type": "IReadOnlyList<double>",
+      "isRequired": false,
+      "default": "[0.5, 1.0]",
+      "description": "Fractions of the viewport height a bottom sheet snaps to, in ascending order. A sheet needs at least one."
+    },
+    {
+      "name": "SwipeToDismiss",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether a downward swipe past the lowest snap dismisses the sheet."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the sheet renders. Auto follows the viewport scope; a forced value renders that mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the rendered layout changes. The initial value is not a change."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Filters
 
 <div class="tm-view-manager">
@@ -118,11 +119,15 @@
     }
 </div>
 
-@* Modal for creating/editing views *@
-@if (_showModal)
-{
-    <div class="tm-view-modal-overlay" @onclick="CloseModal">
-        <div class="tm-view-modal" @onclick:stopPropagation>
+@* The create/edit view dialog. TmModal gives it the sheet presentation on a mobile viewport, the
+   focus trap and the sticky footer; the inner markup stays so the form's own classes keep working. *@
+<TmModal Show="_showModal"
+         Title="@(_editingView == null ? Loc["TmViewManager_CreateTitle"] : Loc["TmViewManager_EditTitle"])"
+         OnClose="CloseModal"
+         ShowFooter="false"
+         ShowCloseButton="false"
+         MobilePresentation="MobilePresentation.Auto">
+    <div class="tm-view-modal">
             <div class="tm-view-modal-header">
                 <h3>@(_editingView == null
                     ? (Loc["TmViewManager_CreateTitle"])
@@ -223,6 +228,5 @@
                         : (Loc["TmViewManager_Save"]))
                 </button>
             </div>
-        </div>
     </div>
-}
+</TmModal>
