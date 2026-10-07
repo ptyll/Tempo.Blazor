@@ -42,6 +42,98 @@ window.tmNotionEditor = (function () {
     let _chipBeingEdited = null; // chip span being replaced via click-to-edit
     let _statusChipBeingEdited = null; // inline status chip being replaced via click-to-edit
 
+    // ── Pending Enter-split keystroke buffer ──────────────────────────────────
+    // The new block after Enter is created asynchronously; characters typed in
+    // the gap would land in the OLD editable and be overwritten when
+    // OnEnterPressed applies setHtml(before). They are buffered here and flushed
+    // into the block the caret actually lands in.
+    let _pendingSplit = null; // { source, blockId, text, timer } — '\n' in text replays as another split
+
+    function _flushPendingSplit() {
+        const pending = _pendingSplit;
+        if (!pending) return;
+        const active = document.activeElement;
+        // The split round-trip can outlive a single 1.5 s window under heavy load.
+        // While focus still sits inside the source block the landing may yet
+        // arrive — extend the buffer a bounded number of times before giving up.
+        if ((pending.retries ?? 0) < 3 && active && active.isContentEditable &&
+            active.closest('[data-block-id]')?.getAttribute('data-block-id') === pending.blockId) {
+            pending.retries = (pending.retries ?? 0) + 1;
+            pending.timer = setTimeout(_flushPendingSplit, 1500);
+            return;
+        }
+        const target = active && active.isContentEditable ? active : pending.source;
+        _replayPendingSplit(pending, target);
+    }
+
+    function _replayPendingSplit(pending, target) {
+        if (_pendingSplit === pending) {
+            clearTimeout(pending.timer);
+            _pendingSplit = null;
+        }
+        if (!pending.text || !target || !target.isContentEditable) return;
+        const parts = pending.text.split('\n');
+        if (parts[0]) {
+            target.focus();
+            document.execCommand('insertText', false, parts[0]);
+            // execCommand may leave the caret before the inserted text; characters
+            // typed right after landing would then prepend instead of append.
+            _setCursorAtOffset(target, parts[0].length);
+        }
+        // Each Enter queued during the gap replays as a real split on the block
+        // the caret landed in; the tail keeps buffering for the next landing.
+        if (parts.length > 1 && _blocks.has(target)) {
+            _pendingSplit = {
+                source: target,
+                blockId: target.closest('[data-block-id]')?.getAttribute('data-block-id') ?? null,
+                text: parts.slice(1).join('\n'),
+                timer: setTimeout(_flushPendingSplit, 1500)
+            };
+            const { before, after } = _htmlAroundCaretIn(target);
+            _blocks.get(target).dotNetRef
+                .invokeMethodAsync('OnEnterPressed', before, after)
+                .catch(console.error);
+        }
+    }
+
+    // Capture-phase beforeinput swallows the gap keystrokes into the buffer so
+    // they never enter the doomed old editable. The match is by data-block-id,
+    // not element identity: the re-render may recreate the source's editable
+    // element while the block id stays stable.
+    document.addEventListener('beforeinput', (e) => {
+        const p = _pendingSplit;
+        const t = e.target;
+        const bid = (t instanceof Element) ? t.closest('[data-block-id]')?.getAttribute('data-block-id') : null;
+        if (!p || e.inputType !== 'insertText') return;
+        if (!(t instanceof Element) || !t.isContentEditable) return;
+        if (bid && bid === p.blockId) {
+            e.preventDefault();
+            p.text += e.data || '';
+        }
+    }, true);
+
+    function _htmlAroundCaretIn(element) {
+        const r = _range();
+        if (!r || !element.contains(r.startContainer) || !element.contains(r.endContainer)) {
+            return { before: element.innerHTML, after: '' };
+        }
+        function _fragHtml(fr) {
+            const d = document.createElement('div');
+            d.appendChild(fr);
+            return d.innerHTML;
+        }
+        const beforeR = document.createRange();
+        beforeR.selectNodeContents(element);
+        beforeR.setEnd(r.startContainer, r.startOffset);
+        const afterR = document.createRange();
+        afterR.selectNodeContents(element);
+        afterR.setStart(r.endContainer, r.endOffset);
+        return {
+            before: _fragHtml(beforeR.cloneContents()),
+            after:  _fragHtml(afterR.cloneContents())
+        };
+    }
+
     // ── Shared helpers ─────────────────────────────────────────────────────────
 
     function _on(el, type, fn, opts) {
@@ -367,6 +459,7 @@ window.tmNotionEditor = (function () {
 
     function focus(element) {
         element?.focus();
+        _maybeFlushOnFocus(element);
     }
 
     function initEditorKeyHandler(element, dotNetRef) {
@@ -395,14 +488,28 @@ window.tmNotionEditor = (function () {
 
     function focusAtEnd(element) {
         if (element) _setCursorAtEnd(element);
+        _maybeFlushOnFocus(element);
     }
 
     function focusAtStart(element) {
         if (element) _setCursorAtStart(element);
+        _maybeFlushOnFocus(element);
     }
 
     function focusAtOffset(element, offset) {
         if (element) _setCursorAtOffset(element, offset);
+        _maybeFlushOnFocus(element);
+    }
+
+    // A pending split's buffered keystrokes belong to the block the caret
+    // actually lands in — flush them there (unless focus just re-entered the
+    // source block itself, e.g. a recreated editable).
+    function _maybeFlushOnFocus(element) {
+        const p = _pendingSplit;
+        if (p && element && element.isContentEditable && element !== p.source) {
+            const bid = element.closest('[data-block-id]')?.getAttribute('data-block-id');
+            if (bid !== p.blockId) _replayPendingSplit(p, element);
+        }
     }
 
     const _focusTraps = new WeakMap();
@@ -1378,6 +1485,16 @@ window.tmNotionEditor = (function () {
     function _clearEditableDirty(element) { _dirtyEditables.delete(element); }
 
     /**
+     * True when the editable holds DOM text the render model has not seen — typed input or
+     * buffered Enter-split keystrokes replayed by focusAtStart. Re-init paths must consult
+     * this before overwriting innerHTML: a Content-instance swap resets the component's
+     * bookkeeping while the user's characters already sit in the DOM.
+     */
+    function isEditableDirty(element) {
+        return !!element && _dirtyEditables.has(element);
+    }
+
+    /**
      * True when the browser should keep Ctrl+Z for itself: the caret is inside a block the user is
      * still typing into, and undoing character by character is what they expect. Once the block is
      * committed the editor's own history takes over and undoes whole structural edits.
@@ -1409,25 +1526,7 @@ window.tmNotionEditor = (function () {
         state.dotNetRef = dotNetRef;
         _offAll(state.listeners);
 
-        function _htmlAroundCaret() {
-            const r = _range();
-            if (!r) return { before: element.innerHTML, after: '' };
-            function _fragHtml(fr) {
-                const d = document.createElement('div');
-                d.appendChild(fr);
-                return d.innerHTML;
-            }
-            const beforeR = document.createRange();
-            beforeR.selectNodeContents(element);
-            beforeR.setEnd(r.startContainer, r.startOffset);
-            const afterR = document.createRange();
-            afterR.selectNodeContents(element);
-            afterR.setStart(r.endContainer, r.endOffset);
-            return {
-                before: _fragHtml(beforeR.cloneContents()),
-                after:  _fragHtml(afterR.cloneContents())
-            };
-        }
+        const _htmlAroundCaret = () => _htmlAroundCaretIn(element);
 
         const onKeyDown = (e) => {
             if (e.key === 'Backspace' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
@@ -1442,7 +1541,19 @@ window.tmNotionEditor = (function () {
 
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
+                if (_pendingSplit) {
+                    // A split is already in flight — queue this Enter into the
+                    // buffer; it replays as another split after landing.
+                    _pendingSplit.text += '\n';
+                    return;
+                }
                 const { before, after } = _htmlAroundCaret();
+                _pendingSplit = {
+                    source: element,
+                    blockId: element.closest('[data-block-id]')?.getAttribute('data-block-id') ?? null,
+                    text: '',
+                    timer: setTimeout(_flushPendingSplit, 1500)
+                };
                 dotNetRef.invokeMethodAsync('OnEnterPressed', before, after).catch(console.error);
                 return;
             }
@@ -3379,7 +3490,7 @@ window.tmNotionEditor = (function () {
         // 26.4
         getCaretCoords, getTextBeforeCaret,
         // 26.5
-        initKeyboardHandler, insertSmartLinkChip, insertPlainSmartLink,
+        initKeyboardHandler, insertSmartLinkChip, insertPlainSmartLink, isEditableDirty,
         // 26.6
         renderEquation, renderInlineMath,
         // 26.7

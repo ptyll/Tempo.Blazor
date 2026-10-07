@@ -86,6 +86,7 @@ public partial class TmNotionTextBlock : ComponentBase, IAsyncDisposable
     private bool                                       _dirty;
     private bool                                       _lastIsFocused;
     private string?                                    _lastHtml;
+    private string?                                    _lastPropHtml;
     private ITextBlockContent?                         _lastContent;
 
     // ── Computed CSS ─────────────────────────────────────────────────────────
@@ -108,6 +109,7 @@ public partial class TmNotionTextBlock : ComponentBase, IAsyncDisposable
     {
         if (ReferenceEquals(Content, _lastContent)) return;
         _lastContent   = Content;
+        _lastPropHtml  = Content?.Html;
         _dirty         = false;
         _kbInitialized = false;
         _lastHtml      = null;
@@ -130,7 +132,13 @@ public partial class TmNotionTextBlock : ComponentBase, IAsyncDisposable
             try
             {
                 await JS.InvokeVoidAsync("tmNotionEditor.initKeyboardHandler", _editableRef, _dotNetRef);
-                await JS.InvokeVoidAsync("tmNotionEditor.setHtml", _editableRef, SanitizeForRender(html));
+                // A re-init can follow a Content-instance swap while the editable still
+                // holds unsaved DOM text (e.g. Enter-split keystrokes replayed by
+                // focusAtStart); the JS dirty flag is the only trustworthy witness.
+                if (await JS.InvokeAsync<bool>("tmNotionEditor.isEditableDirty", _editableRef))
+                    _dirty = true;
+                else
+                    await JS.InvokeVoidAsync("tmNotionEditor.setHtml", _editableRef, SanitizeForRender(html));
                 if (shouldFocus)
                 {
                     await JS.InvokeVoidAsync("tmNotionEditor.focusAtStart", _editableRef);
@@ -149,9 +157,16 @@ public partial class TmNotionTextBlock : ComponentBase, IAsyncDisposable
                 return;
             }
 
-            _lastHtml = html;
-            try { await JS.InvokeVoidAsync("tmNotionEditor.setHtml", _editableRef, SanitizeForRender(html)); }
-            catch { }
+            // A same-instance prop can only legitimately advance via in-place mutation.
+            // When it still carries the value we already consumed, this render is stale
+            // (e.g. queued before an Enter-split setHtml) and writing it would revert live edits.
+            if (html != _lastPropHtml)
+            {
+                _lastHtml     = html;
+                _lastPropHtml = html;
+                try { await JS.InvokeVoidAsync("tmNotionEditor.setHtml", _editableRef, SanitizeForRender(html)); }
+                catch { }
+            }
         }
 
         if (_kbInitialized && shouldFocus && !focusedThisRender)

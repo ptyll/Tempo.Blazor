@@ -381,6 +381,26 @@
   fails on any non-monotonic step — including a self-check that flags the
   `100`-between-`14`/`15` shape this fix removes.
 
+- **Notion editor no longer loses keystrokes typed during the Enter-split
+  round-trip (CF29).** Pressing Enter creates the next block asynchronously, and
+  characters typed in the gap used to land in the old editable — where they were
+  either overwritten by the `setHtml(before)` rewrite or captured by the blur
+  save and committed as stale content. `notion-editor.js` now arms a pending-split
+  buffer on Enter: a capture-phase `beforeinput` listener intercepts `insertText`
+  aimed at the source block (matched by `data-block-id` so a recreated editable
+  still resolves), `focusAtStart`/`focus`/`focusAtEnd`/`focusAtOffset` replay the
+  buffered text into the block the caret actually lands in, queued Enters replay
+  as further splits, and a bounded retry window plus a 1.5 s give-up flush cover
+  slow landings. Two component-side guards close the revert paths: re-init after
+  a `Content`-instance swap consults the JS `isEditableDirty` witness before
+  overwriting `innerHTML`, and a stale same-instance render (queued before the
+  model update) can no longer push a superseded `Html` back into the DOM —
+  `_lastPropHtml` tracks the value the current content instance carried when it
+  was consumed, so only a genuinely advanced prop may overwrite live edits.
+  Covered by `FastTypingAfterEnter_LandsEveryCharacterInTheNewBlock` (Playwright,
+  6× CPU throttling): the source block keeps `abc` and the new block receives
+  `xyz`.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
