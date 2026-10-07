@@ -30,11 +30,11 @@
                 </button>
             }
         </div>
-        <span class="rc-resolved" data-testid="rc-resolved">@Loc["TmResponsiveDemo_Resolved", ModeName(_resolved)]</span>
+        <span class="rc-resolved" data-testid="rc-resolved">@Status()</span>
     </div>
 
     <div class="rc-stage">
-        <section class="rc-host rc-host--wide" data-testid="rc-host-wide">
+        <section class="rc-host rc-host--wide @(_mode == TmLayoutMode.Auto ? null : "rc-host--forced")" data-testid="rc-host-wide">
             <h2 data-testid="rc-host-wide-heading">@HostHeading("TmResponsiveDemo_WideHost", "rc-host-wide")</h2>
             <TmDashboard DashboardId="rc-wide" UserId="rc" LayoutMode="_mode" ResolvedLayoutChanged="OnResolved" Class="rc-dashboard" />
         </section>
@@ -58,7 +58,7 @@
     <div class="rc-reveal tm-reveal-host">
         <span>@Loc["TmResponsiveDemo_RevealHint"]</span>
         <button type="button" class="tm-btn tm-btn-icon tm-btn-secondary tm-reveal-on-hover" data-testid="rc-reveal" aria-label="@Loc["TmResponsiveDemo_Details"]">
-            @Loc["TmResponsiveDemo_Details"]
+            <TmIcon Name="info" Size="IconSize.Sm" />
         </button>
     </div>
 </div>
@@ -76,10 +76,23 @@
     {
         if (_seeded) return;
         _seeded = true;
-        foreach (var id in new[] { "rc-wide", "rc-medium", "rc-compact", "rc-narrow" })
-            await Dashboards.SaveDashboardAsync(ResponsiveConventionsProvider.Create(id));
+        foreach (var (id, key) in new[]
+        {
+            ("rc-wide", "TmResponsiveDemo_WideHost"),
+            ("rc-medium", "TmResponsiveDemo_MediumHost"),
+            ("rc-compact", "TmResponsiveDemo_CompactHost"),
+            ("rc-narrow", "TmResponsiveDemo_NarrowHost"),
+        })
+        {
+            var dashboard = ResponsiveConventionsProvider.Create(id);
+            dashboard.Name = Loc[key];
+            await Dashboards.SaveDashboardAsync(dashboard);
+        }
         foreach (var widget in ResponsiveConventionsProvider.Widgets)
+        {
+            widget.Name = Loc[$"TmResponsiveDemo_{WidgetKey(widget.Id)}"];
             Widgets.RegisterWidget(widget);
+        }
     }
 
     private string ModeName(TmLayoutMode mode) => Loc[$"TmLayoutMode_{mode}"];
@@ -90,8 +103,14 @@
     {
         var mode = testId == "rc-host-wide" ? _resolved : ModeFor(_widths.GetValueOrDefault(testId));
         var width = _widths.TryGetValue(testId, out var measured) && measured > 0 ? $" · {measured} px" : "";
-        return $"{Loc[hostKey]}{width} · {ModeName(mode)}";
+        var forced = testId == "rc-host-wide" && _mode != TmLayoutMode.Auto ? $" ({Loc["TmResponsiveDemo_Forced"]})" : "";
+        return $"{Loc[hostKey]}{width} · {ModeName(mode)}{forced}";
     }
+
+    private string Status() => Loc["TmResponsiveDemo_Status",
+        Loc["TmResponsiveDemo_WideHost"],
+        ModeName(_resolved),
+        Loc[_mode == TmLayoutMode.Auto ? "TmResponsiveDemo_Measured" : "TmResponsiveDemo_Forced"]];
 
     private static TmLayoutMode ModeFor(int widthPx) =>
         widthPx <= 0 ? TmLayoutMode.Desktop : TmBreakpoints.Classify(widthPx);
@@ -110,14 +129,32 @@
     [JSInvokable]
     public void OnMeasured(Dictionary<string, int> measured)
     {
-        foreach (var pair in measured) _widths[pair.Key] = pair.Value;
-        StateHasChanged();
+        var changed = false;
+        foreach (var pair in measured)
+        {
+            if (_widths.TryGetValue(pair.Key, out var known) && known == pair.Value) continue;
+            _widths[pair.Key] = pair.Value;
+            changed = true;
+        }
+        if (changed) StateHasChanged();
     }
 
-    public ValueTask DisposeAsync()
+    private static string WidgetKey(string id) => id switch
     {
+        "rc-revenue" => "Revenue",
+        "rc-orders" => "Orders",
+        "rc-returns" => "Returns",
+        "rc-margin" => "Margin",
+        "rc-queue" => "Queue",
+        _ => "Backlog",
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_watching && JS is IJSInProcessRuntime sync)
+            sync.InvokeVoid("tmResponsiveConventions.stop");
         _self?.Dispose();
-        return ValueTask.CompletedTask;
+        await ValueTask.CompletedTask;
     }
 
     private Task OnResolved(TmLayoutMode mode)

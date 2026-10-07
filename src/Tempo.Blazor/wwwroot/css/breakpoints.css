@@ -40,11 +40,11 @@
    whatever padding the component already has. */
 
 .tm-safe-area-bottom {
-  padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-bottom, 0px));
 }
 
 .tm-safe-area-top {
-  padding-top: calc(var(--tm-space-2) + env(safe-area-inset-top, 0px));
+  padding-top: calc(var(--tm-safe-area-base, var(--tm-space-2)) + env(safe-area-inset-top, 0px));
 }
 
 /* ── Coarse pointer ─────────────────────────────────────────────

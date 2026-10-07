@@ -24,6 +24,16 @@ public class TmLayoutResolveTests
     }
 
     [Fact]
+    public void WithResolvedAuto_Throws()
+    {
+        var context = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop);
+
+        var act = () => context with { Resolved = TmLayoutMode.Auto };
+
+        act.Should().Throw<ArgumentException>("a resolved layout is desktop, tablet or mobile, including through a with-expression");
+    }
+
+    [Fact]
     public void ExplicitMode_BeatsEverything()
     {
         var resolved = TmLayout.Resolve(

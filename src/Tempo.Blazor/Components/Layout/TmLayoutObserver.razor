@@ -33,6 +33,7 @@
 
     private readonly string _id = $"tm-layout-{Guid.NewGuid():n}";
     private ElementReference _root;
+    private bool _attaching;
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmLayoutObserver>? _dotNetRef;
     private bool _observing;
@@ -148,8 +149,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!Measures || _observing || _disposed) return;
+        if (!Measures || _observing || _attaching || _disposed) return;
 
+        // Set before the first await, so a second render during the import cannot start another one.
+        _attaching = true;
         _dotNetRef ??= DotNetObjectReference.Create(this);
         _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
         // Dispose may have run while the import was awaiting. Release what it could not see.
@@ -164,6 +167,7 @@
         if (_module is null) return;
 
         _observing = true;
+        _attaching = false;
         await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, new
         {
             breakpoints = new { sm = TmBreakpoints.Sm, md = TmBreakpoints.Md, lg = TmBreakpoints.Lg },
@@ -203,23 +207,7 @@
     {
         if (_disposed) return;
         _disposed = true;
-
-        var module = _module;
-        var observing = _observing;
-        _module = null;
-        _observing = false;
-        _dotNetRef?.Dispose();
-        _dotNetRef = null;
-        if (module is null) return;
-
-        try
-        {
-            if (observing) await module.InvokeVoidAsync("disconnect", _id);
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        await ReleaseAsync();
     }
 
     private async Task ReleaseAsync()

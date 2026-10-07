@@ -139,14 +139,20 @@ only. The placement variables (`--tm-w-x`, `--tm-w-span`, `--tm-w-span-md`, `--t
 
 - `.tm-touch-target` opts an element into that minimum size.
 - `@media (pointer: coarse)` applies it to `.tm-btn-icon` and to the dashboard's icon-sized
-  controls (resize handles, the widget-card add button, menu actions, widget header buttons).
-  A component with its own icon control adds the same rule in its own stylesheet.
+  controls (the corner resize handle, the widget-card add button, menu actions, widget header
+  buttons). The edge resize handles are hidden on a coarse pointer; only the corner handle remains,
+  at 44px. A component with its own icon control adds the same rule in its own stylesheet. The
+  shared close buttons (dialog, modal, drawer, popover) follow the same minimum.
 - `@media (hover: hover) and (pointer: fine)` is the only place an action may be hidden until
   hover. `.tm-reveal-on-hover` does this and stays visible under `:focus-within` and
   `:focus-visible`, so keyboard users reach it too. On `(hover: none)` the action is always
   visible — a touch screen has no hover to reveal it.
-- `.tm-safe-area-bottom` and `.tm-safe-area-top` add `env(safe-area-inset-*)` on top of the
-  component's own padding, for bars and sheets that sit under the home indicator or the notch.
+- `.tm-reveal-host` is the container for a `.tm-reveal-on-hover` action. The action stays hidden
+  until hover or focus on a fine pointer, and is always visible on `(hover: none)`.
+- `.tm-safe-area-bottom` and `.tm-safe-area-top` add `env(safe-area-inset-*)` on top of
+  `--tm-safe-area-base` (which falls back to `--tm-space-2`), for bars and sheets that sit under the
+  home indicator or the notch. The inset is zero unless the host page sets `viewport-fit=cover`; set
+  `--tm-safe-area-base` to the component's own padding.
 
 ## Motion
 
@@ -155,10 +161,14 @@ Anything these utilities animate (the reveal, the dashboard handles) drops its t
 
 ## What a later plan copies
 
-1. Add `container-type` and `container-name` to the component root, unless the collapse caveat
-   applies — then gate it on an opt-in class.
-2. Write `@container` rules at 640, 768, 1024 or 1280 only.
-3. Where the render itself must change, take a `TmLayoutMode LayoutMode` parameter (default
-   `Auto`) and either wrap the root in `TmLayoutObserver` or consume the cascaded
-   `TmLayoutContext`. Keep the old parameter as an `[Obsolete]` alias rather than removing it.
-4. Add the coarse-pointer minimum and the `(hover: none)` reveal to every hover-only action.
+1. The root may be a container only if the queries style its descendants. A structural change (how
+   many columns, which pane) follows `[data-layout]`; a container query is only for a finer step
+   inside one mode.
+2. Write `@container` and `@media` rules at 640, 768, 1024 or 1280 only, in range syntax. A width
+   outside that set, or `min-width`/`max-width`, is debt tracked by `media-width-baseline.txt`,
+   which may only shrink.
+3. An owner reads its own resolved mode only through `LayoutContent`. Never derive state from
+   `ResolvedLayoutChanged`: the callback reports the resolved mode, and a two-way bind would pin it.
+4. Anything positioned against the viewport resolves from the `TmLayoutScopes.Viewport` cascade, not
+   from the trigger's container. Add the coarse-pointer minimum and the `(hover: none)` reveal to
+   every hover-only action.

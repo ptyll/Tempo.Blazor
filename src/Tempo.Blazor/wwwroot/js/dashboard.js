@@ -37,6 +37,16 @@ window.tempoDashboard = {
 
         dashboard._grid = grid;
 
+        // The grid publishes its own metrics as custom properties. Reading them keeps the drag
+        // math on the same columns, row height and gap the stylesheet renders.
+        const gridStyle = getComputedStyle(grid);
+        const columns = parseFloat(gridStyle.getPropertyValue('--grid-columns'));
+        const rowHeight = parseFloat(gridStyle.getPropertyValue('--row-height'));
+        const gap = parseFloat(gridStyle.getPropertyValue('--grid-gap'));
+        if (Number.isFinite(columns) && columns > 0) dashboard.gridColumns = columns;
+        if (Number.isFinite(rowHeight) && rowHeight > 0) dashboard.rowHeight = rowHeight;
+        if (Number.isFinite(gap) && gap >= 0) dashboard.gap = gap;
+
         // Store bound handlers for cleanup
         dashboard._onDragStart = (e) => this.onDragStart(e, dashboard);
         dashboard._onDragOver = (e) => this.onDragOver(e, dashboard);

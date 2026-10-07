@@ -79,6 +79,10 @@
   max-width: 100%;
 }
 
+.rc-host--forced {
+  border-color: var(--tm-color-primary);
+}
+
 .rc-host--narrow {
   width: 24rem;
   max-width: 100%;

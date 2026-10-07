@@ -72137,12 +72137,6 @@
               "kind": "Field",
               "type": "bool",
               "description": "True when the rendered layout is the compact one."
-            },
-            {
-              "name": "Resolved",
-              "kind": "Property",
-              "type": "TmLayoutMode",
-              "description": "A resolved layout is desktop, tablet or mobile. Auto means \"not resolved yet\"."
             }
           ]
         },

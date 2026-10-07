@@ -5297,7 +5297,6 @@
   "TmResponsiveDemo_ForcedLayout": "Vynucené rozložení",
   "TmResponsiveDemo_ForceLabel": "Vynutit rozložení širokého kontejneru:",
   "TmResponsiveDemo_Resolved": "Aktuální rozložení: {0}",
-  "TmResponsiveDemo_Measuring": "měření",
   "TmResponsiveDemo_WideHost": "Široký kontejner",
   "TmResponsiveDemo_MediumHost": "Střední kontejner",
   "TmResponsiveDemo_CompactHost": "Kompaktní kontejner",
@@ -5305,7 +5304,12 @@
   "TmResponsiveDemo_Revenue": "Tržby",
   "TmResponsiveDemo_Orders": "Objednávky",
   "TmResponsiveDemo_Returns": "Vratky",
-  "TmResponsiveDemo_WideHint": "Širší než polovina řádku, takže v kompaktní mřížce zabere celý řádek.",
-  "TmResponsiveDemo_Add": "Přidat",
-  "TmResponsiveDemo_Details": "Podrobnosti"
+  "TmResponsiveDemo_Margin": "Marže",
+  "TmResponsiveDemo_Queue": "Fronta",
+  "TmResponsiveDemo_Backlog": "Nevyřízené",
+  "TmResponsiveDemo_Details": "Podrobnosti",
+  "TmResponsiveDemo_RevealHint": "Akce se zobrazí po najetí myší nebo zaostření. Na dotykové obrazovce je vidět hned.",
+  "TmResponsiveDemo_Forced": "vynuceno",
+  "TmResponsiveDemo_Measured": "změřeno",
+  "TmResponsiveDemo_Status": "{0}: {1} ({2})"
 }

@@ -74,6 +74,53 @@ public class TmBreakpointsTests
     }
 
     [Fact]
+    public void MediaWidths_MatchTheShrinkOnlyBaseline()
+    {
+        var root = RepoRoot();
+        var found = Directory.EnumerateFiles(Path.Combine(root, "src"), "*.css", SearchOption.AllDirectories)
+            .Where(path => path.Contains($"{Path.DirectorySeparatorChar}wwwroot{Path.DirectorySeparatorChar}")
+                        && !path.EndsWith(".min.css", StringComparison.OrdinalIgnoreCase)
+                        && !path.Contains($"{Path.DirectorySeparatorChar}lib{Path.DirectorySeparatorChar}")
+                        && !path.Contains($"{Path.DirectorySeparatorChar}bootstrap{Path.DirectorySeparatorChar}")
+                        && !path.EndsWith("tempo-blazor.bundled.css", StringComparison.Ordinal))
+            .SelectMany(path => MediaDebt(path, root))
+            .OrderBy(entry => entry, StringComparer.Ordinal)
+            .ToList();
+
+        var baseline = File.ReadAllLines(Path.Combine(root, "tests", "Tempo.Blazor.Tests", "Layout", "media-width-baseline.txt"))
+            .Where(line => line.Length > 0 && !line.StartsWith('#'))
+            .OrderBy(entry => entry, StringComparer.Ordinal)
+            .ToList();
+
+        found.Except(baseline).Should().BeEmpty("a new @media width is debt the baseline does not allow; use range syntax and a TmBreakpoints width, or the baseline cannot shrink");
+        baseline.Except(found).Should().BeEmpty("a baselined @media width is gone, so remove it from media-width-baseline.txt");
+    }
+
+    /// <summary>One line per <c>@media</c> condition that is not range syntax or uses a width outside <see cref="TmBreakpoints"/>.</summary>
+    private static IEnumerable<string> MediaDebt(string path, string root)
+    {
+        var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
+        var withoutComments = Regex.Replace(File.ReadAllText(path), @"/\*.*?\*/", " ", RegexOptions.Singleline);
+        foreach (Match media in Regex.Matches(withoutComments, @"@media\b(?<condition>[^{]*)\{"))
+        {
+            var condition = media.Groups["condition"].Value;
+            var widths = Regex.Matches(condition, @"\b(?<value>\d+(?:\.\d+)?)px\b")
+                .Select(match => match.Groups["value"].Value)
+                .Distinct()
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToList();
+            if (widths.Count == 0) continue;
+
+            var range = !condition.Contains("max-width") && !condition.Contains("min-width");
+            var allowed = widths.All(value => Allowed.Contains((int)Math.Round(double.Parse(value, System.Globalization.CultureInfo.InvariantCulture)))
+                                              && !value.Contains('.'));
+            if (range && allowed) continue;
+
+            yield return $"{relative} | {string.Join(",", widths)}";
+        }
+    }
+
+    [Fact]
     public void BreakpointsCss_DeclaresEveryConstantAsALiteral()
     {
         var css = File.ReadAllText(Path.Combine(

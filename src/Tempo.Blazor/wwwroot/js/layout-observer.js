@@ -66,12 +66,9 @@ export function observe(element, dotnet, id, options) {
     const entry = { element, dotnet, id, mode: null, breakpoints: options?.breakpoints };
     tracked.set(element, entry);
 
+    // ResizeObserver fires an initial observation, so a clientWidth report here would measure a
+    // different box than the one the observer reports.
     sharedObserver()?.observe(element);
-
-    const initial = options?.initialWidth ?? element.clientWidth;
-    if (typeof initial === 'number' && Number.isFinite(initial)) {
-        report(entry, initial);
-    }
     return Promise.resolve();
 }
 

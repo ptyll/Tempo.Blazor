@@ -76,7 +76,6 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
         Assert.AreEqual(0, se, "resize is desktop only, so a coarse pointer below desktop has no handle");
 
         await ShotAsync(page, "1024-touch");
-        await ShotAsync(page, "coarse-pointer");
     }
 
     [TestMethod]
@@ -99,6 +98,34 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
         var edge = await touch.Locator(".tm-widget-resize-n").First.EvaluateAsync<string>("el => getComputedStyle(el).display");
         Assert.AreEqual("none", edge, "a coarse pointer hides the edge resize handles");
         await ShotAsync(touch, "edit-touch");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task CoarsePointer_ShowsTheReveal_WithoutEditMode()
+    {
+        var page = await OpenTouchAsync(390, 844);
+        var reveal = await page.GetByTestId("rc-reveal").EvaluateAsync<string>("el => getComputedStyle(el).opacity");
+        Assert.AreEqual("1", reveal, "a coarse pointer shows a hover-only action without entering edit mode");
+        await ShotAsync(page, "coarse-pointer");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Headings_MatchTheMeasuredContainer()
+    {
+        foreach (var (width, height) in new[] { (1440, 900), (1024, 768), (390, 844) })
+        {
+            var page = await OpenAsync(width, height);
+            foreach (var host in new[] { "rc-host-wide", "rc-host-medium", "rc-host-compact", "rc-host-narrow" })
+            {
+                var grid = await page.GetByTestId(host).Locator(".tm-dashboard-grid-container").EvaluateAsync<int>("el => Math.round(el.clientWidth)");
+                var layout = await page.GetByTestId(host).Locator(".tm-dashboard").GetAttributeAsync("data-layout");
+                var heading = await page.GetByTestId($"{host}-heading").InnerTextAsync();
+                StringAssert.Contains(heading, $"{grid} px", $"{host} at {width}: the heading must name the measured width");
+                StringAssert.Contains(heading, layout!, $"{host} at {width}: the heading must name the dashboard's own data-layout");
+            }
+        }
     }
 
     [TestMethod]
@@ -210,6 +237,23 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
     {
         Directory.CreateDirectory(OutputDir);
         var path = Path.GetFullPath(Path.Combine(OutputDir, $"{name}.png"));
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = true, Type = ScreenshotType.Png });
+
+        // A full-page or element screenshot resets Playwright's touch emulation, so the capture
+        // would show a fine pointer. Grow the viewport to the document instead, then restore it.
+        var viewport = page.ViewportSize ?? new ViewportSize { Width = 1440, Height = 900 };
+        var height = await page.EvaluateAsync<int>("() => document.documentElement.scrollHeight");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions
+        {
+            Content = "*, *::before, *::after { transition: none !important; animation: none !important; }",
+        });
+        await page.SetViewportSizeAsync(viewport.Width, Math.Max(viewport.Height, height));
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false, Type = ScreenshotType.Png });
+        await page.SetViewportSizeAsync(viewport.Width, viewport.Height);
+
+        if (name.Contains("touch", StringComparison.Ordinal))
+        {
+            var coarse = await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches");
+            Assert.IsTrue(coarse, $"{name}: the touch emulation must survive the screenshot");
+        }
     }
 }

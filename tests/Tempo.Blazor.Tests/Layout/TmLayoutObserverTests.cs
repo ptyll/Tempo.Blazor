@@ -176,7 +176,8 @@ public class TmLayoutObserverTests : LocalizationTestBase
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)
             .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
 
-        await cut.InvokeAsync(() => cut.Instance.OnLayoutModeChanged("desktop"));
+        await cut.InvokeAsync(() => cut.Instance.OnLayoutModeChanged("tablet"));
+        reported.Should().Be(TmLayoutMode.Tablet);
         reported = null;
 
         cut.Render(parameters => parameters
@@ -184,7 +185,12 @@ public class TmLayoutObserverTests : LocalizationTestBase
             .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
         reported.Should().Be(TmLayoutMode.Mobile);
 
+        // A measurement taken while forced is recorded but does not change what is rendered.
         reported = null;
+        await cut.InvokeAsync(() => cut.Instance.OnLayoutModeChanged("desktop"));
+        reported.Should().BeNull("a forced mode hides the measurement, so the report is not a change");
+        cut.Find(".tm-layout").GetAttribute("data-layout").Should().Be("mobile");
+
         cut.Render(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)
             .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));

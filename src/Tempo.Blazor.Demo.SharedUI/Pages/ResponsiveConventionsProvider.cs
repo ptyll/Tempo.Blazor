@@ -13,9 +13,10 @@ public sealed class ResponsiveConventionsProvider : IDashboardProvider
     [
         new() { InstanceId = "rc-revenue", WidgetId = "rc-revenue", X = 0, Y = 0, Width = 8, Height = 3 },
         new() { InstanceId = "rc-orders", WidgetId = "rc-orders", X = 8, Y = 0, Width = 4, Height = 3 },
-        new() { InstanceId = "rc-returns", WidgetId = "rc-returns", X = 0, Y = 3, Width = 4, Height = 3 },
-        new() { InstanceId = "rc-margin", WidgetId = "rc-margin", X = 4, Y = 3, Width = 4, Height = 3 },
-        new() { InstanceId = "rc-queue", WidgetId = "rc-queue", X = 8, Y = 3, Width = 4, Height = 3 },
+        new() { InstanceId = "rc-returns", WidgetId = "rc-returns", X = 0, Y = 3, Width = 3, Height = 3 },
+        new() { InstanceId = "rc-margin", WidgetId = "rc-margin", X = 3, Y = 3, Width = 3, Height = 3 },
+        new() { InstanceId = "rc-queue", WidgetId = "rc-queue", X = 6, Y = 3, Width = 3, Height = 3 },
+        new() { InstanceId = "rc-backlog", WidgetId = "rc-backlog", X = 9, Y = 3, Width = 3, Height = 3 },
     ];
 
     /// <summary>The dashboard the page seeds into the host's provider, once per host id.</summary>
@@ -28,7 +29,8 @@ public sealed class ResponsiveConventionsProvider : IDashboardProvider
         new() { Id = "rc-orders", Name = "Orders", DefaultWidth = 4, DefaultHeight = 3 },
         new() { Id = "rc-returns", Name = "Returns", DefaultWidth = 4, DefaultHeight = 3 },
         new() { Id = "rc-margin", Name = "Margin", DefaultWidth = 4, DefaultHeight = 3 },
-        new() { Id = "rc-queue", Name = "Queue", DefaultWidth = 4, DefaultHeight = 3 },
+        new() { Id = "rc-queue", Name = "Queue", DefaultWidth = 3, DefaultHeight = 3 },
+        new() { Id = "rc-backlog", Name = "Backlog", DefaultWidth = 3, DefaultHeight = 3 },
     ];
 
     /// <inheritdoc />

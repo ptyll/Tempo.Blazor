@@ -5344,7 +5344,6 @@
   "TmResponsiveDemo_ForcedLayout": "Disposition forcée",
   "TmResponsiveDemo_ForceLabel": "Forcer la disposition du conteneur large :",
   "TmResponsiveDemo_Resolved": "Disposition appliquée : {0}",
-  "TmResponsiveDemo_Measuring": "mesure",
   "TmResponsiveDemo_WideHost": "Conteneur large",
   "TmResponsiveDemo_MediumHost": "Conteneur moyen",
   "TmResponsiveDemo_CompactHost": "Conteneur compact",
@@ -5352,7 +5351,12 @@
   "TmResponsiveDemo_Revenue": "Chiffre d'affaires",
   "TmResponsiveDemo_Orders": "Commandes",
   "TmResponsiveDemo_Returns": "Retours",
-  "TmResponsiveDemo_WideHint": "Plus large que la moitié de la ligne : il occupe toute la largeur de la grille compacte.",
-  "TmResponsiveDemo_Add": "Ajouter",
-  "TmResponsiveDemo_Details": "Détails"
+  "TmResponsiveDemo_Margin": "Marge",
+  "TmResponsiveDemo_Queue": "File d'attente",
+  "TmResponsiveDemo_Backlog": "Arriéré",
+  "TmResponsiveDemo_Details": "Détails",
+  "TmResponsiveDemo_RevealHint": "L'action apparaît au survol ou au focus. Sur un écran tactile, elle est visible immédiatement.",
+  "TmResponsiveDemo_Forced": "forcé",
+  "TmResponsiveDemo_Measured": "mesuré",
+  "TmResponsiveDemo_Status": "{0} : {1} ({2})"
 }

@@ -40,11 +40,21 @@
   gap: var(--tm-space-2);
 }
 
-.tm-dashboard-title {
+.tm-dashboard .tm-dashboard-title {
   font-size: var(--tm-font-size-xl);
   font-weight: var(--tm-font-weight-bold);
   color: var(--tm-text-primary);
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tm-dashboard[data-layout="mobile"] {
+  padding: var(--tm-space-3);
+}
+
+.tm-dashboard[data-layout="mobile"] .tm-dashboard-toolbar {
+  flex-wrap: wrap;
 }
 
 .tm-dashboard-edit-badge {
@@ -837,7 +847,7 @@
    Responsive
    ═══════════════════════════════════════════════════════════════ */
 
-@media (max-width: 768px) {
+@media (width < 768px) {
   .tm-widget-selector-modal {
     height: 100vh;
     max-height: none;

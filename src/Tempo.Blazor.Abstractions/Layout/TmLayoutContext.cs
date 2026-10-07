@@ -8,11 +8,21 @@ namespace Tempo.Blazor.Abstractions.Layout;
 /// <param name="Resolved">The mode actually rendered. Never <see cref="TmLayoutMode.Auto"/>.</param>
 public sealed record TmLayoutContext(TmLayoutMode Mode, TmLayoutMode Resolved)
 {
+    // The positional constructor assigns the parameter through this initializer, not through init,
+    // so both paths validate. A with-expression goes through init.
+    private readonly TmLayoutMode _resolved = Valid(Resolved);
+
     /// <summary>A resolved layout is desktop, tablet or mobile. Auto means "not resolved yet".</summary>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="Resolved"/> is <see cref="TmLayoutMode.Auto"/>.</exception>
-    public TmLayoutMode Resolved { get; init; } = Resolved == TmLayoutMode.Auto
-        ? throw new ArgumentException("A resolved layout is desktop, tablet or mobile.", nameof(Resolved))
-        : Resolved;
+    /// <exception cref="ArgumentException">Thrown when the value is <see cref="TmLayoutMode.Auto"/>, including through a <c>with</c> expression.</exception>
+    public TmLayoutMode Resolved
+    {
+        get => _resolved;
+        init => _resolved = Valid(value);
+    }
+
+    private static TmLayoutMode Valid(TmLayoutMode value) => value == TmLayoutMode.Auto
+        ? throw new ArgumentException("A resolved layout is desktop, tablet or mobile.", nameof(value))
+        : value;
 
     /// <summary>The BEM modifier for <see cref="Resolved"/>: <c>desktop</c>, <c>tablet</c> or <c>mobile</c>.</summary>
     public string CssModifier => Resolved switch
