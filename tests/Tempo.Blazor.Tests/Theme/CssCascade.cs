@@ -1505,6 +1505,25 @@ internal static class CssCascade
             }
 
             var inner = clause.Trim('(', ')');
+
+            // Range syntax (width < 768px) is the form the stylesheets are moving to. It decides the
+            // same way as min/max-width; only the boundary is exclusive.
+            var range = Regex.Match(inner, @"^width\s*(?<op><=|>=|<|>)\s*(?<value>\d+(?:\.\d+)?)px$",
+                RegexOptions.IgnoreCase, Timeout);
+            if (range.Success
+                && double.TryParse(range.Groups["value"].Value, NumberStyles.Float,
+                    CultureInfo.InvariantCulture, out var rangePx))
+            {
+                query = range.Groups["op"].Value switch
+                {
+                    "<" => query with { MaxWidth = Math.Min(query.MaxWidth, rangePx - 0.001) },
+                    "<=" => query with { MaxWidth = Math.Min(query.MaxWidth, rangePx) },
+                    ">" => query with { MinWidth = Math.Max(query.MinWidth, rangePx + 0.001) },
+                    _ => query with { MinWidth = Math.Max(query.MinWidth, rangePx) },
+                };
+                continue;
+            }
+
             var colon = inner.IndexOf(':', StringComparison.Ordinal);
             var feature = (colon < 0 ? inner : inner[..colon]).Trim().ToLowerInvariant();
             var value = colon < 0 ? string.Empty : inner[(colon + 1)..].Trim();
