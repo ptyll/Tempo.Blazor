@@ -52,9 +52,11 @@ test('a release above the tallest snap clamps to it', () => {
     assert.equal(result.snap, 1);
 });
 
-test('a sheet with one snap dismisses only below it', () => {
-    assert.equal(settle([0.6], 0.3, true).dismiss, true);
-    assert.equal(settle([0.6], 0.9, true).dismiss, false);
+test('a one-snap sheet is not dismissed by settle — the gesture decides from the start height', () => {
+    // settle used to dismiss a one-snap sheet on any release below the snap, so a 10px drag closed
+    // it. The gesture now dismisses only past a quarter of the start height, or on a flick.
+    assert.equal(settle([0.6], 0.3, true).dismiss, false);
+    assert.equal(settle([0.6], 0.9, true).snap, 0.6);
 });
 
 test('a sheet with no snap points is content height, not an error', () => {
@@ -306,6 +308,50 @@ test('a slow drag that ends on the last move does not count as a flick', () => {
 
     assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'a slow drag settles to the nearest snap');
     assert.equal(sink.calls[0]?.[1], 0);
+    delete globalThis.window;
+});
+
+test('a one-snap sheet dismisses only past a quarter of its start height', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5], true, sink, 'one');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 110, timeStamp: 200 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 110, timeStamp: 400 });
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', '10px is not a quarter of the start height');
+
+    sink.calls.length = 0;
+    grab.dispatch('pointerdown', { button: 0, pointerId: 2, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 2, clientY: 40, timeStamp: 200 });
+    grab.dispatch('pointerup', { pointerId: 2, clientY: 40, timeStamp: 400 });
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'an upward drag never dismisses a one-snap sheet');
+    delete globalThis.window;
+});
+
+test('an inline sheet measures against its host, not the viewport', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(200);
+    const hostBox = { getBoundingClientRect: () => ({ height: 400 }) };
+    sheet.closest = () => hostBox;
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'inline', false);
+
+    // 40px down of a 200px sheet is 0.4 of the 400px host. Of the 800px viewport that same drag is a
+    // dismiss, so a snap here proves the gesture measured the host.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 140, timeStamp: 200 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 140, timeStamp: 400 });
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'a small drag inside a short host must not dismiss');
+
+    sink.calls.length = 0;
+    grab.dispatch('pointerdown', { button: 0, pointerId: 2, clientY: 200, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 2, clientY: 80, timeStamp: 200 });
+    grab.dispatch('pointerup', { pointerId: 2, clientY: 80, timeStamp: 400 });
+    assert.equal(sink.calls[0]?.[1], 1, '0.8 of the host settles on the higher snap');
     delete globalThis.window;
 });
 

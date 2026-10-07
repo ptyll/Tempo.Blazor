@@ -22,10 +22,7 @@ public sealed class SheetRound2E2ETests : WasmTestBase
         });
         RegisterContext(context);
         var page = await context.NewPageAsync();
-        // The self-hosted probe checks 5010; with an external host the base URL stays 7106, which is
-        // not where this demo listens. Use the host that actually answered.
-        var host = Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "http://localhost:5010";
-        await page.GotoAsync($"{host}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await page.GotoAsync($"{BaseUrl}{route}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
         return page;
     }

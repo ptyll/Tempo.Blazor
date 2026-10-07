@@ -727,7 +727,8 @@ public abstract class PlaywrightTestBase
 [TestCategory("WASM")]
 public abstract class WasmTestBase : PlaywrightTestBase
 {
-    protected override string BaseUrl => "https://localhost:7106";
+    protected override string BaseUrl =>
+        Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "https://localhost:7106";
 }
 
 /// <summary>

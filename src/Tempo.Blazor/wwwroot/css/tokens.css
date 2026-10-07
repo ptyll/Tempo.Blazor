@@ -234,6 +234,8 @@
      for full-screen "topmost" surfaces (e.g. the lightbox) and must NOT be used for a modal backdrop. */
   --tm-z-drawer-backdrop: 1035;
   --tm-z-drawer:          1036;
+  /* An inline sheet lives in its host, not the viewport band. Low enough to sit under a modal. */
+  --tm-z-inline-sheet:    10;
   --tm-z-modal:       1040;
   --tm-z-overlay:     1060;
   --tm-z-toast:       1080;

@@ -182,3 +182,36 @@ public class TmFocusScopeTests : LocalizationTestBase
         }
     }
 }
+
+public class TmFocusScopeDisposeTests : LocalizationTestBase
+{
+    private sealed class Host : ComponentBase
+    {
+        public bool Show { get; set; } = true;
+        public int Deactivated { get; set; }
+
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            if (!Show) return;
+            builder.OpenComponent<TmFocusScope>(0);
+            builder.AddAttribute(1, "Active", true);
+            builder.AddAttribute(2, "OnDeactivated", EventCallback.Factory.Create(this, () => Deactivated++));
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddMarkupContent(0, "<button>Inside</button>")));
+            builder.CloseComponent();
+        }
+    }
+
+    [Fact]
+    public void RemovingAnActiveScope_RaisesOnDeactivated()
+    {
+        var cut = Render<Host>();
+        cut.Instance.Deactivated.Should().Be(0);
+
+        // Removing the scope from a live tree is what a closing overlay does. Disposing the whole
+        // renderer cannot deliver the callback, so that path only has to stay silent.
+        cut.Instance.Show = false;
+        cut.Render();
+
+        cut.Instance.Deactivated.Should().Be(1);
+    }
+}

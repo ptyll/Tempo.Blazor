@@ -104,7 +104,6 @@
     {
         switch (e.Key)
         {
-            case "Escape":                        await OnClose.InvokeAsync(); break;
             case "ArrowRight" when !IsLast:       await OnNext.InvokeAsync();  break;
             case "ArrowLeft"  when !IsFirst:      await OnPrev.InvokeAsync();  break;
         }

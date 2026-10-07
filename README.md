@@ -75,6 +75,7 @@ sidebar too:
 block for every `position: fixed` overlay and pin a sheet to the app shell instead of the viewport.
 With no viewport scope an overlay measures the viewport itself, so a phone still gets the sheet. The
 first frame uses `InitialMode` until that measurement arrives, which is a flash, not a wrong layout.
+The sheet contract — snaps, dismiss, inline host — is [docs/bottom-sheet.md](docs/bottom-sheet.md).
 Set `InitialMode="TmLayoutMode.Mobile"` on the scope when the first frame must already be the phone
 layout. See
 [docs/responsive-conventions.md](docs/responsive-conventions.md).

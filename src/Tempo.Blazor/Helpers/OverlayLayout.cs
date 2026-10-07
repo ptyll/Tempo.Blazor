@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Tempo.Blazor.Abstractions.Layout;
 
@@ -30,43 +29,25 @@ internal sealed class OverlayLayout
     /// Reports a change of the resolved mode. The first resolution is not reported: a host that
     /// renders before any measurement must not see a spurious change.
     /// </summary>
-    public async Task ReportAsync(TmLayoutMode resolved, Func<TmLayoutMode, Task> changed, ILogger logger, bool hint, IServiceProvider? services = null)
+    public async Task ReportAsync(TmLayoutMode resolved, Func<TmLayoutMode, Task> changed)
     {
-        if (hint) HintOnce(logger, services);
         if (_lastReported == resolved) return;
         var first = _lastReported is null;
         _lastReported = resolved;
         if (!first) await changed(resolved);
     }
 
+    /// <summary>Lets a test observe the hint again. The flag is otherwise process-wide.</summary>
+    internal static void ResetHint() => _hinted = false;
+
     /// <summary>
-    /// Logs the missing-viewport hint once per process. Development logs at Information, so a host
-    /// that forgot the scope sees it; every other environment stays at Debug.
+    /// Logs the missing-viewport hint once per process, at Information, under this type's logger
+    /// category. A host that does not want it filters the category; the environment is not sniffed.
     /// </summary>
-    public static void HintOnce(ILogger logger, IServiceProvider? services = null)
+    public static void HintOnce(ILogger logger)
     {
         if (_hinted) return;
         _hinted = true;
-        const string message = "An overlay has no viewport scope, so it measured the viewport itself. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.";
-        if (IsDevelopment(services)) logger.LogInformation(message);
-        else logger.LogDebug(message);
-    }
-
-    private static bool IsDevelopment(IServiceProvider? services)
-    {
-        if (services is null) return false;
-        // Resolved by type name. The helper sits in the core package, which references neither
-        // Microsoft.Extensions.Hosting nor the WebAssembly host.
-        foreach (var service in services.GetServices<object>())
-        {
-            var type = service.GetType();
-            if (type.GetProperty("EnvironmentName") is not { } property) continue;
-            if (property.GetValue(service) is string name
-                && string.Equals(name, "Development", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
+        logger.LogInformation("An overlay has no viewport scope, so it measured the viewport itself. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
     }
 }

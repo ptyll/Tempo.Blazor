@@ -8,11 +8,12 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 @inject ILogger<TmDrawer> Logger
-@inject IServiceProvider HostServices
+@inject ILogger<OverlayLayout> LayoutLogger
+
 
 @if (IsOpen && Modal && Viewport is null && LayoutMode == TmLayoutMode.Auto)
 {
-    <TmViewportProbe OnMeasured="OnProbed" />
+    <ViewportProbe OnMeasured="OnProbed" />
 }
 @if (IsOpen)
 {
@@ -338,8 +339,11 @@
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        var cap = Math.Clamp(MaxHeight, 0.01, 1);
         _sortedSnaps = SnapPoints
-            .Where(s => s > 0 && s <= 1)
+            .Where(s => s > 0)
+            .Select(s => Math.Min(s, cap))
+            .Distinct()
             .OrderBy(s => s)
             .ToArray();
         if (SnapIndex != _snapIndexParam)
@@ -353,11 +357,12 @@
     private Task OnProbed(TmLayoutMode mode)
     {
         _layout.Measured(mode);
+        OverlayLayout.HintOnce(LayoutLogger);
         return ReportResolved();
     }
 
     private Task ReportResolved() => _layout.ReportAsync(
-        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: Viewport is null, HostServices);
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode));
 
     private async Task SetSnapAsync(int index)
     {

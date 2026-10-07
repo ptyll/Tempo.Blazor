@@ -262,4 +262,35 @@ public class TmViewManagerTests : LocalizationTestBase
         var errorElements = cut.FindAll(".tm-view-error");
         errorElements.Count.Should().BeGreaterThanOrEqualTo(1);
     }
+
+    [Fact]
+    public void TwoInstances_RenderDistinctToggleAndNameIds()
+    {
+        var provider = BuildProvider();
+        var first = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId));
+        var second = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId));
+
+        var firstToggle = first.Find(".tm-view-manager-toggle").Id;
+        var secondToggle = second.Find(".tm-view-manager-toggle").Id;
+        firstToggle.Should().NotBeNullOrEmpty();
+        firstToggle.Should().NotBe(secondToggle, "a shared toggle id restores focus to the first instance");
+        firstToggle.Should().NotBe("tm-view-manager-toggle");
+
+        first.Find(".tm-view-manager-toggle").Click();
+        first.Find(".tm-btn-primary").Click();
+        second.Find(".tm-view-manager-toggle").Click();
+        second.Find(".tm-btn-primary").Click();
+
+        var firstName = first.Find("input").Id;
+        var secondName = second.Find("input").Id;
+        firstName.Should().NotBeNullOrEmpty();
+        firstName.Should().NotBe(secondName, "a shared name id focuses the first instance's field");
+        firstName.Should().NotBe("tm-view-name");
+    }
 }

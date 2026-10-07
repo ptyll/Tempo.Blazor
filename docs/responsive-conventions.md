@@ -147,8 +147,9 @@ that frame has no measurement yet.
     frame uses `InitialMode` until that measurement arrives. The probe is internal and reads no cascade:
     a fixed, hidden box the size of the viewport, reported on every measurement including the first.
     `TmModal`, `TmDialog` and `TmDrawer` share one helper for that resolution. Set `InitialMode` on the
-    overlay when that first frame matters. A Development host logs the missing scope once, at
-    Information.
+    overlay when that first frame matters. The missing-scope hint is logged once per process, at
+    Information, under the `OverlayLayout` logger category. A host that does not want it filters
+    that category; the environment is not sniffed.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid

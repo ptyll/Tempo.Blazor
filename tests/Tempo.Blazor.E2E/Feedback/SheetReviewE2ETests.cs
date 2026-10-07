@@ -10,10 +10,6 @@ namespace Tempo.Blazor.E2E.Feedback;
 [TestCategory("WASM")]
 public sealed class SheetReviewE2ETests : WasmTestBase
 {
-    // The self-hosted probe checks 7106. An external host answers on the URL the round-2 tests use.
-    protected override string BaseUrl =>
-        Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? base.BaseUrl;
-
     private async Task<IPage> OpenAsync(string route, int width, int height, bool touch)
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions

@@ -8,11 +8,12 @@
 @using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 @inject ILogger<TmDialog> Logger
-@inject IServiceProvider HostServices
+@inject ILogger<OverlayLayout> LayoutLogger
+
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
-    <TmViewportProbe OnMeasured="OnProbed" />
+    <ViewportProbe OnMeasured="OnProbed" />
 }
 @if (Show)
 {
@@ -32,7 +33,7 @@
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId">
 
-                @if (IsSheet)
+                @if (IsSheet && CloseOnOverlayClick)
                 {
                     <TmSheetHandle @ref="_handle" Decorative="true" />
                 }
@@ -244,11 +245,12 @@
     }
 
     private Task ReportResolved() => _layout.ReportAsync(
-        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: Viewport is null, HostServices);
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode));
 
     private Task OnProbed(TmLayoutMode mode)
     {
         _layout.Measured(mode);
+        OverlayLayout.HintOnce(LayoutLogger);
         return ReportResolved();
     }
 

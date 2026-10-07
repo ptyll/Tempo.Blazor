@@ -241,7 +241,10 @@ function focusOf(target) {
 function restoreFocus(trap) {
     // A non-modal surface restores focus only if it held it. Restoring while the user is on the
     // canvas behind an inline sheet would steal that focus.
-    if (trap.modal === false && trap.element && !trap.element.contains(document.activeElement)) return;
+    // Skip only when focus is already on a connected element outside the sheet. A removed sheet
+    // leaves activeElement on body, and that must still restore to the opener.
+    const active = document.activeElement;
+    if (trap.modal === false && active && active !== document.body && active.isConnected && trap.element && !trap.element.contains(active)) return;
     // Resolved at deactivation: an explicit false restores nothing; an explicit element wins; then
     // the id recorded on the root; then the opener captured at activation; then body.
     const dataset = trap.element && trap.element.dataset;

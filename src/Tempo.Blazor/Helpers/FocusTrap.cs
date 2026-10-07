@@ -90,6 +90,7 @@ internal sealed class FocusTrap : IAsyncDisposable
         }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
         catch (InvalidOperationException) { }
     }
 

@@ -17,10 +17,6 @@ public sealed class BottomSheetE2ETests : WasmTestBase
 {
     private const string Route = "/feedback";
 
-    // The self-hosted probe checks 7106. An external host answers on the URL the round-2 tests use.
-    protected override string BaseUrl =>
-        Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? base.BaseUrl;
-
     private async Task<IPage> OpenTouchAsync(int width, int height)
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions

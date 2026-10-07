@@ -11,9 +11,6 @@ namespace Tempo.Blazor.E2E.Feedback;
 [TestCategory("WASM")]
 public sealed class SheetRound3E2ETests : WasmTestBase
 {
-    protected override string BaseUrl =>
-        Environment.GetEnvironmentVariable("TM_E2E_WASM_URL") ?? "http://localhost:5010";
-
     private async Task<IPage> OpenAsync(int width)
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
@@ -223,6 +220,141 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         // Full is min(1, max cap 0.85) of the viewport. A collapsed sheet falls back to the 0.5 default.
         Assert.AreEqual(before, height, before * 0.05,
             $"{afterWhat} must keep the full-snap height, not collapse to the 0.5 default: {read}");
+    }
+
+    [TestMethod]
+    public async Task FullSnap_TapOnTheGrabber_StaysOpenAtFull()
+    {
+        var page = await OpenAsync(390);
+        await OpenDrawerAsync(page, "open-bottom-sheet", ".tm-drawer--bottom");
+        await SnapToFullAsync(page);
+
+        var before = await page.Locator(".tm-drawer--bottom .tm-drawer__panel")
+            .EvaluateAsync<double>("el => el.getBoundingClientRect().height");
+        await page.Locator(".tm-drawer--bottom .tm-sheet__handle").ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        Assert.IsTrue(await page.Locator(".tm-drawer--bottom").IsVisibleAsync(),
+            "a tap on the grabber must not close the drawer");
+        await AssertFullSnapAsync(page, before, "a tap on the grabber");
+    }
+
+    [TestMethod]
+    public async Task FullSnap_ShortDrag_KeepsTheSnap()
+    {
+        var page = await OpenAsync(390);
+        await OpenDrawerAsync(page, "open-bottom-sheet", ".tm-drawer--bottom");
+        await SnapToFullAsync(page);
+
+        var before = await page.Locator(".tm-drawer--bottom .tm-drawer__panel")
+            .EvaluateAsync<double>("el => el.getBoundingClientRect().height");
+        var box = await page.Locator(".tm-drawer--bottom .tm-sheet__handle").BoundingBoxAsync();
+        Assert.IsNotNull(box);
+        var x = box.X + box.Width / 2;
+        var y = box.Y + box.Height / 2;
+        await page.Mouse.MoveAsync(x, y);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(x, y + 30, new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.UpAsync();
+        await page.WaitForTimeoutAsync(500);
+
+        await AssertFullSnapAsync(page, before, "a 30px drag at full");
+    }
+
+    [TestMethod]
+    [DataRow(390)]
+    [DataRow(1440)]
+    public async Task LongDialog_KeepsTitleAndReachesTheLastWord(int width)
+    {
+        var page = await OpenAsync(width);
+        await page.GotoAsync($"{BaseUrl}/modal-dialog", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        if (width >= 1024)
+        {
+            await page.GetByTestId("toggle-sheet-presentation").CheckAsync();
+        }
+
+        await page.GetByTestId("open-long-dialog").ClickAsync();
+        var dialog = page.Locator(".tm-dialog");
+        await dialog.WaitForAsync();
+        await dialog.EvaluateAsync("el => Promise.all(el.getAnimations().map(a => a.finished)).catch(() => {})");
+
+        var visible = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const title = document.querySelector('.tm-dialog-title').getBoundingClientRect();
+                const footer = document.querySelector('.tm-dialog-footer').getBoundingClientRect();
+                const view = window.innerHeight;
+                return title.top >= -1 && title.bottom <= view + 1 && footer.top >= -1 && footer.bottom <= view + 1;
+            }
+            """);
+        Assert.IsTrue(visible, "the title and the footer must both be inside the viewport");
+
+        var reached = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const content = document.querySelector('.tm-dialog-content');
+                content.scrollTop = content.scrollHeight;
+                const tail = content.innerText.trim().split(/\s+/).at(-1);
+                return tail && content.innerText.endsWith(tail) && content.scrollTop + content.clientHeight >= content.scrollHeight - 2;
+            }
+            """);
+        Assert.IsTrue(reached, "scrolling the dialog content must reach the last word");
+    }
+
+    [TestMethod]
+    public async Task StandaloneScope_Escape_RestoresTheTrigger()
+    {
+        var page = await OpenAsync(390);
+        await page.GotoAsync($"{BaseUrl}/modal-dialog", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        var trigger = page.GetByTestId("scope-trigger");
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await trigger.ClickAsync();
+        await page.GetByTestId("scope-input").WaitForAsync();
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(300);
+
+        var focused = await page.EvaluateAsync<string>("() => document.activeElement?.id ?? ''");
+        Assert.AreEqual("scope-trigger", focused, "Escape must return focus to the trigger");
+        var inert = await page.EvaluateAsync<int>("() => document.querySelectorAll('[inert]').length");
+        Assert.AreEqual(0, inert, "closing the scope must release everything it marked inert");
+    }
+
+    [TestMethod]
+    public async Task ViewManager_ThirdInstance_EscapeRestoresItsOwnToggle()
+    {
+        var page = await OpenAsync(1440);
+        await page.GotoAsync($"{BaseUrl}/data-table", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var toggles = page.Locator(".tm-view-manager-toggle");
+        Assert.IsTrue(await toggles.CountAsync() >= 3, "the data-table page renders three view managers");
+        var third = toggles.Nth(2);
+        await third.ScrollIntoViewIfNeededAsync();
+        var before = await page.EvaluateAsync<double>("() => window.scrollY");
+        await third.ClickAsync();
+        await page.Locator(".tm-view-manager-panel .tm-btn-primary").Last.ClickAsync();
+        await page.Locator(".tm-modal").WaitForAsync();
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
+
+        var focusedId = await page.EvaluateAsync<string>("() => document.activeElement?.id ?? ''");
+        var thirdId = await third.GetAttributeAsync("id");
+        Assert.AreEqual(thirdId, focusedId, "Escape must restore the toggle that opened the modal, not the first one");
+        var after = await page.EvaluateAsync<double>("() => window.scrollY");
+        Assert.AreEqual(before, after, 80, "restoring focus must not jump the page to another instance");
+    }
+
+    private static async Task SnapToFullAsync(IPage page)
+    {
+        await page.Locator(".tm-drawer--bottom .tm-sheet__handle").FocusAsync();
+        await page.Keyboard.PressAsync("ArrowUp");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('.tm-drawer--bottom')?.getAttribute('data-snap-index') === '1'",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
     [TestMethod]

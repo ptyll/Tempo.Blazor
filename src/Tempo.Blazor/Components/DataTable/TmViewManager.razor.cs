@@ -58,6 +58,11 @@ public partial class TmViewManager : ComponentBase
     [Parameter] public string? CurrentTenantId { get; set; }
 
     private bool _isOpen;
+
+    // Per instance. A hardcoded id restores focus to the first manager on the page.
+    private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
+    private string _toggleId => $"tm-view-manager-toggle-{_instanceId}";
+    private string _nameId => $"tm-view-name-{_instanceId}";
     private bool _showModal;
     private List<DataTableView> _views = [];
     private DataTableView? _editingView;

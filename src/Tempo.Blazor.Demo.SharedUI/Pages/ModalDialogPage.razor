@@ -116,6 +116,7 @@
         <TmButton OnClick="() => _showSheet = true" data-testid="open-sheet">@Loc["TmDemo_OpenSheet"]</TmButton>
         <TmButton OnClick="() => _showStacked = true" Variant="ButtonVariant.Secondary" data-testid="open-stacked">@Loc["TmDemo_StackedFooter"]</TmButton>
         <TmButton OnClick="() => _showInlineDrawer = true" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer">@Loc["TmDemo_InlineSheet"]</TmButton>
+        <TmButton OnClick="() => _showLongDialog = true" Variant="ButtonVariant.Secondary" data-testid="open-long-dialog">@Loc["TmDemo_OpenLongDialog"]</TmButton>
     </div>
     <div class="mt-3 flex flex-wrap gap-4 text-sm">
         <label><input type="checkbox" data-testid="toggle-dialog-inline" @bind="_dialogInline" /> @Loc["TmDemo_ToggleInline"]</label>
@@ -129,9 +130,10 @@
         </TmDrawer>
     </div>
     <div class="mt-4">
-        <TmFocusScope Active="_scopeActive" InitialFocusTargetId="scope-input" RestoreFocusTargetId="scope-trigger" AriaLabel="@Loc["TmDemo_FocusScopeLabel"]">
+        <TmFocusScope Active="_scopeActive" InitialFocusTargetId="scope-input" RestoreFocusTargetId="scope-trigger" CloseOnEscape="true" OnEscape="() => _scopeActive = false" AriaLabel="@Loc["TmDemo_FocusScopeLabel"]">
             <label for="scope-input">@Loc["TmDemo_FocusScopeInput"]</label>
             <input id="scope-input" data-testid="scope-input" class="tm-input" aria-label="@Loc["TmDemo_FocusScopeInput"]" />
+            <button type="button" class="tm-btn tm-btn-primary" data-testid="scope-done" @onclick="() => _scopeActive = false">@Loc["Tm_Done"]</button>
         </TmFocusScope>
         <button type="button" id="scope-trigger" data-testid="scope-trigger" class="tm-btn tm-btn-ghost" @onclick="() => _scopeActive = !_scopeActive">@Loc["TmDemo_ToggleFocusScope"]</button>
     </div>
@@ -151,7 +153,11 @@
    MODALS & DIALOGS
    ═══════════════════════════════════════════════════════════════ -->
 
-<TmModal Show="_showSheet" OnClose="() => _showSheet = false" Title="@Loc["TmDemo_OpenSheet"]" MobilePresentation="@(_forceSheet ? MobilePresentation.Sheet : MobilePresentation.Auto)" FooterLayout="FooterLayout.Inline" ShowDefaultFooterButtons="true" />
+<TmModal Show="_showSheet" OnClose="() => _showSheet = false" Title="@Loc["TmDemo_OpenSheet"]" MobilePresentation="@(_forceSheet ? MobilePresentation.Sheet : MobilePresentation.Auto)" FooterLayout="FooterLayout.Inline" ShowDefaultFooterButtons="true">
+    <ChildContent>
+        <p>@Loc["TmDemo_InlineSheetBody"]</p>
+    </ChildContent>
+</TmModal>
 <TmModal Show="_showStacked" OnClose="() => _showStacked = false" Title="Stacked footer" FooterLayout="FooterLayout.Stacked" ShowDefaultFooterButtons="true" />
 
 <!-- Basic Modal -->
@@ -185,6 +191,13 @@
           Title="@_alertTitle"
           Message="@_alertMessage"
           OnResult="OnAlertResult" />
+
+<TmDialog Show="_showLongDialog"
+          Type="DialogType.Confirm"
+          MobilePresentation="@(_forceSheet ? MobilePresentation.Sheet : MobilePresentation.Auto)"
+          Title="@Loc["TmDemo_LongDialogTitle"]"
+          Message="@LongMessage"
+          OnResult="_ => _showLongDialog = false" />
 
 <!-- Confirm Dialog -->
 <TmDialog Show="_showConfirm"
@@ -261,6 +274,8 @@
     
     // Confirm Dialog
     private bool _showConfirm;
+    private bool _showLongDialog;
+    private string LongMessage => string.Join(' ', Enumerable.Repeat("word", 400)) + " " + Loc["TmDemo_LongDialogTail"];
     private bool _confirmIsDangerous;
     private string _confirmTitle = "Confirm Action";
     private string _confirmMessage = "Are you sure you want to proceed?";

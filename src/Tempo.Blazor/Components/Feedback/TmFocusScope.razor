@@ -196,10 +196,18 @@
         if (_disposed) return;
         _disposed = true;
 
+        var wasActive = _wasActive;
         if (_wasActive)
         {
             Parent?.UnregisterDescendant();
             _wasActive = false;
+        }
+
+        if (wasActive)
+        {
+            try { await OnDeactivated.InvokeAsync(); }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) { }
         }
 
         if (_trap is not null)

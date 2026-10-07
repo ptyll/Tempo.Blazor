@@ -21,16 +21,10 @@ export function settle(snaps, released, swipeToDismiss, velocity = 0) {
         return { dismiss: false, snap: null, index: -1 };
     }
 
-    if (snaps.length === 0) {
-        return { dismiss: false, snap: null, index: -1 };
-    }
-
     const lowest = snaps[0];
-    // A one-snap sheet dismisses from a real drag (below the snap). A multi-snap sheet dismisses
-    // only past the lowest snap by a margin, or on a downward flick — a release between snaps
-    // settles to the nearest one.
-    const dismissAt = snaps.length === 1 ? lowest : lowest - 0.15;
-    if (swipeToDismiss && (released < dismissAt || velocity > 0.5)) {
+    // A multi-snap sheet dismisses only past the lowest snap by a margin, or on a downward flick.
+    // A one-snap sheet is not decided here: its dismiss is relative to the height it started at.
+    if (snaps.length > 1 && swipeToDismiss && (released < lowest - 0.15 || velocity > 0.5)) {
         return { dismiss: true, snap: lowest, index: 0 };
     }
 
@@ -113,12 +107,6 @@ const gestures = new Map();
  * @param {{ invokeMethodAsync: Function }|null} host the component to tell about a snap or a dismiss
  * @param {string} id the sheet's id, so a second attach replaces the first
  */
-const INTERACTIVE = 'button, a, input, select, textarea, [role="button"]';
-
-function isInteractive(target) {
-    return !!target && typeof target.closest === 'function' && !!target.closest(INTERACTIVE);
-}
-
 export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, track = true) {
     if (!panel) return;
     detach(id);
@@ -138,6 +126,17 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         samples.push({ y, time });
         const cutoff = time - 80;
         while (samples.length > 1 && samples[0].time < cutoff) samples.shift();
+    };
+
+    // An inline sheet is a fraction of its host, not of the viewport. A modal sheet tracks the
+    // visible viewport. Measured at the call, so a release sees the host as it is now.
+    const basis = () => {
+        if (!track) {
+            const hostBox = panel.closest?.('.tm-drawer')?.getBoundingClientRect?.().height
+                ?? panel.parentElement?.clientHeight;
+            if (hostBox > 0) return hostBox;
+        }
+        return window.visualViewport ? window.visualViewport.height : window.innerHeight;
     };
 
     const resetInline = () => {
@@ -164,8 +163,12 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         samples.length = 0;
         remember(event.clientY, event.timeStamp ?? 0);
         startHeight = panel.getBoundingClientRect().height;
-        const viewportNow = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        startFraction = viewportNow > 0 ? startHeight / viewportNow : 0;
+        // A press on the handle itself captures immediately. A fast drag whose first move leaves
+        // the 44px handle would otherwise never arm. A header press still waits for the 6px arm,
+        // so a click on the close button stays a click.
+        if (event.target === handle || event.target?.closest?.('.tm-sheet__handle') === handle) capture(event);
+        const basisNow = basis();
+        startFraction = basisNow > 0 ? startHeight / basisNow : 0;
     };
 
     const onMove = (event) => {
@@ -189,8 +192,13 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         armed = false;
         pointerId = null;
 
+        // A tap never armed. Leave the inline styles alone: clearing them is a no-op, but a click
+        // that follows pointerup must still land on the grabber, not on a backdrop the panel
+        // collapsed onto.
+        if (!wasArmed) return;
+
         // Measure before clearing: resetInline drops the inline height, and a read after it sees 0.
-        const viewport = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const viewport = basis();
         const height = panel.getBoundingClientRect().height;
         const now = event.timeStamp ?? samples.at(-1)?.time ?? 0;
         const recent = samples.filter(sample => sample.time >= now - 80);
@@ -201,15 +209,20 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         if (cancelled || !wasArmed) return;
 
         const released = viewport > 0 ? height / viewport : 0;
-        // A content sheet has no snaps. It dismisses only on a real downward drag — past a quarter
-        // of the height it started at — or a flick. An upward drag never dismisses.
-        if (sorted.length === 0) {
-            if (swipeToDismiss && (released < startFraction * 0.75 || velocity > 0.5)) {
+        // An upward drag never dismisses, whatever the velocity sample says.
+        const downward = (event.clientY - startY) > 0;
+        // A content sheet, and a one-snap sheet, dismiss only past a quarter of the height they
+        // started at, or on a downward flick. A multi-snap sheet uses the lowest-snap margin.
+        if (sorted.length <= 1) {
+            if (swipeToDismiss && downward && (released < startFraction * 0.75 || velocity > 0.5)) {
                 host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
+            }
+            else if (sorted.length === 1) {
+                host?.invokeMethodAsync('HandleSheetSnappedAsync', 0).catch(() => {});
             }
             return;
         }
-        const result = settle(sorted, released, swipeToDismiss, velocity);
+        const result = settle(sorted, released, swipeToDismiss && downward, velocity);
         if (result.dismiss) {
             host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
             return;

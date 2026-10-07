@@ -27,7 +27,7 @@
   otherwise. A host that wants the centered dialog at every width sets
   `MobilePresentation="Dialog"`. An app should place `<TmLayoutObserver IsViewportScope="true"
   IsContainer="false">` as its outermost layout element. Without it, an open overlay measures its
-  own fixed root, so the sheet still appears, but the first frame can flash. See
+  own viewport through an internal probe, so the sheet still appears, but the first frame can flash. See
   [docs/responsive-conventions.md](docs/responsive-conventions.md).
 
 - **`TmModal`, `TmDialog` and `TmDrawer` render a `TmFocusScope` root.** The dialog role, `tabindex`
@@ -54,12 +54,12 @@
   `.tm-command-palette-backdrop`) is not recognised. `TmCommandPalette` and `TmKeyboardShortcutsHelp`
   mark their backdrops the same way.
 
-- **A modal side drawer panel stacks above its backdrop.** The overlay is `position: fixed` at
-  `--tm-z-drawer-backdrop` (1035). After it moved inside the root it painted over the static side
-  panel, so every click in a left or right drawer hit the backdrop and closed it. The panel of a
-  modal drawer is now `position: relative` at `calc(var(--tm-z-drawer-backdrop, 1035) + 1)`. An
-  inline drawer has no overlay and stays static. Below 640px a side panel is full width, so there
-  is no backdrop point to click; close it from its own button.
+- **A drawer panel stacks above its backdrop, for every position.** The overlay is `position: fixed`
+  inside the root, so it painted over the static panel and every click in a left or right drawer hit
+  the backdrop and closed it. `.tm-drawer__panel` is now `position: relative; z-index: 1` and
+  `.tm-drawer > .tm-drawer__overlay` is `z-index: 0`. Both live in the root's stacking context, so the
+  panel wins without a calc against the backdrop token. Below 640px a side panel is full width, so
+  there is no backdrop point to click; close it from its own button.
 
 - **`.tm-modal` and `.tm-dialog` end at `transform: none`.** The visible state used to be
   `transform: scale(1)`, which is still a containing block. A sheet opened inside that modal then
@@ -77,7 +77,44 @@
 - **`TmDrawer.SnapIndex` is two-way.** The drawer adopts a change of the parameter, and a gesture
   reports the snap it settled on through `SnapIndexChanged`. A parent re-render that passes the
   same index does not reset a snap the user just dragged to. `--tm-sheet-height` is written only by
-  Blazor; the gesture must not delete it.
+  Blazor; the gesture must not delete it. Snap points are clamped to `MaxHeight` and de-duplicated
+  before the gesture sees them, so a snap of `1` under a cap of `0.85` is one snap, not two. A
+  one-snap sheet dismisses only past a quarter of the height it started at, or on a downward flick.
+  An upward drag never dismisses.
+
+- **A click on the dimmed area closes `TmModal`.** `CloseOnOverlayClick` now defaults to `true`.
+  A host that kept the old behaviour sets it to `false`. `.tm-modal-container` is
+  `pointer-events: none`, so the click reaches the overlay.
+
+- **An inline sheet is a fraction of its host.** `Modal="false"` renders `position: absolute;
+  inset: 0` inside a positioned host, measures snaps against that host, and does not track the
+  keyboard. The root uses `--tm-z-inline-sheet` (10), under the modal band.
+
+- **A visible modal or dialog ends at `transform: none`.** The open keyframe used to finish at
+  `scale(1)`, which is still a containing block. A sheet inside that modal then anchored to the
+  modal instead of the viewport.
+
+- **`TmLightbox`, `TmKeyboardShortcutsHelp` and `TmCommandPalette` render a `TmFocusScope` root.**
+  Escape is the scope's document keydown. `TmLightbox` no longer also handles Escape itself, which
+  closed it twice.
+
+- **`TmSheetHandle.SnapValue` drives the value text.** The handle announces `TmSheet_SnapPercent`
+  (`{0} %`). `TmSheet_SnapIndex` is no longer the announcement.
+
+- **`.tm-viewport-probe` replaces `.tm-layout--fallback`.** An overlay with no viewport scope
+  measures a fixed, hidden box. The probe is an internal class, not a public component.
+
+- **Side-drawer shadows use a token.** The panel shadow is `var(--tm-shadow-xl)`, not a hardcoded
+  value. The modal sheet media query is `width < 640px`: a viewport of exactly 640px is no longer
+  inside the sheet rule.
+
+- **`TmViewManager` ids are per instance.** The toggle and the name field used to be
+  `tm-view-manager-toggle` and `tm-view-name`. A page with three managers restored focus to the
+  first. Each instance now suffixes both ids, and the modal's initial focus is the name field of
+  that instance.
+
+- **`TmDashboard` closes its menu when a delete dialog opens.** The menu no longer stays open
+  behind the dialog.
 
 - **Sheet dismiss thresholds changed.** A snapped sheet dismisses only below the lowest snap by
   0.15, or on a downward flick faster than 0.5 px/ms measured over the last 80ms. It used to treat
@@ -262,6 +299,9 @@
 - Opt-in indigo theme (`theme-indigo.css`, activated with `data-tm-theme="indigo"`). The blue
   scale stays the default. The demo exposes a switch that persists the choice in `localStorage`.
 - Shared keys `Tm_Ok`, `Tm_Done` and `Tm_More` in en/cs/fr.
+- `TmFocusScope`, the public focus-trap root. `TmSheetHandle`, the shared grabber.
+  `MobilePresentation`, `FooterLayout` and `DialogLayout`. `InitialFocusTargetId` on the scope.
+  [docs/bottom-sheet.md](docs/bottom-sheet.md).
 - `scripts/audit-css-strict.mjs` with a shrink-only baseline, gated by `CssTokenAuditTests`, and
   `ScopedCssOwnershipTests` with its own shrink-only baseline. The audit now also flags the named
   colours `white` and `black`, and judges white-on-primary per rule rather than per line. See
@@ -282,11 +322,6 @@
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 
 ### Fixed
-
-- **Sheet chrome moved to the shared handle (F2 review).** The `*DragHandle` resource keys are
-  `TmSheet_*`. `.tm-modal__handle` and `.tm-dialog__handle` are gone; the grabber is `.tm-sheet__handle`.
-  The page scroll lock is `html.tm-scroll-lock`. A desktop sheet caps at 48rem. The command palette and
-  the gantt roots are `.tm-focus-scope`.
 
 - **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
   `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
