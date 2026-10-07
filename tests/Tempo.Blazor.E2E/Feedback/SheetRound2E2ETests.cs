@@ -116,4 +116,59 @@ public sealed class SheetRound2E2ETests : WasmTestBase
         var inline = await panel.EvaluateAsync<string>("el => el.style.getPropertyValue('height')");
         Assert.AreEqual(string.Empty, inline, "a release clears the inline height the gesture wrote");
     }
+
+    [TestMethod]
+    public async Task TapOnTheModalGrabber_DoesNotDismiss()
+    {
+        var page = await OpenAsync("/modal-dialog", 390, 844);
+        await page.GetByTestId("toggle-sheet-presentation").CheckAsync();
+        await page.GetByTestId("open-sheet").ClickAsync();
+        await page.Locator(".tm-modal--sheet").WaitForAsync();
+        var handle = await page.Locator(".tm-modal--sheet .tm-sheet__handle").BoundingBoxAsync();
+        Assert.IsNotNull(handle);
+
+        await page.Mouse.ClickAsync(handle.X + handle.Width / 2, handle.Y + handle.Height / 2);
+
+        Assert.IsTrue(await page.Locator(".tm-modal--sheet").IsVisibleAsync(), "a tap on the grabber is not a dismiss");
+    }
+
+    [TestMethod]
+    public async Task OverlayClick_ClosesTheModal()
+    {
+        var page = await OpenAsync("/modal-dialog", 1440, 900);
+        await page.GetByTestId("open-basic-modal").ClickAsync();
+        await page.Locator(".tm-modal").First.WaitForAsync();
+
+        await page.Mouse.ClickAsync(10, 10);
+
+        Assert.AreEqual(0, await page.Locator(".tm-modal-overlay").CountAsync(), "a click on the dimmed area closes the modal");
+    }
+
+    [TestMethod]
+    [DataRow(390)]
+    [DataRow(1440)]
+    public async Task InlineSheet_StaysInsideItsHost_AndIgnoresEscapeOnTheCanvas(int width)
+    {
+        var page = await OpenAsync("/modal-dialog", width, 844);
+        await page.GetByTestId("open-inline-drawer").ClickAsync();
+        var panel = page.Locator(".tm-drawer--inline .tm-drawer__panel");
+        await panel.WaitForAsync();
+
+        var inside = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const host = document.querySelector('[style*="position: relative"]');
+                const panel = document.querySelector('.tm-drawer--inline .tm-drawer__panel');
+                if (!host || !panel) return false;
+                const h = host.getBoundingClientRect();
+                const p = panel.getBoundingClientRect();
+                return p.left >= h.left - 1 && p.right <= h.right + 1 && p.bottom <= h.bottom + 1 && p.top >= h.top - 1;
+            }
+            """);
+        Assert.IsTrue(inside, "the inline panel is positioned inside its host, not the viewport");
+
+        await page.GetByTestId("sheet-canvas").FocusAsync();
+        await page.Keyboard.PressAsync("Escape");
+        Assert.IsTrue(await panel.IsVisibleAsync(), "Escape on the canvas behind an inline sheet does not close it");
+    }
 }
