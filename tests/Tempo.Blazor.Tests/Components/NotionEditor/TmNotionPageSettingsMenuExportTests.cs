@@ -9,6 +9,7 @@ using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.NotionEditor;
 
@@ -98,6 +99,39 @@ public class TmNotionPageSettingsMenuExportTests : LocalizationTestBase
 
         requested.Should().BeTrue();
         cut.FindAll(".tm-npsm").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void OpenMenu_ClickOutsideBackdrop_UsesScopedClassNotInlineZIndex()
+    {
+        var cut = RenderMenu(importExportProvider: null);
+
+        cut.Find(".tm-npsm-trigger").Click();
+
+        // CF10n follow-up: the click-outside layer sits one step under the popover
+        // band via the scoped class. The old inline z-index:9998 escaped the CSS
+        // band sweep, covered the 1030 panel and made every menu item unclickable
+        // (Playwright hit-test reported an aria-hidden div intercepting).
+        var backdrop = cut.Find(".tm-npsm__backdrop");
+        backdrop.GetAttribute("style").Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public void NotionEditorRazor_BackdropLayers_CarryNoInlineZIndex()
+    {
+        // Inline z-indexes are invisible to the --tm-z-* band sweeps: the page-settings
+        // backdrop kept z-index:9998 above the migrated 1030 panel. The whole tree is
+        // scanned so the next inline band value cannot hide in markup again.
+        var notionEditorDir = Path.Combine(
+            ThemeCss.RepositoryRoot().FullName, "src", "Tempo.Blazor.NotionEditor");
+        var offenders = Directory
+            .EnumerateFiles(notionEditorDir, "*.razor", SearchOption.AllDirectories)
+            .SelectMany(file => File.ReadLines(file)
+                .Where(line => line.Contains("style=") && line.Contains("z-index"))
+                .Select(line => $"{file}: {line.Trim()}"))
+            .ToList();
+
+        offenders.Should().BeEmpty();
     }
 
     private IRenderedComponent<CascadingValue<NotionEditorContext>> RenderMenu(

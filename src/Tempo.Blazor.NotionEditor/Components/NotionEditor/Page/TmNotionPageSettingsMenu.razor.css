@@ -6,6 +6,15 @@
     align-items: center;
 }
 
+/* ── Click-outside backdrop — one step under the popover band, like every other
+   Notion anchored surface (slash menu, token dropdown, color picker…). An inline
+   z-index here escaped the CF10n band sweep and covered the panel. ─────────── */
+.tm-npsm__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--tm-z-popover, 1030) - 1);
+}
+
 /* ── Trigger button ───────────────────────────────────────────────────────── */
 
 .tm-npsm-trigger {

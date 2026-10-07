@@ -478,6 +478,21 @@
   conflicts still produce the pending-conflict resolve flow. Regression
   coverage: `OverlappingApplyAsync_QueuesSecondMutationBehindInFlightSave`.
 
+- **The Notion page-settings menu is clickable again.** CF10n migrated
+  `.tm-npsm` from `z-index: 9999` to the popover band
+  (`var(--tm-z-popover, 1030)`) but left the menu's click-outside backdrop
+  as an inline `z-index: 9998` — a literal the band sweep could not see.
+  The full-screen backdrop then painted *above* the 1030 panel and ate
+  every pointer event, so no export/import/comment item could be clicked
+  (`CF28`, `PageComment_MarkAllAsRead_SettingsMenu`, `CF25`/`CF26`
+  import-export E2E). The backdrop is now the scoped
+  `.tm-npsm__backdrop` class at `calc(var(--tm-z-popover, 1030) - 1)`,
+  one step under the panel like every other anchored surface. Regression
+  coverage: `OpenMenu_ClickOutsideBackdrop_UsesScopedClassNotInlineZIndex`
+  plus `NotionEditorRazor_BackdropLayers_CarryNoInlineZIndex`, which scans
+  the whole NotionEditor tree so the next inline band value cannot hide in
+  markup again.
+
 ### Erratum 2.9.0
 
 Two changes shipped in 2.9.0 under routine fix/feature sections but are
