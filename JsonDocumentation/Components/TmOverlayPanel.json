@@ -73,7 +73,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Cap the panel height at the room available on the resolved side (honouring a smaller CSS max-height) and let it scroll."
+      "description": "Cap the panel height at the room available on the resolved side (honouring a smaller CSS max-height) and let it scroll. The cap tracks the room on every placement pass in both directions — it shrinks when the anchor nears the viewport edge and regrows up to the stylesheet max-height when the room returns (since 2.9.1)."
     },
     {
       "name": "CloseOnEscape",

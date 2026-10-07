@@ -303,6 +303,12 @@
             return;
         }
 
+        // N319: close the dropdown BEFORE awaiting CreateAsync — the handler may open a dialog
+        // (e.g. a confirm or a create-form) and the top-layer panel would cover it.
+        SetShowDropdown(false);
+        StateHasChanged();
+        await Task.Yield();
+
         var created = await DataProvider.CreateAsync(_searchText);
         if (created is null)
         {

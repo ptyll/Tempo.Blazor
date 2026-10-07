@@ -2,7 +2,7 @@
   "itemName": "TmSplitButton",
   "kind": "Component",
   "category": "Buttons",
-  "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items.",
+  "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items. The menu is a top-layer TmOverlayPanel; any click inside it closes it (bubbling panel click), and the primary button also sets the menu closed before OnClick — a handler-opened dialog never renders under the still-open menu.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
   ],

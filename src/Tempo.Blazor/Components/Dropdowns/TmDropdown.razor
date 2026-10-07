@@ -85,9 +85,13 @@
     public async Task SelectItemAsync(string value)
     {
         if (Disabled) return;
-        await OnSelect.InvokeAsync(value);
+        // N319: close BEFORE invoking the handler. The menu is a top-layer popover — a dialog
+        // the handler opens would render UNDER the still-open menu (and the first Escape would
+        // close the menu, not the dialog). The yield lets the close re-render hide the popover.
         _isOpen = false;
         StateHasChanged();
+        await Task.Yield();
+        await OnSelect.InvokeAsync(value);
     }
 
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase

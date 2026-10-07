@@ -4,7 +4,7 @@
 // touch .matches()/showPopover(), which the stubs deliberately do not implement.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { open, close, dismiss } from '../overlay.js';
+import { open, close, dismiss, update } from '../overlay.js';
 
 function stubWindow() {
     return { innerWidth: 1280, innerHeight: 800, addEventListener() {}, removeEventListener() {} };
@@ -40,6 +40,11 @@ function installDomStubs({ captureKeydown = null, activeElement = null } = {}) {
         };
     }
     globalThis.document = stubDocument({ activeElement });
+    // Node has no CSSOM; open() reads the stylesheet max-height once per entry (N318), so every
+    // test needs a computed-style stub. Default = "no stylesheet cap" (parseFloat('none') is NaN,
+    // which the cap math treats as room-only). Tests that need a real cap override this AFTER
+    // calling installDomStubs.
+    globalThis.getComputedStyle = () => ({ maxHeight: 'none' });
     const observed = [];
     const unobserved = [];
     globalThis.ResizeObserver = class {
@@ -198,4 +203,61 @@ test('an accepted dismissal (dotNetRef resolves true) keeps entry.dismissed', as
     await new Promise(r => setTimeout(r, 0));
     assert.equal(entry.dismissed, true,
         'an accepted dismissal stays dismissed — the entry is on its way to close()');
+});
+
+test('constrainHeight cap grows back when the room grows (N318)', () => {
+    installDomStubs();
+    const panel = stubPanel(); // offsetHeight 40 — fits on the bottom side in both passes, no flip
+    // Stylesheet cap 320px, resolved like the real CSSOM: an inline max-height overrides the
+    // stylesheet value. That read-back of our own previous inline cap is the N318 defect — the
+    // entry must remember the STYLESHEET cap instead.
+    globalThis.getComputedStyle = el =>
+        el === panel ? { maxHeight: panel.style.maxHeight || '320px' } : { maxHeight: 'none' };
+
+    // Anchor near the viewport bottom: room below = 800 − 688 − 4 − 8 = 100px.
+    const lowAnchor = {
+        isConnected: true,
+        getBoundingClientRect: () => ({ top: 648, left: 100, right: 220, bottom: 688, width: 120, height: 40 }),
+    };
+    open('n318-grow', panel, lowAnchor, {}, { constrainHeight: true });
+    assert.equal(panel.style.maxHeight, '100px', 'first pass caps to the available room');
+
+    // The anchor scrolled back up: room below is now 800 − 388 − 4 − 8 = 400px, so the panel may
+    // grow to the stylesheet cap 320px. Reading getComputedStyle HERE returns 100px (our own
+    // inline override) and the buggy code keeps the cap at 100px forever.
+    const highAnchor = {
+        isConnected: true,
+        getBoundingClientRect: () => ({ top: 348, left: 100, right: 220, bottom: 388, width: 120, height: 40 }),
+    };
+    update('n318-grow', highAnchor, { constrainHeight: true });
+    assert.equal(panel.style.maxHeight, '320px',
+        'cap must regrow to the stylesheet ceiling once the room returns');
+
+    close('n318-grow');
+});
+
+test('panel height is measured without the previous inline cap (N318)', () => {
+    installDomStubs();
+    const panel = stubPanel();
+    // offsetHeight must be read AFTER place() clears the previous pass's inline maxHeight —
+    // otherwise the flip/fit decision uses the capped height instead of the natural one.
+    const maxHeightAtMeasure = [];
+    Object.defineProperty(panel, 'offsetHeight', {
+        get() { maxHeightAtMeasure.push(panel.style.maxHeight); return 40; },
+    });
+    globalThis.getComputedStyle = el =>
+        el === panel ? { maxHeight: panel.style.maxHeight || '320px' } : { maxHeight: 'none' };
+
+    const anchor = {
+        isConnected: true,
+        getBoundingClientRect: () => ({ top: 648, left: 100, right: 220, bottom: 688, width: 120, height: 40 }),
+    };
+    open('n318-measure', panel, anchor, {}, { constrainHeight: true });
+    assert.equal(panel.style.maxHeight, '100px', 'first pass leaves a real inline cap behind');
+
+    update('n318-measure', anchor, { constrainHeight: true }); // second place() pass
+    assert.equal(maxHeightAtMeasure.at(-1), '',
+        'the second pass must clear the inline cap BEFORE measuring offsetHeight');
+
+    close('n318-measure');
 });

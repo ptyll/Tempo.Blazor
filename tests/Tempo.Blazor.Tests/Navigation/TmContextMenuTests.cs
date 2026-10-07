@@ -212,7 +212,9 @@ public class TmContextMenuTests : LocalizationTestBase
         cut.Find(".tm-context-menu__trigger").Click();
         cut.Find("[role='menuitem']").Click();
 
-        clicked.Should().BeTrue();
+        // N319: the item closes the menu and yields a render before OnClick runs, so the
+        // callback lands on a later dispatcher turn than the Click() dispatch.
+        cut.WaitForAssertion(() => clicked.Should().BeTrue());
     }
 
     [Fact]
@@ -249,6 +251,32 @@ public class TmContextMenuTests : LocalizationTestBase
         await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll("[role='menu']").Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// N319: the menu must close BEFORE the item's <c>OnClick</c> runs — a handler that opens a
+    /// dialog would otherwise render it under the still-open top-layer popover (and the first
+    /// Escape would close the menu, not the dialog).
+    /// </summary>
+    [Fact]
+    public void ContextMenuItem_Click_ClosesMenuBeforeOnClick()
+    {
+        var openPanelsDuringHandler = -1;
+        IRenderedComponent<TmContextMenu>? probe = null;
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Open</button>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Delete")
+                .Add(x => x.OnClick, EventCallback.Factory.Create(this, () =>
+                {
+                    openPanelsDuringHandler = probe!.FindAll(".tm-overlay-panel").Count;
+                }))));
+        probe = cut;
+
+        cut.Find(".tm-context-menu__trigger").Click();
+        cut.Find(".tm-context-menu__item").Click();
+
+        cut.WaitForAssertion(() => openPanelsDuringHandler.Should().Be(0));
     }
 
     // ── Helper ─────────────────────────────────────────────

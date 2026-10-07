@@ -55,8 +55,11 @@ else
     {
         if (!Disabled)
         {
-            await OnClick.InvokeAsync();
+            // N319: close the menu BEFORE the handler runs — the menu is a top-layer popover and
+            // would cover a dialog the handler opens (and steal its first Escape).
             Parent?.CloseMenu();
+            await Task.Yield();
+            await OnClick.InvokeAsync();
         }
     }
 }

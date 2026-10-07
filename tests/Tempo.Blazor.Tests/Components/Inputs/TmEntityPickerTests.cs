@@ -30,11 +30,14 @@ public class TmEntityPickerTests : LocalizationTestBase
     /// <summary>Provider that supports inline create-new and recent items via the K10 default-interface methods.</summary>
     private sealed class FakeEntityProvider : IDropdownDataProvider<TestItem>
     {
+        /// <summary>Optional hook invoked inside <see cref="CreateAsync"/> (N319 ordering probe).</summary>
+        public Func<Task<TestItem?>>? OnCreate { get; set; }
+
         public Task<DropdownDataResult<TestItem>> GetItemsAsync(DropdownSearchRequest request, CancellationToken ct = default)
             => Task.FromResult(DropdownDataResult<TestItem>.WithAllItems(_allItems));
 
         public Task<TestItem?> CreateAsync(string text, CancellationToken ct = default)
-            => Task.FromResult<TestItem?>(new TestItem(99, text));
+            => OnCreate?.Invoke() ?? Task.FromResult<TestItem?>(new TestItem(99, text));
 
         public Task<IReadOnlyList<TestItem>> GetRecentAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<TestItem>>(new List<TestItem> { new(3, "Charlie") });
@@ -262,6 +265,36 @@ public class TmEntityPickerTests : LocalizationTestBase
 
         cut.WaitForState(() => cut.FindAll(".tm-entity-picker__recent-item").Count > 0);
         cut.Find(".tm-entity-picker__recent").TextContent.Should().Contain("Charlie");
+    }
+
+    /// <summary>
+    /// N319: the dropdown must close BEFORE <c>CreateAsync</c> is awaited — the handler may open
+    /// a dialog that would otherwise render under the still-open top-layer panel.
+    /// </summary>
+    [Fact]
+    public async Task EntityPicker_CreateNew_DropdownClosedWhileCreateAsyncRuns()
+    {
+        var provider = new FakeEntityProvider();
+        var cut = Render<TmEntityPicker<TestItem, int>>(p => p
+            .Add(x => x.SearchProvider, SearchProvider)
+            .Add(x => x.ValueSelector, i => i.Id)
+            .Add(x => x.DisplaySelector, i => i.Name)
+            .Add(x => x.MinSearchLength, 1)
+            .Add(x => x.AllowCreateNew, true)
+            .Add(x => x.DataProvider, provider));
+
+        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "Zoe" });
+        cut.WaitForState(() => cut.FindAll(".tm-entity-picker__create").Count > 0);
+
+        var openPanelsDuringCreate = -1;
+        provider.OnCreate = () =>
+        {
+            openPanelsDuringCreate = cut.FindAll(".tm-overlay-panel").Count;
+            return Task.FromResult<TestItem?>(new TestItem(99, "Zoe"));
+        };
+        cut.Find(".tm-entity-picker__create").Click();
+
+        cut.WaitForAssertion(() => openPanelsDuringCreate.Should().Be(0));
     }
 
     /// <summary>

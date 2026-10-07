@@ -2,7 +2,7 @@
   "itemName": "TmFilterableDropdown",
   "kind": "Component",
   "category": "Dropdowns",
-  "description": "Generic searchable dropdown with client-side or server-side data loading, keyboard navigation, custom item templates, and a clear button. Client-side filtering is contains-based and accent-insensitive by default (FormD normalization — \"usti\" matches \"Ústí\"). Supports two-way binding via Value/ValueChanged.",
+  "description": "Generic searchable dropdown with client-side or server-side data loading, keyboard navigation, custom item templates, and a clear button. Client-side filtering is contains-based and accent-insensitive by default (FormD normalization — \"usti\" matches \"Ústí\"). Supports two-way binding via Value/ValueChanged. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dropdowns"
   ],

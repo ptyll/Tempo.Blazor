@@ -2,7 +2,7 @@
   "itemName": "TmQueryInput",
   "kind": "Component",
   "category": "Inputs",
-  "description": "JQL/TQL-style query input: a monospace text field with caret-aware autocomplete (field/operator/value/function/keyword suggestions), inline wavy error underlines with tooltips, keyboard navigation, and a submit event. Pure Blazor except a tiny optional caret helper script; falls back to end-of-text tracking when the script is absent.",
+  "description": "JQL/TQL-style query input: a monospace text field with caret-aware autocomplete (field/operator/value/function/keyword suggestions), inline wavy error underlines with tooltips, keyboard navigation, and a submit event. Pure Blazor except a tiny optional caret helper script; falls back to end-of-text tracking when the script is absent. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
   ],
