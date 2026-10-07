@@ -11,7 +11,8 @@ namespace Tempo.Blazor.Helpers;
 /// document-level Escape key back to the owning component.
 /// </summary>
 /// <remarks>
-/// Used by TmModal, TmDialog and TmDrawer so all three share one focus-trap implementation.
+/// Used by <c>TmFocusScope</c>, which is how TmModal, TmDialog, TmDrawer and the other
+/// migrated overlays share one focus-trap implementation.
 /// All interop is guarded: when JS is unavailable (bUnit / prerender / disconnected circuit)
 /// activation degrades to a best-effort <see cref="ElementReference.FocusAsync()"/> and never
 /// throws into the render loop.

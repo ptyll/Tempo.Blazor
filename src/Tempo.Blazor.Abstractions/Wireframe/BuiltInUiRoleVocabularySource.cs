@@ -65,6 +65,8 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("alert", "Alert", "Displays an inline message with severity.", "notice", "upozorneni", "TmAlert"),
         R("modal", "Modal", "Shows blocking overlay content.", "modal window", "modalni okno", "TmModal"),
         R("dialog", "Dialog", "Asks for confirmation or focused input.", "confirmation dialog", "dialog", "TmDialog"),
+        R("focus-scope", "Focus scope", "Traps keyboard focus inside an overlay.", "focus trap", "zachyceni fokusu", "TmFocusScope"),
+        R("sheet-handle", "Sheet handle", "Drag handle that changes a sheet height.", "drag handle", "tahlo panelu", "TmSheetHandle"),
         R("tooltip", "Tooltip", "Displays short contextual help.", "hint", "napoveda", "TmTooltip"),
         R("popover", "Popover", "Displays contextual floating content.", "floating panel", "plovouci panel", "TmPopover"),
         R("progress-bar", "Progress bar", "Shows completion progress.", "progress indicator", "prubeh", "TmProgressBar"),

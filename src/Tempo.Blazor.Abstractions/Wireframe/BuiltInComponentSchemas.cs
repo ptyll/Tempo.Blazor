@@ -179,6 +179,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmFormActionBar"] = ["toolbar"],
             ["TmAlert"] = ["alert"],
             ["TmModal"] = ["modal"],
+            ["TmFocusScope"] = ["focus-scope"],
+            ["TmSheetHandle"] = ["sheet-handle"],
             ["TmDialog"] = ["dialog"],
             ["TmTooltip"] = ["tooltip"],
             ["TmPopover"] = ["popover"],
@@ -262,6 +264,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             "TmSection",
             "TmStackLayout",
             "TmModal",
+            "TmFocusScope",
             "TmDialog",
             "TmFormSection",
             "TmFormRow"
@@ -1237,6 +1240,20 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("icon",          "Icon",           PropType.Icon,                                cat: "Content"),
                 P("dismissible",   "Dismissible",    PropType.Bool,   true,                        cat: "Behavior"),
             ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmFocusScope", Category = "Feedback", DisplayName = "Focus Scope",
+            IsContainer = true,
+            DefaultWidth = 280, DefaultHeight = 120,
+            Props = [P("ariaLabel", "Label", PropType.String, "Focus scope", cat: "Content")]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSheetHandle", Category = "Feedback", DisplayName = "Sheet Handle",
+            DefaultWidth = 120, DefaultHeight = 24
         };
 
         yield return new WireframeComponentSchema
