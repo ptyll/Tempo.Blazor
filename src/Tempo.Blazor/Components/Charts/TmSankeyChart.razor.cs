@@ -180,37 +180,37 @@ public partial class TmSankeyChart
                         this,
                         args => HandleLinkKeyDownAsync(args, layout.Link)));
                 builder.AddAttribute(
-                    100,
+                    15,
                     "onkeyup",
                     EventCallback.Factory.Create<KeyboardEventArgs>(
                         this,
                         args => HandleLinkKeyUpAsync(args, layout.Link)));
                 builder.AddAttribute(
-                    15,
+                    16,
                     "onfocus",
                     EventCallback.Factory.Create<FocusEventArgs>(
                         this,
                         () => HighlightLink(linkIndex)));
                 builder.AddAttribute(
-                    16,
+                    17,
                     "onblur",
                     EventCallback.Factory.Create<FocusEventArgs>(this, ClearHighlight));
             }
 
             builder.AddAttribute(
-                17,
+                18,
                 "onmouseover",
                 EventCallback.Factory.Create<MouseEventArgs>(
                     this,
                     () => HighlightLink(linkIndex)));
             builder.AddAttribute(
-                18,
+                19,
                 "onmouseout",
                 EventCallback.Factory.Create<MouseEventArgs>(this, ClearHighlight));
 
-            builder.OpenElement(19, "title");
+            builder.OpenElement(20, "title");
             builder.AddContent(
-                20,
+                21,
                 $"{sourceLabel} → {targetLabel}: {FormatValue(layout.Link.Value)}");
             builder.CloseElement();
             builder.CloseElement();
@@ -255,36 +255,36 @@ public partial class TmSankeyChart
                         this,
                         args => HandleNodeKeyDownAsync(args, layout.Node)));
                 builder.AddAttribute(
-                    100,
+                    14,
                     "onkeyup",
                     EventCallback.Factory.Create<KeyboardEventArgs>(
                         this,
                         args => HandleNodeKeyUpAsync(args, layout.Node)));
                 builder.AddAttribute(
-                    14,
+                    15,
                     "onfocus",
                     EventCallback.Factory.Create<FocusEventArgs>(
                         this,
                         () => HighlightNode(layout.Node.Id)));
                 builder.AddAttribute(
-                    15,
+                    16,
                     "onblur",
                     EventCallback.Factory.Create<FocusEventArgs>(this, ClearHighlight));
             }
 
             builder.AddAttribute(
-                16,
+                17,
                 "onmouseover",
                 EventCallback.Factory.Create<MouseEventArgs>(
                     this,
                     () => HighlightNode(layout.Node.Id)));
             builder.AddAttribute(
-                17,
+                18,
                 "onmouseout",
                 EventCallback.Factory.Create<MouseEventArgs>(this, ClearHighlight));
 
-            builder.OpenElement(18, "title");
-            builder.AddContent(19, $"{layout.Node.Label} — {FormatValue(layout.Value)}");
+            builder.OpenElement(19, "title");
+            builder.AddContent(20, $"{layout.Node.Label} — {FormatValue(layout.Value)}");
             builder.CloseElement();
             builder.CloseElement();
 

@@ -372,6 +372,15 @@
   by a bUnit selection-state test plus an axe-core E2E scan of the list view
   (0 critical/serious violations).
 
+- **`TmSankeyChart` sequence literals are monotonic again (CF18-6).** `BuildLinks`
+  and `BuildNodes` emitted the `onkeyup` attribute with sequence number `100`
+  between `14`/`15` and `13`/`14`, so every later literal sat out of order and the
+  renderer's frame diff could pair unrelated attributes. The numbers now run
+  strictly ascending inside each `Build*` method, and a source-level test scans
+  every `Build*` member for the integer first arguments of `builder.*` calls and
+  fails on any non-monotonic step — including a self-check that flags the
+  `100`-between-`14`/`15` shape this fix removes.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
