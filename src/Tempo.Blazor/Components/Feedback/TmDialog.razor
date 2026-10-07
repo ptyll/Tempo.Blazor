@@ -1,11 +1,16 @@
 @namespace Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Helpers
 @implements IAsyncDisposable
 
+@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
+{
+    <TmLayoutObserver @ref="_fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+}
 @if (Show)
 {
     <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass() @PresentationClass @Class"
@@ -16,16 +21,17 @@
         <div @ref="_panel" class="tm-modal-container tm-modal--center" @onclick:stopPropagation="true">
             <TmFocusScope @ref="_scope"
                           Active="true"
-                          Class="@($"tm-dialog {GetDialogClasses()}")"
+                          DialogRole="@(IsDangerous ? "alertdialog" : "dialog")"
+                          Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
                           CloseOnEscape="CloseOnEscape"
-                          OnEscape="HandleEscape">
+                          OnEscape="HandleEscape"
+                          RestoreFocusTarget="RestoreFocusTarget"
+                          RestoreFocusTargetId="@RestoreFocusTargetId">
 
                 @if (IsSheet)
                 {
-                    <button type="button" @ref="_handle" class="tm-dialog__handle" aria-label="@Loc["TmDialog_DragHandle"]">
-                        <span class="tm-dialog__handle-bar"></span>
-                    </button>
+                    <TmSheetHandle @ref="_handle" Decorative="true" />
                 }
                 
                 @* Icon *@
@@ -63,7 +69,7 @@
                 </div>
                 
                 @* Footer Buttons *@
-                <div class="tm-dialog-footer @FooterClass">
+                <div class="tm-dialog-footer @FooterClass @(Layout == DialogLayout.Inline ? "tm-dialog-footer--own-row" : null)">
                     @if (Type == DialogType.Alert)
                     {
                         <TmButton Variant="GetOkButtonVariant()"
@@ -165,6 +171,12 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The element focus returns to when the dialog closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
+
+    /// <summary>The id of the restore target, for a target rendered outside this dialog.</summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     /// <summary>The viewport's layout. A dialog is positioned against the viewport, not its container.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
@@ -179,25 +191,26 @@
     /// <summary>The prompt placeholder: the caller's text, or the localized default when none was passed.</summary>
     private string ResolvedPromptPlaceholder => string.IsNullOrEmpty(PromptPlaceholder) ? Loc["TmDialog_PromptPlaceholder"] : PromptPlaceholder;
 
-    private const string SheetModulePath = "./_content/Tempo.Blazor/js/tm-sheet.js";
-
     private string _titleId = Guid.NewGuid().ToString("N");
-    private readonly string _sheetId = Guid.NewGuid().ToString("N");
-    private ElementReference _handle;
+    private TmSheetHandle? _handle;
     private ElementReference _panel;
     private ElementReference _overlayElement;
     private string _promptValue = string.Empty;
     private bool _wasShown;
     private bool _gestureAttached;
-    private IJSObjectReference? _sheetModule;
+    private bool _disposed;
+    private SheetInterop? _sheet;
+    private DotNetObjectReference<TmDialog>? _dotNetRef;
     private TmFocusScope? _scope;
+    private TmLayoutObserver? _fallback;
     private TmLayoutMode? _lastReported;
+    private TmLayoutMode? _fallbackMeasured;
 
     private TmLayoutContext Context
     {
         get
         {
-            var resolved = TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode);
+            var resolved = TmLayout.Resolve(LayoutMode, Viewport ?? FallbackContext, null, InitialMode);
             return new TmLayoutContext(LayoutMode, resolved);
         }
     }
@@ -208,12 +221,18 @@
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 
+    private TmLayoutContext? FallbackContext => Viewport is null && _fallbackMeasured is TmLayoutMode measured
+        ? new TmLayoutContext(TmLayoutMode.Auto, measured)
+        : null;
+
     private string PresentationClass => ResolvedPresentation switch
     {
-        MobilePresentation.Sheet => "tm-modal--sheet",
+        MobilePresentation.Sheet => "tm-modal--sheet tm-sheet tm-sheet--anchored",
         MobilePresentation.Fullscreen => "tm-modal--fullscreen-presentation",
         _ => "tm-modal--dialog"
     };
+
+    private string ScopeClass => $"tm-dialog {GetDialogClasses()}{(IsSheet ? " tm-sheet__panel" : "")}";
 
     private string FooterClass => FooterLayout == FooterLayout.Stacked
         ? "tm-modal-footer--stacked"
@@ -273,41 +292,39 @@
 
     private async Task AttachGestureAsync()
     {
-        try
-        {
-            _sheetModule ??= await JS.InvokeAsync<IJSObjectReference>("import", SheetModulePath);
-            await _sheetModule.InvokeVoidAsync("attach", _handle, _panel, new[] { 1d }, false, null, _sheetId);
-        }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
+        if (_disposed) return;
+        _sheet ??= new SheetInterop(JS);
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        ElementReference? handle = CloseOnOverlayClick && _handle is not null ? _handle.Element : null;
+        await _sheet.AttachAsync(handle, _panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
+        if (_disposed) await _sheet.DetachAsync();
     }
 
-    private async Task DetachGestureAsync()
+    private Task DetachGestureAsync() => _sheet is null ? Task.CompletedTask : _sheet.DetachAsync();
+
+    /// <summary>Invoked by the sheet module when a downward swipe dismisses the sheet.</summary>
+    [JSInvokable]
+    public Task HandleSheetDismissedAsync() => InvokeAsync(OnCancelClick);
+
+    /// <summary>A dialog sheet has one snap, so a reported snap changes nothing.</summary>
+    [JSInvokable]
+    public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
+
+    private Task OnFallbackMeasured(TmLayoutMode mode)
     {
-        if (_sheetModule is null) return;
-        try { await _sheetModule.InvokeVoidAsync("detach", _sheetId); }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        _fallbackMeasured = mode;
+        ReportResolved();
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        await DetachGestureAsync();
-        if (_sheetModule is not null)
-        {
-            try { await _sheetModule.DisposeAsync(); }
-            catch (JSDisconnectedException) { }
-            catch (TaskCanceledException) { }
-        }
-
-        if (_scope is not null)
-        {
-            await _scope.DisposeAsync();
-        }
+        if (_disposed) return;
+        _disposed = true;
+        if (_sheet is not null) await _sheet.DisposeAsync();
+        _dotNetRef?.Dispose();
+        if (_scope is not null) await _scope.DisposeAsync();
     }
     
     private string GetVisibleClass() => Show ? "tm-modal--visible" : "";

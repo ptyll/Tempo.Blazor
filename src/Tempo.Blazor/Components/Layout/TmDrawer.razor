@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Helpers
 @inherits Tempo.Blazor.Components.TmComponentBase
 @implements IAsyncDisposable
 @inject IJSRuntime JS
@@ -20,26 +21,22 @@
                   AriaLabelledBy="@LabelledBy"
                   CloseOnEscape="CloseOnEscape"
                   OnEscape="HandleEscape"
+                  RestoreFocusTarget="RestoreFocusTarget"
+                  RestoreFocusTargetId="@RestoreFocusTargetId"
+                  DataTestId="@DataTestId"
                   AdditionalAttributes="RootAttributes">
 
-        <div @ref="_panel" class="tm-drawer__panel" style="@PanelStyle">
+        <div @ref="_panel" class="tm-drawer__panel tm-sheet__panel" style="@PanelStyle">
             @if (IsSheet && ShowHandle)
             {
-                <button type="button"
-                        @ref="_handle"
-                        class="tm-drawer__handle"
-                        role="slider"
-                        aria-label="@Loc["TmDrawer_DragHandle"]"
-                        aria-valuemin="0"
-                        aria-valuemax="@(_snaps.Length - 1)"
-                        aria-valuenow="@_snapIndex"
-                        aria-orientation="vertical"
-                        @onkeydown="HandleHandleKey">
-                    <span class="tm-drawer__handle-bar"></span>
-                </button>
+                <TmSheetHandle @ref="_handle"
+                               SnapCount="_snaps.Length"
+                               SnapIndex="_snapIndex"
+                               SnapIndexChanged="SetSnapAsync"
+                               OnDismiss="Close" />
             }
 
-            <div class="tm-drawer__header">
+            <div @ref="_header" class="tm-drawer__header">
                 @if (HeaderContent is not null)
                 {
                     @HeaderContent
@@ -162,31 +159,48 @@
     /// <summary>Additional HTML attributes for the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    /// <summary>The viewport's layout. A sheet is positioned against the viewport, not its container.</summary>
+    /// <summary>The element focus returns to when the drawer closes.</summary>
+    [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
+
+    /// <summary>The id of the restore target, for a target rendered outside this drawer.</summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>The snap the sheet renders. Two-way with <see cref="SnapIndexChanged"/>.</summary>
+    [Parameter] public int SnapIndex { get; set; }
+
+    /// <summary>Raised when the rendered snap changes.</summary>
+    [Parameter] public EventCallback<int> SnapIndexChanged { get; set; }
+
+    /// <summary>
+    /// The tallest fraction of the viewport a sheet may cover. Between 0 and 1; the default leaves a
+    /// sliver of the content behind the sheet visible.
+    /// </summary>
+    [Parameter] public double MaxHeight { get; set; } = 0.85;
+
+    /// <summary>The viewport's layout. A modal sheet is positioned against the viewport, not its container.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
-    private const string SheetModulePath = "./_content/Tempo.Blazor/js/tm-sheet.js";
+    /// <summary>The container's layout. A non-modal sheet is positioned against its container.</summary>
+    [CascadingParameter] public TmLayoutContext? Container { get; set; }
 
     private readonly string _titleId = $"tm-drawer-title-{Guid.NewGuid():N}";
-    private readonly string _sheetId = Guid.NewGuid().ToString("N");
-    private ElementReference _handle;
+    private TmSheetHandle? _handle;
     private ElementReference _panel;
-    private IJSObjectReference? _sheetModule;
+    private ElementReference _header;
+    private SheetInterop? _sheet;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
+    private bool _disposed;
     private TmFocusScope? _scope;
     private TmLayoutMode? _lastReported;
     private int _snapIndex;
+    private double[] _sortedSnaps = DefaultSnaps;
 
     private bool IsSheet => Position == DrawerPosition.Bottom;
 
-    private double[] _snaps => SnapPoints.Count > 0
-        ? SnapPoints.OrderBy(s => s).ToArray()
-        : throw new ArgumentException("A sheet needs at least one snap point.", nameof(SnapPoints));
+    private double[] _snaps => _sortedSnaps;
 
     private string SnapList => string.Join(",", _snaps.Select(s => s.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)));
-
-    private string SwipeFlag => SwipeToDismiss ? "true" : "false";
 
     private string? LabelledBy => !string.IsNullOrEmpty(Title) && HeaderContent is null ? _titleId : null;
 
@@ -194,7 +208,11 @@
     {
         get
         {
-            var resolved = TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode);
+            // A non-modal sheet is positioned against its container, so the unnamed context wins.
+            // A modal one is positioned against the viewport.
+            var resolved = Modal
+                ? TmLayout.Resolve(LayoutMode, Viewport, null, InitialMode)
+                : TmLayout.Resolve(LayoutMode, Container, null, InitialMode);
             return new TmLayoutContext(LayoutMode, resolved);
         }
     }
@@ -207,9 +225,7 @@
             {
                 ["data-layout"] = Context.CssModifier,
                 ["data-snap-points"] = SnapList,
-                ["data-snap-index"] = _snapIndex,
-                ["data-swipe-to-dismiss"] = SwipeFlag,
-                ["data-max-height"] = "85"
+                ["data-snap-index"] = _snapIndex
             };
 
             if (AdditionalAttributes is not null)
@@ -229,6 +245,12 @@
         get
         {
             var classes = new List<string> { "tm-drawer", PositionClass };
+            if (IsSheet)
+            {
+                classes.Add("tm-sheet");
+                classes.Add("tm-sheet--anchored");
+                if (_snaps.Length == 0) classes.Add("tm-sheet--content");
+            }
             if (!Modal) classes.Add("tm-drawer--inline");
             if (!string.IsNullOrEmpty(Class)) classes.Add(Class);
             return string.Join(" ", classes);
@@ -242,9 +264,17 @@
         _ => "tm-drawer--right"
     };
 
-    private string PanelStyle => IsSheet
-        ? $"--tm-sheet-height: {_snaps[Math.Clamp(_snapIndex, 0, _snaps.Length - 1)].ToString(System.Globalization.CultureInfo.InvariantCulture)}"
-        : $"width: {Width}";
+    private string PanelStyle
+    {
+        get
+        {
+            if (!IsSheet) return $"--tm-drawer-width: {Width}";
+            var max = Math.Clamp(MaxHeight, 0.01, 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (_snaps.Length == 0) return $"--tm-sheet-max: {max}";
+            var height = _snaps[Math.Clamp(_snapIndex, 0, _snaps.Length - 1)].ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return $"--tm-sheet-height: {height}; --tm-sheet-max: {max}";
+        }
+    }
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -263,55 +293,38 @@
 
     private async Task AttachGestureAsync()
     {
-        try
-        {
-            _sheetModule ??= await JS.InvokeAsync<IJSObjectReference>("import", SheetModulePath);
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            // The handle is the gesture target when there is one; without it the panel itself follows
-            // the finger, so a sheet that hides its grabber still tracks the keyboard.
-            var target = ShowHandle ? _handle : _panel;
-            await _sheetModule.InvokeVoidAsync("attach", target, _panel, _snaps, SwipeToDismiss, _dotNetRef, _sheetId);
-        }
-        catch (JSException) { }
-        catch (InvalidOperationException) { }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
+        if (_disposed) return;
+        _sheet ??= new SheetInterop(JS);
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        // The handle is the gesture target when there is one. Without it the header follows the
+        // finger — never the scrolling body, which has to keep scrolling.
+        ElementReference? target = ShowHandle && _handle is not null ? _handle.Element : _header;
+        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef);
+        if (_disposed) await _sheet.DetachAsync();
     }
 
     private async Task DetachGestureAsync()
     {
-        if (_sheetModule is null) return;
-        try
-        {
-            await _sheetModule.InvokeVoidAsync("detach", _sheetId);
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        if (_sheet is null) return;
+        await _sheet.DetachAsync();
     }
 
     /// <summary>Invoked by the sheet module when a downward swipe passes the lowest snap.</summary>
     [JSInvokable]
-    public Task HandleSheetDismissedAsync() => Close();
+    public Task HandleSheetDismissedAsync() => InvokeAsync(Close);
 
-    /// <summary>Invoked by the sheet module when a gesture settles on a snap. Not implemented yet.</summary>
+    /// <summary>Invoked by the sheet module when a gesture settles on a snap. C# owns the index.</summary>
     [JSInvokable]
-    public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
-
-    /// <summary>The snap the sheet renders. Two-way with <see cref="SnapIndexChanged"/>.</summary>
-    [Parameter] public int SnapIndex { get; set; }
-
-    /// <summary>Raised when the rendered snap changes.</summary>
-    [Parameter] public EventCallback<int> SnapIndexChanged { get; set; }
+    public Task HandleSheetSnappedAsync(int index) => InvokeAsync(() => SetSnapAsync(index));
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
-        if (IsSheet && SnapPoints.Count == 0)
-        {
-            throw new ArgumentException("A sheet needs at least one snap point.", nameof(SnapPoints));
-        }
-
+        _sortedSnaps = SnapPoints
+            .Where(s => s > 0 && s <= 1)
+            .OrderBy(s => s)
+            .ToArray();
+        if (SnapIndex != _snapIndex) _snapIndex = Math.Clamp(SnapIndex, 0, Math.Max(0, _sortedSnaps.Length - 1));
         ReportResolved();
     }
 
@@ -328,38 +341,15 @@
         }
     }
 
-    private async Task HandleHandleKey(KeyboardEventArgs e)
+    private async Task SetSnapAsync(int index)
     {
-        if (e.Key == "ArrowUp")
-        {
-            _snapIndex = Math.Min(_snapIndex + 1, _snaps.Length - 1);
-        }
-        else if (e.Key == "ArrowDown")
-        {
-            if (_snapIndex == 0)
-            {
-                await Close();
-                return;
-            }
-
-            _snapIndex--;
-        }
+        if (_snaps.Length == 0) return;
+        _snapIndex = Math.Clamp(index, 0, _snaps.Length - 1);
+        StateHasChanged();
+        await SnapIndexChanged.InvokeAsync(_snapIndex);
     }
 
-    private Task HandleEscape() => HandleFocusTrapEscapeAsync();
-
-    /// <summary>
-    /// Invoked when Escape is pressed at the document level. Kept on the drawer so a host that wired
-    /// the old JSInvokable keeps working; the scope is what the module actually calls.
-    /// </summary>
-    [JSInvokable]
-    public async Task HandleFocusTrapEscapeAsync()
-    {
-        if (CloseOnEscape)
-        {
-            await Close();
-        }
-    }
+    private Task HandleEscape() => CloseOnEscape ? Close() : Task.CompletedTask;
 
     private async Task Close()
     {
@@ -375,18 +365,10 @@
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        await DetachGestureAsync();
-        if (_sheetModule is not null)
-        {
-            try { await _sheetModule.DisposeAsync(); }
-            catch (JSDisconnectedException) { }
-            catch (TaskCanceledException) { }
-        }
-
+        if (_disposed) return;
+        _disposed = true;
+        if (_sheet is not null) await _sheet.DisposeAsync();
         _dotNetRef?.Dispose();
-        if (_scope is not null)
-        {
-            await _scope.DisposeAsync();
-        }
+        if (_scope is not null) await _scope.DisposeAsync();
     }
 }

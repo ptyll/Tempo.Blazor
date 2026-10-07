@@ -883,9 +883,11 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmDrawer
         ["TmDrawer_Close"] = "Close panel",
-        ["TmDrawer_DragHandle"] = "Drag to resize the panel",
-        ["TmModal_DragHandle"] = "Drag to resize the panel",
-        ["TmDialog_DragHandle"] = "Drag to resize the panel",
+        ["TmSheet_Handle"] = "Drag to resize the panel",
+        ["TmSheet_SnapPeek"] = "Peek",
+        ["TmSheet_SnapHalf"] = "Half",
+        ["TmSheet_SnapFull"] = "Full",
+        ["TmSheet_SnapIndex"] = "Snap {0} of {1}",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Bulk actions",
@@ -4417,9 +4419,11 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmDrawer
         ["TmDrawer_Close"] = "Zavřít panel",
-        ["TmDrawer_DragHandle"] = "Posunout panel",
-        ["TmModal_DragHandle"] = "Posunout panel",
-        ["TmDialog_DragHandle"] = "Posunout panel",
+        ["TmSheet_Handle"] = "Přetažením změníte výšku panelu",
+        ["TmSheet_SnapPeek"] = "Náhled",
+        ["TmSheet_SnapHalf"] = "Polovina",
+        ["TmSheet_SnapFull"] = "Celá výška",
+        ["TmSheet_SnapIndex"] = "Krok {0} z {1}",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Hromadné akce",

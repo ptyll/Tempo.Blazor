@@ -4,22 +4,22 @@ import { keyboardOffset, settle, trackViewport } from '../tm-sheet.js';
 
 const snaps = [0.5, 1];
 
-test('an open keyboard reports the visible viewport and the hidden gap', () => {
+test('an open keyboard reports the visible viewport and the hidden gap as lengths', () => {
     // A 844px layout viewport with the keyboard covering everything below 430px.
     const offset = keyboardOffset(844, { height: 430, offsetTop: 0 });
-    assert.equal(offset.viewport, 430);
-    assert.equal(offset.keyboard, 414);
+    assert.equal(offset.viewport, '430px');
+    assert.equal(offset.keyboard, '414px');
 });
 
 test('a keyboard that also shifts the viewport counts its offset', () => {
     const offset = keyboardOffset(844, { height: 430, offsetTop: 20 });
-    assert.equal(offset.keyboard, 394);
+    assert.equal(offset.keyboard, '394px');
 });
 
 test('no keyboard leaves the sheet untouched', () => {
     const offset = keyboardOffset(844, { height: 844, offsetTop: 0 });
-    assert.equal(offset.viewport, 844);
-    assert.equal(offset.keyboard, 0);
+    assert.equal(offset.viewport, '844px');
+    assert.equal(offset.keyboard, '0px');
 });
 
 test('a release below the lowest snap dismisses when swipe-to-dismiss is on', () => {

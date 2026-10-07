@@ -1,146 +1,180 @@
-// Tempo.Blazor bottom sheet gesture (ES module).
+// Tempo.Blazor bottom sheet (ES module).
 //
-// A bottom drawer follows the finger while it is dragged and settles to a snap point on release.
-// The drag is a pointer gesture, which Blazor cannot track without a per-move render, so it lives
-// here. The decision of where the sheet settles is pure, so the node tests can prove it without a
-// browser: a release past the lowest snap dismisses, anything else snaps to the nearest point, and a
-// sheet that opted out of swipe-to-dismiss never dismisses.
+// Two jobs, deliberately separate. trackViewport writes the visible viewport and the keyboard gap as
+// lengths on the sheet root, so the stylesheet can lift the sheet above an on-screen keyboard without
+// knowing which component owns it. attachGesture follows a pointer on the handle and reports the snap
+// it settled on; it never writes the height. C# owns the snap index, and an inline height written
+// here would freeze the sheet at whatever the last gesture set.
 //
-// Heights are fractions of the viewport, matching the --tm-sheet-height custom property the
-// stylesheet reads.
+// Heights are fractions of the visible viewport, matching --tm-sheet-height. A sheet with no snap
+// points sizes to its content under the max-height cap, so a short menu is not forced to half height.
 
 /**
  * The snap a released sheet settles to.
- * @param {number[]} snaps fractions of the viewport height, ascending
+ * @param {number[]} snaps fractions of the viewport height, ascending; empty means content height
  * @param {number} released the fraction the finger released at
  * @param {boolean} swipeToDismiss whether a release below the lowest snap closes the sheet
- * @returns {{ dismiss: boolean, snap: number }} the snap to settle to, or dismiss when it closes
+ * @returns {{ dismiss: boolean, snap: number|null, index: number }} the snap to settle to
  */
 export function settle(snaps, released, swipeToDismiss) {
     if (!Array.isArray(snaps) || snaps.length === 0) {
-        throw new Error('A sheet needs at least one snap point.');
+        return { dismiss: false, snap: null, index: -1 };
     }
 
     const lowest = snaps[0];
     if (swipeToDismiss && released < lowest) {
-        return { dismiss: true, snap: lowest };
+        return { dismiss: true, snap: lowest, index: 0 };
     }
 
-    const nearest = snaps.reduce((best, snap) =>
-        Math.abs(snap - released) < Math.abs(best - released) ? snap : best);
-    return { dismiss: false, snap: nearest };
+    let nearest = snaps[0];
+    let index = 0;
+    for (let i = 1; i < snaps.length; i++) {
+        if (Math.abs(snaps[i] - released) < Math.abs(nearest - released)) {
+            nearest = snaps[i];
+            index = i;
+        }
+    }
+    return { dismiss: false, snap: nearest, index };
 }
 
 /**
  * How an open keyboard changes the sheet. The visible height is measured rather than read from
  * 100dvh, because a faked visualViewport shrinks visualViewport.height without shrinking dvh.
- * Both values are unitless pixels: the stylesheet multiplies them by 1px, and a calc() cannot
- * subtract a px length from a unitless product.
+ * Both values are lengths: the stylesheet reads them directly, and a sheet that has not imported
+ * this module yet falls back to the lengths the stylesheet declares.
  * @param {number} layoutHeight window.innerHeight
  * @param {{ height: number, offsetTop: number }} viewport window.visualViewport
- * @returns {{ viewport: number, keyboard: number }} the visible height and the hidden gap
+ * @returns {{ viewport: string, keyboard: string }} the visible height and the hidden gap
  */
 export function keyboardOffset(layoutHeight, viewport) {
     const hidden = Math.max(0, layoutHeight - viewport.height - viewport.offsetTop);
-    return { viewport: viewport.height, keyboard: hidden };
+    return { viewport: `${viewport.height}px`, keyboard: `${hidden}px` };
 }
 
-const sheets = new Map();
+/**
+ * Writes the visible viewport and the keyboard gap onto the sheet root, and keeps them current.
+ * Listens to visualViewport resize and scroll: iOS moves the visual viewport with offsetTop on
+ * scroll rather than resize. Returns a function that removes the listeners.
+ * @param {HTMLElement} root the sheet root
+ * @returns {() => void} stop
+ */
+export function trackViewport(root) {
+    if (!root) return () => {};
+
+    const apply = () => {
+        const viewport = window.visualViewport;
+        if (!viewport) return;
+        const offset = keyboardOffset(window.innerHeight, viewport);
+        root.style.setProperty('--tm-sheet-viewport', offset.viewport);
+        root.style.setProperty('--tm-sheet-keyboard', offset.keyboard);
+    };
+
+    apply();
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', apply);
+        window.visualViewport.addEventListener('scroll', apply);
+    }
+    window.addEventListener('resize', apply);
+
+    return () => {
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', apply);
+            window.visualViewport.removeEventListener('scroll', apply);
+        }
+        window.removeEventListener('resize', apply);
+    };
+}
+
+const gestures = new Map();
 
 /**
- * Attaches the drag gesture to a sheet. The handle is what the finger grabs; the panel is what
- * moves. A host that already disposed the element simply gets nothing.
- * @param {HTMLElement} handle the drag handle
+ * Attaches the drag gesture to a handle. The panel is what moves while the finger is down; on
+ * release the inline height and transition are cleared and the host is told which snap to render.
+ * Pointer capture keeps the gesture alive when the finger leaves the handle, and a pointercancel
+ * restores the snap C# already owns instead of leaving the sheet mid-drag.
+ * @param {HTMLElement} handle the drag handle, or the header when the sheet has no grabber
  * @param {HTMLElement} panel the sheet panel
- * @param {number[]} snaps fractions of the viewport height
+ * @param {number[]} snaps fractions of the viewport height, already sorted
  * @param {boolean} swipeToDismiss whether a release below the lowest snap closes the sheet
- * @param {{ invokeMethodAsync: Function }} host the component to tell about a dismiss
+ * @param {{ invokeMethodAsync: Function }|null} host the component to tell about a snap or a dismiss
  * @param {string} id the sheet's id, so a second attach replaces the first
  */
-export function attach(handle, panel, snaps, swipeToDismiss, host, id) {
+export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
     if (!handle || !panel) return;
     detach(id);
 
+    const sorted = Array.isArray(snaps) ? snaps : [];
     let startY = 0;
     let startHeight = 0;
     let dragging = false;
+    let pointerId = null;
+
+    const resetInline = () => {
+        panel.style.height = '';
+        panel.style.transition = '';
+    };
 
     const onDown = (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
         dragging = true;
+        pointerId = event.pointerId;
         startY = event.clientY;
         startHeight = panel.getBoundingClientRect().height;
         panel.style.transition = 'none';
+        if (typeof handle.setPointerCapture === 'function' && event.pointerId !== undefined) {
+            try { handle.setPointerCapture(event.pointerId); } catch { /* already released */ }
+        }
     };
 
     const onMove = (event) => {
-        if (!dragging) return;
+        if (!dragging || (pointerId !== null && event.pointerId !== pointerId)) return;
         const viewport = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const next = Math.max(0, startHeight - (event.clientY - startY));
         panel.style.height = `${next}px`;
-        panel.style.setProperty('--tm-sheet-height', String(next / viewport));
+        if (viewport > 0) panel.style.setProperty('--tm-sheet-height', String(next / viewport));
     };
 
-    const onUp = (event) => {
-        if (!dragging) return;
+    const finish = (event, cancelled) => {
+        if (!dragging || (pointerId !== null && event.pointerId !== undefined && event.pointerId !== pointerId)) return;
         dragging = false;
-        panel.style.transition = '';
+        pointerId = null;
+        resetInline();
+        if (cancelled || sorted.length === 0) return;
+
         const viewport = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const released = panel.getBoundingClientRect().height / viewport;
-        const result = settle(snaps, released, swipeToDismiss);
+        const released = viewport > 0 ? panel.getBoundingClientRect().height / viewport : 0;
+        const result = settle(sorted, released, swipeToDismiss);
         if (result.dismiss) {
             host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
             return;
         }
-        panel.style.height = '';
-        panel.style.setProperty('--tm-sheet-height', String(result.snap));
+        host?.invokeMethodAsync('HandleSheetSnappedAsync', result.index).catch(() => {});
     };
 
-    // The on-screen keyboard shrinks the visual viewport, and a fixed sheet does not follow it, so the
-    // footer slides under the keyboard. The offset is the gap between the layout viewport and the
-    // visible one. It is a custom property, never an inline height: the stylesheet subtracts it from
-    // the snap height, and an inline height would freeze the sheet at whatever the gesture last set.
-    const onViewport = () => {
-        const viewport = window.visualViewport;
-        if (!viewport) return;
-        const offset = keyboardOffset(window.innerHeight, viewport);
-        const hidden = offset.keyboard;
-        // The offset goes on the sheet root, not the panel. The height rule reads the variable
-        // through inheritance, and a panel-level variable would not reach a rule that selects the
-        // panel from an ancestor (the drawer's root carries the sheet class, the panel does not).
-        //
-        // The visible height is measured here rather than read from 100dvh. A faked visualViewport
-        // (a test, an embedded frame) shrinks visualViewport.height without shrinking dvh, so a
-        // stylesheet that subtracted the offset from 100dvh would clamp the sheet to nothing.
-        const root = panel.closest('.tm-drawer, .tm-modal-overlay') ?? panel;
-        // Unitless, like the viewport. The stylesheet multiplies the whole difference by 1px;
-        // a px value here would make the subtraction invalid.
-        root.style.setProperty('--tm-sheet-keyboard', String(hidden));
-        // Unitless. A calc() can multiply two numbers but not a number by a px length, so the
-        // stylesheet turns this back into pixels itself.
-        root.style.setProperty('--tm-sheet-viewport', String(offset.viewport));
-    };
-
+    const onUp = (event) => finish(event, false);
+    const onCancel = (event) => finish(event, true);
     handle.addEventListener('pointerdown', onDown);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    // Both events: visualViewport fires for a real keyboard, and a host that only resizes the window
-    // (a test, an embedded frame) still moves the sheet.
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', onViewport);
-    window.addEventListener('resize', onViewport);
-    onViewport();
-    sheets.set(id, { handle, onDown, onMove, onUp, onViewport });
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onCancel);
+
+    const stopViewport = trackViewport(panel.closest('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel);
+    gestures.set(id, { handle, onDown, onMove, onUp, onCancel, stopViewport });
 }
 
-/** Removes the gesture listeners for a sheet. Safe to call twice. */
+/** Removes the gesture and the viewport tracking for a sheet. Safe to call twice. */
 export function detach(id) {
-    const sheet = sheets.get(id);
-    if (!sheet) return;
-    sheets.delete(id);
-    sheet.handle.removeEventListener('pointerdown', sheet.onDown);
-    window.removeEventListener('pointermove', sheet.onMove);
-    window.removeEventListener('pointerup', sheet.onUp);
-    if (sheet.onViewport) {
-        if (window.visualViewport) window.visualViewport.removeEventListener('resize', sheet.onViewport);
-        window.removeEventListener('resize', sheet.onViewport);
-    }
+    const gesture = gestures.get(id);
+    if (!gesture) return;
+    gestures.delete(id);
+    gesture.handle.removeEventListener('pointerdown', gesture.onDown);
+    gesture.handle.removeEventListener('pointermove', gesture.onMove);
+    gesture.handle.removeEventListener('pointerup', gesture.onUp);
+    gesture.handle.removeEventListener('pointercancel', gesture.onCancel);
+    gesture.stopViewport?.();
+}
+
+/** @deprecated Use attachGesture. Kept so a host that imported attach before the split still works. */
+export function attach(handle, panel, snaps, swipeToDismiss, host, id) {
+    attachGesture(handle, panel, snaps, swipeToDismiss, host, id);
 }

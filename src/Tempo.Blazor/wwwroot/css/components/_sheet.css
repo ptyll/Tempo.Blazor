@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════
+   Shared bottom sheet — the grabber, the snap height and the keyboard lift
+   ═══════════════════════════════════════════════════════ */
+
+/* Lengths, not bare numbers. The module overwrites both from visualViewport; these defaults keep a
+   sheet usable before the module runs (prerender, the first server frame, an import that failed). */
+.tm-sheet {
+    --tm-sheet-viewport: 100dvh;
+    --tm-sheet-keyboard: 0px;
+    --tm-sheet-height: 0.5;
+    --tm-sheet-max: 0.85;
+}
+
+/* The keyboard offset pads the sheet root so the whole sheet lifts above the keyboard. Subtracting
+   it from the snap height collapses a half snap. */
+.tm-sheet--anchored {
+    padding-bottom: var(--tm-sheet-keyboard);
+    box-sizing: border-box;
+}
+
+.tm-sheet__panel {
+    height: calc(var(--tm-sheet-height, 0.5) * var(--tm-sheet-viewport));
+    max-height: calc(var(--tm-sheet-max, 0.85) * var(--tm-sheet-viewport));
+    box-sizing: border-box;
+}
+
+/* No snap points: the panel sizes to its content and the cap still applies. */
+.tm-sheet--content .tm-sheet__panel {
+    height: auto;
+}
+
+.tm-sheet__handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-2);
+    background: transparent;
+    border: none;
+    cursor: grab;
+    flex-shrink: 0;
+    touch-action: none;
+}
+
+.tm-sheet__handle-bar {
+    width: var(--tm-space-10);
+    height: var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-border-color-strong);
+}
+
+.tm-sheet__handle:focus-visible {
+    outline: none;
+}
+
+.tm-sheet__handle:focus-visible .tm-sheet__handle-bar {
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-sheet__panel {
+        transition: none;
+    }
+}

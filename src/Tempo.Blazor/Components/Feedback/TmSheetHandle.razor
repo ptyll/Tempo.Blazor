@@ -1,0 +1,87 @@
+@namespace Tempo.Blazor.Components.Feedback
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@*
+    The shared sheet grabber. A drawer renders it as a slider the keyboard can drive; a modal or
+    dialog renders it decorative, because those sheets dismiss rather than snap and a focusable
+    handle would sit in the Tab order with nothing to change. The gesture itself lives in tm-sheet.js.
+*@
+@if (Decorative)
+{
+    <div @ref="Element"
+         class="tm-sheet__handle"
+         aria-hidden="true"
+         data-testid="@RootTestId("tm-sheet-handle")">
+        <span class="tm-sheet__handle-bar"></span>
+    </div>
+}
+else
+{
+    <button type="button"
+            @ref="Element"
+            class="tm-sheet__handle"
+            role="slider"
+            aria-label="@Loc["TmSheet_Handle"]"
+            aria-valuemin="0"
+            aria-valuemax="@Math.Max(0, SnapCount - 1)"
+            aria-valuenow="@SnapIndex"
+            aria-valuetext="@ValueText"
+            aria-orientation="vertical"
+            data-testid="@RootTestId("tm-sheet-handle")"
+            @onkeydown="HandleKey">
+        <span class="tm-sheet__handle-bar"></span>
+    </button>
+}
+
+@code {
+    /// <summary>The element the gesture binds to.</summary>
+    public ElementReference Element { get; private set; }
+
+    /// <summary>
+    /// Whether the handle is decorative. A decorative handle is not focusable and carries no label,
+    /// because it is not a control.
+    /// </summary>
+    [Parameter] public bool Decorative { get; set; }
+
+    /// <summary>How many snap points the sheet has. The slider's maximum is one less.</summary>
+    [Parameter] public int SnapCount { get; set; }
+
+    /// <summary>The snap the sheet currently renders.</summary>
+    [Parameter] public int SnapIndex { get; set; }
+
+    /// <summary>Raised when the keyboard moves the slider to another snap.</summary>
+    [Parameter] public EventCallback<int> SnapIndexChanged { get; set; }
+
+    /// <summary>Raised when ArrowDown is pressed at the lowest snap, which dismisses the sheet.</summary>
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private string ValueText => SnapIndex switch
+    {
+        0 => Loc["TmSheet_SnapPeek"],
+        1 => Loc["TmSheet_SnapHalf"],
+        2 => Loc["TmSheet_SnapFull"],
+        _ => string.Format(Loc["TmSheet_SnapIndex"], SnapIndex + 1, Math.Max(1, SnapCount))
+    };
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        var next = e.Key switch
+        {
+            "ArrowUp" => Math.Min(SnapIndex + 1, Math.Max(0, SnapCount - 1)),
+            "ArrowDown" => SnapIndex - 1,
+            "Home" => 0,
+            "End" => Math.Max(0, SnapCount - 1),
+            _ => (int?)null
+        };
+
+        if (next is null || next == SnapIndex) return;
+
+        if (next < 0)
+        {
+            await OnDismiss.InvokeAsync();
+            return;
+        }
+
+        await SnapIndexChanged.InvokeAsync(next.Value);
+    }
+}

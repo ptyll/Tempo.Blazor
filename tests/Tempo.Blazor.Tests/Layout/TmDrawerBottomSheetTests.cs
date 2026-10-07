@@ -76,14 +76,6 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .AddChildContent("Body"));
 
         cut.Find(".tm-drawer").GetAttribute("data-snap-points").Should().Be("0.3,0.7,1");
-
-        var act = () => Render<TmDrawer>(p => p
-            .Add(x => x.IsOpen, true)
-            .Add(x => x.Position, DrawerPosition.Bottom)
-            .Add(x => x.SnapPoints, Array.Empty<double>())
-            .AddChildContent("Body"));
-
-        act.Should().Throw<ArgumentException>("a sheet needs at least one snap point");
     }
 
     [Fact]

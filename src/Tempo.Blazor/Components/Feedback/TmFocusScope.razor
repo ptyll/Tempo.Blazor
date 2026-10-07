@@ -18,6 +18,7 @@
      aria-labelledby="@AriaLabelledBy"
      tabindex="@TabIndex"
      data-restore-target="@RestoreFocusTargetId"
+     data-initial-focus="@InitialFocusTargetId"
      data-testid="@RootTestId("tm-focus-scope")"
      @attributes="AdditionalAttributes">
     <CascadingValue Value="this" IsFixed="true">
@@ -91,7 +92,7 @@
     /// <summary>True when an active scope is nested inside this one.</summary>
     private bool HasActiveDescendant => _activeDescendants > 0;
 
-    private string? Role => Active ? "dialog" : null;
+    private string? Role => Active ? (string.IsNullOrEmpty(DialogRole) ? "dialog" : DialogRole) : null;
 
     private string? TabIndex => Active ? "-1" : null;
 
@@ -100,14 +101,6 @@
     private string? AriaModal => Active ? (Modal && !HasActiveDescendant ? "true" : "false") : null;
 
     /// <inheritdoc />
-    protected override void OnInitialized()
-    {
-        if (Active)
-        {
-            Parent?.RegisterDescendant();
-        }
-    }
-
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
