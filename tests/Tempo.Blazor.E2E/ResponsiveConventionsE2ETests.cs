@@ -102,6 +102,32 @@ public sealed class ResponsiveConventionsE2ETests : WasmTestBase
 
     [TestMethod]
     [TestCategory("WASM")]
+    public async Task EditMode_KeepsTheToolbarInsideTheDashboard()
+    {
+        foreach (var (width, height, host, shot) in new[] { (390, 844, "rc-host-wide", "edit-390"), (1440, 900, "rc-host-narrow", "edit-narrow") })
+        {
+            var page = await OpenAsync(width, height);
+            await page.GetByTestId(host).GetByRole(AriaRole.Button, new() { Name = "Edit" }).ClickAsync();
+            await page.GetByTestId(host).Locator(".tm-dashboard--edit").WaitForAsync();
+
+            var clipped = await page.GetByTestId(host).EvaluateAsync<string>(
+                """
+                host => {
+                    const dash = host.querySelector('.tm-dashboard');
+                    const toolbar = host.querySelector('.tm-dashboard-toolbar');
+                    const edge = dash.getBoundingClientRect().right + 1;
+                    const overflow = toolbar.scrollWidth > toolbar.clientWidth;
+                    const past = [...toolbar.querySelectorAll('button')].filter(button => button.getBoundingClientRect().right > edge).map(button => button.textContent.trim());
+                    return overflow || past.length ? `overflow=${overflow} past=${past.join(',')}` : '';
+                }
+                """);
+            Assert.AreEqual("", clipped, $"{host} at {width}: the edit toolbar must wrap, not clip Save or Cancel");
+            await ShotAsync(page, shot);
+        }
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
     public async Task CoarsePointer_ShowsTheReveal_WithoutEditMode()
     {
         var page = await OpenTouchAsync(390, 844);

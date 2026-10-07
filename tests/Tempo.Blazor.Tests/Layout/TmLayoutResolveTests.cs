@@ -24,6 +24,21 @@ public class TmLayoutResolveTests
     }
 
     [Fact]
+    public void Overlay_IgnoresTheContainersContext_AndUsesTheViewportScope()
+    {
+        var viewport = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop);
+        var container = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile);
+
+        var fromViewport = TmLayout.Resolve(TmLayoutMode.Auto, viewport, measured: null, TmLayoutMode.Mobile);
+        var fromContainer = TmLayout.Resolve(TmLayoutMode.Auto, container, measured: null, TmLayoutMode.Desktop);
+
+        fromViewport.Should().Be(TmLayoutMode.Desktop, "the viewport scope measured desktop, so an Auto overlay follows it");
+        fromContainer.Should().Be(TmLayoutMode.Mobile,
+            "the container context is not what an overlay passes; passing it would wrongly sheet the dialog");
+        fromViewport.Should().NotBe(fromContainer, "the two contexts disagree, so the overlay must choose the viewport one");
+    }
+
+    [Fact]
     public void WithResolvedAuto_Throws()
     {
         var context = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop);

@@ -92,11 +92,10 @@ public class TmBreakpointsTests
             .OrderBy(entry => entry, StringComparer.Ordinal)
             .ToList();
 
-        found.Except(baseline).Should().BeEmpty("a new @media width is debt the baseline does not allow; use range syntax and a TmBreakpoints width, or the baseline cannot shrink");
-        baseline.Except(found).Should().BeEmpty("a baselined @media width is gone, so remove it from media-width-baseline.txt");
+        found.Should().Equal(baseline, "the baseline counts every occurrence, so one more or one fewer @media width fails; it may only shrink");
     }
 
-    /// <summary>One line per <c>@media</c> condition that is not range syntax or uses a width outside <see cref="TmBreakpoints"/>.</summary>
+    /// <summary>One line per <c>@media</c> occurrence that is not range syntax or uses a width outside <see cref="TmBreakpoints"/>, so two identical conditions count twice.</summary>
     private static IEnumerable<string> MediaDebt(string path, string root)
     {
         var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
