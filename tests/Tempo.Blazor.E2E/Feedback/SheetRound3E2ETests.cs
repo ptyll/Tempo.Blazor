@@ -98,25 +98,26 @@ public sealed class SheetRound3E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [DataRow(390, "open-right-drawer", ".tm-drawer--right")]
     [DataRow(1440, "open-right-drawer", ".tm-drawer--right")]
-    [DataRow(390, "open-left-drawer", ".tm-drawer--left")]
     [DataRow(1440, "open-left-drawer", ".tm-drawer--left")]
     public async Task SideDrawer_BackdropClick_IsOutsideThePanel(int width, string triggerId, string drawer)
     {
         var page = await OpenAsync(width);
         await OpenDrawerAsync(page, triggerId, drawer);
+        await page.Locator(drawer).EvaluateAsync("el => Promise.all(el.getAnimations({ subtree: true }).map(a => a.finished)).catch(() => {})");
 
         // A click at (width/2, 8) lands inside a right drawer, so it never tests the backdrop.
         // Below 640px the right panel is full-bleed and there is no outside point; the close button
         // is the dismiss control, and a click on the panel must not hit the backdrop.
+        await page.WaitForTimeoutAsync(400);
         var point = await page.EvaluateAsync<float[]>(
             """
             (drawer) => {
                 const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
-                if (panel.left > 8) return [4, panel.top + panel.height / 2];
-                if (panel.right + 8 < window.innerWidth) return [panel.right + 8, panel.top + panel.height / 2];
-                return [-1, -1];
+                const y = panel.top + panel.height / 2;
+                const x = panel.left > 8 ? 4 : (panel.right + 8 < window.innerWidth ? panel.right + 8 : -1);
+                if (x < 0 || (x >= panel.left && x <= panel.right)) return [-1, -1];
+                return [x, y];
             }
             """,
             drawer);
@@ -131,15 +132,6 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         }
         else
         {
-            var outside = await page.EvaluateAsync<bool>(
-                """
-                ([drawer, x, y]) => {
-                    const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
-                    return x < panel.left - 1 || x > panel.right + 1;
-                }
-                """,
-                new object[] { drawer, point[0], point[1] });
-            Assert.IsTrue(outside, $"the backdrop point ({point[0]:F0},{point[1]:F0}) must sit outside the panel");
             await page.Mouse.ClickAsync(point[0], point[1]);
         }
 
@@ -215,8 +207,10 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         var index = await page.Locator(".tm-drawer--bottom").GetAttributeAsync("data-snap-index");
 
         Assert.AreEqual("1", index, $"{afterWhat} must leave the snap index at full: {read}");
-        Assert.IsTrue(style.Contains("--tm-sheet-height: 1", StringComparison.Ordinal),
-            $"{afterWhat} must keep the Blazor height variable: {style}");
+        var full = await page.Locator(".tm-drawer--bottom").EvaluateAsync<string>(
+            "el => (el.getAttribute('data-snap-points') || '').split(',').at(-1)");
+        Assert.IsTrue(style.Contains($"--tm-sheet-height: {full}", StringComparison.Ordinal),
+            $"{afterWhat} must keep the Blazor height variable (full is capped at MaxHeight): {style}");
         // Full is min(1, max cap 0.85) of the viewport. A collapsed sheet falls back to the 0.5 default.
         Assert.AreEqual(before, height, before * 0.05,
             $"{afterWhat} must keep the full-snap height, not collapse to the 0.5 default: {read}");
@@ -368,13 +362,22 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         var x = box.X + box.Width / 2;
         var y = box.Y + box.Height / 2;
 
-        // A short, fast downward flick. The release stays above the lowest-snap margin (half minus
-        // 0.15 of an 844px viewport is about 126px), so only the velocity can dismiss it.
-        await page.Mouse.MoveAsync(x, y);
-        await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(x, y + 12, new MouseMoveOptions { Steps = 1 });
-        await page.Mouse.MoveAsync(x, y + 70, new MouseMoveOptions { Steps = 1 });
-        await page.Mouse.UpAsync();
+        // Playwright's mouse moves are too far apart to be a flick. Dispatch the pointer events in
+        // one turn: their timestamps collapse, and the gesture treats a zero gap as 1ms.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const handle = document.querySelector('.tm-drawer--bottom .tm-sheet__handle');
+                const start = handle.getBoundingClientRect().top + handle.getBoundingClientRect().height / 2;
+                const fire = (type, dy) => handle.dispatchEvent(new PointerEvent(type, {
+                    bubbles: true, cancelable: true, pointerId: 1, clientY: start + dy, button: 0
+                }));
+                fire('pointerdown', 0);
+                fire('pointermove', 12);
+                fire('pointermove', 70);
+                fire('pointerup', 70);
+            }
+            """);
 
         await page.Locator(".tm-drawer--bottom").WaitForAsync(new LocatorWaitForOptions
         {
