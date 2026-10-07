@@ -66,7 +66,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Stretch the panel to the anchor's width (dropdown/select menus)."
+      "description": "Stretch the panel to the anchor's width (dropdown/select menus). The width is written before placement is measured, so a larger stylesheet min-width still wins: alignment, shift and viewport clamping all use the rendered width."
     },
     {
       "name": "ConstrainHeight",

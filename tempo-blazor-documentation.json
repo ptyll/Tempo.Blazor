@@ -14384,7 +14384,7 @@
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "A combo box that displays a multi-column grid in its dropdown for rich item selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+      "description": "A combo box that displays a multi-column grid in its dropdown for rich item selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. The dropdown's stylesheet min-width (320px) can exceed a narrow trigger: MatchAnchorWidth writes the anchor width but placement uses the rendered width, so the panel stays inside the viewport even at the right edge.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmMultiColumnComboBox.razor",
       "documentationStatus": "merged",
@@ -18756,7 +18756,7 @@
           "name": "MatchAnchorWidth",
           "type": "bool",
           "isRequired": false,
-          "description": "Stretch the panel to the anchor's width (dropdown/select menus).",
+          "description": "Stretch the panel to the anchor's width (dropdown/select menus). The width is written before placement is measured, so a larger stylesheet min-width still wins: alignment, shift and viewport clamping all use the rendered width.",
           "default": "false"
         },
         {

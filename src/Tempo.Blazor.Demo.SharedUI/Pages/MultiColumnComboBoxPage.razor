@@ -92,6 +92,28 @@
     }
 </section>
 
+<!-- N324: narrow trigger at the right edge — the min-width:320px panel must stay in viewport -->
+<section class="showcase-card mt-8">
+    <div class="mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Narrow trigger, right edge</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400">
+            A 240px trigger whose panel declares <code>min-width: 320px</code>:
+            <code>MatchAnchorWidth</code> writes the anchor width but the rendered box is wider —
+            the placement math must use the rendered width, or the panel overhangs the viewport.
+        </p>
+    </div>
+
+    <div class="ml-auto" style="width: 240px;" data-testid="mccb-narrow-host">
+        <TmMultiColumnComboBox TItem="Product"
+                               TValue="int"
+                               Data="_products"
+                               ValueField="p => p.Id"
+                               TextField="p => p.Name"
+                               Columns="_columns"
+                               @bind-Value="_selectedProductId" />
+    </div>
+</section>
+
 @code {
     private int _selectedProductId;
     private IReadOnlyList<int> _selectedProductIds = [];

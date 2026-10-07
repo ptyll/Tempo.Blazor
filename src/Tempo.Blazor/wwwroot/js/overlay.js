@@ -191,6 +191,18 @@ function place(entry) {
     panel.style.maxHeight = '';
     panel.style.overflowY = '';
 
+    // matchAnchorWidth must write BEFORE measuring (N324): the panel's own min-width can exceed
+    // the anchor width (TmMultiColumnComboBox's 320px panel under a 240px trigger) and only a
+    // real offsetWidth read after the write resolves the RENDERED width the align/shift/clamp
+    // math must use — otherwise a min-width-clamped panel overflows the viewport edge.
+    if (options.matchAnchorWidth) {
+        panel.style.width = `${anchorRect.width}px`;
+    } else {
+        // The option may have flipped off while the panel is open (update()) — the inline width
+        // written by an earlier pass would otherwise survive as a stale override of the CSS class.
+        panel.style.width = '';
+    }
+
     // Measure the LAYOUT box, not getBoundingClientRect: a transform on the panel's open
     // animation scales the rect (e.g. .tm-popover__body grows from scale(0.95)) and place()
     // runs at t≈0 — the mis-measurement would then stick for the panel's whole open life.
@@ -198,12 +210,6 @@ function place(entry) {
     // touched the measurement, but they don't mind the switch either.
     const panelWidth = panel.offsetWidth;
     const panelHeight = panel.offsetHeight;
-
-    // matchAnchorWidth must feed the ALIGN math too, not just the inline width written below:
-    // with align 'end'/'center' the x coordinate is width-dependent, so resolving against the
-    // panel's natural width and only then overriding width would land the panel off by the
-    // (naturalWidth − anchorWidth) delta.
-    const effectiveWidth = options.matchAnchorWidth ? anchorRect.width : panelWidth;
 
     const viewW = window.innerWidth;
     const viewH = window.innerHeight;
@@ -218,7 +224,7 @@ function place(entry) {
     const originTop = block ? block.top : 0;
     const originLeft = block ? block.left : 0;
 
-    const result = resolvePlacement(anchorRect, { width: effectiveWidth, height: panelHeight }, {
+    const result = resolvePlacement(anchorRect, { width: panelWidth, height: panelHeight }, {
         placement: options.placement,
         align: options.align,
         offset: options.offset,
@@ -232,14 +238,6 @@ function place(entry) {
     panel.style.left = `${Math.round(result.x - originLeft)}px`;
     panel.style.top = `${Math.round(result.y - originTop)}px`;
     panel.setAttribute(PLACEMENT_ATTR, result.side);
-
-    if (options.matchAnchorWidth) {
-        panel.style.width = `${anchorRect.width}px`;
-    } else {
-        // The option may have flipped off while the panel is open (update()) — the inline width
-        // written by an earlier pass would otherwise survive as a stale override of the CSS class.
-        panel.style.width = '';
-    }
 
     if (options.constrainHeight && (result.side === 'bottom' || result.side === 'top')) {
         const room = result.side === 'bottom'

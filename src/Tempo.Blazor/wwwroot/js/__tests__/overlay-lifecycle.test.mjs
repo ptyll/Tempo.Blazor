@@ -261,3 +261,35 @@ test('panel height is measured without the previous inline cap (N318)', () => {
 
     close('n318-measure');
 });
+
+test('matchAnchorWidth respects panel min-width when clamping (N324)', () => {
+    installDomStubs();
+
+    // TmMultiColumnComboBox contract: a 240px trigger under a panel with min-width 320px.
+    // offsetWidth must therefore answer 320 once style.width is written to 240px.
+    const panel = stubPanel();
+    Object.defineProperty(panel, 'offsetWidth', {
+        configurable: true,
+        get() {
+            const w = parseFloat(panel.style.width);
+            return Number.isNaN(w) ? 320 : Math.max(320, w);
+        },
+    });
+    const anchor = {
+        isConnected: true,
+        getBoundingClientRect: () => ({ top: 0, left: 1040, right: 1280, bottom: 20, width: 240, height: 20 }),
+    };
+
+    open('n324-min-width', panel, anchor, {}, { matchAnchorWidth: true, align: 'start' });
+
+    // The inline width still honours the trigger…
+    assert.equal(panel.style.width, '240px');
+    // …but the shift clamp must have used the RENDERED 320px, so the right edge stays inside
+    // the viewport margin. Under the bug the 240px math placed x at 1280-8-240=1032 and the
+    // real panel overhung the edge by 72px.
+    const x = parseFloat(panel.style.left);
+    assert.ok(x + 320 <= 1280 - 8 + 0.5,
+        `min-width-clamped panel must stay inside the viewport (left=${x})`);
+
+    close('n324-min-width');
+});

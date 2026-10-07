@@ -195,6 +195,13 @@
   click inside a `TmSplitButton` menu also closes it. No z-index or top-layer changes to
   TmModal/TmDialog.
 
+- **`MatchAnchorWidth` now respects the panel's own `min-width` (N324).** `overlay.js` used to
+  run the placement math against `anchorRect.width` and only then write `style.width` — a panel
+  whose stylesheet `min-width` exceeds the anchor (TmMultiColumnComboBox's 320px dropdown under
+  a 240px trigger) was positioned as if it were anchor-wide and its min-width-clamped box
+  overhung the viewport's right edge. The width write now happens before `offsetWidth` is
+  measured, so align, shift and the viewport clamp all use the *rendered* width.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
