@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Interfaces
-@using Tempo.Blazor.Helpers
+@using Tempo.Blazor.Components.Feedback
 @using Microsoft.AspNetCore.Components.Web
 @implements IAsyncDisposable
 @inject IJSRuntime JS
@@ -8,13 +8,13 @@
 @if (IsOpen)
 {
     <div class="tm-command-palette-backdrop @Class" @attributes="AdditionalAttributes">
-        <div class="tm-command-palette"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@Loc["TmCommandPalette_Aria"]"
-             tabindex="-1"
-             @ref="_paletteElement"
-             @onkeydown="HandleKeyDownAsync">
+        <TmFocusScope @ref="_scope"
+                      Class="tm-command-palette"
+                      Active="true"
+                      CloseOnEscape="true"
+                      OnEscape="CloseAsync"
+                      AriaLabel="@Loc["TmCommandPalette_Aria"]"
+                      @onkeydown="HandleKeyDownAsync">
             <div class="tm-command-palette-header">
                 <input class="tm-command-palette-input"
                        value="@_query"
@@ -54,7 +54,7 @@
                     }
                 </ul>
             }
-        </div>
+        </TmFocusScope>
     </div>
 }
 
@@ -63,10 +63,8 @@
     private List<ICommandPaletteAction> _filtered = new();
     private int _highlightedIndex;
 
-    private ElementReference _paletteElement;
+    private TmFocusScope? _scope;
     private bool _wasOpen;
-    private bool _shouldActivateTrap;
-    private FocusTrap? _focusTrap;
 
     /// <summary>Whether the command palette is visible.</summary>
     [Parameter] public bool IsOpen { get; set; }
@@ -92,30 +90,13 @@
             // Fresh state every time the palette opens: empty query, first item highlighted.
             _query = string.Empty;
             _highlightedIndex = 0;
-            _shouldActivateTrap = true;
         }
         else if (!IsOpen && _wasOpen)
         {
             _wasOpen = false;
-            await DeactivateTrapAsync();
         }
 
         RecomputeFiltered();
-    }
-
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // Activate the trap AFTER the palette has rendered so the input element exists. The shared
-        // trap moves initial focus to the first focusable (the search input), traps Tab, and restores
-        // focus to the trigger on deactivate. Escape stays on the palette's own keydown, which also
-        // drives its arrow navigation, so no document-level listener is needed.
-        if (_shouldActivateTrap && IsOpen)
-        {
-            _shouldActivateTrap = false;
-            _focusTrap ??= new FocusTrap(JS);
-            await _focusTrap.ActivateAsync<TmCommandPalette>(_paletteElement);
-        }
     }
 
     private void HandleInput(ChangeEventArgs e)
@@ -190,20 +171,9 @@
 
     private Task CloseAsync() => IsOpenChanged.InvokeAsync(false);
 
-    private async Task DeactivateTrapAsync()
-    {
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DeactivateAsync();
-        }
-    }
-
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DisposeAsync();
-        }
+        if (_scope is not null) await _scope.DisposeAsync();
     }
 }

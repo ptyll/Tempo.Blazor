@@ -184,7 +184,7 @@ public class TmGanttImportDialogTests : LocalizationTestBase
             .Add(x => x.IsOpen, true)
             .Add(x => x.OnClose, () => closed = true));
 
-        await cut.InvokeAsync(() => cut.Instance.HandleFocusTrapEscapeAsync());
+        await cut.InvokeAsync(() => cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         closed.Should().BeTrue();
     }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Services;
 
@@ -26,12 +27,9 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private bool _isImporting;
     private ElementReference _fileInputWrap;
     private ElementReference _triggerWrapRef;
-    private ElementReference _dialogElement;
     private IJSObjectReference? _filePickerModule;
     private bool _wasOpen;
-    private bool _shouldActivateTrap;
-    private FocusTrap? _focusTrap;
-    private DotNetObjectReference<TmGanttImportDialog>? _dotNetRef;
+    private TmFocusScope? _scope;
     private readonly string _titleId = $"tm-gantt-import-title-{Guid.NewGuid():N}";
 
     /// <summary>Whether the dialog is visible.</summary>
@@ -57,29 +55,16 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         if (IsOpen && !_wasOpen)
         {
             _wasOpen = true;
-            _shouldActivateTrap = true;
         }
         else if (!IsOpen && _wasOpen)
         {
             _wasOpen = false;
-            await DeactivateTrapAsync();
         }
     }
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_shouldActivateTrap && IsOpen)
-        {
-            _shouldActivateTrap = false;
-            _dotNetRef ??= DotNetObjectReference.Create(this);
-            _focusTrap ??= new FocusTrap(JS);
-            // Escape is handled at the document level so it closes the dialog regardless of
-            // where focus currently sits — the modal contract TmDrawer/TmModal already follow
-            // (carry-forward review item: the dialog trapped focus but ignored Escape).
-            await _focusTrap.ActivateAsync<TmGanttImportDialog>(_dialogElement, _dotNetRef, closeOnEscape: true);
-        }
-
         // Register the NATIVE click listener ahead of the first click — re-attempted on EVERY
         // render while the trigger element exists, because tab switches (@if/else-if in the
         // markup) destroy and recreate the file area: a C# "registered once" flag can never see
@@ -94,21 +79,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         }
     }
 
-    private async Task DeactivateTrapAsync()
-    {
-        if (_focusTrap is not null)
-        {
-            await _focusTrap.DeactivateAsync();
-        }
-    }
-
-    /// <summary>Invoked by the shared focus-trap module when Escape is pressed at the document level.</summary>
-    [JSInvokable]
-    public async Task HandleFocusTrapEscapeAsync()
-    {
-        await OnClose.InvokeAsync();
-    }
-
     private void OnFileChangedAsync(InputFileChangeEventArgs e)
     {
         _selectedFile = e.File;
@@ -121,9 +91,9 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     {
         try
         {
-            if (_focusTrap is not null)
+            if (_scope is not null)
             {
-                await _focusTrap.DisposeAsync();
+                await _scope.DisposeAsync();
             }
             if (_filePickerModule is not null)
             {
@@ -136,7 +106,6 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         }
         finally
         {
-            _dotNetRef?.Dispose();
         }
     }
 

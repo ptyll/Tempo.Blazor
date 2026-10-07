@@ -1,13 +1,15 @@
 @namespace Tempo.Blazor.Components.Scheduler
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Feedback
 @using Microsoft.AspNetCore.Components.Forms
 
 @if (IsOpen)
 {
     <div class="tm-gantt__dialog-overlay" @onclick="OnClose">
-        <div class="tm-gantt__dialog tm-gantt__import-dialog" @ref="_dialogElement" @onclick:stopPropagation
-             role="dialog" aria-modal="true" aria-labelledby="@_titleId">
+        <TmFocusScope @ref="_scope" Class="tm-gantt__dialog tm-gantt__import-dialog"
+                      Active="true" CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
+                      @onclick:stopPropagation>
             <div class="tm-gantt__dialog-header">
                 <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>
                 <button type="button" class="tm-gantt__dialog-close" @onclick="OnClose"
@@ -101,6 +103,6 @@
                     @Loc["Tm_Cancel"]
                 </TmButton>
             </div>
-        </div>
+        </TmFocusScope>
     </div>
 }

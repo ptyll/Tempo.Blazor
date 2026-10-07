@@ -38,7 +38,7 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     const returnTarget = restoreTarget || document.activeElement;
 
     const tabHandler = function (e) {
-        if (e.key !== 'Tab') return;
+        if (e.key !== 'Tab' || !modal) return;
         // Only the innermost active trap cycles Tab. An outer one that also handled it would pull
         // focus out of the dialog the user is actually in.
         if (!isInnermost(id)) return;
@@ -77,9 +77,13 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     // attribute Blazor cannot keep in sync with the page around the overlay, so the module owns it.
     // The overlay's own ancestors stay reachable, otherwise the trap would inert itself. A non-modal
     // surface (an inline drawer) leaves the page usable.
-    if (modal) markBackgroundInert(element, true);
+    if (modal) {
+        markBackgroundInert(element, true);
+        lockScroll(true);
+    }
 
     // ARIA wants initial focus INSIDE the overlay, but only when it is not already there.
+    // A non-modal surface leaves focus where it is: the page behind it stays usable.
     // Activation is gated on a lazy ES-module import (FocusTrap.ActivateAsync), so it can land an
     // arbitrary amount of time after the overlay rendered — long enough for the user to have clicked
     // or typed into a field inside it. An unconditional `(list[0] || element).focus()` then STEALS
@@ -91,9 +95,11 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     // tabindex="-1" fallback, and from there focus still belongs on the first real control.
     const active = document.activeElement;
     const alreadyInside = !!active && active !== element && element.contains(active);
-    if (!alreadyInside) {
+    if (modal && !alreadyInside) {
         const list = visibleFocusable(element);
-        (list[0] || element).focus();
+        const initialId = element.dataset ? element.dataset.initialFocus : null;
+        const initial = initialId && document.getElementById ? document.getElementById(initialId) : null;
+        (initial || list[0] || element).focus();
     }
 }
 
@@ -119,19 +125,26 @@ const inerted = new Set();
 
 function markBackgroundInert(element, inert) {
     if (!element || !document.body) return;
-    const excluded = new Set();
-    for (let node = element; node; node = node.parentElement) excluded.add(node);
-    for (const child of document.body.children) {
-        if (excluded.has(child)) continue;
-        if (inert) {
-            if (!child.hasAttribute('inert')) {
-                child.toggleAttribute('inert', true);
-                inerted.add(child);
-            }
-        } else if (inerted.has(child)) {
-            child.toggleAttribute('inert', false);
-            inerted.delete(child);
+    // Walk every ancestor up to body. A Blazor host is body > #app > page, and the overlay is a
+    // descendant of #app, so inerting only body's children leaves the page reachable.
+    for (let node = element.parentElement; node; node = node.parentElement) {
+        for (const child of node.children) {
+            if (child === element || child.contains(element)) continue;
+            setInert(child, inert);
         }
+        if (node === document.body) break;
+    }
+}
+
+function setInert(child, inert) {
+    if (inert) {
+        if (!child.hasAttribute('inert')) {
+            child.toggleAttribute('inert', true);
+            inerted.add(child);
+        }
+    } else if (inerted.has(child)) {
+        child.toggleAttribute('inert', false);
+        inerted.delete(child);
     }
 }
 
@@ -139,6 +152,7 @@ function markBackgroundInert(element, inert) {
 export function __resetForTests() {
     traps.clear();
     inerted.clear();
+    scrollLocks.length = 0;
 }
 
 export function deactivate(id) {
@@ -155,10 +169,36 @@ export function deactivate(id) {
     // Only the last modal trap releases the background. A nested dialog closing must not make the
     // page reachable again while the sheet that opened it is still up.
     const stillModal = Array.from(traps.values()).some(other => other.modal);
-    if (trap.modal && !stillModal) markBackgroundInert(trap.element, false);
+    if (trap.modal && !stillModal) {
+        markBackgroundInert(trap.element, false);
+        lockScroll(false);
+    }
 
-    const target = trap.returnTarget;
-    if (target && typeof target.focus === 'function') {
-        try { target.focus(); } catch (e) { /* element gone */ }
+    restoreFocus(trap);
+}
+
+const scrollLocks = [];
+
+function lockScroll(lock) {
+    const body = document.body;
+    if (!body || !body.style) return;
+    if (lock) {
+        scrollLocks.push(body.style.overflow ?? '');
+        body.style.overflow = 'hidden';
+        return;
+    }
+    body.style.overflow = scrollLocks.pop() ?? '';
+}
+
+function restoreFocus(trap) {
+    const named = trap.returnTarget;
+    if (named && named.isConnected !== false && typeof named.focus === 'function') {
+        try { named.focus(); return; } catch { /* disconnected or unfocusable */ }
+    }
+    const id = trap.element && trap.element.dataset ? trap.element.dataset.restoreTarget : null;
+    const byId = id && document.getElementById ? document.getElementById(id) : null;
+    const fallback = byId || document.body;
+    if (fallback && typeof fallback.focus === 'function') {
+        try { fallback.focus(); } catch { /* nothing to restore to */ }
     }
 }

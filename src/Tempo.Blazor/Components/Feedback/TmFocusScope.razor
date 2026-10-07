@@ -16,6 +16,7 @@
      role="@Role"
      aria-modal="@AriaModal"
      aria-labelledby="@AriaLabelledBy"
+     aria-label="@AriaLabel"
      tabindex="@TabIndex"
      data-restore-target="@RestoreFocusTargetId"
      data-initial-focus="@InitialFocusTargetId"
@@ -55,6 +56,9 @@
     /// <summary>The id of the element that names the scope, wired to <c>aria-labelledby</c>.</summary>
     [Parameter] public string? AriaLabelledBy { get; set; }
 
+    /// <summary>An accessible name for the scope, wired to <c>aria-label</c>.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
     /// <summary>The dialog role. A dangerous confirm passes <c>alertdialog</c>. Not wired yet.</summary>
     [Parameter] public string DialogRole { get; set; } = "dialog";
 
@@ -80,7 +84,8 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>The scope this one is nested in, when there is one.</summary>
-    [CascadingParameter] public TmFocusScope? Parent { get; set; }
+    /// <summary>The scope this one is nested in. Internal: a host nests scopes by rendering them, not by setting this.</summary>
+    [CascadingParameter] internal TmFocusScope? Parent { get; set; }
 
     private ElementReference _element;
     private FocusTrap? _trap;
@@ -104,6 +109,8 @@
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        if (_disposed) return;
+
         if (Active && !_wasActive)
         {
             _wasActive = true;
@@ -145,12 +152,14 @@
 
     private void RegisterDescendant()
     {
+        if (_disposed) return;
         _activeDescendants++;
         StateHasChanged();
     }
 
     private void UnregisterDescendant()
     {
+        if (_disposed) return;
         _activeDescendants = Math.Max(0, _activeDescendants - 1);
         StateHasChanged();
     }
