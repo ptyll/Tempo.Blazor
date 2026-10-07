@@ -247,6 +247,30 @@
   that only needed local stacking dropped under 100. Any future bare `z-index: NNN` or
   `+ 9000`-style arithmetic escape anywhere in the NotionEditor fails the sweep.
 
+- **Notion AI menu, mention menu, and comment-mention dropdown now render in the browser top
+  layer (CF18-7).** All three used to be `position:fixed` surfaces on `z-index:1030` — below
+  the `--tm-z-modal` band — so any of them opened against a `TmModal` painted under the modal
+  overlay and was unreachable. They are `TmOverlayPanel` popovers now: `TmNotionAiMenu` and
+  `TmNotionMentionMenu` anchor to a zero-size virtual element pinned at the existing
+  `Top`/`Left` coordinates, and `TmCommentMentionInput` anchors its dropdown to the textarea
+  itself. `overlay.js` supplies flip/shift viewport clamping (replacing
+  `adjustSlashMenuPosition`), outside-pointerdown dismissal (replacing the transparent
+  backdrop) and Escape handling routed through `IsOpenChanged` into the existing `OnClosed`
+  callbacks — arrow navigation, Enter selection, selection callbacks and the mention-trigger
+  cancellation are unchanged. Panel-root styles moved to the new global
+  `_notion-floating-menus.css` (the N325 scoped-CSS rule applies: the panel element carries
+  `TmOverlayPanel`'s scope attribute, so scoped selectors could never match it). The z-band
+  sweep gained a fail-closed theory asserting these surfaces declare no `z-index` of their
+  own.
+
+- **A degenerate viewport pass no longer dismisses an open overlay panel.** Chromium applies
+  a 1×1 device-metrics emulation mid-way through a full-page screenshot capture (Playwright
+  `fullPage: true`), and the resulting resize pass used to see every anchor as out-of-view —
+  for a panel holding focus that meant an instant `anchor-hidden` dismissal and unmount.
+  `place()` now early-returns when `innerWidth`/`innerHeight` is below 2: the layout math is
+  meaningless at that size, and the next real resize pass re-runs it anyway. The migration
+  E2E surfaced this inside `NotionMentionMenuE2ETests`' baseline captures.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

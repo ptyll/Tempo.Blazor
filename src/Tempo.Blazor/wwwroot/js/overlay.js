@@ -214,6 +214,15 @@ function place(entry) {
     const viewW = window.innerWidth;
     const viewH = window.innerHeight;
 
+    // A transient degenerate viewport — the 1×1 metrics emulation Chromium applies during a
+    // full-page screenshot capture, or a mid-animation mobile keyboard collapse — must not
+    // park or dismiss anything: the placement math is meaningless at that size, a focused
+    // panel would be destroyed by 'anchor-hidden' for a viewport state no user can produce,
+    // and the next real resize pass re-runs place() anyway.
+    if (viewW < 2 || viewH < 2) {
+        return;
+    }
+
     // Anchor scrolled fully out of the viewport: park the panel invisible rather than clamp it
     // against an edge — it reappears on the next pass once the anchor is back. ('' restores the
     // stylesheet value; hidePanel's cssText reset already covers the closed path.)

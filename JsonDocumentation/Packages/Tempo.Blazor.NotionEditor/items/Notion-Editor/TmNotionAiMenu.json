@@ -2,7 +2,7 @@
   "itemName": "TmNotionAiMenu",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "AI assistant panel with Generate, Improve, Summarize, and Ask tabs. Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard.",
+  "description": "AI assistant panel with Generate, Improve, Summarize, and Ask tabs. Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping and Escape + outside-pointerdown dismissal (IsOpenChanged). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAiMenu.razor",

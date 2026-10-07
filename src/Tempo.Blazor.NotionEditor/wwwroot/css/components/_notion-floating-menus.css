@@ -1,0 +1,69 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tempo NotionEditor — floating menu panel roots (CF18-7)
+   Applied globally (not scoped): the panel element is rendered by
+   TmOverlayPanel, so it carries THAT component's scope attribute and a scoped
+   rule in the consumer's .razor.css can never match it (N325). position,
+   z-index and top/left are deliberately absent — _overlay-panel.css and
+   overlay.js own placement; these rules only carry the visual + layout props.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── TmNotionMentionMenu — anchored at the caret via a virtual anchor span ─── */
+
+.tm-nmm {
+    --tm-nmm-viewport-margin: var(--tm-space-2, 8px);
+    --tm-nmm-max-menu-height: 360px;
+    width: 280px;
+    max-height: min(
+        var(--tm-nmm-max-menu-height),
+        calc(100vh - (var(--tm-nmm-viewport-margin) * 2))
+    );
+    display: flex;
+    flex-direction: column;
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-notion-border);
+    border-radius: 6px;
+    box-shadow: var(--tm-notion-menu-shadow);
+    overflow: hidden;
+    font-size: 14px;
+    color: var(--tm-text-primary);
+    animation: tm-nmm-appear 80ms ease;
+}
+
+@keyframes tm-nmm-appear {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── TmCommentMentionInput — anchored at its own textarea ──────────────────── */
+
+.tm-comment-mention-dropdown {
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-notion-border);
+    border-radius: 6px;
+    box-shadow: var(--tm-notion-menu-shadow);
+    padding: 4px 0;
+}
+
+/* ── TmNotionAiMenu — anchored at the page top-right virtual anchor ────────── */
+
+.tm-notion-ai {
+    width: min(28rem, calc(100vw - var(--tm-space-4)));
+    max-height: calc(100vh - var(--tm-space-6));
+    overflow-y: auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3);
+    color: var(--tm-color-text);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-lg);
+    box-shadow: var(--tm-shadow-xl);
+}
+
+.tm-notion-ai--panel {
+    width: min(32rem, calc(100vw - var(--tm-space-4)));
+}

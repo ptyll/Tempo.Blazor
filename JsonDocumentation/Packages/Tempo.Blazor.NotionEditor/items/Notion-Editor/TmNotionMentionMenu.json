@@ -2,7 +2,7 @@
   "itemName": "TmNotionMentionMenu",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Mention popup (triggered by @ or [[) with People, Pages, and Date tabs (or pages only), featuring a search input, results list, and keyboard navigation, raising the selected item as a type, id, and display text.",
+  "description": "Mention popup (triggered by @ or [[) with People, Pages, and Date tabs (or pages only), featuring a search input, results list, and keyboard navigation, raising the selected item as a type, id, and display text. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left caret coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping (replacing adjustSlashMenuPosition) and Escape + outside-pointerdown dismissal (replacing the transparent backdrop). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor",

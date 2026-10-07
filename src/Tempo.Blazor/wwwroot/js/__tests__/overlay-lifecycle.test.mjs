@@ -342,3 +342,36 @@ test('matchAnchorWidth respects panel min-width when clamping (N324)', () => {
 
     close('n324-min-width');
 });
+
+test('a degenerate viewport pass is a no-op — no park, no anchor-hidden dismiss (CF18-7)', async () => {
+    // Chromium applies a 1×1 device-metrics emulation mid-way through a full-page
+    // screenshot capture; the resulting resize pass used to see every anchor as
+    // out-of-view and kill a focused panel via 'anchor-hidden'.
+    const insidePanel = { isConnected: true };
+    installDomStubs({ activeElement: insidePanel });
+    globalThis.window.innerWidth = 1;
+    globalThis.window.innerHeight = 1;
+
+    const panel = { ...stubPanel(), contains: el => el === insidePanel };
+    const dismissed = [];
+    const anchor = {
+        isConnected: true,
+        // A zero-size virtual anchor mid-viewport (the mention-menu caret pin): inside any
+        // real viewport, "outside" the emulated 1×1 one.
+        getBoundingClientRect: () => ({ top: 430, left: 720, right: 720, bottom: 430, width: 0, height: 0 }),
+    };
+
+    open('degenerate-viewport', panel, anchor, {
+        invokeMethodAsync: async (method, reason) => { dismissed.push(reason); return true; },
+    }, {});
+
+    assert.equal(panel.style.visibility, undefined,
+        'a 1×1 emulation pass leaves visibility alone — no park');
+    assert.equal(panel.style.top, undefined,
+        'placement math at a meaningless viewport writes nothing');
+    await new Promise(r => setTimeout(r, 0));
+    assert.deepEqual(dismissed, [],
+        'a transient emulated viewport must not dismiss a focused panel');
+
+    close('degenerate-viewport');
+});

@@ -4,14 +4,17 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Interfaces;
+using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
 using Tempo.Blazor.Tests.Localization;
@@ -191,6 +194,23 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 var cut = Render<TmDateTimePicker>(p => p.Add(c => c.Label, "Start"));
                 cut.Find(".tm-date-picker-trigger").Click();
                 return cut.Find("[role='dialog']");
+            },
+            ["TmNotionAiMenu"] = () =>
+            {
+                var cut = Render<TmNotionAiMenu>(p => p
+                    .Add(c => c.Visible, true)
+                    .Add(c => c.Provider, Substitute.For<INotionAIProvider>()));
+                return cut.Find("[role='dialog']");
+            },
+            ["TmNotionMentionMenu"] = () =>
+            {
+                var host = Render<CascadingValue<NotionEditorContext>>(p => p
+                    .Add(c => c.Value, new NotionEditorContext())
+                    .AddChildContent<TmNotionMentionMenu>(m => m
+                        .Add(x => x.Visible, true)
+                        .Add(x => x.Top, 100)
+                        .Add(x => x.Left, 200)));
+                return host.Find("[role='dialog']");
             },
         };
 

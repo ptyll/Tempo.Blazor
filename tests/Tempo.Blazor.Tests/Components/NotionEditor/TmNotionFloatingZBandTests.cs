@@ -83,11 +83,8 @@ public sealed class TmNotionFloatingZBandTests
     [Theory]
     // anchored surface only — no click-capture backdrop
     [InlineData("UI/TmNotionInlineToolbar", 1)]
-    [InlineData("UI/TmCommentMentionInput", 1)]
-    [InlineData("UI/TmNotionAiMenu", 1)]
     // backdrop + panel pairs
     [InlineData("UI/TmNotionSlashMenu", 2)]
-    [InlineData("UI/TmNotionMentionMenu", 2)]
     [InlineData("UI/TmNotionBlockTypeSwitcher", 2)]
     [InlineData("UI/TmNotionColorPicker", 2)]
     [InlineData("UI/TmNotionEmojiPicker", 2)]
@@ -111,6 +108,26 @@ public sealed class TmNotionFloatingZBandTests
                 "--tm-z-popover",
                 $"{scopedCss}: every z-index the surface declares goes through the popover band");
         }
+    }
+
+    /// <summary>
+    /// CF18-7: surfaces migrated onto <c>TmOverlayPanel</c> declare NO z-index of their own —
+    /// the popover top layer + overlay.js own stacking, and a stray band claim on the panel
+    /// root would silently compete with the top layer.
+    /// </summary>
+    [Theory]
+    [InlineData("UI/TmNotionAiMenu")]
+    [InlineData("UI/TmNotionMentionMenu")]
+    [InlineData("UI/TmCommentMentionInput")]
+    public void OverlayHostedSurfaces_DeclareNoOwnZIndex(string scopedCss)
+    {
+        var css = CssComment.Replace(File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
+            "Components", "NotionEditor", $"{scopedCss}.razor.css")), string.Empty);
+
+        AnyLevel.Matches(css).Should().BeEmpty(
+            $"{scopedCss}: its panel is a TmOverlayPanel — stacking is top-layer+overlay.js "
+            + "territory; any own z-index here is a regression");
     }
 
     /// <summary>Full-screen take-overs ride the overlay band; their dialogs stack above it.</summary>

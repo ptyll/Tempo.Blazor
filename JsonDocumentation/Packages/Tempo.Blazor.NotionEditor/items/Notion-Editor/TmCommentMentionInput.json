@@ -2,7 +2,7 @@
   "itemName": "TmCommentMentionInput",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Auto-sizing comment textarea with an inline @-mention autocomplete dropdown (searching the people provider) that two-way binds its value and forwards keydown events for reply and submit shortcuts.",
+  "description": "Auto-sizing comment textarea with an inline @-mention autocomplete dropdown (searching the people provider) that two-way binds its value and forwards keydown events for reply and submit shortcuts. The dropdown is a TmOverlayPanel anchored to the textarea — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies viewport clamping and Escape + outside-pointerdown dismissal, replacing getMentionDropdownPosition. Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmCommentMentionInput.razor",
