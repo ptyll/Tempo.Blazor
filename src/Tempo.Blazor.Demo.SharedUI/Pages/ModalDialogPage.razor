@@ -122,7 +122,7 @@
         <label><input type="checkbox" data-testid="toggle-sheet-presentation" @bind="_forceSheet" /> @Loc["TmDemo_ToggleSheet"]</label>
         <label><input type="checkbox" data-testid="toggle-content-height" @bind="_contentHeight" /> @Loc["TmDemo_ToggleContentHeight"]</label>
     </div>
-    <div class="mt-4 p-6 border border-slate-200 dark:border-slate-700 rounded-lg" style="position: relative; min-height: 16rem;">
+    <div class="mt-4 p-6 border border-slate-200 dark:border-slate-700 rounded-lg" style="position: relative; min-height: 16rem;" data-testid="inline-sheet-host">
         <button type="button" id="sheet-canvas" data-testid="sheet-canvas" class="tm-btn tm-btn-secondary">@Loc["TmDemo_CanvasBehind"]</button>
         <TmDrawer IsOpen="_showInlineDrawer" IsOpenChanged="open => _showInlineDrawer = open" Position="DrawerPosition.Bottom" Modal="false" SnapPoints="@(_contentHeight ? Array.Empty<double>() : new[] { 0.5, 1.0 })" Title="@Loc["TmDemo_InlineSheet"]">
             <p>@Loc["TmDemo_InlineSheetBody"]</p>

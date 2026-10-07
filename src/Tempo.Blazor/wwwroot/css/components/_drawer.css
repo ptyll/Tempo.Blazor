@@ -73,6 +73,11 @@
 }
 
 .tm-drawer--bottom .tm-drawer__panel {
+    /* The overlay is position:fixed, so it paints above a static panel and swallows clicks meant
+       for the sheet. The panel has to stack above it. */
+    position: relative;
+    /* Above the overlay (1035). A z-index of 1 loses to it, so the backdrop swallows the sheet. */
+    z-index: calc(var(--tm-z-drawer-backdrop, 1035) + 1);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     flex: 0 0 auto;
     width: 100%;
@@ -96,9 +101,10 @@
     pointer-events: none;
 }
 
-.tm-drawer--inline.tm-drawer--bottom .tm-drawer__panel {
-    /* The shared sheet rule sizes .tm-sheet__panel from the viewport. An inline sheet is a fraction
-       of its host, so the drawer's own panel class carries that length. */
+.tm-drawer--inline.tm-drawer--bottom .tm-drawer__panel.tm-sheet__panel {
+    /* The shared sheet rule sizes .tm-sheet__panel from the viewport at the same specificity, so a
+       bare panel selector loses to it. The compound wins, and an inline sheet is a fraction of its
+       host instead of the viewport. */
     height: calc(var(--tm-sheet-height, 0.5) * 100%);
     max-height: calc(var(--tm-sheet-max, 0.85) * 100%);
 }

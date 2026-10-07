@@ -57,7 +57,10 @@ public sealed class SheetRound2E2ETests : WasmTestBase
         var page = await OpenAsync("/feedback", 390, 844);
         await page.GetByTestId("open-bottom-sheet").ClickAsync();
         await page.Locator(".tm-drawer--bottom").WaitForAsync();
-        await page.GetByTestId("sheet-open-dialog").ClickAsync();
+        // The sheet opens at half height, so the trigger starts below the panel. Scroll it up first.
+        var nested = page.GetByTestId("sheet-open-dialog");
+        await nested.EvaluateAsync("el => el.scrollIntoView({ block: 'center' })");
+        await nested.ClickAsync();
         await page.Locator(".tm-dialog").WaitForAsync();
 
         await page.Keyboard.PressAsync("Escape");
@@ -106,7 +109,7 @@ public sealed class SheetRound2E2ETests : WasmTestBase
         var page = await OpenAsync("/feedback", 390, 844);
         await page.GetByTestId("open-bottom-sheet").ClickAsync();
         var panel = page.Locator(".tm-drawer--bottom .tm-drawer__panel");
-        await panel.WaitForAsync();
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
         var handle = await page.Locator(".tm-sheet__handle").BoundingBoxAsync();
         Assert.IsNotNull(handle);
 
@@ -155,11 +158,25 @@ public sealed class SheetRound2E2ETests : WasmTestBase
         await page.GetByTestId("open-inline-drawer").ClickAsync();
         var panel = page.Locator(".tm-drawer--inline .tm-drawer__panel");
         await panel.WaitForAsync();
+        // The slide-up animation is still running when the panel first appears, so a box read then
+        // sits below the host. Wait for it to settle.
+        await page.WaitForFunctionAsync(
+            "() => getComputedStyle(document.querySelector('.tm-drawer--inline .tm-drawer__panel')).transform === 'none'",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
 
+        var measured = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const host = document.querySelector('[data-testid="inline-sheet-host"]');
+                const panel = document.querySelector('.tm-drawer--inline .tm-drawer__panel');
+                const box = el => el ? JSON.stringify(el.getBoundingClientRect()) : 'missing';
+                return 'host=' + box(host) + ' panel=' + box(panel);
+            }
+            """);
         var inside = await page.EvaluateAsync<bool>(
             """
             () => {
-                const host = document.querySelector('[style*="position: relative"]');
+                const host = document.querySelector('[data-testid="inline-sheet-host"]');
                 const panel = document.querySelector('.tm-drawer--inline .tm-drawer__panel');
                 if (!host || !panel) return false;
                 const h = host.getBoundingClientRect();
@@ -167,7 +184,7 @@ public sealed class SheetRound2E2ETests : WasmTestBase
                 return p.left >= h.left - 1 && p.right <= h.right + 1 && p.bottom <= h.bottom + 1 && p.top >= h.top - 1;
             }
             """);
-        Assert.IsTrue(inside, "the inline panel is positioned inside its host, not the viewport");
+        Assert.IsTrue(inside, "the inline panel is positioned inside its host, not the viewport: " + measured);
 
         await page.GetByTestId("sheet-canvas").FocusAsync();
         await page.Keyboard.PressAsync("Escape");
