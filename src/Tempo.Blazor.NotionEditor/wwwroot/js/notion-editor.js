@@ -480,6 +480,13 @@ window.tmNotionEditor = (function () {
         let attempts = 0;
         const tryFocus = () => {
             if (!el.isConnected || ++attempts > 10) return;
+            // CF18-3: a deliberate focus move (user Tabbed/clicked onto a real element —
+            // not the document body and not this menu's target) must win over the
+            // re-assert. The contenteditable case is different: that is the render-queued
+            // refocus this loop exists to outlast, so it does NOT count as a deliberate
+            // move and the menu keeps winning it.
+            const a = document.activeElement;
+            if (attempts > 1 && a && a !== document.body && a !== el && !a.isContentEditable) return;
             el.focus({ preventScroll: true });
             requestAnimationFrame(tryFocus);
         };

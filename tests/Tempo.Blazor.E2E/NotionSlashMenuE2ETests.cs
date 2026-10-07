@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -90,6 +91,78 @@ public class NotionSlashMenuE2ETests : WasmTestBase
         var menu = page.Locator(".tm-notion-slash").First;
         Assert.IsFalse(await menu.IsVisibleAsync(), "Slash menu should close after clicking outside");
         await TakeScreenshotAsync(page, "slash_menu_click_outside_close");
+    }
+
+    [TestMethod]
+    [Description("CF18-3: Tab inside the menu's ~10-frame re-assert window is a deliberate focus move — focusMenuInput must not pull it back")]
+    public async Task SlashMenu_TabWithinTwoFrames_FocusNotPulledBack()
+    {
+        var page = await OpenNotionEditorAsync();
+        await OpenSlashMenuAsync(page);
+
+        // The re-assert window is ~10 rAF frames (~167 ms) — far tighter than any Playwright
+        // round-trip, so the whole scenario runs in-page. The unit under test is the
+        // focusMenuInput loop itself, driven on a probe element inside the real slash menu.
+        // Two moves pin the full contract:
+        //   1. focus onto a real non-editable element = deliberate move → loop must STOP.
+        //   2. focus onto the block contenteditable = the render-queued contention this
+        //      loop exists to outlast → loop must KEEP re-asserting (menu wins the race).
+        var result = await page.EvaluateAsync<JsonElement>("""
+            () => new Promise(async resolve => {
+                const orig = HTMLElement.prototype.focus;
+                const menu = document.querySelector('.tm-notion-slash');
+                const editable = document.querySelector(".tm-notion-paragraph[contenteditable='true']");
+                const state = { probe: null, probeCalls: 0, moved: false, postMoveCalls: 0 };
+                HTMLElement.prototype.focus = function (...args) {
+                    if (this === state.probe) {
+                        if (state.moved) state.postMoveCalls++; else state.probeCalls++;
+                    }
+                    return orig.apply(this, args);
+                };
+                const raf = () => new Promise(r => requestAnimationFrame(r));
+                const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+                async function scenario(moveTarget) {
+                    const probe = document.createElement('button');
+                    probe.textContent = 'probe';
+                    menu.appendChild(probe);
+                    state.probe = probe; state.probeCalls = 0; state.moved = false; state.postMoveCalls = 0;
+                    window.tmNotionEditor.focusMenuInput(probe);
+                    // Wait until the loop has provably re-asserted AND holds the probe —
+                    // the move then lands mid-window like a fast user Tab.
+                    for (let i = 0; i < 600 && !(state.probeCalls >= 2 && document.activeElement === probe); i++)
+                        await raf();
+                    moveTarget.focus();
+                    state.moved = true;
+                    await sleep(400);
+                    probe.remove();
+                    return { moved: state.moved, postMoveCalls: state.postMoveCalls };
+                }
+
+                const moveTarget = document.createElement('button');
+                moveTarget.textContent = 'move-target';
+                document.body.appendChild(moveTarget);
+                const nonEditable = await scenario(moveTarget);
+                const contention = await scenario(editable);
+                moveTarget.remove();
+                HTMLElement.prototype.focus = orig;
+                resolve({ nonEditable, contention });
+            })
+            """);
+
+        var nonEditable = result.GetProperty("nonEditable");
+        var contention = result.GetProperty("contention");
+
+        Assert.IsTrue(nonEditable.GetProperty("moved").GetBoolean(),
+            "the focusMenuInput loop should be live (>=2 probe focus calls) before the move");
+        Assert.AreEqual(0, nonEditable.GetProperty("postMoveCalls").GetInt32(),
+            "a deliberate focus move inside the re-assert window must stop it — " +
+            $"focusMenuInput kept forcing el.focus() {nonEditable.GetProperty("postMoveCalls").GetInt32()}x after the user's move (CF18-3)");
+        Assert.IsTrue(contention.GetProperty("moved").GetBoolean(),
+            "the second scenario's loop should be live too");
+        Assert.IsTrue(contention.GetProperty("postMoveCalls").GetInt32() >= 1,
+            "the render-queued editable refocus is the contention this loop exists to outlast — " +
+            "it must NOT count as a deliberate move or the menu loses the typing target");
     }
 
     // ══════════════════════════════════════════════════════════════════════════

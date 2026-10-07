@@ -318,6 +318,17 @@
   submenu that still holds keyboard focus (focus fell to `<body>`), and a sibling's
   `mouseenter` hands focus back to the focused submenu's trigger before the swap.
 
+- **The Notion menus' focus re-assert loop no longer fights a deliberate focus move (CF18-3).**
+  `tmNotionEditor.focusMenuInput` re-focuses the just-opened search input for ~10 animation
+  frames because the same keystroke queues a Blazor render that can refocus the block
+  editable afterwards. The loop never checked what the user did in between: a Tab (or any
+  focus move to a real element) inside that window was yanked back to the menu input up to
+  nine more times. `tryFocus` now stops on attempts after the first when
+  `document.activeElement` is a real non-contenteditable element that is neither the target
+  nor `body` — the initial claim is unchanged, and the block-editable refocus the loop
+  exists to outlast still loses the race. Affects `TmNotionSlashMenu`,
+  `TmNotionMentionMenu`, and `TmNotionTokenDropdown`.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
