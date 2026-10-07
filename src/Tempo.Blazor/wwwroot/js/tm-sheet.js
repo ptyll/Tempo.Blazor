@@ -21,6 +21,10 @@ export function settle(snaps, released, swipeToDismiss, velocity = 0) {
         return { dismiss: false, snap: null, index: -1 };
     }
 
+    if (snaps.length === 0) {
+        return { dismiss: false, snap: null, index: -1 };
+    }
+
     const lowest = snaps[0];
     // A one-snap sheet dismisses from a real drag (below the snap). A multi-snap sheet dismisses
     // only past the lowest snap by a margin, or on a downward flick — a release between snaps
@@ -115,13 +119,14 @@ function isInteractive(target) {
     return !!target && typeof target.closest === 'function' && !!target.closest(INTERACTIVE);
 }
 
-export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
+export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, track = true) {
     if (!panel) return;
     detach(id);
 
     const sorted = Array.isArray(snaps) ? snaps : [];
     let startY = 0;
     let startHeight = 0;
+    let startFraction = 0;
     let lastY = 0;
     let lastTime = 0;
     let dragging = false;
@@ -143,16 +148,16 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
     const onDown = (event) => {
         if (event.button !== undefined && event.button !== 0) return;
         dragging = true;
-        armed = !isInteractive(event.target);
+        // Never arm on pointerdown. A tap, and a press on the close button, stay a click until
+        // the finger actually moves. Arming immediately dismissed a content sheet on a tap.
+        armed = false;
         pointerId = event.pointerId;
         startY = event.clientY;
         lastY = event.clientY;
         lastTime = event.timeStamp ?? 0;
         startHeight = panel.getBoundingClientRect().height;
-        if (armed) {
-            panel.style.transition = 'none';
-            capture(event);
-        }
+        const viewportNow = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        startFraction = viewportNow > 0 ? startHeight / viewportNow : 0;
     };
 
     const onMove = (event) => {
@@ -183,9 +188,17 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
         const elapsed = Math.max(1, (event.timeStamp ?? lastTime) - lastTime);
         const velocity = (event.clientY - lastY) / elapsed;
         resetInline();
-        if (cancelled || !wasArmed || sorted.length === 0) return;
+        if (cancelled || !wasArmed) return;
 
         const released = viewport > 0 ? height / viewport : 0;
+        // A content sheet has no snaps. It dismisses only on a real downward drag — past a quarter
+        // of the height it started at — or a flick. An upward drag never dismisses.
+        if (sorted.length === 0) {
+            if (swipeToDismiss && (released < startFraction * 0.75 || velocity > 0.5)) {
+                host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
+            }
+            return;
+        }
         const result = settle(sorted, released, swipeToDismiss, velocity);
         if (result.dismiss) {
             host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
@@ -203,7 +216,9 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id) {
         handle.addEventListener('pointercancel', onCancel);
     }
 
-    const stopViewport = trackViewport(panel.closest?.('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel, host);
+    const stopViewport = track
+        ? trackViewport(panel.closest?.('.tm-sheet, .tm-drawer, .tm-modal-overlay') ?? panel, host)
+        : () => {};
     gestures.set(id, { handle, onDown, onMove, onUp, onCancel, stopViewport });
 }
 

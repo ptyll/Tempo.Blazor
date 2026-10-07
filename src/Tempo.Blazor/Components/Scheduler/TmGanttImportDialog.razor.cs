@@ -48,7 +48,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     /// The dialog renders inline at the end of the Gantt DOM — behind hundreds of task-tree
     /// tab stops — so a keyboard user could never reach it by Tab alone. Moving focus inside
     /// (and trapping it there while open) is the standard modal contract TmModal/TmDialog
-    /// already implement via the shared <see cref="FocusTrap"/>.
+    /// already implement via <c>TmFocusScope</c>.
     /// </summary>
     protected override async Task OnParametersSetAsync()
     {

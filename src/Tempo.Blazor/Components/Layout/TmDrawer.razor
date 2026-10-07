@@ -11,7 +11,7 @@
 
 @if (IsOpen && Modal && Viewport is null && LayoutMode == TmLayoutMode.Auto)
 {
-    <TmLayoutObserver @ref="_fallback" Class="tm-layout--fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+    <TmViewportProbe OnMeasured="OnProbed" />
 }
 @if (IsOpen)
 {
@@ -197,16 +197,12 @@
     private SheetInterop? _sheet;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
+    private string? _gestureKey;
     private bool _disposed;
     private TmFocusScope? _scope;
-    private TmLayoutMode? _lastReported;
-    private TmLayoutMode? _fallbackMeasured;
-    private TmLayoutObserver? _fallback;
-
-    private TmLayoutContext? FallbackContext => Viewport is null && _fallbackMeasured is TmLayoutMode measured
-        ? new TmLayoutContext(TmLayoutMode.Auto, measured)
-        : null;
+    private readonly OverlayLayout _layout = new();
     private int _snapIndex;
+    private int _snapIndexParam = int.MinValue;
     private int? _snapBeforeKeyboard;
     private double[] _sortedSnaps = DefaultSnaps;
 
@@ -218,18 +214,7 @@
 
     private string? LabelledBy => !string.IsNullOrEmpty(Title) && HeaderContent is null ? _titleId : null;
 
-    private TmLayoutContext Context
-    {
-        get
-        {
-            // A non-modal sheet is positioned against its container, so the unnamed context wins.
-            // A modal one is positioned against the viewport.
-            var resolved = Modal
-                ? TmLayout.Resolve(LayoutMode, Viewport ?? FallbackContext, null, InitialMode)
-                : TmLayout.Resolve(LayoutMode, Container, null, InitialMode);
-            return new TmLayoutContext(LayoutMode, resolved);
-        }
-    }
+    private TmLayoutContext Context => _layout.Resolve(LayoutMode, Modal ? Viewport : Container, InitialMode);
 
     private Dictionary<string, object> RootAttributes
     {
@@ -262,7 +247,7 @@
             if (IsSheet)
             {
                 classes.Add("tm-sheet");
-                classes.Add("tm-sheet--anchored");
+                if (Modal) classes.Add("tm-sheet--anchored");
                 if (_snaps.Length == 0) classes.Add("tm-sheet--content");
             }
             if (!Modal) classes.Add("tm-drawer--inline");
@@ -293,9 +278,11 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (IsOpen && IsSheet && !_gestureAttached)
+        var gestureKey = $"{ShowHandle}:{SnapList}";
+        if (IsOpen && IsSheet && (!_gestureAttached || _gestureKey != gestureKey))
         {
             _gestureAttached = true;
+            _gestureKey = gestureKey;
             await AttachGestureAsync();
         }
         else if ((!IsOpen || !IsSheet) && _gestureAttached)
@@ -313,7 +300,7 @@
         // The handle is the gesture target when there is one. Without it the header follows the
         // finger — never the scrolling body, which has to keep scrolling.
         ElementReference? target = ShowHandle && _handle is not null ? _handle.Element : _header;
-        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef);
+        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef, trackViewport: Modal);
         if (_disposed) await _sheet.DetachAsync();
     }
 
@@ -353,41 +340,22 @@
             .Where(s => s > 0 && s <= 1)
             .OrderBy(s => s)
             .ToArray();
-        if (SnapIndex != _snapIndex) _snapIndex = Math.Clamp(SnapIndex, 0, Math.Max(0, _sortedSnaps.Length - 1));
+        if (SnapIndex != _snapIndexParam)
+        {
+            _snapIndexParam = SnapIndex;
+            _snapIndex = Math.Clamp(SnapIndex, 0, Math.Max(0, _sortedSnaps.Length - 1));
+        }
         await ReportResolved();
     }
 
-    private Task OnFallbackMeasured(TmLayoutMode mode)
+    private Task OnProbed(TmLayoutMode mode)
     {
-        if (_fallbackMeasured is null) HintMissingViewportScope();
-        _fallbackMeasured = mode;
+        _layout.Measured(mode);
         return ReportResolved();
     }
 
-    private static bool _hintedMissingScope;
-
-    private void HintMissingViewportScope()
-    {
-        if (_hintedMissingScope) return;
-        _hintedMissingScope = true;
-
-        // The library references neither IHostEnvironment nor the WASM host environment, so the
-        // Development check cannot be resolved here. Log once at Debug, in every build.
-        Logger.LogDebug("TmDrawer has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
-    }
-
-    private async Task ReportResolved()
-    {
-        var resolved = Context.Resolved;
-        if (_lastReported == resolved) return;
-
-        var first = _lastReported is null;
-        _lastReported = resolved;
-        if (!first)
-        {
-            await ResolvedLayoutChanged.InvokeAsync(resolved);
-        }
-    }
+    private Task ReportResolved() => _layout.ReportAsync(
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: Viewport is null);
 
     private async Task SetSnapAsync(int index)
     {

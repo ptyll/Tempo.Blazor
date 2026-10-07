@@ -150,7 +150,7 @@
     {
         _dotNetRef ??= DotNetObjectReference.Create(this);
         _trap ??= new FocusTrap(JS);
-        await _trap.ActivateAsync(_element, _dotNetRef, CloseOnEscape, RestoreFocusTarget, Modal);
+        await _trap.ActivateAsync(_element, _dotNetRef, CloseOnEscape, RestoreFocusTarget, Modal, InitialFocusTarget);
     }
 
     private async Task DeactivateAsync()

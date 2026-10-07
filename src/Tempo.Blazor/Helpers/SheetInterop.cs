@@ -36,7 +36,8 @@ internal sealed class SheetInterop : IAsyncDisposable
         ElementReference panel,
         double[] snaps,
         bool swipeToDismiss,
-        DotNetObjectReference<T>? host) where T : class
+        DotNetObjectReference<T>? host,
+        bool trackViewport = true) where T : class
     {
         if (_disposed) return;
         try
@@ -50,7 +51,7 @@ internal sealed class SheetInterop : IAsyncDisposable
 
             if (module is null) return;
 
-            await module.InvokeVoidAsync("attachGesture", handle, panel, snaps, swipeToDismiss, host, _id);
+            await module.InvokeVoidAsync("attachGesture", handle, panel, snaps, swipeToDismiss, host, _id, trackViewport);
             if (_disposed)
             {
                 await module.InvokeVoidAsync("detach", _id);

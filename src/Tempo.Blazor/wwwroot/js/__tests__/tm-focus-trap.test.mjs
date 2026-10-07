@@ -210,6 +210,37 @@ test('deactivation resolves a restore target by id when the element reference is
     assert.equal(canvas.focusCalls, 1, 'the id recorded on the root must win over a disconnected reference');
 });
 
+test('an initial focus element beats the named id', () => {
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocus: 'named' };
+    const named = element(scope);
+    const preferred = element(scope);
+    installDom(body);
+    document.getElementById = (id) => (id === 'named' ? named : null);
+
+    activate(scope, 'scope', null, false, null, true, preferred);
+
+    assert.equal(preferred.focusCalls, 1, 'the element reference is the initial target');
+    assert.equal(named.focusCalls, 0, 'the named id is only the fallback');
+});
+
+test('a dialog declared in page content becomes reachable when it opens', () => {
+    const body = element();
+    const app = element(body);
+    const content = element(app);
+    const dialog = element(content);
+    const drawer = element(app);
+    installDom(body);
+
+    activate(drawer, 'drawer', { invokeMethodAsync() {} }, true, null, true);
+    assert.equal(content.attributes.has('inert'), true, 'the open drawer inerts the page content that holds the dialog');
+
+    activate(dialog, 'dialog', { invokeMethodAsync() {} }, true, null, true);
+    assert.equal(content.attributes.has('inert'), false, 'opening the dialog releases the ancestor the drawer inerted');
+    assert.equal(dialog.attributes.has('inert'), false, 'the dialog itself stays reachable');
+});
+
 test('a backdrop rendered as a sibling of the trap root stays clickable', () => {
     // TmDrawer renders .tm-drawer__overlay as a sibling of the TmFocusScope root. The walk that
     // inerts the page must not inert a backdrop that belongs to the overlay, or a click on it never

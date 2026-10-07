@@ -51,12 +51,16 @@
 .tm-drawer__panel {
     display: flex;
     flex-direction: column;
-    height: 100%;
     width: var(--tm-drawer-width, 400px);
     max-width: 100vw;
     background-color: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-xl);
     overflow: hidden;
+}
+
+.tm-drawer--right .tm-drawer__panel,
+.tm-drawer--left .tm-drawer__panel {
+    height: 100%;
 }
 
 .tm-drawer--right .tm-drawer__panel {
@@ -69,9 +73,6 @@
 }
 
 .tm-drawer--bottom .tm-drawer__panel {
-    /* Beats the shared panel's height: 100%, which would size the sheet to the viewport scope. */
-    height: calc(var(--tm-sheet-height, 0.5) * var(--tm-sheet-viewport));
-    max-height: calc(var(--tm-sheet-max, 0.85) * var(--tm-sheet-viewport));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     flex: 0 0 auto;
     width: 100%;
@@ -90,15 +91,15 @@
    it, and it does not lift for a keyboard: it is not positioned against the viewport. */
 .tm-drawer--inline.tm-drawer--bottom {
     /* The host must be positioned. The sheet then fills it and anchors to its bottom edge. */
+    position: absolute;
     inset: 0;
-    top: auto;
     pointer-events: none;
-    padding-bottom: 0;
 }
 
-.tm-drawer--inline.tm-drawer--bottom .tm-drawer__panel {
+.tm-drawer--inline .tm-sheet__panel {
     height: calc(var(--tm-sheet-height, 0.5) * 100%);
     max-height: calc(var(--tm-sheet-max, 0.85) * 100%);
+    pointer-events: auto;
 }
 
 .tm-drawer--inline .tm-drawer__panel {

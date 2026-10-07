@@ -142,7 +142,9 @@ that frame has no measurement yet.
     before the module runs. The offset is a custom property, never an inline height.
   - A host should place an app-level `<TmLayoutObserver IsViewportScope="true" IsContainer="false">`
     as the outermost full-viewport layout element (decision `F2-VIEWPORT-HOST-REQUIREMENT`: should,
-    not must). `IsContainer="false"` is mandatory on that scope. With no viewport scope, an open Auto
+    not must). `IsContainer="false"` is mandatory on that scope. An overlay with no viewport scope
+    measures the viewport itself through an internal probe, so a phone still gets the sheet; the first
+    frame uses `InitialMode` until that measurement arrives. With no viewport scope, an open Auto
     overlay measures its own fixed root, so mobile presentation still happens; the first frame can
     flash the initial mode. Set `InitialMode` on the app scope when that first frame matters.
 

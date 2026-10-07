@@ -11,7 +11,7 @@
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
-    <TmLayoutObserver @ref="_fallback" Class="tm-layout--fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+    <TmViewportProbe OnMeasured="OnProbed" />
 }
 @if (Show)
 {
@@ -204,18 +204,9 @@
     private SheetInterop? _sheet;
     private DotNetObjectReference<TmDialog>? _dotNetRef;
     private TmFocusScope? _scope;
-    private TmLayoutObserver? _fallback;
-    private TmLayoutMode? _lastReported;
-    private TmLayoutMode? _fallbackMeasured;
+    private readonly OverlayLayout _layout = new();
 
-    private TmLayoutContext Context
-    {
-        get
-        {
-            var resolved = TmLayout.Resolve(LayoutMode, Viewport ?? FallbackContext, null, InitialMode);
-            return new TmLayoutContext(LayoutMode, resolved);
-        }
-    }
+    private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
 
     private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
         ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
@@ -223,13 +214,9 @@
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 
-    private TmLayoutContext? FallbackContext => Viewport is null && _fallbackMeasured is TmLayoutMode measured
-        ? new TmLayoutContext(TmLayoutMode.Auto, measured)
-        : null;
-
     private string PresentationClass => ResolvedPresentation switch
     {
-        MobilePresentation.Sheet => "tm-modal--sheet tm-sheet tm-sheet--anchored",
+        MobilePresentation.Sheet => "tm-modal--sheet tm-sheet tm-sheet--anchored tm-sheet--content",
         MobilePresentation.Fullscreen => "tm-modal--fullscreen-presentation",
         _ => "tm-modal--dialog"
     };
@@ -255,17 +242,13 @@
         }
     }
 
-    private async Task ReportResolved()
-    {
-        var resolved = Context.Resolved;
-        if (_lastReported == resolved) return;
+    private Task ReportResolved() => _layout.ReportAsync(
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: false);
 
-        var first = _lastReported is null;
-        _lastReported = resolved;
-        if (!first)
-        {
-            await ResolvedLayoutChanged.InvokeAsync(resolved);
-        }
+    private Task OnProbed(TmLayoutMode mode)
+    {
+        _layout.Measured(mode);
+        return ReportResolved();
     }
 
     private Task HandleOverlayClick() => CloseOnOverlayClick ? OnCancelClick() : Task.CompletedTask;
@@ -295,7 +278,7 @@
         // sheet that cannot be swiped still lifts above the keyboard.
         ElementReference? handle = CloseOnOverlayClick && _handle is not null ? _handle.Element : null;
         var panel = _scope?.Element ?? _panel;
-        await _sheet.AttachAsync(handle, panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
+        await _sheet.AttachAsync(handle, panel, Array.Empty<double>(), CloseOnOverlayClick, _dotNetRef);
         if (_disposed) await _sheet.DetachAsync();
     }
 
@@ -305,23 +288,13 @@
     [JSInvokable]
     public Task HandleSheetDismissedAsync() => InvokeAsync(OnCancelClick);
 
-    /// <summary>A dialog sheet has one snap, so a reported snap changes nothing.</summary>
+    /// <summary>A dialog sheet sizes to its content, so a reported snap changes nothing.</summary>
     [JSInvokable]
     public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
 
-    private async Task OnFallbackMeasured(TmLayoutMode mode)
-    {
-        if (_fallbackMeasured is null) HintMissingViewportScope();
-        _fallbackMeasured = mode;
-        await ReportResolved();
-    }
-
-    private void HintMissingViewportScope()
-    {
-#if DEBUG
-        Logger.LogDebug("TmDialog has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
-#endif
-    }
+    /// <summary>The keyboard opened or closed. The stylesheet reads the gap; the callback exists because the module calls it.</summary>
+    [JSInvokable]
+    public Task HandleSheetKeyboardAsync(bool open) => Task.CompletedTask;
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()

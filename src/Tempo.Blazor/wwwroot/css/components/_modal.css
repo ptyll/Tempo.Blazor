@@ -45,6 +45,13 @@
   height: 100%;
   max-height: 100vh;
   overflow-y: auto;
+  /* The container fills the overlay. Clicks on the dimmed area must reach the overlay, which is
+     what CloseOnOverlayClick listens to. The panel takes its own clicks back. */
+  pointer-events: none;
+}
+
+.tm-modal-container > .tm-focus-scope {
+  pointer-events: auto;
 }
 
 .tm-modal-container.tm-modal--top {
@@ -85,7 +92,9 @@
 }
 
 .tm-modal--visible .tm-modal {
-  transform: scale(1) translateY(0);
+  /* none, not scale(1): an identity transform is still a containing block, and a sheet opened
+     inside the modal would then anchor to the modal instead of the viewport. */
+  transform: none;
 }
 
 /* Modal Sizes */
@@ -215,7 +224,7 @@
 }
 
 .tm-modal--visible .tm-dialog {
-  transform: scale(1);
+  transform: none;
 }
 
 /* Dialog Icon */

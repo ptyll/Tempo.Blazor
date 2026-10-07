@@ -25,7 +25,7 @@ function visibleFocusable(element) {
         .filter(el => el.offsetParent !== null && !el.hasAttribute('disabled'));
 }
 
-export function activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal = true) {
+export function activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal = true, initialTarget = null) {
     if (!element) return;
 
     // Deactivate any stale trap reusing this id before re-registering.
@@ -66,6 +66,9 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
             if (e.key !== 'Escape' || e.defaultPrevented) return;
             // Only the topmost trap closes. A sheet behind a dialog must not close on the same key.
             if (!isTopmost(id)) return;
+            // A non-modal surface closes only when focus is inside it. Escape on the canvas behind
+            // an inline sheet belongs to the page.
+            if (!modal && !element.contains(document.activeElement)) return;
             escapeHandler.invokeMethodAsync('HandleFocusTrapEscapeAsync');
         };
         document.addEventListener('keydown', escHandler);
@@ -78,6 +81,9 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     // The overlay's own ancestors stay reachable, otherwise the trap would inert itself. A non-modal
     // surface (an inline drawer) leaves the page usable.
     if (modal) {
+        // A dialog declared in page content opens inside an ancestor an outer trap already inerted.
+        // That ancestor has to become reachable again, or the dialog itself is inert.
+        releaseAncestors(element);
         markBackgroundInert(element, id);
         lockScroll(true);
     }
@@ -98,8 +104,10 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     if (modal && !alreadyInside) {
         const list = visibleFocusable(element);
         const initialId = element.dataset ? element.dataset.initialFocus : null;
-        const initial = initialId && document.getElementById ? document.getElementById(initialId) : null;
-        (initial || list[0] || element).focus();
+        const byId = initialId && document.getElementById ? document.getElementById(initialId) : null;
+        // An element reference wins over the id: the id is the fallback for a target that is not an
+        // element reference yet.
+        (initialTarget || byId || list[0] || element).focus();
     }
 }
 
@@ -129,9 +137,18 @@ function isBackdrop(element) {
     return !!element && (
         element.hasAttribute?.('data-tm-backdrop')
         || element.dataset?.tmBackdrop !== undefined
-        || element.classList?.contains('tm-drawer__overlay')
-        || element.classList?.contains('tm-command-palette-backdrop')
     );
+}
+
+function releaseAncestors(element) {
+    for (let node = element.parentElement; node; node = node.parentElement) {
+        for (const marked of inertedByTrap.values()) {
+            if (!marked.has(node)) continue;
+            marked.delete(node);
+            node.toggleAttribute('inert', false);
+        }
+        if (node === document.body) break;
+    }
 }
 
 function markBackgroundInert(element, id) {
@@ -225,6 +242,9 @@ function focusOf(target) {
 }
 
 function restoreFocus(trap) {
+    // A non-modal surface restores focus only if it held it. Restoring while the user is on the
+    // canvas behind an inline sheet would steal that focus.
+    if (trap.modal === false && trap.element && !trap.element.contains(document.activeElement)) return;
     // Resolved at deactivation: an explicit false restores nothing; an explicit element wins; then
     // the id recorded on the root; then the opener captured at activation; then body.
     const dataset = trap.element && trap.element.dataset;

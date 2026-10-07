@@ -27,7 +27,7 @@ restores whatever was focused when it opened, which is what an overlay wants.
 
 A backdrop rendered as a sibling of the scope root must carry `data-tm-backdrop`. The module inerts
 every sibling it walks, and a backdrop without the marker swallows the click that should close the
-overlay. `.tm-drawer__overlay` and `.tm-command-palette-backdrop` are recognised without the attribute.
+overlay. The attribute is the only contract; a class name is not recognised.
 
 The cycling, the initial-focus move, the inert background and the restore are things Blazor cannot do
 itself, so they live in `wwwroot/js/tm-focus-trap.js`. Everything else — the dialog role, `aria-modal`,
@@ -39,6 +39,13 @@ the labelled-by wiring — is markup the scope renders.
 A host of those components changes nothing: Escape, the focus restore and the inert background behave
 as before. The scope root is a `div.tm-focus-scope` with `tabindex="-1"` while active, so a test that
 looked for `role="dialog"` on the old element finds it on this root.
+
+## Still claiming a modal without a trap
+
+`TmLightbox`, `TmKeyboardShortcutsHelp`, `TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker`
+set `aria-modal="true"` on a popup that is not a `TmFocusScope`. Each one is a positioned popup with
+its own open and close path, so moving it onto the scope is its own change and is not part of the
+sheet work. Until that move, a keyboard user can Tab out of them.
 
 ## Packages that keep their own trap
 

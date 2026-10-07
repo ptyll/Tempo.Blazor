@@ -39,7 +39,8 @@ internal sealed class FocusTrap : IAsyncDisposable
         DotNetObjectReference<T>? escapeHandler = null,
         bool closeOnEscape = false,
         ElementReference? restoreTarget = null,
-        bool modal = true) where T : class
+        bool modal = true,
+        ElementReference? initialTarget = null) where T : class
     {
         try
         {
@@ -58,7 +59,7 @@ internal sealed class FocusTrap : IAsyncDisposable
                 await FallbackFocusAsync(element);
                 return;
             }
-            await _module.InvokeVoidAsync("activate", element, _id, escapeHandler, closeOnEscape, restoreTarget, modal);
+            await _module.InvokeVoidAsync("activate", element, _id, escapeHandler, closeOnEscape, restoreTarget, modal, initialTarget);
             if (_disposed)
             {
                 await DeactivateOrDropAsync(module);

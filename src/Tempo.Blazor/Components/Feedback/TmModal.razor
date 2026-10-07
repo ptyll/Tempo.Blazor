@@ -12,7 +12,7 @@
 {
     @* No viewport scope: measure the fixed overlay itself, so the first frame is not stuck on the
        initial mode. The observer renders nothing visible; the overlay below is what the user sees. *@
-    <TmLayoutObserver @ref="_fallback" Class="tm-layout--fallback" IsContainer="false" IsViewportScope="false" ResolvedLayoutChanged="OnFallbackMeasured" />
+    <TmViewportProbe OnMeasured="OnProbed" />
 }
 @if (Show)
 {
@@ -195,28 +195,15 @@
     private SheetInterop? _sheet;
     private DotNetObjectReference<TmModal>? _dotNetRef;
     private TmFocusScope? _scope;
-    private TmLayoutObserver? _fallback;
-    private TmLayoutMode? _lastReported;
-    private TmLayoutMode? _fallbackMeasured;
+    private readonly OverlayLayout _layout = new();
 
-    private TmLayoutContext Context
-    {
-        get
-        {
-            var resolved = TmLayout.Resolve(LayoutMode, Viewport ?? FallbackContext, null, InitialMode);
-            return new TmLayoutContext(LayoutMode, resolved);
-        }
-    }
+    private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 
     private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
         ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
         : MobilePresentation;
-
-    private TmLayoutContext? FallbackContext => Viewport is null && _fallbackMeasured is TmLayoutMode measured
-        ? new TmLayoutContext(TmLayoutMode.Auto, measured)
-        : null;
 
     private string ScopeClass => $"tm-modal {GetModalClasses()}{(IsSheet ? " tm-sheet__panel" : "")}";
 
@@ -239,17 +226,13 @@
         }
     }
 
-    private async Task ReportResolved()
-    {
-        var resolved = Context.Resolved;
-        if (_lastReported == resolved) return;
+    private Task ReportResolved() => _layout.ReportAsync(
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode), Logger, hint: false);
 
-        var first = _lastReported is null;
-        _lastReported = resolved;
-        if (!first)
-        {
-            await ResolvedLayoutChanged.InvokeAsync(resolved);
-        }
+    private Task OnProbed(TmLayoutMode mode)
+    {
+        _layout.Measured(mode);
+        return ReportResolved();
     }
 
     /// <inheritdoc />
@@ -279,7 +262,7 @@
         // tracks the viewport, so the sheet lifts for the keyboard even when it cannot be swiped.
         ElementReference? handle = CloseOnOverlayClick && _handle is not null ? _handle.Element : null;
         var panel = _scope?.Element ?? _panel;
-        await _sheet.AttachAsync(handle, panel, new[] { 1d }, CloseOnOverlayClick, _dotNetRef);
+        await _sheet.AttachAsync(handle, panel, Array.Empty<double>(), CloseOnOverlayClick, _dotNetRef);
         if (_disposed) await _sheet.DetachAsync();
     }
 
@@ -289,24 +272,13 @@
     [JSInvokable]
     public Task HandleSheetDismissedAsync() => InvokeAsync(HandleOverlayClick);
 
-    /// <summary>A modal sheet has one snap, so a reported snap changes nothing.</summary>
+    /// <summary>A modal sheet sizes to its content, so a reported snap changes nothing.</summary>
     [JSInvokable]
     public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
 
-    /// <summary>Called by the fallback observer when no viewport scope exists.</summary>
-    private async Task OnFallbackMeasured(TmLayoutMode mode)
-    {
-        if (_fallbackMeasured is null) HintMissingViewportScope();
-        _fallbackMeasured = mode;
-        await ReportResolved();
-    }
-
-    private void HintMissingViewportScope()
-    {
-#if DEBUG
-        Logger.LogDebug("TmModal has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
-#endif
-    }
+    /// <summary>The keyboard opened or closed. The stylesheet reads the gap; the callback exists because the module calls it.</summary>
+    [JSInvokable]
+    public Task HandleSheetKeyboardAsync(bool open) => Task.CompletedTask;
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
@@ -347,7 +319,7 @@
         if (Show) classes.Add("tm-modal--visible");
         classes.Add(ResolvedPresentation switch
         {
-            MobilePresentation.Sheet => "tm-modal--sheet tm-sheet tm-sheet--anchored",
+            MobilePresentation.Sheet => "tm-modal--sheet tm-sheet tm-sheet--anchored tm-sheet--content",
             MobilePresentation.Fullscreen => "tm-modal--fullscreen-presentation",
             _ => "tm-modal--dialog"
         });

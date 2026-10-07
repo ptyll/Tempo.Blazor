@@ -102,7 +102,7 @@ function panel(height) {
             setProperty(name, value) { props.set(name, value); },
             removeProperty(name) { props.delete(name); },
         },
-        getBoundingClientRect: () => ({ height }),
+        getBoundingClientRect: () => ({ height: inline.height ? Number.parseFloat(inline.height) : height }),
         closest: () => null,
     };
 }
@@ -207,6 +207,51 @@ test('a header ignores pointerdown on an interactive target until the finger mov
 
     grab.dispatch('pointermove', { pointerId: 1, clientY: 112 });
     assert.equal(sheet.inline.height, '388px', 'a real drag from the header still moves the sheet');
+    delete globalThis.window;
+});
+
+test('a tap on a content sheet does not dismiss it', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [], true, sink, 'tap');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 100 });
+
+    assert.equal(sink.calls.length, 0, 'a tap never reaches the host');
+    delete globalThis.window;
+});
+
+test('an upward drag on a content sheet does not dismiss it', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [], true, sink, 'up');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 120 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 120 });
+
+    assert.equal(sink.calls.length, 0, 'growing the sheet is not a dismiss');
+    delete globalThis.window;
+});
+
+test('a content sheet dismisses past a quarter of its start height', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [], true, sink, 'down');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 230 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 230 });
+
+    assert.equal(sink.calls[0][0], 'HandleSheetDismissedAsync',
+        '130px of a 400px sheet is past the quarter, so it dismisses');
     delete globalThis.window;
 });
 
