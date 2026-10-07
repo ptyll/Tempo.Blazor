@@ -291,6 +291,60 @@ test('an element that was already inert is not cleared by a trap that did not se
     assert.equal(hostInert.hasAttribute('inert'), true, 'a host-owned inert survives the trap');
 });
 
+test('a named id beats the opener captured at activation', () => {
+    const body = element();
+    const opener = element(body);
+    opener.focus = () => { opener.focusCalls++; };
+    const named = element(body);
+    named.id = 'canvas';
+    named.focus = () => { named.focusCalls++; };
+    const dialog = element(body);
+    dialog.dataset = { restoreTarget: 'canvas' };
+    installDom(body);
+    document.activeElement = opener;
+    document.getElementById = (id) => (id === 'canvas' ? named : null);
+
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+
+    assert.equal(named.focusCalls, 1, 'RestoreFocusTargetId wins over the element focused at open');
+    assert.equal(opener.focusCalls, 0);
+});
+
+test('RestoreFocus=false restores nothing, not even the opener', () => {
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const opener = element(body);
+    opener.focus = () => { opener.focusCalls++; };
+    const dialog = element(body);
+    dialog.dataset = { restoreFocus: 'false' };
+    installDom(body);
+    document.activeElement = opener;
+
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+
+    assert.equal(opener.focusCalls, 0);
+    assert.equal(body.focusCalls, undefined);
+});
+
+test('initial focus lands on the named target, not the first focusable', () => {
+    const body = element();
+    const dialog = element(body);
+    const close = element(dialog);
+    const name = element(dialog);
+    name.id = 'name';
+    dialog.dataset = { initialFocus: 'name' };
+    dialog.querySelectorAll = () => [close, name];
+    installDom(body);
+    document.getElementById = (id) => (id === 'name' ? name : null);
+
+    activate(dialog, 'scope', null, false, null, true);
+
+    assert.equal(name.focusCalls, 1, 'the initial-focus id is forwarded to activate');
+    assert.equal(close.focusCalls, 0);
+});
+
 test('deactivation falls back when the restore target is disconnected and has no id', () => {
     const body = element();
     body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
