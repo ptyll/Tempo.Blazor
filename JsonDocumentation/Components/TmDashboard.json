@@ -52,6 +52,13 @@
       "description": "Auto measures the dashboard. The grid reads the resolved mode: 12 columns on desktop, 6 on tablet, 1 on mobile, and 2 inside tablet below 768px of the dashboard container. A forced value restacks the grid and never measures."
     },
     {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement, forwarded to the observer. Desktop unless the host says otherwise."
+    },
+    {
       "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,

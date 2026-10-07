@@ -6435,6 +6435,13 @@
           "isRequired": false
         },
         {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The layout rendered before the first measurement, forwarded to the observer. Desktop unless the host says otherwise."
+        },
+        {
           "name": "LayoutMode",
           "type": "TmLayoutMode",
           "isRequired": false,
