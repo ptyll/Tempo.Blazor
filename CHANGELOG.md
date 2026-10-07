@@ -418,6 +418,25 @@
   `ReleaseGateFilterTests.EveryPublishTestStep_SetsTempoRequireFeed` (step-, job-
   and workflow-level env reach) plus three `DecideSkip` unit cells.
 
+- **Release evidence: eight fail-closed holes in the gate are closed (CF19).**
+  `eng/verify-release-evidence.sh` now diffs with `--no-renames`, so a
+  `git mv src/X docs/X` can no longer read as a prose-only change (CF19a);
+  `artifactsPath` must live inside the committed `eng/release-evidence/` store —
+  an outside path or a `..` traversal refuses (CF19b); a workflow guard pins the
+  verifier invocation inside the publish job, not merely somewhere in the file
+  (CF19c); a new `selfHost` key declares whether `hostRestarts` was measured —
+  `selfHost: false` requires the external `host-watch.log` in the artifacts dir,
+  and a missing or non-boolean value refuses (CF19d). Supporting fixes:
+  `HostRestartLog` increments its counter before the JSONL write so a failed
+  append can no longer hide a resurrection from the gate (CF19e);
+  `SqlServerCacheFixture` detects CREATE DATABASE denied by the canonical
+  262 number instead of a broad `permission`/`denied` substring (CF19f); the
+  three byte-identical `TestAssemblyInit` copies are now ONE linked file under
+  `tests/Shared/` (CF19g); and the 1200-line source sweep enumerates TRACKED
+  files via `git ls-files`, so untracked `artifacts/`/`TestResults/` output can
+  no longer move the count (CF19h). Covered by seven new verifier/fixture arms
+  over real worktrees and evidence fixtures.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

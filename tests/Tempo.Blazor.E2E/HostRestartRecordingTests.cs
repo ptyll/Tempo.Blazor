@@ -48,6 +48,45 @@ public class HostRestartRecordingTests
         }
     }
 
+    /// <summary>
+    /// CF19e — the release gate reads <see cref="HostRestartLog.TotalHostRestarts"/>: a JSONL
+    /// append that throws must still leave the resurrection counted. The previous order —
+    /// increment AFTER the write — meant a failed append kept the counter at zero and the run
+    /// reported clean. The fixture makes the write fail deterministically by aiming the JSONL
+    /// path through an existing FILE: a file-as-parent fails the directory creation on every OS.
+    /// </summary>
+    [TestMethod]
+    public void CounterIncrements_EvenWhenJsonlWriteFails()
+    {
+        string blocker = Path.Combine(Path.GetTempPath(), $"tm-hostrestart-blocker-{Guid.NewGuid():N}");
+        File.WriteAllText(blocker, "a file where a directory should be");
+        int before = HostRestartLog.TotalHostRestarts;
+
+        try
+        {
+            string jsonlPath = Path.Combine(blocker, "sub", "host-restarts.jsonl");
+            try
+            {
+                HostRestartLog.AppendRestartRecord(
+                    jsonlPath, "Demo WASM", "died-mid-run", "tail output");
+                Assert.Fail("a JSONL path whose parent is a file must throw");
+            }
+            catch (IOException)
+            {
+                // DirectoryNotFoundException on Linux, IOException on Windows — the base class
+                // is the portable assertion.
+            }
+
+            Assert.AreEqual(before + 1, HostRestartLog.TotalHostRestarts,
+                "the counter must increment even when the JSONL write fails — the release gate "
+                + "reads the counter, not the file");
+        }
+        finally
+        {
+            File.Delete(blocker);
+        }
+    }
+
     [TestMethod]
     public void BuildRestartLine_EscapesJson_AndCapsRecentOutput()
     {

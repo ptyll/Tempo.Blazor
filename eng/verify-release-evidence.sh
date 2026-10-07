@@ -69,7 +69,7 @@ json_value() {
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^,\"}]*\).*/\1/p" "$RELEASE_EVIDENCE_PATH" | head -n 1
 }
 
-required_keys=(commit verifiedDate verifiedBy runName passed failed skipped total serialResidualTotal serialResidualFailed wallClock artifactsPath hostRestarts)
+required_keys=(commit verifiedDate verifiedBy runName passed failed skipped total serialResidualTotal serialResidualFailed wallClock artifactsPath hostRestarts selfHost)
 for key in "${required_keys[@]}"; do
   if [[ -z "$(json_value "$key")" ]]; then
     refuse "release evidence is missing required key '$key' — a partial record is not a recorded run."
@@ -103,6 +103,18 @@ for key in passed failed skipped total serialResidualTotal serialResidualFailed 
   fi
 done
 
+# CF19d: selfHost declares HOW the run's demo hosts were managed. With selfHost=true the
+# suite's own HostRestartLog counts resurrections and hostRestarts means what it says.
+# With selfHost=false the hosts were externally managed — a resurrection happens outside
+# the suite's sight, so hostRestarts:0 is VACUOUS and cannot stand as the clean-run
+# claim. The evidence then rests on the external host's own watch-log, which must ship
+# in the artifacts dir where the gate can read it (host-watch.log, checked below once
+# artifactsPath itself has been proven inside the store).
+self_host="$(json_value selfHost)"
+if [[ "$self_host" != "true" && "$self_host" != "false" ]]; then
+  refuse "release evidence key 'selfHost' is '$self_host', not true/false — the gate must know whether hostRestarts was measured or is vacuous."
+fi
+
 # A RECORD OF NOTHING IS NOT A RECORDED RUN (Fáze 20E review F2): an all-zero record satisfies
 # every other clause — integer shape, a commit that exists, an empty diff, a consistent sum —
 # while describing no suite at all. total must be a positive count, not merely well-formed.
@@ -115,8 +127,18 @@ fi
 # where the gate runs (the repo root in the publish workflows). That is why recorded runs keep
 # their artifacts inside the committed eng/release-evidence/<run>/ tree: a gitignored
 # TestResults/ path a fresh CI checkout can never see would make this refusal permanent.
+# CF19b: the artifacts must live INSIDE the committed evidence store. A path outside
+# eng/release-evidence/ — or one escaping it through .. — points at files the gate cannot
+# audit (an absolute path, a gitignored TestResults dir, or a traversal into anywhere).
+[[ "$artifacts_path" == eng/release-evidence/?* && "$artifacts_path" != *..* ]] ||
+  refuse "artifactsPath '$artifacts_path' must live under eng/release-evidence/ — the run's artifacts are auditable only where the store commits them; any other location is evidence the gate cannot see."
+
 if [[ ! -d "$artifacts_path" ]]; then
   refuse "release evidence artifactsPath '$artifacts_path' does not exist — the run's artifacts must ship where the gate can check them (the committed eng/release-evidence/<run>/ dir), not only on the machine that ran the suite."
+fi
+
+if [[ "$self_host" == "false" && ! -f "$artifacts_path/host-watch.log" ]]; then
+  refuse "selfHost=false but no host-watch.log ships in artifactsPath — an externally managed host resurrects outside the suite's sight, so the clean-run claim must rest on the host's own watch-log, not on a vacuous hostRestarts:0."
 fi
 
 if ! git cat-file -e "${commit}^{commit}" 2>/dev/null; then
@@ -133,7 +155,12 @@ fi
 # iterated nothing and the run read as clean. In a command substitution the failure becomes this
 # assignment's exit status, which `set -e` turns into a refusal — the same contract every other
 # read in this script already keeps.
-changed_paths="$(git diff --name-only "$commit" HEAD)"
+# --no-renames (CF19a): with rename detection on, `git diff --name-only` prints only the
+# RENAME TARGET — a `git mv src/X.cs docs/X.cs` reads as the single allowed path docs/X.cs
+# and the compiled code it moved out of never reaches the allowlist. Spelled with
+# --no-renames the move becomes a deletion under src/ plus an addition under docs/, and
+# the src/ side refuses — a move out of compiled code must never read as a prose-only change.
+changed_paths="$(git diff --no-renames --name-only "$commit" HEAD)"
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
   if ! grep -Eq "$STALE_ALLOWED_PATTERN" <<<"$path"; then

@@ -178,4 +178,9 @@ What the three test-side ones raced, for anyone writing a similar test:
   externally managed hosts a resurrection is recorded nowhere the suite can
   see — the counter only measures hosts the suite itself started. The claim
   then rests on the external host's own watch-log and on the absence of
-  refused-connection errors in `full-run.log` (related: CF19d).
+  refused-connection errors in `full-run.log`.
+- **`selfHost` declares which case applies (CF19d):** the evidence JSON carries
+  `selfHost: true` when the suite started its own hosts (the JSONL counter is
+  meaningful) and `selfHost: false` for externally managed hosts — where the
+  verifier then requires `host-watch.log` inside `artifactsPath` instead of
+  trusting a vacuous `hostRestarts: 0`. Missing or non-boolean values refuse.
