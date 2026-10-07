@@ -133,41 +133,54 @@ function installWindow(height = 800) {
     };
 }
 
-test('a drag writes only an inline height and clears the height variable on release', () => {
+test('a drag writes only an inline height and leaves the Blazor height variable alone', () => {
     installWindow(800);
     const grab = handle();
     const sheet = panel(400);
+    // Blazor owns --tm-sheet-height. A gesture that deletes it leaves the panel at the CSS default
+    // (0.5) whenever the snap index does not change, because Blazor will not rewrite the style.
+    sheet.style.setProperty('--tm-sheet-height', '1');
     attachGesture(grab, sheet, [0.5, 1], true, host(), 'sheet');
 
     grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
     grab.dispatch('pointermove', { pointerId: 1, clientY: 140 });
     assert.equal(sheet.inline.height, '360px');
-    assert.equal(sheet.props.has('--tm-sheet-height'), false, 'a gesture must not freeze the snap variable');
+    assert.equal(sheet.props.get('--tm-sheet-height'), '1', 'a gesture must not rewrite the snap variable');
 
     sheet.getBoundingClientRect = () => ({ height: 400 });
     grab.dispatch('pointerup', { pointerId: 1, clientY: 140 });
     assert.equal(sheet.inline.height, '', 'releasing on the same snap clears the inline height');
     assert.equal(sheet.inline.transition, '');
-    assert.equal(sheet.props.has('--tm-sheet-height'), false);
+    assert.equal(sheet.props.get('--tm-sheet-height'), '1', 'the Blazor-owned height survives a release');
     delete globalThis.window;
 });
 
-test('pointercancel and a vetoed dismiss both clear the inline gesture state', () => {
+test('pointercancel and a vetoed dismiss clear the inline gesture state and keep the height variable', () => {
     installWindow(800);
     const grab = handle();
     const sheet = panel(400);
     const sink = host();
+    // Seeded before the gesture, the way Blazor writes PanelStyle. The gesture must not delete it:
+    // a cancel leaves the snap index unchanged, so Blazor will not put the variable back.
+    sheet.style.setProperty('--tm-sheet-height', '1');
     attachGesture(grab, sheet, [0.5, 1], false, sink, 'veto');
 
     grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100 });
     grab.dispatch('pointermove', { pointerId: 1, clientY: 500 });
-    sheet.style.setProperty('--tm-sheet-height', '0.1');
     grab.dispatch('pointercancel', { pointerId: 1 });
 
     assert.equal(sheet.inline.height, '');
     assert.equal(sheet.inline.transition, '');
-    assert.equal(sheet.props.has('--tm-sheet-height'), false, 'pointercancel must not leave the height variable');
+    assert.equal(sheet.props.get('--tm-sheet-height'), '1', 'pointercancel must not drop the Blazor-owned height');
     assert.equal(sink.calls.length, 0, 'a cancelled gesture reports nothing');
+
+    // A vetoed dismiss (swipe-to-dismiss off, released below the lowest snap) reports the snap and
+    // still must not touch the variable. Blazor rewrites it only when the index changes.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 2, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 2, clientY: 500, timeStamp: 200 });
+    grab.dispatch('pointerup', { pointerId: 2, clientY: 500, timeStamp: 220 });
+    assert.equal(sheet.props.get('--tm-sheet-height'), '1', 'a vetoed dismiss leaves the height variable alone');
+    assert.equal(sink.calls.at(-1)?.[0], 'HandleSheetSnappedAsync');
     delete globalThis.window;
 });
 
@@ -252,6 +265,47 @@ test('a content sheet dismisses past a quarter of its start height', () => {
 
     assert.equal(sink.calls[0][0], 'HandleSheetDismissedAsync',
         '130px of a 400px sheet is past the quarter, so it dismisses');
+    delete globalThis.window;
+});
+
+test('a flick dismisses even when pointerup lands on the last move', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'flick');
+
+    // A real pointerup is dispatched at the last move's position, so velocity computed from lastY
+    // (which onMove already overwrote) is always 0. The samples are 8ms apart and the release adds
+    // no further travel: 40px / 8ms is 5 px/ms, well past the 0.5 px/ms flick.
+    // Released height is 360 of 800 (0.45), which is above the lowest snap minus the 0.15 margin
+    // (0.35), so only the flick can dismiss it.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 200, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 200, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 208, timeStamp: 8 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 240, timeStamp: 16 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 240, timeStamp: 16 });
+
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetDismissedAsync',
+        'a downward flick faster than 0.5 px/ms dismisses even though the release is still above the margin');
+    delete globalThis.window;
+});
+
+test('a slow drag that ends on the last move does not count as a flick', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'slow');
+
+    // 40px over 400ms is 0.1 px/ms. Released at 0.45, nearest snap is half, and it must not dismiss.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 200, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 208, timeStamp: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 240, timeStamp: 400 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 240, timeStamp: 400 });
+
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'a slow drag settles to the nearest snap');
+    assert.equal(sink.calls[0]?.[1], 0);
     delete globalThis.window;
 });
 

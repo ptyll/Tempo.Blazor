@@ -581,7 +581,7 @@
             <TmButton Variant="ButtonVariant.Primary" data-testid="open-right-drawer" OnClick="@(() => _drawerRightOpen = true)">
                 Open Right Drawer
             </TmButton>
-            <TmButton Variant="ButtonVariant.Secondary" OnClick="@(() => _drawerLeftOpen = true)">
+            <TmButton Variant="ButtonVariant.Secondary" data-testid="open-left-drawer" OnClick="@(() => _drawerLeftOpen = true)">
                 Open Left Drawer
             </TmButton>
             <TmButton Variant="ButtonVariant.Secondary" data-testid="open-bottom-sheet" OnClick="@(() => { _sheetOpen = true; StateHasChanged(); })">
@@ -595,6 +595,7 @@
           Title="Edit Record" Width="420px">
     <div class="space-y-4">
         <p class="text-sm text-slate-600 dark:text-slate-400">This is a right-side drawer panel. It slides in from the right edge.</p>
+        <TmTextInput data-testid="right-drawer-field" Label="@Loc["TmDemo_FocusScopeInput"]" />
         <TmAlert Severity="AlertSeverity.Info">Click the overlay or press Escape to close.</TmAlert>
     </div>
 </TmDrawer>
@@ -602,10 +603,11 @@
 <TmDrawer IsOpen="@_drawerLeftOpen" IsOpenChanged="@(v => { _drawerLeftOpen = v; StateHasChanged(); })"
           Title="Navigation" Position="DrawerPosition.Left" Width="320px">
     <FooterContent>
-        <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="@(() => { _drawerLeftOpen = false; StateHasChanged(); })">Close</TmButton>
+        <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" data-testid="left-drawer-close" OnClick="@(() => { _drawerLeftOpen = false; StateHasChanged(); })">Close</TmButton>
     </FooterContent>
     <ChildContent>
         <p class="text-sm text-slate-600 dark:text-slate-400">Left-side drawer with a footer action.</p>
+        <TmTextInput data-testid="left-drawer-field" Label="@Loc["TmDemo_FocusScopeInput"]" />
     </ChildContent>
 </TmDrawer>
 
