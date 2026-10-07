@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Tests.Localization;
 
@@ -68,6 +69,53 @@ public class TmFocusScopeTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Nested_DeactivatingTheInnerScope_RestoresTheOuterDialogAndLetsItHandleEscape()
+    {
+        var outerEscapes = 0;
+        var cut = Render<NestedScopeHost>(p => p
+            .Add(h => h.InnerActive, true)
+            .Add(h => h.OnOuterEscape, EventCallback.Factory.Create(this, () => outerEscapes++)));
+
+        var scopes = cut.FindAll(".tm-focus-scope");
+        scopes[0].GetAttribute("aria-modal").Should().Be("false");
+
+        cut.Render(p => p.Add(h => h.InnerActive, false));
+
+        scopes = cut.FindAll(".tm-focus-scope");
+        scopes.Should().ContainSingle();
+        scopes[0].GetAttribute("aria-modal").Should().Be("true",
+            "closing the inner dialog hands the modal semantics back; a double-counted descendant would leave the outer one false");
+
+        cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync().GetAwaiter().GetResult();
+        outerEscapes.Should().Be(1, "the outer scope handles Escape once it is topmost again");
+    }
+
+    [Fact]
+    public void Role_DefaultsToDialog_AndCanBeAnAlertDialog()
+    {
+        var dialog = Render<TmFocusScope>(p => p.Add(s => s.Active, true).AddChildContent("<button>Save</button>"));
+        dialog.Find(".tm-focus-scope").GetAttribute("role").Should().Be("dialog");
+
+        var alert = Render<TmFocusScope>(p => p
+            .Add(s => s.Active, true)
+            .Add(s => s.DialogRole, "alertdialog")
+            .AddChildContent("<button>Delete</button>"));
+        alert.Find(".tm-focus-scope").GetAttribute("role").Should().Be("alertdialog");
+    }
+
+    [Fact]
+    public void InitialFocusTarget_IsForwardedSoTheModuleFocusesThatElement()
+    {
+        var cut = Render<TmFocusScope>(p => p
+            .Add(s => s.Active, true)
+            .Add(s => s.InitialFocusTargetId, "name")
+            .AddChildContent("<input id=\"name\" />"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("data-initial-focus").Should().Be("name",
+            "the module resolves the initial focus target from the id the scope records");
+    }
+
+    [Fact]
     public void LabelledBy_WiresTheAccessibleName()
     {
         var cut = Render<TmFocusScope>(p => p
@@ -101,6 +149,36 @@ public class TmFocusScopeTests : LocalizationTestBase
             builder.CloseComponent();
 
             builder.CloseElement();
+        }
+    }
+
+    /// <summary>An outer scope with an inner one that can be deactivated, the nested-dialog case.</summary>
+    private sealed class NestedScopeHost : ComponentBase
+    {
+        [Parameter] public bool InnerActive { get; set; }
+
+        [Parameter] public EventCallback OnOuterEscape { get; set; }
+
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<TmFocusScope>(0);
+            builder.AddAttribute(1, "Active", true);
+            builder.AddAttribute(2, "CloseOnEscape", true);
+            builder.AddAttribute(3, "OnEscape", OnOuterEscape);
+            builder.AddAttribute(4, "ChildContent", (RenderFragment)(inner =>
+            {
+                inner.OpenElement(0, "button");
+                inner.AddContent(1, "Outer");
+                inner.CloseElement();
+
+                if (!InnerActive) return;
+
+                inner.OpenComponent<TmFocusScope>(2);
+                inner.AddAttribute(3, "Active", true);
+                inner.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddMarkupContent(0, "<button>Inner</button>")));
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
         }
     }
 }

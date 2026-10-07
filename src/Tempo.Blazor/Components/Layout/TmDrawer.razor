@@ -294,6 +294,16 @@
     [JSInvokable]
     public Task HandleSheetDismissedAsync() => Close();
 
+    /// <summary>Invoked by the sheet module when a gesture settles on a snap. Not implemented yet.</summary>
+    [JSInvokable]
+    public Task HandleSheetSnappedAsync(int index) => Task.CompletedTask;
+
+    /// <summary>The snap the sheet renders. Two-way with <see cref="SnapIndexChanged"/>.</summary>
+    [Parameter] public int SnapIndex { get; set; }
+
+    /// <summary>Raised when the rendered snap changes.</summary>
+    [Parameter] public EventCallback<int> SnapIndexChanged { get; set; }
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {

@@ -41,6 +41,8 @@ public class TmModalPresentationTests : LocalizationTestBase
         overlay.GetAttribute("data-layout").Should().Be("desktop");
         overlay.ClassList.Should().Contain("tm-modal--dialog");
         overlay.ClassList.Should().NotContain("tm-modal--sheet");
+        cut.FindAll(".tm-layout").Should().ContainSingle(
+            "with no viewport scope an Auto overlay measures its own fixed root, so the first frame is not stuck on InitialMode");
     }
 
     [Fact]
@@ -86,7 +88,10 @@ public class TmModalPresentationTests : LocalizationTestBase
             .Add(m => m.Footer, (RenderFragment)(b => b.AddMarkupContent(0, "<button>Save</button>")))
             .AddChildContent("<p>Body</p>"));
 
-        cut.Find(".tm-modal__handle").GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
+        var handle = cut.Find(".tm-sheet__handle");
+        handle.GetAttribute("aria-hidden").Should().Be("true",
+            "a modal sheet handle is decorative; the drawer handle is the one that takes keyboard focus");
+        handle.GetAttribute("tabindex").Should().BeNull();
         var modal = cut.Find(".tm-modal");
         modal.InnerHtml.Should().Contain("tm-modal-body");
         modal.InnerHtml.Should().Contain("tm-modal-footer");
@@ -105,6 +110,15 @@ public class TmModalPresentationTests : LocalizationTestBase
             .AddChildContent("<p>Body</p>"));
 
         cut.Find(".tm-modal-footer").ClassList.Should().Contain(expectedClass);
+        cut.Find(".tm-modal").GetAttribute("data-restore-target").Should().BeNull();
+    }
+
+    [Fact]
+    public void RestoreFocusTarget_IsForwardedToTheScope()
+    {
+        var cut = Render<RestoreHost>();
+
+        cut.Find(".tm-modal").GetAttribute("data-restore-target").Should().Be("trigger");
     }
 
     [Fact]
@@ -116,7 +130,10 @@ public class TmModalPresentationTests : LocalizationTestBase
             .Add(m => m.Position, ModalPosition.Bottom)
             .AddChildContent("<p>Body</p>"));
 
-        cut.Find(".tm-modal-container").ClassList.Should().Contain("tm-modal--bottom-anchored");
+        var container = cut.Find(".tm-modal-container");
+        container.ClassList.Should().Contain("tm-modal--bottom-anchored");
+        container.ClassList.Should().Contain("tm-modal--bottom-flush",
+            "ModalPosition.Bottom sits flush with the viewport edge at every width, with no overlay padding and no modal margin");
     }
 
     [Fact]
@@ -132,6 +149,24 @@ public class TmModalPresentationTests : LocalizationTestBase
         cut.Render(p => p.Add(x => x.ViewportMode, TmLayoutMode.Mobile));
 
         seen.Should().Equal(TmLayoutMode.Mobile);
+    }
+
+    private sealed class RestoreHost : ComponentBase
+    {
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "id", "trigger");
+            builder.AddContent(2, "Open");
+            builder.CloseElement();
+
+            builder.OpenComponent<TmModal>(3);
+            builder.AddAttribute(4, "Show", true);
+            builder.AddAttribute(5, "Title", "Create");
+            builder.AddAttribute(6, "RestoreFocusTargetId", "trigger");
+            builder.AddAttribute(7, "ChildContent", (RenderFragment)(b => b.AddMarkupContent(0, "<p>Body</p>")));
+            builder.CloseComponent();
+        }
     }
 
     /// <summary>Cascades a desktop container context beside a named viewport context.</summary>

@@ -189,8 +189,8 @@ public class TmDrawerTests : LocalizationTestBase
             .AddChildContent("Content"));
 
         // Esc is delivered by the shared focus-trap module at the document level so it works
-        // regardless of where focus sits; the module calls back into this JSInvokable.
-        await cut.InvokeAsync(() => cut.Instance.HandleFocusTrapEscapeAsync());
+        // regardless of where focus sits; the module calls the scope, which the drawer forwards.
+        await cut.InvokeAsync(() => cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         isOpen.Should().BeFalse();
     }
@@ -205,7 +205,7 @@ public class TmDrawerTests : LocalizationTestBase
             .Add(x => x.IsOpenChanged, EventCallback.Factory.Create<bool>(this, v => isOpen = v))
             .AddChildContent("Content"));
 
-        await cut.InvokeAsync(() => cut.Instance.HandleFocusTrapEscapeAsync());
+        await cut.InvokeAsync(() => cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         isOpen.Should().BeTrue();
     }

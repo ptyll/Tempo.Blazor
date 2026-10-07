@@ -76,6 +76,26 @@ test('a modal trap marks the background inert and leaves its own ancestors alone
     assert.equal(dialog.hasAttribute('inert'), false);
 });
 
+test('a modal trap inerts the siblings at every level up to body, the Blazor #app shape', () => {
+    // Blazor hosts render body > #app > page, and the overlay is a descendant of #app. Inerting only
+    // body's children leaves #app (and the page inside it) reachable.
+    const body = element();
+    const app = element(body);
+    const page = element(app);
+    const overlay = element(app);
+    const dialog = element(overlay);
+    installDom(body);
+
+    activate(dialog, 'sheet', null, false, null, true);
+
+    assert.equal(page.hasAttribute('inert'), true, 'the page inside #app must be inert while the sheet is open');
+    assert.equal(app.hasAttribute('inert'), false, 'the overlay host stays reachable, otherwise the trap inerts itself');
+    assert.equal(overlay.hasAttribute('inert'), false);
+
+    deactivate('sheet');
+    assert.equal(page.hasAttribute('inert'), false, 'closing the last modal restores exactly what it marked');
+});
+
 test('a non-modal trap leaves the background usable', () => {
     const body = element();
     const page = element(body);
@@ -141,4 +161,56 @@ test('deactivation restores focus to the named target', () => {
     deactivate('scope');
 
     assert.equal(canvas.focusCalls, 1);
+});
+
+test('a non-modal trap does not cycle Tab and does not move initial focus', () => {
+    const body = element();
+    const drawer = element(body);
+    const behind = element(body);
+    behind.offsetParent = {};
+    drawer.querySelectorAll = () => [behind];
+    installDom(body);
+    document.activeElement = behind;
+
+    activate(drawer, 'inline', null, false, null, false);
+
+    const tab = { key: 'Tab', shiftKey: false, preventDefault() { tab.prevented = true; } };
+    drawer.dispatch('keydown', tab);
+    assert.equal(tab.prevented, undefined, 'a non-modal sheet must let Tab reach the page behind it');
+    assert.equal(behind.focusCalls, 0, 'a non-modal sheet must not steal focus on open');
+});
+
+test('deactivation resolves a restore target by id when the element reference is gone', () => {
+    const body = element();
+    const dialog = element(body);
+    dialog.dataset = { restoreTarget: 'canvas' };
+    const canvas = element(body);
+    canvas.id = 'canvas';
+    installDom(body);
+    document.getElementById = (id) => (id === 'canvas' ? canvas : null);
+
+    // The reference captured at open is disconnected (a re-rendered trigger). The id on the root
+    // still names the element focus should return to.
+    const gone = element();
+    gone.isConnected = false;
+    activate(dialog, 'scope', null, false, gone, true);
+    deactivate('scope');
+
+    assert.equal(canvas.focusCalls, 1, 'the id recorded on the root must win over a disconnected reference');
+});
+
+test('deactivation falls back when the restore target is disconnected and has no id', () => {
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const dialog = element(body);
+    installDom(body);
+    document.getElementById = () => null;
+
+    const gone = element();
+    gone.isConnected = false;
+    gone.focus = () => { throw new Error('disconnected'); };
+    activate(dialog, 'scope', null, false, gone, true);
+
+    assert.doesNotThrow(() => deactivate('scope'));
+    assert.equal(body.focusCalls, 1, 'a disconnected target with no id falls back to body without throwing');
 });

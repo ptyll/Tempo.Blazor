@@ -24,6 +24,8 @@ public class TmDialogPresentationTests : LocalizationTestBase
         var overlay = cut.Find(".tm-modal-overlay");
         overlay.GetAttribute("data-layout").Should().Be("desktop");
         overlay.ClassList.Should().Contain("tm-modal--dialog");
+        cut.FindAll(".tm-layout").Should().ContainSingle(
+            "with no viewport scope an Auto dialog measures its own overlay root");
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public class TmDialogPresentationTests : LocalizationTestBase
         var overlay = cut.Find(".tm-modal-overlay");
         overlay.GetAttribute("data-layout").Should().Be("mobile");
         overlay.ClassList.Should().Contain("tm-modal--sheet");
-        cut.FindAll(".tm-dialog__handle").Should().NotBeEmpty();
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-hidden").Should().Be("true");
     }
 
     [Fact]
@@ -83,6 +85,37 @@ public class TmDialogPresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Dangerous_AnnouncesItselfAsAnAlertDialog()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.IsDangerous, true));
+
+        cut.Find(".tm-dialog").GetAttribute("role").Should().Be("alertdialog");
+    }
+
+    [Fact]
+    public void InlineLayout_PutsTheFooterOnItsOwnRow()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Saved")
+            .Add(d => d.Layout, DialogLayout.Inline));
+
+        cut.Find(".tm-dialog").ClassList.Should().Contain("tm-dialog--inline");
+        cut.Find(".tm-dialog-footer").ClassList.Should().Contain("tm-dialog-footer--own-row");
+    }
+
+    [Fact]
+    public void RestoreFocusTarget_IsForwardedToTheScope()
+    {
+        var cut = Render<RestoreHost>();
+
+        cut.Find(".tm-dialog").GetAttribute("data-restore-target").Should().Be("trigger");
+    }
+
+    [Fact]
     public void FooterLayout_IsAClassOnTheDialogFooter()
     {
         var cut = Render<TmDialog>(p => p
@@ -91,6 +124,7 @@ public class TmDialogPresentationTests : LocalizationTestBase
             .Add(d => d.FooterLayout, FooterLayout.Stacked));
 
         cut.Find(".tm-dialog-footer").ClassList.Should().Contain("tm-modal-footer--stacked");
+        cut.Find(".tm-dialog").GetAttribute("role").Should().Be("dialog");
     }
 
     [Fact]
@@ -106,6 +140,24 @@ public class TmDialogPresentationTests : LocalizationTestBase
         cut.Render(p => p.Add(x => x.ViewportMode, TmLayoutMode.Mobile));
 
         seen.Should().Equal(TmLayoutMode.Mobile);
+    }
+
+    /// <summary>A dialog opened from a named trigger, so the restore target can be asserted.</summary>
+    private sealed class RestoreHost : ComponentBase
+    {
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "id", "trigger");
+            builder.AddContent(2, "Open");
+            builder.CloseElement();
+
+            builder.OpenComponent<TmDialog>(3);
+            builder.AddAttribute(4, "Show", true);
+            builder.AddAttribute(5, "Title", "Saved");
+            builder.AddAttribute(6, "RestoreFocusTargetId", "trigger");
+            builder.CloseComponent();
+        }
     }
 
     /// <summary>Cascades a desktop container context beside a named viewport context.</summary>

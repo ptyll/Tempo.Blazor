@@ -29,7 +29,7 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
         drawer.GetAttribute("data-layout").Should().Be("desktop",
             "a sheet with no viewport scope renders its InitialMode, which is desktop");
 
-        var handle = cut.Find(".tm-drawer__handle");
+        var handle = cut.Find(".tm-sheet__handle");
         handle.GetAttribute("aria-label").Should().NotBeNullOrWhiteSpace();
         handle.GetAttribute("role").Should().Be("slider");
         handle.GetAttribute("aria-valuemin").Should().Be("0");
@@ -49,7 +49,7 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.Position, DrawerPosition.Bottom)
             .AddChildContent("Body"));
 
-        cut.Find(".tm-drawer__handle").GetAttribute("aria-label").Should().Be("Posunout panel");
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-label").Should().Be("Přetažením změníte výšku panelu");
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
         var drawer = cut.Find(".tm-drawer");
         drawer.GetAttribute("data-snap-points").Should().Be("0.5,1");
         drawer.GetAttribute("data-snap-index").Should().Be("0");
-        cut.Find(".tm-drawer__handle").GetAttribute("aria-valuenow").Should().Be("0");
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-valuenow").Should().Be("0");
     }
 
     [Fact]
@@ -96,14 +96,14 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.IsOpenChanged, EventCallback.Factory.Create<bool>(this, open => closed = !open))
             .AddChildContent("Body"));
 
-        cut.Find(".tm-drawer__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        cut.Find(".tm-sheet__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
         cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("1",
             "ArrowUp raises the sheet to the next snap");
 
-        cut.Find(".tm-drawer__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-sheet__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
         cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("0");
 
-        cut.Find(".tm-drawer__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-sheet__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
         closed.Should().BeTrue("ArrowDown past the lowest snap dismisses the sheet");
     }
 
@@ -130,7 +130,8 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.Position, DrawerPosition.Bottom)
             .AddChildContent("Body"));
 
-        on.Find(".tm-drawer").GetAttribute("data-swipe-to-dismiss").Should().Be("true");
+        on.Find(".tm-drawer").GetAttribute("data-swipe-to-dismiss").Should().BeNull(
+            "swipe-to-dismiss is a behaviour the gesture engine owns, not a test-only attribute");
 
         var off = Render<TmDrawer>(p => p
             .Add(x => x.IsOpen, true)
@@ -138,7 +139,7 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.SwipeToDismiss, false)
             .AddChildContent("Body"));
 
-        off.Find(".tm-drawer").GetAttribute("data-swipe-to-dismiss").Should().Be("false");
+        off.Find(".tm-drawer").GetAttribute("data-swipe-to-dismiss").Should().BeNull();
     }
 
     [Fact]
@@ -199,8 +200,9 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.Position, DrawerPosition.Bottom)
             .AddChildContent("Body"));
 
-        cut.Find(".tm-drawer").GetAttribute("data-max-height").Should().Be("85",
-            "a sheet never covers the whole viewport; the stylesheet caps it at 85dvh");
+        cut.Find(".tm-drawer").GetAttribute("data-max-height").Should().BeNull(
+            "the cap is a stylesheet rule and a MaxHeight parameter, not a test-only attribute");
+        cut.Find(".tm-drawer__panel").GetAttribute("style").Should().Contain("--tm-sheet-max");
     }
 
     [Fact]
@@ -212,7 +214,70 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.ShowHandle, false)
             .AddChildContent("Body"));
 
-        cut.FindAll(".tm-drawer__handle").Should().BeEmpty();
+        cut.FindAll(".tm-sheet__handle").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Bottom_ReportedSnap_BecomesTheRenderedSnap()
+    {
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.SnapPoints, new[] { 0.3, 0.6, 1.0 })
+            .AddChildContent("Body"));
+
+        cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("0");
+
+        cut.InvokeAsync(() => cut.Instance.HandleSheetSnappedAsync(2)).GetAwaiter().GetResult();
+
+        cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("2",
+            "the gesture reports a snap index and C# owns it; the module must not write the height itself");
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-valuenow").Should().Be("2");
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-valuetext").Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Bottom_EmptySnapPoints_SizesToContentUnderTheCap()
+    {
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.SnapPoints, Array.Empty<double>())
+            .AddChildContent("Short menu"));
+
+        var style = cut.Find(".tm-drawer__panel").GetAttribute("style") ?? string.Empty;
+        style.Should().NotContain("--tm-sheet-height", "no snap points means the panel sizes to its content");
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-sheet--content");
+    }
+
+    [Fact]
+    public void Bottom_SnapIndex_IsTwoWay()
+    {
+        var seen = new List<int>();
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.SnapIndex, 1)
+            .Add(x => x.SnapIndexChanged, EventCallback.Factory.Create<int>(this, seen.Add))
+            .AddChildContent("Body"));
+
+        cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("1");
+
+        cut.Find(".tm-sheet__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        seen.Should().Equal(0);
+    }
+
+    [Fact]
+    public void NonModal_ResolvesFromTheContainerContext_NotTheViewport()
+    {
+        var cut = Render<ViewportHost>(p => p
+            .Add(x => x.ViewportMode, TmLayoutMode.Mobile)
+            .Add(x => x.ContainerMode, TmLayoutMode.Desktop)
+            .Add(x => x.Modal, false));
+
+        cut.Find(".tm-drawer").GetAttribute("data-layout").Should().Be("desktop",
+            "a non-modal sheet is positioned against its container, so the unnamed context wins");
     }
 
     [Fact]
@@ -235,10 +300,14 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
     {
         [Parameter] public TmLayoutMode ViewportMode { get; set; } = TmLayoutMode.Mobile;
 
+        [Parameter] public TmLayoutMode ContainerMode { get; set; } = TmLayoutMode.Desktop;
+
+        [Parameter] public bool Modal { get; set; } = true;
+
         protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
         {
             builder.OpenComponent<CascadingValue<TmLayoutContext>>(0);
-            builder.AddAttribute(1, "Value", new TmLayoutContext(TmLayoutMode.Desktop, TmLayoutMode.Desktop));
+            builder.AddAttribute(1, "Value", new TmLayoutContext(ContainerMode, ContainerMode));
             builder.AddAttribute(2, "ChildContent", (RenderFragment)(inner =>
             {
                 inner.OpenComponent<CascadingValue<TmLayoutContext>>(0);
@@ -249,7 +318,8 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
                     sheet.OpenComponent<TmDrawer>(0);
                     sheet.AddAttribute(1, "IsOpen", true);
                     sheet.AddAttribute(2, "Position", DrawerPosition.Bottom);
-                    sheet.AddAttribute(3, "ChildContent", (RenderFragment)(b => b.AddContent(0, "Body")));
+                    sheet.AddAttribute(3, "Modal", Modal);
+                    sheet.AddAttribute(4, "ChildContent", (RenderFragment)(b => b.AddContent(0, "Body")));
                     sheet.CloseComponent();
                 }));
                 inner.CloseComponent();
