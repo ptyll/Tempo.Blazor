@@ -11,6 +11,19 @@ namespace Tempo.Blazor.Tests.Layout;
 public class TmLayoutResolveTests
 {
     [Fact]
+    public void ViewportScope_BeatsANarrowContainer_ForAnOverlay()
+    {
+        var resolved = TmLayout.Resolve(
+            TmLayoutMode.Auto,
+            new TmLayoutContext(TmLayoutMode.Desktop, TmLayoutMode.Desktop),
+            measured: null,
+            TmLayoutMode.Mobile);
+
+        resolved.Should().Be(TmLayoutMode.Desktop,
+            "an overlay asks the viewport-scope context, not the trigger's container, so a narrow host does not turn a dialog into a sheet");
+    }
+
+    [Fact]
     public void ExplicitMode_BeatsEverything()
     {
         var resolved = TmLayout.Resolve(

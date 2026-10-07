@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Dashboard;
+using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -305,6 +306,136 @@ public class TmDashboardTests : LocalizationTestBase
         root.ClassList.Should().Contain("tm-dashboard--mobile");
         root.GetAttribute("data-layout").Should().Be("mobile");
         JSInterop.VerifyNotInvoke("import");
+    }
+
+    [Fact]
+    public void Dashboard_UnderForcedMobileAncestor_RendersMobile_WithoutImportingTheObserver()
+    {
+        JSInterop.Mode = JSRuntimeMode.Strict;
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+        provider.GetDashboardAsync("d1", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DashboardConfig?>(new DashboardConfig
+            {
+                Id = "d1",
+                Name = "Nested",
+                Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }],
+            }));
+
+        var cut = Render<ForcedMobileHost>();
+
+        cut.Find(".tm-dashboard").GetAttribute("data-layout").Should().Be("mobile",
+            "the dashboard reads the context its own observer resolved, not a copy it froze at desktop");
+        cut.FindAll(".tm-widget-drag-handle").Should().BeEmpty();
+        cut.FindAll(".tm-widget-resize-se").Should().BeEmpty();
+        JSInterop.VerifyNotInvoke("import");
+    }
+
+    [Fact]
+    public void Dashboard_UnderMeasuredMobileAncestor_RendersMobile()
+    {
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+        provider.GetDashboardAsync("d1", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DashboardConfig?>(new DashboardConfig
+            {
+                Id = "d1",
+                Name = "Measured",
+                Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }],
+            }));
+
+        var host = Render<MeasuredMobileHost>();
+        host.FindComponent<TmLayoutObserver>().InvokeAsync(async () =>
+            await host.FindComponent<TmLayoutObserver>().Instance.OnLayoutModeChanged("mobile"));
+
+        host.Find(".tm-dashboard").GetAttribute("data-layout").Should().Be("mobile",
+            "an ancestor that measured mobile is the app-level fallback, so the dashboard must not stay desktop");
+    }
+
+    [Fact]
+    public void Dashboard_ForcedTabletEditMode_HidesTheGridBackground()
+    {
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+        provider.GetDashboardAsync("d1", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DashboardConfig?>(new DashboardConfig
+            {
+                Id = "d1",
+                Name = "Tablet",
+                Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }],
+            }));
+
+        var cut = Render<TmDashboard>(parameters => parameters
+            .Add(p => p.DashboardId, "d1")
+            .Add(p => p.LayoutMode, TmLayoutMode.Tablet));
+        cut.Find("button[title='Edit']").Click();
+
+        cut.FindAll(".tm-dashboard-grid-bg").Should().BeEmpty(
+            "the column grid is the desktop edit affordance; below desktop there is no column to show");
+    }
+
+    [Fact]
+    public void Dashboard_Order_UpdatesAfterAMove()
+    {
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+        provider.GetDashboardAsync("d1", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<DashboardConfig?>(new DashboardConfig
+            {
+                Id = "d1",
+                Name = "Order",
+                Widgets =
+                [
+                    new WidgetInstance { InstanceId = "first", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 },
+                    new WidgetInstance { InstanceId = "second", WidgetId = "kpi", X = 4, Y = 0, Width = 4, Height = 2 },
+                ],
+            }));
+
+        var cut = Render<TmDashboard>(parameters => parameters.Add(p => p.DashboardId, "d1"));
+        cut.Find("[data-instance-id='first']").GetAttribute("style").Should().Contain("--tm-w-order: 1");
+
+        cut.InvokeAsync(() => cut.Instance.OnGridPositionChanged("first", 8, 0));
+
+        cut.Find("[data-instance-id='first']").GetAttribute("style").Should().Contain("--tm-w-order: 2",
+            "a move changes the visual order, so the dictionary computed at the last parameter set is stale");
+    }
+
+    /// <summary>A forced Mobile observer hosting a dashboard through ordinary child content.</summary>
+    private sealed class ForcedMobileHost : ComponentBase
+    {
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<TmLayoutObserver>(0);
+            builder.AddAttribute(1, "LayoutMode", TmLayoutMode.Mobile);
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)(inner =>
+            {
+                inner.OpenComponent<TmDashboard>(0);
+                inner.AddAttribute(1, "DashboardId", "d1");
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    }
+
+    /// <summary>An app-level Auto observer hosting a dashboard. The test reports a measurement on it.</summary>
+    private sealed class MeasuredMobileHost : ComponentBase
+    {
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<Tempo.Blazor.Components.Layout.TmLayoutObserver>(0);
+            builder.AddAttribute(1, "LayoutMode", TmLayoutMode.Auto);
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)(inner =>
+            {
+                inner.OpenComponent<TmDashboard>(0);
+                inner.AddAttribute(1, "DashboardId", "d1");
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
     }
 
     [Fact]

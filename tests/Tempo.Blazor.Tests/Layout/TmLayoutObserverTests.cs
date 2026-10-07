@@ -207,6 +207,74 @@ public class TmLayoutObserverTests : LocalizationTestBase
     }
 
     [Fact]
+    public void LayoutContent_ReceivesTheResolvedContext()
+    {
+        var cut = Render<LayoutContentHost>();
+
+        cut.Find(".owned").TextContent.Should().Be("tablet");
+    }
+
+    [Fact]
+    public void BothChildContentAndLayoutContent_Throw()
+    {
+        var act = () => Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.ChildContent, builder => builder.AddContent(0, "child"))
+            .Add(p => p.LayoutContent, (TmLayoutContext _) => builder => builder.AddContent(0, "owned")));
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void IsViewportScope_CascadesTheNamedContext()
+    {
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+            .Add(p => p.IsViewportScope, true)
+            .AddChildContent(ViewportProbe.Fragment));
+
+        cut.Find(".viewport-probe").TextContent.Should().Be("desktop");
+    }
+
+    /// <summary>Renders through LayoutContent, which the observer does not yet honour.</summary>
+    private sealed class LayoutContentHost : ComponentBase
+    {
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<TmLayoutObserver>(0);
+            builder.AddAttribute(1, "LayoutMode", TmLayoutMode.Tablet);
+            builder.AddAttribute(2, "LayoutContent", (RenderFragment<TmLayoutContext>)(layout => inner =>
+            {
+                inner.OpenElement(0, "span");
+                inner.AddAttribute(1, "class", "owned");
+                inner.AddContent(2, layout.CssModifier);
+                inner.CloseElement();
+            }));
+            builder.CloseComponent();
+        }
+    }
+
+    /// <summary>Reads the viewport-scoped cascade, which an ordinary cascade must not satisfy.</summary>
+    private sealed class ViewportProbe : ComponentBase
+    {
+        public static RenderFragment Fragment => builder =>
+        {
+            builder.OpenComponent<ViewportProbe>(0);
+            builder.CloseComponent();
+        };
+
+        [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "viewport-probe");
+            builder.AddContent(2, Viewport?.CssModifier ?? "missing");
+            builder.CloseElement();
+        }
+    }
+
+    [Fact]
     public void PlainChildContent_StillRenders()
     {
         var cut = Render<TmLayoutObserver>(parameters => parameters

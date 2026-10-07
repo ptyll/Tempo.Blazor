@@ -46,6 +46,12 @@
     /// <summary>Raised when the rendered layout changes. The initial value is not a change.</summary>
     [Parameter] public EventCallback<TmLayoutMode> LayoutModeChanged { get; set; }
 
+    /// <summary>Content that receives the resolved layout. Not rendered yet — the round-2 tests pin the contract.</summary>
+    [Parameter] public RenderFragment<TmLayoutContext>? LayoutContent { get; set; }
+
+    /// <summary>Also cascades the context under <see cref="TmLayoutScopes.Viewport"/>. Not wired yet.</summary>
+    [Parameter] public bool IsViewportScope { get; set; }
+
     /// <summary>
     /// Content rendered inside the observed container. The context argument is the layout this
     /// observer has resolved, so <c>Context="layout"</c> works. Plain child content keeps working.
