@@ -276,21 +276,21 @@ public class TmViewManagerTests : LocalizationTestBase
             .Add(c => c.ViewContext, TestViewContext)
             .Add(c => c.CurrentUserId, TestUserId));
 
-        var firstToggle = first.Find(".tm-view-manager-toggle").Id;
-        var secondToggle = second.Find(".tm-view-manager-toggle").Id;
+        var firstToggle = first.Find(".tm-view-manager-toggle").GetAttribute("data-tm-id");
+        var secondToggle = second.Find(".tm-view-manager-toggle").GetAttribute("data-tm-id");
         firstToggle.Should().NotBeNullOrEmpty();
         firstToggle.Should().NotBe(secondToggle, "a shared toggle id restores focus to the first instance");
-        firstToggle.Should().NotBe("tm-view-manager-toggle");
+        firstToggle.Should().NotBe("view-manager-toggle");
 
         first.Find(".tm-view-manager-toggle").Click();
         first.Find(".tm-btn-primary").Click();
         second.Find(".tm-view-manager-toggle").Click();
         second.Find(".tm-btn-primary").Click();
 
-        var firstName = first.Find("input").Id;
-        var secondName = second.Find("input").Id;
+        var firstName = first.Find("input").GetAttribute("data-tm-id");
+        var secondName = second.Find("input").GetAttribute("data-tm-id");
         firstName.Should().NotBeNullOrEmpty();
         firstName.Should().NotBe(secondName, "a shared name id focuses the first instance's field");
-        firstName.Should().NotBe("tm-view-name");
+        firstName.Should().NotBe("view-name");
     }
 }

@@ -13,6 +13,7 @@
 {
     @* No viewport scope: measure the fixed overlay itself, so the first frame is not stuck on the
        initial mode. The observer renders nothing visible; the overlay below is what the user sees. *@
+    <div class="tm-viewport-probe" style="position:fixed;inset:0;visibility:hidden;pointer-events:none"></div>
     <ViewportProbe OnMeasured="OnProbed" />
 }
 @if (Show)

@@ -436,13 +436,15 @@
   }
 }
 
-.tm-modal-overlay.tm-modal--sheet .tm-modal-footer > .tm-btn,
-.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer > .tm-btn {
+.tm-modal-overlay.tm-modal--sheet .tm-modal-footer,
+.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer {
+  flex-wrap: wrap;
+}
+
+.tm-modal-overlay.tm-modal--sheet .tm-modal-footer,
+.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer {
   white-space: normal;
-  height: auto;
-  min-height: var(--tm-touch-target);
   overflow-wrap: anywhere;
-  min-width: 0;
 }
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal,

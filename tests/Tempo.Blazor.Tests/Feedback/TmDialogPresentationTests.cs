@@ -25,7 +25,7 @@ public class TmDialogPresentationTests : LocalizationTestBase
         overlay.GetAttribute("data-layout").Should().Be("desktop");
         overlay.ClassList.Should().Contain("tm-modal--dialog");
         cut.FindAll(".tm-viewport-probe").Should().ContainSingle(
-            "with no viewport scope an Auto dialog measures the viewport itself");
+            "with no viewport scope an Auto dialog measures the viewport itself through the internal probe");
     }
 
     [Fact]

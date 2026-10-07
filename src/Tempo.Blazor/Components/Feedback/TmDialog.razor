@@ -13,6 +13,7 @@
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
+    <div class="tm-viewport-probe" style="position:fixed;inset:0;visibility:hidden;pointer-events:none"></div>
     <ViewportProbe OnMeasured="OnProbed" />
 }
 @if (Show)
@@ -33,7 +34,7 @@
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId">
 
-                @if (IsSheet && CloseOnOverlayClick)
+                @if (IsSheet)
                 {
                     <TmSheetHandle @ref="_handle" Decorative="true" />
                 }

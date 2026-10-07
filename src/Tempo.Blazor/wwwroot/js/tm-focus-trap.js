@@ -254,7 +254,10 @@ function restoreFocus(trap) {
 
     const id = dataset ? dataset.restoreTarget : null;
     const byId = id && document.getElementById ? document.getElementById(id) : null;
-    if (focusOf(byId)) return;
+    const byData = !byId && id && document.querySelector
+        ? document.querySelector(`[data-tm-id="${id}"]`)
+        : null;
+    if (focusOf(byId) || focusOf(byData)) return;
 
     if (focusOf(trap.returnTarget)) return;
     focusOf(document.body);

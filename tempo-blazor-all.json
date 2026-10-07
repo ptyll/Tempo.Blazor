@@ -18261,28 +18261,6 @@
           ]
         },
         {
-          "itemName": "TmViewportProbe",
-          "kind": "Component",
-          "category": "Layout",
-          "namespace": "Tempo.Blazor.Components.Layout",
-          "description": "Internal. A fixed, hidden box the size of the viewport, rendered by an overlay that has no viewport scope. A host does not render it; TmModal, TmDialog and TmDrawer do. The Razor generator emits a public class, so it is documented here rather than hidden.",
-          "packageId": "Tempo.Blazor",
-          "sourcePath": "src/Tempo.Blazor/Components/Layout/TmViewportProbe.razor",
-          "documentationStatus": "merged",
-          "requiredImports": [
-            "@using Tempo.Blazor.Components.Layout"
-          ],
-          "parameters": [
-            {
-              "name": "OnMeasured",
-              "type": "EventCallback<TmLayoutMode>",
-              "isRequired": false,
-              "description": "Raised for every measurement, including the first. The mode is the viewport's."
-            }
-          ],
-          "examples": []
-        },
-        {
           "itemName": "TmLedgerGrid",
           "kind": "Component",
           "category": "Ledger",
@@ -25279,11 +25257,11 @@
         }
       ],
       "summary": {
-        "itemCount": 352,
-        "manualItemCount": 352,
-        "generatedItemCount": 344,
+        "itemCount": 351,
+        "manualItemCount": 351,
+        "generatedItemCount": 343,
         "generatedOnlyItemCount": 0,
-        "componentCount": 199,
+        "componentCount": 198,
         "publicApiTypeCount": 145
       }
     },
@@ -110873,10 +110851,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3177,
-    "manualItemCount": 3177,
+    "itemCount": 3176,
+    "manualItemCount": 3176,
     "generatedOnlyItemCount": 0,
-    "componentCount": 470,
+    "componentCount": 469,
     "publicApiTypeCount": 2654
   }
 }

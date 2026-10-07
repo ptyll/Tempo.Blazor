@@ -74,7 +74,8 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .AddChildContent("Body"));
 
         var drawer = cut.Find(".tm-drawer");
-        drawer.GetAttribute("data-snap-points").Should().Be("0.5,1");
+        drawer.GetAttribute("data-snap-points").Should().Be("0.5,0.85",
+            "the full snap is clamped to MaxHeight, so the gesture never sees a snap it cannot reach");
         drawer.GetAttribute("data-snap-index").Should().Be("0");
         cut.Find(".tm-sheet__handle").GetAttribute("aria-valuenow").Should().Be("0");
     }
@@ -88,7 +89,7 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
             .Add(x => x.SnapPoints, new[] { 0.3, 0.7, 1.0 })
             .AddChildContent("Body"));
 
-        cut.Find(".tm-drawer").GetAttribute("data-snap-points").Should().Be("0.3,0.7,1");
+        cut.Find(".tm-drawer").GetAttribute("data-snap-points").Should().Be("0.3,0.7,0.85");
     }
 
     [Fact]

@@ -335,8 +335,8 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Escape");
         await page.Locator(".tm-modal").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
 
-        var focusedId = await page.EvaluateAsync<string>("() => document.activeElement?.id ?? ''");
-        var thirdId = await third.GetAttributeAsync("id");
+        var focusedId = await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-tm-id') ?? ''");
+        var thirdId = await third.GetAttributeAsync("data-tm-id");
         Assert.AreEqual(thirdId, focusedId, "Escape must restore the toggle that opened the modal, not the first one");
         var after = await page.EvaluateAsync<double>("() => window.scrollY");
         Assert.AreEqual(before, after, 80, "restoring focus must not jump the page to another instance");
