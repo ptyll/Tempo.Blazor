@@ -401,6 +401,13 @@
   6× CPU throttling): the source block keeps `abc` and the new block receives
   `xyz`.
 
+- **New ratchet: undocumented JSON-doc parameters can no longer grow (CF06e1).**
+  `UndescribedParametersRatchetTests` counts `parameters[].description` entries
+  that are missing or whitespace across `JsonDocumentation/**/*.json` and fails
+  above a constant frozen at the measured value (882 of 4453 parameters on
+  ratchet day); filling in descriptions must lower the constant, never raise it.
+  A mutation fact proves the same counting and ceiling logic over synthetic JSON.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
