@@ -122,6 +122,15 @@
   height again. Affects every `ConstrainHeight` consumer: TmFilterableDropdown, TmEntityPicker,
   TmQueryInput, TmMultiSelect, TmTagPicker and TmMultiColumnComboBox.
 
+- **Overlay menus now close BEFORE their item handler runs (N319).** `TmDropdown.SelectItemAsync`,
+  `TmContextMenuItem.HandleClick` and the `TmEntityPicker` create-new path used to invoke the
+  item's `OnSelect`/`OnClick`/`DataProvider.CreateAsync` first and only close the menu afterwards.
+  An async handler that opened a dialog (confirmation, create-form) therefore rendered it *under*
+  the still-open top-layer popover — and the first Escape peeled the stale menu instead of the
+  dialog. All three now close synchronously (and yield a render) before the handler runs; any
+  click inside a `TmSplitButton` menu also closes it. No z-index or top-layer changes to
+  TmModal/TmDialog.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

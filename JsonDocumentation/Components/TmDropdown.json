@@ -2,7 +2,7 @@
   "itemName": "TmDropdown",
   "kind": "Component",
   "category": "Dropdowns",
-  "description": "Action dropdown menu triggered by a button, supporting icons and keyboard navigation. Items are rendered via TmDropdownItem children.",
+  "description": "Action dropdown menu triggered by a button, supporting icons and keyboard navigation. Items are rendered via TmDropdownItem children. The menu is a top-layer TmOverlayPanel; SelectItemAsync closes it (and yields a render) BEFORE invoking OnSelect, so a dialog opened by the handler never renders under the still-open menu and the first Escape reaches the dialog.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dropdowns"
   ],

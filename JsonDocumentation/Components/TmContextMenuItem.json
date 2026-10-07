@@ -2,7 +2,7 @@
   "itemName": "TmContextMenuItem",
   "kind": "Component",
   "category": "Navigation",
-  "description": "Individual menu item for TmContextMenu. Supports icons, disabled state, danger styling, and divider mode. Automatically closes parent menu on click.",
+  "description": "Individual menu item for TmContextMenu. Supports icons, disabled state, danger styling, and divider mode. Closes the parent menu BEFORE invoking OnClick — the menu is a top-layer TmOverlayPanel, so a dialog opened by the handler would otherwise render under it and lose its first Escape to the stale menu.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
   ],

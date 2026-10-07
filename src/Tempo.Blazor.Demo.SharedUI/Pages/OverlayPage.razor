@@ -203,6 +203,28 @@
     </div>
 </section>
 
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Item action opens a dialog</h2>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            Selecting a menu item opens a confirmation dialog: the menu must already be gone when
+            the dialog renders — otherwise the top-layer popover covers it and the first Escape
+            closes the stale menu instead of the dialog.
+        </p>
+        <TmDropdown Text="Actions" OnSelect="HandleConfirmSelect"
+                    data-testid="overlay-menu-dialog-dropdown">
+            <TmDropdownItem Value="confirm">Delete item...</TmDropdownItem>
+        </TmDropdown>
+        <TmModal Show="_confirmDialogOpen" Title="Confirm delete" Size="ModalSize.Small"
+                 OnClose="() => _confirmDialogOpen = false"
+                 data-testid="overlay-menu-dialog">
+            <p class="text-sm text-slate-600 dark:text-slate-400">Delete this item? This cannot be undone.</p>
+        </TmModal>
+    </div>
+</section>
+
 @* Scroll room below the edge section: without it the document ends right after the trigger, so
    scrollIntoView({block:'end'}) cannot pin the trigger's bottom edge to the viewport bottom and
    the flip demo/test would have nothing to prove. It also gives the "anchor scrolled fully out of
@@ -225,6 +247,16 @@
     private bool _modalOpen;
     private bool _modalPanelOpen;
     private bool _edgeOpen;
+    private bool _confirmDialogOpen;
+
+    private async Task HandleConfirmSelect(string _)
+    {
+        // Simulates a real async handler (validation round-trip, draft save). The N319 defect is
+        // only observable while the handler is in flight: under the old ordering the top-layer
+        // menu stayed open for the whole await and only closed after it completed.
+        await Task.Delay(1200);
+        _confirmDialogOpen = true;
+    }
     private DateOnly? _modalDate;
     private IReadOnlyList<string> _focusValues = [];
 

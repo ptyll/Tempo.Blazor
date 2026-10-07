@@ -2,7 +2,7 @@
   "itemName": "TmEntityPicker",
   "kind": "Component",
   "category": "Inputs",
-  "description": "Searchable entity lookup input that calls an async search provider after a configurable debounce, displays results in a dropdown, and binds to a typed value upon selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+  "description": "Searchable entity lookup input that calls an async search provider after a configurable debounce, displays results in a dropdown, and binds to a typed value upon selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. The create-new flow closes the dropdown BEFORE awaiting DataProvider.CreateAsync, so a dialog opened while the create runs is never covered by the panel.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Inputs"
   ],

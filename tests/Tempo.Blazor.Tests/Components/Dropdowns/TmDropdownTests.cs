@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Dropdowns;
 using Tempo.Blazor.Tests.Localization;
@@ -98,5 +99,31 @@ public class TmDropdownTests : LocalizationTestBase
         cut.Find("button.tm-dropdown-trigger").Click();
 
         cut.Find("button.tm-dropdown-trigger").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
+    /// <summary>
+    /// N319: the menu must close BEFORE <c>OnSelect</c> runs — a handler that opens a dialog
+    /// would otherwise render it under the still-open top-layer popover.
+    /// </summary>
+    [Fact]
+    public void TmDropdown_SelectItem_ClosesMenuBeforeInvokingOnSelect()
+    {
+        var openPanelsDuringHandler = -1;
+        IRenderedComponent<TmDropdown>? probe = null;
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .Add(c => c.OnSelect, EventCallback.Factory.Create<string>(this, _ =>
+            {
+                openPanelsDuringHandler = probe!.FindAll(".tm-overlay-panel").Count;
+            }))
+            .AddChildContent<TmDropdownItem>(i => i
+                .Add(x => x.Value, "a")
+                .AddChildContent("A")));
+        probe = cut;
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        cut.Find(".tm-dropdown-item").Click();
+
+        cut.WaitForAssertion(() => openPanelsDuringHandler.Should().Be(0));
     }
 }

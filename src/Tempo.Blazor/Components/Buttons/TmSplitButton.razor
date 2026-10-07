@@ -37,7 +37,8 @@
                     Align="OverlayAlign.End"
                     Offset="4"
                     Role="menu"
-                    Class="tm-split-button__dropdown">
+                    Class="tm-split-button__dropdown"
+                    @onclick="CloseMenu">
         @ChildContent
     </TmOverlayPanel>
 </div>
@@ -104,6 +105,15 @@
     private void SetOpen(bool open)
     {
         _isOpen = open;
+    }
+
+    // N319: any click inside the menu is an item activation — the menu must close, or a dialog
+    // the item handler opens would render under the still-open top-layer popover. This bubbles
+    // after the item's own onclick; the batched render then applies menu-closed + dialog-open
+    // together (and the first Escape reaches the dialog, not the stale menu).
+    private void CloseMenu()
+    {
+        _isOpen = false;
     }
 
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
