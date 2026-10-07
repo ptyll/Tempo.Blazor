@@ -281,6 +281,15 @@
   `EditContext.Validate()`/form submit still paints every field. An EditContext swap resets both
   flags and moves all three subscriptions to the new context; Dispose unsubscribes all three.
 
+- **TmNavigationGuard's dialog can no longer be dismissed during an in-flight save (N321).**
+  Escape used to reach `HandleDialogResultAsync(false)` through `TmDialog`'s default
+  `CloseOnEscape="true"` — it dismissed the dialog the save still reports through and fired
+  `OnCancel`, while the save's eventual success re-issued the navigation the user had just
+  "stayed" from. Both guard variants now pass `CloseOnEscape="@(!_saving)"`
+  (`CloseOnOverlayClick` stays false), and `HandleDialogResultAsync` early-returns while
+  `_saving` as a second line of defense for any path that skips the disabled/Escape gates.
+  A successful save still re-issues the blocked navigation unchanged.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change

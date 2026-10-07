@@ -18179,7 +18179,7 @@
       "kind": "Component",
       "category": "Navigation",
       "namespace": "Tempo.Blazor.Components.Navigation",
-      "description": "Guards a form or working area against losing unsaved changes. Registers a router LocationChanging handler so internal navigation while dirty shows a TmDialog confirmation instead of navigating away silently, and optionally arms a browser beforeunload prompt for tab close/refresh. Does not manage locks or working copies itself — it only gates navigation.",
+      "description": "Guards a form or working area against losing unsaved changes. Registers a router LocationChanging handler so internal navigation while dirty shows a TmDialog confirmation instead of navigating away silently, and optionally arms a browser beforeunload prompt for tab close/refresh. Does not manage locks or working copies itself — it only gates navigation. While a Save-and-leave callback is in flight the dialog is fully inert: its buttons disable, CloseOnEscape drops to false, and the result handler early-returns, so the save cannot be orphaned from the surface it reports through.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Navigation/TmNavigationGuard.razor",
       "documentationStatus": "merged",

@@ -303,6 +303,85 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
     }
 
     /// <summary>
+    /// N321: an in-flight save owns the whole dialog — not just its footer. Escape used to reach
+    /// <c>HandleDialogResultAsync(false)</c> through TmDialog's default <c>CloseOnEscape="true"</c>,
+    /// dismissing the dialog the save still reports through and firing <c>OnCancel</c> — while the
+    /// save's eventual success then re-issued navigation the user just "stayed" from. Both guard
+    /// variants now pin <c>CloseOnEscape="!_saving"</c>, and <c>HandleDialogResultAsync</c> itself
+    /// early-returns while <c>_saving</c> for renderers that ignore a disabled attribute.
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLeave_DuringInFlightSave_EscapeIsIgnored_AndSaveStillNavigates()
+    {
+        var gate = new TaskCompletionSource<bool>();
+        var cancelled = 0;
+        var cut = Render<TmNavigationGuard>(p => p
+            .Add(x => x.IsDirty, true)
+            .Add(x => x.OnSaveAndLeave, () => gate.Task)
+            .Add(x => x.OnCancel, EventCallback.Factory.Create(this, () => cancelled++))
+            .Add(x => x.SaveAndLeaveText, "Save and leave"));
+
+        Nav.NavigateTo("/next-page");
+        cut.WaitForState(() => Nav.History.Count > 0);
+
+        var saveButton = cut.FindAll(".tm-dialog-footer button")
+            .First(b => b.TextContent.Contains("Save and leave"));
+        var first = cut.InvokeAsync(() => saveButton.Click());
+        cut.WaitForAssertion(() => cut.FindAll(".tm-dialog-footer button")
+            .Should().OnlyContain(b => b.HasAttribute("disabled"), "the save must be in flight"));
+
+        await cut.InvokeAsync(() => cut.Find(".tm-dialog").KeyUp(new KeyboardEventArgs { Key = "Escape" }));
+
+        cancelled.Should().Be(0,
+            "Escape during the save must be ignored, not mapped to Stay — the save still owns the dialog");
+        cut.Find(".tm-dialog").Should().NotBeNull("the dialog must survive Escape while the save is in flight");
+
+        gate.SetResult(true);
+        await first;
+        cut.WaitForState(() => Nav.History.Count > 1);
+        Nav.History.First().State.Should().Be(NavigationState.Succeeded,
+            "the successful save still re-issues the blocked navigation");
+        Nav.History.First().Uri.Should().EndWith("/next-page");
+    }
+
+    /// <summary>
+    /// N321: the backdrop must not dismiss the save-owned dialog either. <c>CloseOnOverlayClick</c>
+    /// stays false on both variants; this pins the contract for both the in-flight-save window and
+    /// a future default flip.
+    /// </summary>
+    [Fact]
+    public async Task SaveAndLeave_DuringInFlightSave_BackdropClickIsIgnored()
+    {
+        var gate = new TaskCompletionSource<bool>();
+        var cancelled = 0;
+        var cut = Render<TmNavigationGuard>(p => p
+            .Add(x => x.IsDirty, true)
+            .Add(x => x.OnSaveAndLeave, () => gate.Task)
+            .Add(x => x.OnCancel, EventCallback.Factory.Create(this, () => cancelled++))
+            .Add(x => x.SaveAndLeaveText, "Save and leave"));
+
+        Nav.NavigateTo("/next-page");
+        cut.WaitForState(() => Nav.History.Count > 0);
+
+        var saveButton = cut.FindAll(".tm-dialog-footer button")
+            .First(b => b.TextContent.Contains("Save and leave"));
+        var first = cut.InvokeAsync(() => saveButton.Click());
+        cut.WaitForAssertion(() => cut.FindAll(".tm-dialog-footer button")
+            .Should().OnlyContain(b => b.HasAttribute("disabled"), "the save must be in flight"));
+
+        await cut.InvokeAsync(() => cut.Find(".tm-modal-overlay").Click());
+
+        cancelled.Should().Be(0, "a backdrop click during the save must not reach Stay");
+        cut.Find(".tm-dialog").Should().NotBeNull(
+            "the dialog the save still reports through must not be dismissed by an outside click");
+
+        gate.SetResult(true);
+        await first;
+        cut.WaitForState(() => Nav.History.Count > 1);
+        Nav.History.First().State.Should().Be(NavigationState.Succeeded);
+    }
+
+    /// <summary>
     /// A second click while the first save is still in flight must not start a second save. The dialog
     /// stays up during the save, so the button stays there to be clicked.
     /// </summary>
