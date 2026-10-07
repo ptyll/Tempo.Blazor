@@ -437,6 +437,19 @@
   no longer move the count (CF19h). Covered by seven new verifier/fixture arms
   over real worktrees and evidence fixtures.
 
+- **New guard: a component API change must carry `JsonDocumentation/**` in
+  the same commit (N328).** `ComponentChangeCarriesJsonTests` evaluates every
+  commit after the most recent tag (or the last 50 when the tag is fresh):
+  a `[Parameter]` attribute line or changed public property declaration in
+  `src/**/Components/**/Tm*.razor{,.cs}` without a `JsonDocumentation/**`
+  path in the same commit is a finding — the freshness guard on HEAD cannot
+  see WHEN either side moved, only that they currently agree. Calibrated on
+  history: `ee1ec3df` is detected (SortLabel shipped with JSON regenerated
+  only at the repo root), `56fa6f04` is clean (mass backfill carried its
+  docs), and `3980af1d` is the single frozen grandfather — its JSON landed
+  one commit later in `ca00f94d`. Shallow clones fail as
+  `unmeasurable:shallow-clone` under `TEMPO_REQUIRE_FULL_CLONE`.
+
 ### Erratum 2.9.0
 
 Two changes shipped in 2.9.0 under routine fix/feature sections but are
