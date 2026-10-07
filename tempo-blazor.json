@@ -11898,7 +11898,7 @@
       "kind": "Component",
       "category": "Forms",
       "namespace": "Tempo.Blazor.Components.Forms",
-      "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator. Since 2.9.0 Required is forwarded to the inner input (required + aria-required), and the success icon/tm-input-valid appears only after the EditContext ran a validation pass (OnValidationRequested/OnValidationStateChanged) with no messages for the field — a field that was merely typed into no longer paints as valid.",
+      "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator. Since 2.9.0 Required is forwarded to the inner input (required + aria-required), and the success icon/tm-input-valid appears only after a validation pass that covered THIS field completed with no messages — since 2.9.1 the tracking is field-scoped (own OnFieldChanged or a whole-form OnValidationRequested), so a pass triggered by editing another field no longer paints this field valid.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Forms/TmValidatedField.razor",
       "documentationStatus": "merged",

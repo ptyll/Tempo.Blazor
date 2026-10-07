@@ -271,6 +271,16 @@
   meaningless at that size, and the next real resize pass re-runs it anyway. The migration
   E2E surfaced this inside `NotionMentionMenuE2ETests`' baseline captures.
 
+- **TmValidatedField's green frame now tracks the field, not the context (N320).** The
+  `_validationRan` flag used to be set by any `OnValidationStateChanged` — including a pass
+  triggered by editing a *different* field — so a never-touched field painted `tm-input-valid`
+  on the strength of its neighbour's validation. The state is now field-scoped: the field's own
+  `OnFieldChanged` or a whole-form `OnValidationRequested` marks a pass as covering it, and only
+  then does `OnValidationStateChanged` mark it validated (the notify event still just re-renders;
+  it never marks on its own). Editing field A therefore leaves untouched field B neutral, while
+  `EditContext.Validate()`/form submit still paints every field. An EditContext swap resets both
+  flags and moves all three subscriptions to the new context; Dispose unsubscribes all three.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
