@@ -110,28 +110,42 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         var page = await OpenAsync(width);
         await OpenDrawerAsync(page, triggerId, drawer);
 
-        // A click at (width/2, 8) lands inside a right drawer on a 390px viewport, so it never tests
-        // the backdrop. The point has to be outside the panel box.
+        // A click at (width/2, 8) lands inside a right drawer, so it never tests the backdrop.
+        // Below 640px the right panel is full-bleed and there is no outside point; the close button
+        // is the dismiss control, and a click on the panel must not hit the backdrop.
         var point = await page.EvaluateAsync<float[]>(
             """
             (drawer) => {
                 const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
-                const x = panel.x > 8 ? 4 : panel.right + 4;
-                return [x, panel.y + panel.height / 2];
+                if (panel.left > 8) return [4, panel.top + panel.height / 2];
+                if (panel.right + 8 < window.innerWidth) return [panel.right + 8, panel.top + panel.height / 2];
+                return [-1, -1];
             }
             """,
             drawer);
-        var outside = await page.EvaluateAsync<bool>(
-            """
-            ([drawer, x, y]) => {
-                const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
-                return x < panel.left - 1 || x > panel.right + 1;
-            }
-            """,
-            new object[] { drawer, point[0], point[1] });
-        Assert.IsTrue(outside, $"the backdrop point ({point[0]:F0},{point[1]:F0}) must sit outside the panel");
+        if (point[0] < 0)
+        {
+            var centre = await page.Locator($"{drawer} .tm-drawer__panel").BoundingBoxAsync();
+            Assert.IsNotNull(centre);
+            await page.Mouse.ClickAsync(centre.X + centre.Width / 2, centre.Y + centre.Height / 2);
+            Assert.IsTrue(await page.Locator(drawer).IsVisibleAsync(),
+                "a full-bleed panel covers the backdrop, so a click on the panel must not close it");
+            await page.Locator($"{drawer} .tm-drawer__close").ClickAsync();
+        }
+        else
+        {
+            var outside = await page.EvaluateAsync<bool>(
+                """
+                ([drawer, x, y]) => {
+                    const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
+                    return x < panel.left - 1 || x > panel.right + 1;
+                }
+                """,
+                new object[] { drawer, point[0], point[1] });
+            Assert.IsTrue(outside, $"the backdrop point ({point[0]:F0},{point[1]:F0}) must sit outside the panel");
+            await page.Mouse.ClickAsync(point[0], point[1]);
+        }
 
-        await page.Mouse.ClickAsync(point[0], point[1]);
         await page.Locator(drawer).WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Detached,

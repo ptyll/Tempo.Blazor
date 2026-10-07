@@ -35,6 +35,78 @@
   topmost overlay only. A modal marks the page behind it `inert` and locks document scroll. A
   drawer title id is unique per instance. The focus ring on a sheet handle paints the bar only.
 
+- **A drawer backdrop is a child of the focus-scope root, and it carries `data-tm-backdrop`.** It
+  used to be a sibling that preceded the root. The trap marks every sibling `inert`, so that
+  sibling swallowed the click that should close the drawer.
+
+  ```html
+  <!-- before: the overlay is outside the trapped root, so the trap marks it inert -->
+  <div class="tm-drawer__overlay"></div>
+  <div class="tm-focus-scope tm-drawer" role="dialog">…</div>
+  <!-- after: the overlay is inside the root, and the marker is the only backdrop contract -->
+  <div class="tm-focus-scope tm-drawer" role="dialog">
+    <div class="tm-drawer__overlay" data-tm-backdrop></div>
+    …
+  </div>
+  ```
+
+  A backdrop without `data-tm-backdrop` is inert. A class name (`.tm-drawer__overlay`,
+  `.tm-command-palette-backdrop`) is not recognised. `TmCommandPalette` and `TmKeyboardShortcutsHelp`
+  mark their backdrops the same way.
+
+- **A modal side drawer panel stacks above its backdrop.** The overlay is `position: fixed` at
+  `--tm-z-drawer-backdrop` (1035). After it moved inside the root it painted over the static side
+  panel, so every click in a left or right drawer hit the backdrop and closed it. The panel of a
+  modal drawer is now `position: relative` at `calc(var(--tm-z-drawer-backdrop, 1035) + 1)`. An
+  inline drawer has no overlay and stays static. Below 640px a side panel is full width, so there
+  is no backdrop point to click; close it from its own button.
+
+- **`.tm-modal` and `.tm-dialog` end at `transform: none`.** The visible state used to be
+  `transform: scale(1)`, which is still a containing block. A sheet opened inside that modal then
+  anchored to the modal instead of the viewport. Host CSS that keyed off the identity transform
+  must accept `none`.
+
+- **`.tm-modal-container` no longer receives pointer events.** It fills the overlay, so a click on
+  the dimmed area used to land on the container and never reached `CloseOnOverlayClick`. The
+  container is `pointer-events: none`; the scope (`> .tm-focus-scope`) takes its own clicks back.
+
+- **A modal or dialog sheet sizes to its content.** It used to snap. `TmModal` and `TmDialog` now
+  render `tm-sheet--content` and pass no snap points, so the panel is `height: auto` under
+  `MaxHeight`. A host that wants snaps composes `TmDrawer`.
+
+- **`TmDrawer.SnapIndex` is two-way.** The drawer adopts a change of the parameter, and a gesture
+  reports the snap it settled on through `SnapIndexChanged`. A parent re-render that passes the
+  same index does not reset a snap the user just dragged to. `--tm-sheet-height` is written only by
+  Blazor; the gesture must not delete it.
+
+- **Sheet dismiss thresholds changed.** A snapped sheet dismisses only below the lowest snap by
+  0.15, or on a downward flick faster than 0.5 px/ms measured over the last 80ms. It used to treat
+  any release below the lowest snap as a dismiss, and a flick never fired because velocity was
+  taken from the last move, which `pointerup` repeats. A content sheet dismisses past a quarter of
+  the height it started at, or on a flick. A tap never dismisses.
+
+- **`TmLightbox` and `TmKeyboardShortcutsHelp` render a `TmFocusScope` root.** Tab stays inside and
+  Escape closes them. The dialog role and `tabindex` sit on `div.tm-focus-scope`, not on the old
+  overlay element. A test that looked for `role="dialog"` on `.tm-lightbox` or
+  `.tm-keyboard-shortcuts` finds it on the scope.
+
+- **An inline (`Modal="false"`) bottom sheet is sized from its host.** The root is
+  `position: absolute; inset: 0` inside a positioned host, and the panel height is
+  `calc(var(--tm-sheet-height) * 100%)` of that host, not of the viewport. A host that is not
+  positioned lets the sheet escape it. Escape closes the inline sheet only when focus is inside it.
+
+- **The old grabber classes and keys are gone.** `.tm-modal__handle` and `.tm-dialog__handle` are
+  not rendered; the grabber is `.tm-sheet__handle`. The `*DragHandle` resource keys are `TmSheet_*`.
+  A stylesheet that targeted the old classes no longer matches.
+
+- **Document scroll lock is `html.tm-scroll-lock`.** It used to be a class on `body`. A host rule
+  that unlocked scroll by clearing a body class must clear `html.tm-scroll-lock`. The lock is a ref
+  count: it stays while any modal trap is open and leaves when the last one closes.
+
+- **A desktop sheet caps at 48rem.** `[data-layout="desktop"]` bottom drawers and modal sheets set
+  `max-width: 48rem` and center. They used to be full-bleed at every width. A host that stretched a
+  desktop sheet to the viewport must override that cap.
+
 - **`TmViewManager` no longer renders `.tm-view-modal`.** The create/edit form is a `TmModal`: the
   title and close button are the modal's, and Cancel/Create sit in its footer. Host CSS that
   targeted `.tm-view-modal`, `.tm-view-modal-overlay` or `.tm-view-modal-footer` no longer matches.
@@ -218,13 +290,15 @@
 
 - **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
   `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
-  `data-tm-backdrop` (or `.tm-drawer__overlay` / `.tm-command-palette-backdrop`), and re-applies the
-  inert set of the trap that remains when the topmost one closes. The scroll lock is a ref count, so
-  two open modals no longer leave `html.tm-scroll-lock` behind. A sheet gesture writes only an inline
-  height and clears it — and the `--tm-sheet-height` variable — on release, cancel and a vetoed
-  dismiss. The keyboard gap pads the sheet overlay, so a dialog sheet keeps its own safe-area
-  padding. `TmDialog` awaits its result callbacks, and `TmCommandPalette` lets the focus scope own
-  Escape instead of closing twice.
+  `data-tm-backdrop`, and re-applies the inert set of the trap that remains when the topmost one
+  closes. A class name is not a backdrop. The scroll lock is a ref count, so two open modals no
+  longer leave `html.tm-scroll-lock` behind. A sheet gesture writes only an inline height and
+  transition, and clears those two on release, cancel and a vetoed dismiss. It does not touch
+  `--tm-sheet-height`: that variable is Blazor-owned, and deleting it collapsed a snap whose index
+  had not changed. Flick velocity is the travel over the last 80ms, so a `pointerup` that lands on
+  the last move still dismisses. The keyboard gap pads the sheet overlay, so a dialog sheet keeps
+  its own safe-area padding. `TmDialog` awaits its result callbacks, and `TmCommandPalette` lets the
+  focus scope own Escape instead of closing twice.
 
 - **`ConstrainHeight` panels can now grow back after the room returns (N318).** `overlay.js`
   used to read `getComputedStyle(panel).maxHeight` on every placement pass — which resolves the

@@ -127,16 +127,24 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
     let startY = 0;
     let startHeight = 0;
     let startFraction = 0;
-    let lastY = 0;
-    let lastTime = 0;
     let dragging = false;
     let armed = false;
     let pointerId = null;
+    // Recent pointer samples. A real pointerup lands on the last move, so velocity taken from that
+    // move alone is always 0 and a flick never dismisses. The window is the last ~80ms.
+    const samples = [];
+
+    const remember = (y, time) => {
+        samples.push({ y, time });
+        const cutoff = time - 80;
+        while (samples.length > 1 && samples[0].time < cutoff) samples.shift();
+    };
 
     const resetInline = () => {
+        // height and transition only. --tm-sheet-height is Blazor-owned (TmDrawer.PanelStyle);
+        // deleting it collapses a snap Blazor will not rewrite, because the index did not change.
         panel.style.height = '';
         panel.style.transition = '';
-        panel.style.removeProperty?.('--tm-sheet-height');
     };
 
     const capture = (event) => {
@@ -153,8 +161,8 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         armed = false;
         pointerId = event.pointerId;
         startY = event.clientY;
-        lastY = event.clientY;
-        lastTime = event.timeStamp ?? 0;
+        samples.length = 0;
+        remember(event.clientY, event.timeStamp ?? 0);
         startHeight = panel.getBoundingClientRect().height;
         const viewportNow = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         startFraction = viewportNow > 0 ? startHeight / viewportNow : 0;
@@ -169,8 +177,7 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
             panel.style.transition = 'none';
             capture(event);
         }
-        lastY = event.clientY;
-        lastTime = event.timeStamp ?? lastTime;
+        remember(event.clientY, event.timeStamp ?? samples.at(-1)?.time ?? 0);
         const next = Math.max(0, startHeight - (event.clientY - startY));
         panel.style.height = `${next}px`;
     };
@@ -185,8 +192,11 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
         // Measure before clearing: resetInline drops the inline height, and a read after it sees 0.
         const viewport = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const height = panel.getBoundingClientRect().height;
-        const elapsed = Math.max(1, (event.timeStamp ?? lastTime) - lastTime);
-        const velocity = (event.clientY - lastY) / elapsed;
+        const now = event.timeStamp ?? samples.at(-1)?.time ?? 0;
+        const recent = samples.filter(sample => sample.time >= now - 80);
+        const origin = recent[0];
+        const elapsed = origin ? Math.max(1, now - origin.time) : 1;
+        const velocity = origin ? (event.clientY - origin.y) / elapsed : 0;
         resetInline();
         if (cancelled || !wasArmed) return;
 

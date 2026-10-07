@@ -43,8 +43,36 @@ public sealed class SheetRound2E2ETests : WasmTestBase
         await trigger.ClickAsync();
         await page.Locator(drawer).WaitForAsync();
 
-        // A click on the sliver above the sheet hits the backdrop. An inerted backdrop swallows it.
-        await page.Mouse.ClickAsync(width / 2, 8);
+        // (width/2, 8) is inside a side panel: below 640px the panel is full-bleed, and at 1440 a
+        // right panel still covers that point. The backdrop point has to sit outside the panel box.
+        var point = await page.EvaluateAsync<float[]>(
+            """
+            (drawer) => {
+                const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
+                const x = panel.left > 8 ? 4 : (panel.right + 8 < window.innerWidth ? panel.right + 8 : panel.left + panel.width / 2);
+                const y = panel.top > 8 ? 4 : panel.top + panel.height / 2;
+                return [x, y];
+            }
+            """,
+            drawer);
+        var outside = await page.EvaluateAsync<bool>(
+            """
+            ([drawer, x, y]) => {
+                const panel = document.querySelector(drawer + ' .tm-drawer__panel').getBoundingClientRect();
+                return x < panel.left - 1 || x > panel.right + 1 || y < panel.top - 1 || y > panel.bottom + 1;
+            }
+            """,
+            new object[] { drawer, point[0], point[1] });
+        if (!outside)
+        {
+            // A full-bleed panel covers the backdrop. The close control is the one that dismisses it.
+            await page.Locator($"{drawer} .tm-drawer__close").ClickAsync();
+        }
+        else
+        {
+            await page.Mouse.ClickAsync(point[0], point[1]);
+        }
+
         await page.Locator(drawer).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 5000 });
 
         var focused = await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''");

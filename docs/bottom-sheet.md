@@ -13,9 +13,15 @@ a gesture reports the snap it settled on. A parent re-render that passes the sam
 reset a snap the user just dragged to.
 
 `SwipeToDismiss` is on by default. A snapped sheet dismisses only below the lowest snap by 0.15, or
-on a downward flick faster than 0.5 px/ms. A content sheet dismisses when the drag passes a quarter
+on a downward flick faster than 0.5 px/ms. The flick is the travel over the last 80ms of the drag,
+not the gap between the last move and `pointerup`: a real release lands on that last move, so a
+velocity taken from it alone is always 0. A content sheet dismisses when the drag passes a quarter
 of the height it started at, or on a flick. A tap never dismisses, and an upward drag never
 dismisses.
+
+The gesture writes only an inline `height` and `transition`, and clears both on release, cancel and
+a vetoed dismiss. `--tm-sheet-height` stays Blazor-owned. Deleting it collapses a snap whose index
+did not change, because Blazor will not rewrite a style it still considers current.
 
 ## Modal and inline
 

@@ -58,6 +58,14 @@
     overflow: hidden;
 }
 
+/* The overlay is position:fixed, so it paints above a static panel and swallows every click — a
+   side drawer included, not only the sheet. The panel has to stack above it. An inline drawer has
+   no overlay, so it keeps the static panel. */
+.tm-drawer:not(.tm-drawer--inline) .tm-drawer__panel {
+    position: relative;
+    z-index: calc(var(--tm-z-drawer-backdrop, 1035) + 1);
+}
+
 .tm-drawer--right .tm-drawer__panel,
 .tm-drawer--left .tm-drawer__panel {
     height: 100%;
@@ -73,11 +81,6 @@
 }
 
 .tm-drawer--bottom .tm-drawer__panel {
-    /* The overlay is position:fixed, so it paints above a static panel and swallows clicks meant
-       for the sheet. The panel has to stack above it. */
-    position: relative;
-    /* Above the overlay (1035). A z-index of 1 loses to it, so the backdrop swallows the sheet. */
-    z-index: calc(var(--tm-z-drawer-backdrop, 1035) + 1);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     flex: 0 0 auto;
     width: 100%;
