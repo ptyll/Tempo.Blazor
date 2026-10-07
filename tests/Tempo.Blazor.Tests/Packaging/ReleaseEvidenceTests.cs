@@ -437,6 +437,63 @@ public sealed class ReleaseEvidenceTests
     }
 
     /// <summary>
+    /// CF15b — a required key occurring twice is two records wearing one file: the flat-JSON
+    /// reader returns the FIRST match, so a second <c>hostRestarts</c> line could disagree with
+    /// the number the gate actually checked. The verifier must refuse rather than arbitrate.
+    /// The refusal fires before any git question, so no worktree is needed.
+    /// </summary>
+    [BashScriptFact]
+    public void Verifier_RefusesDuplicateKey()
+    {
+        string fixtureDir = Path.Combine(Path.GetTempPath(), $"tm-evidence-dup-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(fixtureDir);
+
+        try
+        {
+            string path = Path.Combine(fixtureDir, "evidence.json");
+            string json = EvidenceTemplate("irrelevant", artifactsPath: fixtureDir.Replace('\\', '/'));
+            json = json.Replace(
+                "\"hostRestarts\": 0\n",
+                "\"hostRestarts\": 0,\n  \"hostRestarts\": 3\n",
+                StringComparison.Ordinal);
+            json.Should().Contain("\"hostRestarts\": 3", "the fixture must carry the duplicate");
+            File.WriteAllText(path, json);
+
+            ReleaseScriptInputReadTests.ScriptResult result = RunVerifier(fixtureDir, path);
+            Dump("duplicate hostRestarts", result);
+
+            using (new AssertionScope())
+            {
+                result.Exit.Should().NotBe(0,
+                    "a duplicated required key must refuse — the reviewer reads one number and "
+                    + $"the gate checks another ({result.Combined})");
+                result.Combined.Should().Contain("duplicate",
+                    $"the refusal must name the shape it rejected ({result.Combined})");
+            }
+        }
+        finally
+        {
+            ReleaseScriptInputReadTests.TryDeleteDir(fixtureDir);
+        }
+    }
+
+    /// <summary>
+    /// CF15a — the evidence <c>total</c> counts distinct test names, not testId elements: the
+    /// convention must be written where the reader of the number finds it, in the script's own
+    /// header, so a future evidence writer cannot fill it with the other count.
+    /// </summary>
+    [Fact]
+    public void VerifierHeader_DefinesTotalAsDistinctTestNames()
+    {
+        string script = File.ReadAllText(ScriptPath);
+        script.ToLowerInvariant().Should().Contain(
+            "distinct test names",
+            "the script header must pin total = distinct test names in the TRX (data-row "
+            + "instances sharing a name count once), not the count of testId elements — "
+            + "otherwise the same field means different things to the recorder and the gate");
+    }
+
+    /// <summary>
     /// The PATH-shadow fixture for <see cref="Verifier_RefusesWhenTheGitDiffReadFails"/>: fails on
     /// <c>git diff</c> exactly the way the measured mutation did, and forwards every other
     /// subcommand to the first real <c>git</c> found on PATH outside its own directory — so

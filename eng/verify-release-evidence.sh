@@ -12,6 +12,15 @@ set -euo pipefail
 # eng/pack-nuget-packages.sh already make. Every required key missing is a refusal, not a default:
 # an unreadable evidence file must produce red, not silence.
 #
+# `total` counts DISTINCT test names in the TRX — data-row instances sharing a test name count
+# once — not the count of testId elements the file happens to carry. The same convention applies
+# to passed/failed/skipped, so the consistency sum below compares like with like (CF15a).
+#
+# EVERY REQUIRED KEY MUST OCCUR EXACTLY ONCE (CF15b): the flat-JSON reader below returns the
+# FIRST match, so a duplicated key is two records wearing one file — the reviewer reads one
+# number and the gate checks another. Refuse a second occurrence of any required key rather
+# than hope both copies agree.
+#
 # THE hostRestarts KEY (N209 wired into the gate, Fáze 20E review F3): PlaywrightTestBase
 # resurrects a dead self-hosted demo host so the suite can finish, appending one JSONL line to
 # TestResults/host-restarts.jsonl per resurrection. The restart is deliberate; what the gate
@@ -64,6 +73,15 @@ required_keys=(commit verifiedDate verifiedBy runName passed failed skipped tota
 for key in "${required_keys[@]}"; do
   if [[ -z "$(json_value "$key")" ]]; then
     refuse "release evidence is missing required key '$key' — a partial record is not a recorded run."
+  fi
+done
+
+# CF15b: a duplicated required key is ambiguous evidence — json_value reads the first occurrence,
+# so a later line could disagree with what the gate checked. Exactly one occurrence per key.
+for key in "${required_keys[@]}"; do
+  n=$(grep -c "\"$key\"[[:space:]]*:" "$RELEASE_EVIDENCE_PATH")
+  if (( n > 1 )); then
+    refuse "release evidence carries duplicate key '$key' ($n occurrences) — the reader returns the first, so a second copy could disagree with the number the gate checked."
   fi
 done
 
