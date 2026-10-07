@@ -156,6 +156,10 @@ jobs:
       # Testcontainers-per-test-run fixture) and is out of scope for this phase; revisit if the
       # two-lane wall clock becomes the bottleneck.
       - name: Test
+        env:
+          # N276: an unreachable nuget.org feed in the release lane must FAIL the provenance
+          # guard, not skip it — a skip tallies as green evidence that was never measured.
+          TEMPO_REQUIRE_FEED: "1"
         run: dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E"
 
       # A SECOND LANE OVER THE SAME BINARIES, DIFFERING IN EXACTLY ONE VARIABLE: the ambient culture.
@@ -198,6 +202,8 @@ jobs:
         env:
           LANG: cs_CZ.UTF-8
           LC_ALL: cs_CZ.UTF-8
+          # N276: same release contract as the first lane — a skipped feed guard is not evidence.
+          TEMPO_REQUIRE_FEED: "1"
         run: |
           echo "[locale-lane] LANG=$LANG LC_ALL=$LC_ALL"
           dotnet test --no-build --configuration Release --verbosity normal --filter "FullyQualifiedName!~Tempo.Blazor.E2E"

@@ -408,6 +408,16 @@
   ratchet day); filling in descriptions must lower the constant, never raise it.
   A mutation fact proves the same counting and ceiling logic over synthetic JSON.
 
+- **Release lane: an unreachable nuget.org feed now fails the provenance guard
+  instead of skipping it (N276).** Both publish workflows set
+  `TEMPO_REQUIRE_FEED=1` on every `dotnet test` step; with the variable set, the
+  `FeedReachableFact` probe refuses to answer, the test runs, and its own
+  `survey.Unreachable` assertion reports `unmeasured:feed-unreachable` as a
+  failure. Without the variable the behaviour is unchanged — local and ordinary
+  CI runs keep their skip-on-outage. Guarded by
+  `ReleaseGateFilterTests.EveryPublishTestStep_SetsTempoRequireFeed` (step-, job-
+  and workflow-level env reach) plus three `DecideSkip` unit cells.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
