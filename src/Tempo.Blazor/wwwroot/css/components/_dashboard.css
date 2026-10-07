@@ -2,15 +2,6 @@
    TmDashboard - Modern Dashboard with Draggable Widgets
    ═══════════════════════════════════════════════════════════════ */
 
-/* The observer wraps the dashboard only to measure it. It must not become a container itself:
-   a nested container would hide the dashboard grid from an ancestor's container queries. */
-.tm-dashboard-layout {
-  display: block;
-  min-width: 0;
-  container-type: normal;
-  container-name: none;
-}
-
 /* Dashboard Container */
 .tm-dashboard {
   display: flex;

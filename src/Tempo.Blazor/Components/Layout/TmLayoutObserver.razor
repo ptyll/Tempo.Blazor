@@ -9,13 +9,22 @@
    observer script only reports a width. Children read the cascaded context. *@
 <div @ref="_root"
      id="@_id"
-     class="tm-layout tm-layout--@Context.CssModifier @(IsContainer ? null : "tm-layout--shrink") @Class"
+     class="tm-layout tm-layout--@Context.CssModifier @(IsContainer ? null : "tm-layout--no-container") @Class"
      data-layout="@Context.CssModifier"
      data-testid="@RootTestId("tm-layout")"
      style="@Style"
      @attributes="AdditionalAttributes">
     <CascadingValue Value="Context" IsFixed="false">
-        @ChildContent
+        @if (IsViewportScope)
+        {
+            <CascadingValue Value="Context" Name="@TmLayoutScopes.Viewport" IsFixed="false">
+                @RenderContent
+            </CascadingValue>
+        }
+        else
+        {
+            @RenderContent
+        }
     </CascadingValue>
 </div>
 
@@ -43,19 +52,23 @@
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
-    /// <summary>Raised when the rendered layout changes. The initial value is not a change.</summary>
-    [Parameter] public EventCallback<TmLayoutMode> LayoutModeChanged { get; set; }
+    /// <summary>
+    /// Raised when the rendered layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
+    /// would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
-    /// <summary>Content that receives the resolved layout. Not rendered yet — the round-2 tests pin the contract.</summary>
+    /// <summary>Content that receives the resolved layout; use instead of ChildContent when the owner must branch its own markup.</summary>
     [Parameter] public RenderFragment<TmLayoutContext>? LayoutContent { get; set; }
 
-    /// <summary>Also cascades the context under <see cref="TmLayoutScopes.Viewport"/>. Not wired yet.</summary>
+    /// <summary>
+    /// Also cascades the context under <see cref="TmLayoutScopes.Viewport"/>, so an overlay can ask
+    /// for the viewport's layout rather than the container the trigger sits in.
+    /// </summary>
     [Parameter] public bool IsViewportScope { get; set; }
 
-    /// <summary>
-    /// Content rendered inside the observed container. The context argument is the layout this
-    /// observer has resolved, so <c>Context="layout"</c> works. Plain child content keeps working.
-    /// </summary>
+    /// <summary>Content rendered inside the observed container. Plain child content does not receive the context.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
     /// <summary>Extra CSS classes appended to the root.</summary>
@@ -100,6 +113,20 @@
 
     private TmLayoutMode Current() => TmLayout.Resolve(LayoutMode, Parent, _measured, InitialMode);
 
+    private RenderFragment RenderContent => builder =>
+    {
+        if (LayoutContent is not null)
+            LayoutContent(Context)(builder);
+        else
+            ChildContent?.Invoke(builder);
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (ChildContent is not null && LayoutContent is not null)
+            throw new InvalidOperationException("Set ChildContent or LayoutContent, not both. LayoutContent is how an owner branches its own markup on the resolved layout.");
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         var resolved = Current();
@@ -113,7 +140,7 @@
         if (resolved == _resolved) return;
 
         _resolved = resolved;
-        await LayoutModeChanged.InvokeAsync(resolved);
+        await ResolvedLayoutChanged.InvokeAsync(resolved);
     }
 
     /// <summary>True when this observer measures its own root. A forced mode, or Auto under a forced ancestor, does not.</summary>
@@ -166,7 +193,7 @@
             if (resolved == _resolved) return;
 
             _resolved = resolved;
-            await LayoutModeChanged.InvokeAsync(resolved);
+            await ResolvedLayoutChanged.InvokeAsync(resolved);
             StateHasChanged();
         });
     }

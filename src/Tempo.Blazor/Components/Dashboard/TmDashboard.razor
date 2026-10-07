@@ -12,9 +12,10 @@
 @using Microsoft.JSInterop
 @implements IAsyncDisposable
 
-<TmLayoutObserver LayoutMode="LayoutMode" LayoutModeChanged="OnLayoutObservedAsync" Class="tm-dashboard-layout">
-<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") tm-dashboard--@Layout.CssModifier @Class"
-     data-layout="@Layout.CssModifier"
+<TmLayoutObserver LayoutMode="LayoutMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false" Class="tm-dashboard-layout">
+<LayoutContent Context="mode">
+<div class="tm-dashboard @(_isEditMode ? "tm-dashboard--edit" : "") tm-dashboard--@mode.CssModifier @Class"
+     data-layout="@mode.CssModifier"
      @ref="_dashboardElement">
     
     @* ── Toolbar ─────────────────────────────────────────────── *@
@@ -161,7 +162,7 @@
                     --grid-gap: @(_currentDashboard?.Grid.Gap ?? 16)px;">
             
             @* Grid Background (visible in edit mode) *@
-            @if (_isEditMode)
+            @if (_isEditMode && mode.IsDesktop)
             {
                 <div class="tm-dashboard-grid-bg">
                     @for (int i = 0; i < (_currentDashboard?.Grid.Columns ?? 12); i++)
@@ -183,10 +184,10 @@
                     <div class="tm-widget-header"
                          @ondragstart="(e) => OnDragStart(e, widget)"
                          @ondragend="OnDragEnd"
-                         draggable="@(_isEditMode && CanDrag(widget) ? "true" : "false")">
+                         draggable="@(_isEditMode && CanDrag(widget, mode) ? "true" : "false")">
                         
                         <div class="tm-widget-header-left">
-                            @if (_isEditMode && CanDrag(widget))
+                            @if (_isEditMode && CanDrag(widget, mode))
                             {
                                 <span class="tm-widget-drag-handle" title="@Loc["TmDashboard_DragToMove"]">
                                     <TmIcon Name="grip-vertical" Size="IconSize.Sm" />
@@ -226,7 +227,7 @@
                     }
                     
                     @* Resize Handles (edit mode only) ─────────────── *@
-                    @if (_isEditMode && CanResize(widget))
+                    @if (_isEditMode && CanResize(widget, mode))
                     {
                         <div class="tm-widget-resize-handle tm-widget-resize-se"
                              @onmousedown="@(e => OnResizeStart(e, widget, "se"))"></div>
@@ -317,6 +318,7 @@
           OnResult="HandleDeleteDialogResult"
           OkButtonText="@Loc["Tm_Delete"]"
           IsDangerous="true" />
+</LayoutContent>
 </TmLayoutObserver>
 
 @code {
@@ -337,18 +339,13 @@
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Raised when the rendered layout changes. The initial value is not a change.</summary>
-    [Parameter] public EventCallback<TmLayoutMode> LayoutModeChanged { get; set; }
+    /// <summary>
+    /// Raised when the rendered layout changes. Never pair <see cref="LayoutMode"/> with this
+    /// callback: it reports the resolved mode, and a two-way bind would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
-    private TmLayoutMode? _measured;
-
-    /// <summary>The layout rendered now, derived from the parameter and the last measurement.</summary>
-    private TmLayoutContext Layout => new(LayoutMode, TmLayout.Resolve(LayoutMode, parent: null, _measured, TmLayoutMode.Desktop));
-
-    private Task OnLayoutObservedAsync(TmLayoutMode mode)
-    {
-        _measured = mode;
-        return LayoutModeChanged.InvokeAsync(mode);
-    }
+    private Task OnResolvedLayoutChanged(TmLayoutMode mode) => ResolvedLayoutChanged.InvokeAsync(mode);
 
     [Inject] public IDashboardProvider? DashboardProvider { get; set; }
     [Inject] public IWidgetRegistry? WidgetRegistry { get; set; }
@@ -639,30 +636,15 @@
     {
         // Variables, not grid-column: an inline grid-column beats every @container rule, so the
         // container query in _dashboard.css is what turns these into 12, 2 or 1 column.
-        var order = _order.TryGetValue(widget.InstanceId, out var known) ? known : WidgetOrder(widget);
+        var order = OrderFor(widget);
         // Tablet span: wider than half the desktop grid takes the whole row, wider than a quarter
         // takes half, anything narrower takes a third. Two widgets then share a tablet row.
         var spanMd = widget.Width > Columns / 2 ? 6 : widget.Width > Columns / 4 ? 3 : 2;
         return $"--tm-w-x: {widget.X + 1}; --tm-w-span: {widget.Width}; --tm-w-span-md: {spanMd}; --tm-w-y: {widget.Y + 1}; --tm-w-rows: {widget.Height}; --tm-w-order: {order}; z-index: {widget.ZIndex};";
     }
 
-    private Dictionary<string, int> _order = new(StringComparer.Ordinal);
-
-    protected override void OnParametersSet() => RebuildOrder();
-
-    /// <summary>1-based visual order, row then column, computed once per render.</summary>
-    private void RebuildOrder()
-    {
-        _order = _widgets
-            .OrderBy(item => item.Y)
-            .ThenBy(item => item.X)
-            .ThenBy(item => item.InstanceId, StringComparer.Ordinal)
-            .Select((item, index) => (item.InstanceId, index + 1))
-            .ToDictionary(item => item.InstanceId, item => item.Item2, StringComparer.Ordinal);
-    }
-
-    /// <summary>1-based visual order, row then column, so a stacked layout reads like the desktop.</summary>
-    private int WidgetOrder(WidgetInstance widget)
+    /// <summary>1-based visual order, row then column, computed from the widgets as they are now.</summary>
+    private int OrderFor(WidgetInstance widget)
     {
         var index = _widgets
             .OrderBy(item => item.Y)
@@ -684,7 +666,7 @@
     }
 
     /// <summary>Drag is a desktop gesture. Below desktop the grid has restacked and the coordinates no longer match.</summary>
-    private bool CanDrag(WidgetInstance widget) => IsDraggable(widget) && Layout.IsDesktop;
+    private bool CanDrag(WidgetInstance widget, TmLayoutContext layout) => IsDraggable(widget) && layout.IsDesktop;
     
     private bool IsResizable(WidgetInstance widget)
     {
@@ -692,7 +674,7 @@
     }
 
     /// <summary>Resize handles follow the desktop grid. Below desktop they would resize a track that is no longer there.</summary>
-    private bool CanResize(WidgetInstance widget) => IsResizable(widget) && Layout.IsDesktop;
+    private bool CanResize(WidgetInstance widget, TmLayoutContext layout) => IsResizable(widget) && layout.IsDesktop;
     
     private bool CanCollapse(WidgetInstance widget)
     {

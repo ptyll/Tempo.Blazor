@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "description": "Resolves which layout a component renders. The order is an explicit mode, then a forced ancestor, then this component's own measurement, then an Auto ancestor's resolved mode, then the initial mode.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayout.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmLayout"
+}

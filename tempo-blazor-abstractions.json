@@ -11773,14 +11773,14 @@
       ]
     },
     {
+      "itemName": "TmLayout",
       "kind": "Class",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Abstractions.Layout",
-      "description": "Resolves which layout a component renders. The order is fixed so a host, an overlay and a test all reach the same answer: an explicit mode, then a forced ancestor, then this component's own measurement, then the initial mode.",
+      "description": "Resolves which layout a component renders. The order is an explicit mode, then a forced ancestor, then this component's own measurement, then an Auto ancestor's resolved mode, then the initial mode.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayout.cs",
-      "documentationStatus": "generated",
-      "itemName": "TmLayout"
+      "documentationStatus": "merged"
     },
     {
       "itemName": "TmLayoutContext",
@@ -11827,6 +11827,24 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutMode.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmLayoutScopes",
+      "kind": "Class",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "Names of the layout cascades a component can ask for. Viewport is the layout of the viewport, as opposed to the container the trigger sits in.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutScopes.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Viewport",
+          "kind": "Field",
+          "type": "string",
+          "description": "The layout of the viewport, as opposed to the container the trigger sits in."
+        }
+      ]
     },
     {
       "itemName": "ITmLocalizer",
@@ -36039,11 +36057,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1476,
-    "manualItemCount": 1475,
-    "generatedItemCount": 1459,
-    "generatedOnlyItemCount": 1,
+    "itemCount": 1477,
+    "manualItemCount": 1477,
+    "generatedItemCount": 1460,
+    "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1459
+    "publicApiTypeCount": 1460
   }
 }

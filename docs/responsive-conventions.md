@@ -70,8 +70,10 @@ CSS container queries cover the visual change. A component that must **branch it
 pane, swap a dialog for a sheet) uses the mode, because a container query cannot change the markup.
 
 ```razor
-<TmLayoutObserver LayoutMode="LayoutMode" LayoutModeChanged="OnLayoutChanged">
-    <MyPane />
+<TmLayoutObserver LayoutMode="LayoutMode" ResolvedLayoutChanged="OnLayoutChanged">
+    <LayoutContent Context="layout">
+        <MyPane Layout="layout" />
+    </LayoutContent>
 </TmLayoutObserver>
 ```
 
@@ -95,7 +97,8 @@ else
 `<TmButton Class="tm-btn-icon" />`: the size modifier drives the square.
 
 Resolution order, in `TmLayout.Resolve`: an explicit (non-Auto) parameter, then a forced ancestor
-(a cascaded context whose `Mode` is not Auto), then this component's own measurement, then
+(a cascaded context whose `Mode` is not Auto), then this component's own measurement, then the
+ancestor's resolved mode when that ancestor is itself Auto (the app-level fallback), then
 `InitialMode`. An Auto component under a forced ancestor adopts the ancestor's resolved mode and
 does not import the observer.
 
@@ -114,7 +117,14 @@ viewport) when the trigger cascaded nothing.
 - Children read the cascaded `TmLayoutContext` (`Mode`, `Resolved`, `IsMobile`, `IsTablet`,
   `IsDesktop`, `CssModifier`). The root also carries `tm-layout--{mode}` and `data-layout`, so CSS
   can branch without the context.
-- `LayoutModeChanged` fires when the rendered mode changes. The initial value is not a change.
+- `ResolvedLayoutChanged` fires when the rendered mode changes. The initial value is not a change.
+  Never pair `LayoutMode` with `ResolvedLayoutChanged`: the callback reports the resolved mode, and a
+  two-way bind would pin that mode. An owner that must branch its own markup uses `LayoutContent`,
+  which receives the context; it does not keep a copy of the mode.
+- An app-level `<TmLayoutObserver IsViewportScope="true">` also cascades its context under
+  `TmLayoutScopes.Viewport`. Anything positioned against the viewport (a modal, a dialog, a bottom
+  sheet, an action bar) resolves `explicit parameter > that viewport context > InitialMode`. The
+  trigger's own container only sizes inline content, such as a popover's width.
 
 `TmDashboard` is the pilot consumer. Its grid follows the resolved mode: 12 columns on desktop, six
 on tablet, one on mobile. Inside tablet, below 768px of the dashboard's own container, the grid

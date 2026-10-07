@@ -15,10 +15,23 @@
       "description": "Auto measures the root unless a forced ancestor has decided. Desktop, Tablet or Mobile force that layout and skip the observer."
     },
     {
-      "name": "LayoutModeChanged",
+      "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,
-      "description": "Raised when the rendered mode changes. The initial value is not a change."
+      "description": "Raised when the rendered mode changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
+    },
+    {
+      "name": "LayoutContent",
+      "type": "RenderFragment<TmLayoutContext>?",
+      "isRequired": false,
+      "description": "Content that receives the resolved layout. Use it instead of ChildContent when the owner must branch its own markup. Setting both throws."
+    },
+    {
+      "name": "IsViewportScope",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Also cascades the context under the name TmLayoutScopes.Viewport, so an overlay can ask for the viewport layout rather than the container the trigger sits in."
     },
     {
       "name": "ChildContent",
@@ -58,7 +71,7 @@
     "tm-layout--desktop",
     "tm-layout--tablet",
     "tm-layout--mobile",
-    "tm-layout--shrink"
+    "tm-layout--no-container"
   ],
   "examples": [
     {

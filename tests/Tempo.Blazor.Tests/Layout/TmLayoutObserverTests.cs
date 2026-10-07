@@ -154,13 +154,13 @@ public class TmLayoutObserverTests : LocalizationTestBase
         TmLayoutMode? reported = null;
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
-            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
 
         reported.Should().BeNull("the initial forced value is the caller's own value, not a change");
 
         cut.Render(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
-            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
 
         reported.Should().Be(TmLayoutMode.Mobile);
     }
@@ -174,20 +174,20 @@ public class TmLayoutObserverTests : LocalizationTestBase
         TmLayoutMode? reported = null;
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)
-            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
 
         await cut.InvokeAsync(() => cut.Instance.OnLayoutModeChanged("desktop"));
         reported = null;
 
         cut.Render(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
-            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
         reported.Should().Be(TmLayoutMode.Mobile);
 
         reported = null;
         cut.Render(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)
-            .Add(p => p.LayoutModeChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
+            .Add(p => p.ResolvedLayoutChanged, EventCallback.Factory.Create<TmLayoutMode>(this, mode => reported = mode)));
 
         cut.Find(".tm-layout").GetAttribute("data-layout").Should().Be("desktop",
             "switching back to Auto returns to the mode measured while the layout was forced");

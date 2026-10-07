@@ -50,6 +50,14 @@
   `.tm-safe-area-top` use `calc(var(--tm-space-2) + env(safe-area-inset-*, 0px))`.
   The inset is zero unless the host page sets `viewport-fit=cover`.
 
+- **`TmLayoutObserver.LayoutModeChanged` is now `ResolvedLayoutChanged`.** The callback reports the
+  resolved mode, so pairing it with `LayoutMode` in a two-way bind would pin that mode. `TmDashboard`
+  renames its callback the same way. An owner that must branch its own markup uses the new
+  `LayoutContent` (`RenderFragment<TmLayoutContext>`) instead of keeping a copy of the mode; setting
+  both `ChildContent` and `LayoutContent` throws. `IsViewportScope` also cascades the context under
+  `TmLayoutScopes.Viewport` for overlays positioned against the viewport. The no-container modifier
+  is `tm-layout--no-container` (it was `tm-layout--shrink`).
+
 - **`TmLayoutObserver` gains `IsContainer` and `InitialMode`.** `IsContainer` defaults to true;
   shrink-to-fit hosts such as a popover pass false so the root does not establish a containment
   context. `InitialMode` defaults to Desktop and is the mode rendered before the first measurement

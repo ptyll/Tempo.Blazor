@@ -10,7 +10,7 @@
 }
 
 /* A shrink-to-fit host (a popover) must not establish a containment context. */
-.tm-layout.tm-layout--shrink {
+.tm-layout.tm-layout--no-container {
   container-type: normal;
   container-name: none;
 }

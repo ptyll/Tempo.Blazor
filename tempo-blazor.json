@@ -6439,18 +6439,18 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Auto",
-          "description": "Auto measures the dashboard and reports the mode on data-layout. The grid restacks by container query regardless (12 columns, 6 below 1024px, 2 below 768px, 1 below 640px). A forced value reports that mode without measuring."
-        },
-        {
-          "name": "LayoutModeChanged",
-          "type": "EventCallback<TmLayoutMode>",
-          "isRequired": false,
-          "description": "Raised when the rendered layout changes."
+          "description": "Auto measures the dashboard. The grid reads the resolved mode: 12 columns on desktop, 6 on tablet, 1 on mobile, and 2 inside tablet below 768px of the dashboard container. A forced value restacks the grid and never measures."
         },
         {
           "name": "OnDashboardChanged",
           "type": "EventCallback<DashboardConfig>",
           "isRequired": false
+        },
+        {
+          "name": "ResolvedLayoutChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the rendered layout changes. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "ShowTitle",
@@ -17332,7 +17332,7 @@
           "name": "ChildContent",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Content rendered inside the observed container. The context argument is the resolved layout, so Context=\"layout\" works; plain child content keeps working."
+          "description": "Content rendered inside the observed container. The resolved layout is cascaded as TmLayoutContext, so a child reads it with a CascadingParameter."
         },
         {
           "name": "Class",
@@ -17355,6 +17355,19 @@
           "description": "When false the root does not establish a containment context. Shrink-to-fit hosts such as a popover pass false."
         },
         {
+          "name": "IsViewportScope",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Also cascades the context under the name TmLayoutScopes.Viewport, so an overlay can ask for the viewport layout rather than the container the trigger sits in.",
+          "default": "false"
+        },
+        {
+          "name": "LayoutContent",
+          "type": "RenderFragment<TmLayoutContext>?",
+          "isRequired": false,
+          "description": "Content that receives the resolved layout. Use it instead of ChildContent when the owner must branch its own markup. Setting both throws."
+        },
+        {
           "name": "LayoutMode",
           "type": "TmLayoutMode",
           "isRequired": false,
@@ -17362,10 +17375,10 @@
           "description": "Auto measures the root unless a forced ancestor has decided. Desktop, Tablet or Mobile force that layout and skip the observer."
         },
         {
-          "name": "LayoutModeChanged",
+          "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the rendered mode changes. The initial value is not a change."
+          "description": "Raised when the rendered mode changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "Style",
@@ -17379,7 +17392,7 @@
         "tm-layout--desktop",
         "tm-layout--tablet",
         "tm-layout--mobile",
-        "tm-layout--shrink"
+        "tm-layout--no-container"
       ],
       "examples": [
         {

@@ -49,13 +49,13 @@
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Auto",
-      "description": "Auto measures the dashboard and reports the mode on data-layout. The grid restacks by container query regardless (12 columns, 6 below 1024px, 2 below 768px, 1 below 640px). A forced value reports that mode without measuring."
+      "description": "Auto measures the dashboard. The grid reads the resolved mode: 12 columns on desktop, 6 on tablet, 1 on mobile, and 2 inside tablet below 768px of the dashboard container. A forced value restacks the grid and never measures."
     },
     {
-      "name": "LayoutModeChanged",
+      "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,
-      "description": "Raised when the rendered layout changes."
+      "description": "Raised when the rendered layout changes. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
     }
   ],
   "cssClasses": [

@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "description": "Names of the layout cascades a component can ask for. Viewport is the layout of the viewport, as opposed to the container the trigger sits in.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutScopes.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmLayoutScopes"
+}
