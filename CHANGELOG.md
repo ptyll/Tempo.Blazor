@@ -162,6 +162,9 @@
 - `TmOverlayPanel.AriaLabel` / `TmOverlayPanel.AriaLabelledBy` parameters for giving the panel an
   accessible name. Every `Role="dialog"` panel ships one; `AriaLabelledBy` is preferred when the
   panel renders a visible title.
+- `OverlayPanelRules_Inventory_*` tests pin the exact `.tm-overlay-panel` rule set of the bundled
+  CSS (the `:where()` reset, the fallback closed-state hide, the `:where()` open display) so a
+  new or re-weighted global rule on the shared element fails as a finding (CF03c).
 
 ### Changed
 
