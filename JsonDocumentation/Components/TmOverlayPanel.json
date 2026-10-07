@@ -111,7 +111,19 @@
       "name": "Role",
       "type": "string?",
       "isRequired": false,
-      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip."
+      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name rendered as aria-label on the panel element. Required for Role=\"dialog\" panels that do not render a visible title to reference via AriaLabelledBy (since 2.9.1)."
+    },
+    {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name rendered as aria-labelledby on the panel element. Takes precedence over AriaLabel — point it at the visible title's id; the referenced element must be present (and, for ids inside ChildContent, rendered) while the panel is open (since 2.9.1)."
     },
     {
       "name": "ChildContent",
@@ -133,7 +145,7 @@
   "examples": [
     {
       "title": "Anchored panel",
-      "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
+      "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\"\n                AriaLabel=\"Details\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
     }
   ]
 }

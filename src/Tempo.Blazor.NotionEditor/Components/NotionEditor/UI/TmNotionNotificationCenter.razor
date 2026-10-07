@@ -38,9 +38,10 @@
                     Align="OverlayAlign.End"
                     Offset="8"
                     Role="dialog"
+                    AriaLabelledBy="@_titleId"
                     Class="tm-notification-bell__dropdown tm-notion-notifications__panel">
             <div class="tm-notification-bell__header">
-                <span class="tm-notification-bell__title">@Loc["Notion_Notifications_Title"]</span>
+                <span id="@_titleId" class="tm-notification-bell__title">@Loc["Notion_Notifications_Title"]</span>
                 <div class="tm-notification-bell__actions">
                     <button type="button"
                             class="tm-notification-bell__filter"
@@ -132,8 +133,9 @@
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _pollCts;
     private ElementReference _buttonRef;
-    // Per-instance id so the toggle's aria-controls can reference the overlay panel element.
+    // Per-instance ids so the toggle's aria-controls and the panel's aria-labelledby resolve.
     private readonly string _panelId = $"tm-notion-notification-panel-{Guid.NewGuid():n}";
+    private readonly string _titleId = $"tm-notion-notification-title-{Guid.NewGuid():n}";
 
     private int BadgeCount => _unreadCount;
 

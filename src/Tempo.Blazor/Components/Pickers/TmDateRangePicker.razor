@@ -53,6 +53,8 @@
                     Align="OverlayAlign.Start"
                     Offset="4"
                     Role="dialog"
+                    AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
+                    AriaLabel="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDateRangePicker_From"]) : null)"
                     Class="tm-date-range-popup"
                     aria-modal="true">
         @if (ShowPresets && EffectivePresets.Count > 0)

@@ -15,6 +15,8 @@
          class="tm-overlay-panel @Class"
          popover="manual"
          role="@Role"
+         aria-label="@AriaLabel"
+         aria-labelledby="@AriaLabelledBy"
          data-testid="@RootTestId("tm-overlay-panel")"
          @attributes="AdditionalAttributes">
         @ChildContent
@@ -101,6 +103,19 @@
 
     /// <summary>ARIA role of the panel — typically <c>menu</c>, <c>listbox</c>, <c>dialog</c> or <c>tooltip</c>.</summary>
     [Parameter] public string? Role { get; set; }
+
+    /// <summary>
+    /// Accessible name for the panel — emitted as <c>aria-label</c>. Every <c>Role="dialog"</c>
+    /// panel must get a name from here or <see cref="AriaLabelledBy"/>: an unnamed dialog
+    /// announces only "dialog" and fails axe's aria-dialog-name rule.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// Id of the element that names the panel — emitted as <c>aria-labelledby</c>. Prefer this
+    /// over <see cref="AriaLabel"/> when the panel already renders a visible title.
+    /// </summary>
+    [Parameter] public string? AriaLabelledBy { get; set; }
 
     /// <summary>Panel content. Rendered only while the panel is open.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }

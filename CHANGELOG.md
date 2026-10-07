@@ -159,6 +159,9 @@
   `ScopedCssOwnershipTests` with its own shrink-only baseline. The audit now also flags the named
   colours `white` and `black`, and judges white-on-primary per rule rather than per line. See
   `docs/css-token-aliases.md` and `docs/scoped-css-ownership.md`.
+- `TmOverlayPanel.AriaLabel` / `TmOverlayPanel.AriaLabelledBy` parameters for giving the panel an
+  accessible name. Every `Role="dialog"` panel ships one; `AriaLabelledBy` is preferred when the
+  panel renders a visible title.
 
 ### Changed
 
@@ -211,6 +214,16 @@
   max-width: calc(100vw − 1.5rem)`, and a new source sweep
   (`OverlayPanelScopedCssTests`) fails closed on any scoped rule targeting a class passed to
   `TmOverlayPanel` without `::deep`.
+
+- **Every `Role="dialog"` overlay panel now exposes an accessible name (N326).** `TmOverlayPanel`
+  gained `AriaLabel`/`AriaLabelledBy`; the seven dialog-role consumers ship names — both
+  notification centers point `aria-labelledby` at their visible title, the date pickers point at
+  the field label (falling back to a localized `aria-label` when `Label` is unset), and
+  TmColorPicker/TmMultiColumnComboBox use localized `aria-label`s. A new source sweep
+  (`TmOverlayPanelDialogNamingTests`) enumerates every `<TmOverlayPanel Role="dialog">` under
+  `src/`, verifies the rendered panel carries `aria-label` or an `aria-labelledby` that resolves
+  to a present element while open, and fails closed on unnamed sites — including sites it cannot
+  render (`unmeasurable:`).
 
 ## 2.9.0 - 2026-09-27
 

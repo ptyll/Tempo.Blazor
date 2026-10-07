@@ -43,4 +43,34 @@ public class NotionNotificationCenterE2ETests : WasmTestBase
         Assert.IsTrue(Math.Abs(narrowWidth - 366f) < 1.5f,
             $"at 390px the panel must clamp to viewport − 24px = 366px (got {narrowWidth}px)");
     }
+
+    [TestMethod]
+    public async Task NotionNotificationCenter_Panel_ExposesAccessibleName()
+    {
+        // N326: a Role="dialog" overlay must carry an accessible name — here aria-labelledby
+        // pointing at the visible title rendered inside the open panel.
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.GotoAsync(PageUrl);
+        await WaitForAppReadyAsync(page);
+
+        var toggle = page.Locator("[data-testid='notion-notification-toggle']").First;
+        await toggle.ClickAsync();
+
+        var panel = page.Locator(".tm-notion-notifications__panel.tm-overlay-panel--open");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        Assert.AreEqual("dialog", await panel.GetAttributeAsync("role"));
+
+        var labelledBy = await panel.GetAttributeAsync("aria-labelledby");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(labelledBy),
+            "the dialog panel must be named by its visible title via aria-labelledby");
+
+        var title = panel.Locator($"#{labelledBy}");
+        Assert.AreEqual(1, await title.CountAsync(),
+            $"aria-labelledby must resolve to an element inside the open panel (id '{labelledBy}')");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(await title.First.TextContentAsync()),
+            "the naming element must carry non-empty text");
+    }
 }
