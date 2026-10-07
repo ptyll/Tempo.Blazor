@@ -329,6 +329,23 @@
   exists to outlast still loses the race. Affects `TmNotionSlashMenu`,
   `TmNotionMentionMenu`, and `TmNotionTokenDropdown`.
 
+- **The InteractiveAuto demo now proves the WebAssembly renderer actually claims the page
+  (CF18-4).** The shared demo layout stamps `data-render-mode` from `RendererInfo.Name` —
+  `Static` under prerender, `Server` while only the SignalR renderer is attached, and
+  `WebAssembly` only when the WASM renderer owns the layout. The new E2E test models the
+  real .NET auto-mode contract instead of asserting a live swap that `blazor.web.js`
+  deliberately never performs: on the first visit the `onWebAssemblyFailedToLoadQuickly`
+  latch assigns auto components to the Server renderer and there is no migration once a
+  renderer claims a component; only after the WASM runtime finishes booting does the
+  framework persist `blazor-resource-hash:<assembly>` to `localStorage`, and on subsequent
+  navigations the matching hash skips the latch so auto descriptors stay unassigned until
+  the WASM renderer claims them. The test waits for the persisted hash (deterministic
+  proof a WASM boot fully completed — Debug payloads at the auto throttle of one download
+  at a time take tens of seconds), reloads, and asserts the marker reaches `WebAssembly`.
+  Earlier RED runs that observed `Server` for 90+ seconds were this designed latch, not a
+  hosting defect: `dotnetReady` resolves, all ~300 runtime assets fetch 200, and the
+  second navigation does hydrate on `WebAssembly`.
+
 ## 2.9.0 - 2026-09-27
 
 The number is 2.9.0 rather than 2.8.27 because this release carries a breaking change
