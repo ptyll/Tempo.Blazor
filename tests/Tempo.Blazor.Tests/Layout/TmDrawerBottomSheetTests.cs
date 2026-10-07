@@ -53,6 +53,19 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Bottom_NamesTheSnapByItsValue()
+    {
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.SnapPoints, new[] { 0.25, 0.5, 0.75, 1 })
+            .Add(x => x.SnapIndex, 2)
+            .AddChildContent("Body"));
+
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-valuetext").Should().Be("75 %");
+    }
+
+    [Fact]
     public void Bottom_DefaultsToTheHalfSnap_AndExposesTheSnapList()
     {
         var cut = Render<TmDrawer>(p => p

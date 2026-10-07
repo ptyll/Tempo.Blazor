@@ -264,17 +264,11 @@
         _lastReported = resolved;
         if (!first)
         {
-            _ = ResolvedLayoutChanged.InvokeAsync(resolved);
+            await ResolvedLayoutChanged.InvokeAsync(resolved);
         }
     }
 
-    private void HandleOverlayClick()
-    {
-        if (CloseOnOverlayClick)
-        {
-            OnCancelClick();
-        }
-    }
+    private Task HandleOverlayClick() => CloseOnOverlayClick ? OnCancelClick() : Task.CompletedTask;
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -2317,6 +2317,7 @@
   "TmSheet_SnapHalf": "Half",
   "TmSheet_SnapFull": "Full",
   "TmSheet_SnapIndex": "Snap {0} of {1}",
+  "TmSheet_SnapPercent": "{0} %",
   "TmDemo_SheetSection": "Sheet, footer and focus",
   "TmDemo_OpenSheet": "Open sheet",
   "TmDemo_StackedFooter": "Stacked footer",

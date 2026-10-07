@@ -97,6 +97,26 @@ public class TmModalPresentationTests : LocalizationTestBase
         modal.InnerHtml.Should().Contain("tm-modal-footer");
     }
 
+    [Fact]
+    public void StackedFooter_IsNotInsideAMediaQuery()
+    {
+        var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
+        var rule = css.IndexOf(".tm-modal-footer--stacked", StringComparison.Ordinal);
+        rule.Should().BeGreaterThan(0);
+        var media = css.LastIndexOf("@media", rule, StringComparison.Ordinal);
+        if (media >= 0)
+        {
+            css.IndexOf('}', media).Should().BeLessThan(rule, "the stacked footer applies at every width");
+        }
+    }
+
+    private static string FindRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("repo root not found");
+    }
+
     [Theory]
     [InlineData(FooterLayout.Inline, "tm-modal-footer--inline")]
     [InlineData(FooterLayout.Stacked, "tm-modal-footer--stacked")]

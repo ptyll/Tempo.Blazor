@@ -25,7 +25,7 @@ else
             aria-valuemin="0"
             aria-valuemax="@Math.Max(0, SnapCount - 1)"
             aria-valuenow="@SnapIndex"
-            aria-valuetext="@ValueText"
+            aria-valuetext="@ValueText(SnapValue)"
             aria-orientation="vertical"
             data-testid="@RootTestId("tm-sheet-handle")"
             @onkeydown="HandleKey">
@@ -49,18 +49,21 @@ else
     /// <summary>The snap the sheet currently renders.</summary>
     [Parameter] public int SnapIndex { get; set; }
 
+    /// <summary>The snap's fraction of the viewport, which the value text names.</summary>
+    [Parameter] public double SnapValue { get; set; }
+
     /// <summary>Raised when the keyboard moves the slider to another snap.</summary>
     [Parameter] public EventCallback<int> SnapIndexChanged { get; set; }
 
     /// <summary>Raised when ArrowDown is pressed at the lowest snap, which dismisses the sheet.</summary>
     [Parameter] public EventCallback OnDismiss { get; set; }
 
-    private string ValueText => SnapIndex switch
+    private string ValueText(double value) => value switch
     {
-        0 => Loc["TmSheet_SnapPeek"],
-        1 => Loc["TmSheet_SnapHalf"],
-        2 => Loc["TmSheet_SnapFull"],
-        _ => string.Format(Loc["TmSheet_SnapIndex"], SnapIndex + 1, Math.Max(1, SnapCount))
+        <= 0.35 => Loc["TmSheet_SnapPeek"],
+        <= 0.65 => Loc["TmSheet_SnapHalf"],
+        >= 0.9 => Loc["TmSheet_SnapFull"],
+        _ => string.Format(Loc["TmSheet_SnapPercent"], (int)Math.Round(value * 100))
     };
 
     private async Task HandleKey(KeyboardEventArgs e)

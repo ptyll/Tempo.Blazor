@@ -1,5 +1,6 @@
 @page "/feedback"
 @inject ToastService Toast
+@inject ITmLocalizer Loc
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Workflow
 @using Tempo.Blazor.Components.Notifications
@@ -616,6 +617,8 @@
             {
                 <p class="text-sm text-slate-600 dark:text-slate-400">Filter row @i — the body scrolls, the footer stays put.</p>
             }
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="sheet-open-dialog"
+                      OnClick="@(() => { _sheetDialog = true; StateHasChanged(); })">@Loc["TmDemo_ToggleFocusScope"]</TmButton>
         </div>
     </ChildContent>
     <FooterContent>
@@ -623,6 +626,9 @@
                   OnClick="@(() => { _sheetOpen = false; StateHasChanged(); })">Apply</TmButton>
     </FooterContent>
 </TmDrawer>
+
+<TmDialog Show="_sheetDialog" Type="DialogType.Confirm" Title="@Loc["TmDemo_FocusScopeLabel"]"
+          Message="@Loc["TmDemo_InlineSheetBody"]" OnResult="@(_ => { _sheetDialog = false; StateHasChanged(); })" />
 
 <!-- Context Menu & Split Button -->
 <section class="demo-section">
@@ -995,6 +1001,7 @@
     private bool _drawerRightOpen;
     private bool _drawerLeftOpen;
     private bool _sheetOpen;
+    private bool _sheetDialog;
     private int _bulkCount;
     private int? _quantity = 1;
     private int? _amount = 100;

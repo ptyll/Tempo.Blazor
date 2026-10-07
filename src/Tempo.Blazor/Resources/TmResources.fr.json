@@ -2317,6 +2317,7 @@
   "TmSheet_SnapHalf": "Moitié",
   "TmSheet_SnapFull": "Plein",
   "TmSheet_SnapIndex": "Cran {0} sur {1}",
+  "TmSheet_SnapPercent": "{0} %",
   "TmDemo_SheetSection": "Volet, pied de page et focus",
   "TmDemo_OpenSheet": "Ouvrir le volet",
   "TmDemo_StackedFooter": "Pied de page empilé",

@@ -89,9 +89,16 @@
 /* An inline sheet sits in its container. The root must not eat clicks meant for the canvas behind
    it, and it does not lift for a keyboard: it is not positioned against the viewport. */
 .tm-drawer--inline.tm-drawer--bottom {
+    /* The host must be positioned. The sheet then fills it and anchors to its bottom edge. */
+    inset: 0;
     top: auto;
     pointer-events: none;
     padding-bottom: 0;
+}
+
+.tm-drawer--inline.tm-drawer--bottom .tm-drawer__panel {
+    height: calc(var(--tm-sheet-height, 0.5) * 100%);
+    max-height: calc(var(--tm-sheet-max, 0.85) * 100%);
 }
 
 .tm-drawer--inline .tm-drawer__panel {

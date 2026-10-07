@@ -334,16 +334,7 @@
     padding: var(--tm-space-3) var(--tm-space-4);
   }
 
-  /* Stacking is opt-in. The old rule stacked every footer's buttons below 640px, which pushed the
-     confirm action below the fold on a phone; a host that wants the stack sets FooterLayout. */
-  .tm-modal-footer--stacked {
-    flex-direction: column-reverse;
-  }
 
-  .tm-modal-footer--stacked .tm-btn {
-    width: 100%;
-    min-width: auto;
-  }
 
   .tm-dialog {
     padding: var(--tm-space-6);
@@ -351,13 +342,6 @@
     margin: var(--tm-space-4);
   }
 
-  .tm-dialog-footer.tm-modal-footer--stacked {
-    flex-direction: column-reverse;
-  }
-
-  .tm-dialog-footer.tm-modal-footer--stacked .tm-btn {
-    width: 100%;
-  }
 }
 
 /* The margin 2.8.25 painted below 768px came from a stray @media rule in _dashboard.css —
@@ -377,7 +361,7 @@
   align-items: flex-end;
   /* The keyboard gap pads the overlay, so the whole sheet lifts and the panel keeps its own
      safe-area padding. Padding the panel instead ate the dialog's bottom padding. */
-  padding: 0 0 var(--tm-sheet-keyboard, 0px);
+  padding: 0 0 var(--tm-sheet-keyboard, 0px) 0;
 }
 
 /* The container fills the overlay and anchors the panel to the bottom edge. overflow: visible so the
@@ -401,10 +385,26 @@
   flex-wrap: wrap;
 }
 
+/* Stacking is the host's choice, at every width. A media query used to stack every footer below
+   640px, which pushed the confirm action below the fold. */
+.tm-modal-footer--stacked,
+.tm-dialog-footer.tm-modal-footer--stacked {
+  flex-direction: column-reverse;
+}
+
+.tm-modal-footer--stacked .tm-btn,
+.tm-dialog-footer.tm-modal-footer--stacked .tm-btn {
+  width: 100%;
+  min-width: auto;
+}
+
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn,
 .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline > .tm-btn {
-  flex: 1 1 0;
-  min-width: min(100%, 8rem);
+  flex: 1 1 8rem;
+  min-width: fit-content;
+  max-width: 100%;
+  white-space: normal;
+  height: auto;
 }
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer {
@@ -467,6 +467,11 @@
   max-height: 100%;
   margin: 0;
   border-radius: 0;
+}
+
+/* The grabber spans both columns of an inline dialog, or it lands in the icon column. */
+.tm-dialog--inline .tm-sheet__handle {
+  grid-column: 1 / -1;
 }
 
 /* An inline dialog puts its icon beside the content instead of above it. */

@@ -2322,6 +2322,7 @@
   "TmSheet_SnapHalf": "Polovina",
   "TmSheet_SnapFull": "Celá výška",
   "TmSheet_SnapIndex": "Krok {0} z {1}",
+  "TmSheet_SnapPercent": "{0} %",
   "TmDemo_SheetSection": "Panel, zápatí a fokus",
   "TmDemo_OpenSheet": "Otevřít panel",
   "TmDemo_StackedFooter": "Skládané zápatí",

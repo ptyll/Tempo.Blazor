@@ -38,6 +38,7 @@
                 <TmSheetHandle @ref="_handle"
                                SnapCount="_snaps.Length"
                                SnapIndex="_snapIndex"
+                               SnapValue="@(_snaps.Length == 0 ? 0 : _snaps[Math.Clamp(_snapIndex, 0, _snaps.Length - 1)])"
                                SnapIndexChanged="SetSnapAsync"
                                OnDismiss="Close" />
             }
@@ -363,11 +364,16 @@
         return ReportResolved();
     }
 
+    private static bool _hintedMissingScope;
+
     private void HintMissingViewportScope()
     {
-#if DEBUG
+        if (_hintedMissingScope) return;
+        _hintedMissingScope = true;
+
+        // The library references neither IHostEnvironment nor the WASM host environment, so the
+        // Development check cannot be resolved here. Log once at Debug, in every build.
         Logger.LogDebug("TmDrawer has no viewport scope, so it measured its own root. Add <TmLayoutObserver IsViewportScope=\"true\" IsContainer=\"false\"> to your layout for flash-free mobile presentation.");
-#endif
     }
 
     private async Task ReportResolved()
