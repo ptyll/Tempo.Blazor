@@ -7,11 +7,11 @@ and dialog sheets size to their content and dismiss; they do not snap.
 ## Snaps and content height
 
 `SnapPoints` is a list of fractions, ascending, each between 0 and 1. The default is half and full
-(`[0.5, 1.0]`). A value above `MaxHeight` is clamped to it, so the gesture never sees a snap it
-cannot reach. A modal sheet measures those fractions against the visible viewport. An inline sheet
-(`Modal="false"`) measures them against its host. Snaps are clamped to `MaxHeight` and de-duplicated
-before the gesture sees them. An empty list sizes the panel to its content, still under `MaxHeight`
-(default 0.85). `SnapIndex` is two-way: the drawer adopts a change of the parameter, and a gesture
+(`[0.5, 1.0]`). A value above `MaxHeight` is clamped to it and duplicates are removed, so the
+gesture never sees a snap it cannot reach or two identical snaps. A modal sheet measures those
+fractions against the visible viewport. An inline sheet (`Modal="false"`) measures them against its
+host. An empty list sizes the panel to its content, still under `MaxHeight` (default 0.85).
+`SnapIndex` is two-way: the drawer adopts a change of the parameter, and a gesture
 reports the snap it settled on. A parent re-render that passes the same index does not reset a snap
 the user just dragged to.
 
