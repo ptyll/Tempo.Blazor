@@ -23,22 +23,17 @@
     
     <div class="showcase-card">
         <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            The <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmToastContainer /&gt;</code> component displays toast notifications. 
-            It is typically placed in your MainLayout. The demo below shows a local instance:
+            The <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmToastContainer /&gt;</code> component displays toast notifications.
+            It is placed once in the app layout (MainLayout here) and renders every toast the
+            scoped <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">ToastService</code> receives — one container per app,
+            so a toast never paints twice.
         </p>
-        
-        <div class="relative h-64 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900">
-            <div class="absolute inset-0 flex items-center justify-center">
-                <span class="text-slate-400 text-sm">Toast Container Preview Area</span>
-            </div>
-            <TmToastContainer />
-        </div>
-        
+
         <div class="mt-4 flex flex-wrap gap-3">
-            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowSuccess("Success toast!", "Success"))">Show Success</TmButton>
-            <TmButton Variant="ButtonVariant.Danger" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowError("Error toast!", "Error"))">Show Error</TmButton>
-            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowWarning("Warning toast!"))">Show Warning</TmButton>
-            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="@(() => _demoToastService.ShowInfo("Info toast!"))">Show Info</TmButton>
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="@(() => Toast.ShowSuccess("Success toast!", "Success"))">Show Success</TmButton>
+            <TmButton Variant="ButtonVariant.Danger" Size="ButtonSize.Sm" OnClick="@(() => Toast.ShowError("Error toast!", "Error"))">Show Error</TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="@(() => Toast.ShowWarning("Warning toast!"))">Show Warning</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="@(() => Toast.ShowInfo("Info toast!"))">Show Info</TmButton>
         </div>
     </div>
 </section>
@@ -997,7 +992,6 @@
 </section>
 
 @code {
-    private ToastService _demoToastService = new ToastService();
     private bool _showInternal;
     private int _activeStep;
     private string _stepperSize = "Medium";
