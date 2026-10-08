@@ -79,8 +79,9 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
         var drawer = cut.FindComponent<TmDrawer>();
         drawer.Instance.CloseOnEscape.Should().BeFalse();
         drawer.Instance.CloseOnOverlayClick.Should().BeFalse();
-        // A sheet that cannot be dismissed must not swipe-dismiss either.
+        // A sheet that cannot be dismissed must not swipe-dismiss either, and shows no grabber.
         drawer.Instance.SwipeToDismiss.Should().BeFalse();
+        drawer.Instance.ShowHandle.Should().BeFalse();
     }
 
     [Fact]
@@ -124,8 +125,8 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     [Fact]
     public void MobilePresentationForcedLayoutModeMobile_UsesSheetWithoutDomMeasurement()
     {
-        // A forced layout decides the sheet without any measurement of its own — the drawer it
-        // composes may still measure the viewport for its own keyboard tracking.
+        // A forced layout never imports the viewport probe — the test renders with no DOM at all.
+        // The resolved layout is handed to the composed drawer, so it does not measure a second time.
         var cut = Render<TmOverlayPanel>(p => p
             .Add(c => c.IsOpen, true)
             .Add(c => c.MobilePresentation, PanelPresentation.Auto)
@@ -135,6 +136,86 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
 
         cut.FindAll(".tm-drawer.tm-drawer--bottom").Should().HaveCount(1);
         cut.FindAll(".tm-overlay-panel").Should().BeEmpty();
+        cut.FindAll(".tm-viewport-probe").Should().BeEmpty();
+
+        var drawer = cut.FindComponent<TmDrawer>();
+        drawer.Instance.LayoutMode.Should().Be(TmLayoutMode.Mobile);
+        drawer.Instance.InitialMode.Should().Be(TmLayoutMode.Mobile);
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_RendersSingleProbe_WithoutViewportScope()
+    {
+        // Auto without a cascaded viewport: the PANEL's probe measures once and the resolved
+        // layout is passed to the drawer — the drawer must not mount a probe of its own.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Auto)
+            .Add(c => c.InitialMode, TmLayoutMode.Mobile)
+            .Add(c => c.Title, "Filters")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.FindAll(".tm-viewport-probe").Should().HaveCount(1);
+    }
+
+    // ── Sheet content wrapper: Role, Id and AdditionalAttributes land on a content div inside
+    //    the drawer body, so menu/listbox ownership (axe aria-required-parent) and aria-controls
+    //    targets survive the popover→sheet switch. ──────────────────────────────────────────
+
+    [Fact]
+    public void MobilePresentationSheet_WrapsContent_WithRoleIdAndAttributes()
+    {
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Id, "picker-menu")
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Role, "menu")
+            .Add(c => c.Title, "Filters")
+            .Add(c => c.AdditionalAttributes, new Dictionary<string, object> { ["data-owner"] = "grid" })
+            .AddChildContent("<button role='menuitem'>One</button>"));
+
+        var content = cut.Find(".tm-overlay-panel-sheet__content");
+        content.GetAttribute("id").Should().Be("picker-menu");
+        content.GetAttribute("role").Should().Be("menu");
+        content.GetAttribute("data-owner").Should().Be("grid");
+        // The title names the wrapper too, so the menu dialog is labelled inside the sheet.
+        var labelledBy = content.GetAttribute("aria-labelledby");
+        labelledBy.Should().NotBeNullOrEmpty();
+        cut.FindAll($"[id='{labelledBy}']").Should().ContainSingle();
+        // The item sits INSIDE the role=menu wrapper.
+        content.QuerySelector("[role='menuitem']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_DialogRole_KeepsDialogRoleOnTheDrawerRoot()
+    {
+        // Role="dialog" panels (date pickers) keep the dialog role on the focus-scope/drawer
+        // root; the content wrapper carries no conflicting role, only the id + name.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Id, "calendar-popup")
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Role, "dialog")
+            .Add(c => c.Title, "Pick a date")
+            .AddChildContent("<div>Calendar</div>"));
+
+        var content = cut.Find(".tm-overlay-panel-sheet__content");
+        content.GetAttribute("role").Should().BeNull();
+        content.GetAttribute("id").Should().Be("calendar-popup");
+        cut.Find(".tm-focus-scope").GetAttribute("role").Should().Be("dialog");
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_ShowsGrabberWhileSwipeToDismissIsOn()
+    {
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Filters")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.FindComponent<TmDrawer>().Instance.ShowHandle.Should().BeTrue();
+        cut.Find(".tm-sheet__handle").Should().NotBeNull();
     }
 
     [Fact]
