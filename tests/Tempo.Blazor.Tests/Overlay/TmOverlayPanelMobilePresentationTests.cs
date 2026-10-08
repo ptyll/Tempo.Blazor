@@ -206,6 +206,27 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void MobilePresentationSheet_DoneCanBeDisabled_UntilTheConsumerIsReady()
+    {
+        // T8: the date-range sheet keeps Done disabled until both dates are picked — a half
+        // range must not close silently. The consumer drives the flag; other sheets are unaffected.
+        var disabled = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Period")
+            .Add(c => c.SheetDoneEnabled, false)
+            .AddChildContent("<div>Body</div>"));
+        disabled.Find(".tm-overlay-panel-sheet__done").HasAttribute("disabled").Should().BeTrue();
+
+        var enabled = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Period")
+            .AddChildContent("<div>Body</div>"));
+        enabled.Find(".tm-overlay-panel-sheet__done").HasAttribute("disabled").Should().BeFalse();
+    }
+
+    [Fact]
     public void MobilePresentationSheet_AnchoredRoot_CarriesTopLayerPopover()
     {
         // T7: the modal sheet's root is promoted to the browser top layer (popover="manual" +

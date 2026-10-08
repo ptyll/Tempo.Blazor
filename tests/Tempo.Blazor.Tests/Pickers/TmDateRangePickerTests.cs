@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -8,6 +9,61 @@ namespace Tempo.Blazor.Tests.Pickers;
 
 public class TmDateRangePickerTests : LocalizationTestBase
 {
+    [Fact]
+    public void DateRangePicker_SheetWithHalfRange_DoneIsDisabled()
+    {
+        // T8: in the sheet presentation the header Done stays disabled until BOTH dates are
+        // picked; Escape/outside still close and keep the partial selection (cancel semantics).
+        var viewport = new Tempo.Blazor.Abstractions.Layout.TmLayoutContext(
+            Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile,
+            Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile);
+
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.CascadingValue<Tempo.Blazor.Abstractions.Layout.TmLayoutContext>>(0);
+            builder.AddAttribute(1, "Name", Tempo.Blazor.Abstractions.Layout.TmLayoutScopes.Viewport);
+            builder.AddAttribute(2, "Value", viewport);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDateRangePicker>(0);
+                b.AddAttribute(1, "Value", (Start: (DateOnly?)new DateOnly(2026, 10, 20), End: (DateOnly?)null));
+                b.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<(DateOnly? Start, DateOnly? End)>(this, _ => { }));
+                b.CloseComponent();
+            }));
+            builder.CloseComponent();
+        });
+
+        cut.Find(".tm-date-range-trigger").Click();
+        cut.FindAll(".tm-overlay-panel-sheet").Should().HaveCount(1);
+        cut.Find(".tm-overlay-panel-sheet__done").HasAttribute("disabled").Should().BeTrue();
+    }
+
+    [Fact]
+    public void DateRangePicker_SheetWithFullRange_DoneIsEnabled()
+    {
+        var viewport = new Tempo.Blazor.Abstractions.Layout.TmLayoutContext(
+            Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile,
+            Tempo.Blazor.Abstractions.Layout.TmLayoutMode.Mobile);
+
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.CascadingValue<Tempo.Blazor.Abstractions.Layout.TmLayoutContext>>(0);
+            builder.AddAttribute(1, "Name", Tempo.Blazor.Abstractions.Layout.TmLayoutScopes.Viewport);
+            builder.AddAttribute(2, "Value", viewport);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDateRangePicker>(0);
+                b.AddAttribute(1, "Value", (Start: (DateOnly?)new DateOnly(2026, 10, 20), End: (DateOnly?)new DateOnly(2026, 10, 22)));
+                b.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<(DateOnly? Start, DateOnly? End)>(this, _ => { }));
+                b.CloseComponent();
+            }));
+            builder.CloseComponent();
+        });
+
+        cut.Find(".tm-date-range-trigger").Click();
+        cut.Find(".tm-overlay-panel-sheet__done").HasAttribute("disabled").Should().BeFalse();
+    }
+
     [Fact]
     public void DateRangePicker_ShowsTwoCalendars()
     {
