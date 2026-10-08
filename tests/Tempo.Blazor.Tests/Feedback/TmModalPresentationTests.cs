@@ -118,8 +118,10 @@ public class TmModalPresentationTests : LocalizationTestBase
         var buttonCss = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_button.css"));
 
         var inline = RuleFor(modalCss, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn");
-        inline.Should().Contain("min-width: 0",
-            "min-width: fit-content forces a long FR label out of a 320px sheet footer");
+        inline.Should().Contain("min-width: auto",
+            "min-width: fit-content pushed a long FR label out of a 320px sheet footer and min-width: 0 cut ordinary labels with a forced 50/50 split; auto wraps them to their own row first");
+        inline.Should().Contain("max-width: 100%",
+            "a single label wider than the whole row is capped, and only that one truncates");
         inline.Should().NotContain("height",
             "a height claim on .tm-btn from another stylesheet would outrank the tm-btn-sm/md size modifiers");
 
@@ -134,17 +136,30 @@ public class TmModalPresentationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void DefaultFooterButtons_CarryTheirLabelAsTheTitle()
+    public void SheetFooterButtons_CarryTheirLabelAsTheTitle_DesktopOnesDoNot()
     {
-        var cut = Render<TmModal>(p => p
+        var sheet = Render<TmModal>(p => p
             .Add(m => m.Show, true)
             .Add(m => m.Title, "Create")
+            .Add(m => m.MobilePresentation, MobilePresentation.Sheet)
             .Add(m => m.ShowDefaultFooterButtons, true)
             .AddChildContent("<p>Body</p>"));
 
-        cut.Find(".tm-modal-btn-ok").GetAttribute("title").Should().NotBeNullOrWhiteSpace();
-        cut.Find(".tm-modal-btn-cancel").GetAttribute("title").Should().NotBeNullOrWhiteSpace();
-        cut.Find(".tm-modal-btn-ok .tm-btn-label").Should().NotBeNull("the label is a span the footer can truncate");
+        sheet.Find(".tm-modal-btn-ok").GetAttribute("title").Should().NotBeNullOrWhiteSpace(
+            "the sheet footer may truncate the label, so the full text rides in the title");
+        sheet.Find(".tm-modal-btn-cancel").GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+
+        var dialog = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Create")
+            .Add(m => m.MobilePresentation, MobilePresentation.Dialog)
+            .Add(m => m.ShowDefaultFooterButtons, true)
+            .AddChildContent("<p>Body</p>"));
+
+        dialog.Find(".tm-modal-btn-ok").GetAttribute("title").Should().BeNull(
+            "a fully visible desktop label must not grow an 'OK' tooltip");
+        dialog.Find(".tm-modal-btn-cancel").GetAttribute("title").Should().BeNull();
+        dialog.Find(".tm-modal-btn-ok .tm-btn-label").Should().NotBeNull("the label is a span the footer can truncate");
     }
 
     /// <summary>Reads the declaration block of the last rule that declares the selector verbatim.</summary>

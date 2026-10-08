@@ -210,12 +210,20 @@
     /// <summary>The prompt placeholder: the caller's text, or the localized default when none was passed.</summary>
     private string ResolvedPromptPlaceholder => string.IsNullOrEmpty(PromptPlaceholder) ? Loc["TmDialog_PromptPlaceholder"] : PromptPlaceholder;
 
-    /// <summary>The full label as the title: a truncated sheet-footer label keeps its text reachable.</summary>
-    private Dictionary<string, object> FooterButtonAttrs(string label, string id) => new(StringComparer.Ordinal)
+    /// <summary>
+    /// The footer button's extra attributes. The full label rides as the title ONLY in the sheet
+    /// presentation, where the label may truncate with an ellipsis; on the desktop dialog it would
+    /// paint a pointless "OK" tooltip over a fully visible label (UX round 5, m-r5-1).
+    /// </summary>
+    private Dictionary<string, object> FooterButtonAttrs(string label, string id)
     {
-        ["title"] = label,
-        ["id"] = id,
-    };
+        var attrs = new Dictionary<string, object>(StringComparer.Ordinal) { ["id"] = id };
+        if (IsSheet)
+        {
+            attrs["title"] = label;
+        }
+        return attrs;
+    }
 
     private string _titleId = Guid.NewGuid().ToString("N");
     private readonly string _promptInputId = $"tm-dialog-{Guid.NewGuid():N}-input";

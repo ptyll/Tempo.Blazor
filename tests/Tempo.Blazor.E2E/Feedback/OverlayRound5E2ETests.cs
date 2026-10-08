@@ -211,8 +211,7 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
 
     [TestMethod]
     public async Task LongDialog_OverflowTurnsTheContentIntoARegion_TabReachesIt_AndArrowScrolls()
-    {
-        var page = await OpenAsync(1440);
+    {        var page = await OpenAsync(1440);
         await GotoAsync(page, "/modal-dialog");
 
         await page.GetByTestId("open-long-dialog").ClickAsync();
@@ -262,5 +261,105 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
 
         await ShootAsync(page, "1440-long-dialog-region-scroll");
         await page.Keyboard.PressAsync("Escape");
+    }
+
+    [TestMethod]
+    [DataRow(320)]
+    [DataRow(375)]
+    [DataRow(390)]
+    public async Task SheetFooter_RealisticLabelsAreNotTruncated_AndShortPairsStaySideBySide(int width)
+    {
+        var page = await OpenAsync(width, 844);
+        await GotoAsync(page, "/modal-dialog");
+
+        await page.GetByTestId("open-sheet").ClickAsync();
+        await page.Locator(".tm-modal-overlay").WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await page.WaitForTimeoutAsync(700);
+
+        // Realistic ≤30-char labels from the FR and CS resources — the ones a forced 50/50 split
+        // used to cut in half before the footer ever got to wrap.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const labels = document.querySelectorAll('.tm-modal-overlay .tm-modal-footer .tm-btn .tm-btn-label');
+                labels[0].textContent = 'Enregistrer les modifications';
+                labels[1].textContent = 'Uložit změny a zavřít';
+            }
+            """);
+        await page.WaitForTimeoutAsync(300);
+
+        var report = await ReadLabelMetricsAsync(page);
+        TestContext.WriteLine($"sheet footer {width}: {report}");
+        foreach (var label in JsonDocument.Parse(report).RootElement.GetProperty("labels").EnumerateArray())
+        {
+            Assert.IsTrue(label.GetProperty("scroll").GetDouble() <= label.GetProperty("client").GetDouble() + 1,
+                $"a realistic ≤30-char label must NOT truncate at {width}px — it wraps to its own row instead: {report}");
+        }
+
+        // The default short pair stays side by side on one row.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const labels = document.querySelectorAll('.tm-modal-overlay .tm-modal-footer .tm-btn .tm-btn-label');
+                labels[0].textContent = 'Cancel';
+                labels[1].textContent = 'OK';
+            }
+            """);
+        await page.WaitForTimeoutAsync(300);
+
+        var pair = await ReadLabelMetricsAsync(page);
+        using (var doc = JsonDocument.Parse(pair))
+        {
+            var buttons = doc.RootElement.GetProperty("buttons");
+            var rows = buttons.EnumerateArray().Select(b => b.GetProperty("top").GetInt32()).Distinct().ToList();
+            Assert.AreEqual(1, rows.Count, $"a short Cancel/OK pair must stay side by side at {width}px: {pair}");
+            Assert.IsTrue(doc.RootElement.GetProperty("overflow").GetBoolean() == false,
+                $"the short pair must not overflow the footer at {width}px: {pair}");
+        }
+        await ShootAsync(page, $"{width}-short-pair-side-by-side");
+
+        // A 61-char label is wider than the whole row: that one, and only that one, truncates.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const labels = document.querySelectorAll('.tm-modal-overlay .tm-modal-footer .tm-btn .tm-btn-label');
+                labels[0].textContent = 'Supprimer définitivement cet élément et toutes ses pièces jointes associées';
+                labels[1].textContent = 'OK';
+            }
+            """);
+        await page.WaitForTimeoutAsync(300);
+
+        var longReport = await ReadLabelMetricsAsync(page);
+        using (var doc = JsonDocument.Parse(longReport))
+        {
+            var labels = doc.RootElement.GetProperty("labels").EnumerateArray().ToList();
+            Assert.IsTrue(labels[0].GetProperty("scroll").GetDouble() > labels[0].GetProperty("client").GetDouble(),
+                $"a 61-char label is wider than the whole row and must truncate: {longReport}");
+            Assert.IsTrue(labels[1].GetProperty("scroll").GetDouble() <= labels[1].GetProperty("client").GetDouble() + 1,
+                $"the short label next to it must not truncate: {longReport}");
+        }
+        await ShootAsync(page, $"{width}-61char-label-truncates");
+
+        await page.Keyboard.PressAsync("Escape");
+    }
+
+    private static async Task<string> ReadLabelMetricsAsync(IPage page)
+    {
+        return await page.EvaluateAsync<string>(
+            """
+            () => {
+                const footer = document.querySelector('.tm-modal-overlay .tm-modal-footer, .tm-modal-overlay .tm-dialog-footer');
+                return JSON.stringify({
+                    overflow: footer.scrollWidth > footer.clientWidth + 1,
+                    buttons: [...footer.querySelectorAll('.tm-btn')].map(b => {
+                        const r = b.getBoundingClientRect();
+                        return { top: Math.round(r.top), width: Math.round(r.width) };
+                    }),
+                    labels: [...footer.querySelectorAll('.tm-btn-label')].map(l => ({
+                        scroll: l.scrollWidth, client: l.clientWidth,
+                    })),
+                });
+            }
+            """);
     }
 }

@@ -163,6 +163,27 @@ public class TmDialogPresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void FooterButtons_CarryTheTitleOnlyInSheetPresentation()
+    {
+        var sheet = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Confirm)
+            .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.MobilePresentation, MobilePresentation.Sheet));
+
+        sheet.Find(".tm-dialog-btn-cancel").GetAttribute("title").Should().NotBeNullOrWhiteSpace(
+            "the sheet footer may truncate the label, so the full text rides in the title");
+
+        var dialog = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Type, DialogType.Confirm)
+            .Add(d => d.Title, "Delete dashboard"));
+
+        dialog.Find(".tm-dialog-btn-cancel").GetAttribute("title").Should().BeNull(
+            "a fully visible desktop label must not grow a tooltip");
+    }
+
+    [Fact]
     public void FooterLayout_IsAClassOnTheDialogFooter()
     {
         var cut = Render<TmDialog>(p => p

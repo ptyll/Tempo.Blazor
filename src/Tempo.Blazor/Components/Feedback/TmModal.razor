@@ -191,8 +191,16 @@
     private string ResolvedOkText => string.IsNullOrEmpty(OkButtonText) ? Loc["Tm_Ok"] : OkButtonText;
     private string ResolvedCancelText => string.IsNullOrEmpty(CancelButtonText) ? Loc["Tm_Cancel"] : CancelButtonText;
 
-    /// <summary>The full label as the title: a truncated sheet-footer label keeps its text reachable.</summary>
-    private Dictionary<string, object> ButtonTitle(string label) => new(StringComparer.Ordinal) { ["title"] = label };
+    /// <summary>
+    /// The footer button's extra attributes. The full label rides as the title ONLY in the sheet
+    /// presentation, where the label may truncate with an ellipsis; on the desktop dialog it would
+    /// paint a pointless "OK" tooltip over a fully visible label (UX round 5, m-r5-1).
+    /// </summary>
+    private Dictionary<string, object> ButtonTitle(string label)
+    {
+        if (!IsSheet) return new Dictionary<string, object>(StringComparer.Ordinal);
+        return new Dictionary<string, object>(StringComparer.Ordinal) { ["title"] = label };
+    }
 
     private ElementReference _overlayElement;
     private ElementReference _panel;

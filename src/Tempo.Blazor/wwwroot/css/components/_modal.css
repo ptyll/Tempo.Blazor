@@ -423,16 +423,19 @@
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn,
 .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline > .tm-btn {
   flex: 1 1 8rem;
-  /* min-width: fit-content pushed a long FR label out of a 320px sheet footer. The button may
-     shrink and its .tm-btn-label truncates with an ellipsis below — the button's own box and
-     nowrap stay untouched, so the size modifiers keep winning. */
-  min-width: 0;
+  /* min-width: fit-content pushed a long FR label out of a 320px sheet footer, and min-width: 0
+     cut ORDINARY labels in half by forcing a 50/50 split before the footer wrapped. min-width: auto
+     keeps the content minimum, so two labels that do not fit side by side wrap to their own
+     full-width rows first; max-width: 100% caps a single button whose label is wider than the
+     whole row — that label (and only that one) truncates with an ellipsis below. The button's own
+     box and nowrap stay untouched, so the size modifiers keep winning. */
+  min-width: auto;
   max-width: 100%;
 }
 
 /* The truncating label. The span ships as display: contents (geometry-neutral everywhere else);
-   a sheet footer blockifies it so ellipsis applies and the flex item can shrink below its text.
-   min-width: 0 is what lets it shrink; the full text rides in the button's title. */
+   a sheet footer blockifies it so ellipsis applies. min-width: 0 is what lets it shrink inside
+   its button; the full text rides in the button's title (sheet presentation only). */
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer .tm-btn-label,
 .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer .tm-btn-label {
   display: block;

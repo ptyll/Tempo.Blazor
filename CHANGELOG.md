@@ -356,6 +356,18 @@
 
 ### Fixed
 
+- **Round-5 overlay fixes.** A `TmDrawer` with `SwipeToDismiss="false"` no longer dismisses on any
+  fast downward flick, and a net-upward drag whose tail flicks downward no longer closes the sheet:
+  every dismiss honours the flag, and the net drag direction — not the tail velocity — picks which
+  way a flick steps. Every `TmDialog` type now names an explicit initial-focus target (prompt → the
+  input, confirm → Cancel, alert → OK), and the scroller `div.tm-dialog-content` is a
+  keyboard-reachable region only while it actually overflows, so a short dialog grows no extra tab
+  stop and the title block no longer takes focus. A sheet footer no longer cuts ordinary labels in
+  half with a forced 50/50 split: buttons that do not fit side by side wrap to their own full-width
+  rows first, and only a label wider than the whole row truncates. The footer buttons carry their
+  label as a `title` only in the sheet presentation, so desktop dialogs stopped growing an "OK"
+  tooltip.
+
 - **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
   `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
   `data-tm-backdrop`, and re-applies the inert set of the trap that remains when the topmost one
