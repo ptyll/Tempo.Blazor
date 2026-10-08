@@ -4,7 +4,8 @@
 @using Tempo.Blazor.Components.Files
 @using Tempo.Blazor.Components.Wireframe.Models
 
-<div class="tm-notion-wireframe-block" @onfocus="HandleFocusAsync">
+<div class="tm-notion-wireframe-block" @onfocus="HandleFocusAsync"
+     data-doclib-subscribed="@(_subscriptionReady ? _subscribedId.ToString() : null)">
 
     @if (_notFound)
     {

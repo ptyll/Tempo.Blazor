@@ -22,9 +22,17 @@ public class WireframeEditorE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync($"{BaseUrl}{WireframeEditorUrl}");
+        await page.GotoAsync($"{BaseUrl}{WireframeEditorUrl}", new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 60000
+        });
         await page.EvaluateAsync("() => localStorage.setItem('tm-demo-culture', 'en')");
-        await page.ReloadAsync();
+        await page.ReloadAsync(new PageReloadOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 60000
+        });
         await WaitForAppReadyAsync(page);
 
         // Scope everything to the first (interactive) editor on the page

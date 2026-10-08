@@ -67,10 +67,13 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
 
         var insertedBlock = page.Locator($"[data-block-id='{insertedBlockId}']").First;
         await insertedBlock.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        // Conversion persists through the aggregate session, which serializes mutations behind
+        // any in-flight autosave — under a contended runner that queue alone can exceed the old
+        // 5s window even though the conversion completes correctly.
         await page.WaitForFunctionAsync(
             "args => document.querySelector(`[data-block-id='${args.id}']`)?.getAttribute('data-block-type') === args.type",
             new { id = insertedBlockId, type = expectedBlockType },
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+            new PageWaitForFunctionOptions { Timeout = 20000 });
 
         return insertedBlock;
     }

@@ -1,0 +1,1646 @@
+  Determining projects to restore...
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.EmailTemplates.Abstractions/Tempo.Blazor.EmailTemplates.Abstractions.csproj (in 1.37 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.Shared/Tempo.Blazor.Demo.Shared.csproj (in 1.37 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Collaboration/Tempo.Blazor.Collaboration.csproj (in 1.37 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Engine/Tempo.Reporting.Engine.csproj (in 1.47 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Spreadsheet/Tempo.Blazor.Spreadsheet.csproj (in 1.45 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor/Tempo.Blazor.csproj (in 1.09 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Proofing.LanguageTool/Tempo.Blazor.Proofing.LanguageTool.csproj (in 6 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.PdfViewer/Tempo.Blazor.PdfViewer.csproj (in 1.44 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Maps/Tempo.Blazor.Maps.csproj (in 1.44 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Wireframe/Tempo.Blazor.Wireframe.csproj (in 1.11 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.SharedUI/Tempo.Blazor.Demo.SharedUI.csproj (in 1.42 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Signing/Tempo.Blazor.Signing.csproj (in 82 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.Server/Tempo.Blazor.Demo.Server.csproj (in 1.07 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto.csproj (in 1.43 sec).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.EmailTemplates/Tempo.Blazor.EmailTemplates.csproj (in 131 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.WebPush/Tempo.Blazor.WebPush.csproj (in 268 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.FluentValidation/Tempo.Blazor.FluentValidation.csproj (in 86 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.GanttXlsx/Tempo.Blazor.GanttXlsx.csproj (in 188 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.NotionEditor/Tempo.Blazor.NotionEditor.csproj (in 226 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentEditor/Tempo.Blazor.DocumentEditor.csproj (in 161 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DiagramEditor/Tempo.Blazor.DiagramEditor.csproj (in 111 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DataTableXlsx/Tempo.Blazor.DataTableXlsx.csproj (in 77 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentFormats/Tempo.Blazor.DocumentFormats.csproj (in 204 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Modeling/Tempo.Blazor.Modeling.csproj (in 201 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Reporting/Tempo.Blazor.Reporting.csproj (in 267 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj (in 56 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Mcp/Tempo.Blazor.Mcp.csproj (in 299 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Abstractions/Tempo.Reporting.Abstractions.csproj (in 20 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.Api/Tempo.Blazor.Demo.Api.csproj (in 190 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Codes/Tempo.Blazor.Codes.csproj (in 236 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.ReportServer.Web.Client/Tempo.ReportServer.Web.Client.csproj (in 152 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo/Tempo.Blazor.Demo.csproj (in 377 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto.Client/Tempo.Blazor.Demo.InteractiveAuto.Client.csproj (in 329 ms).
+  Restored /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.ReportServer.Web/Tempo.ReportServer.Web.csproj (in 186 ms).
+  16 of 50 projects are up-to-date for restore.
+  Tempo.Blazor.EmailTemplates.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.EmailTemplates.Abstractions/bin/Release/net10.0/Tempo.Blazor.EmailTemplates.Abstractions.dll
+  Tempo.Reporting.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Abstractions/bin/Release/net10.0/Tempo.Reporting.Abstractions.dll
+  Tempo.Reporting.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Abstractions/bin/Release/net9.0/Tempo.Reporting.Abstractions.dll
+  Tempo.Reporting.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Abstractions/bin/Release/net8.0/Tempo.Reporting.Abstractions.dll
+  Tempo.Blazor.EmailTemplates.Abstractions.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests/bin/Release/net10.0/Tempo.Blazor.EmailTemplates.Abstractions.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests/bin/Release/net10.0/Tempo.Blazor.EmailTemplates.Abstractions.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Reporting.Engine -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Engine/bin/Release/net9.0/Tempo.Reporting.Engine.dll
+  Tempo.Reporting.Engine -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Engine/bin/Release/net10.0/Tempo.Reporting.Engine.dll
+  Tempo.Reporting.Engine -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Reporting.Engine/bin/Release/net8.0/Tempo.Reporting.Engine.dll
+  Tempo.Reporting.Abstractions.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Abstractions.Tests/bin/Release/net10.0/Tempo.Reporting.Abstractions.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Abstractions.Tests/bin/Release/net10.0/Tempo.Reporting.Abstractions.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Abstractions.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:   192, Skipped:     0, Total:   192, Duration: 1 s - Tempo.Blazor.EmailTemplates.Abstractions.Tests.dll (net10.0)
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Abstractions.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Abstractions.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:    37, Skipped:     0, Total:    37, Duration: 922 ms - Tempo.Reporting.Abstractions.Tests.dll (net10.0)
+  Tempo.Reporting.Engine.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Engine.Tests/bin/Release/net10.0/Tempo.Reporting.Engine.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Engine.Tests/bin/Release/net10.0/Tempo.Reporting.Engine.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Abstractions/bin/Release/net10.0/Tempo.Blazor.Abstractions.dll
+  Tempo.ReportServer.Api -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.ReportServer.Api/bin/Release/net10.0/Tempo.ReportServer.Api.dll
+  Tempo.Blazor.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Abstractions/bin/Release/net8.0/Tempo.Blazor.Abstractions.dll
+  Tempo.ReportServer.Api.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Api.Tests/bin/Release/net10.0/Tempo.ReportServer.Api.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Api.Tests/bin/Release/net10.0/Tempo.ReportServer.Api.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.Abstractions -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Abstractions/bin/Release/net9.0/Tempo.Blazor.Abstractions.dll
+  Tempo.Blazor.GanttXlsx -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.GanttXlsx/bin/Release/net10.0/Tempo.Blazor.GanttXlsx.dll
+  Tempo.Blazor.Proofing.LanguageTool -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Proofing.LanguageTool/bin/Release/net10.0/Tempo.Blazor.Proofing.LanguageTool.dll
+  Tempo.Blazor.Demo.Shared -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.Shared/bin/Release/net10.0/Tempo.Blazor.Demo.Shared.dll
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Engine.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Reporting.Engine.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:    94, Skipped:     0, Total:    94, Duration: 3 s - Tempo.Reporting.Engine.Tests.dll (net10.0)
+  Tempo.Blazor.WebPush -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.WebPush/bin/Release/net10.0/Tempo.Blazor.WebPush.dll
+  Successfully created package '/root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Abstractions/bin/Release/Tempo.Blazor.Abstractions.2.9.1.nupkg'.
+  Tempo.Blazor.FluentValidation -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.FluentValidation/bin/Release/net10.0/Tempo.Blazor.FluentValidation.dll
+  Tempo.Blazor.GanttXlsx -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.GanttXlsx/bin/Release/net8.0/Tempo.Blazor.GanttXlsx.dll
+  Tempo.Blazor.DocumentFormats -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentFormats/bin/Release/net10.0/Tempo.Blazor.DocumentFormats.dll
+  Tempo.Blazor.DataTableXlsx -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DataTableXlsx/bin/Release/net9.0/Tempo.Blazor.DataTableXlsx.dll
+[xUnit.net 00:00:09.12]     Tempo.ReportServer.Api.Tests.Scheduling.SmtpScheduledReportDeliveryE2ESkeleton.ScheduledReport_IsDeliveredToSmtp4Dev_WithPdfAttachment [SKIP]
+  Skipped Tempo.ReportServer.Api.Tests.Scheduling.SmtpScheduledReportDeliveryE2ESkeleton.ScheduledReport_IsDeliveredToSmtp4Dev_WithPdfAttachment [1 ms]
+  Tempo.Blazor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor/bin/Release/net8.0/Tempo.Blazor.dll
+  Tempo.Blazor.WebPush -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.WebPush/bin/Release/net8.0/Tempo.Blazor.WebPush.dll
+  Tempo.Blazor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor/bin/Release/net9.0/Tempo.Blazor.dll
+  Tempo.Blazor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor/bin/Release/net10.0/Tempo.Blazor.dll
+  Tempo.Blazor.FluentValidation -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.FluentValidation/bin/Release/net9.0/Tempo.Blazor.FluentValidation.dll
+  Tempo.Blazor.Mcp -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Mcp/bin/Release/net10.0/Tempo.Blazor.Mcp.dll
+  Tempo.Blazor.Collaboration -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Collaboration/bin/Release/net10.0/Tempo.Blazor.Collaboration.dll
+  Tempo.Blazor.Maps -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Maps/bin/Release/net8.0/Tempo.Blazor.Maps.dll
+  Tempo.Blazor.DocumentFormats.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.DocumentFormats.Tests/bin/Release/net10.0/Tempo.Blazor.DocumentFormats.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.DocumentFormats.Tests/bin/Release/net10.0/Tempo.Blazor.DocumentFormats.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.GanttXlsx -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.GanttXlsx/bin/Release/net9.0/Tempo.Blazor.GanttXlsx.dll
+  Tempo.Blazor.Wireframe -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Wireframe/bin/Release/net8.0/Tempo.Blazor.Wireframe.dll
+  Tempo.Blazor.DataTableXlsx -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DataTableXlsx/bin/Release/net8.0/Tempo.Blazor.DataTableXlsx.dll
+  Tempo.Blazor.PdfViewer -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.PdfViewer/bin/Release/net10.0/Tempo.Blazor.PdfViewer.dll
+  Tempo.Blazor.Codes -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Codes/bin/Release/net10.0/Tempo.Blazor.Codes.dll
+  Tempo.Blazor.Codes -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Codes/bin/Release/net8.0/Tempo.Blazor.Codes.dll
+  Tempo.Blazor.Spreadsheet -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Spreadsheet/bin/Release/net8.0/Tempo.Blazor.Spreadsheet.dll
+  Tempo.Blazor.DiagramEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DiagramEditor/bin/Release/net10.0/Tempo.Blazor.DiagramEditor.dll
+  Tempo.Blazor.Spreadsheet -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Spreadsheet/bin/Release/net10.0/Tempo.Blazor.Spreadsheet.dll
+  Tempo.Blazor.Signing -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Signing/bin/Release/net8.0/Tempo.Blazor.Signing.dll
+  Tempo.Blazor.Wireframe -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Wireframe/bin/Release/net10.0/Tempo.Blazor.Wireframe.dll
+  Tempo.Blazor.DocumentEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentEditor/bin/Release/net8.0/Tempo.Blazor.DocumentEditor.dll
+  Tempo.Blazor.Maps -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Maps/bin/Release/net10.0/Tempo.Blazor.Maps.dll
+  Tempo.Blazor.EmailTemplates -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.EmailTemplates/bin/Release/net10.0/Tempo.Blazor.EmailTemplates.dll
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.DocumentFormats.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.DocumentFormats.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:   365, Skipped:     0, Total:   365, Duration: 38 s - Tempo.Blazor.DocumentFormats.Tests.dll (net10.0)
+  Tempo.Blazor.EmailTemplates.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Tests/bin/Release/net10.0/Tempo.Blazor.EmailTemplates.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Tests/bin/Release/net10.0/Tempo.Blazor.EmailTemplates.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Api.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Api.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:   185, Skipped:     1, Total:   186, Duration: 2 m 1 s - Tempo.ReportServer.Api.Tests.dll (net10.0)
+  Tempo.Blazor.FluentValidation.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.FluentValidation.Tests/bin/Release/net10.0/Tempo.Blazor.FluentValidation.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.FluentValidation.Tests/bin/Release/net10.0/Tempo.Blazor.FluentValidation.Tests.dll (.NETCoreApp,Version=v10.0)
+  Tempo.Blazor.PdfViewer -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.PdfViewer/bin/Release/net8.0/Tempo.Blazor.PdfViewer.dll
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.Modeling -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Modeling/bin/Release/net10.0/Tempo.Blazor.Modeling.dll
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.EmailTemplates.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:   103, Skipped:     0, Total:   103, Duration: 3 s - Tempo.Blazor.EmailTemplates.Tests.dll (net10.0)
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.FluentValidation.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.FluentValidation.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:    44, Skipped:     0, Total:    44, Duration: 1 s - Tempo.Blazor.FluentValidation.Tests.dll (net10.0)
+  Tempo.Blazor.DiagramEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DiagramEditor/bin/Release/net8.0/Tempo.Blazor.DiagramEditor.dll
+  Tempo.Blazor.NotionEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.NotionEditor/bin/Release/net10.0/Tempo.Blazor.NotionEditor.dll
+  Tempo.Blazor.Signing -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Signing/bin/Release/net9.0/Tempo.Blazor.Signing.dll
+  Tempo.Blazor.Wireframe -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Wireframe/bin/Release/net9.0/Tempo.Blazor.Wireframe.dll
+  Tempo.Blazor.Mcp.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Mcp.Tests/bin/Release/net10.0/Tempo.Blazor.Mcp.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Mcp.Tests/bin/Release/net10.0/Tempo.Blazor.Mcp.Tests.dll (.NETCoreApp,Version=v10.0)
+  Tempo.Blazor.DiagramEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DiagramEditor/bin/Release/net9.0/Tempo.Blazor.DiagramEditor.dll
+  Tempo.Blazor.Spreadsheet -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Spreadsheet/bin/Release/net9.0/Tempo.Blazor.Spreadsheet.dll
+  Tempo.Blazor.PdfViewer -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.PdfViewer/bin/Release/net9.0/Tempo.Blazor.PdfViewer.dll
+  Tempo.Blazor.Maps -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Maps/bin/Release/net9.0/Tempo.Blazor.Maps.dll
+  Tempo.Blazor.DocumentEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentEditor/bin/Release/net9.0/Tempo.Blazor.DocumentEditor.dll
+VSTest version 18.0.2 (x64)
+
+  Tempo.Blazor.Demo.Api -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.Api/bin/Release/net10.0/Tempo.Blazor.Demo.Api.dll
+  Tempo.Blazor.DocumentFormats -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentFormats/bin/Release/net9.0/Tempo.Blazor.DocumentFormats.dll
+Starting test execution, please wait...
+  Tempo.Blazor.Modeling -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Modeling/bin/Release/net8.0/Tempo.Blazor.Modeling.dll
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.Mcp -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Mcp/bin/Release/net9.0/Tempo.Blazor.Mcp.dll
+  Tempo.Blazor.Demo.Api.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Demo.Api.Tests/bin/Release/net10.0/Tempo.Blazor.Demo.Api.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Demo.Api.Tests/bin/Release/net10.0/Tempo.Blazor.Demo.Api.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.Reporting -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Reporting/bin/Release/net9.0/Tempo.Blazor.Reporting.dll
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Mcp.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Mcp.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:   410, Skipped:     0, Total:   410, Duration: 13 s - Tempo.Blazor.Mcp.Tests.dll (net10.0)
+  Tempo.Blazor.Codes -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Codes/bin/Release/net9.0/Tempo.Blazor.Codes.dll
+  Tempo.Blazor.DocumentEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentEditor/bin/Release/net10.0/Tempo.Blazor.DocumentEditor.dll
+  Tempo.Blazor.Reporting -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Reporting/bin/Release/net10.0/Tempo.Blazor.Reporting.dll
+  Tempo.Blazor.NotionEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.NotionEditor/bin/Release/net8.0/Tempo.Blazor.NotionEditor.dll
+  Tempo.Blazor.Modeling -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Modeling/bin/Release/net9.0/Tempo.Blazor.Modeling.dll
+  Tempo.Blazor.Reporting.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Reporting.Tests/bin/Release/net10.0/Tempo.Blazor.Reporting.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Reporting.Tests/bin/Release/net10.0/Tempo.Blazor.Reporting.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Tempo.Blazor.Signing -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Signing/bin/Release/net10.0/Tempo.Blazor.Signing.dll
+  Tempo.Blazor.FluentValidation -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.FluentValidation/bin/Release/net8.0/Tempo.Blazor.FluentValidation.dll
+  Tempo.Blazor.WebPush -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.WebPush/bin/Release/net9.0/Tempo.Blazor.WebPush.dll
+  Tempo.Blazor.DataTableXlsx -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DataTableXlsx/bin/Release/net10.0/Tempo.Blazor.DataTableXlsx.dll
+  Tempo.Blazor.All -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.All/bin/Release/net8.0/Tempo.Blazor.All.dll
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Reporting.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Reporting.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29, Duration: 2 s - Tempo.Blazor.Reporting.Tests.dll (net10.0)
+  Successfully created package '/root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.FluentValidation/bin/Release/Tempo.Blazor.FluentValidation.2.9.1.nupkg'.
+  Tempo.Blazor.Reporting -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Reporting/bin/Release/net8.0/Tempo.Blazor.Reporting.dll
+  Tempo.Blazor.DocumentFormats -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.DocumentFormats/bin/Release/net8.0/Tempo.Blazor.DocumentFormats.dll
+  Tempo.ReportServer.Web.Client -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.ReportServer.Web.Client/bin/Release/net10.0/Tempo.ReportServer.Web.Client.dll
+  Tempo.ReportServer.Web.Client (Blazor output) -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.ReportServer.Web.Client/bin/Release/net10.0/wwwroot
+  Tempo.Blazor.E2E -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/bin/Release/net10.0/Tempo.Blazor.E2E.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Demo.Api.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Demo.Api.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:   216, Skipped:     0, Total:   216, Duration: 1 m 4 s - Tempo.Blazor.Demo.Api.Tests.dll (net10.0)
+  Tempo.ReportServer.Web -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.ReportServer.Web/bin/Release/net10.0/Tempo.ReportServer.Web.dll
+  Tempo.ReportServer.Web.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Web.Tests/bin/Release/net10.0/Tempo.ReportServer.Web.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Web.Tests/bin/Release/net10.0/Tempo.ReportServer.Web.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Web.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.ReportServer.Web.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed:    99, Skipped:     0, Total:    99, Duration: 35 s - Tempo.ReportServer.Web.Tests.dll (net10.0)
+  Tempo.Blazor.NotionEditor -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.NotionEditor/bin/Release/net9.0/Tempo.Blazor.NotionEditor.dll
+  Tempo.Blazor.All -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.All/bin/Release/net9.0/Tempo.Blazor.All.dll
+  Skipped Capture_LightAndDark ("/activity","activity") [9 ms]
+  Skipped Capture_LightAndDark ("/charts","charts") [1 ms]
+  Skipped Capture_LightAndDark ("/chat","chat") [< 1 ms]
+  Skipped Capture_LightAndDark ("/color-picker","color-picker") [< 1 ms]
+  Skipped Capture_LightAndDark ("/dashboard","dashboard") [< 1 ms]
+  Skipped Capture_LightAndDark ("/data-display","data-display") [< 1 ms]
+  Skipped Capture_LightAndDark ("/data-table","data-table") [< 1 ms]
+  Skipped Capture_LightAndDark ("/dock-manager","dock-manager") [< 1 ms]
+  Skipped Capture_LightAndDark ("/email-templates","email-templates") [< 1 ms]
+  Skipped Capture_LightAndDark ("/feedback","feedback") [< 1 ms]
+  Skipped Capture_LightAndDark ("/file-manager","file-manager") [< 1 ms]
+  Skipped Capture_LightAndDark ("/forms","forms") [< 1 ms]
+  Skipped Capture_LightAndDark ("/import-export","import-export") [< 1 ms]
+  Skipped Capture_LightAndDark ("/kanban","kanban") [< 1 ms]
+  Skipped Capture_LightAndDark ("/layout","layout") [< 1 ms]
+  Skipped Capture_LightAndDark ("/modal-dialog","modal-dialog") [< 1 ms]
+  Skipped Capture_LightAndDark ("/multi-view-list","multi-view-list") [< 1 ms]
+  Skipped Capture_LightAndDark ("/new-components","new-components") [< 1 ms]
+  Skipped Capture_LightAndDark ("/pickers","pickers") [< 1 ms]
+  Skipped Capture_LightAndDark ("/pivot-table","pivot-table") [< 1 ms]
+  Skipped Capture_LightAndDark ("/richtext","richtext") [< 1 ms]
+  Skipped Capture_LightAndDark ("/scheduler","scheduler") [< 1 ms]
+  Skipped Capture_LightAndDark ("/toolbar-forms","toolbar-forms") [< 1 ms]
+  Skipped Capture_LightAndDark ("/tree-list","tree-list") [< 1 ms]
+  Skipped GenerateAllBaselines [9 ms]
+  Skipped GenerateAllBaselines [2 ms]
+  Skipped GenerateAllBaselines [1 ms]
+  Failed DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload [54 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload threw exception: 
+System.TimeoutException: Timeout 30000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.DocumentLibraryNotionE2ETests.DocLib4_RemoteEdit_RefreshesLinkedBlock_WithoutReload() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/DocumentLibraryNotionE2ETests.cs:line 136
+
+  Failed FileBlock_Shows_DownloadLink [25 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.FileBlock_Shows_DownloadLink threw exception: 
+System.TimeoutException: Timeout 5000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.InsertBlockViaSlashMenuAsync(IPage page, String searchTerm, String itemName, String expectedBlockType) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMediaBlocksE2ETests.cs:line 70
+   at Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.FileBlock_Shows_DownloadLink() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMediaBlocksE2ETests.cs:line 311
+
+  Failed AudioBlock_EnterUrl_ShowsPlayer [25 s]
+  Error Message:
+   Test method Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.AudioBlock_EnterUrl_ShowsPlayer threw exception: 
+System.TimeoutException: Timeout 5000ms exceeded.
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Frame.WaitForFunctionAsync(String expression, Object arg, FrameWaitForFunctionOptions options) in /_/src/Playwright/Core/Frame.cs:line 658
+   at Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.InsertBlockViaSlashMenuAsync(IPage page, String searchTerm, String itemName, String expectedBlockType) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMediaBlocksE2ETests.cs:line 70
+   at Tempo.Blazor.E2E.NotionMediaBlocksE2ETests.AudioBlock_EnterUrl_ShowsPlayer() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/NotionMediaBlocksE2ETests.cs:line 334
+
+  Skipped F8_PdfRenderer_MatchesCanvasGoldenImagesForInvoiceAndSales [3 s]
+  Skipped ApiKey_Render_Audits_ThenRevoke_Yields401 [3 ms]
+  Skipped Author1_SeesAuthorNav_NotAdminNav [3 ms]
+  Skipped Viewer1_SeesOnlyViewerNav [< 1 ms]
+  Skipped BearerLeg_ApiRequiresToken_AndBrowserHoldsNoToken [< 1 ms]
+  Skipped Logout_ClearsSession_AndProtectedPagesRequireLogin [< 1 ms]
+  Skipped Catalog_PortalLoads_CreateFolder_PersistsRow [2 ms]
+  Skipped NewReport_CreatesRealReport_ShownInDesigner_AndPersisted [< 1 ms]
+  Skipped NewReport_ImportsRdl_CreatesRealReport_ShownInDesigner_AndPersisted [< 1 ms]
+  Skipped Favorites_ToggleRoundTrips_AndPersists [< 1 ms]
+  Skipped Render_WithParameter_RecordsRunInHistory [< 1 ms]
+  Skipped EdgeCases_InvalidUploadBlocks_AndDirectReportHitBouncesToLogin [< 1 ms]
+  Skipped LoginPage_BootsTo_WebAssembly [1 ms]
+  Skipped Portal_RunsCleanly_OnWasm [1 ms]
+  Skipped ServerToWasm_Handoff_StaysAuthenticated_AndBearerSurvives [1 ms]
+  Skipped Reports_PrerenderedHtml_ContainsRealPortalContent [1 ms]
+  Skipped Reports_ServerCircuit_EmitsNoBrowserSideCatalogFetch [< 1 ms]
+  Skipped Schedule_FiresSoon_DeliversEmailWithPdf_AndRecordsDeliveredRun [2 ms]
+  Skipped Baseline_Spreadsheet_DefaultSurface [1 ms]
+  Skipped Baseline_Spreadsheet_FullViewport [< 1 ms]
+  Skipped Baseline_Spreadsheet_SelectedCell [< 1 ms]
+  Skipped Baseline_Spreadsheet_TypeDetection [< 1 ms]
+  Skipped Baseline_StatusBar_Aggregation [< 1 ms]
+  Skipped Baseline_Zoom_150 [< 1 ms]
+  Skipped Baseline_Zoom_50 [< 1 ms]
+  Skipped Baseline_Find_Highlight [< 1 ms]
+  Skipped Baseline_Find_Replace [< 1 ms]
+  Skipped Baseline_Filter_Dropdown [< 1 ms]
+  Skipped Baseline_Filter_Active [< 1 ms]
+  Skipped Baseline_Sort_Dialog [< 1 ms]
+  Skipped Baseline_Dedup_Dialog [< 1 ms]
+  Skipped Baseline_TextToColumns_Step2Preview [< 1 ms]
+  Skipped Baseline_PasteSpecial_Dialog [< 1 ms]
+  Skipped Baseline_Validation_Dialog_Settings [< 1 ms]
+  Skipped Baseline_Validation_Dropdown [< 1 ms]
+  Skipped Baseline_Validation_ErrorAlert [< 1 ms]
+  Skipped names_01_manager [3 ms]
+  Skipped names_02_namebox [1 ms]
+  Skipped hyperlink_01_dialog [< 1 ms]
+  Skipped hyperlink_02_incell [< 1 ms]
+  Skipped Capture_LightAndDark ("/feedback","feedback") [1 ms]
+  Skipped Capture_LightAndDark ("/forms","forms") [1 ms]
+  Skipped Capture_LightAndDark ("/charts","charts") [< 1 ms]
+  Skipped Capture_LightAndDark ("/kanban","kanban") [< 1 ms]
+  Skipped Capture_LightAndDark ("/new-components","new-components") [< 1 ms]
+  Skipped Capture_LightAndDark ("/pickers","pickers") [< 1 ms]
+  Skipped Capture_LightAndDark ("/file-manager","file-manager") [< 1 ms]
+  Skipped Capture_LightAndDark ("/query-input","query-input") [< 1 ms]
+  Skipped Capture_LightAndDark ("/workflow-designer","workflow-designer") [< 1 ms]
+  Failed TmButton_NewVariants_RenderExpectedCssClasses [20 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmButtonDataTableScopeE2ETests.TmButton_NewVariants_RenderExpectedCssClasses threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmButtonDataTableScopeE2ETests.OpenDemoPageAsync(String path, String readySelector) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmButtonDataTableScopeE2ETests.cs:line 33
+   at Tempo.Blazor.E2E.TmButtonDataTableScopeE2ETests.TmButton_NewVariants_RenderExpectedCssClasses() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmButtonDataTableScopeE2ETests.cs:line 14
+
+  Failed TmDataTable_RowAttributes_RenderForFlatVirtualizedAndGroupedRows [12 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmButtonDataTableScopeE2ETests.TmDataTable_RowAttributes_RenderForFlatVirtualizedAndGroupedRows threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmButtonDataTableScopeE2ETests.OpenDemoPageAsync(String path, String readySelector) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmButtonDataTableScopeE2ETests.cs:line 33
+   at Tempo.Blazor.E2E.TmButtonDataTableScopeE2ETests.TmDataTable_RowAttributes_RenderForFlatVirtualizedAndGroupedRows() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmButtonDataTableScopeE2ETests.cs:line 24
+
+  Failed SortButton_AccessibleName_Keyboard_And_HoverFocus_Chromium [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmDataTableSortButtonE2ETests.SortButton_AccessibleName_Keyboard_And_HoverFocus_Chromium threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmDataTableSortButtonE2ETests.SortButton_AccessibleName_Keyboard_And_HoverFocus_Chromium() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmDataTableSortButtonE2ETests.cs:line 26
+
+  Failed SortButton_ShiftEnter_MultiSort_Chromium [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmDataTableSortButtonE2ETests.SortButton_ShiftEnter_MultiSort_Chromium threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmDataTableSortButtonE2ETests.SortButton_ShiftEnter_MultiSort_Chromium() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmDataTableSortButtonE2ETests.cs:line 47
+
+  Failed GroupableHeader_DragFromHeaderText_Groups_Chromium [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmDataTableSortButtonE2ETests.GroupableHeader_DragFromHeaderText_Groups_Chromium threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmDataTableSortButtonE2ETests.GroupableHeader_DragFromHeaderText_Groups_Chromium() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmDataTableSortButtonE2ETests.cs:line 66
+
+  Failed SortButton_SortedColumn_HoverFocus_Screenshots_LightAndDark_Chromium [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmDataTableSortButtonVisualE2ETests.SortButton_SortedColumn_HoverFocus_Screenshots_LightAndDark_Chromium threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmDataTableSortButtonVisualE2ETests.SortButton_SortedColumn_HoverFocus_Screenshots_LightAndDark_Chromium() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmDataTableSortButtonVisualE2ETests.cs:line 36
+
+  Failed TmModal_TitleCloseAndHeader_PaintRestoredComputedValues [13 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.TmModal_TitleCloseAndHeader_PaintRestoredComputedValues threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.OpenModalPageAsync(Int32 width, Int32 height) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmModalFilterChipStyleE2ETests.cs:line 99
+   at Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.TmModal_TitleCloseAndHeader_PaintRestoredComputedValues() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmModalFilterChipStyleE2ETests.cs:line 21
+
+  Failed TmModal_Below768px_KeepsTheRestoredMargin [10 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.TmModal_Below768px_KeepsTheRestoredMargin threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.OpenModalPageAsync(Int32 width, Int32 height) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmModalFilterChipStyleE2ETests.cs:line 99
+   at Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.TmModal_Below768px_KeepsTheRestoredMargin() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmModalFilterChipStyleE2ETests.cs:line 48
+
+  Failed TmFilterChip_RemoveButton_PaintsZeroPaddingAnd18pxGlyph [22 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.TmFilterChip_RemoveButton_PaintsZeroPaddingAnd18pxGlyph threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmModalFilterChipStyleE2ETests.TmFilterChip_RemoveButton_PaintsZeroPaddingAnd18pxGlyph() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmModalFilterChipStyleE2ETests.cs:line 63
+
+  Failed LineWrapWithSlots_PaintsNoRowRule_AndKeepsTheSlotsOnTheFirstRow (430) [17 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.LineWrapWithSlots_PaintsNoRowRule_AndKeepsTheSlotsOnTheFirstRow threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.LineWrapWithSlots_PaintsNoRowRule_AndKeepsTheSlotsOnTheFirstRow(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 68
+
+  Failed LineWrapWithSlots_PaintsNoRowRule_AndKeepsTheSlotsOnTheFirstRow (760) [4 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.LineWrapWithSlots_PaintsNoRowRule_AndKeepsTheSlotsOnTheFirstRow threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.LineWrapWithSlots_PaintsNoRowRule_AndKeepsTheSlotsOnTheFirstRow(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 68
+
+  Failed WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed ("[data-testid='tabs-pill-wrap-slots']",430) [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed(String testId, Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 117
+
+  Failed WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed ("[data-testid='tabs-pill-wrap-slots']",760) [4 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed(String testId, Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 117
+
+  Failed WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed ("[data-testid='tabs-enclosed-wrap-slots']",430) [3 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed(String testId, Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 117
+
+  Failed WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed ("[data-testid='tabs-enclosed-wrap-slots']",760) [3 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.WrapWithSlots_KeepsTheSlotsOnTheFirstRow_InPillAndEnclosed(String testId, Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 117
+
+  Failed PillWithATallSlot_LeavesTheTrayAndThePillsAtTheirOwnHeight [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.PillWithATallSlot_LeavesTheTrayAndThePillsAtTheirOwnHeight threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.OpenFeedbackAsync(Int32 width) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 242
+   at Tempo.Blazor.E2E.TmTabsHeaderSlotGeometryE2ETests.PillWithATallSlot_LeavesTheTrayAndThePillsAtTheirOwnHeight() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsHeaderSlotGeometryE2ETests.cs:line 128
+
+  Failed ArrowRight_MovesTheDomFocus_NotJustTheSelection [13 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.ArrowRight_MovesTheDomFocus_NotJustTheSelection threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.ArrowRight_MovesTheDomFocus_NotJustTheSelection() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 71
+
+  Failed ArrowLeft_WrapsBackwards_AndCarriesTheFocusWithIt [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.ArrowLeft_WrapsBackwards_AndCarriesTheFocusWithIt threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.ArrowLeft_WrapsBackwards_AndCarriesTheFocusWithIt() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 84
+
+  Failed EndThenHome_AreHandled_AndBothMoveTheDomFocus [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.EndThenHome_AreHandled_AndBothMoveTheDomFocus threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.EndThenHome_AreHandled_AndBothMoveTheDomFocus() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 98
+
+  Failed TwoArrowsInARow_WalkTwoTabs_BecauseTheFocusTravelsWithTheSelection [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.TwoArrowsInARow_WalkTwoTabs_BecauseTheFocusTravelsWithTheSelection threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.TwoArrowsInARow_WalkTwoTabs_BecauseTheFocusTravelsWithTheSelection() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 121
+
+  Failed AfterAnArrowKey_ExactlyTheFocusedTabIsInTheTabOrder [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.AfterAnArrowKey_ExactlyTheFocusedTabIsInTheTabOrder threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.AfterAnArrowKey_ExactlyTheFocusedTabIsInTheTabOrder() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 141
+
+  Failed AVetoedChange_LeavesTheFocusOnTheStillSelectedTab [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.AVetoedChange_LeavesTheFocusOnTheStillSelectedTab threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.AVetoedChange_LeavesTheFocusOnTheStillSelectedTab() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 175
+
+  Failed HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.HomeScrollsThePage_ButLeavesTheFocusedTabInsideTheViewport() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 260
+
+  Failed AVetoedCLICK_PullsTheFocusBackToTheStillSelectedTab [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.AVetoedCLICK_PullsTheFocusBackToTheStillSelectedTab threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.OpenStripAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 475
+   at Tempo.Blazor.E2E.TmTabsKeyboardFocusE2ETests.AVetoedCLICK_PullsTheFocusBackToTheStillSelectedTab() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TmTabsKeyboardFocusE2ETests.cs:line 310
+
+  Failed TreeList_RendersAndExpands [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.TreeList_RendersAndExpands threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.TreeList_RendersAndExpands() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 18
+
+  Failed TreeList_SelectsRow [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.TreeList_SelectsRow threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.TreeList_SelectsRow() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 55
+
+  Failed Gantt_RendersAndSwitchesViews [10 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_RendersAndSwitchesViews threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_RendersAndSwitchesViews() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 78
+
+  Failed Gantt_SelectsTask [13 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_SelectsTask threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_SelectsTask() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 122
+
+  Skipped Gantt_TimelinePan_DragsHorizontally
+  Failed Gantt_ExpandCollapse [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_ExpandCollapse threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_ExpandCollapse() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 219
+
+  Failed Gantt_FitToScreen_AdjustsZoom [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_FitToScreen_AdjustsZoom threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.Gantt_FitToScreen_AdjustsZoom() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 252
+
+  Failed RecurrenceEditor_RendersAndChangesPattern [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.RecurrenceEditor_RendersAndChangesPattern threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.RecurrenceEditor_RendersAndChangesPattern() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 292
+
+  Failed RecurrenceEditor_WeeklyDaysToggle [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.RecurrenceEditor_WeeklyDaysToggle threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.RecurrenceEditor_WeeklyDaysToggle() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 317
+
+  Failed RecurrenceEditor_EndCondition [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.RecurrenceEditor_EndCondition threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreatePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 197
+   at Tempo.Blazor.E2E.TreeListGanttRecurrenceE2ETests.RecurrenceEditor_EndCondition() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TreeListGanttRecurrenceE2ETests.cs:line 348
+
+  Failed PageLoad_ToolbarIsVisible [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_ToolbarIsVisible threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_ToolbarIsVisible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 118
+
+  Failed PageLoad_ToolboxHasItems [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_ToolboxHasItems threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_ToolboxHasItems() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 127
+
+  Failed PageLoad_CanvasIsVisible [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_CanvasIsVisible threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_CanvasIsVisible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 136
+
+  Failed PageLoad_RulersToggleOnOff [43 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_RulersToggleOnOff threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_RulersToggleOnOff() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 145
+
+  Failed PageLoad_PropertiesPanelIsVisible [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_PropertiesPanelIsVisible threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_PropertiesPanelIsVisible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 168
+
+  Failed PageLoad_LayersPanelIsVisible [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_LayersPanelIsVisible threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_LayersPanelIsVisible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 177
+
+  Failed PageLoad_PageTabsExist [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_PageTabsExist threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PageLoad_PageTabsExist() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 186
+
+  Failed Toolbox_SearchFiltersItems [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.Toolbox_SearchFiltersItems threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.Toolbox_SearchFiltersItems() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 199
+
+  Failed Toolbox_ClearSearchRestoresItems [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.Toolbox_ClearSearchRestoresItems threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.Toolbox_ClearSearchRestoresItems() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 218
+
+  Failed DragToolboxItemToCanvas_CreatesElement [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DragToolboxItemToCanvas_CreatesElement threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DragToolboxItemToCanvas_CreatesElement() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 247
+
+  Failed DeleteSelectedElement_RemovesIt [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DeleteSelectedElement_RemovesIt threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DeleteSelectedElement_RemovesIt() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 259
+
+  Failed DeleteViaContextMenu_RemovesElement [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DeleteViaContextMenu_RemovesElement threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DeleteViaContextMenu_RemovesElement() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 276
+
+  Failed ClickOnCanvasElement_SelectsIt [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ClickOnCanvasElement_SelectsIt threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ClickOnCanvasElement_SelectsIt() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 301
+
+  Failed SelectElement_PropertiesPanelShowsFields [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.SelectElement_PropertiesPanelShowsFields threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.SelectElement_PropertiesPanelShowsFields() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 312
+
+  Failed DeselectElement_ClearsSelection [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DeselectElement_ClearsSelection threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DeselectElement_ClearsSelection() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 326
+
+  Failed CtrlClick_SelectsMultipleElements [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.CtrlClick_SelectsMultipleElements threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.CtrlClick_SelectsMultipleElements() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 345
+
+  Failed UndoRedo_AfterAddingElement [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.UndoRedo_AfterAddingElement threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.UndoRedo_AfterAddingElement() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 370
+
+  Failed ZoomIn_ZoomOut_ChangesZoomLevel [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ZoomIn_ZoomOut_ChangesZoomLevel threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ZoomIn_ZoomOut_ChangesZoomLevel() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 400
+
+  Failed FitToView_ChangesZoom [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.FitToView_ChangesZoom threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.FitToView_ChangesZoom() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 422
+
+  Failed SnapToObjects_ToggleWorks [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.SnapToObjects_ToggleWorks threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.SnapToObjects_ToggleWorks() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 448
+
+  Failed BringToFront_SendToBack_ChangesZOrder [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.BringToFront_SendToBack_ChangesZOrder threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.BringToFront_SendToBack_ChangesZOrder() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 467
+
+  Failed LockUnlockElement_Works [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.LockUnlockElement_Works threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.LockUnlockElement_Works() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 493
+
+  Failed GroupUngroup_Works [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.GroupUngroup_Works threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.GroupUngroup_Works() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 508
+
+  Failed AlignDropdown_Opens [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.AlignDropdown_Opens threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.AlignDropdown_Opens() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 536
+
+  Failed DistributeDropdown_Opens [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DistributeDropdown_Opens threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DistributeDropdown_Opens() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 560
+
+  Failed CopyPasteStyle_Works [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.CopyPasteStyle_Works threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.CopyPasteStyle_Works() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 587
+
+  Failed DuplicateElement_Works [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DuplicateElement_Works threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DuplicateElement_Works() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 603
+
+  Failed AddPage_CreatesNewTab [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.AddPage_CreatesNewTab threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.AddPage_CreatesNewTab() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 626
+
+  Failed SwitchPage_ChangesActiveTab [10 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.SwitchPage_ChangesActiveTab threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.SwitchPage_ChangesActiveTab() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 641
+
+  Failed DeletePage_RemovesTab [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DeletePage_RemovesTab threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DeletePage_RemovesTab() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 661
+
+  Failed Layers_AddLayer_CreatesNewLayer [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.Layers_AddLayer_CreatesNewLayer threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.Layers_AddLayer_CreatesNewLayer() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 685
+
+  Failed Layers_ToggleVisibility_HidesLayer [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.Layers_ToggleVisibility_HidesLayer threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.Layers_ToggleVisibility_HidesLayer() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 700
+
+  Failed Layers_SetActiveLayer_Works [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.Layers_SetActiveLayer_Works threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.Layers_SetActiveLayer_Works() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 714
+
+  Failed ContextMenu_OnCanvas_Opens [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ContextMenu_OnCanvas_Opens threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ContextMenu_OnCanvas_Opens() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 740
+
+  Failed ContextMenu_OnElement_Opens [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ContextMenu_OnElement_Opens threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ContextMenu_OnElement_Opens() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 753
+
+  Failed ExportDropdown_OpensAndShowsPngOption [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportDropdown_OpensAndShowsPngOption threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportDropdown_OpensAndShowsPngOption() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 776
+
+  Failed ExportPng_OpensExportDialog [10 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportPng_OpensExportDialog threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportPng_OpensExportDialog() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 790
+
+  Failed ExportDialog_CanChangeScale [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportDialog_CanChangeScale threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportDialog_CanChangeScale() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 808
+
+  Failed ExportDialog_CanClose [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportDialog_CanClose threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ExportDialog_CanClose() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 835
+
+  Failed ReadOnlyToggle_SwitchesMode [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ReadOnlyToggle_SwitchesMode threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ReadOnlyToggle_SwitchesMode() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 862
+
+  Failed ReadOnlyEditor_IsRendered [4 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.ReadOnlyEditor_IsRendered threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.ReadOnlyEditor_IsRendered() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 878
+
+  Failed DocumentTitle_IsEditable [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.DocumentTitle_IsEditable threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.DocumentTitle_IsEditable() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 891
+
+  Failed CanvasSizeButton_OpensInputs [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.CanvasSizeButton_OpensInputs threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.CanvasSizeButton_OpensInputs() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 907
+
+  Failed Toolbox_NewCategories_Visible [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.Toolbox_NewCategories_Visible threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.Toolbox_NewCategories_Visible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 927
+
+  Failed NewComponents_GalleryScreenshot [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeEditorE2ETests.NewComponents_GalleryScreenshot threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.PrepareWireframePageAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.WireframeEditorE2ETests.NewComponents_GalleryScreenshot() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeEditorE2ETests.cs:line 942
+
+  Failed RenderSvg_RendersInBrowser_AndCapturesBaseline [25 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.WireframeServerPreviewE2ETests.RenderSvg_RendersInBrowser_AndCapturesBaseline threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.WireframeServerPreviewE2ETests.RenderSvg_RendersInBrowser_AndCapturesBaseline() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/WireframeServerPreviewE2ETests.cs:line 121
+
+  Failed Scheduler_Timezone_RendersAndExportsValidIcs [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Scheduler.SchedulerTimezoneE2ETests.Scheduler_Timezone_RendersAndExportsValidIcs threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Scheduler.SchedulerTimezoneE2ETests.OpenAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Scheduler/SchedulerTimezoneE2ETests.cs:line 18
+   at Tempo.Blazor.E2E.Scheduler.SchedulerTimezoneE2ETests.Scheduler_Timezone_RendersAndExportsValidIcs() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Scheduler/SchedulerTimezoneE2ETests.cs:line 31
+
+  Failed Scheduler_PrintMedia_HidesNavChrome [10 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Scheduler.SchedulerTimezoneE2ETests.Scheduler_PrintMedia_HidesNavChrome threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Scheduler.SchedulerTimezoneE2ETests.OpenAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Scheduler/SchedulerTimezoneE2ETests.cs:line 18
+   at Tempo.Blazor.E2E.Scheduler.SchedulerTimezoneE2ETests.Scheduler_PrintMedia_HidesNavChrome() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Scheduler/SchedulerTimezoneE2ETests.cs:line 62
+
+  Failed Notifications_Realtime_BellUpdatesInSecondWindow [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.Notifications_Realtime_BellUpdatesInSecondWindow threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.OpenAsync(Boolean grantNotifications) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Notifications/NotificationsE2ETests.cs:line 23
+   at Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.Notifications_Realtime_BellUpdatesInSecondWindow() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Notifications/NotificationsE2ETests.cs:line 42
+
+  Failed Notifications_WebPush_SubscribeAndTestSend [26 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.Notifications_WebPush_SubscribeAndTestSend threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.OpenAsync(Boolean grantNotifications) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Notifications/NotificationsE2ETests.cs:line 23
+   at Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.Notifications_WebPush_SubscribeAndTestSend() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Notifications/NotificationsE2ETests.cs:line 74
+
+  Failed Notifications_Digest_EmailDeliveredToSmtp4Dev [60 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.Notifications_Digest_EmailDeliveredToSmtp4Dev threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.OpenAsync(Boolean grantNotifications) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Notifications/NotificationsE2ETests.cs:line 23
+   at Tempo.Blazor.E2E.Notifications.NotificationsE2ETests.Notifications_Digest_EmailDeliveredToSmtp4Dev() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Notifications/NotificationsE2ETests.cs:line 100
+
+  Failed Phase5_NotionDiscoveryContract_MapsToAdvancedTableUi [142 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Mcp.NotionAuthoringContractE2ETests.Phase5_NotionDiscoveryContract_MapsToAdvancedTableUi threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Mcp.NotionAuthoringContractE2ETests.Phase5_NotionDiscoveryContract_MapsToAdvancedTableUi() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Mcp/NotionAuthoringContractE2ETests.cs:line 96
+
+  Failed Phase8_Notion270Contract_HasNoLegacyTools_AndRendersResponsiveRichTable [62 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Mcp.NotionAuthoringContractE2ETests.Phase8_Notion270Contract_HasNoLegacyTools_AndRendersResponsiveRichTable threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Mcp.NotionAuthoringContractE2ETests.Phase8_Notion270Contract_HasNoLegacyTools_AndRendersResponsiveRichTable() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Mcp/NotionAuthoringContractE2ETests.cs:line 181
+
+  Failed Dashboard_InCzech_ShowsLocalizedWidgetSelectorAndCategories [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Localization.CzechUiE2ETests.Dashboard_InCzech_ShowsLocalizedWidgetSelectorAndCategories threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Localization.CzechUiE2ETests.Dashboard_InCzech_ShowsLocalizedWidgetSelectorAndCategories() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Localization/CzechUiE2ETests.cs:line 19
+
+  Failed TmChart_InteractiveLegend_TogglesSeries_AndTooltipShowsLabelAndValue [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.K10.K10FeaturesE2ETests.TmChart_InteractiveLegend_TogglesSeries_AndTooltipShowsLabelAndValue threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.K10.K10FeaturesE2ETests.OpenAsync(String route, String readySelector) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/K10/K10FeaturesE2ETests.cs:line 31
+   at Tempo.Blazor.E2E.K10.K10FeaturesE2ETests.TmChart_InteractiveLegend_TogglesSeries_AndTooltipShowsLabelAndValue() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/K10/K10FeaturesE2ETests.cs:line 54
+
+  Failed TmMultiColumnComboBox_MultiSelect_PicksTwoRows_RendersTwoRemovableChips [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.K10.K10FeaturesE2ETests.TmMultiColumnComboBox_MultiSelect_PicksTwoRows_RendersTwoRemovableChips threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.K10.K10FeaturesE2ETests.OpenAsync(String route, String readySelector) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/K10/K10FeaturesE2ETests.cs:line 31
+   at Tempo.Blazor.E2E.K10.K10FeaturesE2ETests.TmMultiColumnComboBox_MultiSelect_PicksTwoRows_RendersTwoRemovableChips() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/K10/K10FeaturesE2ETests.cs:line 103
+
+  Failed Files_ChunkedUpload_100MB_ShowsProgressAndCompletes [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.Files_ChunkedUpload_100MB_ShowsProgressAndCompletes threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.OpenChunkedTabAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Files/FileManagerK4E2ETests.cs:line 18
+   at Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.Files_ChunkedUpload_100MB_ShowsProgressAndCompletes() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Files/FileManagerK4E2ETests.cs:line 37
+
+  Failed Files_ScanBlocked_MakesFileUnavailable [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.Files_ScanBlocked_MakesFileUnavailable threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.OpenChunkedTabAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Files/FileManagerK4E2ETests.cs:line 18
+   at Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.Files_ScanBlocked_MakesFileUnavailable() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Files/FileManagerK4E2ETests.cs:line 66
+
+  Failed Files_VersionHistory_CompareAndRestore [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.Files_VersionHistory_CompareAndRestore threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.OpenChunkedTabAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Files/FileManagerK4E2ETests.cs:line 18
+   at Tempo.Blazor.E2E.Files.FileManagerK4E2ETests.Files_VersionHistory_CompareAndRestore() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Files/FileManagerK4E2ETests.cs:line 96
+
+  Failed TestIdPrefix_NamespacesInternalIds_WhileBareStaysBackwardCompatible [10 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Conventions.TestIdPrefixE2ETests.TestIdPrefix_NamespacesInternalIds_WhileBareStaysBackwardCompatible threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Conventions.TestIdPrefixE2ETests.OpenAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Conventions/TestIdPrefixE2ETests.cs:line 22
+   at Tempo.Blazor.E2E.Conventions.TestIdPrefixE2ETests.TestIdPrefix_NamespacesInternalIds_WhileBareStaysBackwardCompatible() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Conventions/TestIdPrefixE2ETests.cs:line 45
+
+  Failed Chat_Thread_Reactions_Receipts_CrossBetweenTwoUsers [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Chat.ChatCollaborationE2ETests.Chat_Thread_Reactions_Receipts_CrossBetweenTwoUsers threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Chat.ChatCollaborationE2ETests.OpenAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Chat/ChatCollaborationE2ETests.cs:line 21
+   at Tempo.Blazor.E2E.Chat.ChatCollaborationE2ETests.Chat_Thread_Reactions_Receipts_CrossBetweenTwoUsers() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Chat/ChatCollaborationE2ETests.cs:line 45
+
+  Failed Chat_EditOwnMessage_ShowsEditedMarkerForBothUsers [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Chat.ChatCollaborationE2ETests.Chat_EditOwnMessage_ShowsEditedMarkerForBothUsers threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Chat.ChatCollaborationE2ETests.OpenAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Chat/ChatCollaborationE2ETests.cs:line 21
+   at Tempo.Blazor.E2E.Chat.ChatCollaborationE2ETests.Chat_EditOwnMessage_ShowsEditedMarkerForBothUsers() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Chat/ChatCollaborationE2ETests.cs:line 81
+
+  Failed FormInputs_Axe_HasNoCriticalOrSeriousViolations [8 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.FormInputs_Axe_HasNoCriticalOrSeriousViolations threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.FormInputs_Axe_HasNoCriticalOrSeriousViolations() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 145
+
+  Failed DataTable_Axe_HasNoCriticalOrSeriousViolations [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.DataTable_Axe_HasNoCriticalOrSeriousViolations threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.DataTable_Axe_HasNoCriticalOrSeriousViolations() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 161
+
+  Failed Modal_Axe_HasNoCriticalOrSerious_AndRestoresFocusOnClose [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Modal_Axe_HasNoCriticalOrSerious_AndRestoresFocusOnClose threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Modal_Axe_HasNoCriticalOrSerious_AndRestoresFocusOnClose() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 173
+
+  Failed Pickers_Axe_TriggerButtons_HaveAccessibleNames [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Pickers_Axe_TriggerButtons_HaveAccessibleNames threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Pickers_Axe_TriggerButtons_HaveAccessibleNames() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 204
+
+  Failed Pickers_ClickingLabel_FocusesTrigger [5 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Pickers_ClickingLabel_FocusesTrigger threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Pickers_ClickingLabel_FocusesTrigger() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 230
+
+  Failed Buttons_Dark_HasNoCriticalOrSeriousViolations [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Buttons_Dark_HasNoCriticalOrSeriousViolations threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Buttons_Dark_HasNoCriticalOrSeriousViolations() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 265
+
+  Failed Badges_Dark_HasNoCriticalOrSeriousViolations [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Badges_Dark_HasNoCriticalOrSeriousViolations threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Badges_Dark_HasNoCriticalOrSeriousViolations() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 279
+
+  Failed Alerts_Dark_HasNoCriticalOrSeriousViolations [6 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Alerts_Dark_HasNoCriticalOrSeriousViolations threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 20
+   at Tempo.Blazor.E2E.Accessibility.ComponentAccessibilityE2ETests.Alerts_Dark_HasNoCriticalOrSeriousViolations() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/ComponentAccessibilityE2ETests.cs:line 292
+
+  Failed Modal_FocusTrapActivation_LeavesFocusAloneWhenItIsAlreadyInsideTheOverlay [11 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.Modal_FocusTrapActivation_LeavesFocusAloneWhenItIsAlreadyInsideTheOverlay threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.OpenWithGatedFocusTrapModuleAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 84
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.Modal_FocusTrapActivation_LeavesFocusAloneWhenItIsAlreadyInsideTheOverlay() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 186
+
+  Failed Modal_FocusTrapActivation_MovesFocusInsideWhenItStartsOutsideTheOverlay [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.Modal_FocusTrapActivation_MovesFocusInsideWhenItStartsOutsideTheOverlay threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.OpenWithGatedFocusTrapModuleAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 84
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.Modal_FocusTrapActivation_MovesFocusInsideWhenItStartsOutsideTheOverlay() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 247
+
+  Failed TmDialog_StillReceivesInitialFocusInsideOnOpen [9 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.TmDialog_StillReceivesInitialFocusInsideOnOpen threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 283
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.TmDialog_StillReceivesInitialFocusInsideOnOpen() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 318
+
+  Failed TmDrawer_StillReceivesInitialFocusInsideOnOpen [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.TmDrawer_StillReceivesInitialFocusInsideOnOpen threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 283
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.TmDrawer_StillReceivesInitialFocusInsideOnOpen() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 327
+
+  Failed TmCommandPalette_StillAutofocusesItsSearchInputOnOpen [7 ms]
+  Error Message:
+   Test method Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.TmCommandPalette_StillAutofocusesItsSearchInputOnOpen threw exception: 
+Microsoft.Playwright.TargetClosedException: Target page, context or browser has been closed
+  Stack Trace:
+     at Microsoft.Playwright.Transport.Connection.InnerSendMessageToServerAsync[T](ChannelOwner object, String method, Dictionary`2 dictionary, Boolean keepNulls) in /_/src/Playwright/Transport/Connection.cs:line 206
+   at Microsoft.Playwright.Transport.Connection.WrapApiCallAsync[T](Func`1 action, Boolean isInternal)
+   at Microsoft.Playwright.Core.Browser.NewContextAsync(BrowserNewContextOptions options) in /_/src/Playwright/Core/Browser.cs:line 172
+   at Tempo.Blazor.E2E.PlaywrightTestBase.CreateContextAsync() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/PlaywrightTestBase.cs:line 167
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.OpenAsync(String route) in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 283
+   at Tempo.Blazor.E2E.Accessibility.FocusTrapActivationE2ETests.TmCommandPalette_StillAutofocusesItsSearchInputOnOpen() in /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/Accessibility/FocusTrapActivationE2ETests.cs:line 335
+
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.E2E/TestResults/release-291.trx
+
+Failed!  - Failed:   111, Passed:  1313, Skipped:    77, Total:  1501, Duration: 6 h 48 m - Tempo.Blazor.E2E.dll (net10.0)
+  Tempo.Blazor.All -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.All/bin/Release/net10.0/Tempo.Blazor.All.dll
+  Tempo.Blazor.Mcp -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Mcp/bin/Release/net8.0/Tempo.Blazor.Mcp.dll
+  Tempo.Blazor.Demo.SharedUI -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/src/Tempo.Blazor.Demo.SharedUI/bin/Release/net10.0/Tempo.Blazor.Demo.SharedUI.dll
+  JsonDocumentationGenerator -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/JsonDocumentation/JsonDocumentationGenerator/bin/Debug/net10.0/JsonDocumentationGenerator.dll
+  Tempo.Blazor.Tests -> /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Tests/bin/Release/net10.0/Tempo.Blazor.Tests.dll
+Test run for /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Tests/bin/Release/net10.0/Tempo.Blazor.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:26.14]     Tempo.Blazor.Tests.Packaging.ReleaseContractTests.PackedPackages_RecordTheCommitTheyWereBuiltFrom [SKIP]
+  Skipped Tempo.Blazor.Tests.Packaging.ReleaseContractTests.PackedPackages_RecordTheCommitTheyWereBuiltFrom [1 ms]
+WARNING: Overwriting results file: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Tests/TestResults/release-291.trx
+Results File: /root/NetProjects/Tempo.Blazor/Tempo.Blazor/tests/Tempo.Blazor.Tests/TestResults/release-291.trx
+
+Passed!  - Failed:     0, Passed: 10322, Skipped:     1, Total: 10323, Duration: 1 m 28 s - Tempo.Blazor.Tests.dll (net10.0)

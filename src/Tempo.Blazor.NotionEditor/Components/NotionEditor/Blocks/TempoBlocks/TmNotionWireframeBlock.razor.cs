@@ -38,6 +38,7 @@ public partial class TmNotionWireframeBlock : ComponentBase, IAsyncDisposable
     private string?                                   _effectivePreview;
     private Guid                                      _refreshedId = Guid.Empty;
     private Guid                                      _subscribedId = Guid.Empty;
+    private bool                                      _subscriptionReady;
     private bool                                      _changeHandlerRegistered;
     private ElementReference                          _previewWrapRef;
     private ElementReference                          _captionRef;
@@ -116,12 +117,20 @@ public partial class TmNotionWireframeBlock : ComponentBase, IAsyncDisposable
         if (_subscribedId != Guid.Empty)
         {
             await notifier.UnsubscribeAsync(DocumentLibrary.TempoDocumentKind.Wireframe, _subscribedId);
+            _subscriptionReady = false;
         }
 
         _subscribedId = id;
         if (id != Guid.Empty)
         {
+            // Awaited so the DOM barrier (data-doclib-subscribed) flips only after the hub
+            // join is confirmed — remote edits broadcast before that point would be lost.
             await notifier.SubscribeAsync(DocumentLibrary.TempoDocumentKind.Wireframe, id);
+            _subscriptionReady = true;
+        }
+        else
+        {
+            _subscriptionReady = false;
         }
     }
 

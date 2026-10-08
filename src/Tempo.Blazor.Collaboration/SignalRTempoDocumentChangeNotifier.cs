@@ -61,6 +61,9 @@ public sealed class SignalRTempoDocumentChangeNotifier : ITempoDocumentChangeNot
         _hub = hub ?? throw new ArgumentNullException(nameof(hub));
         _hub.On<TempoDocumentChange>(HubMethods.RemoteDocumentChanged, change =>
             Changed is null ? Task.CompletedTask : Changed(change, CancellationToken.None));
+        // SignalR does not restore group membership after an automatic reconnect —
+        // without this the client silently stops receiving changes after any dropped connection.
+        _hub.Reconnected += OnReconnectedAsync;
     }
 
     /// <inheritdoc />
@@ -139,6 +142,33 @@ public sealed class SignalRTempoDocumentChangeNotifier : ITempoDocumentChangeNot
         {
             await _hub.InvokeAsync(HubMethods.LeaveDocument, kind, documentId, cancellationToken)
                 .ConfigureAwait(false);
+        }
+    }
+
+    private async Task OnReconnectedAsync(string? connectionId)
+    {
+        List<(TempoDocumentKind Kind, Guid Id)> documents;
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            documents = new List<(TempoDocumentKind Kind, Guid Id)>(_refCounts.Keys);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        foreach (var (kind, documentId) in documents)
+        {
+            try
+            {
+                await _hub!.InvokeAsync(HubMethods.JoinDocument, kind, documentId)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                // Best effort — the next reconnect or resubscribe retries the join.
+            }
         }
     }
 
