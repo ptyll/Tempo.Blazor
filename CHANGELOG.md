@@ -356,6 +356,16 @@
   The suffix matches the lower-cased `TmWorkItemPriority` member. A stylesheet referencing
   `--tm-priority-critical` must switch to `--tm-priority-highest`.
 
+- **Every modal viewport-anchored overlay root lives in the browser top layer.** A modal
+  `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the `TmToastContainer`
+  carry `popover="manual"` and promote themselves at open through the shared promote helper, so
+  the top-layer order equals the open order (a dialog opened from inside a sheet paints above
+  it; a toast pushed while a sheet is open lands above it). Host chrome that relied on a z-index
+  band above modals (its own bar at a z-index higher than `--tm-z-modal` painting over an open
+  modal) now paints UNDER every open modal surface — only another promoted surface can cover
+  one. Non-modal anchored popovers (`TmOverlayPanel`) were already top-layer and are unaffected.
+  See [docs/overlays.md](docs/overlays.md).
+
 ### Added
 
 - `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
@@ -390,20 +400,12 @@
 - `OverlayPanelRules_Inventory_*` tests pin the exact `.tm-overlay-panel` rule set of the bundled
   CSS (the `:where()` reset, the fallback closed-state hide, the `:where()` open display) so a
   new or re-weighted global rule on the shared element fails as a finding (CF03c).
-
-### Fixed
-
-- **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
-  content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
-  menus and listboxes opened as sheets take initial focus on the first item, not Done;
-  `TmDropdown` returns focus to the trigger after a keyboard selection; trap-focus popups
-  activate only after `showPopover()`, so a cold Enter-open no longer drops focus to `<body>`;
-  a modal sheet's root is promoted to the browser top layer (sticky app bars and transformed
-  ancestors can no longer confine or cover it); the date-range sheet stacks its months, shows a
-  single Done and keeps it disabled until both dates are picked; overlay.js translates anchor
-  rects into visible-viewport space (a panned-down visible anchor is no longer dismissed as
-  hidden); `Title` also names the popover; Escape inside a sheet raises `OnDismissed("escape")`;
-  the swipe-enabled sheet shows its grabber; `TmPopover`'s arrow no longer paints inside a sheet.
+- `TmOverlayPanel.SheetDoneEnabled` gates the sheet header's Done action (sheet mode only): a
+  consumer mid-task keeps Done disabled until its input is complete — the date-range picker
+  disables it until BOTH dates are picked.
+- `InitialFocusSelector` on `TmFocusScope` and `TmDrawer` resolves the initial-focus target
+  inside the scope from a CSS selector (e.g. the first menuitem of a menu sheet); an explicit
+  `InitialFocusTarget`/`InitialFocusTargetId` still wins.
 
 ### Changed
 
@@ -420,6 +422,29 @@
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 
 ### Fixed
+
+- **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
+  content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
+  menus and listboxes opened as sheets take initial focus on the first item, not Done;
+  `TmDropdown` returns focus to the trigger after a keyboard selection; trap-focus popups
+  activate only after `showPopover()`, so a cold Enter-open no longer drops focus to `<body>`;
+  a modal sheet's root is promoted to the browser top layer (sticky app bars and transformed
+  ancestors can no longer confine or cover it); the date-range sheet stacks its months, shows a
+  single Done and keeps it disabled until both dates are picked; overlay.js translates anchor
+  rects into visible-viewport space (a panned-down visible anchor is no longer dismissed as
+  hidden); `Title` also names the popover; Escape inside a sheet raises `OnDismissed("escape")`;
+  the swipe-enabled sheet shows its grabber; `TmPopover`'s arrow no longer paints inside a sheet.
+
+- **F3 review round 2.** Every modal viewport-anchored overlay root is promoted to the browser
+  top layer — a modal `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the
+  `TmToastContainer` (re-raised on each push) — so the top-layer order equals the open order: a
+  dialog opened from inside a bottom sheet no longer paints invisible under it, and a toast
+  pushed while a sheet is open lands above it. Each promoted root resets the UA `[popover]`
+  paint (Canvas background, CanvasText color, `overflow:auto`), so the page behind a sheet stays
+  dimmed instead of turning into a flat grey wall and dark body text keeps the themed colour.
+  An invalid `TmFocusScope.InitialFocusSelector` no longer throws after the inert/scroll lock
+  landed. The restored `@media (width < 768px)` `.tm-modal` margin is asserted on the real
+  element again (the round-1 adaptation measured a margin that came from an unrelated rule).
 
 - **Round-6 overlay fixes.** Opening a `TmDialog` Prompt with Enter no longer submits it at once.
   The opener activates on its Enter keydown and the per-type initial focus lands on the input while
