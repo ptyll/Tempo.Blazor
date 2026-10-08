@@ -439,3 +439,75 @@ test('a null handle still tracks the viewport', async () => {
     assert.equal(sheet.props.get('--tm-sheet-viewport'), '430px', 'a modal sheet with no gesture still lifts for the keyboard');
     delete globalThis.window;
 });
+
+// ── SwipeToDismiss=false never dismisses (review round 5) ──────────────────────
+// settle() used to close the sheet on any flick above 2 px/ms, and on a downward flick from the
+// lowest snap, without consulting swipeToDismiss — attachGesture already passes `swipeToDismiss &&
+// downward`, so every dismiss return inside settle must honour the flag too.
+
+test('settle never dismisses when swipe-to-dismiss is off, whatever the velocity', () => {
+    // A 1 px/ms flick from the lowest snap is a "one snap down" gesture; with dismissal off it
+    // clamps to the lowest snap instead of closing.
+    const slow = settle(snaps, 0.45, false, 1, 0);
+    assert.equal(slow.dismiss, false, 'a downward flick from the lowest snap must not dismiss');
+    assert.equal(slow.index, 0, 'a downward flick from the lowest snap clamps to index 0');
+    assert.equal(slow.snap, 0.5);
+
+    // Above ~2 px/ms used to close the sheet from any snap even with the flag off.
+    const fast = settle(snaps, 0.49, false, 2.5, 1);
+    assert.equal(fast.dismiss, false, 'a fast flick settles instead of dismissing');
+    assert.equal(fast.index, 0, 'a fast flick with dismissal off settles at the lowest snap');
+    assert.equal(fast.snap, 0.5);
+});
+
+test('SwipeToDismiss=false: a 1 px/ms downward flick from the lowest snap must not dismiss', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], false, sink, 'off-1');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 400, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 420, timeStamp: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 440, timeStamp: 220 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 440, timeStamp: 220 });
+
+    assert.notEqual(sink.calls[0]?.[0], 'HandleSheetDismissedAsync');
+    delete globalThis.window;
+});
+
+test('SwipeToDismiss=false: a 3 px/ms flick from full must not dismiss', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(800);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], false, sink, 'off-2');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 140, timeStamp: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 200, timeStamp: 220 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 200, timeStamp: 220 });
+
+    assert.notEqual(sink.calls[0]?.[0], 'HandleSheetDismissedAsync');
+    delete globalThis.window;
+});
+
+test('a net-upward drag ending in a downward flick must not dismiss', () => {
+    // The drag grew the sheet first (400 -> 300 -> 380 of an 800px viewport), so its net direction
+    // is upward. The last-80ms velocity sample is a fast downward flick; a decision recorded for the
+    // drawer says a net-upward drag never dismisses, whatever the tail velocity says.
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'up-then-down');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 400, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 300, timeStamp: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 320, timeStamp: 300 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 380, timeStamp: 320 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 380, timeStamp: 320 });
+
+    assert.notEqual(sink.calls[0]?.[0], 'HandleSheetDismissedAsync');
+    delete globalThis.window;
+});

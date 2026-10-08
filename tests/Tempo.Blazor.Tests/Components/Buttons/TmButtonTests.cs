@@ -503,4 +503,52 @@ public class TmButtonTests : LocalizationTestBase
         var classes = cut.Find("button").ClassList;
         classes.Should().Contain("tm-btn").And.Contain(modifier);
     }
+
+    // ─── Label span (review round 5) ──────────────────────────────────────────
+    // The label span exists so a context that shrinks the button (a 320px sheet footer) can truncate
+    // the text. An EMPTY span must not render: a flex child, even a collapsed one, adds a gap, which
+    // grew every icon-only TmButton by 8px.
+
+    [Fact]
+    public void TmButton_IconOnly_RendersNoLabelSpan()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Icon, IconNames.Plus));
+
+        cut.FindAll(".tm-btn-label").Should().BeEmpty(
+            "an empty label span adds a flex gap and grows the icon-only button");
+    }
+
+    [Fact]
+    public void TmButton_WithContent_WrapsItInExactlyOneLabelSpan()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.Icon, IconNames.Plus)
+            .AddChildContent("Add filter"));
+
+        cut.FindAll(".tm-btn-label").Should().ContainSingle(
+            "the span is the truncation hook a shrinking context opts into");
+        cut.Find(".tm-btn-label").TextContent.Should().Contain("Add filter");
+    }
+
+    [Fact]
+    public void TmButton_LoadingWithoutTextOrContent_RendersNoLabelSpan()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.IsLoading, true));
+
+        cut.FindAll(".tm-btn-label").Should().BeEmpty(
+            "a loading button with no text and no content paints only the spinner");
+    }
+
+    [Fact]
+    public void TmButton_LoadingWithText_KeepsTheLabelSpan()
+    {
+        var cut = Render<TmButton>(p => p
+            .Add(c => c.IsLoading, true)
+            .Add(c => c.LoadingText, "Saving…"));
+
+        cut.FindAll(".tm-btn-label").Should().ContainSingle();
+        cut.Find(".tm-btn-label").TextContent.Should().Contain("Saving…");
+    }
 }

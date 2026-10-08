@@ -2322,6 +2322,7 @@
   "TmDemo_OpenSheet": "Open sheet",
   "TmDemo_StackedFooter": "Stacked footer",
   "TmDemo_InlineSheet": "Inline sheet",
+  "TmDemo_InlineSheetNoDismiss": "Inline sheet, no swipe-off",
   "TmDemo_CanvasBehind": "Canvas behind the sheet",
   "TmDemo_InlineSheetBody": "The canvas behind this sheet stays clickable.",
   "TmDemo_ToggleFocusScope": "Toggle focus scope",

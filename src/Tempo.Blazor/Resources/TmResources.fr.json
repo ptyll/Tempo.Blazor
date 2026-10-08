@@ -2322,6 +2322,7 @@
   "TmDemo_OpenSheet": "Ouvrir le volet",
   "TmDemo_StackedFooter": "Pied de page empilé",
   "TmDemo_InlineSheet": "Volet intégré",
+  "TmDemo_InlineSheetNoDismiss": "Volet intégré, sans balayage",
   "TmDemo_CanvasBehind": "Canevas derrière le volet",
   "TmDemo_InlineSheetBody": "Le canevas derrière ce volet reste cliquable.",
   "TmDemo_ToggleFocusScope": "Basculer la zone de focus",

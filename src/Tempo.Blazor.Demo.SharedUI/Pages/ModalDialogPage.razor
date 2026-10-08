@@ -115,7 +115,8 @@
     <div class="flex flex-wrap gap-3">
         <TmButton OnClick="() => _showSheet = true" data-testid="open-sheet">@Loc["TmDemo_OpenSheet"]</TmButton>
         <TmButton OnClick="() => _showStacked = true" Variant="ButtonVariant.Secondary" data-testid="open-stacked">@Loc["TmDemo_StackedFooter"]</TmButton>
-        <TmButton OnClick="() => _showInlineDrawer = true" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer">@Loc["TmDemo_InlineSheet"]</TmButton>
+        <TmButton OnClick="() => { _inlineDrawerSwipe = true; _showInlineDrawer = true; }" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer">@Loc["TmDemo_InlineSheet"]</TmButton>
+        <TmButton OnClick="OpenLockedInlineDrawer" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer-locked">@Loc["TmDemo_InlineSheetNoDismiss"]</TmButton>
         <TmButton OnClick="() => _showLongDialog = true" Variant="ButtonVariant.Secondary" data-testid="open-long-dialog">@Loc["TmDemo_OpenLongDialog"]</TmButton>
     </div>
     <div class="mt-3 flex flex-wrap gap-4 text-sm">
@@ -125,7 +126,7 @@
     </div>
     <div class="mt-4 p-6 border border-slate-200 dark:border-slate-700 rounded-lg" style="position: relative; min-height: 16rem;" data-testid="inline-sheet-host">
         <button type="button" id="sheet-canvas" data-testid="sheet-canvas" class="tm-btn tm-btn-secondary">@Loc["TmDemo_CanvasBehind"]</button>
-        <TmDrawer IsOpen="_showInlineDrawer" IsOpenChanged="open => _showInlineDrawer = open" Position="DrawerPosition.Bottom" Modal="false" SnapPoints="@(_contentHeight ? Array.Empty<double>() : new[] { 0.5, 1.0 })" Title="@Loc["TmDemo_InlineSheet"]">
+        <TmDrawer IsOpen="_showInlineDrawer" IsOpenChanged="open => _showInlineDrawer = open" Position="DrawerPosition.Bottom" Modal="false" SwipeToDismiss="_inlineDrawerSwipe" SnapPoints="@(_contentHeight ? Array.Empty<double>() : new[] { 0.5, 1.0 })" Title="@Loc["TmDemo_InlineSheet"]">
             <p>@Loc["TmDemo_InlineSheetBody"]</p>
         </TmDrawer>
     </div>
@@ -290,6 +291,9 @@
     private bool _showSheet;
     private bool _showStacked;
     private bool _showInlineDrawer;
+    // The locked entry opens the same inline drawer with the swipe-off gesture off, so a review can
+    // see a fast downward flick leave the sheet open.
+    private bool _inlineDrawerSwipe = true;
     private bool _scopeActive;
     private bool _dialogInline;
     private bool _forceSheet;
@@ -326,6 +330,12 @@
         _confirmTitle = "Confirm Action";
         _confirmMessage = "Are you sure you want to proceed with this action?";
         _showConfirm = true;
+    }
+
+    private void OpenLockedInlineDrawer()
+    {
+        _inlineDrawerSwipe = false;
+        _showInlineDrawer = true;
     }
     
     private void ShowDangerConfirm()
