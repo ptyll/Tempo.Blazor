@@ -1,3 +1,7 @@
 # Generated headless layout bundle: keep LF in every working copy so the embedded
 # resource bytes (and the esbuild drift comparison) are identical across platforms.
 src/Tempo.Blazor.DocumentFormats/HeadlessLayout/*.bundle.mjs text eol=lf
+
+# Generated CSS bundle (BundleCss): the build rewrites it and CI diffs it against the commit —
+# CRLF churn on Windows checkouts would false-positive that freshness gate.
+src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css text eol=lf

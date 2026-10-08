@@ -94,6 +94,12 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 
+      - name: Verify the committed CSS bundle is fresh
+        # BundleCss regenerates tempo-blazor.bundled.css during the build; a stale committed
+        # bundle would ship last cycle's CSS while the sources moved on. The eol=lf rule in
+        # .gitattributes keeps this diff byte-stable across platforms.
+        run: git diff --exit-code -- src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css
+
       # Named exceptions of the release gate (DEC-TEMPO-RELEASE-GATE):
       #   Tempo.Blazor.E2E — Playwright over the demo hosts; excluded from this lane because
       #     the full suite runs ~4h. The release condition's second clause is an owner-verified
