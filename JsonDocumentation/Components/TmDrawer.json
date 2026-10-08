@@ -50,7 +50,7 @@
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "An accessible name for the drawer when neither Title nor HeaderContent names it (a header rendered through HeaderContent carries no automatic label). Emitted as aria-label on the focus-scope root (since 2.9.2)."
+      "description": "An accessible name for the drawer when neither Title nor HeaderContent names it (a header rendered through HeaderContent carries no automatic label). Emitted as aria-label on the focus-scope root (since 2.9.1)."
     },
     {
       "name": "ShowOverlay",

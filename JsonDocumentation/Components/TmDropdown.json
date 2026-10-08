@@ -58,27 +58,27 @@
       "type": "PanelPresentation",
       "isRequired": false,
       "default": "Auto",
-      "description": "How the menu presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet titled with the trigger text on mobile, the anchored popover otherwise. A forced value renders without measuring (since 2.9.2)."
+      "description": "How the menu presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet titled with the trigger text on mobile, the anchored popover otherwise. A forced value renders without measuring (since 2.9.1)."
     },
     {
       "name": "LayoutMode",
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Auto",
-      "description": "The layout the menu presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a test can render a mode without a DOM (since 2.9.2)."
+      "description": "The layout the menu presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a test can render a mode without a DOM (since 2.9.1)."
     },
     {
       "name": "InitialMode",
       "type": "TmLayoutMode",
       "isRequired": false,
       "default": "Desktop",
-      "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.2)."
+      "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.1)."
     },
     {
       "name": "ResolvedLayoutChanged",
       "type": "EventCallback<TmLayoutMode>",
       "isRequired": false,
-      "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.2)."
+      "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
     },
     {
       "name": "Class",

@@ -337,7 +337,7 @@ public sealed class OverlayPanelComputedStyleRegressionTests
     /// problem the reset was unwrapped for, so it must land in this list with a written reason.
     /// </summary>
     /// <remarks>
-    /// F3 (2.9.2) adds <c>.tm-overlay-panel-sheet__title</c> and <c>.tm-overlay-panel-sheet__done</c>:
+    /// F3 (2.9.1) adds <c>.tm-overlay-panel-sheet__title</c> and <c>.tm-overlay-panel-sheet__done</c>:
     /// they match this grep only because the BEM name carries the <c>tm-overlay-panel</c> substring —
     /// they style SEPARATE elements (the sheet header's title and Done action, children of the
     /// TmDrawer the panel composes in its sheet presentation) and never touch the shared panel

@@ -9398,21 +9398,21 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.2)."
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.1)."
         },
         {
           "name": "LayoutMode",
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Auto",
-          "description": "The layout the menu presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a test can render a mode without a DOM (since 2.9.2)."
+          "description": "The layout the menu presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a test can render a mode without a DOM (since 2.9.1)."
         },
         {
           "name": "MobilePresentation",
           "type": "PanelPresentation",
           "isRequired": false,
           "default": "PanelPresentation.Auto",
-          "description": "How the menu presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet titled with the trigger text on mobile, the anchored popover otherwise. A forced value renders without measuring (since 2.9.2)."
+          "description": "How the menu presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet titled with the trigger text on mobile, the anchored popover otherwise. A forced value renders without measuring (since 2.9.1)."
         },
         {
           "name": "Offset",
@@ -9438,7 +9438,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.2)."
+          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
         },
         {
           "name": "Text",
@@ -10474,7 +10474,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.2)."
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.1)."
         },
         {
           "name": "IsOpen",
@@ -10493,14 +10493,14 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Auto",
-          "description": "The layout the body presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a test can render a mode without a DOM (since 2.9.2)."
+          "description": "The layout the body presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a test can render a mode without a DOM (since 2.9.1)."
         },
         {
           "name": "MobilePresentation",
           "type": "PanelPresentation",
           "isRequired": false,
           "default": "PanelPresentation.Auto",
-          "description": "How the body presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise. A forced value renders without measuring (since 2.9.2)."
+          "description": "How the body presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise. A forced value renders without measuring (since 2.9.1)."
         },
         {
           "name": "Position",
@@ -10513,7 +10513,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.2)."
+          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
         },
         {
           "name": "ShowArrow",
@@ -10526,7 +10526,7 @@
           "name": "Title",
           "type": "string?",
           "isRequired": false,
-          "description": "Title of the sheet header when the body presents as a bottom sheet on a narrow viewport. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. The popover does not render it (since 2.9.2)."
+          "description": "Title of the sheet header when the body presents as a bottom sheet on a narrow viewport. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. The popover does not render it (since 2.9.1)."
         },
         {
           "name": "TriggerContent",
@@ -17551,7 +17551,7 @@
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
-          "description": "An accessible name for the drawer when neither Title nor HeaderContent names it (a header rendered through HeaderContent carries no automatic label). Emitted as aria-label on the focus-scope root (since 2.9.2)."
+          "description": "An accessible name for the drawer when neither Title nor HeaderContent names it (a header rendered through HeaderContent carries no automatic label). Emitted as aria-label on the focus-scope root (since 2.9.1)."
         },
         {
           "name": "ChildContent",
@@ -19241,7 +19241,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Desktop",
-          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.2)."
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise (since 2.9.1)."
         },
         {
           "name": "IsOpen",
@@ -19260,7 +19260,7 @@
           "type": "TmLayoutMode",
           "isRequired": false,
           "default": "TmLayoutMode.Auto",
-          "description": "The layout the panel presentation resolves from. Auto follows the viewport scope (TmLayoutScopes.Viewport cascade or the internal probe); a forced value never measures, so a test can render a mode without a DOM (since 2.9.2)."
+          "description": "The layout the panel presentation resolves from. Auto follows the viewport scope (TmLayoutScopes.Viewport cascade or the internal probe); a forced value never measures, so a test can render a mode without a DOM (since 2.9.1)."
         },
         {
           "name": "MatchAnchorWidth",
@@ -19274,7 +19274,7 @@
           "type": "PanelPresentation",
           "isRequired": false,
           "default": "PanelPresentation.Auto",
-          "description": "How the panel presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise. A forced Popover/Sheet renders without measuring, so a test can render it without a DOM. Anchoring options apply to the popover only (since 2.9.2)."
+          "description": "How the panel presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise. A forced Popover/Sheet renders without measuring, so a test can render it without a DOM. Anchoring options apply to the popover only (since 2.9.1)."
         },
         {
           "name": "Offset",
@@ -19300,7 +19300,7 @@
           "name": "ResolvedLayoutChanged",
           "type": "EventCallback<TmLayoutMode>",
           "isRequired": false,
-          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.2)."
+          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode (since 2.9.1)."
         },
         {
           "name": "Role",
@@ -19319,13 +19319,13 @@
           "name": "Title",
           "type": "string?",
           "isRequired": false,
-          "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Popover mode does not render it (since 2.9.2)."
+          "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Popover mode does not render it (since 2.9.1)."
         },
         {
           "name": "TrapFocus",
           "type": "bool",
           "isRequired": false,
-          "description": "Trap Tab inside the panel and mark the background inert while it is open — the modality a Role=\"dialog\" popup promises. The TmFocusScope IS the panel root (same top-layer popover element) and aria-modal=\"true\" is enforced by a real trap. Escape stays with overlay.js, which restores focus to the anchor on dismissal. Popover mode only (since 2.9.2).",
+          "description": "Trap Tab inside the panel and mark the background inert while it is open — the modality a Role=\"dialog\" popup promises. The TmFocusScope IS the panel root (same top-layer popover element) and aria-modal=\"true\" is enforced by a real trap. Escape stays with overlay.js, which restores focus to the anchor on dismissal. Popover mode only (since 2.9.1).",
           "default": "false"
         },
         {

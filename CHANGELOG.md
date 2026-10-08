@@ -1,20 +1,8 @@
 # Changelog
 
-## 2.9.2 (unreleased)
+## 2.9.1 (unreleased)
 
 ### Breaking / Migration
-
-- **Anchored panels (`TmOverlayPanel`, `TmDropdown`, `TmPopover`) present as a bottom sheet on a
-  mobile viewport.** `MobilePresentation` (new `PanelPresentation` enum: `Popover | Sheet | Auto`)
-  defaults to `Auto`, which follows the viewport scope: a content-height bottom sheet below 640px,
-  the anchored popover otherwise — the same contract `TmModal`/`TmDialog` already ship. A host that
-  wants the popover at every width sets `MobilePresentation="Popover"`. In sheet mode the panel
-  renders a `TmDrawer Position=Bottom` with a header (`Title`, falling back to `AriaLabel` and a
-  localized generic "Menu") and a **Done** action instead of the floating popover; anchoring options
-  (`Placement`, `Align`, `Offset`, `MatchAnchorWidth`, `ConstrainHeight`) apply to the popover only.
-  The sheet replaces the popover element, so selectors that assume the consumer panel class (e.g.
-  `.tm-dropdown-menu`) on mobile must target `.tm-overlay-panel-sheet` (or the unchanged trigger)
-  instead. See [docs/overlays.md](docs/overlays.md).
 
 - **`TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` popup panels are now
   `TmFocusScope` roots** (`TrapFocus="true"`): the calendar popup traps Tab, marks the background
@@ -29,24 +17,6 @@
   gains `aria-expanded`/`aria-haspopup` on the toggle, and presents as a bottom sheet on mobile.
   Its panel CSS no longer declares `position`/`top`/`right`/`z-index` — a host that restyled those
   properties must key on the panel's surface classes instead.
-
-### Added
-
-- `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
-  `TmPopover`, with `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` forwarded by the two
-  components. `TmOverlayPanel.TrapFocus` for dialog popups that must enforce their modality, and
-  `Title` for the sheet header. `TmDrawer.AriaLabel` names a drawer whose header is rendered
-  through `HeaderContent`.
-- `overlay.js` positions panels against the *visible* viewport: `positionFloating` +
-  `readViewport` read `visualViewport`, so an on-screen keyboard opening flips/clamps an open panel
-  into view, and `visualViewport` resize/scroll re-place open panels.
-- `docs/overlays.md`: when to use popover vs modal vs sheet, and the migration path for packages
-  carrying local clamp/focus-trap copies (NotionEditor's ~5 clamp copies, DocumentEditor's four
-  focus traps).
-
-## 2.9.1 (unreleased)
-
-### Breaking / Migration
 
 - **`TmButton` wraps its content in `span.tm-btn-label`, and the span is geometry-neutral by
   default.** The span exists so a context that shrinks the button (a 320px sheet footer) can
@@ -368,6 +338,17 @@
 
 ### Added
 
+- `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
+  `TmPopover`, with `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` forwarded by the two
+  components. `TmOverlayPanel.TrapFocus` for dialog popups that must enforce their modality, and
+  `Title` for the sheet header. `TmDrawer.AriaLabel` names a drawer whose header is rendered
+  through `HeaderContent`.
+- `overlay.js` positions panels against the *visible* viewport: `positionFloating` +
+  `readViewport` read `visualViewport`, so an on-screen keyboard opening flips/clamps an open panel
+  into view, and `visualViewport` resize/scroll re-place open panels.
+- `docs/overlays.md`: when to use popover vs modal vs sheet, and the migration path for packages
+  carrying local clamp/focus-trap copies (NotionEditor's ~5 clamp copies, DocumentEditor's four
+  focus traps).
 - Semantic tokens for the redesign, in both `tokens.css` and `tokens-dark.css`: `--tm-bg-workspace`,
   `--tm-radius-card`, `--tm-radius-control`, `--tm-shadow-card`, `--tm-shadow-popover`,
   `--tm-touch-target`, `--tm-focus-ring`, `--tm-border-color-strong`, the `--tm-status-*` chip
