@@ -1,0 +1,35 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject IJSRuntime JS
+@inject Tempo.Blazor.Services.ThemeService ThemeService
+
+@* The deliberate counterpart of MainLayout: no app-level `TmLayoutObserver IsViewportScope`.
+    An overlay rendered under this layout must measure the viewport itself through the internal
+    probe, which is the branch the no-scope E2E tests exercise — the viewport-scope host decision
+    is "should", not "must", and the library still has to serve hosts that skip it. *@
+<div class="demo-shell min-h-screen @(ThemeService.IsDark ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")" data-theme="@ThemeService.ThemeName">
+    <main class="p-4 max-w-3xl mx-auto">
+        @Body
+    </main>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.OnChanged += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // The same readiness marker MainLayout sets; WaitForAppReadyAsync waits on it.
+            await JS.InvokeVoidAsync("eval", "document.body.setAttribute('data-blazor-ready', 'true')");
+        }
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnChanged -= StateHasChanged;
+    }
+}

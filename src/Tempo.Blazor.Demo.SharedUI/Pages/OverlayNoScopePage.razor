@@ -1,0 +1,44 @@
+@page "/overlay-no-scope"
+@layout NoScopeLayout
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Buttons
+
+<PageTitle>Overlay without a viewport scope – Tempo.Blazor</PageTitle>
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Overlay without a viewport scope</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        This page deliberately renders no app-level viewport scope. An open overlay measures the
+        viewport itself through the internal probe, presents as a sheet on a phone, and logs the
+        missing-scope hint once.
+    </p>
+</div>
+
+<div class="flex flex-wrap gap-3">
+    <TmButton OnClick="() => _modal = true" Variant="ButtonVariant.Primary" data-testid="noscope-modal">Modal</TmButton>
+    <TmButton OnClick="() => _dialog = true" Variant="ButtonVariant.Secondary" data-testid="noscope-dialog">Dialog</TmButton>
+    <TmButton OnClick="() => _drawer = true" Variant="ButtonVariant.Secondary" data-testid="noscope-drawer">Bottom drawer</TmButton>
+</div>
+
+<TmModal Show="_modal" OnClose="() => _modal = false" Title="Modal without a scope" ShowDefaultFooterButtons="true">
+    <ChildContent>
+        <p>A phone presents this modal as a bottom sheet even though the page has no viewport scope.</p>
+    </ChildContent>
+</TmModal>
+
+<TmDialog Show="_dialog" Type="DialogType.Confirm" Title="Delete without a scope"
+          Message="A phone presents this dialog as a sheet through the probe."
+          OnResult="r => _dialog = false" />
+
+<TmDrawer IsOpen="_drawer" IsOpenChanged="v => _drawer = v" Position="DrawerPosition.Bottom" Title="Drawer without a scope">
+    <ChildContent>
+        <p style="min-height: 8rem;">The bottom drawer resolves its layout from the measured viewport.</p>
+    </ChildContent>
+</TmDrawer>
+
+@code {
+    private bool _modal;
+    private bool _dialog;
+    private bool _drawer;
+}
