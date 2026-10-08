@@ -70,7 +70,7 @@
                       Modal="true"
                       Class="@($"tm-overlay-panel {Class}")"
                       DialogRole="@Role"
-                      AriaLabel="@AriaLabel"
+                      AriaLabel="@EffectiveAriaLabel"
                       AriaLabelledBy="@AriaLabelledBy"
                       CloseOnEscape="false"
                       AdditionalAttributes="TrapFocusAttributes">
@@ -84,7 +84,7 @@
              class="tm-overlay-panel @Class"
              popover="manual"
              role="@Role"
-             aria-label="@AriaLabel"
+             aria-label="@EffectiveAriaLabel"
              aria-labelledby="@AriaLabelledBy"
              data-testid="@RootTestId("tm-overlay-panel")"
              @attributes="AdditionalAttributes">
@@ -202,7 +202,8 @@
     /// <summary>
     /// Title of the sheet header when the panel presents as a bottom sheet. Falls back to
     /// <see cref="AriaLabel"/> and then to a generic localized "Menu", so the sheet dialog is
-    /// always named. Popover mode does not render it.
+    /// always named. Also names the popover: when neither <see cref="AriaLabel"/> nor
+    /// <see cref="AriaLabelledBy"/> is set, the popover emits this as its aria-label.
     /// </summary>
     [Parameter] public string? Title { get; set; }
 
@@ -267,6 +268,11 @@
         : MobilePresentation;
 
     private string? SheetTitle => !string.IsNullOrEmpty(Title) ? Title : AriaLabel;
+
+    // Title names the sheet header AND the popover: without a fallback the popover rendered with
+    // only Title carried no accessible name at all (N326 regression, review finding T4).
+    // AriaLabelledBy still wins — a visible in-panel title outranks the sheet-header text.
+    private string? EffectiveAriaLabel => AriaLabel ?? (AriaLabelledBy is null ? Title : null);
 
     private string SheetAriaLabel => SheetTitle ?? Loc["TmOverlayPanel_SheetFallback"];
 

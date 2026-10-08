@@ -19319,7 +19319,7 @@
           "name": "Title",
           "type": "string?",
           "isRequired": false,
-          "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Popover mode does not render it (since 2.9.1)."
+          "description": "Title of the sheet header when the panel presents as a bottom sheet. Falls back to AriaLabel and then to a localized generic \"Menu\", so the sheet dialog is always named. Also names the popover: when neither AriaLabel nor AriaLabelledBy is set, the popover emits this as its aria-label (since 2.9.1)."
         },
         {
           "name": "TrapFocus",
