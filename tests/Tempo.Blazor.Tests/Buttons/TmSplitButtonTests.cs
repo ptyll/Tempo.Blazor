@@ -148,4 +148,48 @@ public class TmSplitButtonTests : LocalizationTestBase
         var items = cut.FindAll("[role='menuitem']");
         items.Should().HaveCount(2);
     }
+
+    [Fact]
+    public void SplitButton_ItemClick_ClosesMenu_And_RestoresFocusToToggle()
+    {
+        // UX review round 2 (m2): the same rule-4 gap T3 fixed in TmDropdown — a click close does
+        // not route through overlay.js's focus restore, so without the explicit move a keyboard
+        // activation leaves focus on <body>.
+        var cut = Render<TmSplitButton>(p => p
+            .Add(x => x.Text, "Save")
+            .AddChildContent("<button role='menuitem'>Draft</button>"));
+
+        cut.Find(".tm-split-button__toggle").Click();
+        cut.Find("[role='menu']").Should().NotBeNull();
+
+        cut.Find("[role='menuitem']").Click();
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1),
+            TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task SplitButton_EscapeClose_DoesNotFocusToggleAgain()
+    {
+        // overlay.js itself restores focus to the anchor on Escape before notifying — the Blazor
+        // side must not focus a second time (the close ran through SetOpen, not CloseMenu).
+        var cut = Render<TmSplitButton>(p => p
+            .Add(x => x.Text, "Save")
+            .AddChildContent("<button role='menuitem'>Draft</button>"));
+
+        cut.Find(".tm-split-button__toggle").Click();
+        cut.Find("[role='menu']").Should().NotBeNull();
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(0);
+
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(0,
+            "Escape restores focus in overlay.js; a second Blazor-side focus would double it");
+    }
+
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
 }

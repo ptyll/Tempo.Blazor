@@ -45,6 +45,7 @@
 
 @code {
     private bool _isOpen;
+    private bool _focusToggleAfterClose;
     private ElementReference _toggleRef;
 
     /// <summary>Text label on the primary button.</summary>
@@ -114,6 +115,29 @@
     private void CloseMenu()
     {
         _isOpen = false;
+        // docs/overlays.md rule 4 (UX review round 2, m2): a click close does not route through
+        // overlay.js's focus restore — the dropdown pattern (TmDropdown.SelectItemAsync): put
+        // focus back on the toggle, or a keyboard activation leaves focus on <body>. FocusAsync
+        // lands in OnAfterRenderAsync, after the close re-render.
+        _focusToggleAfterClose = true;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusToggleAfterClose)
+        {
+            return;
+        }
+        _focusToggleAfterClose = false;
+        try
+        {
+            await _toggleRef.FocusAsync(preventScroll: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // The toggle left the DOM with the close (a conditional host): nothing to focus.
+        }
     }
 
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase
