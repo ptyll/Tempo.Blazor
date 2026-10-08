@@ -144,7 +144,22 @@ editor) keeps focus.
    behaviour. Every promoted root resets the UA `[popover]` defaults at zero specificity
    (`:where(...)` — background transparent, color inherit, overflow visible, margin/border/padding
    zeroed), so the page behind stays dimmed through the surface's own scrim and themed colours
-   inherit into the body.
+   inherit into the body. Two contracts ride on this rule:
+   - **`data-tm-inert-exempt`** is the attribute a modal trap's inert walk skips exactly like
+     `data-tm-backdrop`. Only the toast containers (`TmToastContainer`,
+     `TmNotificationToastContainer`) carry it — status UI a user must reach under any modal (a
+     dismiss click, an `role=alert` announcement). **Placement rule: render toast containers as
+     layout-level siblings, outside `@Body` wrappers.** The walk inerts every sibling of the
+     trap's ancestors; a container nested inside a `@Body` wrapper is inerted with the wrapper
+     and the exemption on the container never gets to act.
+   - **Non-modal anchored popovers are intentionally NOT promoted.** A dropdown, menu or picker
+     popup (`TmOverlayPanel` with `TrapFocus` off) is a light surface and stays in the z-index
+     band by design — promoting it would hand every light popup top-layer membership and the
+     stacking contract above would no longer say anything. Consequence, stated rather than
+     discovered: a toast already pinned on top can paint OVER a dropdown opened after it (the
+     toast re-raises on every promotion; the dropdown never promotes). That trade is accepted
+     for light surfaces; a popup that must paint above a toast is a modal surface and promotes
+     like one.
 9. **Known non-promoted surfaces (recorded exceptions).** Dialogs living in the extension
    packages still paint in their z-index band and were NOT promoted in this pass: the rich-text
    editor link/image/table/video/find dialogs, the Notion editor package surfaces, the

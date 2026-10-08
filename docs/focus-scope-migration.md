@@ -29,6 +29,14 @@ A backdrop belongs inside the scope root, and it carries `data-tm-backdrop`. The
 sibling it walks, so a backdrop left outside the root is inert and swallows the click that should
 close the overlay. The attribute is the only contract; a class name is not recognised.
 
+The walk skips a sibling that carries `data-tm-inert-exempt` exactly like the backdrop. Only the
+toast containers (`TmToastContainer`, `TmNotificationToastContainer`) carry it — pinned-on-top
+status UI that must stay reachable under any modal, so a dismiss click does not pass through to
+the backdrop and `role=alert` toasts inside an inert subtree still get announced. The exemption
+protects the walked sibling itself, so a toast container must be a **layout-level sibling,
+outside `@Body` wrappers**: nested inside a wrapper, it is inerted with the wrapper and the
+attribute never gets to act.
+
 The cycling, the initial-focus move, the inert background and the restore are things Blazor cannot do
 itself, so they live in `wwwroot/js/tm-focus-trap.js`. Everything else — the dialog role, `aria-modal`,
 the labelled-by wiring — is markup the scope renders.
