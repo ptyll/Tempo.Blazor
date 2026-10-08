@@ -511,3 +511,25 @@ test('a net-upward drag ending in a downward flick must not dismiss', () => {
     assert.notEqual(sink.calls[0]?.[0], 'HandleSheetDismissedAsync');
     delete globalThis.window;
 });
+
+test('the review cases: settle with dismissal off never dismisses, at any velocity or start', () => {
+    // Code-review round 5 pins these two exact calls: a flick from the lowest snap, and a fast
+    // flick from full, both with swipeToDismiss=false.
+    for (const [released, velocity, start] of [[0.45, 1, 0.5], [0.9, 3, 1]]) {
+        const result = settle(snaps, released, false, velocity, start);
+        assert.equal(result.dismiss, false, `settle(snaps, ${released}, false, ${velocity}, ${start}) must not dismiss`);
+    }
+});
+
+test('the net direction picks the flick branch, not the tail velocity sign', () => {
+    // A net-downward drag whose tail flick points up steps DOWN from where it started (the net
+    // gesture wins); the pre-round-5 code read the tail sign alone and grew the sheet instead.
+    const down = settle(snaps, 0.49, true, -1, 1, true);
+    assert.equal(down.dismiss, false);
+    assert.equal(down.index, 0, 'a net-downward drag steps down even when the tail points up');
+
+    // A net-upward drag with a downward tail never dismisses and never steps down.
+    const up = settle(snaps, 0.475, true, 3, 0.5, false);
+    assert.equal(up.dismiss, false, 'a net-upward drag never dismisses');
+    assert.equal(up.index, 0, 'a net-upward drag with a downward tail stays at the lowest snap');
+});

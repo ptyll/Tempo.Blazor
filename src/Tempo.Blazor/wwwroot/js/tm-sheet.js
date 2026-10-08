@@ -17,31 +17,41 @@
  * @param {number} velocity px/ms over the last ~80ms of the drag; negative is upward
  * @param {number|null} startFraction the fraction the drag started at, so a flick knows which snap
  *   it leaves; null falls back to the released fraction
+ * @param {boolean=} downward the NET direction of the drag (start Y vs release Y), which decides
+ *   whether a flick steps down or up; a caller that omits it gets the velocity's sign, the
+ *   pre-round-5 behaviour
  * @returns {{ dismiss: boolean, snap: number|null, index: number }} the snap to settle to
  */
-export function settle(snaps, released, swipeToDismiss, velocity = 0, startFraction = null) {
+export function settle(snaps, released, swipeToDismiss, velocity = 0, startFraction = null, downward) {
     if (!Array.isArray(snaps) || snaps.length === 0) {
         return { dismiss: false, snap: null, index: -1 };
     }
 
     const lowest = snaps[0];
     const startIndex = nearestIndex(snaps, startFraction ?? released);
+    // The tail flick may point the other way than the drag as a whole (drag up to grow, then a fast
+    // downward flick of the last 80ms). A decision recorded for the drawer: a net-upward drag never
+    // dismisses, and its tail flick steps UP, not down.
+    const netDownward = downward ?? velocity >= 0;
     // A multi-snap sheet dismisses past the lowest snap by a margin. A downward flick steps ONE
     // snap in its direction from the snap it started on — from a higher snap that is a step down,
     // because a 300px/300ms swipe is a "back to half" gesture, not a close. Only a very fast
-    // release (> 2 px/ms, vaul's behaviour) closes the sheet from any snap. A one-snap sheet is
-    // not decided here: its dismiss is relative to the height it started at.
+    // release (> 2 px/ms, vaul's behaviour) closes the sheet from any snap. Every dismiss here
+    // honours swipeToDismiss: with the flag off, a flick from the lowest snap clamps to it and a
+    // fast flick settles at it. A one-snap sheet is not decided here: its dismiss is relative to
+    // the height it started at.
     if (snaps.length > 1 && swipeToDismiss && released < lowest - 0.15) {
         return { dismiss: true, snap: lowest, index: 0 };
     }
-    if (snaps.length > 1 && velocity > 2) {
+    if (snaps.length > 1 && netDownward && swipeToDismiss && velocity > 2) {
         return { dismiss: true, snap: lowest, index: 0 };
     }
-    if (snaps.length > 1 && velocity > 0.5) {
-        if (startIndex === 0) return { dismiss: true, snap: lowest, index: 0 };
-        return { dismiss: false, snap: snaps[startIndex - 1], index: startIndex - 1 };
+    if (snaps.length > 1 && netDownward && velocity > 0.5) {
+        if (startIndex === 0 && swipeToDismiss) return { dismiss: true, snap: lowest, index: 0 };
+        const down = Math.max(0, startIndex - 1);
+        return { dismiss: false, snap: snaps[down], index: down };
     }
-    if (snaps.length > 1 && velocity < -0.5) {
+    if (snaps.length > 1 && !netDownward && velocity < -0.5) {
         const up = Math.min(startIndex + 1, snaps.length - 1);
         return { dismiss: false, snap: snaps[up], index: up };
     }
@@ -244,7 +254,7 @@ export function attachGesture(handle, panel, snaps, swipeToDismiss, host, id, tr
             }
             return;
         }
-        const result = settle(sorted, released, swipeToDismiss && downward, velocity, startFraction);
+        const result = settle(sorted, released, swipeToDismiss, velocity, startFraction, downward);
         if (result.dismiss) {
             host?.invokeMethodAsync('HandleSheetDismissedAsync').catch(() => {});
             return;

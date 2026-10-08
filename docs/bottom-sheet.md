@@ -15,10 +15,14 @@ before the gesture sees them. An empty list sizes the panel to its content, stil
 reports the snap it settled on. A parent re-render that passes the same index does not reset a snap
 the user just dragged to.
 
-`SwipeToDismiss` is on by default. A release below the lowest snap by 0.15 dismisses. A flick moves
-ONE snap in its direction from the snap the drag started on: a downward flick from the lowest snap
-dismisses, a downward flick from a higher snap steps one snap down, and an upward flick steps one
-snap up. Only a release faster than about 2 px/ms closes the sheet from any snap. A sheet with one
+`SwipeToDismiss` is on by default, and every dismiss honours it. A release below the lowest snap by
+0.15 dismisses. A flick moves ONE snap in the direction of the drag as a whole — the net direction
+between the press and the release, not the tail of the last 80ms — from the snap the drag started
+on: a downward flick from the lowest snap dismisses, a downward flick from a higher snap steps one
+snap down, and an upward flick steps one snap up, whatever the tail velocity says. Only a release
+faster than about 2 px/ms closes the sheet from any snap, and only while `SwipeToDismiss` is on:
+with the flag off, a downward flick from the lowest snap clamps to it and a fast flick settles
+there. A sheet with one
 snap dismisses only past a quarter of the height it started at, or on that same downward flick — a
 10px drag does not close it. The flick is the travel over the last 80ms of the drag, not the gap
 between the last move and `pointerup`: a real release lands on that last move, so a velocity taken
