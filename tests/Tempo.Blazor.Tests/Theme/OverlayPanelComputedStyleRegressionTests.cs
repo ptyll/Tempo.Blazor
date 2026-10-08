@@ -99,6 +99,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
         new("TmTagPicker.razor", "tm-tag-picker-dropdown",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", "flex"),
+        // F3: TmColumnPicker migrated from an absolute-positioned div onto the shared panel — its
+        // surface must keep winning over the zero-specificity reset exactly like the others.
+        new("TmColumnPicker.razor", "tm-column-picker-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>
@@ -310,12 +314,18 @@ public sealed class OverlayPanelComputedStyleRegressionTests
     private static readonly Regex RuleHead =
         new(@"([^{}]+)\{", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
 
-    /// <summary>Every selector head in <paramref name="css"/> that mentions <c>tm-overlay-panel</c>.
+    /// <summary>Every individual selector in <paramref name="css"/> that mentions
+    /// <c>tm-overlay-panel</c>. Rule heads are split on commas first: a shared rule (the
+    /// reduced-motion enumeration in <c>animations.css</c>) lists hundreds of unrelated subjects
+    /// in one head, and only the selectors belonging to this element are inventory — a whole
+    /// comma-joined head would smuggle every animated class in the library into the CF03c list.
     /// </summary>
     internal static IReadOnlyList<string> OverlayPanelSelectors(string css) =>
         RuleHead.Matches(CssComment.Replace(css, " "))
-            .Select(match => match.Groups[1].Value.Trim())
+            .SelectMany(match => match.Groups[1].Value.Split(','))
+            .Select(selector => selector.Trim())
             .Where(selector => selector.Contains("tm-overlay-panel", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
             .ToList();
 
     /// <summary>
@@ -326,11 +336,22 @@ public sealed class OverlayPanelComputedStyleRegressionTests
     /// <c>.tm-overlay-panel{…}</c> or a descendant selector — would re-create the exact weight
     /// problem the reset was unwrapped for, so it must land in this list with a written reason.
     /// </summary>
+    /// <remarks>
+    /// F3 (2.9.2) adds <c>.tm-overlay-panel-sheet__title</c> and <c>.tm-overlay-panel-sheet__done</c>:
+    /// they match this grep only because the BEM name carries the <c>tm-overlay-panel</c> substring —
+    /// they style SEPARATE elements (the sheet header's title and Done action, children of the
+    /// TmDrawer the panel composes in its sheet presentation) and never touch the shared panel
+    /// element, so N196's weight argument does not apply to them.
+    /// </remarks>
     private static readonly IReadOnlyList<string> KnownOverlayPanelRules =
     [
         ":where(.tm-overlay-panel)",
         ".tm-overlay-panel:not(.tm-overlay-panel--open)",
         ":where(.tm-overlay-panel.tm-overlay-panel--open)",
+        ".tm-overlay-panel-sheet__title",
+        ".tm-overlay-panel-sheet__done",
+        ".tm-overlay-panel-sheet__done:hover",
+        ".tm-overlay-panel-sheet__done:focus-visible",
     ];
 
     /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>

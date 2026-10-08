@@ -73,7 +73,8 @@
     background: transparent;
     border: none;
     border-radius: var(--tm-radius-md);
-    color: var(--tm-color-primary-600);
+    /* --tm-color-primary flips to primary-400 under a dark theme — no dark override needed. */
+    color: var(--tm-color-primary);
     font-size: var(--tm-font-size-base);
     font-weight: 600;
     cursor: pointer;
@@ -87,9 +88,4 @@
 .tm-overlay-panel-sheet__done:focus-visible {
     box-shadow: var(--tm-focus-ring);
     outline: none;
-}
-
-[data-theme="dark"] .tm-overlay-panel-sheet__done,
-.tm-dark .tm-overlay-panel-sheet__done {
-    color: var(--tm-color-primary-500);
 }

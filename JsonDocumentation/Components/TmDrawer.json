@@ -47,6 +47,12 @@
       "description": "Title shown in the header."
     },
     {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An accessible name for the drawer when neither Title nor HeaderContent names it (a header rendered through HeaderContent carries no automatic label). Emitted as aria-label on the focus-scope root (since 2.9.2)."
+    },
+    {
       "name": "ShowOverlay",
       "type": "bool",
       "isRequired": false,
