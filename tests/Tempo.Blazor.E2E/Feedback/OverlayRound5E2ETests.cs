@@ -128,7 +128,8 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
                         const r = b.getBoundingClientRect();
                         const svg = b.querySelector('svg').getBoundingClientRect();
                         const cs = getComputedStyle(b);
-                        const content = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + svg.width;
+                        const content = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+                            + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth) + svg.width;
                         return { w: +r.width.toFixed(1), content: +content.toFixed(1) };
                     });
                 return JSON.stringify(iconOnly);
@@ -141,8 +142,8 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
         {
             var w = box.GetProperty("w").GetDouble();
             var content = box.GetProperty("content").GetDouble();
-            Assert.IsTrue(Math.Abs(w - content) <= 1.5,
-                $"an icon-only TmButton must be exactly padding + icon wide ({content}px); an empty label span adds a flex gap and widens it: {report}");
+            Assert.IsTrue(Math.Abs(w - content) <= 1.0,
+                $"an icon-only TmButton must be exactly border + padding + icon wide ({content}px); an empty label span adds a flex gap and widens it: {report}");
         }
 
         await ShootAsync(page, "1440-icon-only-width");
@@ -244,11 +245,11 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
             await page.Locator(".tm-dialog-title").GetAttributeAsync("id"),
             "the region's aria-labelledby points at the title");
 
-        // Tab reaches the region; ArrowDown scrolls it.
-        await page.Keyboard.PressAsync("Tab");
+        // Shift+Tab reaches the region (it precedes the footer in the DOM); ArrowDown scrolls it.
+        await page.Keyboard.PressAsync("Shift+Tab");
         var regionFocus = await page.EvaluateAsync<string>(
             "() => document.activeElement.classList.contains('tm-dialog-content') ? 'region' : document.activeElement.className");
-        Assert.AreEqual("region", regionFocus, $"Tab must reach the overflowing scroller, got '{regionFocus}'");
+        Assert.AreEqual("region", regionFocus, $"Shift+Tab from Cancel must reach the overflowing scroller, got '{regionFocus}'");
 
         var before = await page.EvaluateAsync<double>("() => document.querySelector('.tm-dialog-content').scrollTop");
         for (var i = 0; i < 3; i++)
