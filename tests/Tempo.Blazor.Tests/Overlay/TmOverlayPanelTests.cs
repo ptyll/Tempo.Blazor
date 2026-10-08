@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Tests.Localization;
 
@@ -167,6 +168,38 @@ public class TmOverlayPanelTests : LocalizationTestBase
         module.Invocations["close"].Count().Should().Be(1,
             "druhý run musí za semaforem vidět AKTUÁLNÍ _jsOpen a zavřít — ne osiřelé open()");
         cut.FindAll(".tm-overlay-panel").Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// T5 (review round 1): the focus scope may only activate AFTER overlay.js open() ran
+    /// showPopover() — activating earlier focuses into a display:none popover and loses initial
+    /// focus to &lt;body&gt; (cold first open by Enter, date pickers inside a TmModal).
+    /// </summary>
+    [Fact]
+    public async Task TrapFocus_ActivatesScopeOnlyAfterOpenCompletes()
+    {
+        var module = new BunitJSModuleInterop(JSInterop);
+        module.SetupVoid("open", _ => true).SetVoidResult();
+        module.SetupVoid("update", _ => true).SetVoidResult();
+        module.SetupVoid("close", _ => true).SetVoidResult();
+        var import = new GatedModuleImport(module);
+        JSInterop.AddInvocationHandler(import);
+
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(x => x.TrapFocus, true)
+            .Add(x => x.Role, "dialog")
+            .AddChildContent("<p>panel</p>"));
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+
+        // The import is still in flight — the scope must stay INACTIVE until open() completed.
+        cut.WaitForAssertion(() => import.DispatchCount.Should().Be(1));
+        cut.FindComponent<TmFocusScope>().Instance.Active.Should().BeFalse(
+            "activating the trap before showPopover() focuses into a hidden popover and loses focus to body");
+
+        import.Release();
+
+        cut.WaitForAssertion(() => cut.FindComponent<TmFocusScope>().Instance.Active.Should().BeTrue());
     }
 
     /// <summary>
