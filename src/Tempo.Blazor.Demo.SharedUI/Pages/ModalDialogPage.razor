@@ -122,6 +122,7 @@
     <div class="mt-3 flex flex-wrap gap-4 text-sm">
         <label><input type="checkbox" data-testid="toggle-dialog-inline" @bind="_dialogInline" /> @Loc["TmDemo_ToggleInline"]</label>
         <label><input type="checkbox" data-testid="toggle-sheet-presentation" @bind="_forceSheet" /> @Loc["TmDemo_ToggleSheet"]</label>
+        <label><input type="checkbox" data-testid="toggle-dialog-presentation" @bind="_forceDialog" /> @Loc["TmDemo_ToggleDialog"]</label>
         <label><input type="checkbox" data-testid="toggle-content-height" @bind="_contentHeight" /> @Loc["TmDemo_ToggleContentHeight"]</label>
     </div>
     <div class="mt-4 p-6 border border-slate-200 dark:border-slate-700 rounded-lg" style="position: relative; min-height: 16rem;" data-testid="inline-sheet-host">
@@ -195,7 +196,7 @@
 
 <TmDialog Show="_showLongDialog"
           Type="DialogType.Confirm"
-          MobilePresentation="@(_forceSheet ? MobilePresentation.Sheet : MobilePresentation.Auto)"
+          MobilePresentation="@(_forceDialog ? MobilePresentation.Dialog : (_forceSheet ? MobilePresentation.Sheet : MobilePresentation.Auto))"
           Title="@Loc["TmDemo_LongDialogTitle"]"
           Message="@LongMessage"
           OnResult="_ => _showLongDialog = false" />
@@ -297,6 +298,7 @@
     private bool _scopeActive;
     private bool _dialogInline;
     private bool _forceSheet;
+    private bool _forceDialog;
     private bool _contentHeight;
     
     private void ShowAlert(DialogVariant variant)

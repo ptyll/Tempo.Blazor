@@ -80,6 +80,7 @@
   "TmOverlayPanel_SheetFallback": "Nabídka",
   "TmDateRangePicker_Title": "Vyberte období",
   "TmDateTimePicker_Title": "Vyberte datum a čas",
+  "TmDemo_ToggleDialog": "Vynutit dialog (nikdy sheet)",
   "TmDocumentOpenDialog_Breadcrumb": "Drobečková navigace",
   "TmFileDropZone_Remove": "Odebrat soubor",
   "TmLightbox_Aria": "Prohlížeč obrázků",

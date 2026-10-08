@@ -34,3 +34,9 @@
 .tm-dropdown-item-danger { color: var(--tm-color-danger); }
 .tm-dropdown-item-danger:hover { background-color: var(--tm-color-danger-subtle); }
 .tm-dropdown-sep { height: 1px; background-color: var(--tm-border-color); margin: var(--tm-space-1) 0; }
+
+/* On a touch screen the menu is usually the bottom-sheet presentation — every item must be a
+   44px tap target. */
+@media (pointer: coarse) {
+  .tm-dropdown-item { min-height: var(--tm-touch-target); }
+}

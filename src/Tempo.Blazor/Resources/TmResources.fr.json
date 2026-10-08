@@ -80,6 +80,7 @@
   "TmOverlayPanel_SheetFallback": "Menu",
   "TmDateRangePicker_Title": "Sélectionner une période",
   "TmDateTimePicker_Title": "Sélectionner une date et une heure",
+  "TmDemo_ToggleDialog": "Forcer la boîte de dialogue (jamais de feuille)",
   "TmDocumentOpenDialog_Breadcrumb": "Fil d'Ariane",
   "TmFileDropZone_Remove": "Retirer le fichier",
   "TmLightbox_Aria": "Visionneuse d'images",
