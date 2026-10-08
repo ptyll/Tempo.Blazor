@@ -298,6 +298,9 @@
 /* Dialog Input (Prompt) */
 .tm-dialog-input-wrapper {
   margin-top: var(--tm-space-5);
+  /* The input opens focused (per-type initial focus), and its 4px focus ring is clipped by the
+     scroller's overflow when the wrapper shares the content edges (UX review round 6, m-r6-1). */
+  padding: var(--tm-space-1);
 }
 
 .tm-dialog-input {
@@ -450,6 +453,16 @@
 
 .tm-modal-overlay.tm-modal--sheet .tm-dialog {
   padding-bottom: calc(var(--tm-space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+/* The dialog sheet footer had 24px sides (272px of label room at 320px) where the modal sheet
+   footer has 16px (288px) — exactly the difference that made 36-character FR/CS labels truncate
+   in the dialog while they fit in the modal (UX review round 6, n-r6-1). Mirrors the modal
+   footer's own <640px padding step. */
+@media (width < 640px) {
+  .tm-modal-overlay.tm-modal--sheet .tm-dialog {
+    padding-inline: var(--tm-space-4);
+  }
 }
 
 @media (pointer: coarse) {

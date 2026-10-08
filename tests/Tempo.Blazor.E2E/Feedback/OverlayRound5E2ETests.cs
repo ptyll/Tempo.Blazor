@@ -132,6 +132,22 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
                             + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth) + svg.width;
                         return { w: +r.width.toFixed(1), content: +content.toFixed(1) };
                     });
+                // The screenshot must show its subject: bring the first VISIBLE icon-only button
+                // into view (the round-6 review got a shot of the page top with the button below
+                // the fold). The demo shell scrolls an inner container, so anchor on the button's
+                // section and top the window up until the button itself is on screen.
+                const target = [...document.querySelectorAll('button.tm-btn')]
+                    .filter(b => b.querySelector('svg') && !b.textContent.trim() && b.offsetParent)[0];
+                if (target) {
+                    // The demo shell sets scroll-behavior: smooth; without 'instant' the shot
+                    // catches the scroll animation mid-flight.
+                    const anchor = target.closest('section') ?? target;
+                    anchor.scrollIntoView({ block: 'start', behavior: 'instant' });
+                    const r = target.getBoundingClientRect();
+                    if (r.top < 0 || r.bottom > window.innerHeight) {
+                        window.scrollBy({ top: Math.round(r.top - window.innerHeight / 2 + r.height / 2), behavior: 'instant' });
+                    }
+                }
                 return JSON.stringify(iconOnly);
             }
             """);
@@ -146,6 +162,7 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
                 $"an icon-only TmButton must be exactly border + padding + icon wide ({content}px); an empty label span adds a flex gap and widens it: {report}");
         }
 
+        await page.WaitForTimeoutAsync(150);
         await ShootAsync(page, "1440-icon-only-width");
     }
 
@@ -173,7 +190,9 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Enter");
         await page.Locator(".tm-modal-overlay").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10000 });
-        await Assertions.Expect(page.GetByText("Pavel").First)
+        var banner = page.GetByText("Pavel").First;
+        await banner.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(banner)
             .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
 
         await ShootAsync(page, $"{width}-prompt-enter-submits");

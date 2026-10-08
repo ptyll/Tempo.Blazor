@@ -356,6 +356,20 @@
 
 ### Fixed
 
+- **Round-6 overlay fixes.** Opening a `TmDialog` Prompt with Enter no longer submits it at once.
+  The opener activates on its Enter keydown and the per-type initial focus lands on the input while
+  the key is still down, so the submit that rode on a bare Enter keyup received the opener's
+  trailing keyup and fired the `DefaultValue` before the user ever saw the dialog. The submit is
+  now armed by the input's own Enter keydown and fires on its keyup, so a full press submits
+  exactly once, a keyup the input never saw go down does nothing, auto-repeat cannot double it,
+  and the arm resets when the dialog reopens. (A bare keydown submit was probed and rejected:
+  closing between keydown and keyup lets Chromium run the keydown's default action against the
+  re-focused opener and re-open the dialog with the default value.) The prompt input's focus ring
+  is no longer clipped by the scrolling content container — the input wrapper reserves one spacing
+  step of padding for the 4px ring. Below 640px a dialog presented as a sheet now uses the modal
+  sheet's 16px inline padding instead of 24px, so 36-character FR/CS footer labels fit at 320px
+  exactly as they do in the modal.
+
 - **Round-5 overlay fixes.** A `TmDrawer` with `SwipeToDismiss="false"` no longer dismisses on any
   fast downward flick, and a net-upward drag whose tail flicks downward no longer closes the sheet:
   every dismiss honours the flag, and the net drag direction — not the tail velocity — picks which
