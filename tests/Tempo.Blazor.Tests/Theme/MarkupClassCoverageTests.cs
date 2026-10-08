@@ -74,11 +74,12 @@ public sealed class MarkupClassCoverageTests
         new(@"\.(tm-[a-zA-Z][\w-]*)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
-    /// The 148 classes core markup emits with no rule anywhere in the library's stylesheets —
-    /// the 2.8.26 inventory held 148 and <c>tm-dropdown-wrapper</c> left it in 18.2, when the
-    /// overlay migration gave it a real <c>position: relative</c> rule in _dropdown.css.
+    /// The classes core markup emits with no rule anywhere in the library's stylesheets — the
+    /// 2.8.26 inventory held 148 and entries have since left it as they gained real rules (e.g.
+    /// <c>tm-dropdown-wrapper</c> in 18.2, when the overlay migration gave it a
+    /// <c>position: relative</c> rule in _dropdown.css).
     /// Each remaining entry is named. None of these is a promise that they SHOULD stay unstyled —
-    /// they are RECORDED so the guard can fail on a 148th.
+    /// they are RECORDED so the guard fails on any new unstyled class.
     /// </summary>
     private static readonly string[] UnstyledMarkupClasses =
     [
@@ -170,6 +171,9 @@ public sealed class MarkupClassCoverageTests
         "tm-mvl-list-title",
         "tm-mvl-loading",
         "tm-overlay",
+        // F3 review round 1: the sheet content wrapper (T2) is a semantics/ARIA hook — it carries
+        // role/id/aria-labelledby and the consumer's AdditionalAttributes — and needs no paint.
+        "tm-overlay-panel-sheet__content",
         "tm-pagination-controls",
         "tm-pagination-next",
         "tm-pagination-prev",

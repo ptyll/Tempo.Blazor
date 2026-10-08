@@ -342,6 +342,13 @@ public sealed class OverlayPanelComputedStyleRegressionTests
     /// they style SEPARATE elements (the sheet header's title and Done action, children of the
     /// TmDrawer the panel composes in its sheet presentation) and never touch the shared panel
     /// element, so N196's weight argument does not apply to them.
+    /// F3 review round 1 extends the same class: <c>.tm-overlay-panel-sheet__done:disabled(:hover)</c>
+    /// (the disabled Done state), <c>.tm-overlay-panel-sheet .tm-popover__arrow</c> (T14 — the stray
+    /// arrow hidden inside a sheet), <c>.tm-overlay-panel-sheet .tm-dropdown-item/-sep</c> (T15 — the
+    /// sheet-mode item inset) and <c>.tm-overlay-panel-sheet .tm-date-range-calendars/-footer</c>
+    /// (T8 — the months stack and the doubled footer hide). Every one of them keys on the SHEET
+    /// element (a TmDrawer root) or its descendants — never on the shared <c>.tm-overlay-panel</c>
+    /// floating element — so the N196 weight argument does not apply to them either.
     /// </remarks>
     private static readonly IReadOnlyList<string> KnownOverlayPanelRules =
     [
@@ -352,6 +359,13 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         ".tm-overlay-panel-sheet__done",
         ".tm-overlay-panel-sheet__done:hover",
         ".tm-overlay-panel-sheet__done:focus-visible",
+        ".tm-overlay-panel-sheet__done:disabled",
+        ".tm-overlay-panel-sheet__done:disabled:hover",
+        ".tm-overlay-panel-sheet .tm-popover__arrow",
+        ".tm-overlay-panel-sheet .tm-dropdown-item",
+        ".tm-overlay-panel-sheet .tm-dropdown-sep",
+        ".tm-overlay-panel-sheet .tm-date-range-calendars",
+        ".tm-overlay-panel-sheet .tm-date-range-footer",
     ];
 
     /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>
