@@ -81,9 +81,12 @@
     {
         @* A dialog-role popup that must enforce its modality: the focus scope IS the panel root,
            so the trap, the inert background and the top-layer popover share one element. Escape
-           stays with overlay.js (window capture), which dismisses through NotifyDismissedAsync. *@
+           stays with overlay.js (window capture), which dismisses through NotifyDismissedAsync.
+           Active is gated on _trapActive: the scope may only activate AFTER overlay.js open()
+           ran showPopover() — activating earlier moves initial focus into a still-hidden
+           (display:none) popover and loses focus to <body> (review finding T5). *@
         <TmFocusScope @ref="_scope"
-                      Active="true"
+                      Active="_trapActive"
                       Modal="true"
                       Class="@($"tm-overlay-panel {Class}")"
                       DialogRole="@Role"
@@ -127,6 +130,7 @@
     private bool _disposed;
     private bool _jsOpen;
     private bool _internalOpen;
+    private bool _trapActive;
     private string? _openOptionsSignature;
 
     /// <summary>
@@ -480,6 +484,14 @@
                     _jsOpen = true;
                     _openOptionsSignature = signature;
                     await _module.InvokeVoidAsync("open", _key, panel, anchor, _dotNetRef, BuildOptions());
+                    // Only now — showPopover() has run — may the trap activate and move initial
+                    // focus. The extra render flips Active, the scope activates in its own
+                    // OnAfterRenderAsync, and the focus move lands inside the visible popover.
+                    if (TrapFocus && !_trapActive)
+                    {
+                        _trapActive = true;
+                        await InvokeAsync(StateHasChanged);
+                    }
                 }
                 else if (_openOptionsSignature != signature)
                 {
@@ -495,6 +507,7 @@
                 // nothing and leave the entry (and the shared scroll listener) behind.
                 _jsOpen = false;
                 _openOptionsSignature = null;
+                _trapActive = false;
                 await _module.InvokeVoidAsync("close", _key);
             }
         }
