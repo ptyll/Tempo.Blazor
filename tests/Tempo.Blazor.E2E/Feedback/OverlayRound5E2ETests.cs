@@ -6,10 +6,10 @@ namespace Tempo.Blazor.E2E.Feedback;
 
 /// <summary>
 /// Review round 5, against real hosts: a drawer with SwipeToDismiss="false" must survive a fast
-/// downward flick, an icon-only TmButton must stay square (the empty label span used to add a flex
-/// gap), a prompt dialog must type straight into its input, a short confirm must start on Cancel
-/// with no content tab stop, and an overflowing dialog scroller must become a keyboard-reachable
-/// region the Tab key can reach without ever taking initial focus.
+/// downward flick, an icon-only TmButton must keep its exact content width (the empty label span
+/// used to add a flex gap), a prompt dialog must type straight into its input, a short confirm must
+/// start on Cancel with no content tab stop, and an overflowing dialog scroller must become a
+/// keyboard-reachable region the Tab key can reach without ever taking initial focus.
 /// </summary>
 [TestClass]
 [TestCategory("WASM")]
@@ -112,11 +112,13 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task IconOnlyButtons_StaySquare_WithoutTheLabelGap()
+    public async Task IconOnlyButtons_KeepTheirWidth_WithoutTheLabelGap()
     {
         var page = await OpenAsync(1440);
         await GotoAsync(page, "/layout");
 
+        // An icon-only TmButton is exactly padding + icon wide. The empty label span used to sit in
+        // the button's flex gap and widen every icon-only button by 8px (42 -> 50 at sm).
         var report = await page.EvaluateAsync<string>(
             """
             () => {
@@ -124,7 +126,10 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
                     .filter(b => b.querySelector('svg') && !b.textContent.trim())
                     .map(b => {
                         const r = b.getBoundingClientRect();
-                        return { w: +r.width.toFixed(1), h: +r.height.toFixed(1) };
+                        const svg = b.querySelector('svg').getBoundingClientRect();
+                        const cs = getComputedStyle(b);
+                        const content = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + svg.width;
+                        return { w: +r.width.toFixed(1), content: +content.toFixed(1) };
                     });
                 return JSON.stringify(iconOnly);
             }
@@ -135,12 +140,12 @@ public sealed class OverlayRound5E2ETests : WasmTestBase
         foreach (var box in boxes)
         {
             var w = box.GetProperty("w").GetDouble();
-            var h = box.GetProperty("h").GetDouble();
-            Assert.IsTrue(Math.Abs(w - h) <= 1.5,
-                $"an icon-only TmButton must stay square (aspect-ratio 1). An empty label span adds a flex gap and widens it: {report}");
+            var content = box.GetProperty("content").GetDouble();
+            Assert.IsTrue(Math.Abs(w - content) <= 1.5,
+                $"an icon-only TmButton must be exactly padding + icon wide ({content}px); an empty label span adds a flex gap and widens it: {report}");
         }
 
-        await ShootAsync(page, "1440-icon-only-square");
+        await ShootAsync(page, "1440-icon-only-width");
     }
 
     [TestMethod]

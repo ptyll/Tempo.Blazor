@@ -17,7 +17,7 @@
         {
             <span class="tm-btn-label">@LoadingText</span>
         }
-        else
+        else if (ChildContent is not null)
         {
             <span class="tm-btn-label">@ChildContent</span>
         }
@@ -30,8 +30,14 @@
         }
 
         @* The label is a span so a context that shrinks the button (a 320px sheet footer) can
-           truncate it with an ellipsis instead of overflowing the panel. *@
-        <span class="tm-btn-label">@ChildContent</span>
+           truncate it with an ellipsis instead of overflowing the panel. It renders ONLY when there
+           is content: an empty span is a flex item all the same, and its gap widened every
+           icon-only button by one --tm-space-2. display: contents keeps the span geometry-neutral
+           by default; a shrinking context opts into truncation on the span itself. *@
+        @if (ChildContent is not null)
+        {
+            <span class="tm-btn-label">@ChildContent</span>
+        }
     }
 
     @if (!IsLoading && !string.IsNullOrEmpty(Icon) && IconRight)

@@ -4,6 +4,27 @@
 
 ### Breaking / Migration
 
+- **`TmButton` wraps its content in `span.tm-btn-label`, and the span is geometry-neutral by
+  default.** The span exists so a context that shrinks the button (a 320px sheet footer) can
+  truncate the text with an ellipsis instead of overflowing the panel. It renders only when there
+  is content — an icon-only button no longer grows by one gap because of an empty flex child — and
+  ships as `display: contents`, so a button lays out exactly as if its content were a direct
+  child. Only the sheet-footer rule in `_modal.css` opts into truncation: it blockifies the span
+  (`display: block; min-width: 0`) next to the existing `overflow/ellipsis`. A host that wants the
+  same in its own shrinking container targets the span, never restyles `.tm-btn`:
+
+  ```html
+  <!-- before -->
+  <button class="tm-btn tm-btn-primary tm-btn-md">Save</button>
+  <!-- after -->
+  <button class="tm-btn tm-btn-primary tm-btn-md"><span class="tm-btn-label">Save</span></button>
+  ```
+
+  Consumer markup snapshots and selectors that assume the content is a direct child of the button
+  are affected: a child selector (`button > svg` still matches, but `svg + *` now matches the
+  span, not the text) or styling that relied on bare text inside `.tm-btn` must key on
+  `.tm-btn-label` instead.
+
 - **`ModalPosition.Bottom` anchors the panel flush with the bottom edge.** It used to sit a margin
   above the edge (`align-self: flex-end` plus the overlay padding), so a bottom modal read as a
   floating card. It now carries `tm-modal--bottom-anchored` and sits flush, with no gap below it.

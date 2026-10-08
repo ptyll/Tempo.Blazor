@@ -29,11 +29,13 @@
 .tm-btn:focus-visible {
   box-shadow: var(--tm-focus-ring);
 }
-/* The label span TmButton wraps its content in. min-width: 0 lets the span shrink inside a flex
-   button; a footer that needs the label to truncate adds overflow/ellipsis on this class in its
-   own stylesheet instead of overriding the button's height or white-space. */
+/* The label span TmButton wraps its content in. display: contents keeps the span geometry-neutral —
+   the button lays out exactly as if its content were a direct child, so an icon-only button stays
+   square and an icon keeps its gap to the text. A context that shrinks the button opts into
+   truncation on the span itself (the sheet-footer rule in _modal.css blockifies it with
+   min-width/overflow/ellipsis); nothing restyles .tm-btn for it. */
 .tm-btn-label {
-  min-width: 0;
+  display: contents;
 }
 .tm-btn:disabled,
 .tm-btn[disabled] {

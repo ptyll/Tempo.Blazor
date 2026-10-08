@@ -126,9 +126,11 @@ public class TmModalPresentationTests : LocalizationTestBase
         var label = RuleFor(modalCss, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer .tm-btn-label");
         label.Should().Contain("text-overflow: ellipsis",
             "the truncated label keeps the button's size contract and shows the full text in its title");
+        label.Should().Contain("display: block").And.Contain("min-width: 0",
+            "the span ships as display: contents; the sheet footer is the opt-in that blockifies and shrinks it");
 
-        RuleFor(buttonCss, ".tm-btn-label").Should().Contain("min-width: 0",
-            "the span must be shrinkable for the footer truncation to engage");
+        RuleFor(buttonCss, ".tm-btn-label").Should().Contain("display: contents",
+            "the span must be geometry-neutral by default — an empty flex span grew icon-only buttons by a gap");
     }
 
     [Fact]

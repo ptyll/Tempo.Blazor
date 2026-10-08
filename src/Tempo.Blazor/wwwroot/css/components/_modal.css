@@ -430,10 +430,13 @@
   max-width: 100%;
 }
 
-/* The truncating label. The span is a blockified flex item, so ellipsis applies; the full text
-   rides in the button's title. */
+/* The truncating label. The span ships as display: contents (geometry-neutral everywhere else);
+   a sheet footer blockifies it so ellipsis applies and the flex item can shrink below its text.
+   min-width: 0 is what lets it shrink; the full text rides in the button's title. */
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer .tm-btn-label,
 .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer .tm-btn-label {
+  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
