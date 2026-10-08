@@ -3,6 +3,9 @@
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Pickers
+@using Tempo.Blazor.Components.Overlay
 
 <PageTitle>Overlay without a viewport scope – Tempo.Blazor</PageTitle>
 
@@ -19,6 +22,17 @@
     <TmButton OnClick="() => _modal = true" Variant="ButtonVariant.Primary" data-testid="noscope-modal">Modal</TmButton>
     <TmButton OnClick="() => _dialog = true" Variant="ButtonVariant.Secondary" data-testid="noscope-dialog">Dialog</TmButton>
     <TmButton OnClick="() => _drawer = true" Variant="ButtonVariant.Secondary" data-testid="noscope-drawer">Bottom drawer</TmButton>
+</div>
+
+@* Anchored panels on the no-scope path (T16): the dropdown and the date picker resolve their
+   popover-vs-sheet choice through the internal probe, so the first frame can flash the desktop
+   presentation before the measurement arrives. *@
+<div class="flex flex-wrap items-end gap-3 mt-6">
+    <TmDropdown Text="Anchored menu" MobilePresentation="PanelPresentation.Auto" data-testid="noscope-dropdown">
+        <TmDropdownItem Value="one">First action</TmDropdownItem>
+        <TmDropdownItem Value="two">Second action</TmDropdownItem>
+    </TmDropdown>
+    <TmDatePicker Label="Anchored picker" @bind-Value="_date" data-testid="noscope-datepicker" />
 </div>
 
 <TmModal Show="_modal" OnClose="() => _modal = false" Title="Modal without a scope" ShowDefaultFooterButtons="true">
@@ -41,4 +55,5 @@
     private bool _modal;
     private bool _dialog;
     private bool _drawer;
+    private DateOnly? _date;
 }

@@ -40,3 +40,14 @@
 @media (pointer: coarse) {
   .tm-dropdown-item { min-height: var(--tm-touch-target); }
 }
+
+/* T15 — the sheet presentation: the sheet body already pads 20px (the header title's left edge),
+   so the popover's own item padding would push the text 12px further in. It comes off and the
+   items become full-width rows flush with the title, like the redesign mockup. */
+.tm-overlay-panel-sheet .tm-dropdown-item {
+  padding-inline: 0;
+}
+
+.tm-overlay-panel-sheet .tm-dropdown-sep {
+  margin-inline: 0;
+}

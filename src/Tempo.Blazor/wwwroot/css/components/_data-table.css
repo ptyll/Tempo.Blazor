@@ -629,6 +629,11 @@
 }
 .tm-column-picker-item:hover { background-color: var(--tm-bg-surface-secondary); }
 .tm-column-picker-item input[type='checkbox'] { cursor: pointer; }
+
+/* T15 — on a coarse pointer every toggle row is a 44px tap target, like the dropdown items. */
+@media (pointer: coarse) {
+  .tm-column-picker-item { min-height: var(--tm-touch-target); }
+}
 .tm-column-picker-footer {
   padding: var(--tm-space-2) var(--tm-space-3) 0;
   border-top: 1px solid var(--tm-border-color);
