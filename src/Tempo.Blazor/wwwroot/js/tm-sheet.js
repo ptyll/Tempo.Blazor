@@ -10,13 +10,17 @@
 // points sizes to its content under the max-height cap, so a short menu is not forced to half height.
 
 /**
- * Promotes a modal sheet root to the browser top layer. The root carries popover="manual"; while
- * closed the UA hides it, and showPopover() lifts it above every z-index stacking context and
- * outside every ancestor's overflow/transform clipping — a sticky app bar (TmTopBar under
- * TmBottomNavigation) or a transformed host can then neither confine nor cover the sheet. The DOM
- * stays in place, so the nested focus trap and the Escape order are unchanged. No-op where the
- * Popover API is missing.
- * @param {HTMLElement} root the sheet root (the drawer's focus-scope element)
+ * Promotes a modal overlay root to the browser top layer. Every modal viewport-anchored overlay
+ * root carries popover="manual" (F3 review round 2, U1): a modal drawer at any position, the
+ * TmModal/TmDialog overlay root and the TmToastContainer. While closed the UA hides the element,
+ * and showPopover() lifts it above every z-index stacking context and outside every ancestor's
+ * overflow/transform clipping — a sticky app bar (TmTopBar under TmBottomNavigation) or a
+ * transformed host can then neither confine nor cover it, and a surface opened LATER from inside
+ * it (a dialog from a sheet, a toast from a dialog) promotes after it, so the top-layer order
+ * equals the open order. The DOM stays in place, so the nested focus trap and the Escape order
+ * are unchanged. No-op where the Popover API is missing.
+ * @param {HTMLElement} root the overlay root (a drawer focus-scope element, a modal overlay, the
+ *   toast container)
  */
 export function promote(root) {
     if (!root || typeof root.showPopover !== 'function') {
@@ -31,6 +35,38 @@ export function promote(root) {
         // InvalidStateError — the element is being detached; the browser hides a dead top-layer
         // element on its own.
     }
+}
+
+/**
+ * Demotes a promoted root (hidePopover). No-op where the Popover API is missing or the element
+ * is not currently promoted. Callers whose root STAYS in the DOM (the toast container) demote on
+ * close; an overlay that unmounts on close (drawer/modal/dialog) needs nothing — a detached
+ * top-layer element is hidden by the browser automatically.
+ * @param {HTMLElement} root the overlay root
+ */
+export function demote(root) {
+    if (!root || typeof root.hidePopover !== 'function') {
+        return;
+    }
+    try {
+        if (root.matches(':popover-open')) {
+            root.hidePopover();
+        }
+    }
+    catch {
+        // InvalidStateError — the element is being detached; nothing to demote.
+    }
+}
+
+/**
+ * Re-raises a promoted root above everything promoted after it: hidePopover + showPopover in one
+ * synchronous step, so no frame paints without it. TmToastContainer calls this on every push, so
+ * a toast always lands above sheets and dialogs opened before it (they stay promoted underneath).
+ * @param {HTMLElement} root the overlay root
+ */
+export function raise(root) {
+    demote(root);
+    promote(root);
 }
 
 /**

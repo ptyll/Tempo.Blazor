@@ -21,6 +21,7 @@
 {
     <div class="tm-modal-overlay tm-modal--animated @GetVisibleClass() @PresentationClass @Class"
          data-layout="@Context.CssModifier"
+         popover="manual"
          @ref="_overlayElement"
          @attributes="AdditionalAttributes"
          @onclick="HandleOverlayClick">
@@ -239,8 +240,10 @@
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _regionAttached;
+    private bool _promoted;
     private bool _disposed;
     private SheetInterop? _sheet;
+    private TopLayerInterop? _topLayer;
     private ScrollRegionInterop? _scrollRegion;
     private DotNetObjectReference<TmDialog>? _dotNetRef;
     private TmFocusScope? _scope;
@@ -352,6 +355,21 @@
             _regionAttached = false;
             await _scrollRegion!.DetachAsync();
         }
+
+        // U1: the dialog overlay root is a modal viewport-anchored surface — promote it to the
+        // browser top layer right after the render that inserted it, so a promoted sheet the
+        // dialog opened from cannot cover it. Closing unmounts the subtree; a detached top-layer
+        // element hides itself — no demote call is needed.
+        if (Show && !_promoted)
+        {
+            _promoted = true;
+            _topLayer ??= new TopLayerInterop(JS);
+            await _topLayer.PromoteAsync(_overlayElement);
+        }
+        else if (!Show && _promoted)
+        {
+            _promoted = false;
+        }
     }
 
     private async Task AttachGestureAsync()
@@ -387,6 +405,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
+        if (_topLayer is not null) await _topLayer.DisposeAsync();
         if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();

@@ -1,10 +1,15 @@
 @namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Services
 @using Tempo.Blazor.Components.Icons
 @inject ToastService ToastService
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="tm-toast-container @PositionClass">
+@* U1: the container rides the browser top layer (popover="manual") and re-raises itself on each
+   push, so a toast pushed while a sheet or dialog is open always paints above it. While empty it
+   is demoted — the UA then hides it, exactly the invisible state an empty in-flow container had. *@
+<div class="tm-toast-container @PositionClass" popover="manual" @ref="_root">
     @foreach (var toast in VisibleToasts)
     {
         <div class="tm-toast tm-toast--@toast.Severity.ToString().ToLowerInvariant()" role="alert">
@@ -56,6 +61,12 @@
         _ => "tm-toast-container--top-right"
     };
 
+    private ElementReference _root;
+    private TopLayerInterop? _topLayer;
+    private int _lastCount;
+    private bool _promoted;
+    private bool _disposed;
+
     protected override void OnInitialized()
     {
         ToastService.OnChange += HandleChange;
@@ -64,6 +75,38 @@
     private void HandleChange()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The container persists in the DOM (unlike a modal, it does not unmount on close), so it
+        // demotes when the last toast leaves. A PUSH re-raises: hidePopover + showPopover in one
+        // synchronous step lands the container above every sheet and dialog promoted before it.
+        var count = VisibleToasts.Count;
+        if (count > 0 && (count > _lastCount || !_promoted))
+        {
+            _topLayer ??= new TopLayerInterop(JS);
+            if (count > _lastCount)
+            {
+                await _topLayer.RaiseAsync(_root);
+            }
+            else
+            {
+                await _topLayer.PromoteAsync(_root);
+            }
+            _promoted = true;
+        }
+        else if (count == 0 && _promoted)
+        {
+            _promoted = false;
+            if (_topLayer is not null)
+            {
+                await _topLayer.DemoteAsync(_root);
+            }
+        }
+
+        _lastCount = count;
     }
 
     private void Dismiss(string id)
@@ -79,8 +122,15 @@
         _ => IconNames.Info
     };
 
-    public void Dispose()
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
         ToastService.OnChange -= HandleChange;
+        if (_topLayer is not null)
+        {
+            await _topLayer.DisposeAsync();
+        }
     }
 }

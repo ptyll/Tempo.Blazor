@@ -226,6 +226,7 @@
     private string? _gestureKey;
     private bool _disposed;
     private TmFocusScope? _scope;
+    private TopLayerInterop? _topLayer;
     private readonly OverlayLayout _layout = new();
     private int _snapIndex;
     private int _snapIndexParam = int.MinValue;
@@ -265,12 +266,13 @@
                 ["data-snap-index"] = _snapIndex
             };
 
-            if (Modal && IsSheet)
+            if (Modal)
             {
-                // T7: a MODAL sheet is positioned against the viewport, so its root is promoted to
-                // the browser top layer (showPopover in OnAfterRenderAsync) — a sticky app bar
-                // (TmTopBar under TmBottomNavigation) or a transformed ancestor can then neither
-                // confine nor cover it. An inline sheet anchors to its container and stays put.
+                // U1: a MODAL drawer at EVERY position is a viewport-anchored overlay, so its root
+                // is promoted to the browser top layer (showPopover in OnAfterRenderAsync) — a
+                // sticky app bar (TmTopBar under TmBottomNavigation) or a transformed ancestor can
+                // then neither confine nor cover it, and nothing opened from inside it paints
+                // invisible under it. An inline drawer anchors to its container and stays put.
                 attributes["popover"] = "manual";
             }
 
@@ -338,19 +340,19 @@
             await DetachGestureAsync();
         }
 
-        // T7: promote a MODAL sheet root to the top layer right after the render that inserted it.
-        // Closing unmounts the whole subtree, and a detached top-layer element is hidden by the
-        // browser automatically — no demote call is needed.
-        if (IsOpen && Modal && IsSheet && !_promoted)
+        // U1: promote a MODAL drawer root (every position) to the top layer right after the render
+        // that inserted it. Closing unmounts the whole subtree, and a detached top-layer element
+        // is hidden by the browser automatically — no demote call is needed.
+        if (IsOpen && Modal && !_promoted)
         {
             _promoted = true;
-            _sheet ??= new SheetInterop(JS);
+            _topLayer ??= new TopLayerInterop(JS);
             if (_scope is not null)
             {
-                await _sheet.PromoteAsync(_scope.Element);
+                await _topLayer.PromoteAsync(_scope.Element);
             }
         }
-        else if ((!IsOpen || !Modal || !IsSheet) && _promoted)
+        else if ((!IsOpen || !Modal) && _promoted)
         {
             _promoted = false;
         }
@@ -452,6 +454,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
+        if (_topLayer is not null) await _topLayer.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }

@@ -9,6 +9,8 @@ namespace Tempo.Blazor.Helpers;
 /// <see cref="AttachAsync{T}"/> is called from <c>OnAfterRenderAsync</c>), tracks the visible
 /// viewport so the sheet lifts above an on-screen keyboard, and reports the snap a gesture
 /// settled on. The module never writes the sheet's height; the component owns the snap index.
+/// Top-layer promotion lives in <see cref="TopLayerInterop"/> — the shared helper every modal
+/// viewport-anchored overlay root uses.
 /// </summary>
 /// <remarks>
 /// Used by <c>TmDrawer</c>, <c>TmModal</c> and <c>TmDialog</c> so a sheet has one implementation.
@@ -80,26 +82,6 @@ internal sealed class SheetInterop : IAsyncDisposable
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
         catch (ObjectDisposedException) { }
-    }
-
-    /// <summary>
-    /// Promotes a modal sheet root to the browser top layer (Popover API). No-op where the API is
-    /// missing or JS is unavailable — the sheet then renders exactly as before, fixed-positioned.
-    /// </summary>
-    public async Task PromoteAsync(ElementReference root)
-    {
-        if (_disposed) return;
-        try
-        {
-            var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
-            if (_disposed || module is null) return;
-            await module.InvokeVoidAsync("promote", root);
-        }
-        catch (JSException) { }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
-        catch (InvalidOperationException) { }
     }
 
     /// <inheritdoc />

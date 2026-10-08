@@ -20,6 +20,7 @@
 {
     <div class="tm-modal-overlay @GetOverlayClasses() @Class"
          data-layout="@Context.CssModifier"
+         popover="manual"
          @attributes="AdditionalAttributes"
          @onclick="HandleOverlayClick"
          @ref="_overlayElement">
@@ -208,8 +209,10 @@
     private string _titleId = Guid.NewGuid().ToString("N");
     private bool _wasShown;
     private bool _gestureAttached;
+    private bool _promoted;
     private bool _disposed;
     private SheetInterop? _sheet;
+    private TopLayerInterop? _topLayer;
     private DotNetObjectReference<TmModal>? _dotNetRef;
     private TmFocusScope? _scope;
     private readonly OverlayLayout _layout = new();
@@ -280,6 +283,21 @@
             _gestureAttached = false;
             await DetachGestureAsync();
         }
+
+        // U1: the modal overlay root is a modal viewport-anchored surface — promote it to the
+        // browser top layer right after the render that inserted it. A sheet a host opened before
+        // the modal then cannot cover it (top-layer order equals open order). Closing unmounts
+        // the subtree; a detached top-layer element hides itself — no demote call is needed.
+        if (Show && !_promoted)
+        {
+            _promoted = true;
+            _topLayer ??= new TopLayerInterop(JS);
+            await _topLayer.PromoteAsync(_overlayElement);
+        }
+        else if (!Show && _promoted)
+        {
+            _promoted = false;
+        }
     }
 
     private async Task AttachGestureAsync()
@@ -316,6 +334,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
+        if (_topLayer is not null) await _topLayer.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }
