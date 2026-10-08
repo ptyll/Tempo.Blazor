@@ -621,6 +621,8 @@
             }
             <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="sheet-open-dialog"
                       OnClick="@(() => { _sheetDialog = true; StateHasChanged(); })">@Loc["TmDemo_ToggleFocusScope"]</TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="sheet-push-toast"
+                      OnClick="@(() => Toast.ShowInfo("Saved from the sheet"))">@Loc["TmDemo_SheetPushToast"]</TmButton>
         </div>
     </ChildContent>
     <FooterContent>

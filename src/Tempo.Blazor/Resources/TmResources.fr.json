@@ -2330,6 +2330,7 @@
   "TmDemo_CanvasBehind": "Canevas derrière le volet",
   "TmDemo_InlineSheetBody": "Le canevas derrière ce volet reste cliquable.",
   "TmDemo_ToggleFocusScope": "Basculer la zone de focus",
+  "TmDemo_SheetPushToast": "Afficher la notification",
   "TmDemo_FocusScopeLabel": "Zone de focus autonome",
   "TmDemo_FocusScopeInput": "Nom",
   "TmDemo_ToggleInline": "Disposition en ligne",

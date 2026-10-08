@@ -220,11 +220,17 @@ public sealed class OverlayRound1FixE2ETests : WasmTestBase
             $"the sheet bottom must sit on the viewport bottom ({panelBox.Y + panelBox.Height})");
 
         // …and what paints at its bottom row is the SHEET, not the z-1030 bar (top layer wins).
+        // elementFromPoint skips inert elements and the sheet's trap inerts the whole page behind
+        // it — so inert is stripped for the hit-test (probe4) or the assertion would pass even
+        // when paint order is wrong. Restored in the round-2 pass.
         var hit = await page.EvaluateAsync<bool>(
             """
             () => {
                 const sheet = document.querySelector('.tm-overlay-panel-sheet');
+                const wasInert = [...document.querySelectorAll('[inert]')];
+                wasInert.forEach(e => e.removeAttribute('inert'));
                 const el = document.elementFromPoint(195, 844 - 20);
+                wasInert.forEach(e => e.setAttribute('inert', ''));
                 return !!el && sheet.contains(el);
             }
             """);
@@ -295,8 +301,16 @@ public sealed class OverlayRound1FixE2ETests : WasmTestBase
             Assert.AreEqual("Done", (await sheet.Locator(".tm-overlay-panel-sheet__done").InnerTextAsync()).Trim());
             var itemBox = await sheet.Locator(".tm-dropdown-item").First.BoundingBoxAsync();
             Assert.IsTrue(itemBox!.Height >= 44, $"export items must be 44px tap targets on touch, got {itemBox.Height}");
-            // The dimmed table stays visible behind the sheet backdrop (structure, not a blank page).
-            Assert.IsTrue(await page.Locator("[data-testid='export-table']").IsVisibleAsync());
+            // The page behind the sheet must show through DIMMED, not vanish under an opaque root:
+            // the promoted root resets the UA [popover] paint (Canvas background), and the scrim
+            // lives on the drawer's own overlay. IsVisibleAsync cannot detect occlusion (round-2
+            // review R2-B1) — assert the computed paint instead.
+            var rootBg = await sheet.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+            Assert.AreEqual("rgba(0, 0, 0, 0)", rootBg,
+                "the promoted sheet root must be transparent — the page behind stays dimmed, not a flat grey wall");
+            var backdropBg = await sheet.Locator(".tm-drawer__overlay").EvaluateAsync<string>(
+                "el => getComputedStyle(el).backgroundColor");
+            StringAssert.Contains(backdropBg, "0.5", "the dimming scrim paints on the drawer overlay");
             await page.WaitForTimeoutAsync(400);
             await ShootAsync(page, $"t10-{width}-dt-export-sheet");
             await AssertCoarsePointerStillMatchesAsync(page);

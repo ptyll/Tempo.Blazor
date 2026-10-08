@@ -45,22 +45,44 @@ public sealed class TmModalFilterChipStyleE2ETests : WasmTestBase
     [TestMethod]
     public async Task TmModal_Below768px_KeepsTheRestoredMargin()
     {
+        // 700x800 sits in the 640 ≤ w < 768 window: the default (Auto) modal still presents as the
+        // CENTERED DIALOG there (the sheet presentation starts below 640), so the restored
+        // declaration is measurable on .tm-modal itself. Reviewers measured 16px with the rule
+        // and 0 without it; the round-1 adaptation measured .tm-dialog at 500px, whose margin
+        // comes from the unrelated (width < 640px) .tm-dialog rule — deleting the restored rule
+        // changed nothing, so that assertion was vacuous.
+        var page = await OpenModalPageAsync(700, 800);
+
+        await page.Locator("[data-testid='open-basic-modal']").ClickAsync();
+        var modal = page.Locator(".tm-modal");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
+
+        // The @media (width < 768px) .tm-modal { margin: var(--tm-space-4) } rule was the only
+        // declaration of the property anywhere — deleting it zeroed the mobile margin.
+        var marginTop = await ComputedAsync(page, ".tm-modal", "marginTop");
+        Assert.AreEqual("16px", marginTop,
+            "pod 768px má centered dialog margin 16px (--tm-space-4) — pravidlo přežilo přesun do _modal.css");
+    }
+
+    [TestMethod]
+    public async Task TmDialog_ForcedDialogBelow640px_KeepsTheDialogMargin()
+    {
         var page = await OpenModalPageAsync(500, 800);
 
-        // Since F2 a default (Auto) modal below 640px presents as a bottom sheet, and the sheet
-        // rule .tm-modal-overlay.tm-modal--sheet .tm-modal{margin:0} intentionally out-ranks the
-        // restored margin. The margin restoration applies to the CENTERED dialog presentation —
-        // force it through the demo toggle so the assertion isolates the restored declaration.
+        // A default (Auto) modal below 640px presents as a bottom sheet, and the sheet rule
+        // .tm-modal-overlay.tm-modal--sheet .tm-modal{margin:0} intentionally out-ranks the
+        // restored margin — force the centered dialog through the demo toggle. NOTE: at 500px the
+        // measured margin comes from the (width < 640px) .tm-dialog rule, NOT from the restored
+        // (width < 768px) .tm-modal rule — this row guards the dialog sheet margin, the row above
+        // guards the restored one.
         await page.Locator("[data-testid='toggle-dialog-presentation']").CheckAsync();
         await page.Locator("[data-testid='open-long-dialog']").ClickAsync();
         var dialog = page.Locator(".tm-dialog");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
 
-        // The @media (width < 768px) .tm-modal { margin: var(--tm-space-4) } rule was the only
-        // declaration of the property anywhere — deleting it zeroed the mobile margin.
         var marginTop = await ComputedAsync(page, ".tm-dialog", "marginTop");
         Assert.AreEqual("16px", marginTop,
-            "pod 768px má centered dialog margin 16px (--tm-space-4) — pravidlo přežilo přesun do _modal.css");
+            "pod 640px má vynucený dialog margin 16px (--tm-space-4) z pravidla .tm-dialog");
     }
 
     [TestMethod]

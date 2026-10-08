@@ -2335,6 +2335,7 @@
   "TmDemo_CanvasBehind": "Plátno za panelem",
   "TmDemo_InlineSheetBody": "Plátno za tímto panelem zůstává klikatelné.",
   "TmDemo_ToggleFocusScope": "Přepnout oblast fokusu",
+  "TmDemo_SheetPushToast": "Odeslat oznámení",
   "TmDemo_FocusScopeLabel": "Samostatná oblast fokusu",
   "TmDemo_ToggleInline": "Řádkové rozložení",
   "TmDemo_ToggleSheet": "Prezentace jako panel",

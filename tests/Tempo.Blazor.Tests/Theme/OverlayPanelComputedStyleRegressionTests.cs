@@ -399,4 +399,59 @@ public sealed class OverlayPanelComputedStyleRegressionTests
                 "potomek sdíleného elementu musí být nálezem — jinak by inventář prošel " +
                 "i nad pravidlem, které znovu zavede váhový problém");
     }
+
+    // ── F3 review round 2 (U2 / UX R2-B1): promoted roots reset the UA popover paint ──
+
+    /// <summary>
+    /// Extracts the declarations of one rule from the bundle. Fails when the rule does not exist.
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> BundleRuleDeclarations(string selector)
+    {
+        var css = CssComment.Replace(Bundle, " ");
+        var pattern = new Regex(
+            Regex.Escape(selector) + @"\s*\{([^{}]*)\}",
+            RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+        var match = pattern.Match(css);
+        match.Success.Should().BeTrue($"pravidlo {selector} musí v bundle existovat");
+        return match.Groups[1].Value
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(declaration => declaration.Split(':', 2))
+            .ToDictionary(parts => parts[0].Trim(), parts => parts[1].Trim());
+    }
+
+    /// <summary>
+    /// Every root the library promotes to the browser top layer (popover="manual") keeps the UA
+    /// [popover] paint off: Canvas background, CanvasText color and overflow:auto turned the page
+    /// behind every sheet into a flat grey wall and dark body text black-on-slate (~1.6:1, UX
+    /// review R2-B1). The reset mirrors <c>:where(.tm-overlay-panel)</c> at zero specificity, so
+    /// the surface's own declarations (the drawer's panel, the modal's scrim, the toast chrome)
+    /// still win where they exist.
+    /// </summary>
+    [Theory]
+    // The modal drawer root at EVERY position (bottom sheets and side drawers) — tm-sheet--anchored
+    // bottom sheets carry the class, the [popover] attribute keys on the promoted set itself.
+    [InlineData(":where(.tm-drawer[popover])")]
+    // The TmModal/TmDialog overlay root.
+    [InlineData(":where(.tm-modal-overlay)")]
+    // The toast container — re-raised to the top layer on each push.
+    [InlineData(":where(.tm-toast-container)")]
+    public void PromotedRoot_Reset_ResetsEveryUaPopoverDefault(string selector)
+    {
+        var declarations = BundleRuleDeclarations(selector);
+
+        declarations.Should().Contain(new KeyValuePair<string, string>("background", "transparent"),
+            "UA [popover] paints background: Canvas — the page behind the sheet turned into a grey wall");
+        declarations.Should().Contain(new KeyValuePair<string, string>("color", "inherit"),
+            "UA [popover] paints color: CanvasText — dark body text measured rgb(0,0,0) on the slate panel");
+        declarations.Should().Contain(new KeyValuePair<string, string>("overflow", "visible"),
+            "UA [popover] sets overflow: auto on the root");
+        declarations.Should().Contain(new KeyValuePair<string, string>("width", "auto"));
+        declarations.Should().Contain(new KeyValuePair<string, string>("height", "auto"));
+        declarations.Should().Contain(new KeyValuePair<string, string>("max-width", "none"));
+        declarations.Should().Contain(new KeyValuePair<string, string>("max-height", "none"));
+        declarations.Should().Contain(new KeyValuePair<string, string>("margin", "0"),
+            "UA [popover] sets margin: auto — the fixed root would shrink to its content");
+        declarations.Should().Contain(new KeyValuePair<string, string>("padding", "0"));
+        declarations.Should().Contain(new KeyValuePair<string, string>("border", "none"));
+    }
 }
