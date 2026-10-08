@@ -75,10 +75,12 @@ export function readViewport(win = typeof window !== 'undefined' ? window : unde
 }
 
 // ── Pure placement math ─────────────────────────────────────────────────────
-// anchor: {top,left,right,bottom,width,height} viewport-space rect.
+// anchor: {top,left,right,bottom,width,height} VISIBLE-viewport-space rect (layout rect minus
+// visualViewport.offsetLeft/offsetTop — getBoundingClientRect is layout-viewport space, while
+// the visible viewport the placement reasons about can be panned/zoomed away from it).
 // size:   {width,height} measured panel size.
 // options:{placement,align,offset,margin,flip,shift,viewWidth,viewHeight}
-// Returns {x,y,side} — viewport-space coordinates and the resolved (post-flip) side.
+// Returns {x,y,side} — visible-viewport-space coordinates and the resolved (post-flip) side.
 export function resolvePlacement(anchor, size, options) {
     const placement = options.placement ?? 'bottom';
     const align = options.align ?? 'start';
@@ -239,7 +241,21 @@ export function positionFloating(panel, options = {}, win) {
         return null;
     }
 
-    const result = resolvePlacement(anchorRect, size, {
+    // Anchor rects are LAYOUT-viewport coordinates (getBoundingClientRect); the visible
+    // viewport can be panned away from the layout viewport (visualViewport.offsetLeft/Top,
+    // always >= 0 when panned). Placement, visibility and constrainHeight all reason in
+    // VISIBLE space, so translate the rect; positions are written back in layout space below
+    // (+offset), where the top layer's fixed coordinates live.
+    const anchor = {
+        top: anchorRect.top - view.top,
+        bottom: anchorRect.bottom - view.top,
+        left: anchorRect.left - view.left,
+        right: anchorRect.right - view.left,
+        width: anchorRect.width,
+        height: anchorRect.height,
+    };
+
+    const result = resolvePlacement(anchor, size, {
         placement: options.placement,
         align: options.align,
         offset: options.anchorGap ?? options.offset,
@@ -251,16 +267,16 @@ export function positionFloating(panel, options = {}, win) {
     });
 
     // Fallback path (no Popover API): coordinates are relative to the fallback containing block,
-    // not the viewport, so its origin is subtracted. The panned visualViewport offset is added:
-    // it positions the panel inside the VISIBLE region even when the layout viewport is panned.
-    const originLeft = (options.originLeft || 0) - view.left;
-    const originTop = (options.originTop || 0) - view.top;
+    // not the viewport, so its origin is subtracted after the visible-space position is mapped
+    // back into layout space (+ the visualViewport pan offset).
+    const originLeft = options.originLeft || 0;
+    const originTop = options.originTop || 0;
 
-    panel.style.left = `${Math.round(result.x - originLeft)}px`;
-    panel.style.top = `${Math.round(result.y - originTop)}px`;
+    panel.style.left = `${Math.round(result.x + view.left - originLeft)}px`;
+    panel.style.top = `${Math.round(result.y + view.top - originTop)}px`;
     panel.setAttribute(PLACEMENT_ATTR, result.side);
 
-    return { ...result, anchorRect, view };
+    return { ...result, anchorRect: anchor, view };
 }
 
 function place(entry) {
@@ -315,9 +331,13 @@ function place(entry) {
     panel.style.visibility = anchorVisible ? '' : 'hidden';
 
     if (options.constrainHeight && (placed.side === 'bottom' || placed.side === 'top')) {
+        // The room math runs in the SAME visible space as placement: the anchor rect is already
+        // translated; the fallback containing block (layout-space rect) is translated here.
+        const blockTop = block ? block.top - view.top : 0;
+        const blockBottom = block ? block.bottom - view.top : view.height;
         const room = placed.side === 'bottom'
-            ? (block ? Math.min(block.bottom, view.height) : view.height) - anchorRect.bottom - options.offset - options.margin
-            : anchorRect.top - (block ? Math.max(block.top, 0) : 0) - options.offset - options.margin;
+            ? Math.min(blockBottom, view.height) - anchorRect.bottom - options.offset - options.margin
+            : anchorRect.top - Math.max(blockTop, 0) - options.offset - options.margin;
         // The stylesheet cap captured in open() — getComputedStyle here would resolve our own
         // previous inline maxHeight (N318: cap could only ever shrink for the panel's open life).
         const cap = Number.isNaN(entry.cssMaxHeight) ? room : Math.min(room, entry.cssMaxHeight);
