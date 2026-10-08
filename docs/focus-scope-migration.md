@@ -91,8 +91,7 @@ The move is per dialog, so a package can migrate one surface at a time.
 `TmModal` renders its overlay with `position: fixed` against the viewport, and its styles live in
 the shared `tempo-blazor.css` bundle, not in a scoped stylesheet. That is what makes it embeddable:
 a scoped stylesheet would not reach the overlay once Blazor teleports nothing and the overlay stays
-in the tree, and a `container-type` ancestor would pin the fixed overlay to that ancestor instead of
-the viewport.
+in the tree.
 
 Two consequences for a host that renders a modal inside its own component — a Notion block, an
 editor canvas, a dashboard:
@@ -101,10 +100,14 @@ editor canvas, a dashboard:
   shared classes (`tm-modal`, `tm-modal-overlay`) or through a `Class` the host passes, declared in
   the shared bundle. This is why `TmViewManager` can hand its dialog to `TmModal` and keep its form
   markup: the form's classes are the host's, the overlay's classes are the library's.
-- The host must not establish a containment context around the modal. `container-type`, `transform`,
-  `filter` and `will-change` all turn the ancestor into the containing block for `position: fixed`,
-  which pins the sheet to that ancestor. Render the modal outside such an ancestor, or accept that
-  it anchors to it. The app-level viewport scope is `IsContainer="false"` for the same reason.
+- The host must not establish a fixed-position containing block around the modal. Per CSS,
+  `position: fixed` resolves against the viewport unless an ancestor creates a containing block
+  for it, which these properties do: `transform` (any value but `none`), `filter`, `backdrop-filter`,
+  `perspective` (any value but `none`), `will-change` naming `transform`, `perspective` or `filter`,
+  and `contain: layout | paint | strict | content`. `container-type: inline-size` does **not** pin
+  a fixed descendant — a container query ancestor is fine. Render the modal outside such an
+  ancestor, or accept that it anchors to it. The app-level viewport scope is `IsContainer="false"`
+  for the same reason.
 
 `TmDashboard` and `TmViewManager` are the reference: both render `TmModal` with
 `MobilePresentation="Auto"`, so the dialog is a centered dialog on desktop and a bottom sheet on a
