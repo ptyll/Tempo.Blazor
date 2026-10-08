@@ -273,3 +273,61 @@ function restoreFocus(trap) {
     if (focusOf(trap.returnTarget)) return;
     focusOf(document.body);
 }
+
+// id -> { element, observer }
+const scrollRegions = new Map();
+
+/**
+ * Keeps an overlay's scroller a keyboard-reachable region ONLY while it actually overflows.
+ * A hardcoded tabindex="0" made the content block the first tabbable element of every dialog, so
+ * the trap focused the title block instead of a button or an input, and short dialogs grew an
+ * extra tab stop. The attributes are owned here, not in the markup, because only a measurement
+ * can decide them. The region never takes initial focus by existing — activate() picks the
+ * target; keyboard users reach the region with Tab.
+ * @param {HTMLElement} element the scroller
+ * @param {string} id the caller's key, so a re-attach replaces the observer
+ * @param {string|null} labelledBy the id of the element that names the region, when it has a title
+ * @returns {() => void} stop
+ */
+export function syncScrollRegion(element, id, labelledBy = null) {
+    stopScrollRegion(id);
+    if (!element) return () => {};
+
+    const apply = () => {
+        // A 1px tolerance: sub-pixel rounding must not mint a tab stop.
+        const overflows = element.scrollHeight > element.clientHeight + 1;
+        if (overflows) {
+            element.setAttribute('tabindex', '0');
+            if (labelledBy) {
+                element.setAttribute('role', 'region');
+                element.setAttribute('aria-labelledby', labelledBy);
+            }
+        } else {
+            element.removeAttribute('tabindex');
+            element.removeAttribute('role');
+            element.removeAttribute('aria-labelledby');
+        }
+    };
+
+    apply();
+    let observer = null;
+    if (typeof ResizeObserver === 'function') {
+        observer = new ResizeObserver(apply);
+        observer.observe(element);
+    }
+    scrollRegions.set(id, { element, observer });
+    return () => stopScrollRegion(id);
+}
+
+/** Removes the scroll-region observer and the attributes it wrote. Safe to call twice. */
+export function stopScrollRegion(id) {
+    const region = scrollRegions.get(id);
+    if (!region) return;
+    scrollRegions.delete(id);
+    if (region.observer) region.observer.disconnect();
+    if (region.element) {
+        region.element.removeAttribute('tabindex');
+        region.element.removeAttribute('role');
+        region.element.removeAttribute('aria-labelledby');
+    }
+}

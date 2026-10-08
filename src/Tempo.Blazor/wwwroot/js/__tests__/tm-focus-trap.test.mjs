@@ -2,7 +2,9 @@
 // no jsdom. The stubs only implement what the module touches.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { activate, deactivate, isInnermost, isTopmost, __resetForTests } from '../tm-focus-trap.js';
+import {
+    activate, deactivate, isInnermost, isTopmost, syncScrollRegion, stopScrollRegion, __resetForTests,
+} from '../tm-focus-trap.js';
 
 test.beforeEach(() => __resetForTests());
 
@@ -430,4 +432,105 @@ test('deactivation falls back when the restore target is disconnected and has no
 
     assert.doesNotThrow(() => deactivate('scope'));
     assert.equal(body.focusCalls, 1, 'a disconnected target with no id falls back to body without throwing');
+});
+
+// ── Scroll region (review round 5) ─────────────────────────────────────────────
+// The dialog scroller must be a keyboard-reachable region only while it actually overflows. A
+// hardcoded tabindex="0" made it the first tabbable element of every dialog, so the trap focused
+// the title block and short dialogs grew an extra tab stop.
+
+function scroller(scrollHeight, clientHeight) {
+    const attrs = new Map();
+    return {
+        scrollHeight,
+        clientHeight,
+        setAttribute(name, value) { attrs.set(name, value); },
+        removeAttribute(name) { attrs.delete(name); },
+        getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
+        hasAttribute(name) { return attrs.has(name); },
+    };
+}
+
+test('an overflowing scroller becomes a tabindex=0 region named by its title', () => {
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'long', 'title-1');
+
+    assert.equal(content.getAttribute('tabindex'), '0', 'a keyboard-only user cannot scroll an unfocusable scroller');
+    assert.equal(content.getAttribute('role'), 'region');
+    assert.equal(content.getAttribute('aria-labelledby'), 'title-1');
+
+    stopScrollRegion('long');
+});
+
+test('a short scroller grows no tab stop and no dangling region', () => {
+    const content = scroller(300, 400);
+    syncScrollRegion(content, 'short', 'title-2');
+
+    assert.equal(content.getAttribute('tabindex'), null, 'a short dialog must not grow an extra tab stop');
+    assert.equal(content.getAttribute('role'), null);
+    assert.equal(content.getAttribute('aria-labelledby'), null);
+
+    stopScrollRegion('short');
+});
+
+test('an overflowing scroller without a title stays a nameless tabindex=0 region', () => {
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'untitled', null);
+
+    assert.equal(content.getAttribute('tabindex'), '0');
+    assert.equal(content.getAttribute('role'), null, 'a region without a name is noise for a reader');
+    assert.equal(content.getAttribute('aria-labelledby'), null);
+
+    stopScrollRegion('untitled');
+});
+
+test('a resize re-decides the attributes and stopping clears them', () => {
+    let overflows = true;
+    const content = {
+        get scrollHeight() { return 900; },
+        get clientHeight() { return overflows ? 400 : 900; },
+        setAttribute() {},
+        removeAttribute() {},
+        getAttribute() { return null; },
+        hasAttribute() { return false; },
+    };
+    const observers = [];
+    globalThis.ResizeObserver = class {
+        constructor(callback) { observers.push(callback); }
+        observe() {}
+        disconnect() {}
+    };
+
+    try {
+        syncScrollRegion(content, 'resize', 'title-3');
+        assert.equal(observers.length, 1, 'the observer is registered once');
+        overflows = false;
+        observers[0]();
+        assert.equal(content.getAttribute('tabindex'), null, 'shrinking below the fold removes the tab stop');
+    } finally {
+        delete globalThis.ResizeObserver;
+    }
+    stopScrollRegion('resize');
+});
+
+test('re-attaching the same id replaces the region and clears the previous element', () => {
+    const first = scroller(900, 400);
+    const second = scroller(900, 400);
+    syncScrollRegion(first, 'replace', 'title-4');
+    syncScrollRegion(second, 'replace', 'title-4');
+
+    assert.equal(first.getAttribute('tabindex'), null, 'the replaced element loses the attributes');
+    assert.equal(second.getAttribute('tabindex'), '0');
+
+    stopScrollRegion('replace');
+    assert.equal(second.getAttribute('tabindex'), null, 'stopping clears the live element too');
+});
+
+test('a null element is a no-op that still stops any previous region', () => {
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'null-guard', 'title-5');
+    const stop = syncScrollRegion(null, 'null-guard', 'title-5');
+
+    assert.equal(content.getAttribute('tabindex'), null, 'the null attach stopped the previous region');
+    assert.doesNotThrow(() => stop());
 });

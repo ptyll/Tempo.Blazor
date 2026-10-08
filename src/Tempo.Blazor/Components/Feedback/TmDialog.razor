@@ -33,7 +33,8 @@
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
                           RestoreFocusTarget="RestoreFocusTarget"
-                          RestoreFocusTargetId="@RestoreFocusTargetId">
+                          RestoreFocusTargetId="@RestoreFocusTargetId"
+                          InitialFocusTargetId="@InitialFocusId">
 
                 @if (IsSheet && CloseOnOverlayClick)
                 {
@@ -48,10 +49,13 @@
                 </div>
                 
                 @* Content *@
-                @* The scroller is keyboard-reachable (tabindex="0", WCAG 2.1.1) and, when it has a
-                   title, a named region — focus lands where the message starts and the reader
-                   announces what it is. *@
-                <div class="tm-dialog-content" tabindex="0" role="@ContentRole" aria-labelledby="@ContentLabelledBy">
+                @* The scroller is NOT a hardcoded tab stop: a tabindex="0" here was the first
+                    tabbable element of every dialog, so the trap focused the title block and short
+                    dialogs grew an extra tab stop. The shared module turns it into a
+                    keyboard-reachable region only while it overflows (tm-focus-trap.js
+                    syncScrollRegion), and it never takes initial focus — InitialFocusTargetId
+                    decides that, per dialog type. *@
+                <div class="tm-dialog-content" @ref="_content">
                     @if (!string.IsNullOrEmpty(Title))
                     {
                         <h3 id="@_titleId" class="tm-dialog-title">@Title</h3>
@@ -65,7 +69,8 @@
                     @if (Type == DialogType.Prompt)
                     {
                         <div class="tm-dialog-input-wrapper">
-                            <TmTextInput @bind-Value="_promptValue"
+                            <TmTextInput Id="@_promptInputId"
+                                         @bind-Value="_promptValue"
                                          Placeholder="@ResolvedPromptPlaceholder"
                                          Class="tm-dialog-input"
                                          @onkeyup="HandlePromptKeyUp" />
@@ -86,7 +91,7 @@
                         <TmButton Variant="GetOkButtonVariant()"
                                   OnClick="OnOkClick"
                                   Class="tm-dialog-btn-ok"
-                                  AdditionalAttributes="@(ButtonTitle(ResolvedOkText))">
+                                  AdditionalAttributes="@(FooterButtonAttrs(ResolvedOkText, _okButtonId))">
                             @ResolvedOkText
                         </TmButton>
                     }
@@ -95,14 +100,14 @@
                         <TmButton Variant="ButtonVariant.Ghost"
                                   OnClick="OnCancelClick"
                                   Class="tm-dialog-btn-cancel"
-                                  AdditionalAttributes="@(ButtonTitle(ResolvedCancelText))">
+                                  AdditionalAttributes="@(FooterButtonAttrs(ResolvedCancelText, _cancelButtonId))">
                             @ResolvedCancelText
                         </TmButton>
                         <TmButton Variant="GetOkButtonVariant()"
                                   OnClick="OnOkClick"
                                   Disabled="IsOkDisabled()"
                                   Class="tm-dialog-btn-ok"
-                                  AdditionalAttributes="@(ButtonTitle(ResolvedOkText))">
+                                  AdditionalAttributes="@(FooterButtonAttrs(ResolvedOkText, _okButtonId))">
                             @ResolvedOkText
                         </TmButton>
                     }
@@ -206,17 +211,27 @@
     private string ResolvedPromptPlaceholder => string.IsNullOrEmpty(PromptPlaceholder) ? Loc["TmDialog_PromptPlaceholder"] : PromptPlaceholder;
 
     /// <summary>The full label as the title: a truncated sheet-footer label keeps its text reachable.</summary>
-    private Dictionary<string, object> ButtonTitle(string label) => new(StringComparer.Ordinal) { ["title"] = label };
+    private Dictionary<string, object> FooterButtonAttrs(string label, string id) => new(StringComparer.Ordinal)
+    {
+        ["title"] = label,
+        ["id"] = id,
+    };
 
     private string _titleId = Guid.NewGuid().ToString("N");
+    private readonly string _promptInputId = $"tm-dialog-{Guid.NewGuid():N}-input";
+    private readonly string _cancelButtonId = $"tm-dialog-{Guid.NewGuid():N}-cancel";
+    private readonly string _okButtonId = $"tm-dialog-{Guid.NewGuid():N}-ok";
     private TmSheetHandle? _handle;
     private ElementReference _panel;
     private ElementReference _overlayElement;
+    private ElementReference _content;
     private string _promptValue = string.Empty;
     private bool _wasShown;
     private bool _gestureAttached;
+    private bool _regionAttached;
     private bool _disposed;
     private SheetInterop? _sheet;
+    private ScrollRegionInterop? _scrollRegion;
     private DotNetObjectReference<TmDialog>? _dotNetRef;
     private TmFocusScope? _scope;
     private readonly OverlayLayout _layout = new();
@@ -241,9 +256,21 @@
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 
-    /// <summary>A titled scroller is a named region; without a title the attributes would dangle.</summary>
-    private string? ContentRole => string.IsNullOrEmpty(Title) ? null : "region";
+    /// <summary>
+    /// The id the scope focuses on activation, chosen per dialog type as the least destructive
+    /// action: a prompt types straight into its input, a confirm (dangerous or not) starts on
+    /// Cancel, an alert has only OK. A custom dialog keeps the default first focusable, because
+    /// its content decides what matters.
+    /// </summary>
+    private string? InitialFocusId => Type switch
+    {
+        DialogType.Prompt => _promptInputId,
+        DialogType.Confirm => _cancelButtonId,
+        DialogType.Alert => _okButtonId,
+        _ => null,
+    };
 
+    /// <summary>A titled scroller is a named region once it overflows; without a title it stays nameless.</summary>
     private string? ContentLabelledBy => string.IsNullOrEmpty(Title) ? null : _titleId;
 
     private string PresentationClass => ResolvedPresentation switch
@@ -300,6 +327,20 @@
             _gestureAttached = false;
             await DetachGestureAsync();
         }
+
+        // The scroller is a keyboard-reachable region only while it overflows. The module owns the
+        // attributes; Blazor's markup carries none, so a short dialog grows no extra tab stop.
+        if (Show && !_regionAttached)
+        {
+            _regionAttached = true;
+            _scrollRegion ??= new ScrollRegionInterop(JS);
+            await _scrollRegion.AttachAsync(_content, ContentLabelledBy);
+        }
+        else if (!Show && _regionAttached)
+        {
+            _regionAttached = false;
+            await _scrollRegion!.DetachAsync();
+        }
     }
 
     private async Task AttachGestureAsync()
@@ -335,6 +376,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
+        if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }

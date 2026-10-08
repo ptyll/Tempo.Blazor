@@ -67,31 +67,22 @@ public class TmDialogPresentationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void LongContent_IsAKeyboardReachableScrollRegion()
+    public void Content_ScrollRegionIsOwnedByTheModule_NotHardcodedMarkup()
     {
+        // A hardcoded tabindex="0" made the content block the FIRST tabbable element of every
+        // dialog: the trap focused the title instead of a button or an input, and short dialogs
+        // grew an extra tab stop. The markup carries none of it — tm-focus-trap.js syncScrollRegion
+        // adds tabindex/role/aria-labelledby only while the content overflows, and removes them
+        // when it does not (node tests + the round-5 E2E pin that half).
         var cut = Render<TmDialog>(p => p
             .Add(d => d.Show, true)
             .Add(d => d.Title, "Delete dashboard")
             .Add(d => d.Message, new string('x', 400)));
 
         var content = cut.Find(".tm-dialog-content");
-        content.GetAttribute("tabindex").Should().Be("0",
-            "a keyboard-only user cannot scroll an unfocusable scroller (WCAG 2.1.1)");
-        content.GetAttribute("role").Should().Be("region");
-        content.GetAttribute("aria-labelledby").Should().Be(cut.Find(".tm-dialog-title").GetAttribute("id"),
-            "the scroll region is named by its title");
-    }
-
-    [Fact]
-    public void Content_WithoutATitle_ScrollsWithoutADanglingName()
-    {
-        var cut = Render<TmDialog>(p => p
-            .Add(d => d.Show, true)
-            .Add(d => d.Message, new string('x', 400)));
-
-        var content = cut.Find(".tm-dialog-content");
-        content.GetAttribute("tabindex").Should().Be("0");
-        content.GetAttribute("role").Should().BeNull("a region without a name is noise for a reader");
+        content.GetAttribute("tabindex").Should().BeNull(
+            "a short dialog must not grow an extra tab stop, and the overflow measurement is JS's to make");
+        content.GetAttribute("role").Should().BeNull();
         content.GetAttribute("aria-labelledby").Should().BeNull();
     }
 
