@@ -2,38 +2,112 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Microsoft.JSInterop
 @using System.Threading
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Helpers
+@using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject ILogger<TmOverlayPanel> Logger
+@inject ILogger<OverlayLayout> LayoutLogger
 
 @* The panel element itself is rendered only while open: an open top-layer popover whose element
    is detached is automatically hidden by the browser, so closing never needs hidePopover() on a
-   dead node — and consumers' "menu absent while closed" markup contracts keep holding. *@
+   dead node — and consumers' "menu absent while closed" markup contracts keep holding.
+
+   Mobile presentation (F3): when the resolved presentation is a sheet, the panel composes
+   TmDrawer Position=Bottom (content height, Modal) instead of the floating popover. The sheet
+   renders in place — inside the modal's DOM when the anchor lives in a modal — so stacking and
+   the nested focus trap stay correct. *@
+@if (IsVisible && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == PanelPresentation.Auto)
+{
+    @* No viewport scope: measure the viewport itself, so the first frame is not stuck on the
+       initial mode. The probe is an internal component, so it is opened from C# — a tag in markup
+       would compile to a literal HTML element and nothing would ever measure. *@
+    @Probe
+}
 @if (IsVisible)
 {
-    <div @ref="_panelRef"
-         id="@Id"
-         class="tm-overlay-panel @Class"
-         popover="manual"
-         role="@Role"
-         aria-label="@AriaLabel"
-         aria-labelledby="@AriaLabelledBy"
-         data-testid="@RootTestId("tm-overlay-panel")"
-         @attributes="AdditionalAttributes">
-        @ChildContent
-    </div>
+    if (IsSheet)
+    {
+        <TmDrawer IsOpen="true"
+                  IsOpenChanged="HandleSheetOpenChanged"
+                  Position="DrawerPosition.Bottom"
+                  Modal="true"
+                  SnapPoints="Array.Empty<double>()"
+                  ShowHandle="false"
+                  ShowCloseButton="false"
+                  CloseOnEscape="CloseOnEscape"
+                  CloseOnOverlayClick="CloseOnOutsidePointerDown"
+                  SwipeToDismiss="CloseOnOutsidePointerDown"
+                  RestoreFocusTarget="SheetRestoreTarget"
+                  Title="@SheetTitle"
+                  AriaLabel="@SheetAriaLabel"
+                  Class="tm-overlay-panel-sheet"
+                  DataTestId="@RootTestId("tm-overlay-panel")">
+            <HeaderContent>
+                @if (!string.IsNullOrEmpty(SheetTitle))
+                {
+                    <h2 class="tm-overlay-panel-sheet__title">@SheetTitle</h2>
+                }
+                <button type="button"
+                        class="tm-overlay-panel-sheet__done"
+                        @onclick="CloseSheetAsync">
+                    @Loc["Tm_Done"]
+                </button>
+            </HeaderContent>
+            <ChildContent>@ChildContent</ChildContent>
+        </TmDrawer>
+    }
+    else if (TrapFocus)
+    {
+        @* A dialog-role popup that must enforce its modality: the focus scope IS the panel root,
+           so the trap, the inert background and the top-layer popover share one element. Escape
+           stays with overlay.js (window capture), which dismisses through NotifyDismissedAsync. *@
+        <TmFocusScope @ref="_scope"
+                      Active="true"
+                      Modal="true"
+                      Class="@($"tm-overlay-panel {Class}")"
+                      DialogRole="@Role"
+                      AriaLabel="@AriaLabel"
+                      AriaLabelledBy="@AriaLabelledBy"
+                      CloseOnEscape="false"
+                      AdditionalAttributes="TrapFocusAttributes">
+            @ChildContent
+        </TmFocusScope>
+    }
+    else
+    {
+        <div @ref="_panelRef"
+             id="@Id"
+             class="tm-overlay-panel @Class"
+             popover="manual"
+             role="@Role"
+             aria-label="@AriaLabel"
+             aria-labelledby="@AriaLabelledBy"
+             data-testid="@RootTestId("tm-overlay-panel")"
+             @attributes="AdditionalAttributes">
+            @ChildContent
+        </div>
+    }
 }
 
 @code {
     private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
 
+    private static readonly IReadOnlyList<double> ContentHeightSnaps = Array.Empty<double>();
+
     private readonly string _key = $"tm-overlay-{Guid.NewGuid():n}";
     private ElementReference _panelRef;
+    private TmFocusScope? _scope;
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmOverlayPanel>? _dotNetRef;
     // Serializes every read/write of _jsOpen/_module/_disposed: two OnAfterRenderAsync runs (or a
     // DisposeAsync racing one) must never both observe _jsOpen==false and double-open (N198), and
     // a render resuming after DisposeAsync must not import a module it then leaks (N172).
     private readonly SemaphoreSlim _jsSync = new(1, 1);
+    private readonly OverlayLayout _layout = new();
     private bool _disposed;
     private bool _jsOpen;
     private bool _internalOpen;
@@ -41,14 +115,16 @@
 
     /// <summary>
     /// Id of the rendered panel element. Defaults to a generated value; supply one when the anchor
-    /// should reference it (e.g. via <c>aria-controls</c>).
+    /// should reference it (e.g. via <c>aria-controls</c>). Popover mode only — a sheet is named
+    /// through its header title.
     /// </summary>
     [Parameter] public string Id { get; set; } = $"tm-overlay-panel-{Guid.NewGuid():n}";
 
     /// <summary>
     /// The element the panel positions itself against. When unset (default
     /// <see cref="ElementReference"/>) overlay.js falls back to the panel's previous element
-    /// sibling — the natural trigger-then-panel layout every built-in consumer uses.
+    /// sibling — the natural trigger-then-panel layout every built-in consumer uses. In sheet mode
+    /// it is also the element focus returns to when the sheet closes.
     /// </summary>
     [Parameter] public ElementReference Anchor { get; set; }
 
@@ -70,12 +146,13 @@
     /// <summary>Slide the panel along the cross axis so it stays inside the viewport. Default true.</summary>
     [Parameter] public bool Shift { get; set; } = true;
 
-    /// <summary>Stretch the panel to the anchor's width (dropdown/select menus). Default false.</summary>
+    /// <summary>Stretch the panel to the anchor's width (dropdown/select menus). Default false. Popover mode only.</summary>
     [Parameter] public bool MatchAnchorWidth { get; set; }
 
     /// <summary>
     /// Cap the panel height at the room available on the resolved side (the script writes an inline
     /// <c>max-height</c>, honouring a smaller CSS cap when one exists) and let it scroll. Default false.
+    /// Popover mode only.
     /// </summary>
     [Parameter] public bool ConstrainHeight { get; set; }
 
@@ -85,6 +162,7 @@
     /// <summary>
     /// Close when a <c>pointerdown</c> lands outside both the panel and the anchor. Default true.
     /// The anchor is exempt so clicking the trigger toggles instead of close-then-reopen races.
+    /// In sheet mode this governs the backdrop click and the swipe-to-dismiss gesture.
     /// </summary>
     [Parameter] public bool CloseOnOutsidePointerDown { get; set; } = true;
 
@@ -100,7 +178,8 @@
     /// of the viewport while focus sat inside the panel — the hidden panel would keep swallowing
     /// keys, so it is closed and focus returns to the anchor). Programmatic closes
     /// (<see cref="CloseAsync"/>, <see cref="IsOpen"/> turning false) do not raise it — the
-    /// consumer already knows.
+    /// consumer already knows. Popover mode only: a sheet closes through the drawer's own
+    /// <see cref="IsOpenChanged"/> without a reason.
     /// </summary>
     [Parameter] public EventCallback<string> OnDismissed { get; set; }
 
@@ -109,8 +188,8 @@
 
     /// <summary>
     /// Accessible name for the panel — emitted as <c>aria-label</c>. Every <c>Role="dialog"</c>
-    /// panel must get a name from here or <see cref="AriaLabelledBy"/>: an unnamed dialog
-    /// announces only "dialog" and fails axe's aria-dialog-name rule.
+    /// panel must get a name from here, <see cref="AriaLabelledBy"/> or <see cref="Title"/>:
+    /// an unnamed dialog announces only "dialog" and fails axe's aria-dialog-name rule.
     /// </summary>
     [Parameter] public string? AriaLabel { get; set; }
 
@@ -119,6 +198,49 @@
     /// over <see cref="AriaLabel"/> when the panel already renders a visible title.
     /// </summary>
     [Parameter] public string? AriaLabelledBy { get; set; }
+
+    /// <summary>
+    /// Title of the sheet header when the panel presents as a bottom sheet. Falls back to
+    /// <see cref="AriaLabel"/> and then to a generic localized "Menu", so the sheet dialog is
+    /// always named. Popover mode does not render it.
+    /// </summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// How the panel presents on a narrow viewport. <see cref="PanelPresentation.Auto"/> follows the
+    /// viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise.
+    /// A forced value renders that presentation without measuring, so a test can render it without
+    /// a DOM. The popover's size still follows the trigger's container; only the popover-vs-sheet
+    /// choice resolves from the viewport.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Auto;
+
+    /// <summary>
+    /// Trap Tab inside the panel and mark the background inert while it is open — the modality a
+    /// <c>Role="dialog"</c> popup promises. The panel element becomes the
+    /// <see cref="TmFocusScope"/> root (same top-layer popover element); Escape stays with
+    /// overlay.js, which restores focus to the anchor on dismissal. Default false. Popover mode only.
+    /// </summary>
+    [Parameter] public bool TrapFocus { get; set; }
+
+    /// <summary>
+    /// The layout the panel presentation resolves from. <see cref="TmLayoutMode.Auto"/> follows the
+    /// viewport scope; a forced value never measures, so a test can render a mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the resolved layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
+    /// would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+
+    /// <summary>The viewport's layout. A panel presented as a sheet is positioned against the viewport.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     /// <summary>Panel content. Rendered only while the panel is open.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -130,6 +252,57 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool IsVisible => IsOpen ?? _internalOpen;
+
+    private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
+
+    private bool IsSheet => ResolvedPresentation == PanelPresentation.Sheet;
+
+    private PanelPresentation ResolvedPresentation => MobilePresentation == PanelPresentation.Auto
+        ? (Context.IsMobile ? PanelPresentation.Sheet : PanelPresentation.Popover)
+        : MobilePresentation;
+
+    private string? SheetTitle => !string.IsNullOrEmpty(Title) ? Title : AriaLabel;
+
+    private string SheetAriaLabel => SheetTitle ?? Loc["TmOverlayPanel_SheetFallback"];
+
+    private ElementReference? SheetRestoreTarget => Anchor.Id is not null ? Anchor : null;
+
+    /// <summary>
+    /// The attributes of the popover panel root in trap-focus mode: the popover contract, the id
+    /// and the consumer's splat all land on the focus-scope root.
+    /// </summary>
+    private Dictionary<string, object> TrapFocusAttributes
+    {
+        get
+        {
+            var attributes = new Dictionary<string, object>
+            {
+                ["popover"] = "manual",
+                ["id"] = Id,
+                ["data-testid"] = RootTestId("tm-overlay-panel"),
+            };
+            if (AdditionalAttributes is not null)
+            {
+                foreach (var pair in AdditionalAttributes)
+                {
+                    attributes[pair.Key] = pair.Value;
+                }
+            }
+            return attributes;
+        }
+    }
+
+    /// <summary>
+    /// The internal viewport probe, opened from C# because a Razor tag binds only to public
+    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// </summary>
+    private RenderFragment Probe => builder =>
+    {
+        builder.OpenComponent<ViewportProbe>(0);
+        builder.AddComponentParameter(1, nameof(ViewportProbe.OnMeasured),
+            EventCallback.Factory.Create<TmLayoutMode>(this, OnProbed));
+        builder.CloseComponent();
+    };
 
     /// <summary>Opens the panel (fires <see cref="IsOpenChanged"/> in controlled mode).</summary>
     public Task SetOpenAsync(bool open) => ApplyOpenAsync(open, dismissed: false, reason: null);
@@ -173,6 +346,28 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>A sheet close request from the drawer (Done, Escape, backdrop, swipe).</summary>
+    private Task HandleSheetOpenChanged(bool open) => open ? Task.CompletedTask : ApplyOpenAsync(false, dismissed: false, reason: null);
+
+    /// <summary>The Done action closes the sheet without a selection, like Escape on the popover.</summary>
+    private Task CloseSheetAsync() => ApplyOpenAsync(false, dismissed: false, reason: null);
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReportResolved();
+    }
+
+    private Task OnProbed(TmLayoutMode mode)
+    {
+        _layout.Measured(mode);
+        OverlayLayout.HintOnce(LayoutLogger);
+        return ReportResolved();
+    }
+
+    private Task ReportResolved() => _layout.ReportAsync(
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode));
+
     // Anchor.Id is part of the signature so swapping the anchor mid-open re-pushes it through
     // update() — a bare options signature would leave the panel tracking the old element.
     private string OptionsSignature() => string.Join('|',
@@ -208,7 +403,7 @@
                 return;
             }
 
-            if (IsVisible)
+            if (IsVisible && !IsSheet)
             {
                 _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
                 if (_disposed)
@@ -224,12 +419,15 @@
                 // overlay.js fall back to the panel's previous element sibling.
                 var anchor = Anchor.Id is not null ? Anchor : (ElementReference?)null;
 
+                // In trap-focus mode the focus-scope root IS the panel element.
+                var panel = TrapFocus ? _scope!.Element : _panelRef;
+
                 var signature = OptionsSignature();
                 if (!_jsOpen)
                 {
                     _jsOpen = true;
                     _openOptionsSignature = signature;
-                    await _module.InvokeVoidAsync("open", _key, _panelRef, anchor, _dotNetRef, BuildOptions());
+                    await _module.InvokeVoidAsync("open", _key, panel, anchor, _dotNetRef, BuildOptions());
                 }
                 else if (_openOptionsSignature != signature)
                 {

@@ -59,7 +59,10 @@
        so a modal's overflow/transform can no longer clip it (the original defect — a date field
        near the end of a scrolling modal body opened its calendar below the fold), and overlay.js
        flips it above the trigger when the space below runs out. Bottom + Start + 4px keeps the
-       historical "under the trigger, left-aligned" look (the old top:calc(100%+space-1);left:0). *@
+       historical "under the trigger, left-aligned" look (the old top:calc(100%+space-1);left:0).
+       TrapFocus makes the dialog popup honour its role=dialog: Tab cycles inside, the background
+       goes inert, and aria-modal="true" is enforced by the TmFocusScope that IS the panel root.
+       On a narrow viewport the popup presents as a content-height bottom sheet. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
@@ -67,6 +70,8 @@
                     Align="OverlayAlign.Start"
                     Offset="4"
                     Role="dialog"
+                    TrapFocus="true"
+                    Title="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDatePicker_Placeholder"]) : Label)"
                     AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
                     AriaLabel="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDatePicker_Placeholder"]) : null)"
                     Class="tm-date-picker-popup">

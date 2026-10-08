@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Overlay
 
 <div class="tm-popover tm-popover--@PositionCss @Class" @attributes="AdditionalAttributes">
@@ -22,7 +23,8 @@
     @* The body is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
        repositions it on scroll/resize, flipping sides when the preferred one has no room. The
-       resolved side lands on data-tm-placement, which the arrow CSS reads. *@
+       resolved side lands on data-tm-placement, which the arrow CSS reads. On a narrow viewport
+       (MobilePresentation=Auto) the body presents as a content-height bottom sheet. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="IsVisible"
                     IsOpenChanged="SetOpenAsync"
@@ -30,6 +32,11 @@
                     Align="OverlayAlign.Center"
                     Offset="8"
                     CloseOnOutsidePointerDown="CloseOnClickOutside"
+                    Title="@Title"
+                    MobilePresentation="MobilePresentation"
+                    LayoutMode="LayoutMode"
+                    InitialMode="InitialMode"
+                    ResolvedLayoutChanged="ResolvedLayoutChanged"
                     Class="tm-popover__body">
         @if (ShowArrow)
         {
@@ -63,6 +70,37 @@
 
     /// <summary>Close when clicking outside.</summary>
     [Parameter] public bool CloseOnClickOutside { get; set; } = true;
+
+    /// <summary>
+    /// Title of the sheet header when the body presents as a bottom sheet on a narrow viewport.
+    /// Falls back to <see cref="TmOverlayPanel.AriaLabel"/> and then to a generic localized
+    /// "Menu", so the sheet dialog is always named. The popover does not render it.
+    /// </summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// How the body presents on a narrow viewport. <see cref="PanelPresentation.Auto"/> follows the
+    /// viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise.
+    /// A forced value renders that presentation without measuring, so a test can render it without
+    /// a DOM.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Auto;
+
+    /// <summary>
+    /// The layout the body presentation resolves from. <see cref="TmLayoutMode.Auto"/> follows the
+    /// viewport scope; a forced value never measures, so a test can render a mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the resolved layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
+    /// would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }

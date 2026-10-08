@@ -28,3 +28,22 @@ public enum OverlayAlign
     /// <summary>Panel end edge aligns with the anchor end edge (right edge for top/bottom placement).</summary>
     End
 }
+
+/// <summary>
+/// How an anchored panel (<see cref="TmOverlayPanel"/>, <c>TmDropdown</c>, <c>TmPopover</c>) presents
+/// itself on a narrow viewport: the floating popover anchored to the trigger, or a bottom sheet.
+/// </summary>
+public enum PanelPresentation
+{
+    /// <summary>The anchored floating panel, at every viewport width.</summary>
+    Popover,
+
+    /// <summary>A content-height bottom sheet with a title and a Done action.</summary>
+    Sheet,
+
+    /// <summary>
+    /// Follows the viewport scope: a bottom sheet on a mobile viewport, the anchored popover
+    /// otherwise. With no viewport scope the first frame renders <c>InitialMode</c>.
+    /// </summary>
+    Auto
+}

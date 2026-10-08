@@ -52,6 +52,28 @@ function clamp(value, min, max) {
 
 const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
 
+// ── Viewport read ───────────────────────────────────────────────────────────
+// The VISIBLE viewport drives placement, so an on-screen keyboard shrinking the visible
+// height (visualViewport) flips/clamps a panel into view instead of opening it under the
+// keyboard. A transient degenerate visualViewport — the 1×1 metrics emulation Chromium applies
+// during a full-page screenshot capture — is ignored in favour of the layout viewport.
+// `win` is injectable so the Node tests can drive this without a DOM.
+export function readViewport(win = typeof window !== 'undefined' ? window : undefined) {
+    if (!win) {
+        return { width: 0, height: 0, left: 0, top: 0 };
+    }
+    const vv = win.visualViewport;
+    if (vv && vv.width >= 2 && vv.height >= 2) {
+        return {
+            width: vv.width,
+            height: vv.height,
+            left: vv.offsetLeft || 0,
+            top: vv.offsetTop || 0,
+        };
+    }
+    return { width: win.innerWidth, height: win.innerHeight, left: 0, top: 0 };
+}
+
 // ── Pure placement math ─────────────────────────────────────────────────────
 // anchor: {top,left,right,bottom,width,height} viewport-space rect.
 // size:   {width,height} measured panel size.
@@ -167,18 +189,17 @@ function resolveAnchor(entry) {
     return sibling ?? null;
 }
 
-function place(entry) {
-    const { panel, options } = entry;
-    if (!panel.isConnected) {
-        release(entry.key);
-        return;
-    }
-
-    const anchorEl = resolveAnchor(entry);
+// Measure + resolve + write in one step, so the whole pipeline is exercised by the Node tests
+// through stub elements. `options` is the public placement contract — {anchor, placement, align,
+// anchorGap, margin, flip, clamp, matchAnchorWidth, originLeft, originTop} — with offset/shift
+// accepted as aliases for anchorGap/clamp (the TmOverlayPanel parameter names). The returned
+// {x, y, side, anchorRect, view} lets place() run its visibility and constrainHeight passes.
+export function positionFloating(panel, options = {}, win) {
+    const anchorEl = options.anchor && options.anchor.isConnected
+        ? options.anchor
+        : panel.previousElementSibling;
     if (!anchorEl) {
-        // No live anchor to measure against — keep the panel where it is; the next render pass
-        // (or close()) resolves it.
-        return;
+        return null;
     }
 
     const anchorRect = anchorEl.getBoundingClientRect();
@@ -186,8 +207,7 @@ function place(entry) {
     // N318: drop the previous pass's inline height cap BEFORE measuring. Left in place it would
     // shrink offsetHeight (the flip decision would then reason about the capped size) — and it is
     // also the value getComputedStyle would resolve again below, which is exactly why a shrunk
-    // cap used to never regrow. The stylesheet's own max-height still applies to the measurement;
-    // it is remembered per-entry as entry.cssMaxHeight.
+    // cap used to never regrow. The stylesheet's own max-height still applies to the measurement.
     panel.style.maxHeight = '';
     panel.style.overflowY = '';
 
@@ -208,20 +228,74 @@ function place(entry) {
     // runs at t≈0 — the mis-measurement would then stick for the panel's whole open life.
     // offsetWidth/offsetHeight ignore transforms. translate-only openers (tm-fade-in) never
     // touched the measurement, but they don't mind the switch either.
-    const panelWidth = panel.offsetWidth;
-    const panelHeight = panel.offsetHeight;
-
-    const viewW = window.innerWidth;
-    const viewH = window.innerHeight;
+    const size = { width: panel.offsetWidth, height: panel.offsetHeight };
+    const view = readViewport(win);
 
     // A transient degenerate viewport — the 1×1 metrics emulation Chromium applies during a
     // full-page screenshot capture, or a mid-animation mobile keyboard collapse — must not
-    // park or dismiss anything: the placement math is meaningless at that size, a focused
-    // panel would be destroyed by 'anchor-hidden' for a viewport state no user can produce,
-    // and the next real resize pass re-runs place() anyway.
-    if (viewW < 2 || viewH < 2) {
+    // park or dismiss anything: the placement math is meaningless at that size, and the next
+    // real resize pass re-runs place() anyway.
+    if (view.width < 2 || view.height < 2) {
+        return null;
+    }
+
+    const result = resolvePlacement(anchorRect, size, {
+        placement: options.placement,
+        align: options.align,
+        offset: options.anchorGap ?? options.offset,
+        margin: options.margin,
+        flip: options.flip,
+        shift: options.clamp ?? options.shift,
+        viewWidth: view.width,
+        viewHeight: view.height,
+    });
+
+    // Fallback path (no Popover API): coordinates are relative to the fallback containing block,
+    // not the viewport, so its origin is subtracted. The panned visualViewport offset is added:
+    // it positions the panel inside the VISIBLE region even when the layout viewport is panned.
+    const originLeft = (options.originLeft || 0) - view.left;
+    const originTop = (options.originTop || 0) - view.top;
+
+    panel.style.left = `${Math.round(result.x - originLeft)}px`;
+    panel.style.top = `${Math.round(result.y - originTop)}px`;
+    panel.setAttribute(PLACEMENT_ATTR, result.side);
+
+    return { ...result, anchorRect, view };
+}
+
+function place(entry) {
+    const { panel, options } = entry;
+    if (!panel.isConnected) {
+        release(entry.key);
         return;
     }
+
+    const anchorEl = resolveAnchor(entry);
+    if (!anchorEl) {
+        // No live anchor to measure against — keep the panel where it is; the next render pass
+        // (or close()) resolves it.
+        return;
+    }
+
+    // Top layer: containing block is the viewport. Fallback: nearest transformed-ish ancestor.
+    const block = entry.usesPopover ? null : containingBlockOf(panel);
+
+    const placed = positionFloating(panel, {
+        anchor: anchorEl,
+        placement: options.placement,
+        align: options.align,
+        anchorGap: options.offset,
+        margin: options.margin,
+        flip: options.flip,
+        clamp: options.shift,
+        matchAnchorWidth: options.matchAnchorWidth,
+        originLeft: block ? block.left : 0,
+        originTop: block ? block.top : 0,
+    });
+    if (!placed) {
+        return;
+    }
+    const { anchorRect, view } = placed;
 
     // Anchor scrolled fully out of the viewport: park the panel invisible rather than clamp it
     // against an edge — it reappears on the next pass once the anchor is back. ('' restores the
@@ -230,7 +304,7 @@ function place(entry) {
     // (e.g. the TmFilterableDropdown filter input). That panel is dismissed instead, through the
     // same accepted-dismissal path as an outside pointerdown ('anchor-hidden' reaches
     // OnDismissed), and focus returns to the anchor via the shared restore.
-    const anchorVisible = anchorIntersectsViewport(anchorRect, viewW, viewH);
+    const anchorVisible = anchorIntersectsViewport(anchorRect, view.width, view.height);
     if (!anchorVisible && panel.contains(document.activeElement)) {
         panel.style.visibility = 'hidden';
         if (dismiss(entry, 'anchor-hidden')) {
@@ -240,29 +314,9 @@ function place(entry) {
     }
     panel.style.visibility = anchorVisible ? '' : 'hidden';
 
-    // Top layer: containing block is the viewport. Fallback: nearest transformed-ish ancestor.
-    const block = entry.usesPopover ? null : containingBlockOf(panel);
-    const originTop = block ? block.top : 0;
-    const originLeft = block ? block.left : 0;
-
-    const result = resolvePlacement(anchorRect, { width: panelWidth, height: panelHeight }, {
-        placement: options.placement,
-        align: options.align,
-        offset: options.offset,
-        margin: options.margin,
-        flip: options.flip,
-        shift: options.shift,
-        viewWidth: viewW,
-        viewHeight: viewH,
-    });
-
-    panel.style.left = `${Math.round(result.x - originLeft)}px`;
-    panel.style.top = `${Math.round(result.y - originTop)}px`;
-    panel.setAttribute(PLACEMENT_ATTR, result.side);
-
-    if (options.constrainHeight && (result.side === 'bottom' || result.side === 'top')) {
-        const room = result.side === 'bottom'
-            ? (block ? Math.min(block.bottom, window.innerHeight) : window.innerHeight) - anchorRect.bottom - options.offset - options.margin
+    if (options.constrainHeight && (placed.side === 'bottom' || placed.side === 'top')) {
+        const room = placed.side === 'bottom'
+            ? (block ? Math.min(block.bottom, view.height) : view.height) - anchorRect.bottom - options.offset - options.margin
             : anchorRect.top - (block ? Math.max(block.top, 0) : 0) - options.offset - options.margin;
         // The stylesheet cap captured in open() — getComputedStyle here would resolve our own
         // previous inline maxHeight (N318: cap could only ever shrink for the panel's open life).
@@ -454,6 +508,13 @@ function bindListeners() {
     window.addEventListener('resize', schedule, { passive: true });
     window.addEventListener('keydown', onKeyDown, { capture: true });
     document.addEventListener('pointerdown', onPointerDown, { capture: true });
+    // The on-screen keyboard opening/closing (or pinch-zoom panning) changes the VISIBLE
+    // viewport without a window resize in every browser — placement must react or a panel
+    // opens under the keyboard. visualViewport fires for both.
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', schedule, { passive: true });
+        window.visualViewport.addEventListener('scroll', schedule, { passive: true });
+    }
     listenersBound = true;
 }
 
@@ -465,6 +526,10 @@ function unbindListeners() {
     window.removeEventListener('resize', schedule);
     window.removeEventListener('keydown', onKeyDown, { capture: true });
     document.removeEventListener('pointerdown', onPointerDown, { capture: true });
+    if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', schedule, { passive: true });
+        window.visualViewport.removeEventListener('scroll', schedule, { passive: true });
+    }
     listenersBound = false;
 }
 

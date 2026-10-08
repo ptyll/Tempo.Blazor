@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Overlay",
+  "description": "How an anchored panel (TmOverlayPanel, TmDropdown, TmPopover) presents itself on a narrow viewport: the floating popover anchored to the trigger, or a bottom sheet. Auto follows the viewport scope — a content-height bottom sheet on mobile, the anchored popover otherwise — so an anchored menu keeps one implementation and adapts its presentation. The popover-vs-sheet choice resolves from the viewport; the popover's size still follows the trigger's container.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Overlay/OverlayEnums.cs",
+  "documentationStatus": "documented",
+  "itemName": "PanelPresentation",
+  "members": [
+    {
+      "name": "Popover",
+      "description": "The anchored floating panel, at every viewport width."
+    },
+    {
+      "name": "Sheet",
+      "description": "A content-height bottom sheet (TmDrawer Position=Bottom, Modal) with a header title and a Done action that closes it."
+    },
+    {
+      "name": "Auto",
+      "description": "Follows the viewport scope: a bottom sheet on a mobile viewport, the anchored popover otherwise. With no viewport scope the first frame renders InitialMode."
+    }
+  ],
+  "usageExample": "<TmDropdown Text=\"Export\" MobilePresentation=\"PanelPresentation.Auto\">…</TmDropdown>"
+}

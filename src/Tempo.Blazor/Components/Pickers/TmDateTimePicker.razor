@@ -60,6 +60,8 @@
                             Align="OverlayAlign.Start"
                             Offset="4"
                             Role="dialog"
+                            TrapFocus="true"
+                            Title="@(string.IsNullOrEmpty(Label) ? Loc["TmDateTimePicker_Title"] : Label)"
                             AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
                             AriaLabel="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDateTimePicker_Placeholder"]) : null)"
                             Class="tm-date-picker-popup">

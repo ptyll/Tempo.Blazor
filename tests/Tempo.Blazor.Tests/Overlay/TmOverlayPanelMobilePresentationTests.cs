@@ -50,12 +50,15 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void MobilePresentationSheet_DoneButton_ClosesPanel()
+    public async Task MobilePresentationSheet_DoneButton_ClosesPanel()
     {
         var cut = Render<TmOverlayPanel>(p => p
             .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
             .Add(c => c.Title, "Filters")
             .AddChildContent("<div>Body</div>"));
+
+        // Uncontrolled mode: open programmatically, then close through the Done action.
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
 
         cut.Find(".tm-overlay-panel-sheet__done").Click();
 
@@ -120,7 +123,8 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     [Fact]
     public void MobilePresentationForcedLayoutModeMobile_UsesSheetWithoutDomMeasurement()
     {
-        // A forced layout never imports the viewport probe — the test renders with no DOM at all.
+        // A forced layout decides the sheet without any measurement of its own — the drawer it
+        // composes may still measure the viewport for its own keyboard tracking.
         var cut = Render<TmOverlayPanel>(p => p
             .Add(c => c.IsOpen, true)
             .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
@@ -128,7 +132,7 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
             .AddChildContent("<div>Body</div>"));
 
         cut.FindAll(".tm-drawer.tm-drawer--bottom").Should().HaveCount(1);
-        cut.FindAll(".tm-viewport-probe").Should().BeEmpty();
+        cut.FindAll(".tm-overlay-panel").Should().BeEmpty();
     }
 
     [Fact]
@@ -198,15 +202,17 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     public async Task TrapFocus_EscapeDismissalStillClosesPanel()
     {
         var cut = Render<TmOverlayPanel>(p => p
-            .Add(c => c.IsOpen, true)
             .Add(c => c.TrapFocus, true)
             .Add(c => c.Role, "dialog")
             .AddChildContent("<div>Body</div>"));
 
-        // overlay.js consumes Escape in the window capture phase in a real browser — the
+        // Uncontrolled mode: open programmatically…
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+        cut.FindAll(".tm-focus-scope").Should().HaveCount(1);
+
+        // …overlay.js consumes Escape in the window capture phase in a real browser — the
         // component's dismissal path is this JSInvokable callback.
-        var panel = cut.FindComponent<TmOverlayPanel>();
-        await cut.InvokeAsync(() => panel.Instance.NotifyDismissedAsync("escape"));
+        await cut.InvokeAsync(() => cut.Instance.NotifyDismissedAsync("escape"));
 
         cut.FindAll(".tm-focus-scope").Should().BeEmpty();
     }

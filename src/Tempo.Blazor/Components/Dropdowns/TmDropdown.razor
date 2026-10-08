@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Overlay
 @using Microsoft.AspNetCore.Components.Web
@@ -20,7 +21,9 @@
 
     @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
-       repositions it on scroll/resize, flipping above the trigger when there is no room below. *@
+       repositions it on scroll/resize, flipping above the trigger when there is no room below.
+       On a narrow viewport (MobilePresentation=Auto) the same menu presents as a content-height
+       bottom sheet titled with the trigger text. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
@@ -28,6 +31,11 @@
                     Align="Align"
                     Offset="Offset"
                     Role="menu"
+                    Title="@(string.IsNullOrEmpty(Text) ? null : Text)"
+                    MobilePresentation="MobilePresentation"
+                    LayoutMode="LayoutMode"
+                    InitialMode="InitialMode"
+                    ResolvedLayoutChanged="ResolvedLayoutChanged"
                     Class="tm-dropdown-menu">
         <CascadingValue Value="this">
             @ChildContent
@@ -56,6 +64,29 @@
 
     /// <summary>Gap in pixels between trigger and menu. Default 4.</summary>
     [Parameter] public int Offset { get; set; } = 4;
+
+    /// <summary>
+    /// How the menu presents on a narrow viewport. <see cref="PanelPresentation.Auto"/> follows the
+    /// viewport scope: a content-height bottom sheet with the trigger text as its title on mobile,
+    /// the anchored popover otherwise. A forced value renders that presentation without measuring.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Auto;
+
+    /// <summary>
+    /// The layout the menu presentation resolves from. <see cref="TmLayoutMode.Auto"/> follows the
+    /// viewport scope; a forced value never measures, so a test can render a mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the resolved layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way bind
+    /// would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }

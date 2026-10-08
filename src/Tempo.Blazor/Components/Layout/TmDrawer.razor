@@ -24,6 +24,7 @@
                   Modal="Modal"
                   Class="@RootClass"
                   AriaLabelledBy="@LabelledBy"
+                  AriaLabel="@AriaLabel"
                   CloseOnEscape="CloseOnEscape"
                   OnEscape="HandleEscape"
                   RestoreFocusTarget="RestoreFocusTarget"
@@ -100,6 +101,13 @@
 
     /// <summary>Title shown in the header.</summary>
     [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// An accessible name for the drawer when neither <see cref="Title"/> nor
+    /// <see cref="HeaderContent"/> names it (a header rendered through HeaderContent carries no
+    /// automatic label). Emitted as <c>aria-label</c> on the focus-scope root.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>Show a semi-transparent backdrop behind the drawer.</summary>
     [Parameter] public bool ShowOverlay { get; set; } = true;

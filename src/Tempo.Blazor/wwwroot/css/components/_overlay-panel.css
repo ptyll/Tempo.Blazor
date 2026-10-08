@@ -49,3 +49,47 @@
 :where(.tm-overlay-panel.tm-overlay-panel--open) {
     display: block;
 }
+
+/* ═══════════════════════════════════════════════════════
+   Mobile presentation: the panel as a content-height bottom sheet
+   (TmOverlayPanel composing TmDrawer Position=Bottom). The header
+   carries the sheet title and the Done action.
+   ═══════════════════════════════════════════════════════ */
+
+.tm-overlay-panel-sheet__title {
+    flex: 1;
+    margin: 0;
+    font-size: var(--tm-font-size-lg);
+    font-weight: 600;
+    color: var(--tm-text-primary);
+    line-height: 1.5;
+}
+
+.tm-overlay-panel-sheet__done {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    min-height: var(--tm-touch-target);
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-color-primary-600);
+    font-size: var(--tm-font-size-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tm-overlay-panel-sheet__done:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-overlay-panel-sheet__done:focus-visible {
+    box-shadow: var(--tm-focus-ring);
+    outline: none;
+}
+
+[data-theme="dark"] .tm-overlay-panel-sheet__done,
+.tm-dark .tm-overlay-panel-sheet__done {
+    color: var(--tm-color-primary-500);
+}
