@@ -266,6 +266,42 @@ test('the data-tm-id marker value cannot break out of the attribute selector', (
     assert.equal(field.focusCalls, 1);
 });
 
+test('an initial-focus selector resolves the first match inside the trap', () => {
+    // T3: a menu/listbox sheet wants the FIRST menuitem/option focused, not the first focusable
+    // (the header Done). The selector is scoped to the trap element.
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocusSelector: '[role="menuitem"]' };
+    const done = element(scope);
+    const item = element(scope);
+    installDom(body);
+    scope.querySelectorAll = () => [done, item];
+    let seen = null;
+    scope.querySelector = (selector) => { seen = selector; return item; };
+
+    activate(scope, 'scope', null, false, null, true);
+
+    assert.equal(seen, '[role="menuitem"]', 'the selector is forwarded scoped to the trap');
+    assert.equal(item.focusCalls, 1, 'the selector match takes initial focus');
+    assert.equal(done.focusCalls, 0);
+});
+
+test('an explicit initial target beats the selector', () => {
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocusSelector: '[role="menuitem"]' };
+    const item = element(scope);
+    const preferred = element(scope);
+    installDom(body);
+    scope.querySelectorAll = () => [item, preferred];
+    scope.querySelector = () => { throw new Error('the selector must not even run'); };
+
+    activate(scope, 'scope', null, false, null, true, preferred);
+
+    assert.equal(preferred.focusCalls, 1);
+    assert.equal(item.focusCalls, 0);
+});
+
 test('a dialog declared in page content becomes reachable when it opens', () => {
     const body = element();
     const app = element(body);

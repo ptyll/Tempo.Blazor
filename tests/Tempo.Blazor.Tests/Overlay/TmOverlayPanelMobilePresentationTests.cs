@@ -205,6 +205,38 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
         cut.Find(".tm-focus-scope").GetAttribute("role").Should().Be("dialog");
     }
 
+    [Theory]
+    [InlineData("menu")]
+    [InlineData("listbox")]
+    public void MobilePresentationSheet_MenuOrListboxRole_InitialFocusTargetsFirstItem(string role)
+    {
+        // UX M1: opening a menu/listbox sheet must land focus on the first menuitem/option, not
+        // on Done — the TmFocusScope resolves the selector after the sheet opened.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Role, role)
+            .Add(c => c.Title, "Filters")
+            .AddChildContent($"<div role='{role}'><button role='menuitem'>One</button></div>"));
+
+        var selector = cut.Find(".tm-focus-scope").GetAttribute("data-initial-focus-selector");
+        selector.Should().NotBeNullOrEmpty();
+        selector.Should().Contain("[role='menuitem']").And.Contain("[role='option']");
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_DialogRole_InitialFocusStaysDefault()
+    {
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Role, "dialog")
+            .Add(c => c.Title, "Pick a date")
+            .AddChildContent("<div>Calendar</div>"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("data-initial-focus-selector").Should().BeNull();
+    }
+
     [Fact]
     public void MobilePresentationSheet_ShowsGrabberWhileSwipeToDismissIsOn()
     {

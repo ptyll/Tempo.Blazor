@@ -128,6 +128,48 @@ public class TmDropdownTests : LocalizationTestBase
         cut.WaitForAssertion(() => openPanelsDuringHandler.Should().Be(0));
     }
 
+    [Fact]
+    public void TmDropdown_SelectItem_ReturnsFocusToTrigger()
+    {
+        // docs/overlays.md rule 4: focus returns to the trigger on every close path — Escape,
+        // outside, Done AND selection. A selection close does not route through overlay.js, so
+        // the dropdown restores focus itself (like TmFilterableDropdown/TmMultiSelect since 2.8.25).
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .AddChildContent<TmDropdownItem>(i => i
+                .Add(x => x.Value, "a")
+                .AddChildContent("A")));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        var focusCallsBefore = JSInterop.Invocations.Count(i => i.Identifier.Contains("focus"));
+        cut.Find(".tm-dropdown-item").Click();
+
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier.Contains("focus"))
+                .Should().BeGreaterThan(focusCallsBefore));
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_SelectItem_ClosesSheet_AndRestoresFocus()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .AddChildContent<TmDropdownItem>(i => i
+                .Add(x => x.Value, "a")
+                .AddChildContent("A")));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        cut.FindAll(".tm-overlay-panel-sheet").Should().HaveCount(1);
+
+        cut.Find(".tm-dropdown-item").Click();
+
+        cut.WaitForAssertion(() => cut.FindAll(".tm-overlay-panel-sheet").Should().BeEmpty());
+        cut.WaitForAssertion(() =>
+            JSInterop.Invocations.Count(i => i.Identifier.Contains("focus"))
+                .Should().BeGreaterThan(0));
+    }
+
     // ── F3 mobile presentation: on a narrow viewport the menu is a bottom sheet ─────────────
 
     [Fact]
