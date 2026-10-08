@@ -53,7 +53,13 @@ public class TmGanttImportDialogTests : LocalizationTestBase
 
         var cut = Render<TmGanttImportDialog>(p => p.Add(x => x.IsOpen, true));
 
-        register.Invocations.Should().HaveCount(1,
+        // Two renders per open since UX round 4: the initial render registers the trigger, then
+        // the post-promotion render (the focus scope activates only after the overlay is shown)
+        // re-attempts it — the JS dataset.tmFilePickerRegistered marker dedupes per element, so
+        // the second call is a no-op in the browser. What must hold: the FIRST registration still
+        // lands ahead of any click (a click-time interop round-trip would fall outside the
+        // user-activation window WebKit requires for input.click()).
+        register.Invocations.Should().HaveCount(2,
             "the native listener must be wired AHEAD of the first click — a click-time interop " +
             "round-trip would fall outside the user-activation window WebKit requires for input.click()");
     }
@@ -68,7 +74,8 @@ public class TmGanttImportDialogTests : LocalizationTestBase
         cut.Render(p => p.Add(x => x.IsOpen, false));
         cut.Render(p => p.Add(x => x.IsOpen, true));
 
-        register.Invocations.Should().HaveCount(2,
+        // 2 per open (initial render + the post-promotion re-render, deduped per element by JS).
+        register.Invocations.Should().HaveCount(4,
             "closing destroys the dialog DOM (@if IsOpen) — the reopened button is a NEW element " +
             "without the dataset marker, so the listener must be registered again");
     }
@@ -92,12 +99,13 @@ public class TmGanttImportDialogTests : LocalizationTestBase
         cut.FindAll(".tm-gantt__import-tab")[0].Click();
 
         var calls = register.Invocations["registerFilePickerTrigger"];
-        calls.Should().HaveCount(2,
+        // 2 from the opening renders (same wrapper, JS-deduped) + 1 for the tab-switch's fresh DOM.
+        calls.Should().HaveCount(3,
             "a C# 'registered once per open' flag can never observe the element a tab switch " +
             "recreates — registration must be re-attempted on every render and left for the " +
             "per-element dataset marker to dedupe");
-        calls[1].Arguments[0].Should().NotBe(calls[0].Arguments[0],
-            "the second call must target the freshly rendered trigger wrapper (@ref hands a new " +
+        calls[2].Arguments[0].Should().NotBe(calls[0].Arguments[0],
+            "the last call must target the freshly rendered trigger wrapper (@ref hands a new " +
             "ElementReference for the recreated element), not the destroyed one");
     }
 
