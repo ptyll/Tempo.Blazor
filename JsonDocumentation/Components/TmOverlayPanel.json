@@ -102,6 +102,12 @@
       "description": "Fires when the open state should change (two-way bindable)."
     },
     {
+      "name": "OnOpened",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after the panel has finished opening: in popover mode once overlay.js open() ran showPopover() (the panel is displayed and in the top layer), in sheet mode after the sheet's opening render. Use for post-open focus moves — e.g. focusing a filter input — because a consumer's OnAfterRenderAsync can run before the panel is displayed, and a focus move against a still-hidden popover is dropped. Fires once per open; closing resets it (since 2.9.1)."
+    },
+    {
       "name": "OnDismissed",
       "type": "EventCallback<string>",
       "isRequired": false,

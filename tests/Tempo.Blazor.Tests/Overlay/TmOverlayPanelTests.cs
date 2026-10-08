@@ -203,6 +203,41 @@ public class TmOverlayPanelTests : LocalizationTestBase
     }
 
     /// <summary>
+    /// m3 (UX review round 2): OnOpened fires only after overlay.js open() ran — the gated-module
+    /// import keeps open() outstanding, so a consumer focus move armed from OnOpened can never
+    /// land on a still-hidden popover. Also: exactly once per open, and again after a reopen.
+    /// </summary>
+    [Fact]
+    public async Task OnOpened_FiresOnlyAfterOpenCompletes_AndOncePerOpen()
+    {
+        var module = new BunitJSModuleInterop(JSInterop);
+        module.SetupVoid("open", _ => true).SetVoidResult();
+        module.SetupVoid("close", _ => true).SetVoidResult();
+        var import = new GatedModuleImport(module);
+        JSInterop.AddInvocationHandler(import);
+
+        var opened = 0;
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(x => x.OnOpened, EventCallback.Factory.Create(this, () => opened++))
+            .AddChildContent("<p>panel</p>"));
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+
+        // The import is still in flight: open() has not run, OnOpened must not have fired.
+        cut.WaitForAssertion(() => import.DispatchCount.Should().Be(1));
+        opened.Should().Be(0, "the panel is not displayed until showPopover() ran");
+
+        import.Release();
+        cut.WaitForAssertion(() => opened.Should().Be(1));
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(false));
+        cut.WaitForAssertion(() => cut.FindAll(".tm-overlay-panel").Should().BeEmpty());
+
+        await cut.InvokeAsync(() => cut.Instance.SetOpenAsync(true));
+        cut.WaitForAssertion(() => opened.Should().Be(2, "a reopen fires OnOpened again"));
+    }
+
+    /// <summary>
     /// N172: a close() that fails with a non-JSDisconnected error (JSException — slow/stuck JS,
     /// not a torn-down circuit) must not escape DisposeAsync, and the module must still be
     /// released. The old code caught only JSDisconnectedException and had _module.DisposeAsync()

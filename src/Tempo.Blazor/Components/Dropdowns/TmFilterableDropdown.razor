@@ -48,6 +48,7 @@
                     Id="@_listboxId"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpenFromJs"
+                    OnOpened="HandlePanelOpened"
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.Start"
                     Offset="4"
@@ -210,11 +211,18 @@
         _isOpen = !_isOpen;
         if (_isOpen)
         {
-            // Move keyboard focus into the filter input once the menu has rendered.
-            _focusFilterPending = true;
+            // The filter focus is armed from OnOpened (HandlePanelOpened) — once overlay.js
+            // open() ran showPopover() — not here: this render's OnAfterRenderAsync can run
+            // before the panel is displayed, and the move is dropped (UX review round 2, m3).
             if (DataProvider is not null)
                 await LoadFromProviderAsync();
         }
+    }
+
+    /// <summary>Arms the filter-input focus once the panel is actually displayed.</summary>
+    private void HandlePanelOpened()
+    {
+        _focusFilterPending = true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -173,6 +173,12 @@ public partial class TmMultiSelect<TItem, TValue>
 
     // ── Lifecycle ────────────────────────────────────────────────
 
+    /// <summary>Arms the filter-input focus once the popup is actually displayed.</summary>
+    private void HandlePanelOpened()
+    {
+        _focusFilterPending = true;
+    }
+
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -288,8 +294,9 @@ public partial class TmMultiSelect<TItem, TValue>
         {
             _filterText = string.Empty;
             _focusedIndex = -1;
-            // Move DOM focus into the filter input once the popup has rendered.
-            _focusFilterPending = true;
+            // The filter focus is armed from OnOpened (HandlePanelOpened) — once overlay.js
+            // open() ran showPopover() — not here: this render's OnAfterRenderAsync can run
+            // before the panel is displayed, and the move is dropped (UX review round 2, m3).
             if (DataProvider is not null)
                 await LoadFromProviderAsync();
             await OnOpen.InvokeAsync();

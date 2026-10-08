@@ -19302,6 +19302,12 @@
           "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\", \"outside\" or \"anchor-hidden\" (the anchor scrolled fully out of the viewport while focus sat inside the panel — the hidden panel would keep swallowing keys, so it is closed and focus returns to the anchor since 2.9.1). Programmatic closes do not raise it. A sheet raises it for Escape; Done, the backdrop click and the swipe close without a reason."
         },
         {
+          "name": "OnOpened",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after the panel has finished opening: in popover mode once overlay.js open() ran showPopover() (the panel is displayed and in the top layer), in sheet mode after the sheet's opening render. Use for post-open focus moves — e.g. focusing a filter input — because a consumer's OnAfterRenderAsync can run before the panel is displayed, and a focus move against a still-hidden popover is dropped. Fires once per open; closing resets it (since 2.9.1)."
+        },
+        {
           "name": "Placement",
           "type": "OverlayPlacement",
           "isRequired": false,

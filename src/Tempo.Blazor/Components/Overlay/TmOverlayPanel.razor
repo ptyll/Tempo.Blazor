@@ -132,6 +132,8 @@
     private bool _jsOpen;
     private bool _internalOpen;
     private bool _trapActive;
+    private bool _openedPending;
+    private bool _openedFired;
     private string? _openOptionsSignature;
 
     /// <summary>
@@ -192,6 +194,16 @@
 
     /// <summary>Fires when the open state should change (two-way bindable).</summary>
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    /// <summary>
+    /// Raised after the panel has finished opening: in popover mode once overlay.js
+    /// <c>open()</c> ran <c>showPopover()</c> (the panel is displayed and in the top layer), in
+    /// sheet mode after the sheet's opening render. Use it for post-open focus moves — e.g.
+    /// focusing a filter input — because a consumer's <c>OnAfterRenderAsync</c> can run before
+    /// the panel is displayed, and a focus move against a still-hidden popover is dropped
+    /// (UX review round 2, m3). Fires once per open; closing resets it.
+    /// </summary>
+    [Parameter] public EventCallback OnOpened { get; set; }
 
     /// <summary>
     /// Fires when the panel is dismissed by a user gesture rather than by the consumer:
@@ -493,6 +505,11 @@
                     _jsOpen = true;
                     _openOptionsSignature = signature;
                     await _module.InvokeVoidAsync("open", _key, panel, anchor, _dotNetRef, BuildOptions());
+                    // m3: only now — showPopover() has run — is the panel actually displayed; a
+                    // consumer focus move before this point lands on a display:none element and
+                    // is dropped. The sheet's opening render ran in this batch too (the drawer
+                    // is a child), so one flag covers both presentations.
+                    _openedPending = true;
                     // Only now — showPopover() has run — may the trap activate and move initial
                     // focus. The extra render flips Active, the scope activates in its own
                     // OnAfterRenderAsync, and the focus move lands inside the visible popover.
@@ -508,6 +525,13 @@
                     await _module.InvokeVoidAsync("update", _key, anchor, BuildOptions());
                 }
             }
+            else if (IsVisible && IsSheet && !_openedFired)
+            {
+                // Sheet mode renders without the overlay.js open() call; the drawer's opening
+                // render (a child, so its OnAfterRender ran before this one) is the point the
+                // sheet is displayed and promoted.
+                _openedPending = true;
+            }
             else if (_jsOpen && _module is not null)
             {
                 // Release BY KEY, not by element reference: a closing panel can already be detached
@@ -518,6 +542,20 @@
                 _openOptionsSignature = null;
                 _trapActive = false;
                 await _module.InvokeVoidAsync("close", _key);
+            }
+
+            if (_openedPending)
+            {
+                _openedPending = false;
+                _openedFired = true;
+                await OnOpened.InvokeAsync();
+            }
+
+            if (!IsVisible)
+            {
+                // Both presentations reset here: the popover close branch above and a sheet that
+                // unmounted with the close — the next open must fire OnOpened again.
+                _openedFired = false;
             }
         }
         finally
