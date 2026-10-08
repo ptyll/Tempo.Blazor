@@ -35,8 +35,10 @@
                           RestoreFocusTargetId="@RestoreFocusTargetId"
                           InitialFocusTargetId="@InitialFocusTargetId">
                 
-                @if (IsSheet)
+                @if (IsSheet && CloseOnOverlayClick)
                 {
+                    @* The grabber is decorative, but it is also the swipe target: without the
+                       dismiss gesture it would paint a drag that does nothing. *@
                     <TmSheetHandle @ref="_handle" Decorative="true" />
                 }
 

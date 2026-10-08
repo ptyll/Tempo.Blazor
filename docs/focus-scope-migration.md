@@ -43,10 +43,13 @@ looked for `role="dialog"` on the old element finds it on this root.
 ## Still claiming a modal without a trap
 
 `TmLightbox` and `TmKeyboardShortcutsHelp` wrap their content in a `TmFocusScope`, so Tab stays inside
-and Escape closes them. `TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` still set
-`aria-modal="true"` on a `TmOverlayPanel` popup that is not a `TmFocusScope`. The popup is a positioned
-panel with its own open and close path (the top layer, the flip, the anchor), so moving it onto the
-scope would drop that positioning. Until that move, a keyboard user can Tab out of the calendar.
+and Escape closes them. `TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` no longer set
+`aria-modal="true"` on their `TmOverlayPanel` popup (the `role="dialog"` stays). The attribute
+promised a modality nothing enforced — the page behind the popup was never inert — so removing it
+stops readers announcing a modal the popup is not. Moving the popups onto the `TmFocusScope` is
+deferred to the F3 phase: a popup is a positioned panel with its own open and close path (the top
+layer, the flip, the anchor), and that move would drop the positioning. Until then, a keyboard user
+can Tab out of the calendar.
 
 ## Packages that keep their own trap
 

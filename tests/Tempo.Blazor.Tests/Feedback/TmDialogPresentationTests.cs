@@ -44,6 +44,7 @@ public class TmDialogPresentationTests : LocalizationTestBase
         var cut = Render<TmDialog>(p => p
             .Add(d => d.Show, true)
             .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.MobilePresentation, MobilePresentation.Sheet)
             .Add(d => d.CloseOnOverlayClick, true));
 
         cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--sheet");
@@ -57,6 +58,7 @@ public class TmDialogPresentationTests : LocalizationTestBase
         var cut = Render<TmDialog>(p => p
             .Add(d => d.Show, true)
             .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.MobilePresentation, MobilePresentation.Sheet)
             .Add(d => d.CloseOnOverlayClick, false));
 
         cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--sheet");
