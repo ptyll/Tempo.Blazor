@@ -218,13 +218,18 @@ public sealed class OverlayRound2FixE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(600);
 
         await page.Locator("[data-testid='sheet-push-toast']").TapAsync();
-        var toast = page.Locator(".tm-toast").First;
+        // The demo renders two containers (the app chrome one and the page showcase) sharing the
+        // scoped service and both promote — the assertion targets the first of them, which is
+        // enough to prove the re-raise above the sheet.
+        var toastContainer = page.Locator(".tm-toast-container:popover-open").First;
+        await toastContainer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        var toast = toastContainer.Locator(".tm-toast").First;
         await toast.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForTimeoutAsync(600);
 
-        Assert.IsTrue(await page.Locator(".tm-toast-container").EvaluateAsync<bool>("el => el.matches(':popover-open')"),
+        Assert.IsTrue(await toastContainer.EvaluateAsync<bool>("el => el.matches(':popover-open')"),
             "the toast container re-raises itself to the top layer on each push");
-        Assert.IsTrue(await PaintsAtAsync(page, ".tm-toast .tm-toast-message", ".tm-toast-container"),
+        Assert.IsTrue(await PaintsAtAsync(page, ".tm-toast-container:popover-open .tm-toast-message", ".tm-toast-container:popover-open"),
             "a toast pushed while a sheet is open must paint above the sheet");
 
         await ShootAsync(page, "u1-390-toast-above-sheet");
@@ -275,7 +280,9 @@ public sealed class OverlayRound2FixE2ETests : WasmTestBase
     {
         var page = await OpenPageAsync("/overlay", 390, 844, touch: true);
 
-        await page.Locator("[data-testid='theme-toggle']").ClickAsync();
+        // The demo renders the toggle in both the mobile header and the desktop aside — the FIRST
+        // visible one flips the shared ThemeService either way.
+        await page.Locator("[data-testid='theme-toggle']").First.ClickAsync();
         await page.WaitForTimeoutAsync(500);
 
         var trigger = page.Locator("[data-testid='overlay-mobile-popover'] .tm-popover__trigger");
