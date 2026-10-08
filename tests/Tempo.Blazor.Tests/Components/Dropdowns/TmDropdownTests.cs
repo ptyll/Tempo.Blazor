@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Dropdowns;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.Dropdowns;
@@ -125,5 +126,61 @@ public class TmDropdownTests : LocalizationTestBase
         cut.Find(".tm-dropdown-item").Click();
 
         cut.WaitForAssertion(() => openPanelsDuringHandler.Should().Be(0));
+    }
+
+    // ── F3 mobile presentation: on a narrow viewport the menu is a bottom sheet ─────────────
+
+    [Fact]
+    public void MobilePresentationSheet_RendersInBottomDrawer_WithTitleAndDone()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .AddChildContent("<div class='menu-item'>CSV</div>"));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        cut.Find(".tm-overlay-panel-sheet__title").TextContent.Should().Be("Export");
+        cut.Find(".tm-overlay-panel-sheet__done").TextContent.Trim().Should().Be("Done");
+        cut.Find(".menu-item").Should().NotBeNull();
+        // No floating popover in sheet mode.
+        cut.FindAll(".tm-dropdown-menu").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MobilePresentationAuto_UsesPopoverOnDesktop()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .AddChildContent("<div>Item</div>"));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        cut.FindAll(".tm-dropdown-menu").Should().HaveCount(1);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MobilePresentation_AriaExpanded_AndFocusReturn()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .AddChildContent("<div>Item</div>"));
+
+        cut.Find("button.tm-dropdown-trigger").GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        cut.Find("button.tm-dropdown-trigger").GetAttribute("aria-expanded").Should().Be("true");
+
+        // Focus return is asserted with a real browser in E2E; here the trigger element itself is
+        // wired as the sheet's restore target, so closing lands focus back on it.
+        var drawer = cut.FindComponent<Tempo.Blazor.Components.Layout.TmDrawer>();
+        drawer.Instance.RestoreFocusTarget.HasValue.Should().BeTrue();
+
+        // The Done action closes the sheet and the trigger reflects the closed state.
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+        cut.Find("button.tm-dropdown-trigger").GetAttribute("aria-expanded").Should().Be("false");
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
     }
 }

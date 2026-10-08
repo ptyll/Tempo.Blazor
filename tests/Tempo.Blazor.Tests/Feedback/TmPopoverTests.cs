@@ -246,4 +246,60 @@ public class TmPopoverTests : LocalizationTestBase
 
         cut.Find(".tm-popover").ClassList.Should().Contain("my-pop");
     }
+
+    // ── F3 mobile presentation: on a narrow viewport the body is a bottom sheet ─────────────
+
+    [Fact]
+    public void MobilePresentationSheet_RendersInBottomDrawer_WithTitleAndDone()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.Title, "Details")
+            .Add(x => x.MobilePresentation, PanelPresentation.Sheet)
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("<p class='body-text'>Rich content</p>"));
+
+        cut.Find(".tm-popover__trigger").Click();
+
+        cut.Find(".tm-overlay-panel-sheet__title").TextContent.Should().Be("Details");
+        cut.Find(".tm-overlay-panel-sheet__done").TextContent.Trim().Should().Be("Done");
+        cut.Find(".body-text").Should().NotBeNull();
+        cut.FindAll(".tm-popover__body").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MobilePresentationAuto_UsesPopoverOnDesktop()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        cut.Find(".tm-popover__trigger").Click();
+
+        cut.FindAll(".tm-popover__body").Should().HaveCount(1);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MobilePresentation_AriaExpanded_AndFocusReturn()
+    {
+        var cut = Render<TmPopover>(p => p
+            .Add(x => x.Title, "Details")
+            .Add(x => x.MobilePresentation, PanelPresentation.Sheet)
+            .Add(x => x.TriggerContent, b => b.AddMarkupContent(0, "<button>Open</button>"))
+            .AddChildContent("Content"));
+
+        cut.Find(".tm-popover__trigger").GetAttribute("aria-expanded").Should().Be("false");
+
+        cut.Find(".tm-popover__trigger").Click();
+        cut.Find(".tm-popover__trigger").GetAttribute("aria-expanded").Should().Be("true");
+
+        // The trigger element is wired as the sheet's restore target (focus return is asserted
+        // with a real browser in E2E).
+        var drawer = cut.FindComponent<Tempo.Blazor.Components.Layout.TmDrawer>();
+        drawer.Instance.RestoreFocusTarget.HasValue.Should().BeTrue();
+
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+        cut.Find(".tm-popover__trigger").GetAttribute("aria-expanded").Should().Be("false");
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+    }
 }

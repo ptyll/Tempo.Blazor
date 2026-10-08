@@ -139,4 +139,24 @@ public class TmDateRangePickerTests : LocalizationTestBase
         captured!.Value.s.Should().BeNull();
         captured.Value.e.Should().BeNull();
     }
+
+    // ── F3 (carried from F2): the popup traps focus through TmFocusScope ────────────────────
+
+    [Fact]
+    public void DateRangePicker_OpenPopup_PopupTrapsFocus_WithModalDialogSemantics()
+    {
+        var cut = Render<TmDateRangePicker>(p => p.Add(c => c.Label, "Period"));
+
+        cut.Find(".tm-date-range-trigger").Click();
+
+        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        scope.Instance.Active.Should().BeTrue();
+        scope.Instance.Modal.Should().BeTrue();
+        var root = scope.Find(".tm-focus-scope");
+        root.GetAttribute("role").Should().Be("dialog");
+        root.GetAttribute("aria-modal").Should().Be("true");
+        root.GetAttribute("aria-labelledby").Should().Be(cut.Find(".tm-picker-label").Id);
+        // Both calendars render inside the trapped popup.
+        root.QuerySelectorAll(".tm-calendar").Should().HaveCount(2);
+    }
 }

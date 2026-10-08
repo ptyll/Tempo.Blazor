@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { anchorIntersectsViewport, resolvePlacement } from '../overlay.js';
+import { anchorIntersectsViewport, resolvePlacement, positionFloating, readViewport } from '../overlay.js';
 
 // Viewport used by all tests unless overridden.
 const VIEW = { viewWidth: 1280, viewHeight: 800 };
@@ -160,4 +160,117 @@ test('anchor clipped to a viewport edge still intersects (strict >)', () => {
 test('anchor with a zeroed rect (display:none) does not intersect', () => {
     const a = anchor({ top: 0, bottom: 0, left: 0, right: 0 });
     assert.equal(anchorIntersectsViewport(a, VIEW.viewWidth, VIEW.viewHeight), false);
+});
+
+// ── readViewport: the visible viewport (visualViewport) drives placement, so an on-screen
+//    keyboard shrinking the visible area flips/clamps panels into view. ────────────────────
+
+function stubWindow(over = {}) {
+    return { innerWidth: 1280, innerHeight: 800, visualViewport: null, ...over };
+}
+
+test('readViewport: falls back to the layout viewport when visualViewport is missing', () => {
+    const view = readViewport(stubWindow());
+    assert.deepEqual(view, { width: 1280, height: 800, left: 0, top: 0 });
+});
+
+test('readViewport: prefers visualViewport when present (on-screen keyboard shrinks it)', () => {
+    const win = stubWindow({
+        innerWidth: 390,
+        innerHeight: 844,
+        visualViewport: { width: 390, height: 420, offsetLeft: 0, offsetTop: -180 },
+    });
+    // Height = the visible part above the keyboard; top = the panned layout offset.
+    assert.deepEqual(readViewport(win), { width: 390, height: 420, left: 0, top: -180 });
+});
+
+test('readViewport: ignores a degenerate visualViewport (1x1 metrics-emulation screenshot)', () => {
+    const win = stubWindow({
+        innerWidth: 390,
+        innerHeight: 844,
+        visualViewport: { width: 1, height: 1, offsetLeft: 0, offsetTop: 0 },
+    });
+    assert.deepEqual(readViewport(win), { width: 390, height: 844, left: 0, top: 0 });
+});
+
+// ── positionFloating: measure + resolve + write, driven through stub elements so the whole
+//    pipeline (flip, clamp, visualViewport) is exercised without a DOM. ────────────────────
+
+function stubPanel({ width = 200, height = 150 } = {}) {
+    return {
+        style: {},
+        offsetWidth: width,
+        offsetHeight: height,
+        previousElementSibling: null,
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name]; },
+    };
+}
+
+function stubAnchor(rect) {
+    return { isConnected: true, getBoundingClientRect: () => rect };
+}
+
+function floatOpts(over = {}) {
+    return {
+        anchor: stubAnchor({ top: 100, left: 100, right: 220, bottom: 140, width: 120, height: 40 }),
+        placement: 'bottom',
+        align: 'start',
+        anchorGap: 4,
+        margin: 8,
+        flip: true,
+        clamp: true,
+        matchAnchorWidth: false,
+        ...over,
+    };
+}
+
+test('positionFloating: places below the anchor and writes the placement attribute', () => {
+    const panel = stubPanel();
+    const result = positionFloating(panel, floatOpts(), stubWindow());
+    assert.equal(result.side, 'bottom');
+    assert.equal(panel.style.top, '144px');
+    assert.equal(panel.style.left, '100px');
+    assert.equal(panel.getAttribute('data-tm-placement'), 'bottom');
+});
+
+test('positionFloating: flips to top when the visible space below the anchor is too small', () => {
+    const panel = stubPanel();
+    // Phone with the keyboard open: visible height 420, anchor at 380-424.
+    const anchorEl = stubAnchor({ top: 380, left: 20, right: 160, bottom: 424, width: 140, height: 44 });
+    const win = stubWindow({
+        innerWidth: 390,
+        innerHeight: 844,
+        visualViewport: { width: 390, height: 420, offsetLeft: 0, offsetTop: -180 },
+    });
+    const result = positionFloating(panel, floatOpts({ anchor: anchorEl }), win);
+    assert.equal(result.side, 'top');
+    // Above the anchor, lifted by the panned layout offset.
+    assert.equal(panel.style.top, `${380 - 4 - 150 - 180}px`);
+});
+
+test('positionFloating: clamps the panel inside the visible viewport (shift)', () => {
+    const panel = stubPanel({ width: 200, height: 150 });
+    const anchorEl = stubAnchor({ top: 100, left: 340, right: 380, bottom: 140, width: 40, height: 40 });
+    const win = stubWindow({ innerWidth: 390, innerHeight: 844 });
+    const result = positionFloating(panel, floatOpts({ anchor: anchorEl }), win);
+    assert.equal(panel.style.left, `${390 - 8 - 200}px`);
+});
+
+test('positionFloating: matchAnchorWidth stretches the panel to the anchor before measuring', () => {
+    const panel = stubPanel();
+    positionFloating(panel, floatOpts({ matchAnchorWidth: true }), stubWindow());
+    assert.equal(panel.style.width, '120px');
+    const unstyled = stubPanel();
+    positionFloating(unstyled, floatOpts({ matchAnchorWidth: false }), stubWindow());
+    assert.equal(unstyled.style.width, '');
+});
+
+test('positionFloating: subtracts a fallback containing-block origin (no Popover API)', () => {
+    const panel = stubPanel();
+    const result = positionFloating(panel, floatOpts({ originLeft: 50, originTop: 30 }), stubWindow());
+    assert.equal(panel.style.left, `${100 - 50}px`);
+    assert.equal(panel.style.top, `${144 - 30}px`);
+    assert.equal(result.side, 'bottom');
 });

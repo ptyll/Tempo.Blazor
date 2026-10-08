@@ -198,4 +198,25 @@ public class TmDatePickerTests : LocalizationTestBase
         cut.Find(".tm-date-picker-trigger").HasAttribute("aria-required").Should().BeFalse();
         cut.Find(".tm-picker-label").ClassList.Should().NotContain("tm-input-label-required");
     }
+
+    // ── F3 (carried from F2): the popup traps focus through TmFocusScope — the role=dialog
+    //    popup re-gains the aria-modal it lost when the false promise was removed. ────────────
+
+    [Fact]
+    public void DatePicker_OpenCalendar_PopupTrapsFocus_WithModalDialogSemantics()
+    {
+        var cut = Render<TmDatePicker>(p => p.Add(c => c.Label, "Occurred"));
+
+        cut.Find(".tm-date-picker-trigger").Click();
+
+        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        scope.Instance.Active.Should().BeTrue();
+        scope.Instance.Modal.Should().BeTrue();
+        var root = scope.Find(".tm-focus-scope");
+        root.GetAttribute("role").Should().Be("dialog");
+        root.GetAttribute("aria-modal").Should().Be("true");
+        root.GetAttribute("aria-labelledby").Should().Be(cut.Find(".tm-picker-label").Id);
+        // The calendar still renders inside the popup.
+        root.QuerySelector(".tm-calendar").Should().NotBeNull();
+    }
 }
