@@ -82,6 +82,26 @@ internal sealed class SheetInterop : IAsyncDisposable
         catch (ObjectDisposedException) { }
     }
 
+    /// <summary>
+    /// Promotes a modal sheet root to the browser top layer (Popover API). No-op where the API is
+    /// missing or JS is unavailable — the sheet then renders exactly as before, fixed-positioned.
+    /// </summary>
+    public async Task PromoteAsync(ElementReference root)
+    {
+        if (_disposed) return;
+        try
+        {
+            var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            if (_disposed || module is null) return;
+            await module.InvokeVoidAsync("promote", root);
+        }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {

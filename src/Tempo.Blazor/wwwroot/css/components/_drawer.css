@@ -272,3 +272,19 @@
     max-width: 48rem;
     margin-inline: auto;
 }
+
+/* ── Top layer (T7) ──────────────────────────────────────
+   A MODAL sheet root carries popover="manual" and is promoted via showPopover (tm-sheet.js), so
+   an ancestor stacking context — a sticky TmTopBar under TmBottomNavigation, a transformed host —
+   can neither confine nor cover it. The UA popover defaults the drawer rules do not set are
+   reset at zero specificity (:where), matching the .tm-overlay-panel reset: margin:auto would
+   mis-anchor the root, and width/height:max-content would shrink the full-bleed bottom panel
+   (its width:100% resolves against this root). Placement, padding and z-index stay with the
+   rules above; an inline (non-modal) sheet never carries popover and is unaffected. */
+:where(.tm-drawer.tm-sheet--anchored) {
+    width: auto;
+    height: auto;
+    margin: 0;
+    border: none;
+    padding: 0;
+}

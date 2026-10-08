@@ -10,6 +10,30 @@
 // points sizes to its content under the max-height cap, so a short menu is not forced to half height.
 
 /**
+ * Promotes a modal sheet root to the browser top layer. The root carries popover="manual"; while
+ * closed the UA hides it, and showPopover() lifts it above every z-index stacking context and
+ * outside every ancestor's overflow/transform clipping — a sticky app bar (TmTopBar under
+ * TmBottomNavigation) or a transformed host can then neither confine nor cover the sheet. The DOM
+ * stays in place, so the nested focus trap and the Escape order are unchanged. No-op where the
+ * Popover API is missing.
+ * @param {HTMLElement} root the sheet root (the drawer's focus-scope element)
+ */
+export function promote(root) {
+    if (!root || typeof root.showPopover !== 'function') {
+        return;
+    }
+    try {
+        if (!root.matches(':popover-open')) {
+            root.showPopover();
+        }
+    }
+    catch {
+        // InvalidStateError — the element is being detached; the browser hides a dead top-layer
+        // element on its own.
+    }
+}
+
+/**
  * The snap a released sheet settles to.
  * @param {number[]} snaps fractions of the viewport height, ascending; empty means content height
  * @param {number} released the fraction the finger released at

@@ -222,6 +222,7 @@
     private SheetInterop? _sheet;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
+    private bool _promoted;
     private string? _gestureKey;
     private bool _disposed;
     private TmFocusScope? _scope;
@@ -263,6 +264,15 @@
                 ["data-snap-points"] = SnapList,
                 ["data-snap-index"] = _snapIndex
             };
+
+            if (Modal && IsSheet)
+            {
+                // T7: a MODAL sheet is positioned against the viewport, so its root is promoted to
+                // the browser top layer (showPopover in OnAfterRenderAsync) — a sticky app bar
+                // (TmTopBar under TmBottomNavigation) or a transformed ancestor can then neither
+                // confine nor cover it. An inline sheet anchors to its container and stays put.
+                attributes["popover"] = "manual";
+            }
 
             if (AdditionalAttributes is not null)
             {
@@ -326,6 +336,23 @@
         {
             _gestureAttached = false;
             await DetachGestureAsync();
+        }
+
+        // T7: promote a MODAL sheet root to the top layer right after the render that inserted it.
+        // Closing unmounts the whole subtree, and a detached top-layer element is hidden by the
+        // browser automatically — no demote call is needed.
+        if (IsOpen && Modal && IsSheet && !_promoted)
+        {
+            _promoted = true;
+            _sheet ??= new SheetInterop(JS);
+            if (_scope is not null)
+            {
+                await _sheet.PromoteAsync(_scope.Element);
+            }
+        }
+        else if ((!IsOpen || !Modal || !IsSheet) && _promoted)
+        {
+            _promoted = false;
         }
     }
 
