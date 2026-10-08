@@ -195,6 +195,13 @@ public class UnconstrainedClassOwnershipTests
         ".tm-notion-callout Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
         ".tm-notion-code-block Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
         "code Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
+
+        // Round 5: the label span ships as display: contents in _button.css (geometry-neutral), and
+        // the sheet footer opts into truncation by blockifying it (display: block; min-width: 0;
+        // overflow/ellipsis) in _modal.css. The manifest order decides nothing here — _modal.css
+        // loads after _button.css by design, and the footer rule is a strictly narrower context
+        // (.tm-modal--sheet footer), which is the whole opt-in (decision F2-BTN-LABEL-SPAN).
+        ".tm-btn-label Tempo.Blazor/_button.css|Tempo.Blazor/_modal.css",
     ];
 
     [Fact]
