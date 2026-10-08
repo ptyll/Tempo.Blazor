@@ -96,6 +96,10 @@ public sealed class ComponentChangeCarriesJsonTests
     /// <summary>
     /// The pure evaluator the mutation tests drive: commits whose component API changed without
     /// a <c>JsonDocumentation/**</c> path in the same commit, reported as sha + offending files.
+    /// Deliberately NOT churn-aware: a standalone <c>[Parameter]</c> attribute line moving from
+    /// one property to another normalizes to identical text and must still flag — EOL churn is
+    /// cancelled at the git layer instead (<c>--ignore-cr-at-eol</c> in
+    /// <see cref="ChangeForCommit"/>), never by comparing line texts here.
     /// </summary>
     internal static IReadOnlyList<string> Evaluate(IEnumerable<CommitChange> commits)
     {
@@ -104,8 +108,7 @@ public sealed class ComponentChangeCarriesJsonTests
         {
             var apiFiles = commit.ComponentFiles
                 .Where(file => IsComponentApiFile(file.Path))
-                .Where(file => CancelEndOfLineChurn(file.AddedLines, file.RemovedLines)
-                    .Any(IsParameterAffectingLine))
+                .Where(file => file.AddedLines.Concat(file.RemovedLines).Any(IsParameterAffectingLine))
                 .Select(file => file.Path)
                 .ToList();
             if (apiFiles.Count == 0)
@@ -131,46 +134,14 @@ public sealed class ComponentChangeCarriesJsonTests
     }
 
     /// <summary>
-    /// A CRLF↔LF normalization rewrites every line of a file without changing a single byte of
-    /// content: git shows each line as removed+added, and the declaration arm would read the file
-    /// as an API change. A line whose text ignoring end-of-line whitespace is identical on both
-    /// sides is churn, not an API change — cancel the symmetric pairs (one-for-one) and return
-    /// the lines that actually differ. A real open/close/rename keeps its lines: the old and new
-    /// declarations never normalize to the same text.
+    /// Builds the evaluator's view of one real commit from the object store. The diff is read
+    /// with <c>--ignore-cr-at-eol</c>: a CRLF↔LF normalization rewrites every line of a file
+    /// without changing a single byte of content, and git would show each line as removed+added;
+    /// the flag hides exactly that carry-return-at-EOL class of churn, so a pure line-ending
+    /// commit produces no diff at all. This is the ONLY churn handling — the evaluator itself
+    /// compares no line texts, so a standalone <c>[Parameter]</c> attribute line moved between
+    /// two properties (identical text on both sides) still flags.
     /// </summary>
-    internal static IReadOnlyList<string> CancelEndOfLineChurn(
-        IReadOnlyList<string> addedLines, IReadOnlyList<string> removedLines)
-    {
-        var removedByText = new Dictionary<string, Queue<int>>(StringComparer.Ordinal);
-        for (var i = 0; i < removedLines.Count; i++)
-        {
-            string key = removedLines[i].TrimEnd();
-            if (!removedByText.TryGetValue(key, out var queue))
-            {
-                queue = new Queue<int>();
-                removedByText[key] = queue;
-            }
-            queue.Enqueue(i);
-        }
-
-        var churnAdded = new HashSet<int>();
-        var churnRemoved = new HashSet<int>();
-        for (var i = 0; i < addedLines.Count; i++)
-        {
-            if (removedByText.TryGetValue(addedLines[i].TrimEnd(), out var candidates)
-                && candidates.Count > 0)
-            {
-                churnRemoved.Add(candidates.Dequeue());
-                churnAdded.Add(i);
-            }
-        }
-
-        return addedLines.Where((_, i) => !churnAdded.Contains(i))
-            .Concat(removedLines.Where((_, i) => !churnRemoved.Contains(i)))
-            .ToList();
-    }
-
-    /// <summary>Builds the evaluator's view of one real commit from the object store.</summary>
     private static CommitChange ChangeForCommit(string sha)
     {
         string root = ReleaseScriptInputReadTests.FindRepoRoot();
@@ -185,7 +156,8 @@ public sealed class ComponentChangeCarriesJsonTests
         foreach (string componentPath in paths.Where(IsComponentApiFile))
         {
             var (diffExit, diffOut, diffErr) = FullCloneFactAttribute.RunGit(
-                root, "show", "--format=", "--unified=0", "--first-parent", sha, "--", componentPath);
+                root, "show", "--format=", "--unified=0", "--ignore-cr-at-eol",
+                "--first-parent", sha, "--", componentPath);
             diffExit.Should().Be(0, $"git show --unified=0 must succeed for {sha} ({diffErr})");
             var added = new List<string>();
             var removed = new List<string>();
@@ -279,58 +251,63 @@ public sealed class ComponentChangeCarriesJsonTests
     }
 
     /// <summary>
-    /// An EOL normalization (CRLF↔LF) shows every line as removed+added although no content
-    /// changed — the symmetric pairs must cancel so the declaration arm does not read churn as
-    /// an API change. Measured live by commits that normalize a component file's line endings.
+    /// The hole cancelling symmetric line pairs opened (review round 4, W1): moving a standalone
+    /// <c>[Parameter]</c> attribute line from property A to property B is a diff of exactly
+    /// <c>-    [Parameter]</c> / <c>+    [Parameter]</c> — identical text on both sides — and must
+    /// STILL flag: the attribute changed which property it decorates. The evaluator is pure, so
+    /// this cell pins the behaviour without git; the git layer keeps CRLF churn out via
+    /// <c>--ignore-cr-at-eol</c> instead (measured on real history by
+    /// <see cref="EndOfLineNormalizationCommits_AreClean"/>).
     /// </summary>
     [Fact]
-    public void EndOfLineNormalizationChurn_IsClean()
+    public void StandaloneParameterAttributeMove_BetweenProperties_IsAFinding()
     {
         var commit = new CommitChange(
             "deadbeef00000000000000000000000000000006",
-            ["src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor"],
+            ["src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor.cs"],
             [
                 new ChangedFile(
-                    "src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor",
+                    "src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor.cs",
                     [
-                        "    [Parameter] public int MaxVisible { get; set; }",
-                        "    [Parameter] public ToastPosition Position { get; set; }",
+                        "    /// <summary>Visual cap.</summary>",
+                        "    [Parameter]",
+                        "    public int MaxToasts { get; set; }",
                     ],
                     [
-                        "    [Parameter] public int MaxVisible { get; set; }\r",
-                        "    [Parameter] public ToastPosition Position { get; set; }\r",
-                    ]),
-            ]);
-
-        Evaluate([commit]).Should().BeEmpty(
-            "a CRLF/LF rewrite changes every line but opens, closes or renames no parameter");
-    }
-
-    /// <summary>
-    /// A real declaration change hidden inside EOL churn must still flag: cancelling the
-    /// symmetric pairs leaves the one line that actually differs.
-    /// </summary>
-    [Fact]
-    public void ParameterChange_AmidEndOfLineChurn_IsStillAFinding()
-    {
-        var commit = new CommitChange(
-            "deadbeef00000000000000000000000000000007",
-            ["src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor"],
-            [
-                new ChangedFile(
-                    "src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor",
-                    [
-                        "    [Parameter] public int MaxVisible { get; set; }",
-                        "    [Parameter] public int Cap { get; set; }",
-                    ],
-                    [
-                        "    [Parameter] public int MaxVisible { get; set; }\r",
-                        "    [Parameter] public int MaxToasts { get; set; }\r",
+                        "    /// <summary>Visual cap.</summary>",
+                        "    [Parameter]",
+                        "    public int MaxVisible { get; set; }",
                     ]),
             ]);
 
         Evaluate([commit]).Should().ContainSingle(
-            "the churn pair cancels and the rename (MaxToasts -> Cap) remains a finding");
+            "the removed and added [Parameter] lines are textually identical, yet the attribute "
+            + "moved from MaxVisible to MaxToasts — an API change with no JsonDocumentation/** "
+            + "path in the commit is exactly the hole text-cancelling must never reopen");
+    }
+
+    /// <summary>
+    /// The git layer's half of the W1 contract: commits whose whole content change is a CRLF/LF
+    /// normalization produce NO diff under <c>--ignore-cr-at-eol</c>, so the evaluator has nothing
+    /// to flag. <c>3f5d7f5f</c> restored LF in the round-3-touched promoted component files and
+    /// <c>975a75be</c> stored CRLF in them — both touched component files with zero content delta.
+    /// </summary>
+    [FullCloneFact]
+    public void EndOfLineNormalizationCommits_AreClean()
+    {
+        CommitChange lfRestore = ChangeForCommit(
+            "3f5d7f5f3a98e16168544927b1157021004cd555");
+        CommitChange crlfStore = ChangeForCommit(
+            "975a75be9481d59dfeb945d554a27f558bdd71c6");
+
+        using (new AssertionScope())
+        {
+            Evaluate([lfRestore]).Should().BeEmpty(
+                "3f5d7f5f only restored LF line endings — --ignore-cr-at-eol leaves no diff, so "
+                + "no parameter-affecting line can be read out of it");
+            Evaluate([crlfStore]).Should().BeEmpty(
+                "975a75be only stored CRLF line endings — the same flag hides the churn");
+        }
     }
 
     /// <summary>
