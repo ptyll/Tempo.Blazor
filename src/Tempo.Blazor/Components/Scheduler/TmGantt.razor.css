@@ -1132,7 +1132,14 @@
 
 /* ─── Phase 4: Dialog overlay ────────────────────────────────────── */
 
-.tm-gantt__dialog-overlay {
+/* Every rule in this dialog section targets markup rendered by the Gantt's sub-component
+   dialogs (TmGanttExportDialog, TmGanttImportDialog, TmGanttImportMappingDialog,
+   TmGanttHistoryDrawer's close button) — the dialog components render INSIDE TmGantt's scoped
+   root, so ::deep (scope on the ancestor) is what lets these rules reach them; a plain rule's
+   key class never carries TmGantt's scope attribute and would be dead CSS. The promoted overlay
+   root keeps its DOM position when it rides the top layer, so ::deep still matches it. */
+
+::deep .tm-gantt__dialog-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.45);
@@ -1144,9 +1151,8 @@
 
 /* The promoted overlay root (F3 review round 3, V2: the import dialog carries popover="manual")
    must not keep the UA [popover] paint: width/height fit-content and margin:auto would shrink
-   the full-screen scrim to the dialog box and centre it. Scoped styles beat the UA sheet, so a
-   plain rule suffices here (the shared :where() reset pattern is for the unscoped bundle). */
-.tm-gantt__dialog-overlay {
+   the full-screen scrim to the dialog box and centre it. */
+::deep .tm-gantt__dialog-overlay {
     margin: 0;
     border: none;
     padding: 0;
@@ -1158,7 +1164,7 @@
     overflow: visible;
 }
 
-.tm-gantt__dialog {
+::deep .tm-gantt__dialog {
     background: var(--tm-surface, #ffffff);
     border-radius: var(--tm-radius-lg, 0.5rem);
     border: 1px solid var(--tm-border-color, #d1d5db);
@@ -1170,7 +1176,7 @@
     flex-direction: column;
 }
 
-.tm-gantt__dialog-header {
+::deep .tm-gantt__dialog-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1178,13 +1184,13 @@
     border-bottom: 1px solid var(--tm-border-color, #d1d5db);
 }
 
-.tm-gantt__dialog-title {
+::deep .tm-gantt__dialog-title {
     font-weight: 600;
     font-size: 0.95rem;
     color: var(--tm-text-primary, #111827);
 }
 
-.tm-gantt__dialog-close {
+::deep .tm-gantt__dialog-close {
     background: none;
     border: none;
     cursor: pointer;
@@ -1195,17 +1201,17 @@
     align-items: center;
 }
 
-.tm-gantt__dialog-close:hover {
+::deep .tm-gantt__dialog-close:hover {
     background: var(--tm-bg-hover, #f3f4f6);
 }
 
-.tm-gantt__dialog-body {
+::deep .tm-gantt__dialog-body {
     padding: 16px;
     overflow-y: auto;
     flex: 1;
 }
 
-.tm-gantt__dialog-actions {
+::deep .tm-gantt__dialog-actions {
     display: flex;
     gap: 8px;
     padding: 12px 16px;
@@ -1215,14 +1221,14 @@
 
 /* ─── Export dialog ──────────────────────────────────────────────── */
 
-.tm-gantt__export-formats {
+::deep .tm-gantt__export-formats {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin-bottom: 16px;
 }
 
-.tm-gantt__export-format-option {
+::deep .tm-gantt__export-format-option {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1234,42 +1240,42 @@
     transition: border-color 0.15s;
 }
 
-.tm-gantt__export-format-option input[type=radio] {
+::deep .tm-gantt__export-format-option input[type=radio] {
     display: none;
 }
 
-.tm-gantt__export-format-option--selected {
+::deep .tm-gantt__export-format-option--selected {
     border-color: var(--tm-color-primary, #3b82f6);
     background: var(--tm-color-primary-subtle, #eff6ff);
     color: var(--tm-color-primary, #3b82f6);
 }
 
-.tm-gantt__export-options {
+::deep .tm-gantt__export-options {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-bottom: 16px;
 }
 
-.tm-gantt__export-option-label {
+::deep .tm-gantt__export-option-label {
     font-size: 0.8rem;
     color: var(--tm-text-secondary, #6b7280);
     font-weight: 500;
 }
 
-.tm-gantt__export-checkbox-label {
+::deep .tm-gantt__export-checkbox-label {
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
 }
 
-.tm-gantt__export-select {
+::deep .tm-gantt__export-select {
     width: 100%;
     font-size: 0.85rem;
 }
 
-.tm-gantt__export-preview {
+::deep .tm-gantt__export-preview {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1286,17 +1292,17 @@
 
 /* ─── Import dialog ──────────────────────────────────────────────── */
 
-.tm-gantt__import-dialog {
+::deep .tm-gantt__import-dialog {
     width: min(560px, 95vw);
 }
 
-.tm-gantt__import-tabs {
+::deep .tm-gantt__import-tabs {
     display: flex;
     border-bottom: 1px solid var(--tm-border-color, #d1d5db);
     margin-bottom: 16px;
 }
 
-.tm-gantt__import-tab {
+::deep .tm-gantt__import-tab {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1310,13 +1316,13 @@
     transition: color 0.15s, border-color 0.15s;
 }
 
-.tm-gantt__import-tab--active {
+::deep .tm-gantt__import-tab--active {
     border-bottom-color: var(--tm-color-primary, #3b82f6);
     color: var(--tm-color-primary, #3b82f6);
     font-weight: 500;
 }
 
-.tm-gantt__import-file-area {
+::deep .tm-gantt__import-file-area {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -1325,7 +1331,7 @@
 
 /* The wrapper exists only to hand JS an ElementReference — display:contents keeps it out of the
    flex column's slot accounting so the empty box adds no gap. */
-.tm-gantt__import-file-input-wrap {
+::deep .tm-gantt__import-file-input-wrap {
     display: contents;
 }
 
@@ -1334,7 +1340,7 @@
    inside the same user gesture. display:none was
    replaced by the standard sr-only geometry so the click works identically in every engine; the
    input itself is aria-hidden + tabindex=-1, so it never reaches AT or the tab order. */
-.tm-gantt__import-file-input {
+::deep .tm-gantt__import-file-input {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1347,12 +1353,12 @@
     border: 0;
 }
 
-.tm-gantt__import-file-name {
+::deep .tm-gantt__import-file-name {
     font-size: 0.8rem;
     color: var(--tm-text-secondary, #6b7280);
 }
 
-.tm-gantt__import-jira-form {
+::deep .tm-gantt__import-jira-form {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1360,11 +1366,11 @@
 
 /* ─── Import mapping dialog ──────────────────────────────────────── */
 
-.tm-gantt__import-mapping-dialog {
+::deep .tm-gantt__import-mapping-dialog {
     width: min(560px, 95vw);
 }
 
-.tm-gantt__mapping-header {
+::deep .tm-gantt__mapping-header {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
@@ -1378,7 +1384,7 @@
     margin-bottom: 8px;
 }
 
-.tm-gantt__mapping-row {
+::deep .tm-gantt__mapping-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
@@ -1387,13 +1393,13 @@
     border-bottom: 1px solid var(--tm-border-color, #d1d5db);
 }
 
-.tm-gantt__mapping-source {
+::deep .tm-gantt__mapping-source {
     font-size: 0.85rem;
     font-weight: 500;
     color: var(--tm-text-primary, #111827);
 }
 
-.tm-gantt__mapping-select {
+::deep .tm-gantt__mapping-select {
     width: 100%;
     font-size: 0.85rem;
     height: 32px;

@@ -468,7 +468,11 @@
   expire+push in one render re-raises too. `TmCommandPalette`, `TmKeyboardShortcutsHelp`,
   `TmLightbox`, `TmGanttImportDialog` and `TmNotificationToastContainer` join the promoted roots
   (each resets the UA popover paint), so no focused modal surface paints invisible under another
-  promoted one anymore. A click on a toast's dismiss button while a sheet or modal is open
+  promoted one anymore. For `TmGanttImportDialog` that reset — and the whole Gantt dialog style
+  block — lives in `TmGantt.razor.css`, whose scope attribute the sub-component dialogs never
+  carried; review round 4 re-wrote the block as `::deep` rules so the promoted import overlay
+  paints the full-screen scrim (not the UA popover box) and the export/import dialogs are styled
+  at every width. A click on a toast's dismiss button while a sheet or modal is open
   dismisses the toast instead of passing through to the backdrop and closing the surface (the
   toast containers are exempt from the focus trap's inert background), and `role=alert` toasts
   keep being announced. The demo no longer renders two `TmToastContainer`s sharing one
