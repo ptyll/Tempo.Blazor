@@ -109,8 +109,9 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
             {
                 b.OpenComponent<TmOverlayPanel>(0);
                 b.AddAttribute(1, "IsOpen", true);
-                b.AddAttribute(2, "Title", "Filters");
-                b.AddAttribute(3, "ChildContent", (RenderFragment)(bb => bb.AddContent(0, "Body")));
+                b.AddAttribute(2, "MobilePresentation", PanelPresentation.Auto);
+                b.AddAttribute(3, "Title", "Filters");
+                b.AddAttribute(4, "ChildContent", (RenderFragment)(bb => bb.AddContent(0, "Body")));
                 b.CloseComponent();
             }));
             builder.CloseComponent();
@@ -127,6 +128,7 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
         // composes may still measure the viewport for its own keyboard tracking.
         var cut = Render<TmOverlayPanel>(p => p
             .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Auto)
             .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
             .Add(c => c.Title, "Filters")
             .AddChildContent("<div>Body</div>"));
