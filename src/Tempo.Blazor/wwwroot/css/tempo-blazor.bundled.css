@@ -192,7 +192,8 @@ to{transform:translateX(0);}
 [data-theme="dark"] .tm-drawer__overlay,.tm-dark .tm-drawer__overlay{background-color:rgba(0,0,0,0.7);}
 @media (prefers-reduced-motion:reduce){.tm-drawer__panel,.tm-drawer__overlay{animation:none;}
 }
-@media (width < 640px){.tm-drawer__panel{width:100%;max-width:100vw;}
+@media (width < 640px){.tm-drawer--right,.tm-drawer--left{right:0;left:0;}
+.tm-drawer__panel{width:100%;max-width:100vw;}
 }
 [data-layout="desktop"].tm-drawer--bottom .tm-drawer__panel{max-width:48rem;margin-inline:auto;}
 .tm-section{border:1px solid var(--tm-border-color,#e2e8f0);border-radius:var(--tm-radius-lg,0.5rem);background:var(--tm-bg-surface,#fff);overflow:hidden;}
@@ -226,7 +227,6 @@ to{transform:translateX(0);}
 .tm-viewport-probe{position:fixed;visibility:hidden;pointer-events:none;}
 .tm-layout{display:block;min-width:0;container-type:inline-size;container-name:tm-layout;}
 .tm-layout.tm-layout--no-container{container-type:normal;container-name:none;}
-.tm-layout--fallback{position:fixed;inset:0;width:100%;height:0;overflow:hidden;visibility:hidden;pointer-events:none;z-index:-1;}
 @media (prefers-reduced-motion:reduce){.tm-layout,.tm-layout *{scroll-behavior:auto;}
 }
 .tm-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--tm-space-2);font-family:var(--tm-font-sans);font-weight:var(--tm-font-weight-medium);border-radius:var(--tm-radius-control);border:1px solid transparent;height:var(--tm-input-height-md);padding:0 var(--tm-space-4);cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color var(--tm-transition-fast),border-color var(--tm-transition-fast),color var(--tm-transition-fast),box-shadow var(--tm-transition-fast),opacity var(--tm-transition-fast);outline:none;position:relative;user-select:none;-webkit-user-select:none;}
@@ -3110,6 +3110,7 @@ to{opacity:1;}
 .tm-dialog--warning .tm-dialog-icon{background:var(--tm-color-warning-subtle);color:var(--tm-color-warning);}
 .tm-dialog--error .tm-dialog-icon,.tm-dialog--dangerous .tm-dialog-icon{background:var(--tm-color-danger-subtle);color:var(--tm-color-danger);}
 .tm-dialog-content{width:100%;margin-bottom:var(--tm-space-6);flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
+.tm-dialog-content:focus-visible{outline:2px solid var(--tm-color-primary-500);outline-offset:-2px;}
 .tm-dialog-title{font-size:var(--tm-font-size-xl);font-weight:var(--tm-font-weight-semibold);color:var(--tm-text-primary);margin:0 0 var(--tm-space-3) 0;}
 .tm-dialog-message{font-size:var(--tm-font-size-md);color:var(--tm-text-secondary);margin:0;line-height:1.5;}
 .tm-dialog-input-wrapper{margin-top:var(--tm-space-5);}
@@ -3133,7 +3134,8 @@ to{opacity:1;}
 .tm-modal-footer,.tm-dialog-footer{flex-wrap:wrap;}
 .tm-modal-footer--stacked,.tm-dialog-footer.tm-modal-footer--stacked{flex-direction:column-reverse;}
 .tm-modal-footer--stacked .tm-btn,.tm-dialog-footer.tm-modal-footer--stacked .tm-btn{width:100%;min-width:auto;}
-.tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline>.tm-btn,.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline>.tm-btn{flex:1 1 8rem;min-width:fit-content;max-width:100%;}
+.tm-modal-overlay.tm-modal--sheet .tm-modal-footer--stacked>.tm-btn,.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--stacked>.tm-btn{white-space:normal;overflow-wrap:anywhere;height:auto;min-height:var(--tm-touch-target);}
+.tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline>.tm-btn,.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline>.tm-btn{flex:1 1 8rem;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;height:auto;min-height:var(--tm-input-height-md);}
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer{padding-bottom:calc(var(--tm-space-3) + env(safe-area-inset-bottom,0px));}
 .tm-modal-overlay.tm-modal--sheet .tm-dialog{padding-bottom:calc(var(--tm-space-6) + env(safe-area-inset-bottom,0px));}
 @media (pointer:coarse){.tm-modal-footer .tm-btn,.tm-dialog-footer .tm-btn,.tm-drawer__footer .tm-btn{min-height:var(--tm-touch-target);}

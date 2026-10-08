@@ -274,6 +274,13 @@
   overscroll-behavior: contain;
 }
 
+/* The scroller is tabindex="0" (a keyboard-only user must be able to reach a scrollable message,
+   WCAG 2.1.1), so its focus has to be visible. */
+.tm-dialog-content:focus-visible {
+  outline: 2px solid var(--tm-color-primary-500);
+  outline-offset: -2px;
+}
+
 .tm-dialog-title {
   font-size: var(--tm-font-size-xl);
   font-weight: var(--tm-font-weight-semibold);
@@ -413,11 +420,27 @@
   min-width: auto;
 }
 
+/* A stacked sheet footer has the whole row for one button, but a 61-character FR label still
+   does not fit a 320px panel. Wrap it like the inline footer does. */
+.tm-modal-overlay.tm-modal--sheet .tm-modal-footer--stacked > .tm-btn,
+.tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--stacked > .tm-btn {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  height: auto;
+  min-height: var(--tm-touch-target);
+}
+
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn,
 .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline > .tm-btn {
   flex: 1 1 8rem;
-  min-width: fit-content;
+  /* min-width: fit-content pushed a long FR label out of a 320px sheet footer. The button
+     shrinks below its text and the label wraps onto a second line instead. */
+  min-width: 0;
   max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  height: auto;
+  min-height: var(--tm-input-height-md);
 }
 
 .tm-modal-overlay.tm-modal--sheet .tm-modal-footer {

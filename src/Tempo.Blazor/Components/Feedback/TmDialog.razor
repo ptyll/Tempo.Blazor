@@ -46,7 +46,10 @@
                 </div>
                 
                 @* Content *@
-                <div class="tm-dialog-content">
+                @* The scroller is keyboard-reachable (tabindex="0", WCAG 2.1.1) and, when it has a
+                   title, a named region — focus lands where the message starts and the reader
+                   announces what it is. *@
+                <div class="tm-dialog-content" tabindex="0" role="@ContentRole" aria-labelledby="@ContentLabelledBy">
                     @if (!string.IsNullOrEmpty(Title))
                     {
                         <h3 id="@_titleId" class="tm-dialog-title">@Title</h3>
@@ -229,6 +232,11 @@
         : MobilePresentation;
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
+
+    /// <summary>A titled scroller is a named region; without a title the attributes would dangle.</summary>
+    private string? ContentRole => string.IsNullOrEmpty(Title) ? null : "region";
+
+    private string? ContentLabelledBy => string.IsNullOrEmpty(Title) ? null : _titleId;
 
     private string PresentationClass => ResolvedPresentation switch
     {

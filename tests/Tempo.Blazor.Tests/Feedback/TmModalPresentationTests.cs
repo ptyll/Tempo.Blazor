@@ -115,13 +115,15 @@ public class TmModalPresentationTests : LocalizationTestBase
     public void SheetFooter_ButtonsWrapInsteadOfOverflowingAt320()
     {
         var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
-        var rule = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn");
-        rule.Should().Contain("min-width: 0",
+        var inline = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn");
+        inline.Should().Contain("min-width: 0",
             "min-width: fit-content forces a long FR label out of a 320px sheet footer");
-
-        var wrap = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn, .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline > .tm-btn");
-        wrap.Should().Contain("white-space: normal",
+        inline.Should().Contain("white-space: normal",
             "the label wraps instead of clipping; height:auto lets the second line show");
+
+        var stacked = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--stacked > .tm-btn");
+        stacked.Should().Contain("white-space: normal",
+            "a stacked sheet footer wraps the same way");
     }
 
     /// <summary>Reads the declaration block of the last rule that declares the selector verbatim.</summary>

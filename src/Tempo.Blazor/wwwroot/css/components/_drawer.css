@@ -251,6 +251,16 @@
    Responsive — full-width on mobile
    ═══════════════════════════════════════════════════════ */
 @media (width < 640px) {
+    /* Pinning both edges gives the fixed root a definite width. The panel's width:100% resolves
+       against that root — against a shrink-to-fit root it collapses to the content width, which
+       is why the left drawer used to be narrower than the viewport while the right one (whose
+       content happened to be wider) read as full-bleed. */
+    .tm-drawer--right,
+    .tm-drawer--left {
+        right: 0;
+        left: 0;
+    }
+
     .tm-drawer__panel {
         width: 100%;
         max-width: 100vw;
