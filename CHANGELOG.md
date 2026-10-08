@@ -4,6 +4,26 @@
 
 ### Breaking / Migration
 
+- **Anchored panels present as a bottom sheet on mobile only where a component opts in.**
+  `MobilePresentation` (new `PanelPresentation` enum: `Popover | Sheet | Auto`) follows the same
+  viewport contract `TmModal`/`TmDialog` already ship, but `TmOverlayPanel` now **defaults to
+  `Popover`** — the anchored popover at every width. `TmDropdown` and `TmPopover` keep
+  `MobilePresentation="Auto"` (content-height bottom sheet below 640px, the anchored popover
+  otherwise, with the trigger text as the sheet title), and `TmColumnPicker`, `TmDatePicker`,
+  `TmDateRangePicker` and `TmDateTimePicker` opt into `Auto` explicitly. Every other anchored
+  surface — `TmEntityPicker`, `TmQueryInput`, `TmMultiSelect`, `TmFilterableDropdown`,
+  `TmTagPicker`, `TmMultiColumnComboBox`, `TmColorPicker`, `TmSplitButton`, `TmContextMenu`,
+  `TmNotificationBell` and the Notion mention/AI/comment-mention menus — renders the popover on
+  phones too: their anchor keeps focus (a typeahead, a caret menu, an inline toolbar) and a modal
+  sheet would steal it. A host that wants the sheet for its own panel passes
+  `MobilePresentation="Auto"`; anchoring options (`Placement`, `Align`, `Offset`,
+  `MatchAnchorWidth`, `ConstrainHeight`) apply to the popover only. In sheet mode the panel
+  renders a `TmDrawer Position=Bottom` with a header (`Title`, falling back to `AriaLabel` and a
+  localized generic "Menu") and a **Done** action instead of the floating popover; selectors that
+  assume the consumer panel class (e.g. `.tm-dropdown-menu`) on mobile must target
+  `.tm-overlay-panel-sheet` (or the unchanged trigger) instead. See
+  [docs/overlays.md](docs/overlays.md).
+
 - **`TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` popup panels are now
   `TmFocusScope` roots** (`TrapFocus="true"`): the calendar popup traps Tab, marks the background
   `inert` and re-claims `aria-modal="true"` — the modality the `role="dialog"` popup always

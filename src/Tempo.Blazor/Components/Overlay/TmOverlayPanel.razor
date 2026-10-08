@@ -207,13 +207,18 @@
     [Parameter] public string? Title { get; set; }
 
     /// <summary>
-    /// How the panel presents on a narrow viewport. <see cref="PanelPresentation.Auto"/> follows the
-    /// viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise.
-    /// A forced value renders that presentation without measuring, so a test can render it without
-    /// a DOM. The popover's size still follows the trigger's container; only the popover-vs-sheet
-    /// choice resolves from the viewport.
+    /// How the panel presents on a narrow viewport. Default <see cref="PanelPresentation.Popover"/>:
+    /// the anchored popover at every width. A surface whose anchor keeps focus (a typeahead, a
+    /// caret menu, an inline toolbar) must stay on that default — presenting it as a modal sheet
+    /// moves focus to the sheet header and loses keystrokes. Opt-in wrappers (TmDropdown,
+    /// TmPopover) and deliberate sheet consumers (the column picker, the date/time pickers) pass
+    /// <see cref="PanelPresentation.Auto"/>, which follows the viewport scope: a content-height
+    /// bottom sheet on mobile, the anchored popover otherwise. A forced value renders that
+    /// presentation without measuring, so a test can render it without a DOM. The popover's size
+    /// still follows the trigger's container; only the popover-vs-sheet choice resolves from the
+    /// viewport.
     /// </summary>
-    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Auto;
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
 
     /// <summary>
     /// Trap Tab inside the panel and mark the background inert while it is open — the modality a

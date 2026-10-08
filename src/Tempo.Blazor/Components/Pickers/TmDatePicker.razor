@@ -74,6 +74,7 @@
                     Title="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDatePicker_Placeholder"]) : Label)"
                     AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
                     AriaLabel="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDatePicker_Placeholder"]) : null)"
+                    MobilePresentation="PanelPresentation.Auto"
                     Class="tm-date-picker-popup">
         <TmCalendarGrid DisplayYear="@_displayYear"
                         DisplayMonth="@_displayMonth"

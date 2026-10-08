@@ -57,6 +57,7 @@
                     Title="@(string.IsNullOrEmpty(Label) ? Loc["TmDateRangePicker_Title"] : Label)"
                     AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
                     AriaLabel="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDateRangePicker_From"]) : null)"
+                    MobilePresentation="PanelPresentation.Auto"
                     Class="tm-date-range-popup">
         @if (ShowPresets && EffectivePresets.Count > 0)
         {

@@ -23,6 +23,7 @@
                     Align="OverlayAlign.End"
                     Role="dialog"
                     Title="@Loc["TmDataTable_ColumnPicker"]"
+                    MobilePresentation="PanelPresentation.Auto"
                     Class="tm-column-picker-panel">
         <div class="tm-column-picker-items">
             @foreach (var col in Columns.Where(c => c.IsHideable))

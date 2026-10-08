@@ -135,8 +135,8 @@
       "name": "MobilePresentation",
       "type": "PanelPresentation",
       "isRequired": false,
-      "default": "Auto",
-      "description": "How the panel presents on a narrow viewport. Auto follows the viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise. A forced Popover/Sheet renders without measuring, so a test can render it without a DOM. Anchoring options apply to the popover only (since 2.9.1)."
+      "default": "Popover",
+      "description": "How the panel presents on a narrow viewport. Popover (default) renders the anchored popover at every width — surfaces whose anchor keeps focus (typeaheads, caret menus, inline toolbars) must stay on it, because a sheet moves focus to the header and loses keystrokes. Auto follows the viewport scope: a content-height bottom sheet on mobile, the anchored popover otherwise — the default on the TmDropdown/TmPopover wrappers and the explicit opt-in of the column picker and the date/time pickers. A forced Popover/Sheet renders without measuring, so a test can render it without a DOM. Anchoring options apply to the popover only (since 2.9.1)."
     },
     {
       "name": "TrapFocus",
