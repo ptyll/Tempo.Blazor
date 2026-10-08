@@ -229,6 +229,41 @@ test('an initial focus element beats the named id', () => {
     assert.equal(named.focusCalls, 0, 'the named id is only the fallback');
 });
 
+test('initial focus falls back to a data-tm-id marker when no real id is rendered', () => {
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocus: 'view-name-abc123' };
+    const field = element(scope);
+    const first = element(scope);
+    installDom(body);
+    // The named field is deliberately NOT the first focusable: with no marker fallback the trap
+    // lands on the close button instead, which is the reported regression.
+    scope.querySelectorAll = () => [first, field];
+    document.querySelector = (selector) => (
+        selector === '[data-tm-id="view-name-abc123"]' ? field : null);
+
+    activate(scope, 'scope', null, false, null, true);
+
+    assert.equal(field.focusCalls, 1, 'the data-tm-id marker resolves the initial target when there is no id');
+    assert.equal(first.focusCalls, 0, 'the first focusable is only the last resort');
+});
+
+test('the data-tm-id marker value cannot break out of the attribute selector', () => {
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocus: 'name"injected' };
+    const field = element(scope);
+    installDom(body);
+    scope.querySelectorAll = () => [field];
+    let seen = null;
+    document.querySelector = (selector) => { seen = selector; return field; };
+
+    activate(scope, 'scope', null, false, null, true);
+
+    assert.ok(seen?.includes('\\"'), `the quote in the marker value must be escaped, got ${seen}`);
+    assert.equal(field.focusCalls, 1);
+});
+
 test('a dialog declared in page content becomes reachable when it opens', () => {
     const body = element();
     const app = element(body);

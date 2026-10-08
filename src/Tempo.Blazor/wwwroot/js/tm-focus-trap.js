@@ -20,6 +20,13 @@ const FOCUSABLE = [
 // id -> { element, tabHandler, escHandler, returnTarget }
 const traps = new Map();
 
+// CSS.escape is missing in the stub DOM the node tests run against. Attribute values only need
+// the quote and the backslash escaped to stay inside the selector.
+function escapeAttr(value) {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(value);
+    return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 function visibleFocusable(element) {
     return Array.from(element.querySelectorAll(FOCUSABLE))
         .filter(el => el.offsetParent !== null && !el.hasAttribute('disabled'));
@@ -105,9 +112,13 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         const list = visibleFocusable(element);
         const initialId = element.dataset ? element.dataset.initialFocus : null;
         const byId = initialId && document.getElementById ? document.getElementById(initialId) : null;
+        // A component that renders only a data-tm-id marker (no real id) is still resolvable.
+        const byData = !byId && initialId && document.querySelector
+            ? document.querySelector(`[data-tm-id="${escapeAttr(initialId)}"]`)
+            : null;
         // An element reference wins over the id: the id is the fallback for a target that is not an
         // element reference yet.
-        (initialTarget || byId || list[0] || element).focus();
+        (initialTarget || byId || byData || list[0] || element).focus();
     }
 }
 
@@ -255,7 +266,7 @@ function restoreFocus(trap) {
     const id = dataset ? dataset.restoreTarget : null;
     const byId = id && document.getElementById ? document.getElementById(id) : null;
     const byData = !byId && id && document.querySelector
-        ? document.querySelector(`[data-tm-id="${id}"]`)
+        ? document.querySelector(`[data-tm-id="${escapeAttr(id)}"]`)
         : null;
     if (focusOf(byId) || focusOf(byData)) return;
 

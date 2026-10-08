@@ -3,7 +3,7 @@
 @using Tempo.Blazor.Components.Filters
 
 <div class="tm-view-manager">
-    <button type="button" data-tm-id="@_toggleId" class="tm-btn tm-btn-secondary tm-view-manager-toggle" @onclick="ToggleDropdownAsync">
+    <button type="button" id="@_toggleId" data-tm-id="@_toggleId" class="tm-btn tm-btn-secondary tm-view-manager-toggle" @onclick="ToggleDropdownAsync">
         <TmIcon Name="view-list" />
         <span>@(Loc["TmViewManager_Views"])</span>
         <TmIcon Name="chevron-down" />
@@ -128,13 +128,12 @@
          ShowCloseButton="true"
          InitialFocusTargetId="@_nameId"
          RestoreFocusTargetId="@_toggleId"
-         data-tm-view-name="@_nameId"
          MobilePresentation="MobilePresentation.Auto">
     <ChildContent>
                 @* View Name *@
                 <div class="tm-form-group tm-mb-4">
-                    <label class="tm-form-label">@(Loc["TmViewManager_ViewName"])</label>
-                    <TmTextInput data-tm-id="@_nameId" @bind-Value="_viewName"
+                    <label for="@_nameId" class="tm-form-label">@(Loc["TmViewManager_ViewName"])</label>
+                    <TmTextInput Id="@_nameId" data-tm-id="@_nameId" @bind-Value="_viewName"
                                  Placeholder="@(Loc["TmViewManager_NamePlaceholder"])" />
                 </div>
 
