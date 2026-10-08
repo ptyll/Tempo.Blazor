@@ -178,10 +178,11 @@ test('readViewport: prefers visualViewport when present (on-screen keyboard shri
     const win = stubWindow({
         innerWidth: 390,
         innerHeight: 844,
-        visualViewport: { width: 390, height: 420, offsetLeft: 0, offsetTop: -180 },
+        visualViewport: { width: 390, height: 420, offsetLeft: 0, offsetTop: 180 },
     });
-    // Height = the visible part above the keyboard; top = the panned layout offset.
-    assert.deepEqual(readViewport(win), { width: 390, height: 420, left: 0, top: -180 });
+    // Height = the visible part above the keyboard; top = the panned layout offset (>= 0:
+    // the layout viewport is panned DOWN so the focused field stays visible).
+    assert.deepEqual(readViewport(win), { width: 390, height: 420, left: 0, top: 180 });
 });
 
 test('readViewport: ignores a degenerate visualViewport (1x1 metrics-emulation screenshot)', () => {
@@ -237,17 +238,42 @@ test('positionFloating: places below the anchor and writes the placement attribu
 
 test('positionFloating: flips to top when the visible space below the anchor is too small', () => {
     const panel = stubPanel();
-    // Phone with the keyboard open: visible height 420, anchor at 380-424.
-    const anchorEl = stubAnchor({ top: 380, left: 20, right: 160, bottom: 424, width: 140, height: 44 });
+    // Phone with the keyboard open, layout viewport panned 180px down (visualViewport.offsetTop
+    // is POSITIVE). Anchor LAYOUT rect 560..604 → VISIBLE rect 380..424 in a 420-tall viewport.
+    const anchorEl = stubAnchor({ top: 560, left: 20, right: 160, bottom: 604, width: 140, height: 44 });
     const win = stubWindow({
         innerWidth: 390,
         innerHeight: 844,
-        visualViewport: { width: 390, height: 420, offsetLeft: 0, offsetTop: -180 },
+        visualViewport: { width: 390, height: 420, offsetLeft: 0, offsetTop: 180 },
     });
     const result = positionFloating(panel, floatOpts({ anchor: anchorEl }), win);
     assert.equal(result.side, 'top');
-    // Above the anchor, lifted by the panned layout offset.
-    assert.equal(panel.style.top, `${380 - 4 - 150 - 180}px`);
+    // Above the anchor in visible space (380-4-150=226), written back in LAYOUT space (+180) —
+    // i.e. exactly flush above the layout anchor (560-4-150=406).
+    assert.equal(panel.style.top, `${560 - 4 - 150}px`);
+    // …and the placed panel must not overlap the VISIBLE anchor rect.
+    const panelVisualBottom = parseInt(panel.style.top, 10) - 180 + 150;
+    assert.ok(panelVisualBottom <= 380, `panel visual bottom ${panelVisualBottom} must clear the anchor's visible top 380`);
+});
+
+test('positionFloating: a panned-down visible anchor stays visible (N329 dismissal must not fire)', () => {
+    // Layout viewport panned 180px down (visualViewport.offsetTop positive): the anchor's
+    // LAYOUT rect 560..604 maps to the VISIBLE rect 380..424, which intersects a 420-tall
+    // visible viewport. place() translates the rect before running anchorIntersectsViewport,
+    // so this anchor must read as visible — not parked hidden and not dismissed.
+    const anchorRect = { top: 560, bottom: 604, left: 20, right: 160 };
+    const view = { width: 390, height: 420, left: 0, top: 180 };
+    const anchorVisible = anchorIntersectsViewport(
+        {
+            top: anchorRect.top - view.top,
+            bottom: anchorRect.bottom - view.top,
+            left: anchorRect.left - view.left,
+            right: anchorRect.right - view.left,
+        },
+        view.width,
+        view.height,
+    );
+    assert.equal(anchorVisible, true);
 });
 
 test('positionFloating: clamps the panel inside the visible viewport (shift)', () => {
