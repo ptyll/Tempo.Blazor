@@ -11,12 +11,16 @@ using Tempo.Blazor.Tests.Localization;
 namespace Tempo.Blazor.Tests.Feedback;
 
 /// <summary>
-/// Prompt submit is an Enter-on-keydown activation (UX review round 6, M-r6-1). The submit used to
-/// ride on the input's Enter <c>keyup</c>: since the per-type initial focus the opener's own Enter
-/// keydown opens the dialog, focus lands on the input while the key is still down, and the trailing
-/// keyup submitted the DefaultValue at once — one press, two activations, the dialog flashing past.
-/// Enter acts on keydown (docs/keyboard-activation-convention.md), guarded against auto-repeat, and
-/// a keyup without a prior accepted keydown must never submit.
+/// Prompt submit is one activation per Enter press (UX review round 6, M-r6-1). The submit used to
+/// ride on the input's bare Enter <c>keyup</c>: since the per-type initial focus the opener's own
+/// Enter keydown opens the dialog, focus lands on the input while the key is still down, and the
+/// trailing keyup submitted the DefaultValue at once — one press, two activations, the dialog
+/// flashing past. The submit is now armed by the input's OWN Enter keydown and fired by its keyup:
+/// a bare keyup (the opener's trailing one) arrives unarmed and must not submit, a full press
+/// submits exactly once, auto-repeat must not double it, and an arm must not survive a reopen.
+/// (A bare keydown submit was probed and rejected: it closes the dialog between keydown and keyup,
+/// and Chromium then runs the keydown's default action against the re-focused opener — the dialog
+/// re-opened itself with the default value. docs/keyboard-activation-convention.md.)
 /// </summary>
 public class TmDialogPromptKeyboardTests : LocalizationTestBase
 {
@@ -43,53 +47,63 @@ public class TmDialogPromptKeyboardTests : LocalizationTestBase
         cut.Find("input.tm-dialog-input").KeyUp(new KeyboardEventArgs { Key = "Enter" });
 
         _results.Should().BeEmpty(
-            "the opener's Enter keyup lands on the freshly focused input; a keyup without an accepted " +
-            "keydown must never submit — that is the one-press-two-activations defect");
+            "the opener's Enter keyup lands on the freshly focused input; a keyup the input never " +
+            "saw go down must never submit — that is the one-press-two-activations defect");
     }
 
     [Fact]
-    public void EnterKeyDown_SubmitsTheDefaultValue_ExactlyOnce()
+    public void EnterKeyDownAlone_DoesNotSubmit()
     {
         var cut = RenderPrompt();
 
         cut.Find("input.tm-dialog-input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        _results.Should().BeEmpty(
+            "the submit fires on the keyup of the same press — closing on the keydown would let " +
+            "Chromium run the keydown's default action against the re-focused opener and re-open the dialog");
+    }
+
+    [Fact]
+    public void EnterPress_KeyDownThenKeyUp_SubmitsTheDefaultValue_ExactlyOnce()
+    {
+        var cut = RenderPrompt();
+        var input = cut.Find("input.tm-dialog-input");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
 
         _results.Should().ContainSingle("Enter activates exactly once per press").Which.Should().Be("John Doe");
     }
 
     [Fact]
-    public void EnterKeyDownRepeat_DoesNotSubmit()
+    public void HeldEnter_KeyDownRepeatThenKeyUp_SubmitsExactlyOnce()
     {
         var cut = RenderPrompt();
+        var input = cut.Find("input.tm-dialog-input");
 
-        cut.Find("input.tm-dialog-input").KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter", Repeat = true });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
 
-        _results.Should().BeEmpty("a held Enter auto-repeats keydowns; a repeat event must not re-submit");
+        _results.Should().ContainSingle("a held key's auto-repeat must not multiply the submit")
+            .Which.Should().Be("John Doe");
     }
 
     [Fact]
-    public void EnterKeyDown_WhitespaceOnlyValue_DoesNotSubmit()
+    public void EnterPress_WhitespaceOnlyValue_DoesNotSubmit()
     {
         var cut = RenderPrompt("   ");
+        var input = cut.Find("input.tm-dialog-input");
 
-        cut.Find("input.tm-dialog-input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
 
         _results.Should().BeEmpty("an empty prompt has nothing to confirm — the OK button is disabled for the same reason");
     }
 
     [Fact]
-    public void TypedValue_EnterKeyDown_SubmitsTheTypedValue_ExactlyOnce()
-    {
-        var cut = RenderPrompt();
-        cut.Find("input.tm-dialog-input").Input("Pavel");
-
-        cut.Find("input.tm-dialog-input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
-
-        _results.Should().ContainSingle().Which.Should().Be("Pavel");
-    }
-
-    [Fact]
-    public void TypedValue_TrailingEnterKeyUp_AfterAnAcceptedKeyDown_DoesNotSubmitAgain()
+    public void TypedValue_EnterPress_SubmitsTheTypedValue_ExactlyOnce()
     {
         var cut = RenderPrompt();
         var input = cut.Find("input.tm-dialog-input");
@@ -98,6 +112,39 @@ public class TmDialogPromptKeyboardTests : LocalizationTestBase
         input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
 
-        _results.Should().ContainSingle("the keyup of the same press is spent once the keydown submitted");
+        _results.Should().ContainSingle().Which.Should().Be("Pavel");
+    }
+
+    [Fact]
+    public void SecondEnterKeyUp_WithoutANewKeyDown_DoesNotSubmitAgain()
+    {
+        var cut = RenderPrompt();
+        var input = cut.Find("input.tm-dialog-input");
+        input.Input("Pavel");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
+
+        _results.Should().ContainSingle("the arm is consumed by the keyup that submitted; a stray keyup is unarmed");
+    }
+
+    [Fact]
+    public void EnterArm_DoesNotSurviveAReopen()
+    {
+        var cut = RenderPrompt();
+        cut.Find("input.tm-dialog-input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.InvokeAsync(async () =>
+        {
+            await cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+                new Dictionary<string, object> { [nameof(TmDialog.Show)] = false }));
+            await cut.Instance.SetParametersAsync(ParameterView.FromDictionary(
+                new Dictionary<string, object> { [nameof(TmDialog.Show)] = true }));
+        }).GetAwaiter().GetResult();
+
+        cut.Find("input.tm-dialog-input").KeyUp(new KeyboardEventArgs { Key = "Enter" });
+
+        _results.Should().BeEmpty("an arm left over from the previous session must not submit into the fresh dialog");
     }
 }

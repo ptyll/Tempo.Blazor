@@ -73,6 +73,7 @@
                                          @bind-Value="_promptValue"
                                          Placeholder="@ResolvedPromptPlaceholder"
                                          Class="tm-dialog-input"
+                                         @onkeydown="HandlePromptKeyDown"
                                          @onkeyup="HandlePromptKeyUp" />
                         </div>
                     }
@@ -234,6 +235,7 @@
     private ElementReference _overlayElement;
     private ElementReference _content;
     private string _promptValue = string.Empty;
+    private bool _promptEnterArmed;
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _regionAttached;
@@ -302,6 +304,7 @@
         {
             _wasShown = true;
             _promptValue = DefaultValue ?? string.Empty;
+            _promptEnterArmed = false;
         }
         else if (!Show && _wasShown)
         {
@@ -479,10 +482,38 @@
     }
     
     private Task HandleEscape() => CloseOnEscape ? OnCancelClick() : Task.CompletedTask;
-    
+
+    // The prompt submits on the Enter KEYUP of a press the input itself saw go down (UX review
+    // round 6, M-r6-1). Both halves of the gesture matter, and either handler alone double-activates:
+    //   • a bare keyup submit received the opener's trailing keyup — the opener activates on its
+    //     Enter keydown, initial focus lands on the input while the key is still down, and the
+    //     submit fired the DefaultValue at once, before the user ever saw the dialog;
+    //   • a bare keydown submit closes the dialog between keydown and keyup: Chromium then runs
+    //     the keydown's default action after the input is gone, against the re-focused opener,
+    //     and the dialog re-opens with the default value (probed 2026-10-08: trusted click on the
+    //     opener 100 ms after the keydown). docs/keyboard-activation-convention.md, motivating
+    //     change: the second invocation landed on the re-focused trigger and re-opened the panel.
+    // Arming on the input's own keydown keeps both out: the opener's trailing keyup arrives
+    // unarmed, and a press that submits consumes itself entirely before the dialog closes.
+    private Task HandlePromptKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _promptEnterArmed = true;
+        }
+
+        return Task.CompletedTask;
+    }
+
     private async Task HandlePromptKeyUp(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_promptValue))
+        if (e.Key != "Enter" || !_promptEnterArmed)
+        {
+            return;
+        }
+
+        _promptEnterArmed = false;
+        if (!string.IsNullOrWhiteSpace(_promptValue))
         {
             await OnOkClick();
         }
