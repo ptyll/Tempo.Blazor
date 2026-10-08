@@ -1,0 +1,341 @@
+@namespace Tempo.Blazor.Components.ActionBar
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Helpers
+@using Microsoft.AspNetCore.Components.Rendering
+@using Microsoft.Extensions.Logging
+@inject ILogger<OverlayLayout> LayoutLogger
+
+@* F5 mobile action bar. The bar belongs to its component's container: the default
+   StickyContainer placement sticks inside the component's own box (position: sticky,
+   never fixed against the viewport). FixedViewport is a deliberate opt-in and resolves
+   its visibility from the viewport scope like every other viewport-anchored surface
+   (decision F1-LAYOUT-CONTRACT). The "More" menu composes TmOverlayPanel (F3): the
+   anchored popover on desktop, the shared bottom-sheet primitive on a mobile viewport —
+   sheet, gesture, focus and top-layer logic are never copied here. *@
+
+@if (Placement == ActionBarPlacement.FixedViewport && Viewport is null && LayoutMode == TmLayoutMode.Auto)
+{
+    @* No viewport scope: measure the viewport itself so the first frame is not stuck on
+       InitialMode. The probe is internal, so it is opened from C# — a tag in markup would
+       compile to a literal element and nothing would ever measure. *@
+    @Probe
+}
+
+@if (Placement == ActionBarPlacement.FixedViewport)
+{
+    <div class="@RootClasses"
+         data-layout="@Context.CssModifier"
+         @attributes="AdditionalAttributes">
+        @RenderBar(Context)
+    </div>
+}
+else
+{
+    @* In-container placements resolve from the nearest unnamed layout context: the observer
+       measures this component's own root unless an ancestor already decided (F1 contract). *@
+    <TmLayoutObserver LayoutMode="LayoutMode"
+                      InitialMode="InitialMode"
+                      ResolvedLayoutChanged="OnResolvedLayoutChanged"
+                      IsContainer="false"
+                      Class="@RootClasses"
+                      AdditionalAttributes="AdditionalAttributes">
+        <LayoutContent Context="context">
+            @RenderBar(context)
+        </LayoutContent>
+    </TmLayoutObserver>
+}
+
+@code {
+    private readonly OverlayLayout _layout = new();
+    private TmOverlayPanel? _morePanel;
+    private ElementReference _firstMenuItem;
+    private bool _focusMoreItemPending;
+
+    /// <summary>The actions. Higher <see cref="TmActionItem.Priority"/> renders earlier; the items
+    /// beyond <see cref="MaxVisible"/> move into the "More" menu, keeping that order.</summary>
+    [Parameter] public IReadOnlyList<TmActionItem>? Items { get; set; }
+
+    /// <summary>
+    /// Content the bar belongs to — rendered above it. For <see cref="ActionBarPlacement.StickyContainer"/>
+    /// and <see cref="ActionBarPlacement.FixedViewport"/> the region gets a bottom padding equal to
+    /// the bar height, so the last content stays reachable with no overlap (at 320 and 390 alike);
+    /// <see cref="ActionBarPlacement.Inline"/> needs none and gets none.
+    /// </summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// How many actions stay on the bar before the rest overflow into the "More" menu.
+    /// Values below 1 are treated as 1. Default 3.
+    /// </summary>
+    [Parameter] public int MaxVisible { get; set; } = 3;
+
+    /// <summary>Where the bar anchors. Default <see cref="ActionBarPlacement.StickyContainer"/>.</summary>
+    [Parameter] public ActionBarPlacement Placement { get; set; } = ActionBarPlacement.StickyContainer;
+
+    /// <summary>The "More" menu trigger label. Falls back to the localized default.</summary>
+    [Parameter] public string? MoreLabel { get; set; }
+
+    /// <summary>Accessible name of the bar (<c>role="toolbar"</c>). Falls back to the localized default.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// The layout the visibility resolves from. <see cref="TmLayoutMode.Auto"/> follows the
+    /// container (or the viewport scope for <see cref="ActionBarPlacement.FixedViewport"/>);
+    /// a forced value never measures, so a test can render the bar without a DOM. The bar hides
+    /// whenever the resolved layout is above the mobile breakpoint (tablet and desktop).
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The layout rendered before the first measurement. Desktop unless the host says otherwise.</summary>
+    [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// Raised when the resolved layout changes. The initial value is not a change. Never pair
+    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way
+    /// bind would pin that mode.
+    /// </summary>
+    [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
+
+    /// <summary>Extra CSS classes for the component root.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the component root.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The viewport's layout — only <see cref="ActionBarPlacement.FixedViewport"/> resolves from it.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
+    private string RootClasses => string.Join(" ", new[]
+    {
+        "tm-mobile-action-bar",
+        Placement switch
+        {
+            ActionBarPlacement.FixedViewport => "tm-mobile-action-bar--fixed",
+            ActionBarPlacement.Inline => "tm-mobile-action-bar--inline",
+            _ => "tm-mobile-action-bar--sticky",
+        },
+        Class,
+    }.Where(static c => !string.IsNullOrWhiteSpace(c)));
+
+    private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
+
+    private string EffectiveMoreLabel => MoreLabel ?? Loc["TmMobileActionBar_More"];
+
+    private string EffectiveAriaLabel => AriaLabel ?? Loc["TmMobileActionBar_AriaLabel"];
+
+    private int EffectiveMaxVisible => Math.Max(1, MaxVisible);
+
+    private IReadOnlyList<TmActionItem> OrderedItems => (Items ?? [])
+        .OrderByDescending(static item => item.Priority)
+        .ToList();
+
+    private IReadOnlyList<TmActionItem> VisibleItems => OrderedItems.Take(EffectiveMaxVisible).ToList();
+
+    private IReadOnlyList<TmActionItem> OverflowItems => OrderedItems.Skip(EffectiveMaxVisible).ToList();
+
+    private string BarModifierClass => Placement switch
+    {
+        ActionBarPlacement.FixedViewport => "tm-mobile-action-bar__bar--fixed",
+        ActionBarPlacement.Inline => "tm-mobile-action-bar__bar--inline",
+        _ => "tm-mobile-action-bar__bar--sticky",
+    };
+
+    /// <summary>The bar body: the host content region (when given) and the toolbar itself.
+    /// Rendered only below the mobile breakpoint — above it the bar does not exist.</summary>
+    private RenderFragment<TmLayoutContext> RenderBar => context => builder =>
+    {
+        if (!context.IsMobile)
+        {
+            return;
+        }
+
+        builder.OpenRegion(0);
+        if (ChildContent is not null)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "tm-mobile-action-bar__body");
+            builder.AddContent(2, ChildContent);
+            builder.CloseElement();
+        }
+
+        builder.OpenElement(3, "div");
+        builder.AddAttribute(4, "class", $"tm-mobile-action-bar__bar {BarModifierClass}");
+        builder.AddAttribute(5, "role", "toolbar");
+        builder.AddAttribute(6, "aria-label", EffectiveAriaLabel);
+
+        var sequence = 7;
+        foreach (var item in VisibleItems)
+        {
+            builder.OpenComponent<TmButton>(sequence++);
+            builder.AddAttribute(sequence++, "Class", "tm-mobile-action-bar__action");
+            builder.AddAttribute(sequence++, "Icon", item.Icon);
+            builder.AddAttribute(sequence++, "Disabled", item.Disabled);
+            builder.AddAttribute(sequence++, "title", item.Label);
+            builder.AddAttribute(sequence++, "OnClick", EventCallback.Factory.Create(this, () => InvokeItemAsync(item)));
+            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => b.AddContent(0, item.Label)));
+            builder.CloseComponent();
+        }
+
+        var overflow = OverflowItems;
+        if (overflow.Count > 0)
+        {
+            builder.OpenComponent<TmButton>(sequence++);
+            builder.AddAttribute(sequence++, "Class", "tm-mobile-action-bar__more");
+            builder.AddAttribute(sequence++, "Icon", IconNames.MoreHorizontal);
+            builder.AddAttribute(sequence++, "OnClick", EventCallback.Factory.Create(this, OpenMoreAsync));
+            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => b.AddContent(0, EffectiveMoreLabel)));
+            builder.CloseComponent();
+
+            builder.OpenComponent<TmOverlayPanel>(sequence++);
+            builder.AddComponentParameter(sequence++, "Role", "menu");
+            builder.AddComponentParameter(sequence++, "Title", EffectiveMoreLabel);
+            builder.AddComponentParameter(sequence++, "MobilePresentation", PanelPresentation.Auto);
+            builder.AddComponentParameter(sequence++, "InitialMode", context.Resolved);
+            builder.AddComponentParameter(sequence++, "OnOpened", EventCallback.Factory.Create(this, HandleMoreOpened));
+            builder.AddComponentParameter(sequence++, "OnDismissed", EventCallback.Factory.Create<string>(this, _ => HandleMoreDismissed()));
+            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => BuildMenu(b, overflow)));
+            builder.AddComponentReferenceCapture(sequence++, value => _morePanel = (TmOverlayPanel)value);
+            builder.CloseComponent();
+        }
+
+        builder.CloseElement();
+        builder.CloseRegion();
+    };
+
+    private void BuildMenu(RenderTreeBuilder builder, IReadOnlyList<TmActionItem> overflow)
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "tm-mobile-action-bar__menu");
+        for (var i = 0; i < overflow.Count; i++)
+        {
+            var item = overflow[i];
+            var seq = 16 * (i + 1);
+            builder.OpenElement(seq, "button");
+            builder.AddAttribute(seq + 1, "type", "button");
+            builder.AddAttribute(seq + 2, "role", "menuitem");
+            builder.AddAttribute(seq + 3, "class", "tm-mobile-action-bar__menu-item");
+            builder.AddAttribute(seq + 4, "disabled", item.Disabled);
+            builder.AddAttribute(seq + 5, "title", item.Label);
+            builder.AddAttribute(seq + 7, "onclick", EventCallback.Factory.Create(this, () => InvokeMenuItemAsync(item)));
+            if (!string.IsNullOrEmpty(item.Icon))
+            {
+                builder.OpenComponent<TmIcon>(seq + 8);
+                builder.AddAttribute(seq + 9, "Name", item.Icon);
+                builder.AddAttribute(seq + 10, "Size", IconSize.Sm);
+                builder.CloseComponent();
+            }
+            builder.OpenElement(seq + 11, "span");
+            builder.AddAttribute(seq + 12, "class", "tm-mobile-action-bar__menu-label");
+            builder.AddContent(seq + 13, item.Label);
+            builder.CloseElement();
+            if (i == 0)
+            {
+                // After the attributes and content: an element-reference capture may not sit
+                // between an element frame and its attributes (RenderTreeBuilder assertion).
+                builder.AddElementReferenceCapture(seq + 14, reference => _firstMenuItem = reference);
+            }
+            builder.CloseElement();
+        }
+        builder.CloseElement();
+    }
+
+    private async Task InvokeItemAsync(TmActionItem item)
+    {
+        if (item.Disabled || item.OnClick is null)
+        {
+            return;
+        }
+
+        await item.OnClick();
+    }
+
+    private async Task InvokeMenuItemAsync(TmActionItem item)
+    {
+        // Close first: the sheet pops down and focus returns to the "More" trigger before the
+        // action runs, so an action that opens its own dialog promotes AFTER the sheet and
+        // always paints above it (top-layer order = open order, docs/overlays.md rule 8).
+        if (_morePanel is not null)
+        {
+            await _morePanel.CloseAsync();
+        }
+
+        if (!item.Disabled && item.OnClick is not null)
+        {
+            await item.OnClick();
+        }
+    }
+
+    private Task OpenMoreAsync()
+    {
+        return _morePanel?.SetOpenAsync(true) ?? Task.CompletedTask;
+    }
+
+    /// <summary>Fires once per open, after the panel is actually displayed (the m3 contract).</summary>
+    private void HandleMoreOpened()
+    {
+        // Sheet mode focuses the first menuitem through TmOverlayPanel's InitialFocusSelector;
+        // the popover needs the same move, gated on OnOpened so the focus cannot land on a
+        // still-hidden panel.
+        _focusMoreItemPending = true;
+    }
+
+    private void HandleMoreDismissed()
+    {
+        _focusMoreItemPending = false;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Placement == ActionBarPlacement.FixedViewport)
+        {
+            await ReportResolved();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusMoreItemPending)
+        {
+            _focusMoreItemPending = false;
+            try
+            {
+                await _firstMenuItem.FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // The menu closed before the focus move (fast Escape): nothing to focus.
+            }
+        }
+    }
+
+    private Task OnResolvedLayoutChanged(TmLayoutMode mode) => ResolvedLayoutChanged.InvokeAsync(mode);
+
+    private Task OnProbed(TmLayoutMode mode)
+    {
+        _layout.Measured(mode);
+        OverlayLayout.HintOnce(LayoutLogger);
+        return ReportResolved();
+    }
+
+    private Task ReportResolved() => _layout.ReportAsync(
+        Context.Resolved, mode => ResolvedLayoutChanged.InvokeAsync(mode));
+
+    /// <summary>
+    /// The internal viewport probe, opened from C# because a Razor tag binds only to public
+    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// </summary>
+    private RenderFragment Probe => builder =>
+    {
+        builder.OpenComponent<ViewportProbe>(0);
+        builder.AddComponentParameter(1, nameof(ViewportProbe.OnMeasured),
+            EventCallback.Factory.Create<TmLayoutMode>(this, OnProbed));
+        builder.CloseComponent();
+    };
+}

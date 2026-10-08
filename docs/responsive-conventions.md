@@ -179,6 +179,25 @@ only. The placement variables (`--tm-w-x`, `--tm-w-span`, `--tm-w-span-md`, `--t
   home indicator or the notch. The inset is zero unless the host page sets `viewport-fit=cover`; set
   `--tm-safe-area-base` to the component's own padding.
 
+## Bottom navigation vs action bar (B4)
+
+Two bottom bars exist and they are not interchangeable:
+
+- **`TmBottomNavigation` is application chrome.** It switches the app's top-level destinations,
+  is rendered once by the layout, and anchors to the viewport for the whole session. It answers
+  "where can the user go?".
+- **`TmMobileActionBar` (F5) is a component's action bar.** It exposes the actions of one
+  component (a dashboard's edit/save/cancel, a list's filter/export, …), lives inside that
+  component's own container — the default `StickyContainer` placement uses `position: sticky`,
+  never `position: fixed` — and scrolls away with the content it belongs to. It answers "what
+  can the user do here?". A host that needs viewport anchoring opts into
+  `Placement="FixedViewport"` deliberately. `Auto` visibility hides the bar above the mobile
+  breakpoint: a `StickyContainer`/`Inline` bar resolves from the nearest unnamed layout
+  context (its own container), a `FixedViewport` bar resolves from the `TmLayoutScopes.Viewport`
+  cascade like every other viewport-anchored surface. Actions that overflow `MaxVisible` move
+  into a "More" menu that composes `TmOverlayPanel` — the anchored popover on desktop, the
+  shared bottom-sheet primitive on a mobile viewport.
+
 ## Motion
 
 Anything these utilities animate (the reveal, the dashboard handles) drops its transition under

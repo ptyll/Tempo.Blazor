@@ -1,0 +1,89 @@
+.mab-page {
+  max-width: 72rem;
+}
+
+.mab-header {
+  margin-bottom: var(--tm-space-6);
+}
+
+.mab-header h1 {
+  font-size: var(--tm-font-size-2xl);
+  font-weight: var(--tm-font-weight-bold);
+  color: var(--tm-text-primary);
+  margin: 0 0 var(--tm-space-2);
+}
+
+.mab-header p {
+  color: var(--tm-text-secondary);
+  margin: 0;
+  max-width: 48rem;
+}
+
+.mab-section {
+  margin-bottom: var(--tm-space-8);
+}
+
+.mab-section h2 {
+  font-size: var(--tm-font-size-xl);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-primary);
+  margin: 0 0 var(--tm-space-1);
+}
+
+.mab-section > p {
+  color: var(--tm-text-secondary);
+  margin: 0 0 var(--tm-space-4);
+  max-width: 48rem;
+}
+
+.mab-card {
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-card);
+  background: var(--tm-bg-workspace);
+  overflow: clip;
+}
+
+.mab-card--tall {
+  min-height: 16rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.mab-docs {
+  list-style: none;
+  margin: 0;
+  padding: var(--tm-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+}
+
+.mab-docs li {
+  padding: var(--tm-space-4);
+  border-radius: var(--tm-radius-control);
+  background: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  color: var(--tm-text-primary);
+  font-size: var(--tm-font-size-sm);
+}
+
+.mab-last-action {
+  margin: 0;
+  padding: 0 var(--tm-space-4) var(--tm-space-4);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+}
+
+.mab-variants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--tm-space-4);
+}
+
+.mab-variant h3 {
+  font-size: var(--tm-font-size-md);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-primary);
+  margin: 0 0 var(--tm-space-2);
+}

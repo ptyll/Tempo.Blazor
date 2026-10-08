@@ -379,6 +379,25 @@
   renderer disposes `IAsyncDisposable` components without any host change; a host that called
   `Dispose()` explicitly must drop the call. Same for `TmNotificationToastContainer`.
 
+- **`TmDashboard` edit mode on mobile renders its actions through `TmMobileActionBar` instead of
+  the wrapping toolbar.** Below the mobile breakpoint the toolbar's Add/Save/Cancel buttons are
+  no longer rendered in edit mode (the bar owns them; view mode keeps its Edit entry point), and
+  the bar markup (`.tm-mobile-action-bar`) appears as the last child of the dashboard root. A
+  host that restyled the mobile edit toolbar should target the bar classes:
+
+  ```html
+  <!-- before (mobile edit mode) -->
+  <div class="tm-dashboard-toolbar-right">
+    <button class="tm-btn tm-btn-primary">…Add Widget</button>
+    <button class="tm-btn tm-btn-secondary">…Save Changes</button>
+    <button class="tm-btn tm-btn-ghost">…Cancel</button>
+  </div>
+  <!-- after (mobile edit mode) -->
+  <div class="tm-mobile-action-bar tm-mobile-action-bar--sticky" data-layout="mobile">
+    <div class="tm-mobile-action-bar__bar tm-mobile-action-bar__bar--sticky" role="toolbar" …>…</div>
+  </div>
+  ```
+
 ### Added
 
 - `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
@@ -422,6 +441,20 @@
 - `InitialFocusSelector` on `TmFocusScope` and `TmDrawer` resolves the initial-focus target
   inside the scope from a CSS selector (e.g. the first menuitem of a menu sheet); an explicit
   `InitialFocusTarget`/`InitialFocusTargetId` still wins.
+- `TmMobileActionBar` and the shared `TmActionItem` model (F5): a component-scoped mobile action
+  bar rendering up to `MaxVisible` actions with the overflow in a "More" menu that composes
+  `TmOverlayPanel` (anchored popover on desktop, the shared bottom sheet on a mobile viewport —
+  never a local copy of sheet/gesture/focus logic). `Placement` defaults to `StickyContainer`
+  (`position: sticky` inside the component's own container — never `position: fixed` like
+  `TmBottomNavigation`, which stays application chrome); `FixedViewport` is a deliberate opt-in
+  anchoring to the viewport with the bottom safe area, and `Inline` renders the bar statically.
+  With the default `Auto` visibility the bar exists only below the mobile breakpoint, resolved
+  from the container (or from the viewport scope for `FixedViewport`); `LayoutMode` forces a mode
+  for hosts and bUnit tests. The content region above the bar gets a bottom padding equal to the
+  bar height, so nothing is covered at 320 or 390. `docs/responsive-conventions.md` documents the
+  bottom-navigation-vs-action-bar split; the demo page is `/mobile-action-bar`; the wireframe
+  stencil registers the `action-bar` role. Reference usage: `TmDashboard` edit mode on mobile
+  renders Add/Save/Cancel through the bar instead of the wrapping toolbar.
 
 ### Changed
 

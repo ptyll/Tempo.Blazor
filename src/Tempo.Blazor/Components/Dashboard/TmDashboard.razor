@@ -4,6 +4,7 @@
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.ActionBar
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
@@ -281,6 +282,17 @@
             }
         </div>
     }
+
+    @* ── Mobile action bar (edit mode, mobile layout only) ────── *@
+    @* The edit actions move from the wrapping toolbar into the component-scoped action bar
+       (F5): 3 actions fit the bar, the rest would overflow into its "More" sheet. The desktop
+       toolbar stays untouched; on mobile the data-layout rule hides it (see _dashboard.css). *@
+    @if (_isEditMode && mode.IsMobile)
+    {
+        <TmMobileActionBar Items="@_editModeActions"
+                           AriaLabel="@Loc["TmDashboard_EditMode"]"
+                           data-testid="@TestId("dashboard-action-bar")" />
+    }
 </div>
 
 @* ── Widget Selector Modal ───────────────────────────────────── *@
@@ -401,10 +413,41 @@
     private string? _dashboardToDeleteName;
     
     private bool _dataLoaded;
+    private IReadOnlyList<TmActionItem> _editModeActions = [];
 
     protected override async Task OnInitializedAsync()
     {
         if (_dataLoaded) return;
+
+        // The mobile edit-mode action bar (F5) renders the same three actions as the desktop
+        // toolbar; priority keeps the order stable when a future action joins the overflow.
+        _editModeActions =
+        [
+            new TmActionItem
+            {
+                Id = "add-widget",
+                Label = Loc["TmDashboard_AddWidget"],
+                Icon = IconNames.Plus,
+                Priority = 100,
+                OnClick = () => { OpenWidgetSelector(); return Task.CompletedTask; },
+            },
+            new TmActionItem
+            {
+                Id = "save-layout",
+                Label = Loc["TmDashboard_SaveChanges"],
+                Icon = IconNames.Save,
+                Priority = 90,
+                OnClick = SaveLayout,
+            },
+            new TmActionItem
+            {
+                Id = "cancel-edit",
+                Label = Loc["TmDashboard_CancelEdit"],
+                Icon = "x",
+                Priority = 80,
+                OnClick = () => { CancelEdit(); return Task.CompletedTask; },
+            },
+        ];
 
         await LoadDashboardsList();
 

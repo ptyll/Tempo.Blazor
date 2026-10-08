@@ -78,9 +78,12 @@ public class TmMobileActionBarTests : LocalizationTestBase
         bar.ClassList.Should().Contain("tm-mobile-action-bar__bar--sticky");
         bar.ClassList.Should().NotContain("tm-mobile-action-bar__bar--fixed");
 
-        // Source-level guard: position: fixed exists ONLY in the FixedViewport opt-in block.
+        // Source-level guard: position: fixed exists ONLY in the FixedViewport opt-in block
+        // (comments stripped — the header documents the rule by name).
         var css = File.ReadAllText(RepoPath(
             "src", "Tempo.Blazor", "wwwroot", "css", "components", "_mobile-action-bar.css"));
+        css = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
         css.Should().Contain("position: sticky");
         css.Split('}', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(block => block.Contains("position: fixed", StringComparison.Ordinal))

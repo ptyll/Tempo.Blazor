@@ -72,6 +72,7 @@
     ],
     "namespaces": [
       "Tempo.Blazor.Components",
+      "Tempo.Blazor.Components.ActionBar",
       "Tempo.Blazor.Components.Activity",
       "Tempo.Blazor.Components.AITools",
       "Tempo.Blazor.Components.AuditLog",
@@ -562,6 +563,107 @@
     }
   },
   "items": [
+    {
+      "itemName": "TmMobileActionBar",
+      "kind": "Component",
+      "category": "Action Bar",
+      "namespace": "Tempo.Blazor.Components.ActionBar",
+      "description": "A component-scoped mobile action bar: up to MaxVisible actions pinned to the bottom edge of the component's own container, with the rest overflowing into a \"More\" menu that composes TmOverlayPanel (anchored popover on desktop, the shared bottom-sheet primitive on a mobile viewport). The default StickyContainer placement sticks inside the component (position: sticky, never position: fixed like application chrome), so the bar scrolls away with its content; FixedViewport is a deliberate opt-in that anchors to the viewport and respects the bottom safe area; Inline renders the bar statically at the end of the content. With Auto visibility the bar exists only below the mobile breakpoint, resolved from the container (or from the viewport scope for FixedViewport) through the F1 layout contract; LayoutMode forces a mode for hosts and tests. The bar renders TmButton actions from the shared TmActionItem model (also used by the F4 overflow toolbar), truncating long labels on the label span, and the region above the bar gets a bottom padding equal to the bar height so nothing is covered at 320 or 390. Reference usage: TmDashboard edit mode on mobile.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/ActionBar/TmMobileActionBar.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.ActionBar"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the bar (role=\"toolbar\"). Falls back to the localized default."
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content the bar belongs to, rendered above it. For StickyContainer and FixedViewport the region gets a bottom padding equal to the bar height (no overlap at 320 and 390); Inline needs none and gets none."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra CSS classes for the component root."
+        },
+        {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The layout rendered before the first measurement. Desktop unless the host says otherwise."
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<TmActionItem>?",
+          "isRequired": false,
+          "description": "The actions. Higher TmActionItem.Priority renders earlier; items beyond MaxVisible move into the \"More\" menu keeping that order."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the visibility resolves from. Auto follows the container (or the viewport scope for FixedViewport); a forced value never measures, so a test can render the bar without a DOM. The bar hides whenever the resolved layout is above the mobile breakpoint."
+        },
+        {
+          "name": "MaxVisible",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "How many actions stay on the bar before the rest overflow into the \"More\" menu. Values below 1 are treated as 1."
+        },
+        {
+          "name": "MoreLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The \"More\" menu trigger label. Falls back to the localized default."
+        },
+        {
+          "name": "Placement",
+          "type": "ActionBarPlacement",
+          "isRequired": false,
+          "default": "ActionBarPlacement.StickyContainer",
+          "description": "Where the bar anchors: StickyContainer (default) sticks to the bottom of the viewport while the component's container is scrolled through, without ever leaving the container's flow; FixedViewport pins the bar to the viewport (left and right edge, bottom safe area) as a deliberate opt-in; Inline renders the bar statically at the end of the content."
+        },
+        {
+          "name": "ResolvedLayoutChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the resolved layout changes (the initial value is not a change). Never pair with LayoutMode — a two-way bind would pin the mode."
+        }
+      ],
+      "cssClasses": [
+        "tm-mobile-action-bar",
+        "tm-mobile-action-bar--sticky",
+        "tm-mobile-action-bar--fixed",
+        "tm-mobile-action-bar--inline",
+        "tm-mobile-action-bar__body",
+        "tm-mobile-action-bar__bar",
+        "tm-mobile-action-bar__bar--sticky",
+        "tm-mobile-action-bar__bar--fixed",
+        "tm-mobile-action-bar__bar--inline",
+        "tm-mobile-action-bar__action",
+        "tm-mobile-action-bar__more",
+        "tm-mobile-action-bar__menu",
+        "tm-mobile-action-bar__menu-item",
+        "tm-mobile-action-bar__menu-label"
+      ],
+      "examples": [
+        {
+          "title": "Edit-mode action bar",
+          "code": "<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\">\n    <ChildContent>\n        @* the component content the bar belongs to *@\n    </ChildContent>\n</TmMobileActionBar>\n\n@code {\n    private readonly IReadOnlyList<TmActionItem> _actions =\n    [\n        new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = AddAsync },\n        new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = SaveAsync },\n        new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = CancelAsync },\n    ];\n}"
+        }
+      ]
+    },
     {
       "itemName": "EditorToolbar",
       "kind": "Component",
@@ -3818,6 +3920,30 @@
       ]
     },
     {
+      "itemName": "ActionBarPlacement",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.ActionBar",
+      "description": "Where a TmMobileActionBar anchors. StickyContainer (default) sticks inside the component's own container (position: sticky, never fixed). FixedViewport is a deliberate opt-in anchoring the bar to the viewport with the bottom safe area. Inline renders the bar statically at the end of the content.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/ActionBar/ActionBarPlacement.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "StickyContainer",
+          "description": "The bar is the last in-flow element of its container and sticks to the bottom of the viewport while the container is scrolled through."
+        },
+        {
+          "name": "FixedViewport",
+          "description": "The bar anchors to the viewport (both inline edges pinned) and respects the bottom safe area. A host transform/filter/contain on an ancestor re-anchors it per CSS."
+        },
+        {
+          "name": "Inline",
+          "description": "The bar is static: it sits at the end of the content with no sticking or fixing."
+        }
+      ]
+    },
+    {
       "itemName": "AlertSeverity",
       "kind": "Enum",
       "category": "Components",
@@ -6020,6 +6146,100 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Navigation/TabVariant.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmActionItem",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.ActionBar",
+      "description": "A single action offered by an action surface — the F5 TmMobileActionBar, the F4 overflow toolbar, and any future action host. The model is deliberately free of rendering concerns: a host maps an item to a button, a menu entry, or another surface.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/ActionBar/TmActionItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Disabled",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames value or a registered icon)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the action (used as a render key). When empty, Label identifies the item. Must not start with tm- when it lands in a CSS class or id — that prefix is reserved for library-internal stems (scoped-CSS ownership sweep)."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The user-visible label. Names the rendered button (and its full-text title)."
+        },
+        {
+          "name": "OnClick",
+          "kind": "Property",
+          "type": "Func<Task>?",
+          "description": "The action itself. Invoked exactly once per user activation."
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int",
+          "description": "Ordering hint: higher priority actions render earlier (farther left in LTR). Items with equal priority keep the order of Items. Overflow into the \"More\" menu keeps this order, so the least important actions land in the menu first."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "description": "Stable identity of the action (used as a render key). When empty, Label identifies the item. Must not start with 'tm-' when it lands in a CSS class or id — that prefix is reserved for library-internal stems."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": true,
+          "description": "The user-visible label. Names the rendered button (and its full-text title)."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional icon name (an IconNames value or a registered icon)."
+        },
+        {
+          "name": "Priority",
+          "type": "int",
+          "isRequired": false,
+          "default": "0",
+          "description": "Ordering hint: higher priority actions render earlier (farther left in LTR). Items with equal priority keep the order of Items; overflow into the \"More\" menu keeps this order."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
+        },
+        {
+          "name": "OnClick",
+          "type": "Func<Task>?",
+          "isRequired": false,
+          "description": "The action itself. Invoked exactly once per user activation."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Edit-mode actions for TmMobileActionBar",
+          "code": "private readonly IReadOnlyList<TmActionItem> _actions =\n[\n    new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = AddAsync },\n    new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = SaveAsync },\n    new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = CancelAsync },\n];\n\n<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\" />"
+        }
+      ]
     },
     {
       "itemName": "TmChunkedUploader",
@@ -18434,7 +18654,7 @@
       "kind": "Component",
       "category": "Navigation",
       "namespace": "Tempo.Blazor.Components.Navigation",
-      "description": "A bottom navigation bar component for mobile layouts. Supports items with icons and text, active state highlighting, and click handling.",
+      "description": "A bottom navigation bar for switching the application's top-level destinations — application chrome, not a component action bar. A component's actions (edit, save, cancel, …) belong to TmMobileActionBar, which lives inside the component's own container (sticky, never position: fixed). Supports items with icons and text, active state highlighting, and click handling.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Navigation/TmBottomNavigation.razor",
       "documentationStatus": "merged",
@@ -25033,6 +25253,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_mobile-action-bar.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_modal.css",
       "kind": "Css"
     },
@@ -25426,11 +25650,11 @@
     }
   ],
   "summary": {
-    "itemCount": 352,
-    "manualItemCount": 352,
-    "generatedItemCount": 344,
+    "itemCount": 355,
+    "manualItemCount": 355,
+    "generatedItemCount": 347,
     "generatedOnlyItemCount": 0,
-    "componentCount": 198,
-    "publicApiTypeCount": 146
+    "componentCount": 199,
+    "publicApiTypeCount": 148
   }
 }

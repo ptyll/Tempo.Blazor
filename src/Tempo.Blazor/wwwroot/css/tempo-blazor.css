@@ -109,6 +109,7 @@
 @import "components/_command-palette.css";
 @import "components/_context-menu.css";
 @import "components/_bottom-navigation.css";
+@import "components/_mobile-action-bar.css";
 @import "components/_menu.css";
 
 /* 10. Filters */

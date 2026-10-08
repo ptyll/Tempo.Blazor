@@ -160,6 +160,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmContextMenu"] = ["context-menu"],
             ["TmContextMenuItem"] = ["context-menu"],
             ["TmBottomNavigation"] = ["bottom-navigation"],
+            ["TmMobileActionBar"] = ["action-bar"],
             ["TmNavigationGuard"] = ["navigation-guard"],
             ["TmScrollSpyNav"] = ["scroll-spy-nav"],
             ["TmMenu"] = ["menu"],
@@ -1440,6 +1441,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("items",      "Items",        PropType.StringList, cat: "Content"),
                 P("activeIndex","Active Index", PropType.Int, 0,     cat: "State"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmMobileActionBar", Category = "Navigation", DisplayName = "Mobile Action Bar",
+            DefaultWidth = 360, DefaultHeight = 60,
+            Props =
+            [
+                P("items",      "Items",      PropType.StringList, cat: "Content"),
+                P("maxVisible", "Max Visible", PropType.Int, 3,     cat: "Behavior"),
+                P("placement",  "Placement",  PropType.Enum, "stickyContainer", cat: "Appearance",
+                    opts: ["stickyContainer", "fixedViewport", "inline"]),
             ]
         };
 

@@ -1,0 +1,53 @@
+{
+  "itemName": "TmActionItem",
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.ActionBar",
+  "description": "A single action offered by an action surface — the F5 TmMobileActionBar, the F4 overflow toolbar, and any future action host. The model is deliberately free of rendering concerns: a host maps an item to a button, a menu entry, or another surface.",
+  "properties": [
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "description": "Stable identity of the action (used as a render key). When empty, Label identifies the item. Must not start with 'tm-' when it lands in a CSS class or id — that prefix is reserved for library-internal stems."
+    },
+    {
+      "name": "Label",
+      "type": "string",
+      "isRequired": true,
+      "description": "The user-visible label. Names the rendered button (and its full-text title)."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name (an IconNames value or a registered icon)."
+    },
+    {
+      "name": "Priority",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Ordering hint: higher priority actions render earlier (farther left in LTR). Items with equal priority keep the order of Items; overflow into the \"More\" menu keeps this order."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
+    },
+    {
+      "name": "OnClick",
+      "type": "Func<Task>?",
+      "isRequired": false,
+      "description": "The action itself. Invoked exactly once per user activation."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Edit-mode actions for TmMobileActionBar",
+      "code": "private readonly IReadOnlyList<TmActionItem> _actions =\n[\n    new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = AddAsync },\n    new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = SaveAsync },\n    new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = CancelAsync },\n];\n\n<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\" />"
+    }
+  ]
+}

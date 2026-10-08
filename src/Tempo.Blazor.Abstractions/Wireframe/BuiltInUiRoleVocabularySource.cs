@@ -78,6 +78,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("breadcrumbs", "Breadcrumbs", "Shows hierarchical navigation path.", "breadcrumb trail", "drobeckova navigace", "TmBreadcrumbs"),
         R("context-menu", "Context menu", "Shows actions for a selected target.", "right click menu", "kontextove menu", "TmContextMenu", "TmContextMenuItem"),
         R("bottom-navigation", "Bottom navigation", "Provides primary navigation along the bottom edge.", "bottom nav", "spodni navigace", "TmBottomNavigation"),
+        R("action-bar", "Action bar", "Shows the primary actions of a component or view, typically pinned to the bottom edge on mobile.", "mobile action bar", "action buttons", "akcni lista", "TmMobileActionBar"),
         R("navigation-guard", "Navigation guard", "Confirms and gates navigation away from unsaved work.", "unsaved changes guard", "leave confirmation", "ochrana neulozenych zmen", "TmNavigationGuard"),
         R("scroll-spy-nav", "Scroll-spy navigation", "Highlights the current in-page section while scrolling and jumps to sections on click.", "section nav", "anchor nav", "navigace podle sekci", "TmScrollSpyNav"),
         R("menu", "Menu", "Displays navigation or command choices.", "navigation menu", "nabidka", "TmMenu"),

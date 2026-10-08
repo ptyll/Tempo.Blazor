@@ -1,0 +1,149 @@
+@page "/mobile-action-bar"
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.ActionBar
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmMobileActionBarDemo_Title"] – Tempo.Blazor</PageTitle>
+
+<div class="mab-page">
+    <header class="mab-header">
+        <h1>@Loc["TmMobileActionBarDemo_Title"]</h1>
+        <p>@Loc["TmMobileActionBarDemo_Intro"]</p>
+    </header>
+
+    <section class="mab-section" data-testid="mab-auto">
+        <h2>@Loc["TmMobileActionBarDemo_AutoTitle"]</h2>
+        <p>@Loc["TmMobileActionBarDemo_AutoDescription"]</p>
+        <div class="mab-card">
+            <TmMobileActionBar Items="@_actions" MaxVisible="3" data-testid="mab-auto-bar">
+                <ChildContent>
+                    <ul class="mab-docs">
+                        <li>@Loc["TmMobileActionBarDemo_CardOne"]</li>
+                        <li>@Loc["TmMobileActionBarDemo_CardTwo"]</li>
+                        <li>@Loc["TmMobileActionBarDemo_CardThree"]</li>
+                    </ul>
+                    <p class="mab-last-action" data-testid="mab-last-action">
+                        @Loc["TmMobileActionBarDemo_LastAction"]: @_lastAction
+                    </p>
+                </ChildContent>
+            </TmMobileActionBar>
+        </div>
+    </section>
+
+    <section class="mab-section" data-testid="mab-forced">
+        <h2>@Loc["TmMobileActionBarDemo_ForcedTitle"]</h2>
+        <p>@Loc["TmMobileActionBarDemo_ForcedDescription"]</p>
+        <div class="mab-variants">
+            <div class="mab-variant" data-testid="mab-variant-sticky">
+                <h3>@Loc["TmMobileActionBarDemo_StickyLabel"]</h3>
+                <div class="mab-card mab-card--tall">
+                    <TmMobileActionBar Items="@_actions" MaxVisible="3" LayoutMode="TmLayoutMode.Mobile" />
+                </div>
+            </div>
+            <div class="mab-variant" data-testid="mab-variant-fixed">
+                <h3>@Loc["TmMobileActionBarDemo_FixedLabel"]</h3>
+                <div class="mab-card mab-card--tall">
+                    <TmMobileActionBar Items="@_actions"
+                                       MaxVisible="3"
+                                       Placement="ActionBarPlacement.FixedViewport"
+                                       LayoutMode="TmLayoutMode.Mobile" />
+                </div>
+            </div>
+            <div class="mab-variant" data-testid="mab-variant-inline">
+                <h3>@Loc["TmMobileActionBarDemo_InlineLabel"]</h3>
+                <div class="mab-card mab-card--tall">
+                    <TmMobileActionBar Items="@_actions"
+                                       MaxVisible="3"
+                                       Placement="ActionBarPlacement.Inline"
+                                       LayoutMode="TmLayoutMode.Mobile" />
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@* The destructive action opens its confirmation from inside the "More" sheet: the dialog
+   promotes after the sheet, so it always paints above it (top-layer order = open order). *@
+<TmDialog Type="DialogType.Confirm"
+          Show="@_showConfirm"
+          Title="@Loc["TmMobileActionBarDemo_ConfirmDeleteTitle"]"
+          Message="@Loc["TmMobileActionBarDemo_ConfirmDeleteMessage"]"
+          IsDangerous="true"
+          MobilePresentation="MobilePresentation.Auto"
+          OnResult="HandleConfirmResult" />
+
+@code {
+    private bool _showConfirm;
+    private string _lastAction = "—";
+    private IReadOnlyList<TmActionItem> _actions = [];
+
+    protected override void OnInitialized()
+    {
+        _actions =
+        [
+            new TmActionItem
+            {
+                Id = "share",
+                Label = Loc["TmMobileActionBarDemo_ActionShare"],
+                Icon = IconNames.Share,
+                Priority = 100,
+                OnClick = () => Record("TmMobileActionBarDemo_ActionShare"),
+            },
+            new TmActionItem
+            {
+                Id = "edit",
+                Label = Loc["TmMobileActionBarDemo_ActionEdit"],
+                Icon = "edit",
+                Priority = 90,
+                OnClick = () => Record("TmMobileActionBarDemo_ActionEdit"),
+            },
+            new TmActionItem
+            {
+                Id = "duplicate",
+                Label = Loc["TmMobileActionBarDemo_ActionDuplicate"],
+                Icon = IconNames.Copy,
+                Priority = 80,
+                OnClick = () => Record("TmMobileActionBarDemo_ActionDuplicate"),
+            },
+            new TmActionItem
+            {
+                Id = "archive",
+                Label = Loc["TmMobileActionBarDemo_ActionArchive"],
+                Icon = "archive",
+                Priority = 70,
+                OnClick = () => Record("TmMobileActionBarDemo_ActionArchive"),
+            },
+            new TmActionItem
+            {
+                Id = "delete",
+                Label = Loc["TmMobileActionBarDemo_ActionDelete"],
+                Icon = IconNames.Trash,
+                Priority = 60,
+                OnClick = OpenConfirm,
+            },
+        ];
+    }
+
+    private Task Record(string key)
+    {
+        _lastAction = Loc[key];
+        return Task.CompletedTask;
+    }
+
+    private Task OpenConfirm()
+    {
+        _showConfirm = true;
+        return Task.CompletedTask;
+    }
+
+    private void HandleConfirmResult(bool? result)
+    {
+        _showConfirm = false;
+        if (result == true)
+        {
+            _lastAction = Loc["TmMobileActionBarDemo_ActionDelete"];
+        }
+    }
+}

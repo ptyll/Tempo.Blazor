@@ -64,6 +64,13 @@
   flex-basis: 100%;
 }
 
+/* Edit mode on mobile: the edit actions move into the component-scoped mobile action bar
+   (F5), so the wrapping toolbar's action buttons are not rendered twice. View mode keeps its
+   toolbar (the Edit entry point). */
+.tm-dashboard[data-layout="mobile"].tm-dashboard--edit .tm-dashboard-toolbar-right {
+  display: none;
+}
+
 .tm-dashboard-edit-badge {
   padding: var(--tm-space-1) var(--tm-space-2);
   background: var(--tm-color-primary-subtle);

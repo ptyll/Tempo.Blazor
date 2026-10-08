@@ -2,7 +2,7 @@
   "itemName": "TmBottomNavigation",
   "kind": "Component",
   "category": "Navigation",
-  "description": "A bottom navigation bar component for mobile layouts. Supports items with icons and text, active state highlighting, and click handling.",
+  "description": "A bottom navigation bar for switching the application's top-level destinations — application chrome, not a component action bar. A component's actions (edit, save, cancel, …) belong to TmMobileActionBar, which lives inside the component's own container (sticky, never position: fixed). Supports items with icons and text, active state highlighting, and click handling.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
   ],
