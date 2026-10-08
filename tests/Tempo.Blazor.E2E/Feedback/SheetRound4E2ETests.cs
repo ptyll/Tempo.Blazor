@@ -217,9 +217,9 @@ public sealed class SheetRound4E2ETests : WasmTestBase
         await page.EvaluateAsync(
             """
             () => {
-                const buttons = document.querySelectorAll('.tm-modal-overlay .tm-modal-footer .tm-btn');
-                buttons[0].textContent = 'Annuler sans enregistrer les modifications';
-                buttons[1].textContent = 'Enregistrer les modifications du tableau de bord';
+                const labels = document.querySelectorAll('.tm-modal-overlay .tm-modal-footer .tm-btn .tm-btn-label');
+                labels[0].textContent = 'Annuler sans enregistrer les modifications';
+                labels[1].textContent = 'Enregistrer les modifications du tableau de bord';
             }
             """);
         await page.WaitForTimeoutAsync(300);
@@ -240,7 +240,8 @@ public sealed class SheetRound4E2ETests : WasmTestBase
             () => {
                 const ok = document.querySelector('.tm-dialog-footer .tm-btn-danger')
                     ?? document.querySelector('.tm-dialog-footer .tm-dialog-btn-ok');
-                if (ok) ok.textContent = 'Supprimer définitivement cet élément et toutes ses pièces jointes';
+                if (ok) ok.querySelector('.tm-btn-label').textContent =
+                    'Supprimer définitivement cet élément et toutes ses pièces jointes';
             }
             """);
         await page.WaitForTimeoutAsync(300);

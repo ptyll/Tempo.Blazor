@@ -85,7 +85,8 @@
                     {
                         <TmButton Variant="GetOkButtonVariant()"
                                   OnClick="OnOkClick"
-                                  Class="tm-dialog-btn-ok">
+                                  Class="tm-dialog-btn-ok"
+                                  AdditionalAttributes="@(ButtonTitle(ResolvedOkText))">
                             @ResolvedOkText
                         </TmButton>
                     }
@@ -93,13 +94,15 @@
                     {
                         <TmButton Variant="ButtonVariant.Ghost"
                                   OnClick="OnCancelClick"
-                                  Class="tm-dialog-btn-cancel">
+                                  Class="tm-dialog-btn-cancel"
+                                  AdditionalAttributes="@(ButtonTitle(ResolvedCancelText))">
                             @ResolvedCancelText
                         </TmButton>
                         <TmButton Variant="GetOkButtonVariant()"
                                   OnClick="OnOkClick"
                                   Disabled="IsOkDisabled()"
-                                  Class="tm-dialog-btn-ok">
+                                  Class="tm-dialog-btn-ok"
+                                  AdditionalAttributes="@(ButtonTitle(ResolvedOkText))">
                             @ResolvedOkText
                         </TmButton>
                     }
@@ -201,6 +204,9 @@
 
     /// <summary>The prompt placeholder: the caller's text, or the localized default when none was passed.</summary>
     private string ResolvedPromptPlaceholder => string.IsNullOrEmpty(PromptPlaceholder) ? Loc["TmDialog_PromptPlaceholder"] : PromptPlaceholder;
+
+    /// <summary>The full label as the title: a truncated sheet-footer label keeps its text reachable.</summary>
+    private Dictionary<string, object> ButtonTitle(string label) => new(StringComparer.Ordinal) { ["title"] = label };
 
     private string _titleId = Guid.NewGuid().ToString("N");
     private TmSheetHandle? _handle;

@@ -15,11 +15,11 @@
         <TmSpinner Size="SpinnerSize.Sm" />
         @if (!string.IsNullOrEmpty(LoadingText))
         {
-            <span>@LoadingText</span>
+            <span class="tm-btn-label">@LoadingText</span>
         }
         else
         {
-            @ChildContent
+            <span class="tm-btn-label">@ChildContent</span>
         }
     }
     else
@@ -29,7 +29,9 @@
             <TmIcon Name="@Icon" Size="IconSize.Sm" />
         }
 
-        @ChildContent
+        @* The label is a span so a context that shrinks the button (a 320px sheet footer) can
+           truncate it with an ellipsis instead of overflowing the panel. *@
+        <span class="tm-btn-label">@ChildContent</span>
     }
 
     @if (!IsLoading && !string.IsNullOrEmpty(Icon) && IconRight)

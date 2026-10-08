@@ -91,7 +91,8 @@
                             {
                                 <TmButton Variant="ButtonVariant.Ghost"
                                           OnClick="OnClose"
-                                          Class="tm-modal-btn-cancel">
+                                          Class="tm-modal-btn-cancel"
+                                          AdditionalAttributes="@(ButtonTitle(ResolvedCancelText))">
                                     @ResolvedCancelText
                                 </TmButton>
                             }
@@ -100,7 +101,8 @@
                                 <TmButton Variant="OkButtonVariant"
                                           OnClick="OnOkClick"
                                           Disabled="OkButtonDisabled"
-                                          Class="tm-modal-btn-ok">
+                                          Class="tm-modal-btn-ok"
+                                          AdditionalAttributes="@(ButtonTitle(ResolvedOkText))">
                                     @ResolvedOkText
                                 </TmButton>
                             }
@@ -188,6 +190,9 @@
 
     private string ResolvedOkText => string.IsNullOrEmpty(OkButtonText) ? Loc["Tm_Ok"] : OkButtonText;
     private string ResolvedCancelText => string.IsNullOrEmpty(CancelButtonText) ? Loc["Tm_Cancel"] : CancelButtonText;
+
+    /// <summary>The full label as the title: a truncated sheet-footer label keeps its text reachable.</summary>
+    private Dictionary<string, object> ButtonTitle(string label) => new(StringComparer.Ordinal) { ["title"] = label };
 
     private ElementReference _overlayElement;
     private ElementReference _panel;

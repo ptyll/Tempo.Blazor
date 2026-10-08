@@ -112,18 +112,37 @@ public class TmModalPresentationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void SheetFooter_ButtonsWrapInsteadOfOverflowingAt320()
+    public void SheetFooter_LabelsTruncateInsteadOfOverflowingAt320()
     {
-        var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
-        var inline = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn");
+        var modalCss = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
+        var buttonCss = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_button.css"));
+
+        var inline = RuleFor(modalCss, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn");
         inline.Should().Contain("min-width: 0",
             "min-width: fit-content forces a long FR label out of a 320px sheet footer");
-        inline.Should().Contain("white-space: normal",
-            "the label wraps instead of clipping; height:auto lets the second line show");
+        inline.Should().NotContain("height",
+            "a height claim on .tm-btn from another stylesheet would outrank the tm-btn-sm/md size modifiers");
 
-        var stacked = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--stacked > .tm-btn");
-        stacked.Should().Contain("white-space: normal",
-            "a stacked sheet footer wraps the same way");
+        var label = RuleFor(modalCss, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer .tm-btn-label");
+        label.Should().Contain("text-overflow: ellipsis",
+            "the truncated label keeps the button's size contract and shows the full text in its title");
+
+        RuleFor(buttonCss, ".tm-btn-label").Should().Contain("min-width: 0",
+            "the span must be shrinkable for the footer truncation to engage");
+    }
+
+    [Fact]
+    public void DefaultFooterButtons_CarryTheirLabelAsTheTitle()
+    {
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Create")
+            .Add(m => m.ShowDefaultFooterButtons, true)
+            .AddChildContent("<p>Body</p>"));
+
+        cut.Find(".tm-modal-btn-ok").GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+        cut.Find(".tm-modal-btn-cancel").GetAttribute("title").Should().NotBeNullOrWhiteSpace();
+        cut.Find(".tm-modal-btn-ok .tm-btn-label").Should().NotBeNull("the label is a span the footer can truncate");
     }
 
     /// <summary>Reads the declaration block of the last rule that declares the selector verbatim.</summary>

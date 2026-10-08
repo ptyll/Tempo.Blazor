@@ -29,6 +29,12 @@
 .tm-btn:focus-visible {
   box-shadow: var(--tm-focus-ring);
 }
+/* The label span TmButton wraps its content in. min-width: 0 lets the span shrink inside a flex
+   button; a footer that needs the label to truncate adds overflow/ellipsis on this class in its
+   own stylesheet instead of overriding the button's height or white-space. */
+.tm-btn-label {
+  min-width: 0;
+}
 .tm-btn:disabled,
 .tm-btn[disabled] {
   opacity: 0.5;
