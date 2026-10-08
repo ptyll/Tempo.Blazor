@@ -391,6 +391,20 @@
   CSS (the `:where()` reset, the fallback closed-state hide, the `:where()` open display) so a
   new or re-weighted global rule on the shared element fails as a finding (CF03c).
 
+### Fixed
+
+- **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
+  content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
+  menus and listboxes opened as sheets take initial focus on the first item, not Done;
+  `TmDropdown` returns focus to the trigger after a keyboard selection; trap-focus popups
+  activate only after `showPopover()`, so a cold Enter-open no longer drops focus to `<body>`;
+  a modal sheet's root is promoted to the browser top layer (sticky app bars and transformed
+  ancestors can no longer confine or cover it); the date-range sheet stacks its months, shows a
+  single Done and keeps it disabled until both dates are picked; overlay.js translates anchor
+  rects into visible-viewport space (a panned-down visible anchor is no longer dismissed as
+  hidden); `Title` also names the popover; Escape inside a sheet raises `OnDismissed("escape")`;
+  the swipe-enabled sheet shows its grabber; `TmPopover`'s arrow no longer paints inside a sheet.
+
 ### Changed
 
 - Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
