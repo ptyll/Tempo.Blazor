@@ -205,6 +205,35 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
         cut.Find(".tm-focus-scope").GetAttribute("role").Should().Be("dialog");
     }
 
+    [Fact]
+    public void MobilePresentationSheet_AnchoredRoot_CarriesTopLayerPopover()
+    {
+        // T7: the modal sheet's root is promoted to the browser top layer (popover="manual" +
+        // showPopover), so a sticky app bar (TmTopBar z1020 under TmBottomNavigation z1030) or a
+        // transformed ancestor can never confine or cover the sheet. The DOM stays in place —
+        // nested trap and Escape order are unchanged.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Filters")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("popover").Should().Be("manual");
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_InlineDrawer_IsNotPromoted()
+    {
+        // A non-modal (inline) sheet anchors to its container and must NOT join the top layer.
+        var cut = Render<TmDrawer>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Position, DrawerPosition.Bottom)
+            .Add(c => c.Modal, false)
+            .AddChildContent("<div>Body</div>"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("popover").Should().BeNull();
+    }
+
     [Theory]
     [InlineData("menu")]
     [InlineData("listbox")]
