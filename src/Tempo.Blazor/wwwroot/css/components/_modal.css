@@ -27,6 +27,25 @@
   animation: modalFadeIn 0.3s ease;
 }
 
+/* The promoted overlay root (U1: popover="manual") resets every UA [popover] default at zero
+   specificity, mirroring :where(.tm-overlay-panel). The own declarations above win where they
+   exist (position/inset/padding/the rgba scrim); the reset fills what the UA would otherwise
+   inject: margin:auto, width/height:fit-content, a solid border, the Canvas background, the
+   CanvasText color and overflow:auto (the container scrolls, not the overlay). */
+:where(.tm-modal-overlay) {
+  inset: auto;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;

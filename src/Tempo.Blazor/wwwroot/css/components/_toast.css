@@ -33,6 +33,25 @@
     left: 0;
 }
 
+/* The container rides the browser top layer (U1: popover="manual", re-raised on each push), so
+   every UA [popover] default is reset at zero specificity, mirroring :where(.tm-overlay-panel).
+   The own declarations above win where they exist (the fixed position, the position-class
+   offsets, the flex chrome, the overflow hidden); the reset fills the gaps: margin:auto,
+   width/height:fit-content, a solid border, the Canvas background and CanvasText color. */
+:where(.tm-toast-container) {
+    inset: auto;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+}
+
 /* Toast card */
 .tm-toast {
     pointer-events: auto;

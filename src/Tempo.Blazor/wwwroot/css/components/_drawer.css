@@ -273,18 +273,28 @@
     margin-inline: auto;
 }
 
-/* ── Top layer (T7) ──────────────────────────────────────
-   A MODAL sheet root carries popover="manual" and is promoted via showPopover (tm-sheet.js), so
-   an ancestor stacking context — a sticky TmTopBar under TmBottomNavigation, a transformed host —
-   can neither confine nor cover it. The UA popover defaults the drawer rules do not set are
-   reset at zero specificity (:where), matching the .tm-overlay-panel reset: margin:auto would
-   mis-anchor the root, and width/height:max-content would shrink the full-bleed bottom panel
-   (its width:100% resolves against this root). Placement, padding and z-index stay with the
-   rules above; an inline (non-modal) sheet never carries popover and is unaffected. */
-:where(.tm-drawer.tm-sheet--anchored) {
+/* ── Top layer (U1/U2) ───────────────────────────────────
+   A MODAL drawer root carries popover="manual" at EVERY position and is promoted via
+   showPopover (tm-sheet.js), so an ancestor stacking context — a sticky TmTopBar under
+   TmBottomNavigation, a transformed host — can neither confine nor cover it, and nothing opened
+   from inside it paints invisible under it. The UA popover defaults the drawer rules do not set
+   are reset at zero specificity (:where), matching the .tm-overlay-panel reset: margin:auto
+   would shrink the fixed root to its content, width/height:max-content would shrink the
+   full-bleed bottom panel (its width:100% resolves against this root), the Canvas background
+   turned the page behind the sheet into a flat grey wall, CanvasText made dark body text black
+   on the slate panel, and overflow:auto would double-scroll. Placement, padding, background,
+   color and z-index stay with the rules above; an inline (non-modal) drawer never carries
+   popover and is unaffected. */
+:where(.tm-drawer[popover]) {
+    inset: auto;
     width: auto;
     height: auto;
+    max-width: none;
+    max-height: none;
     margin: 0;
     border: none;
     padding: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
 }
