@@ -634,8 +634,7 @@
 @media (pointer: coarse) {
   .tm-column-picker-item { min-height: var(--tm-touch-target); }
 }
-.tm-column-picker-footer {
-  padding: var(--tm-space-2) var(--tm-space-3) 0;
+.tm-column-picker-footer {  padding: var(--tm-space-2) var(--tm-space-3) 0;
   border-top: 1px solid var(--tm-border-color);
   margin-top: var(--tm-space-2);
 }
@@ -647,6 +646,12 @@
   font-size: var(--tm-font-size-xs);
   padding: 0;
   text-decoration: underline;
+}
+
+/* UX round 2 (m5): the bare 18px link is below the 24px WCAG 2.5.8 minimum and the 44px toggle
+   rows above it — on a coarse pointer it grows to the shared touch target. */
+@media (pointer: coarse) {
+  .tm-column-picker-reset { min-height: var(--tm-touch-target); }
 }
 
 /* External Filter Builder */
