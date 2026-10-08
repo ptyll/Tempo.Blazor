@@ -11,7 +11,7 @@ namespace Tempo.Blazor.E2E;
 [TestClass]
 public class NotionOverlayInModalE2ETests : WasmTestBase
 {
-    private const string PageUrl = "https://localhost:7106/notion-editor";
+    private string PageUrl => $"{BaseUrl}/notion-editor";
 
     private async Task<IPage> OpenPageInModalAsync(IPage page)
     {

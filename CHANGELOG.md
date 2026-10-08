@@ -357,14 +357,27 @@
   `--tm-priority-critical` must switch to `--tm-priority-highest`.
 
 - **Every modal viewport-anchored overlay root lives in the browser top layer.** A modal
-  `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the `TmToastContainer`
-  carry `popover="manual"` and promote themselves at open through the shared promote helper, so
-  the top-layer order equals the open order (a dialog opened from inside a sheet paints above
-  it; a toast pushed while a sheet is open lands above it). Host chrome that relied on a z-index
-  band above modals (its own bar at a z-index higher than `--tm-z-modal` painting over an open
-  modal) now paints UNDER every open modal surface — only another promoted surface can cover
-  one. Non-modal anchored popovers (`TmOverlayPanel`) were already top-layer and are unaffected.
-  See [docs/overlays.md](docs/overlays.md).
+  `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root, the `TmCommandPalette`
+  backdrop, the `TmKeyboardShortcutsHelp` overlay, the `TmLightbox` focus-scope root, the
+  `TmGanttImportDialog` overlay and both toast containers (`TmToastContainer`,
+  `TmNotificationToastContainer`) carry `popover="manual"` and promote themselves at open
+  through the shared promote helper, so the top-layer order equals the open order (a dialog
+  opened from inside a sheet paints above it; a toast pushed while a sheet is open lands above
+  it). The toast containers are pinned on top: they re-raise on every push (including at the
+  `MaxVisible` cap) and after every promotion of another surface, and they are exempt from the
+  modal trap's inert background, so a toast on screen stays visible, reachable and announced.
+  Host chrome that relied on a z-index band above modals (its own bar at a z-index higher than
+  `--tm-z-modal` painting over an open modal) now paints UNDER every open modal surface — only
+  another promoted surface can cover one. The z-index bands in `tokens.css` order only
+  non-promoted surfaces and the no-Popover-API fallback. Non-modal anchored popovers
+  (`TmOverlayPanel`) were already top-layer and are unaffected. Extension-package dialogs (rich
+  text editor, Notion, Spreadsheet, DocumentEditor, Signing, the dashboard widget-selector
+  layer) are recorded exceptions — they still paint in their z-index band; see
+  [docs/overlays.md](docs/overlays.md) rule 9. See [docs/overlays.md](docs/overlays.md).
+
+- **`TmToastContainer` is `IAsyncDisposable` now (the public `Dispose` is gone).** Blazor's
+  renderer disposes `IAsyncDisposable` components without any host change; a host that called
+  `Dispose()` explicitly must drop the call. Same for `TmNotificationToastContainer`.
 
 ### Added
 
@@ -403,6 +416,9 @@
 - `TmOverlayPanel.SheetDoneEnabled` gates the sheet header's Done action (sheet mode only): a
   consumer mid-task keeps Done disabled until its input is complete — the date-range picker
   disables it until BOTH dates are picked.
+- `TmOverlayPanel.OnOpened` fires after the panel is actually displayed — the popover's
+  `showPopover()` has run, or the opening sheet render batch completed — so consumers that move
+  focus (a filter input) no longer land on a hidden element.
 - `InitialFocusSelector` on `TmFocusScope` and `TmDrawer` resolves the initial-focus target
   inside the scope from a CSS selector (e.g. the first menuitem of a menu sheet); an explicit
   `InitialFocusTarget`/`InitialFocusTargetId` still wins.
@@ -445,6 +461,18 @@
   An invalid `TmFocusScope.InitialFocusSelector` no longer throws after the inert/scroll lock
   landed. The restored `@media (width < 768px)` `.tm-modal` margin is asserted on the real
   element again (the round-1 adaptation measured a margin that came from an unrelated rule).
+
+- **F3 review round 3.** A toast that is already on screen is no longer covered by a drawer,
+  sheet or dialog opened after it — the toast containers are pinned on top and re-raise after
+  every later promotion, and a push at the `MaxVisible` cap (visible count unchanged) or an
+  expire+push in one render re-raises too. `TmCommandPalette`, `TmKeyboardShortcutsHelp`,
+  `TmLightbox`, `TmGanttImportDialog` and `TmNotificationToastContainer` join the promoted roots
+  (each resets the UA popover paint), so no focused modal surface paints invisible under another
+  promoted one anymore. A click on a toast's dismiss button while a sheet or modal is open
+  dismisses the toast instead of passing through to the backdrop and closing the surface (the
+  toast containers are exempt from the focus trap's inert background), and `role=alert` toasts
+  keep being announced. The demo no longer renders two `TmToastContainer`s sharing one
+  `ToastService` on the feedback page (every toast painted twice).
 
 - **Round-6 overlay fixes.** Opening a `TmDialog` Prompt with Enter no longer submits it at once.
   The opener activates on its Enter keydown and the per-type initial focus lands on the input while

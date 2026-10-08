@@ -220,6 +220,11 @@
   --tm-transition-slow:   300ms ease;
 
   /* ── Z-Index Scale ──────────────────────────────────────────── */
+  /* The bands below order ONLY surfaces that are NOT promoted to the browser top layer
+     (popover="manual" + showPopover) and the no-Popover-API fallback. Every modal
+     viewport-anchored overlay root is promoted (docs/overlays.md rule 8), and promoted surfaces
+     ignore z-index — they stack strictly by open order, with pinned toast containers re-raised
+     above all of them. A new band here can never move a promoted surface above another. */
   --tm-z-dropdown:    1000;
   --tm-z-sticky:      1020;
   /* Transient anchored popups (open dropdown menus, autocomplete lists) must paint ABOVE sticky/floating

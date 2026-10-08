@@ -37,7 +37,7 @@ public class AriaWiringE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync("https://localhost:7106/overlay");
+        await page.GotoAsync($"{BaseUrl}/overlay");
         await WaitForAppReadyAsync(page);
 
         // The ARIA wiring only exists once the listbox is open — open it first.
@@ -59,7 +59,7 @@ public class AriaWiringE2ETests : WasmTestBase
     {
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
-        await page.GotoAsync("https://localhost:7106/multi-view-list");
+        await page.GotoAsync($"{BaseUrl}/multi-view-list");
         await WaitForAppReadyAsync(page);
 
         // Switch to the list view — that is the view with listbox/option semantics.

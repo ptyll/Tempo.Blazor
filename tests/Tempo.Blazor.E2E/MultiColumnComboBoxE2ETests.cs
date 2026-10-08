@@ -12,7 +12,7 @@ namespace Tempo.Blazor.E2E;
 [TestClass]
 public class MultiColumnComboBoxE2ETests : WasmTestBase
 {
-    private const string PageUrl = "https://localhost:7106/multi-column-combo-box";
+    private string PageUrl => $"{BaseUrl}/multi-column-combo-box";
 
     [TestMethod]
     public async Task MultiColumnComboBox_AtRightViewportEdge_PanelInsideViewport()

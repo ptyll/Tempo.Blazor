@@ -12,7 +12,7 @@ namespace Tempo.Blazor.E2E;
 [TestClass]
 public class FilterableDropdownE2ETests : WasmTestBase
 {
-    private const string PageUrl = "https://localhost:7106/overlay";
+    private string PageUrl => $"{BaseUrl}/overlay";
 
     private static async Task ScrollTriggerTopToAsync(ILocator trigger, double viewportTop)
     {

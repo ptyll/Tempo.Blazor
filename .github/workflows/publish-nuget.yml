@@ -91,6 +91,14 @@ jobs:
             echo "Using CI version: $BASE_VERSION-ci-$TIMESTAMP"
           fi
 
+      - name: Force the CSS bundler to run
+        # BundleCssFiles is incremental (Inputs/Outputs mtimes): a fresh checkout gives every
+        # file the same timestamp, so MSBuild can skip the bundler and the freshness check below
+        # then diffs the committed bundle against itself — always clean, even when the sources
+        # moved on. Touching the entry CSS makes the target inputs newer than the output, so the
+        # Build step below always regenerates tempo-blazor.bundled.css before git diff sees it.
+        run: touch src/Tempo.Blazor/wwwroot/css/tempo-blazor.css
+
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
 

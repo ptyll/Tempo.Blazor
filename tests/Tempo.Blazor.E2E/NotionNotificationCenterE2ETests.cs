@@ -14,7 +14,7 @@ namespace Tempo.Blazor.E2E;
 [TestClass]
 public class NotionNotificationCenterE2ETests : WasmTestBase
 {
-    private const string PageUrl = "https://localhost:7106/notion-editor";
+    private string PageUrl => $"{BaseUrl}/notion-editor";
 
     [TestMethod]
     public async Task NotionNotificationCenter_Panel_UsesDeclaredWidth()

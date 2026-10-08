@@ -528,8 +528,10 @@
             else if (IsVisible && IsSheet && !_openedFired)
             {
                 // Sheet mode renders without the overlay.js open() call; the drawer's opening
-                // render (a child, so its OnAfterRender ran before this one) is the point the
-                // sheet is displayed and promoted.
+                // render (a child, so its OnAfterRenderAsync STARTED before this one) is the point
+                // the sheet is displayed — its promotion lands from that call, which may still be
+                // in flight here. OnOpened therefore fires from THIS OnAfterRender, after the
+                // opening render batch completed, not from the drawer's callback.
                 _openedPending = true;
             }
             else if (_jsOpen && _module is not null)

@@ -124,17 +124,32 @@ editor) keeps focus.
    promoted sheet root); nothing may recreate that guarantee with a z-index arms race in
    package CSS.
 8. **Top-layer order equals open order.** Every modal viewport-anchored overlay root is itself
-   top-layer: a modal `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the
-   `TmToastContainer` carry `popover="manual"` and promote themselves at open through the shared
-   promote helper (`TopLayerInterop` → `tm-sheet.js`). A surface opened from inside one (a
-   dialog from a sheet, a toast from a dialog) promotes *after* it, so it always paints above —
-   DOM stays in place and the trap/inert/Escape order are untouched. A host cannot cover an
-   open modal surface with a z-index band anymore; only another promoted surface can. Toasts
-   re-raise the container on every push (`raise` = hidePopover + showPopover in one step), so a
-   toast pushed while a sheet is open lands above it. Tooltips stay z-index painted *inside*
-   their own surface (`TmTooltip`'s content is a DOM child of its trigger): a tooltip inside a
-   promoted surface paints with it — no extra promotion — and a tooltip on an element behind a
-   modal is inert with its trigger, which is the desired behaviour. Every promoted root resets
-   the UA `[popover]` defaults at zero specificity (`:where(...)` — background transparent,
-   color inherit, overflow visible, margin/border/padding zeroed), so the page behind stays
-   dimmed through the surface's own scrim and themed colours inherit into the body.
+   top-layer: a modal `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root, the
+   `TmCommandPalette` backdrop, the `TmKeyboardShortcutsHelp` overlay, the `TmLightbox`
+   focus-scope root, the `TmGanttImportDialog` overlay and the two toast containers
+   (`TmToastContainer`, `TmNotificationToastContainer`) carry `popover="manual"` and promote
+   themselves at open through the shared promote helper (`TopLayerInterop` → `tm-sheet.js`). A
+   surface opened from inside one (a dialog from a sheet, a toast from a dialog) promotes *after*
+   it, so it always paints above — DOM stays in place and the trap/inert/Escape order are
+   untouched. A host cannot cover an open modal surface with a z-index band anymore; only another
+   promoted surface can. Toast containers are **pinned on top**: they register in the helper's
+   pinned-on-top registry while they hold toasts and re-raise on every push *and* after every
+   promotion of another surface, so a toast that is already on screen is never covered by a
+   drawer, sheet or dialog opened after it, and a toast pushed at the `MaxVisible` cap (count
+   unchanged) still lands above. Render **one `TmToastContainer` per app** (in the layout); two
+   containers sharing a `ToastService` both promote and every toast paints twice. Tooltips stay
+   z-index painted *inside* their own surface (`TmTooltip`'s content is a DOM child of its
+   trigger): a tooltip inside a promoted surface paints with it — no extra promotion — and a
+   tooltip on an element behind a modal is inert with its trigger, which is the desired
+   behaviour. Every promoted root resets the UA `[popover]` defaults at zero specificity
+   (`:where(...)` — background transparent, color inherit, overflow visible, margin/border/padding
+   zeroed), so the page behind stays dimmed through the surface's own scrim and themed colours
+   inherit into the body.
+9. **Known non-promoted surfaces (recorded exceptions).** Dialogs living in the extension
+   packages still paint in their z-index band and were NOT promoted in this pass: the rich-text
+   editor link/image/table/video/find dialogs, the Notion editor package surfaces, the
+   spreadsheet package dialogs, the document-editor package dialogs, the signing package dialogs
+   and the dashboard widget-selector layer (`_dashboard.css`). Opened while a core promoted
+   surface is up they can paint under it — migrate them onto `TmModal`/`TmDialog` (which promote
+   themselves) one surface at a time, and never cover them from package CSS with a z-index arms
+   race. Any NEW modal surface must promote through `TopLayerInterop`.
