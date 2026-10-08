@@ -606,11 +606,10 @@
 .tm-column-picker-toggle { white-space: nowrap; color: var(--tm-color-primary-600); }
 [data-theme="dark"] .tm-column-picker-toggle,
 .tm-dark .tm-column-picker-toggle { color: var(--tm-color-primary-300); }
+/* The panel element is a TmOverlayPanel root: overlay.js positions it in the top layer, so no
+   position/top/right/z-index here — a consumer declaration would override the panel reset and
+   break top-layer positioning. */
 .tm-column-picker-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + var(--tm-space-1));
-  z-index: var(--tm-z-dropdown);
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);

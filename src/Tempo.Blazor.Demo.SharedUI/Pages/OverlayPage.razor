@@ -225,6 +225,42 @@
     </div>
 </section>
 
+<!-- Mobile presentation: popover becomes a sheet -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Mobile presentation</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Resize to &lt; 640 px</span>
+    </div>
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            Anchored panels carry <code>MobilePresentation="Auto"</code>: on a desktop viewport the
+            dropdown below opens as a floating popover anchored to its trigger; on a narrow viewport
+            the same menu presents as a content-height bottom sheet — a header titled with the
+            trigger text and a <em>Done</em> action — through the shared sheet primitive
+            (<code>TmDrawer Position=Bottom</code>). The popover-vs-sheet choice resolves from the
+            viewport; nothing about the menu's content changes.
+        </p>
+        <TmDropdown Text="Export" MobilePresentation="PanelPresentation.Auto"
+                    data-testid="overlay-mobile-dropdown">
+            <TmDropdownItem Value="csv">Export as CSV</TmDropdownItem>
+            <TmDropdownItem Value="xlsx">Export as Excel (XLSX)</TmDropdownItem>
+            <TmDropdownItem Value="pdf">Export as PDF</TmDropdownItem>
+        </TmDropdown>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-3 mb-1">
+            The same contract on a popover with its own sheet title:
+        </p>
+        <TmPopover Title="Filter options" MobilePresentation="PanelPresentation.Auto"
+                   data-testid="overlay-mobile-popover">
+            <TriggerContent>
+                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm">Filters</button>
+            </TriggerContent>
+            <ChildContent>
+                <p class="text-sm">Any content — on mobile it lands in the sheet body.</p>
+            </ChildContent>
+        </TmPopover>
+    </div>
+</section>
+
 @* Scroll room below the edge section: without it the document ends right after the trigger, so
    scrollIntoView({block:'end'}) cannot pin the trigger's bottom edge to the viewport bottom and
    the flip demo/test would have nothing to prove. It also gives the "anchor scrolled fully out of

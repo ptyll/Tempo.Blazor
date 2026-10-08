@@ -1,37 +1,49 @@
 @namespace Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Components.Overlay
 
 <div class="tm-column-picker @Class @(Disabled ? "tm-column-picker-disabled" : "")" @attributes="AdditionalAttributes">
     <button class="tm-column-picker-toggle tm-btn tm-btn-outline tm-btn-sm"
             type="button"
+            @ref="_toggleRef"
+            aria-haspopup="true"
+            aria-expanded="@_open.ToString().ToLowerInvariant()"
             @onclick="ToggleOpen">
         <span class="tm-icon-columns"></span>
         @Loc["TmDataTable_ColumnPicker"]
     </button>
 
-    @if (_open)
-    {
-        <div class="tm-column-picker-panel">
-            <div class="tm-column-picker-items">
-                @foreach (var col in Columns.Where(c => c.IsHideable))
-                {
-                    <label class="tm-column-picker-item">
-                        <input type="checkbox"
-                               data-key="@col.Key"
-                               checked="@col.IsVisible"
-                               @onchange="() => Toggle(col.Key)" />
-                        <span>@col.Title</span>
-                    </label>
-                }
-            </div>
-            <div class="tm-column-picker-footer">
-                <button class="tm-column-picker-reset tm-link-button"
-                        type="button"
-                        @onclick="Reset">
-                    @Loc["TmDataTable_ResetColumns"]
-                </button>
-            </div>
+    @* The panel is a TmOverlayPanel: popover="manual" puts it in the browser top layer (no
+       ancestor overflow can clip it), overlay.js anchors and flips it, and Escape or an outside
+       pointerdown closes it. On a narrow viewport it presents as a content-height bottom sheet
+       titled with the localized column-picker label. *@
+    <TmOverlayPanel Anchor="_toggleRef"
+                    IsOpen="_open"
+                    IsOpenChanged="@(v => _open = v)"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Role="dialog"
+                    Title="@Loc["TmDataTable_ColumnPicker"]"
+                    Class="tm-column-picker-panel">
+        <div class="tm-column-picker-items">
+            @foreach (var col in Columns.Where(c => c.IsHideable))
+            {
+                <label class="tm-column-picker-item">
+                    <input type="checkbox"
+                           data-key="@col.Key"
+                           checked="@col.IsVisible"
+                           @onchange="() => Toggle(col.Key)" />
+                    <span>@col.Title</span>
+                </label>
+            }
         </div>
-    }
+        <div class="tm-column-picker-footer">
+            <button class="tm-column-picker-reset tm-link-button"
+                    type="button"
+                    @onclick="Reset">
+                @Loc["TmDataTable_ResetColumns"]
+            </button>
+        </div>
+    </TmOverlayPanel>
 </div>
 
 @code {
@@ -43,6 +55,7 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _open;
+    private ElementReference _toggleRef;
 
     private void ToggleOpen() => _open = !_open;
 
