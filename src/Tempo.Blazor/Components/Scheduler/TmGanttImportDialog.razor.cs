@@ -31,6 +31,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private IJSObjectReference? _filePickerModule;
     private bool _wasOpen;
     private bool _promoted;
+    private bool _scopeActive;
     private TopLayerInterop? _topLayer;
     private TmFocusScope? _scope;
     private readonly string _titleId = $"tm-gantt-import-title-{Guid.NewGuid():N}";
@@ -89,10 +90,20 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             _promoted = true;
             _topLayer ??= new TopLayerInterop(JS);
             await _topLayer.PromoteAsync(_overlay);
+
+            // UX round 4: the trap may activate only once the popover root is actually visible.
+            // A popover="manual" root is display:none until showPopover runs, and the tm-sheet
+            // module import can outlast the trap's two-frame rAF retry — activating earlier drops
+            // the initial-focus move (a focus() on a display:none subtree is a no-op) and focus
+            // lands on <body>. Activating after the promote makes the close-button focus
+            // deterministic. StateHasChanged re-renders so the scope sees Active flip to true.
+            _scopeActive = true;
+            StateHasChanged();
         }
         else if (!IsOpen && _promoted)
         {
             _promoted = false;
+            _scopeActive = false;
         }
     }
 

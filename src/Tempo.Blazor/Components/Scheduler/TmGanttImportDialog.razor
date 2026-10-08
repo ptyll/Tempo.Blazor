@@ -11,7 +11,7 @@
        carries popover="manual" and promotes after the opening render, like TmModal. *@
     <div class="tm-gantt__dialog-overlay" popover="manual" @ref="_overlay" @onclick="OnClose">
         <TmFocusScope @ref="_scope" Class="tm-gantt__dialog tm-gantt__import-dialog"
-                      Active="true" CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
+                      Active="_scopeActive" CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
                       @onclick:stopPropagation>
             <div class="tm-gantt__dialog-header">
                 <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>
