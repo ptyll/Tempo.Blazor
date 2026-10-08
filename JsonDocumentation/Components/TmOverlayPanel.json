@@ -112,7 +112,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "true",
-      "description": "Whether the sheet header's Done action is enabled. A consumer mid-task can keep Done disabled until its input is complete — TmDateRangePicker disables it until BOTH dates are picked, so a half range can never close the sheet silently (Escape, the backdrop click and the swipe still close and keep the partial selection). Popover mode only (since 2.9.1)."
+      "description": "Whether the sheet header's Done action is enabled. A consumer mid-task can keep Done disabled until its input is complete — TmDateRangePicker disables it until BOTH dates are picked, so a half range can never close the sheet silently (Escape, the backdrop click and the swipe still close and keep the partial selection). Sheet mode only (since 2.9.1)."
     },
     {
       "name": "Role",
