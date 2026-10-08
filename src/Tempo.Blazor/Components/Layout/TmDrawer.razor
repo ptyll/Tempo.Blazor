@@ -29,6 +29,7 @@
                   OnEscape="HandleEscape"
                   RestoreFocusTarget="RestoreFocusTarget"
                   RestoreFocusTargetId="@RestoreFocusTargetId"
+                  InitialFocusSelector="@InitialFocusSelector"
                   DataTestId="@DataTestId"
                   AdditionalAttributes="RootAttributes">
         @* The overlay is a child of the trapped root. A sibling gets marked inert, and an inert
@@ -187,6 +188,14 @@
 
     /// <summary>The id of the restore target, for a target rendered outside this drawer.</summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// A CSS selector resolved inside the scope for the element that receives focus when the
+    /// drawer opens (e.g. the first menuitem of a menu sheet). Null keeps the default first
+    /// focusable. A host that renders its own header controls wins by leaving this unset only
+    /// when the default order is right.
+    /// </summary>
+    [Parameter] public string? InitialFocusSelector { get; set; }
 
     /// <summary>The snap the sheet renders. Two-way with <see cref="SnapIndexChanged"/>.</summary>
     [Parameter] public int SnapIndex { get; set; }

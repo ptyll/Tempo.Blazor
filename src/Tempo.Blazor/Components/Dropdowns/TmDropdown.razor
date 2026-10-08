@@ -99,6 +99,7 @@
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool _isOpen;
+    private bool _focusTriggerAfterClose;
     private ElementReference _triggerRef;
 
     private void Toggle()
@@ -120,9 +121,32 @@
         // the handler opens would render UNDER the still-open menu (and the first Escape would
         // close the menu, not the dialog). The yield lets the close re-render hide the popover.
         _isOpen = false;
+        // docs/overlays.md rule 4: a selection close does not route through overlay.js, so the
+        // dropdown restores focus to the trigger itself — otherwise a keyboard selection leaves
+        // focus on <body> (review finding T3). FocusAsync lands in OnAfterRenderAsync, after the
+        // close re-render (the pattern from docs/keyboard-activation-convention.md).
+        _focusTriggerAfterClose = true;
         StateHasChanged();
         await Task.Yield();
         await OnSelect.InvokeAsync(value);
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusTriggerAfterClose)
+        {
+            return;
+        }
+        _focusTriggerAfterClose = false;
+        try
+        {
+            await _triggerRef.FocusAsync(preventScroll: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
     }
 
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase

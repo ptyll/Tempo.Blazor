@@ -116,9 +116,18 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         const byData = !byId && initialId && document.querySelector
             ? document.querySelector(`[data-tm-id="${escapeAttr(initialId)}"]`)
             : null;
+        // A selector (data-initial-focus-selector) scopes the search to THIS trap: a menu/listbox
+        // sheet wants the first menuitem/option, not the first focusable (the header Done). It
+        // runs only when no explicit target or id claimed the choice, and only on traps whose
+        // environment implements querySelector (the node-test stubs do not).
+        const selector = element.dataset ? element.dataset.initialFocusSelector : null;
+        const bySelector = !initialTarget && !byId && !byData && selector
+            && typeof element.querySelector === 'function'
+            ? element.querySelector(selector)
+            : null;
         // An element reference wins over the id: the id is the fallback for a target that is not an
         // element reference yet.
-        (initialTarget || byId || byData || list[0] || element).focus();
+        (initialTarget || byId || byData || bySelector || list[0] || element).focus();
     }
 }
 

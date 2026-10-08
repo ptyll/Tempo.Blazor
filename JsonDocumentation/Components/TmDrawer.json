@@ -144,6 +144,12 @@
       "description": "The id of the restore target."
     },
     {
+      "name": "InitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "A CSS selector resolved inside the scope for the element that receives focus when the drawer opens (e.g. the first menuitem of a menu sheet). Null keeps the default first focusable (since 2.9.1)."
+    },
+    {
       "name": "SwipeToDismiss",
       "type": "bool",
       "isRequired": false,

@@ -10137,6 +10137,12 @@
               "description": "The dialog role. A dangerous confirm passes alertdialog."
             },
             {
+              "name": "InitialFocusSelector",
+              "type": "string?",
+              "isRequired": false,
+              "description": "A CSS selector resolved inside the scope for the element that receives focus on activation — e.g. the first [role='menuitem'] of a menu sheet. An explicit InitialFocusTarget or InitialFocusTargetId wins; without any of the three, focus falls back to the first focusable (since 2.9.1)."
+            },
+            {
               "name": "InitialFocusTarget",
               "type": "ElementReference?",
               "isRequired": false,
@@ -17592,6 +17598,12 @@
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "Custom header content (replaces Title)."
+            },
+            {
+              "name": "InitialFocusSelector",
+              "type": "string?",
+              "isRequired": false,
+              "description": "A CSS selector resolved inside the scope for the element that receives focus when the drawer opens (e.g. the first menuitem of a menu sheet). Null keeps the default first focusable (since 2.9.1)."
             },
             {
               "name": "InitialMode",

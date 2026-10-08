@@ -21,6 +21,7 @@
      data-restore-target="@(RestoreFocus ? RestoreFocusTargetId : null)"
      data-restore-focus="@(RestoreFocus ? null : "false")"
      data-initial-focus="@InitialFocusTargetId"
+     data-initial-focus-selector="@InitialFocusSelector"
      data-testid="@RootTestId("tm-focus-scope")"
      @attributes="AdditionalAttributes">
     <CascadingValue Value="this" IsFixed="true">
@@ -68,6 +69,14 @@
 
     /// <summary>The id of the element that receives focus on activation.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }
+
+    /// <summary>
+    /// A CSS selector resolved INSIDE the scope for the element that receives focus on
+    /// activation — e.g. the first <c>[role='menuitem']</c> of a menu sheet. An explicit
+    /// <see cref="InitialFocusTarget"/> or <see cref="InitialFocusTargetId"/> wins; without any
+    /// of the three, focus falls back to the first focusable.
+    /// </summary>
+    [Parameter] public string? InitialFocusSelector { get; set; }
 
     /// <summary>Whether deactivation restores focus. False leaves focus where the close action put it.</summary>
     [Parameter] public bool RestoreFocus { get; set; } = true;

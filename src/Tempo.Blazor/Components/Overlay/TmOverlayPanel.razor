@@ -51,6 +51,7 @@
                   AriaLabel="@SheetAriaLabel"
                   LayoutMode="Context.Resolved"
                   InitialMode="Context.Resolved"
+                  InitialFocusSelector="@SheetInitialFocusSelector"
                   Class="tm-overlay-panel-sheet"
                   DataTestId="@RootTestId("tm-overlay-panel")">
             <HeaderContent>
@@ -298,6 +299,14 @@
     /// labelled by the same visible title the user reads).
     /// </summary>
     private string? SheetContentLabelledBy => AriaLabelledBy ?? (SheetTitle is not null ? _sheetTitleId : null);
+
+    /// <summary>
+    /// Menus and listboxes opened as a sheet land initial focus on the first menuitem/option —
+    /// the header Done is a fallback, not the starting point. Other roles keep the scope default.
+    /// </summary>
+    private string? SheetInitialFocusSelector => Role is "menu" or "listbox"
+        ? ".tm-overlay-panel-sheet__content [role='menuitem'], .tm-overlay-panel-sheet__content [role='option']"
+        : null;
 
     private ElementReference? SheetRestoreTarget => Anchor.Id is not null ? Anchor : null;
 
