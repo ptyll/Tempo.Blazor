@@ -10,6 +10,63 @@ namespace Tempo.Blazor.Tests.Overlay;
 /// <summary>TDD tests for the TmOverlayPanel floating primitive.</summary>
 public class TmOverlayPanelTests : LocalizationTestBase
 {
+    [Fact]
+    public void Title_NamesThePopover_WhenNoAriaLabelOrAriaLabelledBy()
+    {
+        // T4: Title is the sheet header text, but an unnamed popover fails no axe rule — while a
+        // dialog without ANY name does. Title falls back to aria-label so both presentations
+        // carry a name.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Title, "Filters")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.Find(".tm-overlay-panel").GetAttribute("aria-label").Should().Be("Filters");
+    }
+
+    [Fact]
+    public void Title_DoesNotOverrideAriaLabel_OnThePopover()
+    {
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Title, "Filters")
+            .Add(c => c.AriaLabel, "Custom")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.Find(".tm-overlay-panel").GetAttribute("aria-label").Should().Be("Custom");
+    }
+
+    [Fact]
+    public void Title_DoesNotOverrideAriaLabelledBy_OnThePopover()
+    {
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<TmOverlayPanel>(0);
+            builder.AddAttribute(1, "IsOpen", true);
+            builder.AddAttribute(2, "Title", "Filters");
+            builder.AddAttribute(3, "AriaLabelledBy", "some-title-id");
+            builder.AddAttribute(4, "ChildContent", (RenderFragment)(bb => bb.AddContent(0, "Body")));
+            builder.CloseComponent();
+        });
+
+        var panel = cut.Find(".tm-overlay-panel");
+        panel.GetAttribute("aria-label").Should().BeNull();
+        panel.GetAttribute("aria-labelledby").Should().Be("some-title-id");
+    }
+
+    [Fact]
+    public void Title_NamesTheTrapFocusPopover_WhenNoAriaLabelOrAriaLabelledBy()
+    {
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.TrapFocus, true)
+            .Add(c => c.Role, "dialog")
+            .Add(c => c.Title, "Pick a date")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("aria-label").Should().Be("Pick a date");
+    }
+
     private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
 
     private BunitJSModuleInterop SetupOverlayModule()

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -114,6 +115,38 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Detector_TagWithLambdaValue_IsFullyMatched()
+    {
+        // A naive [^>]*? scan stops at the '>' inside a lambda attribute ("@(v => ...)") and
+        // mis-reads the tag; the quote-aware pattern must see the whole tag including Role.
+        const string razor = """
+            <TmOverlayPanel IsOpen="_open" IsOpenChanged="@(v => _open = v)" Role="dialog" AriaLabel="Pick">
+                <p>x</p>
+            </TmOverlayPanel>
+            """;
+
+        var sites = OverlayDialogNaming.DialogRoleSitesIn(razor, "src/Fake.razor");
+
+        sites.Should().ContainSingle(site => site.Component == "Fake" && site.DeclaresName);
+    }
+
+    [Fact]
+    public void Detector_TitleCountsAsAName()
+    {
+        // Title names the popover too (aria-label fallback) and the sheet header, so a
+        // dialog-role tag carrying only Title declares a name.
+        const string razor = """
+            <TmOverlayPanel IsOpen="_open" Role="dialog" Title="Columns">
+                <p>x</p>
+            </TmOverlayPanel>
+            """;
+
+        var sites = OverlayDialogNaming.DialogRoleSitesIn(razor, "src/Fake.razor");
+
+        sites.Should().ContainSingle(site => site.DeclaresName);
+    }
+
+    [Fact]
     public void Detector_UnnamedDialogRoleTag_IsFlagged()
     {
         const string razor = """
@@ -144,6 +177,15 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
     private Dictionary<string, Func<IElement>> PanelRenderers() =>
         new(StringComparer.Ordinal)
         {
+            ["TmColumnPicker"] = () =>
+            {
+                var cut = Render<TmColumnPicker>(p => p.Add(c => c.Columns,
+                [
+                    new ColumnVisibilityItem("name", "Name", true, true),
+                ]));
+                cut.Find(".tm-column-picker-toggle").Click();
+                return cut.Find("[role='dialog']");
+            },
             ["TmNotificationBell"] = () =>
             {
                 var cut = Render<TmNotificationBell>();
@@ -241,14 +283,19 @@ internal static class OverlayDialogNaming
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
 
+    // Quote-aware tag match: a naive [^>]*? scan stops at the '>' inside a lambda attribute
+    // ("@(v => ...)"), truncating the tag before Role — TmColumnPicker was invisible to the
+    // sweep until the fix (review finding T4).
     private static readonly Regex OverlayPanelTag =
-        new(@"<TmOverlayPanel\b[^>]*?>", RegexOptions.Compiled | RegexOptions.Singleline, RegexTimeout);
+        new(@"<TmOverlayPanel\b(?:[^>""]|""[^""]*"")*>", RegexOptions.Compiled | RegexOptions.Singleline, RegexTimeout);
 
     private static readonly Regex DialogRole =
         new(@"\bRole\s*=\s*""dialog""", RegexOptions.Compiled, RegexTimeout);
 
+    // Title names the popover too (aria-label fallback) and the sheet header, so it counts as a
+    // declared name; AriaLabelledBy still wins at render time.
     private static readonly Regex NameAttribute =
-        new(@"\bAriaLabel(ledBy)?\s*=", RegexOptions.Compiled, RegexTimeout);
+        new(@"\b(?:AriaLabel(?:ledBy)?|Title)\s*=", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>Every file under src/ containing a dialog-role TmOverlayPanel tag.</summary>
     public static IReadOnlyList<OverlayDialogSite> FindDialogRoleSites(string repositoryRoot) =>
