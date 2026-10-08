@@ -190,6 +190,14 @@ function isBackdrop(element) {
     return !!element && element.hasAttribute?.('data-tm-backdrop');
 }
 
+function isInertExempt(element) {
+    // Toast containers are non-modal status UI pinned to the top layer: the walk must not inert
+    // them, or a click on a toast's dismiss button passes THROUGH to the backdrop and closes the
+    // sheet/modal underneath (data loss), and role=alert toasts inside an inert subtree are never
+    // announced (V3, F3 review round 3).
+    return !!element && element.hasAttribute?.('data-tm-inert-exempt');
+}
+
 function releaseAncestors(element) {
     for (let node = element.parentElement; node; node = node.parentElement) {
         for (const marked of inertedByTrap.values()) {
@@ -209,7 +217,7 @@ function markBackgroundInert(element, id) {
     for (let node = element.parentElement; node; node = node.parentElement) {
         for (const child of node.children) {
             if (child === element || child.contains(element)) continue;
-            if (isBackdrop(child)) continue;
+            if (isBackdrop(child) || isInertExempt(child)) continue;
             // Another open trap, or a host that set inert for its own reasons, owns this element.
             if (child.hasAttribute('inert')) continue;
             child.toggleAttribute('inert', true);

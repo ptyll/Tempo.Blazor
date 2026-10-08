@@ -7,9 +7,10 @@
 @implements IAsyncDisposable
 
 @* U1: the container rides the browser top layer (popover="manual") and re-raises itself on each
-   push, so a toast pushed while a sheet or dialog is open always paints above it. While empty it
-   is demoted — the UA then hides it, exactly the invisible state an empty in-flow container had. *@
-<div class="tm-toast-container @PositionClass" popover="manual" @ref="_root">
+   push, so a toast pushed while a sheet or dialog is open always paints above it. R3-M1: the
+   container is PINNED on top — promote() re-raises it after every later promotion, and the raise
+   is keyed on the newest toast id (not the count), so a push at the MaxVisible cap re-raises too. *@
+<div class="tm-toast-container @PositionClass" popover="manual" data-tm-inert-exempt @ref="_root">
     @foreach (var toast in VisibleToasts)
     {
         <div class="tm-toast tm-toast--@toast.Severity.ToString().ToLowerInvariant()" role="alert">
@@ -63,8 +64,9 @@
 
     private ElementReference _root;
     private TopLayerInterop? _topLayer;
-    private int _lastCount;
+    private string? _lastNewestId;
     private bool _promoted;
+    private bool _pinned;
     private bool _disposed;
 
     protected override void OnInitialized()
@@ -81,32 +83,43 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // The container persists in the DOM (unlike a modal, it does not unmount on close), so it
-        // demotes when the last toast leaves. A PUSH re-raises: hidePopover + showPopover in one
+        // demotes when the last toast leaves. A push re-raises: hidePopover + showPopover in one
         // synchronous step lands the container above every sheet and dialog promoted before it.
+        // R3-M1: the raise is keyed on the NEWEST toast id, not the visible count — a push at the
+        // MaxVisible cap (count unchanged) or an expire+push in one render must still re-raise.
+        // The first raise also pins the container: promote() of any later surface re-raises it, so
+        // a toast already on screen is never covered by a drawer/sheet/dialog opened after it.
         var count = VisibleToasts.Count;
-        if (count > 0 && (count > _lastCount || !_promoted))
+        if (count > 0)
         {
-            _topLayer ??= new TopLayerInterop(JS);
-            if (count > _lastCount)
+            var newestId = VisibleToasts.LastOrDefault()?.Id;
+            if (!_promoted || newestId != _lastNewestId)
             {
+                _topLayer ??= new TopLayerInterop(JS);
+                if (!_pinned)
+                {
+                    _pinned = true;
+                    await _topLayer.PinAsync(_root);
+                }
                 await _topLayer.RaiseAsync(_root);
+                _promoted = true;
+                _lastNewestId = newestId;
             }
-            else
-            {
-                await _topLayer.PromoteAsync(_root);
-            }
-            _promoted = true;
         }
-        else if (count == 0 && _promoted)
+        else if (_promoted)
         {
             _promoted = false;
+            _lastNewestId = null;
             if (_topLayer is not null)
             {
                 await _topLayer.DemoteAsync(_root);
+                if (_pinned)
+                {
+                    _pinned = false;
+                    await _topLayer.UnpinAsync(_root);
+                }
             }
         }
-
-        _lastCount = count;
     }
 
     private void Dismiss(string id)
@@ -130,6 +143,11 @@
         ToastService.OnChange -= HandleChange;
         if (_topLayer is not null)
         {
+            if (_pinned)
+            {
+                _pinned = false;
+                await _topLayer.UnpinAsync(_root);
+            }
             await _topLayer.DisposeAsync();
         }
     }

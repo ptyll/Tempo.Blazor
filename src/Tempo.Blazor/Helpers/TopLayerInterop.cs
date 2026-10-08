@@ -43,6 +43,16 @@ internal sealed class TopLayerInterop : IAsyncDisposable
     /// <summary>Demotes the root (hidePopover). No-op when it is not currently promoted.</summary>
     public Task DemoteAsync(ElementReference root) => InvokeAsync("demote", root);
 
+    /// <summary>
+    /// Registers the root as pinned on top: <c>promote</c>/<c>raise</c> re-raise every registered
+    /// pinned root that is still popover-open, so a toast container holding toasts stays above
+    /// every modal surface promoted after it (F3 review round 3, R3-M1).
+    /// </summary>
+    public Task PinAsync(ElementReference root) => InvokeAsync("pinRoot", root);
+
+    /// <summary>Removes the root from the pinned registry (demote on empty, dispose).</summary>
+    public Task UnpinAsync(ElementReference root) => InvokeAsync("unpinRoot", root);
+
     private async Task InvokeAsync(string function, ElementReference root)
     {
         if (_disposed) return;

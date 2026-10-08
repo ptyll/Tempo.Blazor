@@ -584,12 +584,12 @@ test('promote skips pinned roots that are not popover-open (an empty demoted con
 });
 
 test('promote skips the root it just promoted when that root is itself pinned', () => {
-    const toast = popoverStub('toast', true);
+    const toast = popoverStub('toast');
     pinRoot(toast);
     try {
         promote(toast);
         assert.deepEqual(toast.calls, ['show'],
-            'a pinned root promoting itself must not hide+show itself a second time');
+            'a pinned root promoting itself must show once, not hide+show itself a second time');
     }
     finally {
         unpinRoot(toast);
