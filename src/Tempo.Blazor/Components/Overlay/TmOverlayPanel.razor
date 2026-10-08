@@ -9,7 +9,6 @@
 @using Microsoft.Extensions.Logging
 @implements IAsyncDisposable
 @inject IJSRuntime JS
-@inject ILogger<TmOverlayPanel> Logger
 @inject ILogger<OverlayLayout> LayoutLogger
 
 @* The panel element itself is rendered only while open: an open top-layer popover whose element
@@ -31,25 +30,33 @@
 {
     if (IsSheet)
     {
+        @* The sheet composes TmDrawer Position=Bottom (content height, Modal). The resolved layout
+           is handed down — the drawer never measures a second time. ChildContent wraps in a
+           content div that carries Role/Id/AdditionalAttributes, so menu/listbox ownership (axe
+           aria-required-parent) and aria-controls targets survive the popover→sheet switch; a
+           dialog role stays on the drawer's focus-scope root. *@
         <TmDrawer IsOpen="true"
                   IsOpenChanged="HandleSheetOpenChanged"
                   Position="DrawerPosition.Bottom"
                   Modal="true"
                   SnapPoints="Array.Empty<double>()"
-                  ShowHandle="false"
+                  ShowHandle="@CloseOnOutsidePointerDown"
                   ShowCloseButton="false"
                   CloseOnEscape="CloseOnEscape"
+                  OnEscape="HandleSheetEscape"
                   CloseOnOverlayClick="CloseOnOutsidePointerDown"
                   SwipeToDismiss="CloseOnOutsidePointerDown"
                   RestoreFocusTarget="SheetRestoreTarget"
                   Title="@SheetTitle"
                   AriaLabel="@SheetAriaLabel"
+                  LayoutMode="Context.Resolved"
+                  InitialMode="Context.Resolved"
                   Class="tm-overlay-panel-sheet"
                   DataTestId="@RootTestId("tm-overlay-panel")">
             <HeaderContent>
                 @if (!string.IsNullOrEmpty(SheetTitle))
                 {
-                    <h2 class="tm-overlay-panel-sheet__title">@SheetTitle</h2>
+                    <h2 id="@_sheetTitleId" class="tm-overlay-panel-sheet__title">@SheetTitle</h2>
                 }
                 <button type="button"
                         class="tm-overlay-panel-sheet__done"
@@ -57,7 +64,16 @@
                     @Loc["Tm_Done"]
                 </button>
             </HeaderContent>
-            <ChildContent>@ChildContent</ChildContent>
+            <ChildContent>
+                <div class="tm-overlay-panel-sheet__content"
+                     id="@Id"
+                     role="@(Role is "dialog" ? null : Role)"
+                     aria-label="@AriaLabel"
+                     aria-labelledby="@SheetContentLabelledBy"
+                     @attributes="AdditionalAttributes">
+                    @ChildContent
+                </div>
+            </ChildContent>
         </TmDrawer>
     }
     else if (TrapFocus)
@@ -96,9 +112,8 @@
 @code {
     private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
 
-    private static readonly IReadOnlyList<double> ContentHeightSnaps = Array.Empty<double>();
-
     private readonly string _key = $"tm-overlay-{Guid.NewGuid():n}";
+    private readonly string _sheetTitleId = $"tm-overlay-panel-sheet-title-{Guid.NewGuid():n}";
     private ElementReference _panelRef;
     private TmFocusScope? _scope;
     private IJSObjectReference? _module;
@@ -115,8 +130,8 @@
 
     /// <summary>
     /// Id of the rendered panel element. Defaults to a generated value; supply one when the anchor
-    /// should reference it (e.g. via <c>aria-controls</c>). Popover mode only — a sheet is named
-    /// through its header title.
+    /// should reference it (e.g. via <c>aria-controls</c>). In sheet mode the id lands on the
+    /// content wrapper inside the drawer body, so the reference resolves in both presentations.
     /// </summary>
     [Parameter] public string Id { get; set; } = $"tm-overlay-panel-{Guid.NewGuid():n}";
 
@@ -178,8 +193,9 @@
     /// of the viewport while focus sat inside the panel — the hidden panel would keep swallowing
     /// keys, so it is closed and focus returns to the anchor). Programmatic closes
     /// (<see cref="CloseAsync"/>, <see cref="IsOpen"/> turning false) do not raise it — the
-    /// consumer already knows. Popover mode only: a sheet closes through the drawer's own
-    /// <see cref="IsOpenChanged"/> without a reason.
+    /// consumer already knows. A sheet raises it for Escape (<c>"escape"</c>); Done, the backdrop
+    /// click and the swipe close through the drawer's own <see cref="IsOpenChanged"/> without a
+    /// reason.
     /// </summary>
     [Parameter] public EventCallback<string> OnDismissed { get; set; }
 
@@ -276,6 +292,13 @@
 
     private string SheetAriaLabel => SheetTitle ?? Loc["TmOverlayPanel_SheetFallback"];
 
+    /// <summary>
+    /// The content wrapper's <c>aria-labelledby</c>: the consumer's explicit id wins; otherwise the
+    /// sheet header title names the wrapper (menu/listbox/dialog content inside the sheet is then
+    /// labelled by the same visible title the user reads).
+    /// </summary>
+    private string? SheetContentLabelledBy => AriaLabelledBy ?? (SheetTitle is not null ? _sheetTitleId : null);
+
     private ElementReference? SheetRestoreTarget => Anchor.Id is not null ? Anchor : null;
 
     /// <summary>
@@ -357,8 +380,17 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>A sheet close request from the drawer (Done, Escape, backdrop, swipe).</summary>
+    /// <summary>A sheet close request from the drawer (Done, backdrop click, swipe).</summary>
     private Task HandleSheetOpenChanged(bool open) => open ? Task.CompletedTask : ApplyOpenAsync(false, dismissed: false, reason: null);
+
+    /// <summary>
+    /// Escape inside the sheet raises <see cref="OnDismissed"/> with <c>"escape"</c> — parity
+    /// with the popover's keyboard dismissal. Done, the backdrop click and the swipe close
+    /// through <see cref="HandleSheetOpenChanged"/> without a reason, like a programmatic close.
+    /// </summary>
+    private Task HandleSheetEscape() => CloseOnEscape
+        ? ApplyOpenAsync(false, dismissed: true, reason: "escape")
+        : Task.CompletedTask;
 
     /// <summary>The Done action closes the sheet without a selection, like Escape on the popover.</summary>
     private Task CloseSheetAsync() => ApplyOpenAsync(false, dismissed: false, reason: null);

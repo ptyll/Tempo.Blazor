@@ -89,3 +89,9 @@
     box-shadow: var(--tm-focus-ring);
     outline: none;
 }
+
+/* T14: the popover arrow points at the anchor edge; a sheet has no anchor, so a TmPopover body
+   rendered inside the sheet must not paint its stray diamond. */
+.tm-overlay-panel-sheet .tm-popover__arrow {
+    display: none;
+}

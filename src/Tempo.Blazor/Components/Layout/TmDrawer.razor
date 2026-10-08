@@ -41,7 +41,10 @@
         <div @ref="_panel" class="tm-drawer__panel tm-sheet__panel" style="@PanelStyle">
             @if (IsSheet && ShowHandle)
             {
+                @* A content-height sheet (no snap points) has nothing for the keyboard to slide
+                   between: the handle is a pure swipe grabber, decorative like TmModal's. *@
                 <TmSheetHandle @ref="_handle"
+                               Decorative="@(_snaps.Length == 0)"
                                SnapCount="_snaps.Length"
                                SnapIndex="_snapIndex"
                                SnapValue="@(_snaps.Length == 0 ? 0 : _snaps[Math.Clamp(_snapIndex, 0, _snaps.Length - 1)])"
