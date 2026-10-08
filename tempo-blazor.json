@@ -19299,7 +19299,7 @@
           "name": "OnDismissed",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\", \"outside\" or \"anchor-hidden\" (the anchor scrolled fully out of the viewport while focus sat inside the panel — hiding alone would keep swallowing keystrokes, so the panel closes and focus returns to the anchor since 2.9.1). Programmatic closes do not raise it."
+          "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\", \"outside\" or \"anchor-hidden\" (the anchor scrolled fully out of the viewport while focus sat inside the panel — the hidden panel would keep swallowing keys, so it is closed and focus returns to the anchor since 2.9.1). Programmatic closes do not raise it. A sheet raises it for Escape; Done, the backdrop click and the swipe close without a reason."
         },
         {
           "name": "Placement",
@@ -19319,6 +19319,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel."
+        },
+        {
+          "name": "SheetDoneEnabled",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the sheet header's Done action is enabled. A consumer mid-task can keep Done disabled until its input is complete — TmDateRangePicker disables it until BOTH dates are picked, so a half range can never close the sheet silently (Escape, the backdrop click and the swipe still close and keep the partial selection). Popover mode only (since 2.9.1)."
         },
         {
           "name": "Shift",

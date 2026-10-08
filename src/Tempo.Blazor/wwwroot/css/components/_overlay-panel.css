@@ -85,6 +85,15 @@
     background-color: var(--tm-color-surface-hover);
 }
 
+.tm-overlay-panel-sheet__done:disabled {
+    color: var(--tm-text-secondary);
+    cursor: default;
+}
+
+.tm-overlay-panel-sheet__done:disabled:hover {
+    background-color: transparent;
+}
+
 .tm-overlay-panel-sheet__done:focus-visible {
     box-shadow: var(--tm-focus-ring);
     outline: none;

@@ -58,6 +58,7 @@
                     AriaLabelledBy="@(string.IsNullOrEmpty(Label) ? null : _labelId)"
                     AriaLabel="@(string.IsNullOrEmpty(Label) ? (Placeholder ?? Loc["TmDateRangePicker_From"]) : null)"
                     MobilePresentation="PanelPresentation.Auto"
+                    SheetDoneEnabled="@(Value.Start.HasValue && Value.End.HasValue)"
                     Class="tm-date-range-popup">
         @if (ShowPresets && EffectivePresets.Count > 0)
         {

@@ -61,6 +61,7 @@
                 }
                 <button type="button"
                         class="tm-overlay-panel-sheet__done"
+                        disabled="@(!SheetDoneEnabled)"
                         @onclick="CloseSheetAsync">
                     @Loc["Tm_Done"]
                 </button>
@@ -203,6 +204,14 @@
     /// reason.
     /// </summary>
     [Parameter] public EventCallback<string> OnDismissed { get; set; }
+
+    /// <summary>
+    /// Whether the sheet header's Done action is enabled. Default true. A consumer mid-task can
+    /// keep Done disabled until its input is complete — TmDateRangePicker disables it until BOTH
+    /// dates are picked, so a half range can never close the sheet silently (Escape, the backdrop
+    /// click and the swipe still close and keep the partial selection, as on the popover).
+    /// </summary>
+    [Parameter] public bool SheetDoneEnabled { get; set; } = true;
 
     /// <summary>ARIA role of the panel — typically <c>menu</c>, <c>listbox</c>, <c>dialog</c> or <c>tooltip</c>.</summary>
     [Parameter] public string? Role { get; set; }

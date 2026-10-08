@@ -55,6 +55,18 @@
   border-bottom: 1px solid var(--tm-border-color);
 }
 
+/* T8 — the sheet presentation: two months side by side overflow a 390px sheet body (612px
+   scrollWidth), so they stack vertically and scroll; the sheet header Done is the single close
+   action, and the popover's own footer Done would double it. */
+.tm-overlay-panel-sheet .tm-date-range-calendars {
+  flex-direction: column;
+  gap: var(--tm-space-3);
+}
+
+.tm-overlay-panel-sheet .tm-date-range-footer {
+  display: none;
+}
+
 .tm-date-range-preset-btn {
   padding: var(--tm-space-1) var(--tm-space-3);
   border: 1px solid var(--tm-border-color);
