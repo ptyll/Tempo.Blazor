@@ -1142,6 +1142,22 @@
     justify-content: center;
 }
 
+/* The promoted overlay root (F3 review round 3, V2: the import dialog carries popover="manual")
+   must not keep the UA [popover] paint: width/height fit-content and margin:auto would shrink
+   the full-screen scrim to the dialog box and centre it. Scoped styles beat the UA sheet, so a
+   plain rule suffices here (the shared :where() reset pattern is for the unscoped bundle). */
+.tm-gantt__dialog-overlay {
+    margin: 0;
+    border: none;
+    padding: 0;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    color: inherit;
+    overflow: visible;
+}
+
 .tm-gantt__dialog {
     background: var(--tm-surface, #ffffff);
     border-radius: var(--tm-radius-lg, 0.5rem);

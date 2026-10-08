@@ -121,6 +121,24 @@
   position: fixed; inset: 0; z-index: var(--tm-z-overlay, 1060);
   display: flex; align-items: center; justify-content: center; outline: none;
 }
+
+/* The promoted scope root (F3 review round 3, V2: popover="manual") resets the UA [popover]
+   defaults at zero specificity, mirroring :where(.tm-modal-overlay). The own declarations above
+   win where they exist (position/inset); the reset fills margin:auto, width/height:fit-content,
+   the border, the Canvas background and CanvasText color. */
+:where(.tm-lightbox) {
+  inset: auto;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
 .tm-lightbox-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); }
 .tm-lightbox-content {
   position: relative; z-index: 1;

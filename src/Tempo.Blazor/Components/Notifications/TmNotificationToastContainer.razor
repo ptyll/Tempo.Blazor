@@ -1,9 +1,15 @@
 @namespace Tempo.Blazor.Components.Notifications
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Icons
-@implements IDisposable
+@using Tempo.Blazor.Helpers
+@using Microsoft.AspNetCore.Components.Web
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
-<div class="tm-notification-toast-container">
+@* Round 3 (V2): the container is pinned-on-top status UI like TmToastContainer — its root carries
+   popover="manual", it registers in the pinned-on-top registry while it holds toasts, and it
+   re-raises on every push, so no modal surface opened before or after it can cover it. *@
+<div class="tm-notification-toast-container" popover="manual" data-tm-inert-exempt @ref="_root">
     @foreach (var toast in _toasts)
     {
         <div class="tm-notification-toast"
@@ -40,6 +46,12 @@
     private readonly List<ToastModel> _toasts = new();
     private readonly Queue<ToastModel> _queue = new();
     private int _lastUnreadCount;
+    private ElementReference _root;
+    private TopLayerInterop? _topLayer;
+    private string? _lastNewestId;
+    private bool _promoted;
+    private bool _pinned;
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,6 +115,44 @@
         StateHasChanged();
     }
 
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Pinned-on-top status UI (V2): promote on the first toast, re-raise on every push (keyed
+        // on the newest id — the visible count can stay unchanged at the cap), demote and unpin
+        // when the last toast leaves. Mirrors TmToastContainer.
+        if (_toasts.Count > 0)
+        {
+            var newestId = _toasts[^1].Id;
+            if (!_promoted || newestId != _lastNewestId)
+            {
+                _topLayer ??= new TopLayerInterop(JS);
+                if (!_pinned)
+                {
+                    _pinned = true;
+                    await _topLayer.PinAsync(_root);
+                }
+                await _topLayer.RaiseAsync(_root);
+                _promoted = true;
+                _lastNewestId = newestId;
+            }
+        }
+        else if (_promoted)
+        {
+            _promoted = false;
+            _lastNewestId = null;
+            if (_topLayer is not null)
+            {
+                await _topLayer.DemoteAsync(_root);
+                if (_pinned)
+                {
+                    _pinned = false;
+                    await _topLayer.UnpinAsync(_root);
+                }
+            }
+        }
+    }
+
     private async Task OnToastClickAsync(ToastModel toast)
     {
         RemoveToast(toast.Id);
@@ -120,9 +170,20 @@
         _ => IconNames.Bell
     };
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
         NotificationService.OnChanged -= OnNotificationsChanged;
+        if (_topLayer is not null)
+        {
+            if (_pinned)
+            {
+                _pinned = false;
+                await _topLayer.UnpinAsync(_root);
+            }
+            await _topLayer.DisposeAsync();
+        }
     }
 
     private class ToastModel

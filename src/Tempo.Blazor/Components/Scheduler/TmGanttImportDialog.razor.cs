@@ -27,8 +27,11 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private bool _isImporting;
     private ElementReference _fileInputWrap;
     private ElementReference _triggerWrapRef;
+    private ElementReference _overlay;
     private IJSObjectReference? _filePickerModule;
     private bool _wasOpen;
+    private bool _promoted;
+    private TopLayerInterop? _topLayer;
     private TmFocusScope? _scope;
     private readonly string _titleId = $"tm-gantt-import-title-{Guid.NewGuid():N}";
 
@@ -77,6 +80,20 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             await _filePickerModule.InvokeVoidAsync(
                 "registerFilePickerTrigger", _triggerWrapRef, _fileInputWrap);
         }
+
+        // Round 3 (V2): the overlay root is a modal viewport-anchored surface — promote it right
+        // after the render that inserted it. Closing unmounts the subtree; a detached top-layer
+        // element is hidden by the browser automatically, so no demote is needed.
+        if (IsOpen && !_promoted)
+        {
+            _promoted = true;
+            _topLayer ??= new TopLayerInterop(JS);
+            await _topLayer.PromoteAsync(_overlay);
+        }
+        else if (!IsOpen && _promoted)
+        {
+            _promoted = false;
+        }
     }
 
     private void OnFileChangedAsync(InputFileChangeEventArgs e)
@@ -98,6 +115,10 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             if (_filePickerModule is not null)
             {
                 await _filePickerModule.DisposeAsync();
+            }
+            if (_topLayer is not null)
+            {
+                await _topLayer.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)

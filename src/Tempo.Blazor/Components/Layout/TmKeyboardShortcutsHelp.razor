@@ -1,10 +1,17 @@
 @namespace Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Models
+@using Microsoft.AspNetCore.Components.Web
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
 @if (IsVisible)
 {
-    <div class="tm-keyboard-shortcuts-overlay @Class" data-tm-backdrop @onclick="OnClose">
+    @* Round 3 (V2): a viewport-fixed overlay with a focus trap is a modal viewport-anchored
+       surface — its root carries popover="manual" and promotes after the opening render, like
+       TmModal, so a sheet or dialog opened before it can never cover it. *@
+    <div class="tm-keyboard-shortcuts-overlay @Class" popover="manual" data-tm-backdrop @ref="_root" @onclick="OnClose">
         <TmFocusScope Active="true"
                       Class="tm-keyboard-shortcuts-modal"
                       CloseOnEscape="true"
@@ -62,4 +69,34 @@
     [Parameter] public string? Class { get; set; }
 
     private string DisplayTitle => Title ?? Loc["TmKeyboardShortcutsHelp_Title"];
+
+    private ElementReference _root;
+    private TopLayerInterop? _topLayer;
+    private bool _promoted;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The overlay unmounts when IsVisible goes false; a detached top-layer element is hidden
+        // by the browser automatically, so closing needs no demote — promote only.
+        if (IsVisible && !_promoted)
+        {
+            _promoted = true;
+            _topLayer ??= new TopLayerInterop(JS);
+            await _topLayer.PromoteAsync(_root);
+        }
+        else if (!IsVisible && _promoted)
+        {
+            _promoted = false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_topLayer is not null)
+        {
+            await _topLayer.DisposeAsync();
+        }
+    }
 }

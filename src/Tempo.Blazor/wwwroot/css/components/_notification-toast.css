@@ -12,6 +12,23 @@
     max-width: 100vw;
 }
 
+/* The container rides the browser top layer (F3 review round 3, V2: popover="manual", pinned on
+   top like TmToastContainer), so every UA [popover] default is reset at zero specificity,
+   mirroring :where(.tm-toast-container). */
+:where(.tm-notification-toast-container) {
+    inset: auto;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+}
+
 .tm-notification-toast {
     pointer-events: auto;
     width: 320px;

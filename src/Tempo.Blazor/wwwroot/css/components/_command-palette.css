@@ -9,6 +9,24 @@
   padding-top: 5rem;
   animation: tm-fade-in var(--tm-transition-fast);
 }
+
+/* The promoted backdrop (F3 review round 3, V2: popover="manual") resets every UA [popover]
+   default at zero specificity, mirroring :where(.tm-modal-overlay). The own declarations above
+   win where they exist; the reset fills what the UA would otherwise inject: margin:auto,
+   width/height:fit-content, a solid border, padding, the Canvas background and CanvasText color. */
+:where(.tm-command-palette-backdrop) {
+  inset: auto;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
 .tm-command-palette {
   width: min(40rem, calc(100vw - 2rem));
   background-color: var(--tm-bg-surface);

@@ -1,10 +1,20 @@
 @namespace Tempo.Blazor.Components.Gallery
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Helpers
+@using Microsoft.AspNetCore.Components.Web
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
 @if (IsOpen)
 {
-    <TmFocusScope Active="true"
+    @* Round 3 (V2): the lightbox is a modal viewport-anchored surface. The TmFocusScope root is
+       the promoted element (mirroring TmDrawer): popover="manual" rides the scope's root via
+       AdditionalAttributes and the scope element is promoted after the opening render. *@
+    <TmFocusScope @ref="_scope"
                   Class="tm-lightbox"
+                  popover="manual"
+                  Active="true"
                   AriaLabel="@Loc["TmLightbox_Aria"]"
                   CloseOnEscape="true"
                   OnEscape="OnClose">
@@ -99,6 +109,34 @@
 
     /// <summary>Fires when the delete button is clicked.</summary>
     [Parameter] public EventCallback OnDelete { get; set; }
+
+    private TmFocusScope? _scope;
+    private TopLayerInterop? _topLayer;
+    private bool _promoted;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The scope root is the promoted element. Closing unmounts the subtree; a detached
+        // top-layer element is hidden by the browser automatically — promote only.
+        if (IsOpen && !_promoted && _scope is not null)
+        {
+            _promoted = true;
+            _topLayer ??= new TopLayerInterop(JS);
+            await _topLayer.PromoteAsync(_scope.Element);
+        }
+        else if (!IsOpen && _promoted)
+        {
+            _promoted = false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_scope is not null) await _scope.DisposeAsync();
+        if (_topLayer is not null) await _topLayer.DisposeAsync();
+    }
 
     private async Task HandleKeyAsync(KeyboardEventArgs e)
     {

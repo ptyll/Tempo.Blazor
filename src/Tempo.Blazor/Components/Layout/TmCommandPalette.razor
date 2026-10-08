@@ -1,13 +1,17 @@
 @namespace Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Helpers
 @using Microsoft.AspNetCore.Components.Web
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
 @if (IsOpen)
 {
-    <div class="tm-command-palette-backdrop @Class" data-tm-backdrop @attributes="AdditionalAttributes">
+    @* U1/round 3: the palette is a modal viewport-anchored surface — its backdrop root carries
+       popover="manual" and is promoted after the opening render, so opened from inside a promoted
+       drawer or sheet it paints above it instead of staying focused but invisible underneath. *@
+    <div class="tm-command-palette-backdrop @Class" popover="manual" data-tm-backdrop @ref="_backdrop" @attributes="AdditionalAttributes">
         <TmFocusScope @ref="_scope"
                       Class="tm-command-palette"
                       Active="true"
@@ -63,6 +67,9 @@
     private int _highlightedIndex;
 
     private TmFocusScope? _scope;
+    private ElementReference _backdrop;
+    private TopLayerInterop? _topLayer;
+    private bool _promoted;
     private bool _wasOpen;
 
     /// <summary>Whether the command palette is visible.</summary>
@@ -161,8 +168,27 @@
     private Task CloseAsync() => IsOpenChanged.InvokeAsync(false);
 
     /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // U1: promote the backdrop right after the render that inserted it. Closing unmounts the
+        // whole subtree, and a detached top-layer element is hidden by the browser automatically —
+        // no demote call is needed.
+        if (IsOpen && !_promoted)
+        {
+            _promoted = true;
+            _topLayer ??= new TopLayerInterop(JS);
+            await _topLayer.PromoteAsync(_backdrop);
+        }
+        else if (!IsOpen && _promoted)
+        {
+            _promoted = false;
+        }
+    }
+
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_scope is not null) await _scope.DisposeAsync();
+        if (_topLayer is not null) await _topLayer.DisposeAsync();
     }
 }
