@@ -2331,6 +2331,7 @@
   "TmDemo_InlineSheetBody": "The canvas behind this sheet stays clickable.",
   "TmDemo_ToggleFocusScope": "Toggle focus scope",
   "TmDemo_SheetPushToast": "Push toast",
+  "TmDemo_OpenPalette": "Open Command Palette",
   "TmDemo_FocusScopeLabel": "Standalone focus scope",
   "TmDemo_FocusScopeInput": "Name",
   "TmDemo_ToggleInline": "Inline layout",

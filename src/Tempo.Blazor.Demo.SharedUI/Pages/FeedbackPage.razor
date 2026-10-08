@@ -592,8 +592,14 @@
         <p class="text-sm text-slate-600 dark:text-slate-400">This is a right-side drawer panel. It slides in from the right edge.</p>
         <TmTextInput data-testid="right-drawer-field" Label="@Loc["TmDemo_FocusScopeInput"]" />
         <TmAlert Severity="AlertSeverity.Info">Click the overlay or press Escape to close.</TmAlert>
+        @* Round-3 stacking probe: a modal surface (the command palette) opened from inside a
+           promoted drawer must promote after it and paint above it. *@
+        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="drawer-open-palette"
+                  OnClick="@(() => { _paletteOpen = true; StateHasChanged(); })">@Loc["TmDemo_OpenPalette"]</TmButton>
     </div>
 </TmDrawer>
+
+<TmCommandPalette @bind-IsOpen="_paletteOpen" Actions="_paletteActions" />
 
 <TmDrawer IsOpen="@_drawerLeftOpen" IsOpenChanged="@(v => { _drawerLeftOpen = v; StateHasChanged(); })"
           Title="Navigation" Position="DrawerPosition.Left" Width="320px">
@@ -992,6 +998,20 @@
 </section>
 
 @code {
+    private bool _paletteOpen;
+    private List<Tempo.Blazor.Interfaces.ICommandPaletteAction> _paletteActions = new();
+
+    protected override void OnInitialized()
+    {
+        // Field initializers cannot reference the injected Toast service — build the probe
+        // actions here.
+        _paletteActions = new List<Tempo.Blazor.Interfaces.ICommandPaletteAction>
+        {
+            new PaletteAction("toast", "Show a toast", "Push a toast through the shared ToastService", "bell",
+                () => { Toast.ShowInfo("Palette action"); return Task.CompletedTask; }),
+        };
+    }
+
     private bool _showInternal;
     private int _activeStep;
     private string _stepperSize = "Medium";
@@ -1123,5 +1143,26 @@
     {
         await Task.Delay(800); // simulate async save
         Toast.ShowSuccess("Auto-saved successfully.");
+    }
+
+    // Minimal ICommandPaletteAction for the drawer-stacking probe palette.
+    private class PaletteAction : Tempo.Blazor.Interfaces.ICommandPaletteAction
+    {
+        public string Id { get; }
+        public string Title { get; }
+        public string? Description { get; }
+        public string? Icon { get; }
+        public string? Shortcut => null;
+        public string? Category => null;
+        public Func<Task> Execute { get; }
+
+        public PaletteAction(string id, string title, string? description, string? icon, Func<Task> execute)
+        {
+            Id = id;
+            Title = title;
+            Description = description;
+            Icon = icon;
+            Execute = execute;
+        }
     }
 }
