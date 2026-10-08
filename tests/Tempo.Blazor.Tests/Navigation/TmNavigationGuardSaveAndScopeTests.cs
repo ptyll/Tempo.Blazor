@@ -333,7 +333,11 @@ public class TmNavigationGuardSaveAndScopeTests : LocalizationTestBase
         cut.WaitForAssertion(() => cut.FindAll(".tm-dialog-footer button")
             .Should().OnlyContain(b => b.HasAttribute("disabled"), "the save must be in flight"));
 
-        await cut.InvokeAsync(() => cut.Find(".tm-dialog").KeyUp(new KeyboardEventArgs { Key = "Escape" }));
+        // Escape arrives the way the merged F2 dialog delivers it: the focus-trap module dispatches
+        // at the document level and calls back into the TmFocusScope the dialog renders — there is no
+        // key handler on the .tm-dialog element itself. The guard pins CloseOnEscape="!_saving", so
+        // the scope swallows the Escape while the save is in flight.
+        await cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         cancelled.Should().Be(0,
             "Escape during the save must be ignored, not mapped to Stay — the save still owns the dialog");

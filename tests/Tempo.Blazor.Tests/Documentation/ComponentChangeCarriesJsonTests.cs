@@ -44,11 +44,27 @@ public sealed class ComponentChangeCarriesJsonTests
     /// <item><c>3980af1d</c> — the TDD red commit added <c>LayoutContent</c>/<c>IsViewportScope</c>
     ///   to <c>TmLayoutObserver</c>; the JSON documentation landed one commit later in
     ///   <c>ca00f94d</c>. The docs are current; the same-commit contract was still broken.</item>
+    /// <item><c>631d92f8</c> — an F2-phase overlay commit (authored on the pre-merge main before
+    ///   this N328 gate existed there) added <c>TmViewportProbe</c>'s
+    ///   <c>[Parameter] OnMeasured</c> without a <c>JsonDocumentation/**</c> path; the probe
+    ///   component was removed entirely by later F2 work, so no documentation gap ships. The
+    ///   merge that brought the gate in is the first time the commit could be measured.</item>
+    /// <item><c>80a3221a</c>, <c>bd49e089</c>, <c>2dcaea5d</c>, <c>5f5f2879</c> — F2-phase
+    ///   bottom-sheet/focus-scope commits, likewise authored before the N328 gate existed on
+    ///   main and first measured by the merge that brought the gate in. They opened
+    ///   <c>TmFocusScope</c>/<c>TmSheetHandle</c>/<c>TmDrawer</c> API surface whose
+    ///   <c>JsonDocumentation/**</c> overlays landed in later commits of the same window
+    ///   (both components are documented today; the same-commit contract was the broken part).</item>
     /// </list>
     /// </summary>
     private static readonly HashSet<string> GrandfatheredViolations = new(StringComparer.Ordinal)
     {
         "3980af1d127c9c7c43dd84fb4f44c6164ee9a1c2",
+        "631d92f86e59d503f02efa82c9886ebfb9fc6e27",
+        "80a3221a7eba44cfce5ec3973afab4bf47b17480",
+        "bd49e08990a77702a31019c93101f5ad6c7d8d26",
+        "2dcaea5d90e2a28a42665197ee9d00b9402499b0",
+        "5f5f2879117fb258ad0ef6e98971bbfe1f361a62",
     };
 
     /// <summary>
