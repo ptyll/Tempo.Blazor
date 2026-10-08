@@ -214,12 +214,26 @@ public sealed class OverlayRound3FixE2ETests : WasmTestBase
     {
         var page = await OpenPageAsync("/feedback", width, height, touch);
 
-        await page.Locator("[data-testid='open-bottom-sheet']").TapAsync();
+        if (touch)
+        {
+            await page.Locator("[data-testid='open-bottom-sheet']").TapAsync();
+        }
+        else
+        {
+            await page.Locator("[data-testid='open-bottom-sheet']").ClickAsync();
+        }
         await page.Locator(".tm-drawer--bottom").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForTimeoutAsync(600);
 
-        await page.Locator("[data-testid='sheet-push-toast']").TapAsync();
+        if (touch)
+        {
+            await page.Locator("[data-testid='sheet-push-toast']").TapAsync();
+        }
+        else
+        {
+            await page.Locator("[data-testid='sheet-push-toast']").ClickAsync();
+        }
         var toastContainer = page.Locator(".tm-toast-container:popover-open");
         await toastContainer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForTimeoutAsync(600);
