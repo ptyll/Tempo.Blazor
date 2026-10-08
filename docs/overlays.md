@@ -41,6 +41,13 @@ lost. Those consumers stay on the `Popover` default — enforced by a source swe
 `TmOverlayPanelDefaultPresentationTests`. If a combobox ever wants a sheet, it needs a
 search-in-sheet design: the input moves into the sheet header and is autofocused there.
 
+> **F4 note — editor and formatting-toolbar overflow menus.** An overflow menu opened from an
+> editor or formatting toolbar counts as "the anchor keeps focus/selection": the user's text
+> selection lives in the anchor surface and a modal sheet would move focus to the sheet header,
+> collapsing the selection and any half-typed formatting command. Such menus stay on the
+> `Popover` presentation — or, if a host genuinely needs the sheet, they must restore the
+> selection when the sheet closes. Do not opt them into `Auto` in the F4 pass.
+
 In sheet mode the panel **composes `TmDrawer Position=Bottom`** (content height, `Modal`) — it
 never copies sheet, gesture or focus logic. The sheet header shows `Title` (fall back:
 `AriaLabel`, then a localized generic "Menu") and a **Done** action (`Tm_Done`) that closes
@@ -116,3 +123,18 @@ editor) keeps focus.
 7. Viewport-anchored overlays live in the browser **top layer** (the popover panel and the
    promoted sheet root); nothing may recreate that guarantee with a z-index arms race in
    package CSS.
+8. **Top-layer order equals open order.** Every modal viewport-anchored overlay root is itself
+   top-layer: a modal `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the
+   `TmToastContainer` carry `popover="manual"` and promote themselves at open through the shared
+   promote helper (`TopLayerInterop` → `tm-sheet.js`). A surface opened from inside one (a
+   dialog from a sheet, a toast from a dialog) promotes *after* it, so it always paints above —
+   DOM stays in place and the trap/inert/Escape order are untouched. A host cannot cover an
+   open modal surface with a z-index band anymore; only another promoted surface can. Toasts
+   re-raise the container on every push (`raise` = hidePopover + showPopover in one step), so a
+   toast pushed while a sheet is open lands above it. Tooltips stay z-index painted *inside*
+   their own surface (`TmTooltip`'s content is a DOM child of its trigger): a tooltip inside a
+   promoted surface paints with it — no extra promotion — and a tooltip on an element behind a
+   modal is inert with its trigger, which is the desired behaviour. Every promoted root resets
+   the UA `[popover]` defaults at zero specificity (`:where(...)` — background transparent,
+   color inherit, overflow visible, margin/border/padding zeroed), so the page behind stays
+   dimmed through the surface's own scrim and themed colours inherit into the body.
