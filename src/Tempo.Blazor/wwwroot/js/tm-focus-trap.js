@@ -109,32 +109,58 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     const active = document.activeElement;
     const alreadyInside = !!active && active !== element && element.contains(active);
     if (modal && !alreadyInside) {
-        const list = visibleFocusable(element);
-        const initialId = element.dataset ? element.dataset.initialFocus : null;
-        const byId = initialId && document.getElementById ? document.getElementById(initialId) : null;
-        // A component that renders only a data-tm-id marker (no real id) is still resolvable.
-        const byData = !byId && initialId && document.querySelector
-            ? document.querySelector(`[data-tm-id="${escapeAttr(initialId)}"]`)
-            : null;
-        // A selector (data-initial-focus-selector) scopes the search to THIS trap: a menu/listbox
-        // sheet wants the first menuitem/option, not the first focusable (the header Done). It
-        // runs only when no explicit target or id claimed the choice, and only on traps whose
-        // environment implements querySelector (the node-test stubs do not). An invalid consumer
-        // selector must not throw AFTER the inert/scroll lock landed — it degrades to the first
-        // focusable exactly like a selector that matches nothing.
-        const selector = element.dataset ? element.dataset.initialFocusSelector : null;
-        let bySelector = null;
-        if (!initialTarget && !byId && !byData && selector && typeof element.querySelector === 'function') {
-            try {
-                bySelector = element.querySelector(selector);
+        const focusInitial = () => {
+            const list = visibleFocusable(element);
+            const initialId = element.dataset ? element.dataset.initialFocus : null;
+            const byId = initialId && document.getElementById ? document.getElementById(initialId) : null;
+            // A component that renders only a data-tm-id marker (no real id) is still resolvable.
+            const byData = !byId && initialId && document.querySelector
+                ? document.querySelector(`[data-tm-id="${escapeAttr(initialId)}"]`)
+                : null;
+            // A selector (data-initial-focus-selector) scopes the search to THIS trap: a menu/listbox
+            // sheet wants the first menuitem/option, not the first focusable (the header Done). It
+            // runs only when no explicit target or id claimed the choice, and only on traps whose
+            // environment implements querySelector (the node-test stubs do not). An invalid consumer
+            // selector must not throw AFTER the inert/scroll lock landed — it degrades to the first
+            // focusable exactly like a selector that matches nothing.
+            const selector = element.dataset ? element.dataset.initialFocusSelector : null;
+            let bySelector = null;
+            if (!initialTarget && !byId && !byData && selector && typeof element.querySelector === 'function') {
+                try {
+                    bySelector = element.querySelector(selector);
+                }
+                catch {
+                    bySelector = null;
+                }
             }
-            catch {
-                bySelector = null;
-            }
+            // An element reference wins over the id: the id is the fallback for a target that is not an
+            // element reference yet.
+            (initialTarget || byId || byData || bySelector || list[0] || element).focus();
+        };
+        focusInitial();
+
+        // UX review round 2 (m1): the move above can no-op — overlay.js parks a panel
+        // visibility:hidden while its anchor is still mid-scroll (a smooth scroll-behaviour), and
+        // a focus() on a hidden element is dropped. The trap would then hold focus nowhere while
+        // the page is inert. Retry the same resolution on the next two animation frames: the
+        // panel's first visible place() has run by then and the move lands. Stops early the
+        // moment focus is inside, after deactivation, and never starts where rAF does not exist
+        // (the node-test stubs).
+        const landed = () => {
+            const current = document.activeElement;
+            return !!current && (current === element || element.contains(current));
+        };
+        if (typeof requestAnimationFrame === 'function' && !landed()) {
+            const retry = (attemptsLeft) => {
+                if (!traps.has(id)) return;
+                if (landed()) return;
+                focusInitial();
+                if (attemptsLeft > 0) {
+                    requestAnimationFrame(() => retry(attemptsLeft - 1));
+                }
+            };
+            requestAnimationFrame(() => retry(1));
         }
-        // An element reference wins over the id: the id is the fallback for a target that is not an
-        // element reference yet.
-        (initialTarget || byId || byData || bySelector || list[0] || element).focus();
     }
 }
 

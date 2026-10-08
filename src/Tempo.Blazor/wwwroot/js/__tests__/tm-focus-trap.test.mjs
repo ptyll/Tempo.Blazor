@@ -322,6 +322,58 @@ test('an invalid consumer selector must not throw after the inert and scroll loc
         'the scroll lock landed (the throw would have escaped after it)');
 });
 
+test('initial focus retries on the next animation frames when the first move did not land', () => {
+    // UX r2 m1: a focus() on a visibility:hidden panel (anchor mid-scroll) is dropped. The stub
+    // focus() never moves document.activeElement, which models the same "move did not land"
+    // shape — the trap must schedule its two retries and re-run the resolution.
+    const body = element();
+    const scope = element(body);
+    const first = element(scope);
+    scope.querySelectorAll = () => [first];
+    const frames = [];
+    globalThis.requestAnimationFrame = (cb) => { frames.push(cb); return frames.length; };
+    try {
+        installDom(body);
+
+        activate(scope, 'scope', null, false, null, true);
+
+        assert.equal(first.focusCalls, 1, 'the immediate move runs');
+        assert.equal(frames.length, 1, 'one retry frame is scheduled');
+
+        frames.shift()(0);
+        assert.equal(first.focusCalls, 2, 'the first retry re-runs the resolution');
+        assert.equal(frames.length, 1, 'the second retry frame is scheduled');
+
+        frames.shift()(0);
+        assert.equal(first.focusCalls, 3);
+        assert.equal(frames.length, 0, 'the two-frame retry budget is exhausted');
+    }
+    finally {
+        delete globalThis.requestAnimationFrame;
+    }
+});
+
+test('the initial-focus retry stops early once focus landed', () => {
+    const body = element();
+    const scope = element(body);
+    const first = element(scope);
+    scope.querySelectorAll = () => [first];
+    first.focus = () => { document.activeElement = first; first.focusCalls++; };
+    const frames = [];
+    globalThis.requestAnimationFrame = (cb) => { frames.push(cb); return frames.length; };
+    try {
+        installDom(body);
+
+        activate(scope, 'scope', null, false, null, true);
+
+        assert.equal(first.focusCalls, 1);
+        assert.equal(frames.length, 0, 'no retry once the move landed');
+    }
+    finally {
+        delete globalThis.requestAnimationFrame;
+    }
+});
+
 test('a dialog declared in page content becomes reachable when it opens', () => {
     const body = element();
     const app = element(body);
