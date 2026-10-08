@@ -41,6 +41,8 @@
   <ItemGroup>
     <!-- One start-up rule for every Testcontainers SQL Server of the release gate (both assemblies). -->
     <Compile Include="..\Tempo.ReportServer.Api.Tests\MsSql\SqlServerContainerStart.cs" Link="SqlServerContainerStart.cs" />
+    <!-- CF19g — the ONE assembly-init file, linked (internal does not cross assemblies). -->
+    <Compile Include="..\Shared\TestAssemblyInit.cs" />
   </ItemGroup>
 
   <ItemGroup>

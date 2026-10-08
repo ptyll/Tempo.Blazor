@@ -31,9 +31,10 @@
                     Align="OverlayAlign.End"
                     Offset="8"
                     Role="dialog"
+                    AriaLabelledBy="@_titleId"
                     Class="tm-notification-bell__dropdown">
             <div class="tm-notification-bell__header">
-                <span class="tm-notification-bell__title">@Loc["TmNotificationBell_AriaLabel"]</span>
+                <span id="@_titleId" class="tm-notification-bell__title">@Loc["TmNotificationBell_AriaLabel"]</span>
                 <div class="tm-notification-bell__actions">
                     <button type="button"
                             class="tm-notification-bell__filter"
@@ -104,6 +105,8 @@
     private List<TmNotification> _notifications = new();
     private ElementReference _rootRef;
     private ElementReference _buttonRef;
+    // Per-instance id so the panel's aria-labelledby resolves to its visible title (N326).
+    private readonly string _titleId = $"tm-notification-bell-title-{Guid.NewGuid():n}";
 
     private int UnreadCount => _serviceUnreadCount;
 

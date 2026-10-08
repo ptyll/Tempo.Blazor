@@ -107,6 +107,31 @@ public class SourceFileLengthTests
             string.Join(" | ", stale));
     }
 
+    /// <summary>
+    /// CF19h — the sweep reads TRACKED files only: an untracked .cs in the repo tree (the
+    /// classic <c>artifacts/</c>/<c>TestResults/</c> drop-in) must not enter the enumeration.
+    /// A disk walk would count it and could red the suite on scratch output.
+    /// </summary>
+    [Fact]
+    public void TheSweep_IgnoresUntrackedFiles()
+    {
+        var root = ThemeCss.RepositoryRoot().FullName;
+        var probe = Path.Combine(root, "artifacts", $"cf19h-probe-{Guid.NewGuid():N}", "Oversized.cs");
+        Directory.CreateDirectory(Path.GetDirectoryName(probe)!);
+        try
+        {
+            File.WriteAllText(probe, string.Concat(Enumerable.Repeat("// oversized untracked probe\n", CeilingLines + 100)));
+
+            EnumerateSourceFiles().Should().NotContain(
+                path => path.Contains("cf19h-probe-", StringComparison.Ordinal),
+                "untracked files (artifacts/, TestResults/, scratch) must never reach the ceiling sweep (CF19h)");
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(probe)!, recursive: true);
+        }
+    }
+
     /// <summary>Population guard: the enumeration must actually see sources — a moved root reads nothing.</summary>
     [Fact]
     public void TheSweepReadsAMeaningfulSourcePopulation()
@@ -130,30 +155,39 @@ public class SourceFileLengthTests
     }
 
     /// <summary>
-    /// Every <c>*.cs</c>/<c>*.razor</c> under the repository root, repo-relative with '/' separators,
-    /// minus build outputs and the <c>src/Tempo.Blazor.Demo*</c> demo-app trees.
+    /// Every TRACKED <c>*.cs</c>/<c>*.razor</c> under the repository root, repo-relative with
+    /// '/' separators — <c>git ls-files</c>, not a disk walk, so uncommitted scratch output
+    /// (<c>artifacts/</c>, <c>TestResults/</c>, a stray editor backup) can never move the guard's
+    /// count (CF19h). A disk walk counted exactly such files and let an untracked drop-in red
+    /// the suite. Minus build outputs and the <c>src/Tempo.Blazor.Demo*</c> demo-app trees; the
+    /// obj/bin filters stay because a tracked generated file is still not product source.
+    /// The spec names <c>git ls-files '*.cs' '*.razor' '*.js' '*.css'</c> as the enumeration
+    /// call, but this sweep measures the .cs/.razor ceiling only (the frozen list is .cs/.razor
+    /// and may only shrink — widening to js/css would freeze ~20 already-oversized web assets).
     /// </summary>
     private static IEnumerable<string> EnumerateSourceFiles()
     {
         var root = ThemeCss.RepositoryRoot().FullName;
-        foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        var (exitCode, standardOutput, standardError) =
+            FullCloneFactAttribute.RunGit(root, "ls-files", "--", "*.cs", "*.razor");
+        exitCode.Should().Be(
+            0,
+            "git ls-files must succeed — the sweep counts tracked sources only (stderr: {0})",
+            standardError);
+
+        foreach (var relative in standardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
-            var relative = Path.GetRelativePath(root, file).Replace('\\', '/');
-            if (relative.Contains("/obj/", StringComparison.Ordinal)
-                || relative.Contains("/bin/", StringComparison.Ordinal)
-                || relative.StartsWith("obj/", StringComparison.Ordinal)
-                || relative.StartsWith("bin/", StringComparison.Ordinal)
-                || relative.StartsWith(".git/", StringComparison.Ordinal)
-                || relative.StartsWith("src/Tempo.Blazor.Demo", StringComparison.Ordinal))
+            var path = relative.Trim();
+            if (path.Contains("/obj/", StringComparison.Ordinal)
+                || path.Contains("/bin/", StringComparison.Ordinal)
+                || path.StartsWith("obj/", StringComparison.Ordinal)
+                || path.StartsWith("bin/", StringComparison.Ordinal)
+                || path.StartsWith("src/Tempo.Blazor.Demo", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            if (relative.EndsWith(".cs", StringComparison.Ordinal)
-                || relative.EndsWith(".razor", StringComparison.Ordinal))
-            {
-                yield return relative;
-            }
+            yield return path;
         }
     }
 }

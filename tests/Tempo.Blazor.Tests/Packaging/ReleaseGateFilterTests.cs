@@ -1390,6 +1390,196 @@ public sealed class ReleaseGateFilterTests
             .Where(line => line.Contains("dotnet test", StringComparison.Ordinal))
             .Where(line => !line.Contains("--filter", StringComparison.Ordinal))];
 
+    /// <summary>
+    /// N276 — every <c>dotnet test</c> step in the publish workflows sets
+    /// <c>TEMPO_REQUIRE_FEED=1</c>, the variable that turns a feed-guard skip into a failure.
+    /// <para>
+    /// WHY STEP-LEVEL REACH, NOT JUST JOB-LEVEL: the variable must reach every step that runs the
+    /// gate, and GitHub merges <c>env:</c> downward — a step is covered when its own
+    /// <c>env:</c>, its job's, or the workflow-level mapping carries the key, and uncovered
+    /// otherwise. Checking the STEP means a second test lane added later without the variable is
+    /// a red here, not a release run that silently skipped the provenance guard offline.
+    /// </para>
+    /// <para>
+    /// THE POPULATION IS ASSERTED, as everywhere in this class: a segmentation that found no
+    /// <c>dotnet test</c> step would report an empty offender list out of an empty list.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void EveryPublishTestStep_SetsTempoRequireFeed()
+    {
+        foreach (string relative in WorkflowRelativePaths)
+        {
+            IReadOnlyList<string> offenders =
+                TestStepsMissingRequireFeed(ReadWorkflowCode(relative), out int testSteps);
+
+            using (new AssertionScope())
+            {
+                testSteps.Should().BeGreaterThanOrEqualTo(
+                    2,
+                    $"{relative} must run the gate in at least the two test lanes; a smaller "
+                    + "population means the step segmentation lost the lane and the offender "
+                    + "list is silence, not evidence");
+
+                offenders.Should().BeEmpty(
+                    $"{relative} must set TEMPO_REQUIRE_FEED: \"1\" where every dotnet test step "
+                    + "can see it — in the step's own env:, or in the job- or workflow-level env: "
+                    + "GitHub merges into it. Without it an unreachable nuget.org feed skips the "
+                    + "provenance guard in the release lane, and a skip tallies as green evidence "
+                    + "that was never measured");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mutation over the require-feed guard, in the directions that matter: deleting the key from
+    /// one lane names exactly that step, a commented-out line exports nothing, and a job-level
+    /// env: that reaches both lanes is honoured — because GitHub really does merge it.
+    /// </summary>
+    [Fact]
+    public void TheRequireFeedGuard_DetectsItsLoss_AndHonoursInheritedEnv()
+    {
+        string healthy = ReadWorkflowCode(WorkflowRelativePaths[0]);
+
+        using (new AssertionScope())
+        {
+            TestStepsMissingRequireFeed(healthy, out _).Should().BeEmpty(
+                "the positive control: with the variable in place the guard has to be green, or "
+                + "the reds below say nothing");
+
+            string deleted = healthy.Replace(
+                "          TEMPO_REQUIRE_FEED: \"1\"\n", "", StringComparison.Ordinal);
+            deleted.Should().NotBe(healthy, "the mutation must actually change the text");
+            TestStepsMissingRequireFeed(deleted, out _).Should().NotBeEmpty(
+                "deleting the key from every step that had it must produce named offenders");
+
+            // A synthetic workflow with no env at all — the review-time shape of a workflow
+            // written from scratch — must report its test step, not an empty list.
+            const string synthetic =
+                "jobs:\n"
+                + "  gate:\n"
+                + "    steps:\n"
+                + "      - name: Test\n"
+                + "        run: dotnet test --filter \"x\"\n";
+            TestStepsMissingRequireFeed(synthetic, out int syntheticSteps).Should()
+                .BeEquivalentTo(
+                    ["gate/Test"],
+                    "a dotnet test step with no TEMPO_REQUIRE_FEED in reach is an offender — "
+                    + "the variable is what forbids the release lane from skipping the feed "
+                    + "guard offline");
+            syntheticSteps.Should().Be(1, "the synthetic workflow carries exactly one test step");
+
+            string commented = StripYamlComments(CommentOutLinesContaining(healthy, "TEMPO_REQUIRE_FEED"));
+            TestStepsMissingRequireFeed(commented, out _).Should().NotBeEmpty(
+                "a commented-out env line exports nothing — the 'delete the code, keep the "
+                + "prose' hole the sibling guards already name");
+
+            // The honest counter-arm: a job-level env: reaches every step of that job, so
+            // moving the variable there is a legitimate placement, not an offender.
+            string viaJobEnv = deleted.Replace(
+                "  build-and-test:\n",
+                "  build-and-test:\n    env:\n      TEMPO_REQUIRE_FEED: \"1\"\n",
+                StringComparison.Ordinal);
+            viaJobEnv.Should().NotBe(deleted, "the mutation must actually change the text");
+            TestStepsMissingRequireFeed(viaJobEnv, out _).Should().BeEmpty(
+                "a job-level env: merges into every step of that job — refusing it would be a "
+                + "red nobody could fix without duplicating the variable per step");
+        }
+    }
+
+    /// <summary>
+    /// The assignment spelling of <c>TEMPO_REQUIRE_FEED</c> inside an <c>env:</c> block — a whole
+    /// line whose key is exactly <c>TEMPO_REQUIRE_FEED</c> and whose value is exactly
+    /// <c>1</c>, optionally quoted. Any other value is reported as NOT SET — the fail-closed
+    /// reading, same as <see cref="WaitBudgetIsSetHere"/>.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex RequireFeedIsSetHere = new(
+        @"^[ \t]*TEMPO_REQUIRE_FEED[ \t]*:[ \t]*(?<q>[""']?)1\k<q>[ \t]*$",
+        System.Text.RegularExpressions.RegexOptions.Multiline);
+
+    /// <summary>
+    /// The job body split into its steps. A step begins at <c>      - </c> (six spaces, then the
+    /// list dash); inside <c>run: |</c> block scalars the script content sits at a deeper indent,
+    /// so a six-space dash is always a real step boundary in these workflows.
+    /// </summary>
+    internal static IReadOnlyList<(string Name, string Body)> StepSegments(string jobBody)
+    {
+        var starts = System.Text.RegularExpressions.Regex
+            .Matches(jobBody, @"^      -[ \t]",
+                System.Text.RegularExpressions.RegexOptions.Multiline)
+            .ToList();
+
+        List<(string, string)> segments = [];
+        for (int index = 0; index < starts.Count; index++)
+        {
+            int from = starts[index].Index;
+            int to = index + 1 < starts.Count ? starts[index + 1].Index : jobBody.Length;
+            string body = jobBody[from..to];
+            var name = System.Text.RegularExpressions.Regex.Match(
+                body, @"^      -[ \t]+name:[ \t]*(?<name>.+?)[ \t]*$",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+            segments.Add((name.Success ? name.Groups["name"].Value : $"#{index}", body));
+        }
+
+        return segments;
+    }
+
+    /// <summary>
+    /// The body of a step-level <c>env:</c> mapping inside a step segment — eight-space key,
+    /// block ends at the next line with eight or fewer leading spaces. Mirrors
+    /// <see cref="JobLevelEnvBlock"/> one indent deeper.
+    /// </summary>
+    internal static string StepLevelEnvBlock(string stepBody)
+    {
+        var envKey = System.Text.RegularExpressions.Regex.Match(stepBody, @"^        env:[ \t]*$",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        if (!envKey.Success)
+        {
+            return string.Empty;
+        }
+
+        string tail = stepBody[(envKey.Index + envKey.Length)..];
+        var nextKey = System.Text.RegularExpressions.Regex.Match(tail, @"^ {0,8}\S",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        return nextKey.Success ? tail[..nextKey.Index] : tail;
+    }
+
+    /// <summary>
+    /// Steps that run <c>dotnet test</c> with no <c>TEMPO_REQUIRE_FEED: "1"</c> in reach —
+    /// reported as <c>jobName/stepName</c>. A step is covered by its own env:, the job's env:,
+    /// or the workflow-level env:, in that order of precedence — the same merge GitHub performs.
+    /// </summary>
+    internal static IReadOnlyList<string> TestStepsMissingRequireFeed(
+        string workflowCode, out int testSteps)
+    {
+        bool feedAboveEveryJob = RequireFeedIsSetHere.IsMatch(WorkflowLevelEnvBlock(workflowCode));
+        List<string> offenders = [];
+        testSteps = 0;
+
+        foreach ((string jobName, string jobBody) in JobSegments(workflowCode))
+        {
+            bool feedAboveThisJob =
+                feedAboveEveryJob || RequireFeedIsSetHere.IsMatch(JobLevelEnvBlock(jobBody));
+
+            foreach ((string stepName, string stepBody) in StepSegments(jobBody))
+            {
+                if (!stepBody.Contains("dotnet test", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                testSteps++;
+                if (!feedAboveThisJob && !RequireFeedIsSetHere.IsMatch(StepLevelEnvBlock(stepBody)))
+                {
+                    offenders.Add($"{jobName}/{stepName}");
+                }
+            }
+        }
+
+        return offenders;
+    }
+
     internal static string ReadRepoFile(string relativePath)
     {
         string root = FindRepoRoot();

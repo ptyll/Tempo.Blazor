@@ -2,7 +2,7 @@
   "itemName": "TmMultiColumnComboBox",
   "kind": "Component",
   "category": "Inputs",
-  "description": "A combo box that displays a multi-column grid in its dropdown for rich item selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+  "description": "A combo box that displays a multi-column grid in its dropdown for rich item selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. The dropdown's stylesheet min-width (320px) can exceed a narrow trigger: MatchAnchorWidth writes the anchor width but placement uses the rendered width, so the panel stays inside the viewport even at the right edge.",
   "packageId": "Tempo.Blazor",
   "namespace": "Tempo.Blazor.Components.Inputs",
   "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmMultiColumnComboBox.razor",

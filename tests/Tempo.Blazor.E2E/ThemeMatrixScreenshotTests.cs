@@ -126,8 +126,11 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
         var page = await OpenAsync("/modal-dialog", "[data-testid='open-basic-modal']", dark: false, indigo: false, 1440, 900);
         // The switcher persists the culture and force-reloads; the host reapplies it before the
         // renderer captures its context, which is what makes the dialog's buttons come back translated.
-        await page.RunAndWaitForNavigationAsync(
-            async () => await page.Locator("[data-testid='language-switcher-cs']").ClickAsync());
+        await Task.WhenAll(
+            page.WaitForRequestAsync(
+                request => request.IsNavigationRequest,
+                new PageWaitForRequestOptions { Timeout = 30000 }),
+            page.Locator("[data-testid='language-switcher-cs']").ClickAsync());
         await page.WaitForFunctionAsync(
             "() => document.body !== null && document.body.hasAttribute('data-blazor-ready')",
             null, new PageWaitForFunctionOptions { Timeout = 30000 });

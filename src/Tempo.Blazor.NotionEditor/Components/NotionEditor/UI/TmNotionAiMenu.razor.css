@@ -1,24 +1,14 @@
-.tm-notion-ai {
-    position: fixed;
-    z-index: var(--tm-z-popover, 1030);
-    width: min(28rem, calc(100vw - var(--tm-space-4)));
-    max-height: calc(100vh - var(--tm-space-6));
-    overflow-y: auto;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-3);
-    padding: var(--tm-space-3);
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-}
+/* CF18-7: the surface is a TmOverlayPanel — the .tm-notion-ai root rules moved to the
+   global _notion-floating-menus.css (the panel element carries TmOverlayPanel's scope, not
+   ours). Own position/z-index and the fixed-position mobile media query are gone:
+   overlay.js + the browser top layer handle placement and viewport clamping. */
 
-.tm-notion-ai--panel {
-    left: auto;
-    width: min(32rem, calc(100vw - var(--tm-space-4)));
+/* Virtual anchor — zero-size pin at the page top-right the panel positions against. */
+.tm-notion-ai__anchor {
+    position: fixed;
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
 .tm-notion-ai__header,
@@ -232,11 +222,6 @@
     }
 }
 
-@media (max-width: 48rem) {
-    .tm-notion-ai,
-    .tm-notion-ai--panel {
-        inset: auto var(--tm-space-2) var(--tm-space-2) var(--tm-space-2);
-        width: auto;
-        max-height: calc(100vh - var(--tm-space-4));
-    }
-}
+/* The old @media 48rem full-bleed dock targeted the fixed-position element — overlay.js
+   owns top/left now and shift/clamp already keeps the min(28rem, 100vw−…) panel inside
+   narrow viewports, so no mobile override is needed here. */

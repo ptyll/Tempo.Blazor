@@ -28,8 +28,64 @@ public class InteractiveAutoTests : InteractiveAutoTestBase
     }
 
     [TestMethod]
-    [Description("Verify WASM boots and hydrates the page")]
-    public async Task WasmBoot_HydratesPage()
+    [Description("CF18-4: prove the interactive runtime is actually WebAssembly, not just any runtime")]
+    public async Task WasmBoot_RendersOnWebAssemblyRenderer()
+    {
+        var page = await CreatePageAsync();
+
+        // data-blazor-ready proves AN interactive runtime rendered; it cannot say WHICH one —
+        // Server-interactive sets it too. The demo layout stamps data-render-mode from
+        // RendererInfo.Name, which is null during prerender and resolves to "WebAssembly"
+        // only when the WASM renderer actually owns the layout (CF18-4).
+        //
+        // blazor.web.js never migrates a component once the Server renderer has claimed it.
+        // On the FIRST visit it latches onWebAssemblyFailedToLoadQuickly (no persisted
+        // blazor-resource-hash) so Server claims every auto component; only after the WASM
+        // runtime finishes booting does it persist `blazor-resource-hash:<assembly>` to
+        // localStorage. On subsequent loads the matching hash skips the fail-quickly latch,
+        // auto descriptors stay unassigned, and the WASM renderer claims them once ready.
+        // Phase 1 therefore waits for the persisted hash — the deterministic proof that a
+        // WASM boot fully completed — and Phase 2 reloads and observes WASM take the layout.
+        await Assertions.Expect(page.Locator("body[data-blazor-ready]")).ToBeAttachedAsync(
+            new() { Timeout = 15000 });
+
+        var booted = await page.EvaluateAsync<bool>("""
+            () => new Promise(resolve => {
+                const started = Date.now();
+                const tick = () => {
+                    const v = window.localStorage.getItem('blazor-resource-hash:Tempo.Blazor.Demo.InteractiveAuto.Client');
+                    if (v || Date.now() - started > 300000) { resolve(!!v); return; }
+                    setTimeout(tick, 500);
+                };
+                tick();
+            })
+            """);
+        Assert.IsTrue(booted, "WASM boot never completed: blazor-resource-hash was not persisted within 5 min.");
+
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        var mode = await page.EvaluateAsync<string>("""
+            () => new Promise(resolve => {
+                const started = Date.now();
+                const seen = [];
+                const tick = () => {
+                    const v = document.querySelector('[data-render-mode]')?.getAttribute('data-render-mode') ?? 'none';
+                    if (seen.length === 0 || seen[seen.length - 1] !== v) seen.push(v + '@' + (Date.now() - started) + 'ms');
+                    if (v === 'WebAssembly' || Date.now() - started > 180000) {
+                        resolve(seen.join(' -> '));
+                        return;
+                    }
+                    setTimeout(tick, 250);
+                };
+                tick();
+            })
+            """);
+        TestContext.WriteLine($"data-render-mode timeline: {mode}");
+        Assert.AreEqual("WebAssembly", mode.Split(" -> ").Last().Split('@')[0]);
+    }
+
+    [TestMethod]
+    [Description("Verify the interactive runtime boots and hydrates the page")]
+    public async Task InteractiveBoot_HydratesPage()
     {
         var page = await CreatePageAsync();
 

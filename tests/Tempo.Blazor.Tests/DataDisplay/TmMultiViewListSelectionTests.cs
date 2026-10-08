@@ -33,6 +33,33 @@ public class TmMultiViewListSelectionTests : LocalizationTestBase
         Services.AddScoped<DragDropService>();
     }
 
+    // ── List view ARIA (CF18-5b) ──────────────────────────────────
+    // The list view is a selectable widget: the <ul> needs listbox semantics
+    // and each <li> needs role="option" + aria-selected so assistive tech can
+    // announce both the widget type and the selection state.
+
+    [Fact]
+    public void ListView_Items_ExposeOptionRole_AndSelectionState()
+    {
+        var cut = Render<TmMultiViewList<SelItem>>(p => p
+            .Add(c => c.Items, Items())
+            .Add(c => c.AllowSelection, true));
+
+        cut.Find(".tm-mvl-switch-list").Click();
+
+        var list = cut.Find("ul.tm-mvl-list");
+        list.GetAttribute("role").Should().Be("listbox");
+        list.GetAttribute("aria-multiselectable").Should().Be("true");
+
+        var options = cut.FindAll("ul.tm-mvl-list li");
+        options.Should().NotBeEmpty();
+        foreach (var opt in options)
+        {
+            opt.GetAttribute("role").Should().Be("option");
+            opt.GetAttribute("aria-selected").Should().Be("false");
+        }
+    }
+
     // ── AllowSelection=false (default) ───────────────────────────
 
     [Fact]

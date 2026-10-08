@@ -135,6 +135,86 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
     }
 
     [Fact]
+    public void KeyboardActivation_OnSubmenuTrigger_FocusesFirstItem()
+    {
+        // CF18-1: Enter/Space on a submenu trigger is a native click with Detail==0 — it opened
+        // the panel but never moved focus, an APG asymmetry next to ArrowRight (which does both).
+        var focusFirst = JSInterop.SetupVoid("tmNotionEditor.focusFirstMenuItem", _ => true)
+            .SetVoidResult();
+        var cut = RenderMenu(CalloutBlock());
+        var turnInto = cut.FindAll("button[aria-haspopup='menu']").First();
+
+        turnInto.Click(new MouseEventArgs { Detail = 0 }); // keyboard/programmatic activation
+
+        cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1);
+        focusFirst.Invocations["tmNotionEditor.focusFirstMenuItem"].Should().HaveCount(1,
+            "Enter/Space activation must land focus on the first submenu item like ArrowRight does");
+    }
+
+    [Fact]
+    public void PointerClick_OnSubmenuTrigger_OpensSubmenu_WithoutFocusHandoff()
+    {
+        // CF18-1 inverse: a pointer click (Detail>=1) opens the submenu but keeps its own focus
+        // model — yanking DOM focus into the panel would fight the hover-open sibling flow.
+        var focusFirst = JSInterop.SetupVoid("tmNotionEditor.focusFirstMenuItem", _ => true)
+            .SetVoidResult();
+        var cut = RenderMenu(CalloutBlock());
+        var turnInto = cut.FindAll("button[aria-haspopup='menu']").First();
+
+        turnInto.Click(new MouseEventArgs { Detail = 1 }); // pointer click
+
+        cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1);
+        focusFirst.Invocations["tmNotionEditor.focusFirstMenuItem"].Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MouseLeave_WhileFocusInsideSubmenu_KeepsSubmenuOpen()
+    {
+        // CF18-2: mouseleave fired CloseSub unconditionally — a submenu still holding keyboard
+        // focus was unmounted under the caret and focus fell to <body>.
+        var cut = RenderMenu(CalloutBlock());
+        var wrapper = cut.FindAll(".tm-notion-ctx__sub").First();
+
+        wrapper.QuerySelector("button[aria-haspopup='menu']")!.Click(new MouseEventArgs { Detail = 0 });
+        cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1);
+
+        // Focus lands inside the wrapper (the open submenu's first item)…
+        wrapper.TriggerEvent("onfocusin", new FocusEventArgs());
+        // …then the pointer leaves — the submenu must stay open under the focus it still holds.
+        wrapper.TriggerEvent("onmouseleave", new MouseEventArgs());
+
+        cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1,
+            "mouseleave must not close a submenu whose wrapper still holds keyboard focus");
+    }
+
+    [Fact]
+    public void SiblingMouseEnter_WhileFocusInsideSubmenu_ReturnsFocusToTriggerBeforeClosing()
+    {
+        // CF18-2: a hover on a sibling wrapper closes the focused submenu — without first
+        // handing focus back to that submenu's trigger it would fall to <body>.
+        var cut = RenderMenu(CalloutBlock());
+        var wrappers = cut.FindAll(".tm-notion-ctx__sub");
+        var turnInto = wrappers[0]; // Turn into
+        var color = wrappers[^1];   // Color
+        var turnIntoTrigger = turnInto.QuerySelector("button[aria-haspopup='menu']")!;
+
+        turnIntoTrigger.Click(new MouseEventArgs { Detail = 0 });
+        turnInto.TriggerEvent("onfocusin", new FocusEventArgs());
+
+        color.TriggerEvent("onmouseenter", new MouseEventArgs());
+
+        cut.FindAll("button[aria-haspopup='menu']")[0]
+            .GetAttribute("aria-expanded").Should().Be("false",
+                "the sibling hover still closes the previously focused submenu");
+        JSInterop.Invocations.Should().Contain(i => i.Identifier == "Blazor._internal.domWrapper.focus",
+            "closing a focused submenu must first hand focus back to its trigger — " +
+            "otherwise keyboard focus falls to <body> (CF18-2)");
+        cut.FindAll("button[aria-haspopup='menu']")[2]
+            .GetAttribute("aria-expanded").Should().Be("true",
+                "the hovered sibling's own submenu opened as before");
+    }
+
+    [Fact]
     public void ArrowLeft_WithOpenSubmenu_ClosesOnlySubmenu()
     {
         var closed = false;

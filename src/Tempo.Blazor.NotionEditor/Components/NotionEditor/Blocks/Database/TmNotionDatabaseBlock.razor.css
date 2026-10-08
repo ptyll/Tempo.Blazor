@@ -291,12 +291,12 @@
 .tm-db__floatmenu-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 299;
+    z-index: calc(var(--tm-z-dropdown, 1000) - 1);
 }
 
 .tm-db__floatmenu {
     position: fixed;
-    z-index: 300;
+    z-index: var(--tm-z-dropdown, 1000);
     background: var(--tm-surface, #fff);
     border: 1px solid var(--tm-border, #e5e7eb);
     border-radius: 8px;
@@ -429,12 +429,12 @@
 .tm-db__ctx-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 299;
+    z-index: calc(var(--tm-z-dropdown, 1000) - 1);
 }
 
 .tm-db__ctx-menu {
     position: fixed;
-    z-index: 300;
+    z-index: var(--tm-z-dropdown, 1000);
     background: var(--tm-surface, #fff);
     border: 1px solid var(--tm-border, #e5e7eb);
     border-radius: 8px;

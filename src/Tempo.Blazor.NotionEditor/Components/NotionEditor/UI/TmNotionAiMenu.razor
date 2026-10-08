@@ -1,14 +1,27 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Overlay
 
 @if (Visible && ActiveProvider is not null)
 {
-    <section class="tm-notion-ai @(Panel ? "tm-notion-ai--panel" : "")"
-             style="@PanelStyle"
-             role="dialog"
-             aria-label="@Loc["Notion_AI_Assistant"]"
-             data-testid="@TestId("notion-ai-menu")"
+    @* CF18-7: zero-size virtual anchor at the page top-right — the surface is a
+       TmOverlayPanel (popover="manual", browser top layer), so it paints above a host
+       TmModal instead of sitting under the modal band like the old z-index:1030 section.
+       overlay.js supplies Escape + outside-pointerdown dismissal; the section keeps its
+       own keydown contract unchanged. *@
+    <span @ref="_anchorRef" class="tm-notion-ai__anchor" style="@AnchorStyle" aria-hidden="true"></span>
+
+    <TmOverlayPanel Anchor="_anchorRef"
+                    IsOpen="Visible"
+                    IsOpenChanged="SetOpenFromJsAsync"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Offset="0"
+                    Role="dialog"
+                    AriaLabel="@Loc["Notion_AI_Assistant"]"
+                    Class="@PanelClass">
+    <section data-testid="@TestId("notion-ai-menu")"
              @onkeydown="HandleKeyDownAsync">
         <header class="tm-notion-ai__header">
             <div class="tm-notion-ai__title">
@@ -153,4 +166,5 @@
             </button>
         </footer>
     </section>
+    </TmOverlayPanel>
 }

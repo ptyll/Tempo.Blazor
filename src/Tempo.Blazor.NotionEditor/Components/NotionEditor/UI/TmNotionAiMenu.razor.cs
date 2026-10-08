@@ -88,9 +88,13 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
 
     private INotionAIProvider? ActiveProvider => Provider ?? Context?.AIProvider;
 
-    private string PanelStyle => Panel
+    private ElementReference _anchorRef;
+
+    private string AnchorStyle => Panel
         ? "top:calc(var(--tm-space-8) + 48px);right:var(--tm-space-8);"
         : "top:var(--tm-space-4);right:var(--tm-space-4);";
+
+    private string PanelClass => Panel ? "tm-notion-ai tm-notion-ai--panel" : "tm-notion-ai";
 
     protected override void OnParametersSet()
     {
@@ -275,6 +279,18 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
     {
         CancelStreaming();
         await OnClosed.InvokeAsync();
+    }
+
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js) — same effects as
+    /// the close button: cancel an in-flight stream and notify OnClosed.
+    /// </summary>
+    private async Task SetOpenFromJsAsync(bool open)
+    {
+        if (!open)
+        {
+            await CloseAsync();
+        }
     }
 
     private void CancelStreaming()

@@ -133,6 +133,49 @@ public class TmFilterableDropdownTests : LocalizationTestBase
         captured.Should().BeNull();
     }
 
+    // ── ARIA listbox wiring (CF18-5a) ──────────────────────────────────────
+    // role="combobox" needs aria-controls naming the listbox popup, and the
+    // filter input (which owns focus) needs aria-activedescendant naming the
+    // highlighted option — options therefore need stable ids.
+
+    [Fact]
+    public void TmFilterableDropdown_OpenTrigger_AriaControls_PointsAtListbox()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        var trigger = cut.Find(".tm-filterable-dropdown-trigger");
+        trigger.GetAttribute("aria-controls").Should().BeNull(
+            "closed combobox must not point at a popup that does not exist");
+
+        trigger.Click();
+
+        var menuId = cut.Find(".tm-filterable-dropdown-menu").GetAttribute("id");
+        menuId.Should().NotBeNullOrEmpty();
+        cut.Find(".tm-filterable-dropdown-trigger").GetAttribute("aria-controls")
+            .Should().Be(menuId);
+    }
+
+    [Fact]
+    public void TmFilterableDropdown_ArrowDown_SetsActiveDescendant_ToHighlightedOptionId()
+    {
+        var cut = Render<TmFilterableDropdown<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, o => o.Label));
+
+        cut.Find(".tm-filterable-dropdown-trigger").Click();
+        var input = cut.Find(".tm-filterable-dropdown-filter-input");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        var firstOption = cut.FindAll(".tm-filterable-dropdown-item")[0];
+        firstOption.GetAttribute("id").Should().NotBeNullOrEmpty(
+            "options need ids for aria-activedescendant to reference");
+        cut.Find(".tm-filterable-dropdown-filter-input")
+            .GetAttribute("aria-activedescendant")
+            .Should().Be(firstOption.GetAttribute("id"));
+    }
+
     // ── Accent-insensitive filtering (FormD normalization) ──────────────────
 
     private static List<SelectOption<string>> CityOptions =>

@@ -1598,7 +1598,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor",
-      "description": "Auto-sizing comment textarea with an inline @-mention autocomplete dropdown (searching the people provider) that two-way binds its value and forwards keydown events for reply and submit shortcuts.",
+      "description": "Auto-sizing comment textarea with an inline @-mention autocomplete dropdown (searching the people provider) that two-way binds its value and forwards keydown events for reply and submit shortcuts. The dropdown is a TmOverlayPanel anchored to the textarea — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies viewport clamping and Escape + outside-pointerdown dismissal, replacing getMentionDropdownPosition. Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmCommentMentionInput.razor",
       "documentationStatus": "merged",
@@ -1705,7 +1705,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "AI assistant panel with Generate, Improve, Summarize, and Ask tabs. Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard.",
+      "description": "AI assistant panel with Generate, Improve, Summarize, and Ask tabs. Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping and Escape + outside-pointerdown dismissal (IsOpenChanged). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAiMenu.razor",
       "documentationStatus": "merged",
@@ -2181,7 +2181,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks",
-      "description": "Dropdown context menu for a single block — provides Delete, Duplicate, Turn into, Move to, Copy link, Comment, and Color actions.",
+      "description": "Dropdown context menu for a single block — provides Delete, Duplicate, Turn into, Move to, Copy link, Comment, and Color actions. Submenu activation follows the APG menu-button pattern: ArrowRight and keyboard/programmatic clicks (Detail == 0) land focus on the first submenu item, while pointer-driven open/close never steals or strands focus inside a submenu (mouseleave keeps a focused submenu open, a sibling mouseenter returns focus to the focused submenu's trigger first).",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TmNotionBlockContextMenu.razor",
       "documentationStatus": "merged",
@@ -5785,7 +5785,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "Mention popup (triggered by @ or [[) with People, Pages, and Date tabs (or pages only), featuring a search input, results list, and keyboard navigation, raising the selected item as a type, id, and display text.",
+      "description": "Mention popup (triggered by @ or [[) with People, Pages, and Date tabs (or pages only), featuring a search input, results list, and keyboard navigation, raising the selected item as a type, id, and display text. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left caret coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping (replacing adjustSlashMenuPosition) and Escape + outside-pointerdown dismissal (replacing the transparent backdrop). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's. On open, the search input's focus is re-asserted across ~10 animation frames (a same-keystroke render can refocus the block editable), but the loop yields once document.activeElement moves to another real non-editable element — a deliberate Tab/click never gets pulled back (CF18-3).",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionMentionMenu.razor",
       "documentationStatus": "merged",
@@ -5882,7 +5882,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor",
-      "description": "Notification bell button with an unread badge and a dropdown of notifications (with an unread filter and mark-all-read); clicking an item marks it read and navigates. Polls the notification service on an interval.",
+      "description": "Notification bell button with an unread badge and a dropdown of notifications (with an unread filter and mark-all-read); clicking an item marks it read and navigates. Polls the notification service on an interval. Its panel is a TmOverlayPanel — it carries the overlay's scope attribute, so the panel width rule lives in the global _notion-notifications.css (width 24rem, max-width 100vw−1.5rem); scoped rules on the panel class can never match.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionNotificationCenter.razor",
       "documentationStatus": "merged",
@@ -7056,7 +7056,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "Slash-command menu with a search input and grouped block-type items (plus an optional AI item), keyboard navigation, and recently-used tracking, raising item, AI, or close callbacks.",
+      "description": "Slash-command menu with a search input and grouped block-type items (plus an optional AI item), keyboard navigation, and recently-used tracking, raising item, AI, or close callbacks. On open, the search input's focus is re-asserted across ~10 animation frames (a same-keystroke render can refocus the block editable), but the loop yields once document.activeElement moves to another real non-editable element — a deliberate Tab/click never gets pulled back (CF18-3).",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionSlashMenu.razor",
       "documentationStatus": "merged",
@@ -8179,7 +8179,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "Token autocomplete dropdown with a search input and a results list (icon, name, description, type) plus an optional create-token footer, keyboard-navigable and searching through the token provider.",
+      "description": "Token autocomplete dropdown with a search input and a results list (icon, name, description, type) plus an optional create-token footer, keyboard-navigable and searching through the token provider. On open, the search input's focus is re-asserted across ~10 animation frames (a same-keystroke render can refocus the block editable), but the loop yields once document.activeElement moves to another real non-editable element — a deliberate Tab/click never gets pulled back (CF18-3).",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionTokenDropdown.razor",
       "documentationStatus": "merged",
@@ -8454,6 +8454,14 @@
     },
     {
       "path": "src/Tempo.Blazor.NotionEditor/wwwroot/css/components/_notion-dark.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/css/components/_notion-floating-menus.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/css/components/_notion-notifications.css",
       "kind": "Css"
     },
     {

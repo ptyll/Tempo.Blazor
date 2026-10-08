@@ -67,6 +67,54 @@ public class FilterableDropdownE2ETests : WasmTestBase
         }
     }
 
+    /// <summary>
+    /// N329 (Tempo 2.9.1): when the anchor scrolls fully out of the viewport the panel is parked
+    /// with visibility:hidden — while focus sits inside (the filter input) it must be DISMISSED
+    /// instead, or keys keep landing on an invisible surface, and focus returns to the trigger.
+    /// </summary>
+    [TestMethod]
+    public async Task TmFilterableDropdown_FilterFocused_AnchorScrolledAway_PanelClosesFocusOnTrigger()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(800, 360);
+        await page.GotoAsync(PageUrl);
+        await WaitForAppReadyAsync(page);
+
+        var trigger = page.Locator(
+            "[data-testid='overlay-constrain-height-dropdown'] .tm-filterable-dropdown-trigger");
+        await trigger.ClickAsync();
+
+        var panel = page.Locator(".tm-filterable-dropdown-menu.tm-overlay-panel--open");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await panel.Locator(".tm-filterable-dropdown-item").First
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Put focus inside the panel (the real-world case is the filter input, which the
+        // component autofocuses a beat after open — focusing explicitly avoids the race), then
+        // prove focus really sits inside, otherwise this scenario measures nothing.
+        await panel.Locator(".tm-filterable-dropdown-filter-input").FocusAsync();
+        var focusInside = await page.EvaluateAsync<bool>(
+            "() => document.activeElement != null && document.activeElement.closest('.tm-filterable-dropdown-menu') != null");
+        Assert.IsTrue(focusInside,
+            "scenario invalid: the filter input must hold focus inside the open panel");
+
+        // Scroll the trigger fully above the viewport; two rAFs cover the scroll listener's own
+        // rAF-scheduled place() pass. Under the bug the panel just went visibility:hidden and the
+        // filter kept focus.
+        await page.EvaluateAsync("() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' })");
+        await page.EvaluateAsync(
+            "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))");
+
+        // The panel must be dismissed (closed), not merely hidden.
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+
+        // Focus returns to the trigger via the shared anchor-restore path (deferred one macrotask
+        // inside overlay.js — poll rather than read it immediately).
+        await page.WaitForFunctionAsync(
+            "el => document.activeElement === el", await trigger.ElementHandleAsync());
+    }
+
     private async Task AssertCapRegrowsAsync(IPage page)
     {
         await page.SetViewportSizeAsync(800, 360);

@@ -46,6 +46,10 @@ internal static class HostRestartLog
     internal static string AppendRestartRecord(
         string jsonlPath, string host, string reason, string recentOutput)
     {
+        // CF19e — the increment comes FIRST: the release gate reads TotalHostRestarts, so a
+        // JSONL write that throws must still leave the resurrection counted. Writing the file
+        // first meant a failed append kept the counter at zero and the run reported clean.
+        Interlocked.Increment(ref _totalHostRestarts);
         string line = BuildRestartLine(host, reason, DateTimeOffset.UtcNow, recentOutput);
         lock (Gate)
         {
@@ -53,7 +57,6 @@ internal static class HostRestartLog
             File.AppendAllText(jsonlPath, line + Environment.NewLine);
         }
 
-        Interlocked.Increment(ref _totalHostRestarts);
         return line;
     }
 }

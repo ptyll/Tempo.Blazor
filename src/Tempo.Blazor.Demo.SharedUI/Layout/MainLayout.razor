@@ -21,7 +21,7 @@
    layout rather than the container its trigger sits in. IsContainer is false: a containment context
    here would become the containing block for every position:fixed overlay and pin it to the shell. *@
 <TmLayoutObserver IsViewportScope="true" IsContainer="false" Class="demo-viewport">
-<div class="demo-shell min-h-screen transition-colors duration-300 @(ThemeService.IsDark ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")" data-theme="@ThemeService.ThemeName">
+<div class="demo-shell min-h-screen transition-colors duration-300 @(ThemeService.IsDark ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")" data-theme="@ThemeService.ThemeName" data-render-mode="@(RendererInfo?.Name)">
     <!-- Mobile Header -->
     <div class="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div class="flex items-center justify-between px-4 py-3">

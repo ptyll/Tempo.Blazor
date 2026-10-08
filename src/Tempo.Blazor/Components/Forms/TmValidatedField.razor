@@ -102,15 +102,20 @@
         }
     }
     
-    private bool _validationRan;
+    // N320: "_validationRan" was context-global — a pass triggered by editing ANY field painted
+    // this field valid. The state must be field-scoped: "_fieldValidationRequested" marks that a
+    // pass including THIS field was kicked off (its own OnFieldChanged, or a whole-form
+    // OnValidationRequested), and "_fieldValidated" that such a pass COMPLETED — set in
+    // OnValidationStateChanged, which a real validator raises only after producing messages
+    // (incl. async passes, so no green→red flicker while a request is in flight, N151).
+    private bool _fieldValidationRequested;
+    private bool _fieldValidated;
 
     // "Valid" means the field PASSED validation, not that it contains text: the green frame and
     // check icon must not appear on a field nobody validated (application gap register #10). We
-    // therefore report true only once the EditContext reported a completed validation pass
-    // (OnValidationStateChanged — a real validator raises it AFTER producing messages, including
-    // async passes, so there is no green→red flicker while a validation request is in flight,
-    // N151) and this field has no messages. Without an EditContext there is no validation at
-    // all, so the field stays neutral.
+    // therefore report true only once a validation pass that covered THIS field completed and
+    // the field has no messages. Without an EditContext there is no validation at all, so the
+    // field stays neutral.
     private bool? IsValid
     {
         get
@@ -125,7 +130,7 @@
                 return false;
             }
 
-            return _validationRan ? true : null;
+            return _fieldValidated ? true : null;
         }
     }
 
@@ -139,6 +144,8 @@
         {
             if (_subscribedEditContext is not null)
             {
+                _subscribedEditContext.OnFieldChanged -= HandleFieldChanged;
+                _subscribedEditContext.OnValidationRequested -= HandleValidationRequested;
                 _subscribedEditContext.OnValidationStateChanged -= HandleValidationStateChanged;
             }
 
@@ -146,12 +153,16 @@
 
             if (_subscribedEditContext is not null)
             {
+                _subscribedEditContext.OnFieldChanged += HandleFieldChanged;
+                _subscribedEditContext.OnValidationRequested += HandleValidationRequested;
                 _subscribedEditContext.OnValidationStateChanged += HandleValidationStateChanged;
             }
 
-            // 20D carry-forward: the flag measured a pass on the DISCARDED context — carrying it
-            // over would paint tm-input-valid on a context that never validated (N151 reversed).
-            _validationRan = false;
+            // 20D carry-forward: the flags measured a pass on the DISCARDED context — carrying
+            // them over would paint tm-input-valid on a context that never validated
+            // (N151 reversed).
+            _fieldValidationRequested = false;
+            _fieldValidated = false;
         }
 
         // The cached FieldIdentifier captures the model instance inside ValueExpression; when the
@@ -164,9 +175,28 @@
         }
     }
 
+    private void HandleFieldChanged(object? sender, FieldChangedEventArgs e)
+    {
+        if (e.FieldIdentifier.Equals(FieldIdentifier))
+        {
+            _fieldValidationRequested = true;
+        }
+    }
+
+    // A whole-form request covers every field, touched or not — submit must paint untouched
+    // fields too.
+    private void HandleValidationRequested(object? sender, ValidationRequestedEventArgs e)
+        => _fieldValidationRequested = true;
+
     private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
     {
-        _validationRan = true;
+        // The notification only completes a pass that included this field; a pass triggered by
+        // another field leaves it untouched (N320).
+        if (_fieldValidationRequested)
+        {
+            _fieldValidated = true;
+        }
+
         InvokeAsync(StateHasChanged);
     }
 
@@ -174,6 +204,8 @@
     {
         if (_subscribedEditContext is not null)
         {
+            _subscribedEditContext.OnFieldChanged -= HandleFieldChanged;
+            _subscribedEditContext.OnValidationRequested -= HandleValidationRequested;
             _subscribedEditContext.OnValidationStateChanged -= HandleValidationStateChanged;
         }
     }

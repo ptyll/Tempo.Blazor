@@ -151,7 +151,7 @@
                      TitleField="@(p => p.FullName)"
                      SubTitleField="@(p => p.Email)"
                      StatusLabelField="@(p => p.IsActive ? "Active" : "Inactive")"
-                     StatusColorField="@(p => p.IsActive ? "#22c55e" : "#ef4444")"
+                     StatusColorField="@(p => p.IsActive ? "#15803d" : "#b91c1c")"
                      DateField="@(p => new DateTimeOffset(p.HiredAt, TimeOnly.MinValue, TimeSpan.Zero))"
                      GroupableFields="_personGroupFields"
                      ShowSearch="true"
@@ -257,7 +257,7 @@
             Status = "Active",
             Role = "Developer",
             StatusLabel = "Active",
-            StatusColor = "#22c55e",
+            StatusColor = "#15803d",
             Date = DateTimeOffset.Now.AddDays(-30),
             AvatarUrl = "https://i.pravatar.cc/150?u=alice"
         },
@@ -268,7 +268,7 @@
             Status = "Active",
             Role = "Designer",
             StatusLabel = "Active",
-            StatusColor = "#22c55e",
+            StatusColor = "#15803d",
             Date = DateTimeOffset.Now.AddDays(-60),
             AvatarUrl = "https://i.pravatar.cc/150?u=bob"
         },
@@ -279,7 +279,7 @@
             Status = "Inactive",
             Role = "Manager",
             StatusLabel = "Inactive",
-            StatusColor = "#ef4444",
+            StatusColor = "#b91c1c",
             Date = DateTimeOffset.Now.AddDays(-90),
             AvatarUrl = "https://i.pravatar.cc/150?u=carol"
         },
@@ -290,7 +290,7 @@
             Status = "Active",
             Role = "Developer",
             StatusLabel = "Active",
-            StatusColor = "#22c55e",
+            StatusColor = "#15803d",
             Date = DateTimeOffset.Now.AddDays(-15),
             AvatarUrl = "https://i.pravatar.cc/150?u=david"
         },
@@ -301,7 +301,7 @@
             Status = "Pending",
             Role = "Designer",
             StatusLabel = "Pending",
-            StatusColor = "#f59e0b",
+            StatusColor = "#b45309",
             Date = DateTimeOffset.Now.AddDays(-5),
             AvatarUrl = "https://i.pravatar.cc/150?u=eva"
         },
@@ -312,7 +312,7 @@
             Status = "Active",
             Role = "Developer",
             StatusLabel = "Active",
-            StatusColor = "#22c55e",
+            StatusColor = "#15803d",
             Date = DateTimeOffset.Now.AddDays(-45),
             AvatarUrl = "https://i.pravatar.cc/150?u=frank"
         },
@@ -323,7 +323,7 @@
             Status = "Active",
             Role = "Analyst",
             StatusLabel = "Active",
-            StatusColor = "#22c55e",
+            StatusColor = "#15803d",
             Date = DateTimeOffset.Now.AddDays(-20),
             AvatarUrl = "https://i.pravatar.cc/150?u=grace"
         },
@@ -334,7 +334,7 @@
             Status = "Inactive",
             Role = "Developer",
             StatusLabel = "Inactive",
-            StatusColor = "#ef4444",
+            StatusColor = "#b91c1c",
             Date = DateTimeOffset.Now.AddDays(-75),
             AvatarUrl = "https://i.pravatar.cc/150?u=henry"
         }
@@ -348,7 +348,7 @@
             Title = "Website Redesign", 
             SubTitle = "Marketing Department", 
             StatusLabel = "In Progress", 
-            StatusColor = "#3b82f6",
+            StatusColor = "#1d4ed8",
             Date = DateTimeOffset.Now.AddDays(30)
         },
         new Project 
@@ -356,7 +356,7 @@
             Title = "Mobile App v2.0", 
             SubTitle = "Product Team", 
             StatusLabel = "Planning", 
-            StatusColor = "#f59e0b",
+            StatusColor = "#b45309",
             Date = DateTimeOffset.Now.AddDays(60)
         },
         new Project 
@@ -364,7 +364,7 @@
             Title = "Database Migration", 
             SubTitle = "Backend Team", 
             StatusLabel = "Completed", 
-            StatusColor = "#22c55e",
+            StatusColor = "#15803d",
             Date = DateTimeOffset.Now.AddDays(-10)
         },
         new Project 
@@ -372,7 +372,7 @@
             Title = "API Integration", 
             SubTitle = "External Partners", 
             StatusLabel = "On Hold", 
-            StatusColor = "#6b7280",
+            StatusColor = "#4b5563",
             Date = DateTimeOffset.Now.AddDays(45)
         }
     ];

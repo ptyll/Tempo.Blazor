@@ -82,6 +82,28 @@ public sealed class NotionEditorAggregateSessionTests
     }
 
     [Fact]
+    public async Task OverlappingApplyAsync_QueuesSecondMutationBehindInFlightSave()
+    {
+        var provider = new RecordingAggregateProvider(Snapshot("token-1", "A", "B"))
+        {
+            SaveDelay = TimeSpan.FromMilliseconds(50),
+            EnforceBaseTokens = true
+        };
+        var session = new NotionEditorAggregateSession(provider);
+        await session.LoadAsync(provider.PageId);
+
+        var first = session.ApplyAsync(snapshot => WithRowHtml(snapshot, "One", "B"));
+        var second = session.ApplyAsync(snapshot => WithRowHtml(snapshot, "Two", "B"));
+
+        var results = await Task.WhenAll(first, second);
+
+        results.Should().OnlyContain(result => result.Success && !result.Conflict);
+        provider.SaveRequests.Should().HaveCount(2);
+        provider.SaveRequests[1].Pages[0].BaseConcurrencyToken.Should().Be("token-2");
+        RowHtml(session.CurrentSnapshot!, 0).Should().Be("Two");
+    }
+
+    [Fact]
     public async Task StructuredPaste_InsertsAllBlocksWithOneAggregateSave()
     {
         var provider = new RecordingAggregateProvider(Snapshot("token-1", "A", "B"));
@@ -225,6 +247,8 @@ public sealed class NotionEditorAggregateSessionTests
         public Guid PageId { get; }
         public NotionPageSnapshot Remote { get; set; }
         public bool ConflictNextSave { get; set; }
+        public bool EnforceBaseTokens { get; set; }
+        public TimeSpan SaveDelay { get; set; }
         public List<NotionAggregateSaveRequest> SaveRequests { get; } = [];
 
         public Task<NotionAggregateLoadResult> LoadPageAsync(
@@ -241,15 +265,41 @@ public sealed class NotionEditorAggregateSessionTests
             CancellationToken cancellationToken = default)
             => Task.FromResult(new NotionAggregateLoadResult { Found = false });
 
-        public Task<NotionAggregateSaveResult> SaveAsync(
+        public async Task<NotionAggregateSaveResult> SaveAsync(
             NotionAggregateSaveRequest request,
             CancellationToken cancellationToken = default)
         {
+            if (SaveDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(SaveDelay, cancellationToken);
+            }
+
             SaveRequests.Add(request);
+            if (EnforceBaseTokens &&
+                !string.Equals(
+                    Remote.ConcurrencyToken,
+                    request.Pages[0].BaseConcurrencyToken,
+                    StringComparison.Ordinal))
+            {
+                return new NotionAggregateSaveResult
+                {
+                    Conflict = true,
+                    Conflicts =
+                    [
+                        new NotionPageConflict
+                        {
+                            PageId = PageId,
+                            ExpectedConcurrencyToken = request.Pages[0].BaseConcurrencyToken,
+                            CurrentConcurrencyToken = Remote.ConcurrencyToken
+                        }
+                    ]
+                };
+            }
+
             if (ConflictNextSave)
             {
                 ConflictNextSave = false;
-                return Task.FromResult(new NotionAggregateSaveResult
+                return new NotionAggregateSaveResult
                 {
                     Conflict = true,
                     Conflicts =
@@ -261,13 +311,13 @@ public sealed class NotionEditorAggregateSessionTests
                             CurrentConcurrencyToken = "token-remote"
                         }
                     ]
-                });
+                };
             }
 
             Remote = Clone(request.Pages[0].Snapshot);
             Remote.ConcurrencyToken = $"token-{SaveRequests.Count + 1}";
             Remote.Digest = $"digest:{Remote.ConcurrencyToken}";
-            return Task.FromResult(new NotionAggregateSaveResult
+            return new NotionAggregateSaveResult
             {
                 Success = true,
                 Pages =
@@ -279,7 +329,7 @@ public sealed class NotionEditorAggregateSessionTests
                         Digest = Remote.Digest
                     }
                 ]
-            });
+            };
         }
 
         private static NotionPageSnapshot Clone(NotionPageSnapshot snapshot)

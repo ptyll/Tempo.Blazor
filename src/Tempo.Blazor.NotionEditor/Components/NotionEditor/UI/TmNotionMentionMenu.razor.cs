@@ -45,18 +45,17 @@ public partial class TmNotionMentionMenu : ComponentBase
     private double     _left;
     private bool       _loading;
     private bool       _needsFocus;
-    private bool       _needsPositionAdjustment;
     private int        _selectedIndex;
 
     private IReadOnlyList<TmUser> _people = [];
     private IReadOnlyList<INotionPage>  _pages  = [];
 
-    private ElementReference _menuRef;
+    private ElementReference _anchorRef;
     private ElementReference _inputRef;
 
-    private string MenuStyle => string.Create(
+    private string AnchorStyle => string.Create(
         CultureInfo.InvariantCulture,
-        $"--tm-nmm-anchor-top:{_top}px;--tm-nmm-anchor-left:{_left}px;top:max(8px,min({_top}px,calc(100vh - 360px - 8px)));left:max(8px,min({_left}px,calc(100vw - 280px - 8px)))");
+        $"top:{_top}px;left:{_left}px");
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -72,7 +71,6 @@ public partial class TmNotionMentionMenu : ComponentBase
             _pages         = [];
             _tab           = PagesOnly ? MentionTab.Pages : MentionTab.People;
             _needsFocus    = true;
-            _needsPositionAdjustment = true;
             await SearchAsync();
         }
         else if (!Visible && _wasVisible)
@@ -98,13 +96,6 @@ public partial class TmNotionMentionMenu : ComponentBase
                 // across the next frames so the search box wins that race.
                 await JS.InvokeVoidAsync("tmNotionEditor.focusMenuInput", _inputRef);
             }
-            catch { /* SSR / test */ }
-        }
-
-        if (_needsPositionAdjustment && Visible)
-        {
-            _needsPositionAdjustment = false;
-            try { await JS.InvokeVoidAsync("tmNotionEditor.adjustSlashMenuPosition", _menuRef); }
             catch { /* SSR / test */ }
         }
     }
@@ -152,7 +143,6 @@ public partial class TmNotionMentionMenu : ComponentBase
         finally
         {
             _loading = false;
-            _needsPositionAdjustment = true;
             StateHasChanged();
         }
     }
@@ -227,6 +217,18 @@ public partial class TmNotionMentionMenu : ComponentBase
         try { await JS.InvokeVoidAsync("tmNotionEditor.cancelMentionTrigger"); }
         catch { /* SSR / test */ }
         await OnClosed.InvokeAsync();
+    }
+
+    /// <summary>
+    /// JS-driven dismissal (Escape or outside pointerdown from overlay.js) — same state effects
+    /// as the old transparent-backdrop click: cancel the mention trigger and notify OnClosed.
+    /// </summary>
+    private async Task SetOpenFromJsAsync(bool open)
+    {
+        if (!open)
+        {
+            await HandleBackdropAsync();
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

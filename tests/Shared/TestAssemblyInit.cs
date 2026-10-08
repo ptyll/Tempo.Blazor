@@ -1,11 +1,21 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace Tempo.Blazor.Tests;
+namespace Tempo.Blazor.Testing;
 
 /// <summary>
-/// Assembly-wide test runtime tuning.
+/// Assembly-wide test runtime tuning — the ONE copy linked into every test project that runs
+/// bUnit (<c>tests/Tempo.Blazor.Tests</c>, <c>tests/Tempo.Blazor.Reporting.Tests</c>,
+/// <c>tests/Tempo.ReportServer.Web.Tests</c>) via
+/// <c>&lt;Compile Include="..\Shared\TestAssemblyInit.cs" /&gt;</c>.
 /// </summary>
+/// <remarks>
+/// CF19g — three byte-identical copies used to exist because <c>internal</c> does not cross the
+/// assembly boundary; the shared link keeps one source of truth for the wait budget instead of
+/// three files that can only drift. The namespace is deliberately FIXED (<c>Tempo.Blazor.Testing</c>)
+/// because a linked file compiles identically in every assembly — nothing outside this file
+/// references the type by name.
+/// </remarks>
 internal static class TestAssemblyInit
 {
     /// <summary>The environment variable overriding <see cref="Bunit.TestContext.DefaultWaitTimeout"/>.</summary>

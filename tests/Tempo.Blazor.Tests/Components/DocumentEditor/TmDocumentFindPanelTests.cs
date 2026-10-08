@@ -138,9 +138,16 @@ public sealed class TmDocumentFindPanelTests : LocalizationTestBase
                 this, query => searches.Add(query.Text))));
 
         var input = cut.Find("[data-testid='document-find-input']");
-        input.Input("h");
-        input.Input("he");
-        input.Input("hel");
+        // Dispatch the keystrokes inside one renderer turn: while the delegate occupies the
+        // dispatcher, the Task.Delay debounce continuations cannot interleave between keystrokes.
+        // Without this, a saturated dispatcher (>200 ms per dispatched event on a loaded CI
+        // runner) let the debounce fire after "h" and the assertion below went red as a flake.
+        cut.InvokeAsync(() =>
+        {
+            input.Input("h");
+            input.Input("he");
+            input.Input("hel");
+        }).Wait();
 
         // The full-document search must NOT run synchronously per keystroke...
         searches.Should().BeEmpty("the find fulltext is debounced, not per-keystroke");

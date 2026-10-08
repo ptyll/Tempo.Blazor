@@ -182,8 +182,7 @@ public sealed class SqlServerCacheFixture : IAsyncLifetime
                 await createDb.ExecuteNonQueryAsync().ConfigureAwait(false);
             }
         }
-        catch (SqlException ex) when (ex.Message.Contains("permission", StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("denied", StringComparison.OrdinalIgnoreCase))
+        catch (SqlException ex) when (IsCreateDatabaseDenied(ex))
         {
             throw new InvalidOperationException(
                 $"{ConnectionEnvironmentVariable} must carry CREATE DATABASE permission — a shared "
@@ -211,4 +210,18 @@ public sealed class SqlServerCacheFixture : IAsyncLifetime
         await createTable.ExecuteNonQueryAsync().ConfigureAwait(false);
         return cacheConnectionString;
     }
+
+    /// <summary>
+    /// The canonical CREATE DATABASE denied match — identical to
+    /// <c>Tempo.ReportServer.Api.Tests.MsSql.MsSqlTestDatabase.IsCreateDatabaseDenied</c> (CF19f):
+    /// error 262 by number (locale-independent, and covering batches where 262 is not the first
+    /// error) plus the canonical English phrase for drivers that only surface text. The earlier
+    /// broad <c>permission</c>/<c>denied</c> substring match could mislabel a transient failure
+    /// as a missing CREATE DATABASE grant — it still threw, so the direction was safe, but the
+    /// diagnosis was wrong (Fáze 20E review F7).
+    /// </summary>
+    private static bool IsCreateDatabaseDenied(SqlException ex) =>
+        ex.Number == 262
+        || ex.Errors.Cast<SqlError>().Any(error => error.Number == 262)
+        || ex.Message.Contains("CREATE DATABASE permission denied", StringComparison.OrdinalIgnoreCase);
 }

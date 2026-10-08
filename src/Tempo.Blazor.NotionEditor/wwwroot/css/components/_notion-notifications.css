@@ -1,0 +1,20 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tempo NotionEditor — Notification panel styles
+   Applied globally (not scoped): the panel element is rendered by
+   TmOverlayPanel, so it carries THAT component's scope attribute and a scoped
+   rule in TmNotionNotificationCenter.razor.css can never match it (N325).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The panel is a TmOverlayPanel (N189): position:fixed + z-index come from
+   _overlay-panel.css, overlay.js writes top/left (Bottom + End + 8px) and the
+   popover lands in the browser top layer — so nothing here may set
+   position/stacking again. max-width keeps the 24rem panel inside the viewport on narrow
+   screens (replaces the old fixed-position mobile media query, which overlay.js inline
+   styles would override anyway).
+   width + max-width are written as two declarations so the panel's own 1.5rem floor ALSO
+   overrides the inherited .tm-notification-bell__dropdown cap (100vw − 2rem) on narrow
+   screens — a plain width would lose to that max-width below ~416px. */
+.tm-notion-notifications__panel {
+    width: 24rem;
+    max-width: calc(100vw - 1.5rem);
+}

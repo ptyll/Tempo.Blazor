@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FluentAssertions;
 
 namespace Tempo.Blazor.Tests.Theme;
@@ -299,5 +300,68 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         winner.Value.Should().Be("transparent",
             "mutovaný bundle reprodukuje PŮVODNÍ bug N196: pozdější reset stejné specificity " +
             "přebije vlastnické pozadí");
+    }
+
+    // ── CF03c: the .tm-overlay-panel RULE inventory of the bundle ──────────
+
+    private static readonly Regex CssComment =
+        new(@"/\*.*?\*/", RegexOptions.Compiled | RegexOptions.Singleline, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex RuleHead =
+        new(@"([^{}]+)\{", RegexOptions.Compiled, TimeSpan.FromSeconds(5));
+
+    /// <summary>Every selector head in <paramref name="css"/> that mentions <c>tm-overlay-panel</c>.
+    /// </summary>
+    internal static IReadOnlyList<string> OverlayPanelSelectors(string css) =>
+        RuleHead.Matches(CssComment.Replace(css, " "))
+            .Select(match => match.Groups[1].Value.Trim())
+            .Where(selector => selector.Contains("tm-overlay-panel", StringComparison.Ordinal))
+            .ToList();
+
+    /// <summary>
+    /// The three rules the bundle is allowed to carry on the shared <c>tm-overlay-panel</c>
+    /// element: the zero-specificity reset, the fallback's closed-state hide (kept at full
+    /// strength on purpose — it is the only hidden path when the Popover API is missing), and
+    /// the open-state display, also inside :where() (N196). Anything else — a plain
+    /// <c>.tm-overlay-panel{…}</c> or a descendant selector — would re-create the exact weight
+    /// problem the reset was unwrapped for, so it must land in this list with a written reason.
+    /// </summary>
+    private static readonly IReadOnlyList<string> KnownOverlayPanelRules =
+    [
+        ":where(.tm-overlay-panel)",
+        ".tm-overlay-panel:not(.tm-overlay-panel--open)",
+        ":where(.tm-overlay-panel.tm-overlay-panel--open)",
+    ];
+
+    /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>
+    [Fact]
+    public void OverlayPanelRules_Inventory_IsExactlyTheKnownSelectors()
+    {
+        var selectors = OverlayPanelSelectors(Bundle);
+
+        selectors.Should().NotBeEmpty(
+            "unmeasurable:bundle-empty — sonda nevytáhla žádné tm-overlay-panel selektory " +
+            "z bundlovaného CSS, takže čte špatný text, ne že by byl bundle čistý");
+        selectors.Should().BeEquivalentTo(KnownOverlayPanelRules,
+            "každé další pravidlo na sdíleném elementu mění váhu, nad kterou stojí N196 — " +
+            "nový selektor patří do KnownOverlayPanelRules jen se zdůvodněním; nalezeno: {0}",
+            string.Join(" | ", selectors.Except(KnownOverlayPanelRules)));
+    }
+
+    /// <summary>Mutation proof: an unlisted rule is extracted as a finding, not missed.</summary>
+    [Fact]
+    public void OverlayPanelRules_Inventory_UnknownRule_IsFinding()
+    {
+        const string css = """
+            :where(.tm-overlay-panel){position:fixed;}
+            .tm-overlay-panel:not(.tm-overlay-panel--open){display:none;}
+            :where(.tm-overlay-panel.tm-overlay-panel--open){display:block;}
+            .tm-overlay-panel .x{top:0}
+            """;
+
+        OverlayPanelSelectors(css).Except(KnownOverlayPanelRules).Should()
+            .ContainSingle(selector => selector == ".tm-overlay-panel .x",
+                "potomek sdíleného elementu musí být nálezem — jinak by inventář prošel " +
+                "i nad pravidlem, které znovu zavede váhový problém");
     }
 }

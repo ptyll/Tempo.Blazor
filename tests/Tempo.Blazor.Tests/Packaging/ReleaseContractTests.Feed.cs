@@ -93,9 +93,11 @@ public sealed partial class ReleaseContractTests
         {
             survey.Unreachable.Should().BeNull(
                 "this test only runs when the feed answered — FeedReachableFactAttribute skips it "
-                + "otherwise with unmeasured:feed-unreachable. Reaching here without an answer means "
-                + "the feed stopped answering between discovery and execution, which makes this run's "
-                + $"answer UNKNOWN rather than favourable ({survey.Report})");
+                + "otherwise with unmeasured:feed-unreachable, unless TEMPO_REQUIRE_FEED=1 forbids "
+                + "skipping (the release-lane contract: an outage there is a FAILURE, not a tally "
+                + "of skipped tests). Reaching here without an answer means either the feed stopped "
+                + "answering between discovery and execution or the variable refused the skip; "
+                + $"both make this run's answer UNKNOWN rather than favourable ({survey.Report})");
 
             survey.Answers.Should().HaveCount(
                 survey.ManifestCount,
@@ -1089,10 +1091,41 @@ public sealed partial class ReleaseContractTests
     /// Copying the two lines instead would recreate exactly the shape
     /// <see cref="ProbeDecidedFactAttribute"/> was extracted to remove.
     /// </summary>
-    /// <returns>The survey line when nuget.org did not answer, or null when it did.</returns>
+    /// <returns>The survey line when nuget.org did not answer, or null when it did — or when
+    /// <c>TEMPO_REQUIRE_FEED=1</c> forbids the skip and the test body must report the outage
+    /// as a failure instead.</returns>
     internal static string? FeedUnreachableSkipReason()
     {
         var survey = PublishedVersionSurvey.Take();
-        return survey.Unreachable is null ? null : survey.Report;
+        return DecideSkip(
+            survey.Unreachable is null ? null : survey.Report,
+            Environment.GetEnvironmentVariable("TEMPO_REQUIRE_FEED"));
+    }
+
+    /// <summary>
+    /// Whether an unreachable feed becomes a skip reason.
+    /// <para>
+    /// N276 — plan 1342b9e8 step 21.4 asked for <c>TEMPO_REQUIRE_FEED=1</c> on the release-lane
+    /// <c>dotnet test</c> steps and it was never wired: an unreachable feed in a RELEASE run then
+    /// reported a skip — green in the gate totals — where the lane exists precisely to say the
+    /// provenance was measured. With the variable set the probe refuses to answer: the test is
+    /// handed to the runner, where <see cref="PublishedVersionSurvey.Unreachable"/> is asserted
+    /// null and the outage fails with <c>unmeasured:feed-unreachable</c> instead of being tallied
+    /// as skipped. Without it the behaviour is exactly the historical one, so local runs and
+    /// ordinary CI keep their skip-on-outage.
+    /// </para>
+    /// </summary>
+    /// <param name="unreachableReport">The survey line when the feed did not answer, null when it did.</param>
+    /// <param name="requireFeedEnv">The raw value of <c>TEMPO_REQUIRE_FEED</c>.</param>
+    /// <returns>Null when the test must run (feed answered, or skipping is forbidden); the report
+    /// when the outage may be reported as a skip.</returns>
+    internal static string? DecideSkip(string? unreachableReport, string? requireFeedEnv)
+    {
+        if (unreachableReport is null)
+        {
+            return null;
+        }
+
+        return string.Equals(requireFeedEnv, "1", StringComparison.Ordinal) ? null : unreachableReport;
     }
 }

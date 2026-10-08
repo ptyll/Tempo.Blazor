@@ -25,6 +25,42 @@ public class TmValidatedFieldTests : LocalizationTestBase
         public string Name { get; set; } = "";
     }
 
+    private sealed class TwoFieldModel
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+    }
+
+    private static RenderFragment BuildTwoFieldMarkup(TwoFieldModel model)
+    {
+        return builder =>
+        {
+            builder.OpenComponent<TmValidatedField>(0);
+            builder.AddAttribute(1, nameof(TmValidatedField.Label), "Name");
+            builder.AddAttribute(2, nameof(TmValidatedField.Value), model.Name);
+            builder.AddAttribute(3, nameof(TmValidatedField.ValueChanged),
+                EventCallback.Factory.Create<string>(model, v => model.Name = v));
+            builder.AddAttribute(4, nameof(TmValidatedField.ValueExpression),
+                (Expression<Func<string>>)(() => model.Name));
+            builder.CloseComponent();
+            builder.OpenComponent<TmValidatedField>(5);
+            builder.AddAttribute(6, nameof(TmValidatedField.Label), "Email");
+            builder.AddAttribute(7, nameof(TmValidatedField.Value), model.Email);
+            builder.AddAttribute(8, nameof(TmValidatedField.ValueChanged),
+                EventCallback.Factory.Create<string>(model, v => model.Email = v));
+            builder.AddAttribute(9, nameof(TmValidatedField.ValueExpression),
+                (Expression<Func<string>>)(() => model.Email));
+            builder.CloseComponent();
+        };
+    }
+
+    private IRenderedComponent<EditForm> RenderTwoFieldsInEditForm(TwoFieldModel model)
+    {
+        return Render<EditForm>(parameters => parameters
+            .Add(p => p.Model, model)
+            .Add(p => p.ChildContent, (RenderFragment<EditContext>)(_ => BuildTwoFieldMarkup(model))));
+    }
+
     private static RenderFragment<EditContext> BuildFieldFragment(FormModel model, bool required = false)
     {
         return _ => BuildFieldMarkup(model, required);
@@ -154,6 +190,9 @@ public class TmValidatedFieldTests : LocalizationTestBase
             "subscribe fresh in OnInitialized and this test would prove nothing");
 
         // (1) Resubscription: a completed validation pass on the NEW context must paint valid.
+        // Validate() is what marks the pass as covering this field (N320) — a real validator
+        // always follows a request; bare Notify would leave the field untouched.
+        editContext2.Validate();
         editContext2.NotifyValidationStateChanged();
         cut.WaitForAssertion(() =>
             cut.Find("input").ClassList.Should().Contain("tm-input-valid",
@@ -183,6 +222,7 @@ public class TmValidatedFieldTests : LocalizationTestBase
             .Add(p => p.ChildContent, (RenderFragment)BuildFieldMarkup(model1)));
 
         // A completed validation pass on the FIRST context paints the green frame.
+        editContext1.Validate();
         editContext1.NotifyValidationStateChanged();
         cut.WaitForAssertion(() =>
             cut.Find("input").ClassList.Should().Contain("tm-input-valid"));
@@ -200,9 +240,51 @@ public class TmValidatedFieldTests : LocalizationTestBase
         cut.FindAll(".tm-input-validation-success").Should().BeEmpty();
 
         // …and a completed pass on the NEW context turns it green again.
+        editContext2.Validate();
         editContext2.NotifyValidationStateChanged();
         cut.WaitForAssertion(() =>
             cut.Find("input").ClassList.Should().Contain("tm-input-valid"));
+    }
+
+    [Fact]
+    public void EditingOtherField_DoesNotMarkUntouchedFieldValid()
+    {
+        // N320: _validationRan was context-global — a pass triggered by editing field A painted
+        // the green frame on never-touched field B (gap register #10 reopened). The flag now
+        // tracks the FIELD: B stays neutral until its own field-changed or a whole-form request.
+        var model = new TwoFieldModel();
+        var cut = RenderTwoFieldsInEditForm(model);
+
+        var editContext = ContextOf(cut);
+        // A host notifies field A's edit; the validator's completed pass follows.
+        editContext.NotifyFieldChanged(editContext.Field(nameof(TwoFieldModel.Name)));
+        editContext.NotifyValidationStateChanged();
+
+        var inputs = cut.FindAll("input");
+        inputs[0].ClassList.Should().Contain("tm-input-valid",
+            "field A was edited — its pass completed and it carries no messages");
+        inputs[1].ClassList.Should().NotContain("tm-input-valid",
+            "field B was never edited and the pass did not cover it — a context-global flag " +
+            "paints it valid on the strength of A's edit (N320)");
+    }
+
+    [Fact]
+    public void SubmitForm_MarksAllFieldsValidated()
+    {
+        var model = new TwoFieldModel();
+        var cut = RenderTwoFieldsInEditForm(model);
+
+        var editContext = ContextOf(cut);
+        editContext.Validate(); // whole-form request covers every field, touched or not
+        editContext.NotifyValidationStateChanged();
+
+        var inputs = cut.FindAll("input");
+        cut.WaitForAssertion(() =>
+        {
+            inputs[0].ClassList.Should().Contain("tm-input-valid");
+            inputs[1].ClassList.Should().Contain("tm-input-valid",
+                "a whole-form validation pass validates untouched fields too — submit must paint them");
+        });
     }
 
     [Fact]
@@ -226,11 +308,13 @@ public class TmValidatedFieldTests : LocalizationTestBase
     public void ValidationOnAnotherField_DoesNotInvalidateStateTracking()
     {
         // ValidationStateChanged fired for the whole context marks a pass having happened —
-        // a field with no messages after a validation pass legitimately reports valid.
+        // a field with no messages after a validation pass legitimately reports valid. Since
+        // N320 the pass must also COVER the field, which the whole-form request supplies.
         var model = new FormModel { Name = "x" };
         var cut = RenderInEditForm(model);
 
         var editContext = ContextOf(cut);
+        editContext.Validate();
         editContext.NotifyValidationStateChanged();
 
         cut.WaitForAssertion(() =>

@@ -298,6 +298,44 @@ public class TmEntityPickerTests : LocalizationTestBase
     }
 
     /// <summary>
+    /// N323: dismissing the dropdown (Escape / outside pointerdown via overlay.js) must cancel the
+    /// armed debounce — <c>SetShowDropdown(false)</c> used to flip only <c>_showDropdown</c>, so a
+    /// delayed <c>SearchProvider</c> call still landed and re-set <c>_showDropdown = true</c>,
+    /// reopening the panel the user just closed.
+    /// </summary>
+    [Fact]
+    public async Task EntityPicker_Dismissal_CancelsPendingDebounce_DropdownStaysClosed()
+    {
+        var calls = 0;
+        var cut = Render<TmEntityPicker<TestItem, int>>(p => p
+            .Add(x => x.SearchProvider, q => { calls++; return SearchProvider(q); })
+            .Add(x => x.ValueSelector, i => i.Id)
+            .Add(x => x.DisplaySelector, i => i.Name)
+            .Add(x => x.MinSearchLength, 1)
+            .Add(x => x.Debounce, 80));
+
+        var input = cut.Find("input");
+        await input.InputAsync(new ChangeEventArgs { Value = "Al" });
+        cut.WaitForState(() => cut.FindAll(".tm-entity-picker__option").Count > 0);
+
+        // Re-arm the debounce while the dropdown is open. NOT awaited: HandleSearch awaits
+        // Task.Delay(Debounce, token) inside the handler, so awaiting the input would block until
+        // the debounce already fired — the pending-window the test needs would be gone.
+        var pending = input.InputAsync(new ChangeEventArgs { Value = "Ali" });
+
+        var overlay = cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+        cut.FindAll(".tm-entity-picker__option").Should().BeEmpty();
+
+        // …and the armed token must be dead: no second provider call, no reopen.
+        await Task.Delay(250);
+        calls.Should().Be(1,
+            "the dismissal must cancel the pending debounce — letting it run reopens the dropdown (N323)");
+        cut.FindAll(".tm-entity-picker__option").Should().BeEmpty();
+        await pending; // observe the handler task — it returns early on the cancelled token
+    }
+
+    /// <summary>
     /// N168: the overlay Anchor is the <c>.tm-entity-picker</c> wrapper — overlay.js calls
     /// <c>.focus()</c> on it for Escape/outside dismissal. Without tabindex a plain div swallows
     /// that as a no-op and focus falls to <c>&lt;body&gt;</c>. <c>-1</c> makes it

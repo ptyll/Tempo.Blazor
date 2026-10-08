@@ -2,7 +2,7 @@
   "itemName": "TmOverlayPanel",
   "kind": "Component",
   "category": "Overlay",
-  "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups.",
+  "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups. When the anchor scrolls fully out of the viewport the panel is parked with visibility:hidden and reappears on the anchor's return — unless focus sits inside it, in which case the panel is dismissed ('anchor-hidden') and focus returns to the anchor.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Overlay"
   ],
@@ -66,7 +66,7 @@
       "type": "bool",
       "isRequired": false,
       "default": "false",
-      "description": "Stretch the panel to the anchor's width (dropdown/select menus)."
+      "description": "Stretch the panel to the anchor's width (dropdown/select menus). The width is written before placement is measured, so a larger stylesheet min-width still wins: alignment, shift and viewport clamping all use the rendered width."
     },
     {
       "name": "ConstrainHeight",
@@ -105,13 +105,25 @@
       "name": "OnDismissed",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\" or \"outside\". Programmatic closes do not raise it."
+      "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\", \"outside\" or \"anchor-hidden\" (the anchor scrolled fully out of the viewport while focus sat inside the panel — hiding alone would keep swallowing keystrokes, so the panel closes and focus returns to the anchor since 2.9.1). Programmatic closes do not raise it."
     },
     {
       "name": "Role",
       "type": "string?",
       "isRequired": false,
-      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip."
+      "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name rendered as aria-label on the panel element. Required for Role=\"dialog\" panels that do not render a visible title to reference via AriaLabelledBy (since 2.9.1)."
+    },
+    {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name rendered as aria-labelledby on the panel element. Takes precedence over AriaLabel — point it at the visible title's id; the referenced element must be present (and, for ids inside ChildContent, rendered) while the panel is open (since 2.9.1)."
     },
     {
       "name": "ChildContent",
@@ -133,7 +145,7 @@
   "examples": [
     {
       "title": "Anchored panel",
-      "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
+      "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\"\n                AriaLabel=\"Details\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
     }
   ]
 }

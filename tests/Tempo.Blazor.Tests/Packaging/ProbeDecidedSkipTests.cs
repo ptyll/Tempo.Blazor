@@ -160,6 +160,51 @@ public sealed class ProbeDecidedSkipTests
         }
     }
 
+    /// <summary>
+    /// N276 — with <c>TEMPO_REQUIRE_FEED=1</c> the feed probe must NOT turn an outage into a
+    /// skip: the decision returns null, the runner executes the member, and the survey assert
+    /// inside the body fails the run. A skipped provenance guard in a release lane reads as
+    /// green evidence that was never measured.
+    /// </summary>
+    [Fact]
+    public void DecideSkip_RequireFeedSet_FeedUnreachable_DoesNotSkip()
+    {
+        ReleaseContractTests.DecideSkip("the feed did not answer (survey)", "1").Should().BeNull(
+            "TEMPO_REQUIRE_FEED=1 forbids the skip — the member must run so its own "
+            + "survey.Unreachable assert reports unmeasured:feed-unreachable as a failure");
+    }
+
+    /// <summary>The same outage without the variable keeps the historical skip — local runs and
+    /// ordinary CI lanes are untouched by the release contract.</summary>
+    [Fact]
+    public void DecideSkip_RequireFeedUnset_FeedUnreachable_Skips()
+    {
+        using (new AssertionScope())
+        {
+            ReleaseContractTests.DecideSkip("the feed did not answer (survey)", null).Should().Be(
+                "the feed did not answer (survey)",
+                "with no TEMPO_REQUIRE_FEED the probe reports the outage as a skip exactly as "
+                + "before — offline development must not turn the suite red");
+
+            ReleaseContractTests.DecideSkip("the feed did not answer (survey)", "0").Should().Be(
+                "the feed did not answer (survey)",
+                "anything but the exact release-lane value is unset — '0', empty, or absent all "
+                + "mean the skip is allowed");
+        }
+    }
+
+    /// <summary>A feed that answered never becomes a skip, whichever way the variable is set —
+    /// the env only forbids hiding an outage, it cannot manufacture one.</summary>
+    [Fact]
+    public void DecideSkip_FeedReachable_NeverSkips()
+    {
+        using (new AssertionScope())
+        {
+            ReleaseContractTests.DecideSkip(null, "1").Should().BeNull();
+            ReleaseContractTests.DecideSkip(null, null).Should().BeNull();
+        }
+    }
+
     /// <summary>A probe with a known verdict, so both cells of the shared getter are exact.</summary>
     private sealed class StandInProbeFactAttribute : ProbeDecidedFactAttribute
     {

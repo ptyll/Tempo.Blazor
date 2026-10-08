@@ -169,3 +169,18 @@ What the three test-side ones raced, for anyone writing a similar test:
   which is why release-run artifacts ship in the committed
   `eng/release-evidence/<run>/` tree rather than the gitignored `TestResults/`
   dir a fresh CI checkout cannot see.
+- **The evidence `total` (and `passed`/`failed`/`skipped`) counts distinct
+  test names in the TRX** — data-row instances that share a test name count
+  once — not the number of `testId` elements the file happens to carry
+  (CF15a). `eng/verify-release-evidence.sh` documents the same convention in
+  its header.
+- **`hostRestarts: 0` is vacuous under `TM_E2E_SELF_HOST=false`:** with
+  externally managed hosts a resurrection is recorded nowhere the suite can
+  see — the counter only measures hosts the suite itself started. The claim
+  then rests on the external host's own watch-log and on the absence of
+  refused-connection errors in `full-run.log`.
+- **`selfHost` declares which case applies (CF19d):** the evidence JSON carries
+  `selfHost: true` when the suite started its own hosts (the JSONL counter is
+  meaningful) and `selfHost: false` for externally managed hosts — where the
+  verifier then requires `host-watch.log` inside `artifactsPath` instead of
+  trusting a vacuous `hostRestarts: 0`. Missing or non-boolean values refuse.

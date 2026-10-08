@@ -53,6 +53,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- CF19g — the ONE assembly-init file, linked (internal does not cross assemblies). -->
+    <Compile Include="..\Shared\TestAssemblyInit.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

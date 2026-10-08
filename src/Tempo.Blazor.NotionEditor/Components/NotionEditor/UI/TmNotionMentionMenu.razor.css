@@ -1,40 +1,16 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-
-.tm-nmm-backdrop {
-    position: fixed;
-    inset: 0;
-    /* N191: popover-band tokens — the backdrop sits one step under the anchored menu card. */
-    z-index: calc(var(--tm-z-popover, 1030) - 1);
-    background: transparent;
-}
-
 /* ── Menu card ────────────────────────────────────────────────────────────── */
 
-.tm-nmm {
-    position: fixed;
-    z-index: var(--tm-z-popover, 1030);
-    --tm-nmm-viewport-margin: var(--tm-space-2, 8px);
-    --tm-nmm-max-menu-height: 360px;
-    width: 280px;
-    max-height: min(
-        var(--tm-nmm-max-menu-height),
-        calc(100vh - (var(--tm-nmm-viewport-margin) * 2))
-    );
-    display: flex;
-    flex-direction: column;
-    background: var(--tm-bg-elevated, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-radius: 6px;
-    box-shadow: 0 4px 24px rgba(15,15,15,0.20), 0 0 0 1px rgba(15,15,15,0.04);
-    overflow: hidden;
-    font-size: 14px;
-    color: var(--tm-text-primary, rgb(55,53,47));
-    animation: tm-nmm-appear 80ms ease;
-}
+/* CF18-7: the menu card is a TmOverlayPanel — the .tm-nmm root rule moved to the global
+   _notion-floating-menus.css (the panel element carries TmOverlayPanel's scope, not ours).
+   Backdrop and own position/z-index are gone: overlay.js + the browser top layer handle
+   placement, dismissal and stacking. */
 
-@keyframes tm-nmm-appear {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0);    }
+/* Virtual anchor — zero-size pin at the caret coordinates the panel positions against. */
+.tm-nmm__anchor {
+    position: fixed;
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
 /* ── Search ───────────────────────────────────────────────────────────────── */

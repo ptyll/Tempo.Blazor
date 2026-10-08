@@ -132,6 +132,50 @@ public class NotionStructuralOperationsE2ETests : NotionE2ETestBase
         Assert.IsTrue(declared, "A toggle's block list must name its page and parent to accept drops.");
     }
 
+    [TestMethod]
+    [Description("Keystrokes typed during the async Enter-split round-trip land in the new block, not the wiped old one")]
+    public async Task FastTypingAfterEnter_LandsEveryCharacterInTheNewBlock()
+    {
+        var page = await OpenNotionEditorAsync();
+        var firstId = await FocusTopLevelParagraphAsync(page, "abc");
+
+        // Widen the async gap so the next keystrokes provably arrive BEFORE the new
+        // editable mounts — without buffering they are overwritten by the source
+        // block's setHtml(before) rewrite.
+        var cdp = await page.Context.NewCDPSessionAsync(page);
+        try
+        {
+            await cdp.SendAsync("Emulation.setCPUThrottlingRate", new Dictionary<string, object> { ["rate"] = 6 });
+            await page.Keyboard.PressAsync("End");
+            await page.Keyboard.PressAsync("Enter");
+            await page.Keyboard.TypeAsync("xyz", new() { Delay = 0 });
+        }
+        finally
+        {
+            await cdp.SendAsync("Emulation.setCPUThrottlingRate", new Dictionary<string, object> { ["rate"] = 1 });
+        }
+
+        await page.Locator($"[data-block-id='{firstId}'] + [data-block-id]").WaitForAsync(Visible());
+        await page.WaitForTimeoutAsync(1500);
+
+        var texts = await page.EvaluateAsync<string[]>(
+            """
+            firstId => {
+                const source = document.querySelector(`[data-block-id="${firstId}"]`);
+                const next = source?.nextElementSibling;
+                const textOf = c => (c?.querySelector("[contenteditable='true']")?.innerText ?? '').trim();
+                return [textOf(source), textOf(next)];
+            }
+            """,
+            firstId);
+
+        Assert.AreEqual("abc", texts[0], "Block 1 keeps the text typed before Enter.");
+        Assert.AreEqual("xyz", texts[1], "Block 2 receives the characters typed during the split round-trip.");
+
+        await CaptureBaselineAsync("structural-ops", "fast-typing-after-enter", page.Locator(".tm-notion-page").First);
+        TestContext.WriteLine("UX: characters typed immediately after Enter land in the new block — no swallowed keystrokes.");
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static LocatorWaitForOptions Visible() =>

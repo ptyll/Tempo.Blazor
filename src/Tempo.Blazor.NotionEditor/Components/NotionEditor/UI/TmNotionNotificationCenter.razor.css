@@ -2,14 +2,10 @@
     position: relative;
 }
 
-/* The panel is a TmOverlayPanel (N189): position:fixed + z-index come from _overlay-panel.css,
-   overlay.js writes top/left (Bottom + End + 8px) and the popover lands in the browser top
-   layer — so nothing here may set position/stacking again. min() keeps the 24rem panel inside
-   the viewport on narrow screens (replaces the old fixed-position mobile media query, which
-   overlay.js inline styles would override anyway). */
-.tm-notion-notifications__panel {
-    width: min(24rem, calc(100vw - 1.5rem));
-}
+/* N325: .tm-notion-notifications__panel used to live here, but the panel element is rendered
+   by TmOverlayPanel — it carries THAT component's scope attribute, so this file's rule never
+   matched and the width silently fell back to the global .tm-notification-bell__dropdown.
+   The rule now lives in wwwroot/css/components/_notion-notifications.css (global). */
 
 .tm-notion-notifications__item {
     width: 100%;

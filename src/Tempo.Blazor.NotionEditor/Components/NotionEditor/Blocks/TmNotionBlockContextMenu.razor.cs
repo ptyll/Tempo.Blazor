@@ -9,7 +9,11 @@ namespace Tempo.Blazor.Components.NotionEditor.Blocks;
 
 /// <summary>
 /// Dropdown context menu for a single block — provides Delete, Duplicate, Turn into,
-/// Move to, Copy link, Comment, and Color actions.
+/// Move to, Copy link, Comment, and Color actions. Submenu activation follows the APG
+/// menu-button pattern: ArrowRight and keyboard/programmatic clicks (<c>Detail == 0</c>)
+/// land focus on the first submenu item, while pointer-driven open/close never steals
+/// or strands focus inside a submenu (<c>mouseleave</c> keeps a focused submenu open,
+/// a sibling <c>mouseenter</c> returns focus to the focused submenu's trigger first).
 /// </summary>
 public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
 {
@@ -44,6 +48,7 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
     private bool _showColor;
     private bool _focusPending = true;
     private Sub? _pendingSubFocus;
+    private Sub? _focusedSub;
     private ElementReference _menuRef;
     private ElementReference _turnIntoTriggerRef;
     private ElementReference _panelTypeTriggerRef;
@@ -109,6 +114,53 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
         if (sub == Sub.PanelType) _showPanelType = false;
         if (sub == Sub.Color)     _showColor = false;
     }
+
+    private void OpenSubFromClick(MouseEventArgs args, Sub sub)
+    {
+        OpenSub(sub);
+        // CF18-1: a keyboard/programmatic activation (Enter/Space on a button, element.click())
+        // arrives with Detail == 0. The APG menu-button contract lands focus on the first
+        // submenu item it just opened — same as ArrowRight. Pointer clicks (Detail >= 1)
+        // keep their own focus model, so they leave _pendingSubFocus alone.
+        if (args.Detail == 0)
+        {
+            _pendingSubFocus = sub;
+        }
+    }
+
+    private async Task HandleSubMouseEnterAsync(Sub sub)
+    {
+        // CF18-2: hovering a sibling while keyboard focus lives inside an open submenu would
+        // unmount that submenu under the caret — hand focus back to its trigger first.
+        if (_focusedSub is { } focused && focused != sub)
+        {
+            _focusedSub = null;
+            await FocusSubTriggerAsync(SubTriggerRef(focused));
+        }
+        OpenSub(sub);
+    }
+
+    private void HandleSubMouseLeave(Sub sub)
+    {
+        // CF18-2: mouseleave must not unmount a submenu whose wrapper still holds
+        // keyboard focus — focus would fall to <body>.
+        if (_focusedSub == sub)
+        {
+            return;
+        }
+        CloseSub(sub);
+    }
+
+    private void HandleSubFocusIn(Sub sub) => _focusedSub = sub;
+
+    private void HandleSubFocusOut() => _focusedSub = null;
+
+    private ElementReference SubTriggerRef(Sub sub) => sub switch
+    {
+        Sub.TurnInto  => _turnIntoTriggerRef,
+        Sub.PanelType => _panelTypeTriggerRef,
+        _             => _colorTriggerRef,
+    };
 
     // ── Action handlers ───────────────────────────────────────────────────────
 

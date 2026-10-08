@@ -4,26 +4,28 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Gap register D, proven in a real browser: the focus ring DERIVES from the primary scale via
-/// relative colour syntax (<c>rgb(from var(--tm-color-primary-500) r g b / 0.4)</c>), so repointing
-/// a scale step repaints it. The token-file tests pin the declared expression; only a computed
-/// style can prove the chain actually resolves — a literal <c>rgba()</c> looks identical right up
-/// to the moment somebody rebrands and the ring stays Tempo blue.
+/// Gap register D, proven in a real browser: the focus ring DERIVES from the primary scale —
+/// <c>var(--tm-focus-ring)</c> ends in <c>var(--tm-color-primary)</c> (<c>0 0 0 4px</c> outer
+/// layer), which resolves to primary-600 in the light theme and primary-400 in the dark — so
+/// repointing a scale step repaints it. The token-file tests pin the declared expression; only
+/// a computed style can prove the chain actually resolves — a literal colour looks identical
+/// right up to the moment somebody rebrands and the ring stays Tempo blue.
 /// </summary>
 /// <remarks>
-/// Chromium serialises the resolved relative colour in <c>color(srgb …)</c> form, so the
-/// assertions match the normalised channel triplets rather than 0–255 rgba() text.
+/// The ring resolves to a literal hex through <c>var()</c> chains, so Chromium serialises the
+/// layers as <c>rgb(r, g, b) 0px 0px 0px Npx</c> — the assertions match the outer layer's
+/// colour and spread rather than a <c>color(srgb …)</c> relative-colour form.
 /// </remarks>
 [TestClass]
 public class FocusTokenDerivationE2ETests : WasmTestBase
 {
     private const string FormsPage = "/forms";
 
-    /// <summary>--tm-color-primary-500 #3b82f6 serialised: 59/255, 130/255, 246/255.</summary>
-    private const string LightRing = "color(srgb 0.231373 0.509804 0.964706 / 0.4)";
+    /// <summary>The light ring's outer layer is <c>--tm-color-primary</c> → primary-600 #2563eb.</summary>
+    private const string LightRing = "rgb(37, 99, 235) 0px 0px 0px 4px";
 
-    /// <summary>The dark ring derives from the dark primary step, primary-400 #60a5fa.</summary>
-    private const string DarkRing = "color(srgb 0.376471 0.647059 0.980392 / 0.5)";
+    /// <summary>The dark ring's outer layer is <c>--tm-color-primary</c> → primary-400 #60a5fa.</summary>
+    private const string DarkRing = "rgb(96, 165, 250) 0px 0px 0px 4px";
 
     private async Task<IPage> OpenFormsPageAsync()
     {
@@ -37,7 +39,7 @@ public class FocusTokenDerivationE2ETests : WasmTestBase
     }
 
     /// <summary>The computed <c>box-shadow</c> of a focused <c>.tm-input</c> — <c>.tm-input:focus</c>
-    /// paints <c>var(--tm-shadow-focus)</c>, so this is the ring the user actually sees.</summary>
+    /// paints <c>var(--tm-focus-ring)</c>, so this is the ring the user actually sees.</summary>
     private static async Task<string> FocusedRingAsync(IPage page)
     {
         var input = page.Locator("input.tm-input").First;
@@ -47,22 +49,23 @@ public class FocusTokenDerivationE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Repointing --tm-color-primary-500 repaints the light focus ring; repointing " +
+    [Description("Repointing --tm-color-primary-600 repaints the light focus ring; repointing " +
         "primary-400 repaints the dark one — the ring is derived, not literal")]
     public async Task ShadowFocus_FollowsThePrimaryScaleStep_InBothThemes()
     {
         var page = await OpenFormsPageAsync();
 
         StringAssert.Contains(await FocusedRingAsync(page), LightRing,
-            "the default light ring is primary-500 at 0.4 alpha");
+            "the default light ring's outer layer is primary-600");
 
-        // Rebrand: repoint the 500 step. A derived ring must repaint; a literal would not move.
+        // Rebrand: repoint the 600 step, which --tm-color-primary aliases. A derived ring must
+        // repaint; a literal would not move.
         await page.EvaluateAsync(
-            "document.documentElement.style.setProperty('--tm-color-primary-500', '#ff0000')");
-        StringAssert.Contains(await FocusedRingAsync(page), "color(srgb 1 0 0 / 0.4)",
-            "overriding --tm-color-primary-500 must alter the computed focus colour");
+            "document.documentElement.style.setProperty('--tm-color-primary-600', '#ff0000')");
+        StringAssert.Contains(await FocusedRingAsync(page), "rgb(255, 0, 0) 0px 0px 0px 4px",
+            "overriding --tm-color-primary-600 must alter the computed focus colour");
         await page.EvaluateAsync(
-            "document.documentElement.style.removeProperty('--tm-color-primary-500')");
+            "document.documentElement.style.removeProperty('--tm-color-primary-600')");
 
         // Dark: the demo marks the theme on the layout wrapper; click the visible toggle.
         await page.Locator("button[title*='dark' i]:visible").First.ClickAsync();
@@ -70,11 +73,11 @@ public class FocusTokenDerivationE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(400);
 
         StringAssert.Contains(await FocusedRingAsync(page), DarkRing,
-            "the default dark ring is the dark primary step (primary-400) at 0.5 alpha");
+            "the default dark ring's outer layer is the dark primary step (primary-400)");
 
         await page.EvaluateAsync(
             "document.documentElement.style.setProperty('--tm-color-primary-400', '#00ff00')");
-        StringAssert.Contains(await FocusedRingAsync(page), "color(srgb 0 1 0 / 0.5)",
+        StringAssert.Contains(await FocusedRingAsync(page), "rgb(0, 255, 0) 0px 0px 0px 4px",
             "overriding --tm-color-primary-400 must alter the computed dark focus colour");
     }
 }

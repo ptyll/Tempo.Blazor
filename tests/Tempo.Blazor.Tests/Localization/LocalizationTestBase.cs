@@ -660,6 +660,7 @@ public abstract class LocalizationTestBase : BunitContext
         // TmFilterableDropdown
         ["TmFilterableDropdown_Search"]        = "Search...",
         ["TmFilterableDropdown_NoResults"]     = "No results found",
+        ["TmFilterableDropdown_Options"]       = "Options",
         ["TmFilterableDropdown_Loading"]       = "Loading...",
         ["TmFilterableDropdown_Error"]         = "Failed to load options",
         ["TmFilterableDropdown_Retry"]         = "Retry",
@@ -850,6 +851,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmMvl_TableView"]   = "Table view",
         ["TmMvl_CardView"]    = "Card view",
         ["TmMvl_ListView"]    = "List view",
+        ["TmMvl_ListOptions"] = "List options",
         ["TmMvl_ColTitle"]    = "Title",
         ["TmMvl_ColSubTitle"] = "Subtitle",
         ["TmMvl_ColStatus"]   = "Status",
@@ -4251,6 +4253,7 @@ public abstract class LocalizationTestBase : BunitContext
         // TmFilterableDropdown
         ["TmFilterableDropdown_Search"]        = "Hledat...",
         ["TmFilterableDropdown_NoResults"]     = "Žádné výsledky",
+        ["TmFilterableDropdown_Options"]       = "Možnosti",
         ["TmFilterableDropdown_Loading"]       = "Načítání...",
         ["TmFilterableDropdown_Error"] = "Nepodařilo se načíst možnosti",
         ["TmFilterableDropdown_Retry"]         = "Zkusit znovu",
@@ -4400,6 +4403,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmMvl_TableView"]   = "Tabulka",
         ["TmMvl_CardView"]    = "Karty",
         ["TmMvl_ListView"]    = "Seznam",
+        ["TmMvl_ListOptions"] = "Možnosti seznamu",
         ["TmMvl_ColTitle"]    = "Název",
         ["TmMvl_ColSubTitle"] = "Popis",
         ["TmMvl_ColStatus"]   = "Stav",

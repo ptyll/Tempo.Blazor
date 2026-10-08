@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.9.1 (unreleased)
 
 ### Breaking / Migration
 
@@ -339,6 +339,12 @@
   `ScopedCssOwnershipTests` with its own shrink-only baseline. The audit now also flags the named
   colours `white` and `black`, and judges white-on-primary per rule rather than per line. See
   `docs/css-token-aliases.md` and `docs/scoped-css-ownership.md`.
+- `TmOverlayPanel.AriaLabel` / `TmOverlayPanel.AriaLabelledBy` parameters for giving the panel an
+  accessible name. Every `Role="dialog"` panel ships one; `AriaLabelledBy` is preferred when the
+  panel renders a visible title.
+- `OverlayPanelRules_Inventory_*` tests pin the exact `.tm-overlay-panel` rule set of the bundled
+  CSS (the `:where()` reset, the fallback closed-state hide, the `:where()` open display) so a
+  new or re-weighted global rule on the shared element fails as a finding (CF03c).
 
 ### Changed
 
@@ -412,6 +418,373 @@
   dialog. All three now close synchronously (and yield a render) before the handler runs; any
   click inside a `TmSplitButton` menu also closes it. No z-index or top-layer changes to
   TmModal/TmDialog.
+
+- **`MatchAnchorWidth` now respects the panel's own `min-width` (N324).** `overlay.js` used to
+  run the placement math against `anchorRect.width` and only then write `style.width` — a panel
+  whose stylesheet `min-width` exceeds the anchor (TmMultiColumnComboBox's 320px dropdown under
+  a 240px trigger) was positioned as if it were anchor-wide and its min-width-clamped box
+  overhung the viewport's right edge. The width write now happens before `offsetWidth` is
+  measured, so align, shift and the viewport clamp all use the *rendered* width.
+
+- **TmNotionNotificationCenter's panel width rule now actually applies (N325).** It sat in the
+  component's scoped `.razor.css`, but the panel element is rendered by `TmOverlayPanel` and
+  carries that component's scope attribute — the scoped selector could never match, so the
+  panel silently fell back to the global `.tm-notification-bell__dropdown` (360px instead of
+  the declared `min(24rem, 100vw − 1.5rem)`). The rule moved to the NotionEditor global
+  stylesheet (`_notion-notifications.css`, the N197 pattern) as `width: 24rem;
+  max-width: calc(100vw − 1.5rem)`, and a new source sweep
+  (`OverlayPanelScopedCssTests`) fails closed on any scoped rule targeting a class passed to
+  `TmOverlayPanel` without `::deep`.
+
+- **A panel whose anchor scrolled out of the viewport no longer traps focus (N329).** `overlay.js`
+  used to park the panel `visibility:hidden` and leave it open — focus inside (e.g. the
+  TmFilterableDropdown filter input) kept accepting keystrokes on an invisible surface. Now, when
+  the hide condition coincides with focus inside, the panel is dismissed through the normal
+  accepted-dismissal path (`OnDismissed` reports the new `"anchor-hidden"` reason) and focus
+  returns to the anchor. A hidden panel that does NOT hold focus keeps the old
+  park-and-reappear behaviour unchanged.
+
+- **Every `Role="dialog"` overlay panel now exposes an accessible name (N326).** `TmOverlayPanel`
+  gained `AriaLabel`/`AriaLabelledBy`; the seven dialog-role consumers ship names — both
+  notification centers point `aria-labelledby` at their visible title, the date pickers point at
+  the field label (falling back to a localized `aria-label` when `Label` is unset), and
+  TmColorPicker/TmMultiColumnComboBox use localized `aria-label`s. A new source sweep
+  (`TmOverlayPanelDialogNamingTests`) enumerates every `<TmOverlayPanel Role="dialog">` under
+  `src/`, verifies the rendered panel carries `aria-label` or an `aria-labelledby` that resolves
+  to a present element while open, and fails closed on unnamed sites — including sites it cannot
+  render (`unmeasurable:`).
+
+- **All NotionEditor floating surfaces now ride the `--tm-z-*` token bands (CF10n).** The
+  z-band sweep in `TmNotionFloatingZBandTests` used to cover only `UI/**/*.razor.css`; widened
+  to the whole `Components/NotionEditor` tree it exposed bare band-level levels elsewhere —
+  Share/Restrictions dialogs (10030/10020), db record detail and template editor and
+  import/export overlays (1200/1210), page-tree and database context menus (1000/299-300),
+  page settings menu (9999) and the three TempoBlocks edit modals (1000). Dialogs and
+  full-screen take-overs now sit on `var(--tm-z-modal)` (backdrops `calc(... - 1)`), anchored
+  and context menus on `var(--tm-z-dropdown)`/`var(--tm-z-popover)`, and two in-flow overlays
+  that only needed local stacking dropped under 100. Any future bare `z-index: NNN` or
+  `+ 9000`-style arithmetic escape anywhere in the NotionEditor fails the sweep.
+
+- **Notion AI menu, mention menu, and comment-mention dropdown now render in the browser top
+  layer (CF18-7).** All three used to be `position:fixed` surfaces on `z-index:1030` — below
+  the `--tm-z-modal` band — so any of them opened against a `TmModal` painted under the modal
+  overlay and was unreachable. They are `TmOverlayPanel` popovers now: `TmNotionAiMenu` and
+  `TmNotionMentionMenu` anchor to a zero-size virtual element pinned at the existing
+  `Top`/`Left` coordinates, and `TmCommentMentionInput` anchors its dropdown to the textarea
+  itself. `overlay.js` supplies flip/shift viewport clamping (replacing
+  `adjustSlashMenuPosition`), outside-pointerdown dismissal (replacing the transparent
+  backdrop) and Escape handling routed through `IsOpenChanged` into the existing `OnClosed`
+  callbacks — arrow navigation, Enter selection, selection callbacks and the mention-trigger
+  cancellation are unchanged. Panel-root styles moved to the new global
+  `_notion-floating-menus.css` (the N325 scoped-CSS rule applies: the panel element carries
+  `TmOverlayPanel`'s scope attribute, so scoped selectors could never match it). The z-band
+  sweep gained a fail-closed theory asserting these surfaces declare no `z-index` of their
+  own.
+
+- **A degenerate viewport pass no longer dismisses an open overlay panel.** Chromium applies
+  a 1×1 device-metrics emulation mid-way through a full-page screenshot capture (Playwright
+  `fullPage: true`), and the resulting resize pass used to see every anchor as out-of-view —
+  for a panel holding focus that meant an instant `anchor-hidden` dismissal and unmount.
+  `place()` now early-returns when `innerWidth`/`innerHeight` is below 2: the layout math is
+  meaningless at that size, and the next real resize pass re-runs it anyway. The migration
+  E2E surfaced this inside `NotionMentionMenuE2ETests`' baseline captures.
+
+- **TmValidatedField's green frame now tracks the field, not the context (N320).** The
+  `_validationRan` flag used to be set by any `OnValidationStateChanged` — including a pass
+  triggered by editing a *different* field — so a never-touched field painted `tm-input-valid`
+  on the strength of its neighbour's validation. The state is now field-scoped: the field's own
+  `OnFieldChanged` or a whole-form `OnValidationRequested` marks a pass as covering it, and only
+  then does `OnValidationStateChanged` mark it validated (the notify event still just re-renders;
+  it never marks on its own). Editing field A therefore leaves untouched field B neutral, while
+  `EditContext.Validate()`/form submit still paints every field. An EditContext swap resets both
+  flags and moves all three subscriptions to the new context; Dispose unsubscribes all three.
+
+- **TmNavigationGuard's dialog can no longer be dismissed during an in-flight save (N321).**
+  Escape used to reach `HandleDialogResultAsync(false)` through `TmDialog`'s default
+  `CloseOnEscape="true"` — it dismissed the dialog the save still reports through and fired
+  `OnCancel`, while the save's eventual success re-issued the navigation the user had just
+  "stayed" from. Both guard variants now pass `CloseOnEscape="@(!_saving)"`
+  (`CloseOnOverlayClick` stays false), and `HandleDialogResultAsync` early-returns while
+  `_saving` as a second line of defense for any path that skips the disabled/Escape gates.
+  A successful save still re-issues the blocked navigation unchanged.
+
+- **A pending debounce can no longer reopen a dismissed dropdown (N323).** `TmQueryInput`'s
+  close path bumped `_requestVersion` but left the `System.Timers.Timer` armed — type, Escape
+  inside the debounce window, and the pending timer still fired `LoadSuggestionsAsync`, which
+  stamps its own fresh version and re-set `_isOpen`, reopening the dropdown the user just
+  closed. `CloseDropdown()` now stops and disposes the timer alongside the version bump.
+  `TmEntityPicker` had the same hole on the other side of the mechanism: `SetShowDropdown(false)`
+  (overlay.js Escape / outside pointerdown) flipped only the flag while the awaited
+  `Task.Delay(Debounce, _debounceToken.Token)` kept running into a search that re-set
+  `_showDropdown`. Closing now cancels `_debounceToken`, and the delayed blur-close cancels it
+  too.
+
+- **Track-changes toggle no longer double-pushes the canvas engine (CF09b2).**
+  `ToggleTrackChanges` sent `setTrackChangesEnabled(CanvasEngineTracksChanges)` to the engine
+  but never updated `_appliedCanvasEngineTrackChanges` — the next `OnParametersSetAsync` read
+  the SAME value as a delta and pushed it again, so every user toggle cost two interop calls
+  (and any param-pass observer saw a phantom "change"). The toggle now records the applied
+  flag alongside `_trackChangesEnabled`, whether or not the host is mounted (a host mounting
+  later boots with the same expression).
+
+- **`TmNotionBlockContextMenu` submenus no longer strand keyboard focus (CF18).** Enter/Space
+  on a submenu trigger is a native button click arriving with `MouseEventArgs.Detail == 0` —
+  it opened the panel but never set `_pendingSubFocus`, so focus stayed on the trigger while
+  ArrowRight did both (an APG asymmetry). The click path now detects `Detail == 0` and queues
+  the same first-item focus; pointer clicks (`Detail >= 1`) are untouched. Separately, each
+  `.tm-notion-ctx__sub` wrapper tracks `focusin`/`focusout`: `mouseleave` no longer unmounts a
+  submenu that still holds keyboard focus (focus fell to `<body>`), and a sibling's
+  `mouseenter` hands focus back to the focused submenu's trigger before the swap.
+
+- **The Notion menus' focus re-assert loop no longer fights a deliberate focus move (CF18-3).**
+  `tmNotionEditor.focusMenuInput` re-focuses the just-opened search input for ~10 animation
+  frames because the same keystroke queues a Blazor render that can refocus the block
+  editable afterwards. The loop never checked what the user did in between: a Tab (or any
+  focus move to a real element) inside that window was yanked back to the menu input up to
+  nine more times. `tryFocus` now stops on attempts after the first when
+  `document.activeElement` is a real non-contenteditable element that is neither the target
+  nor `body` — the initial claim is unchanged, and the block-editable refocus the loop
+  exists to outlast still loses the race. Affects `TmNotionSlashMenu`,
+  `TmNotionMentionMenu`, and `TmNotionTokenDropdown`.
+
+- **The InteractiveAuto demo now proves the WebAssembly renderer actually claims the page
+  (CF18-4).** The shared demo layout stamps `data-render-mode` from `RendererInfo.Name` —
+  `Static` under prerender, `Server` while only the SignalR renderer is attached, and
+  `WebAssembly` only when the WASM renderer owns the layout. The new E2E test models the
+  real .NET auto-mode contract instead of asserting a live swap that `blazor.web.js`
+  deliberately never performs: on the first visit the `onWebAssemblyFailedToLoadQuickly`
+  latch assigns auto components to the Server renderer and there is no migration once a
+  renderer claims a component; only after the WASM runtime finishes booting does the
+  framework persist `blazor-resource-hash:<assembly>` to `localStorage`, and on subsequent
+  navigations the matching hash skips the latch so auto descriptors stay unassigned until
+  the WASM renderer claims them. The test waits for the persisted hash (deterministic
+  proof a WASM boot fully completed — Debug payloads at the auto throttle of one download
+  at a time take tens of seconds), reloads, and asserts the marker reaches `WebAssembly`.
+  Earlier RED runs that observed `Server` for 90+ seconds were this designed latch, not a
+  hosting defect: `dotnetReady` resolves, all ~300 runtime assets fetch 200, and the
+  second navigation does hydrate on `WebAssembly`.
+
+- **`TmFilterableDropdown` wires its combobox/listbox ARIA relationships (CF18-5a).**
+  The closed trigger no longer emits `aria-controls` (it pointed at a popup that does not
+  exist); once open it names the `TmOverlayPanel`'s generated id. The filter input —
+  the element that actually holds focus — gets `aria-controls` for the popup and
+  `aria-activedescendant` tracking the ArrowUp/ArrowDown highlight through stable
+  per-option ids (`<popup-id>-opt-<index>`). Because ARIA `listbox` may own only
+  `option` children, the popup keeps the stable id and `role="listbox"` moves to an
+  inner wrapper around the options alone; the filter input and the loading/error/empty
+  messages live outside it as siblings, and the messages now announce themselves via
+  `role="status"`/`role="alert"`. The trigger and the listbox both carry accessible
+  names — the trigger falls back to its visible placeholder/value text when
+  `AriaLabel` is unset, and the listbox uses the new `TmFilterableDropdown_Options`
+  resource. Verified by two bUnit tests plus an axe-core E2E scan of the open dropdown
+  on the demo page (0 critical/serious violations).
+
+- **`TmMultiViewList` list view exposes listbox semantics (CF18-5b).** The `<ul>` is
+  now `role="listbox"` with `aria-multiselectable` bound to `AllowSelection` and an
+  accessible name from the new `TmMvl_ListOptions` resource; each `<li>` is
+  `role="option"` with `aria-selected`. Custom status-badge colors now pair the
+  background with a luminance-picked ink (`--tm-text-primary` on light fills,
+  `--tm-text-inverse` on dark) instead of the muted-secondary default that failed
+  WCAG AA on saturated colors — mid-luminance fills remain the caller's choice.
+  The demo page's palette moves to darker shades so the badges meet 4.5:1. Verified
+  by a bUnit selection-state test plus an axe-core E2E scan of the list view
+  (0 critical/serious violations).
+
+- **`TmSankeyChart` sequence literals are monotonic again (CF18-6).** `BuildLinks`
+  and `BuildNodes` emitted the `onkeyup` attribute with sequence number `100`
+  between `14`/`15` and `13`/`14`, so every later literal sat out of order and the
+  renderer's frame diff could pair unrelated attributes. The numbers now run
+  strictly ascending inside each `Build*` method, and a source-level test scans
+  every `Build*` member for the integer first arguments of `builder.*` calls and
+  fails on any non-monotonic step — including a self-check that flags the
+  `100`-between-`14`/`15` shape this fix removes.
+
+- **Notion editor no longer loses keystrokes typed during the Enter-split
+  round-trip (CF29).** Pressing Enter creates the next block asynchronously, and
+  characters typed in the gap used to land in the old editable — where they were
+  either overwritten by the `setHtml(before)` rewrite or captured by the blur
+  save and committed as stale content. `notion-editor.js` now arms a pending-split
+  buffer on Enter: a capture-phase `beforeinput` listener intercepts `insertText`
+  aimed at the source block (matched by `data-block-id` so a recreated editable
+  still resolves), `focusAtStart`/`focus`/`focusAtEnd`/`focusAtOffset` replay the
+  buffered text into the block the caret actually lands in, queued Enters replay
+  as further splits, and a bounded retry window plus a 1.5 s give-up flush cover
+  slow landings. Two component-side guards close the revert paths: re-init after
+  a `Content`-instance swap consults the JS `isEditableDirty` witness before
+  overwriting `innerHTML`, and a stale same-instance render (queued before the
+  model update) can no longer push a superseded `Html` back into the DOM —
+  `_lastPropHtml` tracks the value the current content instance carried when it
+  was consumed, so only a genuinely advanced prop may overwrite live edits.
+  Covered by `FastTypingAfterEnter_LandsEveryCharacterInTheNewBlock` (Playwright,
+  6× CPU throttling): the source block keeps `abc` and the new block receives
+  `xyz`.
+
+- **New ratchet: undocumented JSON-doc parameters can no longer grow (CF06e1).**
+  `UndescribedParametersRatchetTests` counts `parameters[].description` entries
+  that are missing or whitespace across `JsonDocumentation/**/*.json` and fails
+  above a constant frozen at the measured value (882 of 4453 parameters on
+  ratchet day); filling in descriptions must lower the constant, never raise it.
+  A mutation fact proves the same counting and ceiling logic over synthetic JSON.
+
+- **Release lane: an unreachable nuget.org feed now fails the provenance guard
+  instead of skipping it (N276).** Both publish workflows set
+  `TEMPO_REQUIRE_FEED=1` on every `dotnet test` step; with the variable set, the
+  `FeedReachableFact` probe refuses to answer, the test runs, and its own
+  `survey.Unreachable` assertion reports `unmeasured:feed-unreachable` as a
+  failure. Without the variable the behaviour is unchanged — local and ordinary
+  CI runs keep their skip-on-outage. Guarded by
+  `ReleaseGateFilterTests.EveryPublishTestStep_SetsTempoRequireFeed` (step-, job-
+  and workflow-level env reach) plus three `DecideSkip` unit cells.
+
+- **Release evidence: `total` counts distinct test names, and duplicate keys
+  refuse (CF15).** The counting convention is now written into
+  `eng/verify-release-evidence.sh`'s header and `docs/e2e-test-lanes.md`:
+  `total`/`passed`/`failed`/`skipped` count DISTINCT test names in the TRX —
+  data-row instances sharing a name count once — not the number of `testId`
+  elements the file happens to carry, so the consistency sum compares like
+  with like (CF15a). The verifier rejects a second occurrence of any required
+  flat-JSON key rather than trusting that two copies of the number agree
+  (CF15b). And the lanes doc now records that `hostRestarts: 0` is vacuous
+  under `TM_E2E_SELF_HOST=false` — the counter only measures hosts the suite
+  itself started, so external-host evidence carries the watch-log requirement
+  instead (CF15c).
+
+- **Release evidence: eight fail-closed holes in the gate are closed (CF19).**
+  `eng/verify-release-evidence.sh` now diffs with `--no-renames`, so a
+  `git mv src/X docs/X` can no longer read as a prose-only change (CF19a);
+  `artifactsPath` must live inside the committed `eng/release-evidence/` store —
+  an outside path or a `..` traversal refuses (CF19b); a workflow guard pins the
+  verifier invocation inside the publish job, not merely somewhere in the file
+  (CF19c); a new `selfHost` key declares whether `hostRestarts` was measured —
+  `selfHost: false` requires the external `host-watch.log` in the artifacts dir,
+  and a missing or non-boolean value refuses (CF19d). Supporting fixes:
+  `HostRestartLog` increments its counter before the JSONL write so a failed
+  append can no longer hide a resurrection from the gate (CF19e);
+  `SqlServerCacheFixture` detects CREATE DATABASE denied by the canonical
+  262 number instead of a broad `permission`/`denied` substring (CF19f); the
+  three byte-identical `TestAssemblyInit` copies are now ONE linked file under
+  `tests/Shared/` (CF19g); and the 1200-line source sweep enumerates TRACKED
+  files via `git ls-files`, so untracked `artifacts/`/`TestResults/` output can
+  no longer move the count (CF19h). Covered by seven new verifier/fixture arms
+  over real worktrees and evidence fixtures.
+
+- **New guard: a component API change must carry `JsonDocumentation/**` in
+  the same commit (N328).** `ComponentChangeCarriesJsonTests` evaluates every
+  commit after the most recent tag (or the last 50 when the tag is fresh):
+  a `[Parameter]` attribute line or changed public property declaration in
+  `src/**/Components/**/Tm*.razor{,.cs}` without a `JsonDocumentation/**`
+  path in the same commit is a finding — the freshness guard on HEAD cannot
+  see WHEN either side moved, only that they currently agree. Calibrated on
+  history: `ee1ec3df` is detected (SortLabel shipped with JSON regenerated
+  only at the repo root), `56fa6f04` is clean (mass backfill carried its
+  docs), and `3980af1d` is the single frozen grandfather — its JSON landed
+  one commit later in `ca00f94d`. Shallow clones fail as
+  `unmeasurable:shallow-clone` under `TEMPO_REQUIRE_FULL_CLONE`.
+
+- **The Notion aggregate session can no longer deadlock on its own
+  overlapping saves.** `NotionEditorAggregateSession.ApplyAsync` cloned the
+  current snapshot per call, so two mutations that overlapped across a
+  network await both carried the same base concurrency token — the second
+  save returned 409, parked `_pendingMutation`, and every later mutation
+  was refused with `editor_conflict_pending` until manual resolution. The
+  deterministic symptom was `/wireframe` + Enter inserting nothing: the
+  blur-save and the conversion save raced, one lost, and the menu's
+  conversion was blocked by the self-inflicted conflict
+  (`DocLib2/DocLib4/Mcp4/DocLibShot2` E2E). `LoadAsync`, `ApplyAsync` and
+  `ReapplyAsync` now run one-at-a-time through `_mutationGate`, so queued
+  mutations build on the freshly committed token; genuine cross-actor
+  conflicts still produce the pending-conflict resolve flow. Regression
+  coverage: `OverlappingApplyAsync_QueuesSecondMutationBehindInFlightSave`.
+
+- **The Notion page-settings menu is clickable again.** CF10n migrated
+  `.tm-npsm` from `z-index: 9999` to the popover band
+  (`var(--tm-z-popover, 1030)`) but left the menu's click-outside backdrop
+  as an inline `z-index: 9998` — a literal the band sweep could not see.
+  The full-screen backdrop then painted *above* the 1030 panel and ate
+  every pointer event, so no export/import/comment item could be clicked
+  (`CF28`, `PageComment_MarkAllAsRead_SettingsMenu`, `CF25`/`CF26`
+  import-export E2E). The backdrop is now the scoped
+  `.tm-npsm__backdrop` class at `calc(var(--tm-z-popover, 1030) - 1)`,
+  one step under the panel like every other anchored surface. Regression
+  coverage: `OpenMenu_ClickOutsideBackdrop_UsesScopedClassNotInlineZIndex`
+  plus `NotionEditorRazor_BackdropLayers_CarryNoInlineZIndex`, which scans
+  the whole NotionEditor tree so the next inline band value cannot hide in
+  markup again.
+
+### Erratum 2.9.0
+
+Two changes shipped in 2.9.0 under routine fix/feature sections but are
+retroactively **Breaking / Migration** — each can silently lose a host
+override, and each was discovered only when a downstream application hit it.
+They are recorded here, in the release that publishes the correction notice,
+rather than retro-edited into the released 2.9.0 section.
+
+- **Button and input modifier selectors moved from (0,1,0) to (0,2,0)
+  (`c67cd2cc`).** The bare-modifier tie — `.tm-btn-sm` at (0,1,0) competing
+  with `.tm-btn` at (0,1,0) on import order — was fixed by compounding the
+  modifiers onto their base: `.tm-btn.tm-btn-{xs,sm,md,lg}`,
+  `.tm-btn.tm-btn-primary`, `.tm-btn.tm-btn-secondary`,
+  `.tm-btn.tm-btn-outline-secondary`, `.tm-btn.tm-btn-ghost` and the
+  `.tm-input.tm-*` input modifiers now sit at specificity (0,2,0). A host
+  stylesheet that overrode a Tempo button or input modifier through a
+  single-class selector (`.my-btn { height: … }`, still (0,1,0)) used to win
+  or tie and now silently loses — nothing at build or test time flags it.
+  **Migration:** override with an equally compound selector
+  (`.tm-btn.my-btn`), or prefer the documented `--tm-*` design tokens
+  (e.g. `--tm-input-height-md`), which change the declaration instead of
+  fighting the selector.
+
+- **Migrated floating panels position inline in the browser top layer
+  (`7196e8b2`).** The migrated set — `TmPopover`, `TmDropdown`,
+  `TmFilterableDropdown`, `TmContextMenu`, `TmSplitButton`, `TmDatePicker`,
+  `TmDateRangePicker`, `TmDateTimePicker`, `TmMultiSelect`, `TmTagPicker`,
+  `TmEntityPicker`, `TmNotificationBell`, `TmColorPicker`,
+  `TmMultiColumnComboBox`, `TmQueryInput`, plus the panels inside
+  `TmDataTable` — no longer positions panels through the stylesheet cascade
+  alone: `overlay.js` writes `top`/`left`/`width` inline (inline style beats
+  any non-`!important` rule), and the `:where()` panel reset carries
+  specificity (0,0,0). A host rule that positioned, sized or offset a
+  dropdown, calendar or menu panel can now conflict with the inline values
+  or stop applying without any error. **Migration:** position through the
+  component parameters — `Placement`, `Align`, `Offset`, `ViewportMargin`,
+  `MatchAnchorWidth`, `ConstrainHeight` — not through host CSS targeting the
+  panel's box.
+
+### Release checklist
+
+Every implementation step of the 2.9.1 development line, mapped to the commit
+that landed it. Steps whose deliverable is a measurement or a ledger row rather
+than a code change name the evidence instead of a hash.
+
+| Step | Item | Commit |
+|------|------|--------|
+| announce | `2.9.1 (unreleased)` announced across the packable set | `7d7823ae` |
+| 16.1 | N318 — `ConstrainHeight` cap grows back with the room | `4af89a0c` |
+| 16.2 | N319 — menus close before invoking the item handler | `c2b2dcf6` |
+| 16.3 | N324 — `MatchAnchorWidth` respects the panel `min-width` | `927e1e20` |
+| 16.4 | N325 — `TmNotionNotificationCenter` width rule applies | `e32ea9fa` |
+| 16.5 | N326 — `Role="dialog"` panels expose an accessible name | `844cb2b0` |
+| 16.6 | N329 — hidden panel releases focus | `d96ee971` |
+| 16.7 | CF03c — `.tm-overlay-panel` bundle rule inventory pinned | `2d25ff1b` |
+| 16.8 | CF10n — Notion floating surfaces on `--tm-z-*` bands | `c27b2399` |
+| 16.9 | CF18-7 — AI/mention menus in the top layer (+ the degenerate-viewport dismissal fix) | `a145bdf0` |
+| 17.1 | N320 — `TmValidatedField` green state tracks the field | `7e7246ac` |
+| 17.2 | N321 — `TmNavigationGuard` dialog inert during an in-flight save | `879c85e8` |
+| 17.3 | N323 — dismissal cancels the armed debounce | `aa5bc776` |
+| 17.4 | CF09b2 — track-changes toggle syncs the canvas engine flag | `54587a7e`, `e9729a1f` |
+| 17.5 | CF18-1/CF18-2 — submenu focus on Enter/Space and mouseleave | `282ac3ca` |
+| 17.6 | CF18-3 — `focusMenuInput` yields to deliberate focus moves | `e2b15022` |
+| 17.7 | CF18-4 — InteractiveAuto E2E proves the WASM renderer | `1eb10ceb` |
+| 17.8 | CF18-5a/CF18-5b — combobox/listbox ARIA wiring | `7fa79e52` |
+| 17.9 | CF18-6 — monotonic RenderTreeBuilder sequence numbers | `7dc81fa1` |
+| 17.10 | CF29 + ddfb:N273 — keystrokes buffered across the Enter split | `99870388` |
+| 17.11 | CF06e1 — undocumented-parameter ratchet | `88e9b003` |
+| 17.12 | CF06e2/F13 — `TmDataTable.razor.cs` file budget | verified unchanged at 2418 lines under the list frozen by `29172da2` |
+| 18.1 | N276 — `TEMPO_REQUIRE_FEED` fails the feed guard | `43d28201` |
+| 18.2 | CF15a/CF15b/CF15c — evidence totals, duplicate keys, vacuous restarts | `27975543` |
+| 18.3 | CF19a–h — eight fail-closed gate holes closed | `2eede79c` |
+| 18.4 | N327 — retroactive 2.9.0 erratum | `1dcf2c5f` |
+| 18.5 | N328 — same-commit JSON documentation guard | `c4471191` |
 
 ## 2.9.0 - 2026-09-27
 

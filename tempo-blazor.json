@@ -7428,7 +7428,7 @@
       "kind": "Component",
       "category": "Data Display",
       "namespace": "Tempo.Blazor.Components.DataDisplay",
-      "description": "Generic multi-view list supporting Table, Card, and List display modes with a built-in view switcher, search, client-side and server-side grouping with per-group mini-pager, pagination, virtualization, external filter builder, and optional view persistence via IDataTableViewProvider.\\n\\nComposition rule: either the owning page filters the data and the list renders a content-only surface (set ToolbarMode=ContentOnly and supply pre-filtered Items/DataProvider), or the list owns filtering via its own toolbar and external filter builder. Avoid enabling both filter surfaces at the same time unless they are explicitly integrated.",
+      "description": "Generic multi-view list supporting Table, Card, and List display modes with a built-in view switcher, search, client-side and server-side grouping with per-group mini-pager, pagination, virtualization, external filter builder, and optional view persistence via IDataTableViewProvider.\\n\\nComposition rule: either the owning page filters the data and the list renders a content-only surface (set ToolbarMode=ContentOnly and supply pre-filtered Items/DataProvider), or the list owns filtering via its own toolbar and external filter builder. Avoid enabling both filter surfaces at the same time unless they are explicitly integrated.\n\nThe List view exposes listbox semantics: the ul is role=\"listbox\" with aria-multiselectable bound to AllowSelection and a TmMvl_ListOptions accessible name, and each li is role=\"option\" with aria-selected. A custom StatusColor also drives a luminance-paired badge ink (primary text on light fills, inverse on dark) so saturated colors keep WCAG-contrast text.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmMultiViewList.razor",
       "documentationStatus": "merged",
@@ -9479,7 +9479,7 @@
       "kind": "Component",
       "category": "Dropdowns",
       "namespace": "Tempo.Blazor.Components.Dropdowns",
-      "description": "Generic searchable dropdown with client-side or server-side data loading, keyboard navigation, custom item templates, and a clear button. Client-side filtering is contains-based and accent-insensitive by default (FormD normalization — \"usti\" matches \"Ústí\"). Supports two-way binding via Value/ValueChanged. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+      "description": "Generic searchable dropdown with client-side or server-side data loading, keyboard navigation, custom item templates, and a clear button. Client-side filtering is contains-based and accent-insensitive by default (FormD normalization — \"usti\" matches \"Ústí\"). Supports two-way binding via Value/ValueChanged. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. ARIA wiring: the open trigger carries aria-controls naming the TmOverlayPanel popup, the filter input tracks the keyboard highlight via aria-activedescendant over stable option ids, and role=\"listbox\" wraps only the options — the input and the role=\"status\"/\"alert\" state messages are popup siblings outside it. The trigger falls back to its visible text for an accessible name when AriaLabel is unset; the listbox is named by TmFilterableDropdown_Options.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Dropdowns/TmFilterableDropdown.razor",
       "documentationStatus": "merged",
@@ -12212,7 +12212,7 @@
       "kind": "Component",
       "category": "Forms",
       "namespace": "Tempo.Blazor.Components.Forms",
-      "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator. Since 2.9.0 Required is forwarded to the inner input (required + aria-required), and the success icon/tm-input-valid appears only after the EditContext ran a validation pass (OnValidationRequested/OnValidationStateChanged) with no messages for the field — a field that was merely typed into no longer paints as valid.",
+      "description": "Integrated form field that wraps TmTextInput with automatic EditContext validation, showing error messages and validation icons. Includes label, help text, and required indicator. Since 2.9.0 Required is forwarded to the inner input (required + aria-required), and the success icon/tm-input-valid appears only after a validation pass that covered THIS field completed with no messages — since 2.9.1 the tracking is field-scoped (own OnFieldChanged or a whole-form OnValidationRequested), so a pass triggered by editing another field no longer paints this field valid.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Forms/TmValidatedField.razor",
       "documentationStatus": "merged",
@@ -14251,7 +14251,7 @@
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "Searchable entity lookup input that calls an async search provider after a configurable debounce, displays results in a dropdown, and binds to a typed value upon selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. The create-new flow closes the dropdown BEFORE awaiting DataProvider.CreateAsync, so a dialog opened while the create runs is never covered by the panel.",
+      "description": "Searchable entity lookup input that calls an async search provider after a configurable debounce, displays results in a dropdown, and binds to a typed value upon selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. The create-new flow closes the dropdown BEFORE awaiting DataProvider.CreateAsync, so a dialog opened while the create runs is never covered by the panel. Dismissal (Escape/outside pointerdown via overlay.js, or blur) cancels the armed debounce, so a delayed search result can never reopen the panel the user just closed.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmEntityPicker.razor",
       "documentationStatus": "merged",
@@ -14698,7 +14698,7 @@
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "A combo box that displays a multi-column grid in its dropdown for rich item selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+      "description": "A combo box that displays a multi-column grid in its dropdown for rich item selection. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. The dropdown's stylesheet min-width (320px) can exceed a narrow trigger: MatchAnchorWidth writes the anchor width but placement uses the rendered width, so the panel stays inside the viewport even at the right edge.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmMultiColumnComboBox.razor",
       "documentationStatus": "merged",
@@ -15372,7 +15372,7 @@
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "JQL/TQL-style query input: a monospace text field with caret-aware autocomplete (field/operator/value/function/keyword suggestions), inline wavy error underlines with tooltips, keyboard navigation, and a submit event. Pure Blazor except a tiny optional caret helper script; falls back to end-of-text tracking when the script is absent. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open.",
+      "description": "JQL/TQL-style query input: a monospace text field with caret-aware autocomplete (field/operator/value/function/keyword suggestions), inline wavy error underlines with tooltips, keyboard navigation, and a submit event. Pure Blazor except a tiny optional caret helper script; falls back to end-of-text tracking when the script is absent. Its popup is a TmOverlayPanel with ConstrainHeight: the list is capped at the room left on the resolved side (and at its own CSS max-height), and the cap follows the room in both directions — it regrows as room returns while the panel is open. Dismissal (Escape/outside pointerdown via overlay.js, blur, Enter, or accepting a suggestion) stops the debounce timer as well as invalidating in-flight loads, so a pending suggestion fetch can never reopen the dropdown the user just closed.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmQueryInput.razor",
       "documentationStatus": "merged",
@@ -18572,7 +18572,7 @@
       "kind": "Component",
       "category": "Navigation",
       "namespace": "Tempo.Blazor.Components.Navigation",
-      "description": "Guards a form or working area against losing unsaved changes. Registers a router LocationChanging handler so internal navigation while dirty shows a TmDialog confirmation instead of navigating away silently, and optionally arms a browser beforeunload prompt for tab close/refresh. Does not manage locks or working copies itself — it only gates navigation.",
+      "description": "Guards a form or working area against losing unsaved changes. Registers a router LocationChanging handler so internal navigation while dirty shows a TmDialog confirmation instead of navigating away silently, and optionally arms a browser beforeunload prompt for tab close/refresh. Does not manage locks or working copies itself — it only gates navigation. While a Save-and-leave callback is in flight the dialog is fully inert: its buttons disable, CloseOnEscape drops to false, and the result handler early-returns, so the save cannot be orphaned from the surface it reports through.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Navigation/TmNavigationGuard.razor",
       "documentationStatus": "merged",
@@ -19065,7 +19065,7 @@
       "kind": "Component",
       "category": "Overlay",
       "namespace": "Tempo.Blazor.Components.Overlay",
-      "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups.",
+      "description": "Anchored floating panel rendered with popover=\"manual\" and opened via the HTML Popover API, placing it in the browser top layer — above every z-index stacking context and outside every ancestor's overflow/transform clipping. overlay.js positions it against an anchor element with placement/alignment, viewport-edge flipping and shifting, scroll/resize tracking, Escape and outside-pointerdown dismissal, and a fixed-position fallback (data-tm-overlay-fallback) where the Popover API is missing. Shared primitive behind TmPopover, TmDropdown, TmContextMenu, TmSplitButton, TmDatePicker, TmDateRangePicker, TmDateTimePicker, TmMultiSelect, TmTagPicker, TmEntityPicker, TmFilterableDropdown, TmNotificationBell, TmColorPicker, TmMultiColumnComboBox and TmQueryInput popups. When the anchor scrolls fully out of the viewport the panel is parked with visibility:hidden and reappears on the anchor's return — unless focus sits inside it, in which case the panel is dismissed ('anchor-hidden') and focus returns to the anchor.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Overlay/TmOverlayPanel.razor",
       "documentationStatus": "merged",
@@ -19085,6 +19085,18 @@
           "type": "ElementReference",
           "isRequired": true,
           "description": "The element the panel positions itself against. When unset, overlay.js falls back to the panel's previous element sibling — the natural trigger-then-panel layout."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name rendered as aria-label on the panel element. Required for Role=\"dialog\" panels that do not render a visible title to reference via AriaLabelledBy (since 2.9.1)."
+        },
+        {
+          "name": "AriaLabelledBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name rendered as aria-labelledby on the panel element. Takes precedence over AriaLabel — point it at the visible title's id; the referenced element must be present (and, for ids inside ChildContent, rendered) while the panel is open (since 2.9.1)."
         },
         {
           "name": "ChildContent",
@@ -19149,7 +19161,7 @@
           "name": "MatchAnchorWidth",
           "type": "bool",
           "isRequired": false,
-          "description": "Stretch the panel to the anchor's width (dropdown/select menus).",
+          "description": "Stretch the panel to the anchor's width (dropdown/select menus). The width is written before placement is measured, so a larger stylesheet min-width still wins: alignment, shift and viewport clamping all use the rendered width.",
           "default": "false"
         },
         {
@@ -19163,7 +19175,7 @@
           "name": "OnDismissed",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\" or \"outside\". Programmatic closes do not raise it."
+          "description": "Fires when the panel is dismissed by a user gesture rather than by the consumer: \"escape\", \"outside\" or \"anchor-hidden\" (the anchor scrolled fully out of the viewport while focus sat inside the panel — hiding alone would keep swallowing keystrokes, so the panel closes and focus returns to the anchor since 2.9.1). Programmatic closes do not raise it."
         },
         {
           "name": "Placement",
@@ -19176,7 +19188,7 @@
           "name": "Role",
           "type": "string?",
           "isRequired": false,
-          "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip."
+          "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel."
         },
         {
           "name": "Shift",
@@ -19200,7 +19212,7 @@
       "examples": [
         {
           "title": "Anchored panel",
-          "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
+          "code": "<button @ref=\"_trigger\" @onclick=\"() => _open = !_open\">Details</button>\n\n<TmOverlayPanel Anchor=\"_trigger\"\n                IsOpen=\"_open\"\n                IsOpenChanged=\"v => _open = v\"\n                Placement=\"OverlayPlacement.Bottom\"\n                Align=\"OverlayAlign.Start\"\n                Role=\"dialog\"\n                AriaLabel=\"Details\">\n    <p>Panel content floats above modals, overflow containers and transformed ancestors.</p>\n</TmOverlayPanel>\n\n@code {\n    private ElementReference _trigger;\n    private bool _open;\n}"
         }
       ]
     },

@@ -2,19 +2,27 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.Components.NotionEditor.Services
+@using Tempo.Blazor.Components.Overlay
 
 @if (Visible)
 {
-    @* ── Transparent backdrop — click outside to close ────────────────────── *@
-    <div class="tm-nmm-backdrop" @onclick="HandleBackdropAsync" aria-hidden="true"></div>
+    @* CF18-7: zero-size virtual anchor pinned at the caret coordinates — the panel is a
+       TmOverlayPanel (popover="manual", browser top layer), so it paints above a host
+       TmModal instead of sitting under the modal band like the old z-index:1030 card.
+       overlay.js supplies flip/shift viewport clamping (was adjustSlashMenuPosition) and
+       Escape + outside-pointerdown dismissal (was the transparent backdrop). *@
+    <span @ref="_anchorRef" class="tm-nmm__anchor" style="@AnchorStyle" aria-hidden="true"></span>
 
     @* ── Menu card ─────────────────────────────────────────────────────────── *@
-    <div class="tm-nmm"
-         role="dialog"
-         aria-label="@(PagesOnly ? Loc["TmNotionMentionMenu_PagesSearchPlaceholder"] : Loc["TmNotionMentionMenu_SearchPlaceholder"])"
-         style="@MenuStyle"
-         @ref="_menuRef"
-         @onkeydown:stopPropagation="true">
+    <TmOverlayPanel Anchor="_anchorRef"
+                    IsOpen="Visible"
+                    IsOpenChanged="SetOpenFromJsAsync"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Role="dialog"
+                    AriaLabel="@(PagesOnly ? Loc["TmNotionMentionMenu_PagesSearchPlaceholder"] : Loc["TmNotionMentionMenu_SearchPlaceholder"])"
+                    Class="tm-nmm">
+    <div style="display:contents" @onkeydown:stopPropagation="true">
 
         @* ── Search input ──────────────────────────────────────────────────── *@
         <div class="tm-nmm__search">
@@ -165,4 +173,5 @@
         </div>
 
     </div>
+    </TmOverlayPanel>
 }

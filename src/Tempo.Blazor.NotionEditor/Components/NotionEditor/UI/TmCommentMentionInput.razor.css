@@ -4,18 +4,9 @@
     flex-direction: column;
 }
 
-.tm-comment-mention-dropdown {
-    position: fixed;
-    z-index: var(--tm-z-popover, 1030);
-    max-height: 220px;
-    overflow-y: auto;
-    background: var(--tm-bg-elevated, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-radius: 6px;
-    box-shadow: 0 6px 20px rgba(15,15,15,0.14);
-    margin-top: 4px;
-    padding: 4px 0;
-}
+/* CF18-7: the dropdown is a TmOverlayPanel — the .tm-comment-mention-dropdown root rule
+   moved to the global _notion-floating-menus.css (the panel element carries TmOverlayPanel's
+   scope, not ours). */
 
 .tm-comment-mention-dropdown__item {
     display: flex;

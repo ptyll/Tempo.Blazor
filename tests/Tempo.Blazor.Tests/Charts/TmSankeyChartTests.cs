@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Charts;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Packaging;
 
 namespace Tempo.Blazor.Tests.Charts;
 
@@ -417,4 +419,63 @@ public class TmSankeyChartTests : LocalizationTestBase
         IRenderedComponent<TmSankeyChart> cut,
         string nodeId) =>
         cut.Find($"text.tm-sankey__label[data-node-id='{nodeId}']");
+
+    // ── CF18-6: RenderTreeBuilder sequence numbers — monotonic per Build* method ──
+    // A literal that jumps (…14, 100, 15…) makes the renderer diff mismatched frames.
+
+    [Fact]
+    public void SankeyRenderTree_SequenceNumbers_AreMonotonicPerBlock()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            ReleaseScriptInputReadTests.FindRepoRoot(),
+            "src", "Tempo.Blazor", "Components", "Charts", "TmSankeyChart.razor.cs"));
+
+        var violations = FindNonMonotonicSequences(source).ToList();
+
+        violations.Should().BeEmpty(
+            "out-of-order sequence literals make the diffing engine compare unrelated frames: "
+            + string.Join("; ", violations));
+    }
+
+    [Fact]
+    public void SankeyRenderTree_Scan_ReportsOutOfOrderLiteral()
+    {
+        const string mutated = """
+            private void BuildLink(RenderTreeBuilder builder)
+            {
+                builder.AddAttribute(14, "onkeydown", X);
+                builder.AddAttribute(100, "onkeyup", X);
+                builder.AddAttribute(15, "onfocus", X);
+            }
+            """;
+
+        FindNonMonotonicSequences(mutated).Should().NotBeEmpty(
+            "the scan must flag the seq-literal-out-of-order shape it exists to prevent");
+    }
+
+    private static readonly Regex SeqLiteral =
+        new(@"\bbuilder\.\w+\(\s*(\d+)", RegexOptions.Compiled);
+
+    private static readonly Regex MethodName =
+        new(@"\bprivate\s+[\w<>\[\]?,\s]+\s+(Build\w+)\s*\(", RegexOptions.Compiled);
+
+    private static IEnumerable<string> FindNonMonotonicSequences(string source)
+    {
+        // Method span: a 'private' member's chunk runs to the next 'private' member.
+        var members = Regex.Matches(source, @"^\s*private\s+", RegexOptions.Multiline);
+        for (var i = 0; i < members.Count; i++)
+        {
+            var chunk = source[members[i].Index..(i + 1 < members.Count ? members[i + 1].Index : source.Length)];
+            var name = MethodName.Match(chunk);
+            if (!name.Success) continue;
+            var seqs = SeqLiteral.Matches(chunk)
+                .Select(m => int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))
+                .ToList();
+            for (var j = 1; j < seqs.Count; j++)
+            {
+                if (seqs[j] <= seqs[j - 1])
+                    yield return $"{name.Groups[1].Value}: seq {seqs[j]} after {seqs[j - 1]}";
+            }
+        }
+    }
 }

@@ -39,6 +39,7 @@
                     Align="OverlayAlign.Start"
                     Offset="4"
                     Role="dialog"
+                    AriaLabel="@(Placeholder ?? Loc["TmColorPicker_SelectColor"])"
                     Class="tm-color-picker-dropdown">
             <TmFlatColorPicker Value="@_pendingValue"
                                ValueChanged="OnFlatValueChangedAsync"

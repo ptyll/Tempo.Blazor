@@ -11,5 +11,6 @@
   "serialResidualFailed": 0,
   "wallClock": "4h6m",
   "artifactsPath": "eng/release-evidence/full-run-20260927",
-  "hostRestarts": 0
+  "hostRestarts": 0,
+  "selfHost": true
 }

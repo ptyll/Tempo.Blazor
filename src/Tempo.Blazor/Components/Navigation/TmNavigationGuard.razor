@@ -12,11 +12,14 @@
     @if (OnSaveAndLeave is not null)
     {
         @* Three-choice variant: Stay / Save and leave / Leave.
-           OnResult wires Escape (TmDialog cancel) to "stay", matching the two-choice variant. *@
+           OnResult wires Escape (TmDialog cancel) to "stay", matching the two-choice variant.
+           N321: an in-flight save owns the whole dialog — Escape must not map to Stay while it
+           reports through this surface (CloseOnOverlayClick stays false as before). *@
         <TmDialog Show="@_showConfirm"
                   Type="DialogType.Custom"
                   Title="@ConfirmTitle"
                   Message="@ConfirmMessage"
+                  CloseOnEscape="@(!_saving)"
                   OnResult="HandleDialogResultAsync">
             <FooterContent>
                 @* The whole footer is inert while a save is in flight (20C review carry-forward):
@@ -42,6 +45,7 @@
                   Message="@ConfirmMessage"
                   OkButtonText="@ConfirmLeaveText"
                   CancelButtonText="@CancelText"
+                  CloseOnEscape="@(!_saving)"
                   OnResult="HandleDialogResultAsync" />
     }
 }
@@ -216,6 +220,14 @@
 
     private async Task HandleDialogResultAsync(bool? confirmed)
     {
+        // N321: defensive — the footer buttons are Disabled while saving but stay clickable in a
+        // renderer that ignores the attribute, and any future dismiss path that skips the
+        // CloseOnEscape gate must still not tear down the dialog an in-flight save reports through.
+        if (_saving)
+        {
+            return;
+        }
+
         _showConfirm = false;
         var targetLocation = _pendingTargetLocation;
         _pendingTargetLocation = null;

@@ -2,7 +2,7 @@
   "itemName": "TmNotionSlashMenu",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Slash-command menu with a search input and grouped block-type items (plus an optional AI item), keyboard navigation, and recently-used tracking, raising item, AI, or close callbacks.",
+  "description": "Slash-command menu with a search input and grouped block-type items (plus an optional AI item), keyboard navigation, and recently-used tracking, raising item, AI, or close callbacks. On open, the search input's focus is re-asserted across ~10 animation frames (a same-keystroke render can refocus the block editable), but the loop yields once document.activeElement moves to another real non-editable element — a deliberate Tab/click never gets pulled back (CF18-3).",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionSlashMenu.razor",

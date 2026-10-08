@@ -14,12 +14,15 @@ public sealed class ModelingEditorM8E2ETests : WasmTestBase
     [Description("Modeling editor route shows loading and resolves to the four-panel loaded shell")]
     public async Task ModelingEditor_LoadsDemoProvider_WithVisiblePanels()
     {
-        var page = await OpenPageWithoutInitialReadyWaitAsync($"{ModelingEditorUrl}?delay=500");
+        var page = await OpenPageWithoutInitialReadyWaitAsync($"{ModelingEditorUrl}?delay=6000");
 
         var loading = page.Locator("[data-testid='modeling-editor-loading']");
         // The loading element only exists once Blazor has booted and the component's first load
-        // started, so the observe window has to cover WASM boot, not just the ?delay=500 provider.
-        await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
+        // started, so the observe window has to cover WASM boot, not just the ?delay provider.
+        // ?delay=6000 (the M9 convention): WASM instantiation can freeze the renderer's event
+        // loop for seconds on a contended runner, and a ~2s window then collapses inside a
+        // single busy stretch the Playwright poll never observes. A ~8s window survives it.
+        await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 60_000 });
         await loading.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10_000 });
 
         await WaitForLoadedEditorAsync(page);
