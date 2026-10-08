@@ -191,9 +191,9 @@
 
     /// <summary>
     /// A CSS selector resolved inside the scope for the element that receives focus when the
-    /// drawer opens (e.g. the first menuitem of a menu sheet). Null keeps the default first
-    /// focusable. A host that renders its own header controls wins by leaving this unset only
-    /// when the default order is right.
+    /// drawer opens (e.g. the first menuitem of a menu sheet, so a menu sheet lands on its
+    /// content instead of the header's close action). Null keeps the scope default — the first
+    /// focusable element.
     /// </summary>
     [Parameter] public string? InitialFocusSelector { get; set; }
 
