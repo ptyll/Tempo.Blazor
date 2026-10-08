@@ -52,6 +52,41 @@ test('a release above the tallest snap clamps to it', () => {
     assert.equal(result.snap, 1);
 });
 
+test('a downward flick from the full snap steps one snap down instead of closing', () => {
+    // A 1 px/ms swipe is an ordinary "back to half" gesture. Dismissing from full threw the
+    // user's filters and form state away.
+    const result = settle(snaps, 0.49, true, 1, 1);
+    assert.equal(result.dismiss, false);
+    assert.equal(result.snap, 0.5);
+    assert.equal(result.index, 0);
+});
+
+test('a downward flick from the lowest snap dismisses', () => {
+    // Released above the lowest-snap margin, so only the flick from the lowest snap closes it.
+    const result = settle(snaps, 0.45, true, 1, 0);
+    assert.equal(result.dismiss, true);
+    assert.equal(result.snap, 0.5);
+});
+
+test('a very fast downward release closes the sheet from any snap', () => {
+    // Above ~2 px/ms the user asked to close, whatever snap the drag started from.
+    const result = settle(snaps, 0.49, true, 2.5, 1);
+    assert.equal(result.dismiss, true);
+});
+
+test('an upward flick from the lowest snap steps one snap up', () => {
+    const result = settle(snaps, 0.7, true, -1.5, 0);
+    assert.equal(result.dismiss, false, 'an upward flick never dismisses');
+    assert.equal(result.snap, 1);
+    assert.equal(result.index, 1);
+});
+
+test('a slow release settles to the nearest snap whatever the start index', () => {
+    const result = settle(snaps, 0.8, true, 0.1, 1);
+    assert.equal(result.dismiss, false);
+    assert.equal(result.snap, 1);
+});
+
 test('a one-snap sheet is not dismissed by settle — the gesture decides from the start height', () => {
     // settle used to dismiss a one-snap sheet on any release below the snap, so a 10px drag closed
     // it. The gesture now dismisses only past a quarter of the start height, or on a flick.
@@ -308,6 +343,46 @@ test('a slow drag that ends on the last move does not count as a flick', () => {
 
     assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'a slow drag settles to the nearest snap');
     assert.equal(sink.calls[0]?.[1], 0);
+    delete globalThis.window;
+});
+
+test('a flick from the full snap lands on half, not on the dismiss path', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(680); // the full snap of an 800px viewport capped at 0.85
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 0.85], true, sink, 'full-flick');
+
+    // The last 80ms of the drag carry 20px in 20ms, so the flick is 1 px/ms — fast enough to step,
+    // far below the close-anywhere threshold. Released at 560/800 (0.7), the nearest snap is still
+    // full, so only the start index can move the sheet down one snap.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 200, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 260, timeStamp: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 300, timeStamp: 300 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 320, timeStamp: 320 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 320, timeStamp: 320 });
+
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync');
+    assert.equal(sink.calls[0]?.[1], 0, 'a 1 px/ms swipe from the full snap steps down to half');
+    delete globalThis.window;
+});
+
+test('an upward flick from half grows the sheet to full', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'up-flick');
+
+    // 40px up in the last 20ms is 2 px/ms upward. It must grow the sheet, not dismiss it.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 200, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 180, timeStamp: 200 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 140, timeStamp: 300 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 120, timeStamp: 320 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 120, timeStamp: 320 });
+
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync');
+    assert.equal(sink.calls[0]?.[1], 1, 'an upward flick steps one snap up');
     delete globalThis.window;
 });
 

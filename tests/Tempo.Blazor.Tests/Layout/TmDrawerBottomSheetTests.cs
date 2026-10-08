@@ -249,6 +249,28 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Bottom_ParentRerender_WithTheSameSnapIndex_KeepsTheDraggedSnap()
+    {
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.SnapPoints, new[] { 0.3, 0.6, 1.0 })
+            .AddChildContent("Body"));
+
+        cut.InvokeAsync(() => cut.Instance.HandleSheetSnappedAsync(1)).GetAwaiter().GetResult();
+        cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("1");
+
+        // A parent state change re-runs OnParametersSet with the parameter value the drawer was
+        // opened with. The user's dragged snap must survive that.
+        cut.Render(p => p.Add(x => x.SnapIndex, 0));
+
+        cut.Find(".tm-drawer").GetAttribute("data-snap-index").Should().Be("1",
+            "a re-render passing the same index must not reset the snap the user dragged to");
+        cut.Find(".tm-drawer__panel").GetAttribute("style").Should().Contain("--tm-sheet-height: 0.6",
+            "the panel height follows the kept snap");
+    }
+
+    [Fact]
     public void Bottom_EmptySnapPoints_SizesToContentUnderTheCap()
     {
         var cut = Render<TmDrawer>(p => p
@@ -302,6 +324,30 @@ public class TmDrawerBottomSheetTests : LocalizationTestBase
 
         cut.FindAll(".tm-drawer__handle").Should().BeEmpty();
         cut.Find(".tm-drawer").ClassList.Should().NotContain("tm-drawer--bottom");
+    }
+
+    [Fact]
+    public void SideDrawers_AreFullBleedBelow640_AtTheRootNotOnlyThePanel()
+    {
+        var css = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_drawer.css"));
+
+        var media = css.IndexOf("@media (width < 640px)", StringComparison.Ordinal);
+        media.Should().BeGreaterThan(-1, "the full-bleed rule is a below-640 rule");
+        var close = css.IndexOf("\n}", media, StringComparison.Ordinal);
+        var block = css[media..close];
+
+        block.Should().Contain(".tm-drawer--right").And.Contain(".tm-drawer--left",
+            "the panel's width:100% resolves against a shrink-to-fit fixed root, so the left drawer "
+            + "collapses to its content width; the root itself must span the viewport");
+        block.Should().Contain("left: 0").And.Contain("right: 0",
+            "pinning both edges gives the root a definite width for the panel's 100% to resolve against");
+    }
+
+    private static string FindRepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("repo root not found");
     }
 
     /// <summary>

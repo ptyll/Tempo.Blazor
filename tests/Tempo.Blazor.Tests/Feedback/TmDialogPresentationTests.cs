@@ -36,7 +36,61 @@ public class TmDialogPresentationTests : LocalizationTestBase
         var overlay = cut.Find(".tm-modal-overlay");
         overlay.GetAttribute("data-layout").Should().Be("mobile");
         overlay.ClassList.Should().Contain("tm-modal--sheet");
-        cut.Find(".tm-sheet__handle").GetAttribute("aria-hidden").Should().Be("true");
+    }
+
+    [Fact]
+    public void Sheet_WithADismissGesture_RendersTheDecorativeHandle()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.CloseOnOverlayClick, true));
+
+        cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--sheet");
+        cut.Find(".tm-sheet__handle").GetAttribute("aria-hidden").Should().Be("true",
+            "the grabber is decorative on a dialog sheet; the buttons are the controls");
+    }
+
+    [Fact]
+    public void Sheet_WithoutADismissGesture_RendersNoDeadGrabber()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.CloseOnOverlayClick, false));
+
+        cut.Find(".tm-modal-overlay").ClassList.Should().Contain("tm-modal--sheet");
+        cut.FindAll(".tm-sheet__handle").Should().BeEmpty(
+            "the grabber never dismisses when the overlay click is off, so painting it invites a dead swipe");
+    }
+
+    [Fact]
+    public void LongContent_IsAKeyboardReachableScrollRegion()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Title, "Delete dashboard")
+            .Add(d => d.Message, new string('x', 400)));
+
+        var content = cut.Find(".tm-dialog-content");
+        content.GetAttribute("tabindex").Should().Be("0",
+            "a keyboard-only user cannot scroll an unfocusable scroller (WCAG 2.1.1)");
+        content.GetAttribute("role").Should().Be("region");
+        content.GetAttribute("aria-labelledby").Should().Be(cut.Find(".tm-dialog-title").GetAttribute("id"),
+            "the scroll region is named by its title");
+    }
+
+    [Fact]
+    public void Content_WithoutATitle_ScrollsWithoutADanglingName()
+    {
+        var cut = Render<TmDialog>(p => p
+            .Add(d => d.Show, true)
+            .Add(d => d.Message, new string('x', 400)));
+
+        var content = cut.Find(".tm-dialog-content");
+        content.GetAttribute("tabindex").Should().Be("0");
+        content.GetAttribute("role").Should().BeNull("a region without a name is noise for a reader");
+        content.GetAttribute("aria-labelledby").Should().BeNull();
     }
 
     [Fact]

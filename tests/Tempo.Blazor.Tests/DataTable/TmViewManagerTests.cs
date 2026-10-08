@@ -293,4 +293,47 @@ public class TmViewManagerTests : LocalizationTestBase
         firstName.Should().NotBe(secondName, "a shared name id focuses the first instance's field");
         firstName.Should().NotBe("view-name");
     }
+
+    [Fact]
+    public async Task ViewManager_OpenCreateModal_RendersRealIdsTheTrapCanResolve()
+    {
+        var provider = BuildProvider();
+        var cut = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId));
+
+        await cut.InvokeAsync(() => { });
+        cut.Find(".tm-view-manager-toggle").Click();
+        cut.Find(".tm-btn-primary").Click();
+
+        var toggle = cut.Find(".tm-view-manager-toggle");
+        toggle.GetAttribute("id").Should().Be(toggle.GetAttribute("data-tm-id"),
+            "the trap resolves the initial focus with getElementById, so a data-tm-id alone is invisible to it");
+
+        var input = cut.Find(".tm-modal input");
+        var nameId = input.GetAttribute("data-tm-id");
+        input.GetAttribute("id").Should().Be(nameId,
+            "without a real id the create modal opens on the close button instead of the name field");
+
+        cut.Find(".tm-modal").GetAttribute("data-initial-focus").Should().Be(nameId,
+            "the scope points the initial focus at this instance's name field");
+        cut.Find(".tm-modal label[for]").GetAttribute("for").Should().Be(nameId,
+            "the label must name the field it captions");
+    }
+
+    [Fact]
+    public void ViewManager_DoesNotSplatAViewNameMarker()
+    {
+        var provider = BuildProvider();
+        var cut = Render<TmViewManager>(p => p
+            .Add(c => c.Provider, provider)
+            .Add(c => c.ViewContext, TestViewContext)
+            .Add(c => c.CurrentUserId, TestUserId));
+
+        cut.Find(".tm-view-manager-toggle").Click();
+        cut.Find(".tm-btn-primary").Click();
+
+        cut.Markup.Should().NotContain("data-tm-view-name", "the attribute was read by nothing");
+    }
 }

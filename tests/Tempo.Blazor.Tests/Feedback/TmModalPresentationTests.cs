@@ -98,6 +98,43 @@ public class TmModalPresentationTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Sheet_WithoutADismissGesture_RendersNoDeadGrabber()
+    {
+        var cut = Render<TmModal>(p => p
+            .Add(m => m.Show, true)
+            .Add(m => m.Title, "Create")
+            .Add(m => m.MobilePresentation, MobilePresentation.Sheet)
+            .Add(m => m.CloseOnOverlayClick, false)
+            .AddChildContent("<p>Body</p>"));
+
+        cut.FindAll(".tm-sheet__handle").Should().BeEmpty(
+            "the grabber never dismisses when the overlay click is off, so painting it invites a dead swipe");
+    }
+
+    [Fact]
+    public void SheetFooter_ButtonsWrapInsteadOfOverflowingAt320()
+    {
+        var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
+        var rule = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn");
+        rule.Should().Contain("min-width: 0",
+            "min-width: fit-content forces a long FR label out of a 320px sheet footer");
+
+        var wrap = RuleFor(css, ".tm-modal-overlay.tm-modal--sheet .tm-modal-footer--inline > .tm-btn, .tm-modal-overlay.tm-modal--sheet .tm-dialog-footer.tm-modal-footer--inline > .tm-btn");
+        wrap.Should().Contain("white-space: normal",
+            "the label wraps instead of clipping; height:auto lets the second line show");
+    }
+
+    /// <summary>Reads the declaration block of the last rule that declares the selector verbatim.</summary>
+    private static string RuleFor(string css, string selector)
+    {
+        var start = css.LastIndexOf(selector, StringComparison.Ordinal);
+        start.Should().BeGreaterThan(-1, $"the stylesheet must declare {selector}");
+        var open = css.IndexOf('{', start);
+        var close = css.IndexOf('}', open);
+        return css[open..close];
+    }
+
+    [Fact]
     public void StackedFooter_IsNotInsideAMediaQuery()
     {
         var css = File.ReadAllText(Path.Combine(FindRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_modal.css"));
