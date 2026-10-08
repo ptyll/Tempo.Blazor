@@ -218,6 +218,11 @@ public class ViewportProbeTests : LocalizationTestBase
     public async Task Probe_DisposedBeforeItsImportResolves_ReleasesWithoutThrowing()
     {
         var runtime = new DeferredImportRuntime();
+        // bUnit pins its own JSInterop as IJSRuntime; the deferred runtime must be the only one.
+        for (var i = Services.Count - 1; i >= 0; i--)
+        {
+            if (Services[i].ServiceType == typeof(IJSRuntime)) Services.RemoveAt(i);
+        }
         Services.AddSingleton<IJSRuntime>(runtime);
 
         var cut = Render<TmModal>(p => p
@@ -225,8 +230,14 @@ public class ViewportProbeTests : LocalizationTestBase
             .Add(m => m.Title, "Create")
             .AddChildContent("<p>Body</p>"));
 
+        await cut.InvokeAsync(() => { });
+        runtime.Imported.Task.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue(
+            "the probe must reach the deferred import through the injected IJSRuntime");
+
         var module = new RecordingModule();
-        await cut.Instance.DisposeAsync();
+        // Only the renderer's disposal cascades to the child probe; disposing the modal alone
+        // leaves the probe alive. The import is still pending at this point.
+        await DisposeAsync();
 
         // The import lands after the overlay is gone. The probe must notice _disposed and release
         // the dot-net reference instead of calling observe on a dead renderer.
@@ -289,10 +300,17 @@ public class ViewportProbeTests : LocalizationTestBase
         public TaskCompletionSource<IJSObjectReference> Import { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        /// <summary>Set when the import was requested, so the test knows the runtime is wired.</summary>
+        public TaskCompletionSource<bool> Imported { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
-            if (identifier == "import")
+            // Only the probe's layout-observer import is deferred, so Imported proves the probe —
+            // and nothing else — reached its await.
+            if (identifier == "import" && args is [string path] && path.Contains("layout-observer"))
             {
+                Imported.TrySetResult(true);
                 return Await();
                 async ValueTask<TValue> Await()
                 {

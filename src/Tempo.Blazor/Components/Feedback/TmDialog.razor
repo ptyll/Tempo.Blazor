@@ -13,8 +13,9 @@
 
 @if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
 {
-    <div class="tm-viewport-probe" style="position:fixed;inset:0;visibility:hidden;pointer-events:none"></div>
-    <ViewportProbe OnMeasured="OnProbed" />
+    @* No viewport scope: measure the fixed overlay itself. The probe is an internal component, so
+       it is opened from C# — a tag in markup would compile to a literal HTML element. *@
+    @Probe
 }
 @if (Show)
 {
@@ -210,6 +211,18 @@
     private readonly OverlayLayout _layout = new();
 
     private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
+
+    /// <summary>
+    /// The internal viewport probe, opened from C# because a Razor tag binds only to public
+    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// </summary>
+    private RenderFragment Probe => builder =>
+    {
+        builder.OpenComponent<ViewportProbe>(0);
+        builder.AddComponentParameter(1, nameof(ViewportProbe.OnMeasured),
+            EventCallback.Factory.Create<TmLayoutMode>(this, OnProbed));
+        builder.CloseComponent();
+    };
 
     private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
         ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)

@@ -13,7 +13,9 @@
 
 @if (IsOpen && Modal && Viewport is null && LayoutMode == TmLayoutMode.Auto)
 {
-    <ViewportProbe OnMeasured="OnProbed" />
+    @* No viewport scope: the modal sheet measures the viewport itself. The probe is an internal
+       component, so it is opened from C# — a tag in markup would compile to a literal element. *@
+    @Probe
 }
 @if (IsOpen)
 {
@@ -218,6 +220,18 @@
     private string? LabelledBy => !string.IsNullOrEmpty(Title) && HeaderContent is null ? _titleId : null;
 
     private TmLayoutContext Context => _layout.Resolve(LayoutMode, Modal ? Viewport : Container, InitialMode);
+
+    /// <summary>
+    /// The internal viewport probe, opened from C# because a Razor tag binds only to public
+    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// </summary>
+    private RenderFragment Probe => builder =>
+    {
+        builder.OpenComponent<ViewportProbe>(0);
+        builder.AddComponentParameter(1, nameof(ViewportProbe.OnMeasured),
+            EventCallback.Factory.Create<TmLayoutMode>(this, OnProbed));
+        builder.CloseComponent();
+    };
 
     private Dictionary<string, object> RootAttributes
     {
