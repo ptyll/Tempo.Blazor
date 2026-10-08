@@ -408,6 +408,26 @@ test('a backdrop rendered as a sibling of the trap root stays clickable', () => 
     assert.equal(page.hasAttribute('inert'), true, 'the page behind the overlay is still inert');
 });
 
+test('a toast container marked data-tm-inert-exempt stays reachable under a modal trap', () => {
+    // Toast containers are non-modal status UI (pointer-events:none except the cards) pinned to
+    // the top layer. Inerting them under a modal trap made a click on a toast's dismiss button
+    // pass THROUGH to the backdrop and close the sheet (data loss) and silenced the role=alert
+    // announcement. The walk skips data-tm-inert-exempt like it skips the backdrop.
+    const body = element();
+    const app = element(body);
+    const page = element(app);
+    const toasts = element(app);
+    toasts.toggleAttribute('data-tm-inert-exempt', true);
+    const scope = element(app);
+    installDom(body);
+
+    activate(scope, 'drawer', null, false, null, true);
+
+    assert.equal(toasts.hasAttribute('inert'), false,
+        'the toast container must stay reachable so its dismiss button works and role=alert is announced');
+    assert.equal(page.hasAttribute('inert'), true, 'the page behind the overlay is still inert');
+});
+
 test('a nested dialog restores the outer drawer and releases the scroll lock only once', () => {
     // The inner trap walks up through the drawer and inerts the drawer's own content. Closing it
     // must hand the page back to the outer trap, and two modal traps must not leak html.tm-scroll-lock.

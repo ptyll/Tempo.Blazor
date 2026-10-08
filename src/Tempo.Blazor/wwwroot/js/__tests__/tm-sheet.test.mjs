@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attachGesture, keyboardOffset, settle, trackViewport } from '../tm-sheet.js';
+import { attachGesture, keyboardOffset, promote, raise, settle, trackViewport, pinRoot, unpinRoot } from '../tm-sheet.js';
 
 const snaps = [0.5, 1];
 
@@ -532,4 +532,98 @@ test('the net direction picks the flick branch, not the tail velocity sign', () 
     const up = settle(snaps, 0.475, true, 3, 0.5, false);
     assert.equal(up.dismiss, false, 'a net-upward drag never dismisses');
     assert.equal(up.index, 0, 'a net-upward drag with a downward tail stays at the lowest snap');
+});
+
+// ── Pinned-on-top registry (F3 review round 3, R3-M1) ─────────────────────────
+// promote() used to leave a toast container exactly where the last push put it: any drawer,
+// sheet or dialog promoted AFTER the toast painted above it. Toast containers now register as
+// "pinned on top": promote()/raise() re-raises every registered pinned root that is still
+// popover-open, so toasts stay above every modal surface, always.
+
+function popoverStub(name, open = false) {
+    const calls = [];
+    const el = {
+        name,
+        calls,
+        isConnected: true,
+        _open: open,
+        matches: (selector) => selector === ':popover-open' ? el._open : false,
+        showPopover() { el._open = true; calls.push('show'); },
+        hidePopover() { el._open = false; calls.push('hide'); },
+    };
+    return el;
+}
+
+test('promote re-raises every pinned root that is popover-open, after its own promotion', () => {
+    const toast = popoverStub('toast', true);
+    const sheet = popoverStub('sheet');
+    pinRoot(toast);
+    try {
+        promote(sheet);
+        assert.equal(sheet._open, true);
+        assert.deepEqual(toast.calls, ['hide', 'show'],
+            'the toast pushed BEFORE the sheet must be re-raised above it');
+    }
+    finally {
+        unpinRoot(toast);
+    }
+});
+
+test('promote skips pinned roots that are not popover-open (an empty demoted container)', () => {
+    const toast = popoverStub('toast', false);
+    const sheet = popoverStub('sheet');
+    pinRoot(toast);
+    try {
+        promote(sheet);
+        assert.deepEqual(toast.calls, [],
+            'a demoted (empty) container is not open — re-raising it would show an empty popover');
+    }
+    finally {
+        unpinRoot(toast);
+    }
+});
+
+test('promote skips the root it just promoted when that root is itself pinned', () => {
+    const toast = popoverStub('toast', true);
+    pinRoot(toast);
+    try {
+        promote(toast);
+        assert.deepEqual(toast.calls, ['show'],
+            'a pinned root promoting itself must not hide+show itself a second time');
+    }
+    finally {
+        unpinRoot(toast);
+    }
+});
+
+test('promote drops disconnected pinned roots from the registry', () => {
+    const toast = popoverStub('toast', true);
+    toast.isConnected = false;
+    pinRoot(toast);
+    promote(popoverStub('sheet'));
+    // No hide/show on the dead root: it is unregistered instead. Re-promoting proves the set no
+    // longer holds it (no calls recorded even though it reports :popover-open).
+    promote(popoverStub('dialog'));
+    assert.deepEqual(toast.calls, []);
+    unpinRoot(toast);
+});
+
+test('raise lands the pushing pinned root on top of the other pinned roots', () => {
+    const a = popoverStub('a', true);
+    const b = popoverStub('b', true);
+    pinRoot(a);
+    pinRoot(b);
+    try {
+        raise(b);
+        // The other pinned root re-raises first, the pusher last — the pushed toast paints topmost.
+        assert.deepEqual(a.calls.at(-2), 'hide');
+        assert.deepEqual(a.calls.at(-1), 'show');
+        assert.deepEqual(b.calls.at(-1), 'show');
+        assert.ok(b.calls.length < a.calls.length + 1,
+            'the pusher is hidden and shown exactly once');
+    }
+    finally {
+        unpinRoot(a);
+        unpinRoot(b);
+    }
 });

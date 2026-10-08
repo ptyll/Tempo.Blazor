@@ -213,4 +213,79 @@ public class TmToastTests : LocalizationTestBase
 
         cut.Find(".tm-toast").GetAttribute("role").Should().Be("alert");
     }
+
+    // ── F3 review round 3 (V1b): the container re-raises on every push ─────────
+    // The round-2 raise was keyed on the VISIBLE COUNT: a push at the MaxVisible cap (count
+    // unchanged) or an expire+push in one render never re-raised, so the newest toast painted
+    // UNDER a sheet or dialog opened after the first push. The container must track the newest
+    // toast id instead and raise whenever an unseen id appears.
+
+    [Fact]
+    public void Container_Raises_OnEveryPush_EvenAtTheMaxVisibleCap()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        module.SetupVoid("pinRoot", _ => true).SetVoidResult();
+        module.SetupVoid("raise", _ => true).SetVoidResult();
+
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.MaxVisible, 1));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.Render();
+        svc.ShowSuccess("Two");
+        cut.Render();
+
+        // MaxVisible=1: the visible count stays 1 across both pushes, yet each push must re-raise
+        // the container above every surface promoted in between.
+        module.Invocations.Where(i => i.Identifier == "raise").Should().HaveCount(2,
+            "a push at the MaxVisible cap changes no count — only the newest-id tracking re-raises");
+    }
+
+    [Fact]
+    public void Container_Raises_WhenAVisibleToastExpiresAndAnotherPushesInOneRender()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        module.SetupVoid("pinRoot", _ => true).SetVoidResult();
+        module.SetupVoid("raise", _ => true).SetVoidResult();
+
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.MaxVisible, 2));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.Render();
+        svc.ShowSuccess("Two");
+        cut.Render();
+
+        // Expire the OLDEST and push a new one before a render runs: the count is unchanged (still
+        // 2 of MaxVisible 2) but the newest id changed, so the container must re-raise.
+        svc.Remove(svc.Toasts.OrderBy(t => t.CreatedAt).First().Id);
+        svc.ShowInfo("Three");
+        cut.Render();
+
+        module.Invocations.Where(i => i.Identifier == "raise").Should().HaveCount(3,
+            "an expire+push in one render changes no count — the newest-id tracking must still re-raise");
+    }
+
+    [Fact]
+    public void Container_Demotes_WhenTheLastToastLeaves_AndUnpins()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        module.SetupVoid("pinRoot", _ => true).SetVoidResult();
+        module.SetupVoid("unpinRoot", _ => true).SetVoidResult();
+        module.SetupVoid("raise", _ => true).SetVoidResult();
+        module.SetupVoid("demote", _ => true).SetVoidResult();
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.Render();
+        svc.Remove(svc.Toasts.Single().Id);
+        cut.Render();
+
+        module.Invocations.Where(i => i.Identifier == "demote").Should().HaveCount(1,
+            "the persistent container demotes when the last toast leaves");
+        module.Invocations.Where(i => i.Identifier == "unpinRoot").Should().HaveCount(1,
+            "a demoted container leaves the pinned-on-top registry so promote() stops re-raising it");
+    }
 }
