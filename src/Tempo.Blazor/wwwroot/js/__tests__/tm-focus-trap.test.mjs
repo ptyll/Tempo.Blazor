@@ -302,6 +302,26 @@ test('an explicit initial target beats the selector', () => {
     assert.equal(item.focusCalls, 0);
 });
 
+test('an invalid consumer selector must not throw after the inert and scroll lock landed', () => {
+    // U8: the selector is a consumer-supplied string. A typo must degrade to the first
+    // focusable — the trap has already marked the background inert and locked the scroll when
+    // the selector runs, so a throw would strand the page inert with focus nowhere.
+    const body = element();
+    const scope = element(body);
+    scope.dataset = { initialFocusSelector: '[role=' };
+    const first = element(scope);
+    scope.querySelectorAll = () => [first];
+    scope.querySelector = () => { throw new DOMException('not a valid selector', 'SyntaxError'); };
+    const documentElement = { classList: classList() };
+    installDom(body, documentElement);
+
+    activate(scope, 'scope', null, false, null, true);
+
+    assert.equal(first.focusCalls, 1, 'the invalid selector degrades to the first focusable');
+    assert.equal(documentElement.classList.contains('tm-scroll-lock'), true,
+        'the scroll lock landed (the throw would have escaped after it)');
+});
+
 test('a dialog declared in page content becomes reachable when it opens', () => {
     const body = element();
     const app = element(body);
