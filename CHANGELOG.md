@@ -35,6 +35,16 @@
   topmost overlay only. A modal marks the page behind it `inert` and locks document scroll. A
   drawer title id is unique per instance. The focus ring on a sheet handle paints the bar only.
 
+- **`TmGanttImportDialog`'s dialog is a `TmFocusScope` root too**, so its Tab cycle, Escape and the
+  inert background behave like every other overlay, and its Jira form now renders real
+  `TmFormField` labels (the file omitted the namespace, so the tag compiled to an unknown element
+  and the three labels vanished).
+
+- **The date-picker popups no longer emit `aria-modal="true"`.** `TmDatePicker`, `TmDateRangePicker`
+  and `TmDateTimePicker` keep `role="dialog"`, but nothing inerted the page behind the popup, so the
+  attribute announced a modality the panel does not have. Moving the popups onto `TmFocusScope` is
+  deferred to the F3 phase.
+
 - **A drawer backdrop is a child of the focus-scope root, and it carries `data-tm-backdrop`.** It
   used to be a sibling that preceded the root. The trap marks every sibling `inert`, so that
   sibling swallowed the click that should close the drawer.
@@ -67,8 +77,10 @@
   must accept `none`.
 
 - **`.tm-modal-container` no longer receives pointer events.** It fills the overlay, so a click on
-  the dimmed area used to land on the container and never reached `CloseOnOverlayClick`. The
-  container is `pointer-events: none`; the scope (`> .tm-focus-scope`) takes its own clicks back.
+  the dimmed area used to land on the container and never reached the handler — `CloseOnOverlayClick`
+  already defaulted to `true`, but the click physically could not arrive, so dimmed-area closing did
+  not work. The container is `pointer-events: none`; the scope (`> .tm-focus-scope`) takes its own
+  clicks back. A host that wants clicks on the dimmed area ignored sets `CloseOnOverlayClick="false"`.
 
 - **A modal or dialog sheet sizes to its content.** It used to snap. `TmModal` and `TmDialog` now
   render `tm-sheet--content` and pass no snap points, so the panel is `height: auto` under
@@ -82,63 +94,63 @@
   one-snap sheet dismisses only past a quarter of the height it started at, or on a downward flick.
   An upward drag never dismisses.
 
-- **A click on the dimmed area closes `TmModal`.** `CloseOnOverlayClick` now defaults to `true`.
-  A host that kept the old behaviour sets it to `false`. `.tm-modal-container` is
-  `pointer-events: none`, so the click reaches the overlay.
-
 - **An inline sheet is a fraction of its host.** `Modal="false"` renders `position: absolute;
   inset: 0` inside a positioned host, measures snaps against that host, and does not track the
-  keyboard. The root uses `--tm-z-inline-sheet` (10), under the modal band.
-
-- **A visible modal or dialog ends at `transform: none`.** The open keyframe used to finish at
-  `scale(1)`, which is still a containing block. A sheet inside that modal then anchored to the
-  modal instead of the viewport.
+  keyboard. The panel height is `calc(var(--tm-sheet-height) * 100%)` of that host, not of the
+  viewport, so a host that is not positioned lets the sheet escape it. Escape closes an inline
+  sheet only when focus is inside it. The root uses `--tm-z-inline-sheet` (10), under the modal band.
 
 - **`TmLightbox`, `TmKeyboardShortcutsHelp` and `TmCommandPalette` render a `TmFocusScope` root.**
-  Escape is the scope's document keydown. `TmLightbox` no longer also handles Escape itself, which
-  closed it twice.
+  Tab stays inside, the dialog role and `tabindex` sit on `div.tm-focus-scope`, and Escape is the
+  scope's document keydown. `TmLightbox` no longer also handles Escape itself, which closed it
+  twice. A test that looked for `role="dialog"` on `.tm-lightbox` or `.tm-keyboard-shortcuts` finds
+  it on the scope.
 
 - **`TmSheetHandle.SnapValue` drives the value text.** The handle announces `TmSheet_SnapPercent`
   (`{0} %`). `TmSheet_SnapIndex` is no longer the announcement.
 
-- **`.tm-viewport-probe` replaces `.tm-layout--fallback`.** An overlay with no viewport scope
-  measures a fixed, hidden box. The probe is an internal class, not a public component.
+- **An overlay with no viewport scope measures the viewport itself through `ViewportProbe`.** The
+  probe is an internal component the overlay opens from C#: Razor cannot bind a tag to a non-public
+  component, and with RZ10012 suppressed the `<ViewportProbe />` tag silently compiled to a literal
+  HTML element that never measured — so no-scope overlays stayed on their initial mode and the
+  missing-scope hint never logged. RZ10012 is no longer suppressed. (An intermediate
+  `.tm-layout--fallback` stylesheet class shipped in this cycle but nothing ever rendered it; it is
+  deleted.)
 
 - **Side-drawer shadows use a token.** The panel shadow is `var(--tm-shadow-xl)`, not a hardcoded
   value. The modal sheet media query is `width < 640px`: a viewport of exactly 640px is no longer
   inside the sheet rule.
 
-- **`TmViewManager` ids are per instance.** The toggle and the name field used to be
-  `tm-view-manager-toggle` and `tm-view-name`. A page with three managers restored focus to the
-  first. Each instance now suffixes both ids, and the modal's initial focus is the name field of
-  that instance.
+- **`TmViewManager` ids are per instance.** The toggle used to carry no id at all and the name field
+  only `TmTextInput`'s random default, so nothing named which manager's toggle to restore or which
+  field to focus — a page with three managers restored focus to the first. Each instance now
+  suffixes real ids (`id` + `data-tm-id`) for the toggle and the name field, the label points at the
+  field, the modal's initial focus is that instance's name field, and Escape restores the instance's
+  toggle.
 
 - **`TmDashboard` closes its menu when a delete dialog opens.** The menu no longer stays open
   behind the dialog.
 
-- **Sheet dismiss thresholds changed.** A snapped sheet dismisses only below the lowest snap by
-  0.15, or on a downward flick faster than 0.5 px/ms measured over the last 80ms. It used to treat
-  any release below the lowest snap as a dismiss, and a flick never fired because velocity was
-  taken from the last move, which `pointerup` repeats. A content sheet dismisses past a quarter of
-  the height it started at, or on a flick. A tap never dismisses.
+- **Bottom-sheet dismiss gestures are measured, not positional.** A snapped sheet dismisses only
+  below the lowest snap by 0.15, or on a downward flick — and a flick moves ONE snap in its
+  direction from the snap the drag started on, so the ordinary "back to half" swipe from full
+  (a 300px drag over 300ms, about 1 px/ms) steps down to half instead of closing the sheet; only a
+  release faster than about 2 px/ms closes it from any snap, and an upward flick steps one snap up.
+  A one-snap sheet dismisses past a quarter of the height it started at, or on a downward flick. A
+  content sheet dismisses past a quarter of the height it started at, or on a flick. The flick is
+  the travel over the last 80ms of the drag, not the gap between the last move and `pointerup` (a
+  real release lands on that last move, so a velocity taken from it alone is always 0). A tap never
+  dismisses, and an upward drag never dismisses.
 
-- **`TmLightbox` and `TmKeyboardShortcutsHelp` render a `TmFocusScope` root.** Tab stays inside and
-  Escape closes them. The dialog role and `tabindex` sit on `div.tm-focus-scope`, not on the old
-  overlay element. A test that looked for `role="dialog"` on `.tm-lightbox` or
-  `.tm-keyboard-shortcuts` finds it on the scope.
+- **Sheets grab through the shared `TmSheetHandle` (`.tm-sheet__handle`), named by the new `TmSheet_*`
+  resource keys.** There were no grabber classes or sheet keys before, so nothing to migrate — a
+  host that hand-rolled its own grabber can compose the same component. A `TmModal` or `TmDialog`
+  sheet renders the grabber only while the sheet can be dismissed (`CloseOnOverlayClick`), so it
+  never advertises a swipe that does nothing.
 
-- **An inline (`Modal="false"`) bottom sheet is sized from its host.** The root is
-  `position: absolute; inset: 0` inside a positioned host, and the panel height is
-  `calc(var(--tm-sheet-height) * 100%)` of that host, not of the viewport. A host that is not
-  positioned lets the sheet escape it. Escape closes the inline sheet only when focus is inside it.
-
-- **The old grabber classes and keys are gone.** `.tm-modal__handle` and `.tm-dialog__handle` are
-  not rendered; the grabber is `.tm-sheet__handle`. The `*DragHandle` resource keys are `TmSheet_*`.
-  A stylesheet that targeted the old classes no longer matches.
-
-- **Document scroll lock is `html.tm-scroll-lock`.** It used to be a class on `body`. A host rule
-  that unlocked scroll by clearing a body class must clear `html.tm-scroll-lock`. The lock is a ref
-  count: it stays while any modal trap is open and leaves when the last one closes.
+- **Document scroll lock is `html.tm-scroll-lock`.** A modal overlay did not lock document scroll
+  before; the lock is new. It is a ref count: it stays while any modal trap is open and leaves when
+  the last one closes, so two open modals do not leave the class behind.
 
 - **A desktop sheet caps at 48rem.** `[data-layout="desktop"]` bottom drawers and modal sheets set
   `max-width: 48rem` and center. They used to be full-bleed at every width. A host that stretched a
