@@ -2,7 +2,7 @@
   "itemName": "ActionBarPlacement",
   "kind": "Enum",
   "category": "Components",
-  "namespace": "Tempo.Blazor.Components.ActionBar",
+  "namespace": "Tempo.Blazor.Components.Actions",
   "description": "Where a TmMobileActionBar anchors. StickyContainer (default) sticks inside the component's own container (position: sticky, never fixed). FixedViewport is a deliberate opt-in anchoring the bar to the viewport with the bottom safe area. Inline renders the bar statically at the end of the content.",
   "values": [
     {

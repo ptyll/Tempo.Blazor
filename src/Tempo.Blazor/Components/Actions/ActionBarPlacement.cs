@@ -1,4 +1,4 @@
-namespace Tempo.Blazor.Components.ActionBar;
+namespace Tempo.Blazor.Components.Actions;
 
 /// <summary>Where a <see cref="TmMobileActionBar"/> anchors.</summary>
 public enum ActionBarPlacement

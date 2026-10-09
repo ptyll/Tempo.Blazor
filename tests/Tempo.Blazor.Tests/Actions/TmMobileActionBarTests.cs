@@ -2,7 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
-using Tempo.Blazor.Components.ActionBar;
+using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.ActionBar;

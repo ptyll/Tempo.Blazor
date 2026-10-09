@@ -1,4 +1,4 @@
-namespace Tempo.Blazor.Components.ActionBar;
+namespace Tempo.Blazor.Components.Actions;
 
 using Microsoft.AspNetCore.Components;
 

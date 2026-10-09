@@ -74,7 +74,7 @@
         ],
         "namespaces": [
           "Tempo.Blazor.Components",
-          "Tempo.Blazor.Components.ActionBar",
+          "Tempo.Blazor.Components.Actions",
           "Tempo.Blazor.Components.Activity",
           "Tempo.Blazor.Components.AITools",
           "Tempo.Blazor.Components.AuditLog",
@@ -568,14 +568,15 @@
         {
           "itemName": "TmMobileActionBar",
           "kind": "Component",
-          "category": "Action Bar",
-          "namespace": "Tempo.Blazor.Components.ActionBar",
+          "category": "Actions",
+          "namespace": "Tempo.Blazor.Components.Actions",
           "description": "A component-scoped mobile action bar: up to MaxVisible actions pinned to the bottom edge of the component's own container, with the rest overflowing into a \"More\" menu that composes TmOverlayPanel (anchored popover on desktop, the shared bottom-sheet primitive on a mobile viewport). The default StickyContainer placement sticks inside the component (position: sticky, never position: fixed like application chrome), so the bar scrolls away with its content; FixedViewport is a deliberate opt-in that anchors to the viewport and respects the bottom safe area; Inline renders the bar statically at the end of the content. With Auto visibility the bar exists only below the mobile breakpoint, resolved from the container (or from the viewport scope for FixedViewport) through the F1 layout contract; LayoutMode forces a mode for hosts and tests. The bar renders TmButton actions from the shared TmActionItem model (also used by the F4 overflow toolbar), truncating long labels on the label span, and the region above the bar gets a bottom padding equal to the bar height so nothing is covered at 320 or 390. Reference usage: TmDashboard edit mode on mobile.",
           "packageId": "Tempo.Blazor",
-          "sourcePath": "src/Tempo.Blazor/Components/ActionBar/TmMobileActionBar.razor",
+          "sourcePath": "src/Tempo.Blazor/Components/Actions/TmMobileActionBar.razor",
           "documentationStatus": "merged",
           "requiredImports": [
-            "@using Tempo.Blazor.Components.ActionBar"
+            "@using Tempo.Blazor.Components.ActionBar",
+            "@using Tempo.Blazor.Components.Actions"
           ],
           "parameters": [
             {
@@ -3925,10 +3926,10 @@
           "itemName": "ActionBarPlacement",
           "kind": "Enum",
           "category": "Components",
-          "namespace": "Tempo.Blazor.Components.ActionBar",
+          "namespace": "Tempo.Blazor.Components.Actions",
           "description": "Where a TmMobileActionBar anchors. StickyContainer (default) sticks inside the component's own container (position: sticky, never fixed). FixedViewport is a deliberate opt-in anchoring the bar to the viewport with the bottom safe area. Inline renders the bar statically at the end of the content.",
           "packageId": "Tempo.Blazor",
-          "sourcePath": "src/Tempo.Blazor/Components/ActionBar/ActionBarPlacement.cs",
+          "sourcePath": "src/Tempo.Blazor/Components/Actions/ActionBarPlacement.cs",
           "documentationStatus": "merged",
           "values": [
             {
@@ -6153,10 +6154,10 @@
           "itemName": "TmActionItem",
           "kind": "Class",
           "category": "Components",
-          "namespace": "Tempo.Blazor.Components.ActionBar",
+          "namespace": "Tempo.Blazor.Components.Actions",
           "description": "A single action offered by an action surface — the F5 TmMobileActionBar, the F4 overflow toolbar, and any future action host. The model is deliberately free of rendering concerns: a host maps an item to a button, a menu entry, or another surface.",
           "packageId": "Tempo.Blazor",
-          "sourcePath": "src/Tempo.Blazor/Components/ActionBar/TmActionItem.cs",
+          "sourcePath": "src/Tempo.Blazor/Components/Actions/TmActionItem.cs",
           "documentationStatus": "merged",
           "members": [
             {

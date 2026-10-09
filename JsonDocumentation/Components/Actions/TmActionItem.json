@@ -2,7 +2,7 @@
   "itemName": "TmActionItem",
   "kind": "Class",
   "category": "Components",
-  "namespace": "Tempo.Blazor.Components.ActionBar",
+  "namespace": "Tempo.Blazor.Components.Actions",
   "description": "A single action offered by an action surface — the F5 TmMobileActionBar, the F4 overflow toolbar, and any future action host. The model is deliberately free of rendering concerns: a host maps an item to a button, a menu entry, or another surface.",
   "properties": [
     {
