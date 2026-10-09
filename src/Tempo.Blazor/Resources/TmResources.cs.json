@@ -96,6 +96,8 @@
   "TmMobileActionBarDemo_ActionDuplicate": "Duplikovat",
   "TmMobileActionBarDemo_ActionArchive": "Archivovat",
   "TmMobileActionBarDemo_ActionDelete": "Smazat",
+  "TmMobileActionBarDemo_ActionPrint": "Tisk",
+  "TmMobileActionBarDemo_FixedBody": "Tento obsah sjíždí pod panelem kotvícím k viewportu; rezerva pod ním odpovídá výšce panelu.",
   "TmMobileActionBarDemo_ConfirmDeleteTitle": "Smazat dokument?",
   "TmMobileActionBarDemo_ConfirmDeleteMessage": "Dokument přejde do koše. Později ho můžete obnovit.",
   "TmMobileActionBarDemo_LastAction": "Poslední akce",

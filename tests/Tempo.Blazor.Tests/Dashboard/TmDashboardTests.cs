@@ -206,6 +206,38 @@ public class TmDashboardTests : LocalizationTestBase
         cancelButtons.Should().NotBeEmpty("edit mode should show a Cancel button");
     }
 
+    [Fact]
+    public void Dashboard_EditMode_MobileLayout_RendersTheActionBarWithThreeActions()
+    {
+        // X14: on a mobile layout the edit actions render through TmMobileActionBar (3 actions,
+        // built per render so a culture change re-localizes them).
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+
+        var cut = Render<TmDashboard>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile));
+        cut.Find("button[title='Edit']").Click();
+
+        var bar = cut.Find(".tm-mobile-action-bar__bar");
+        bar.QuerySelectorAll(".tm-mobile-action-bar__action").Count.Should().Be(3);
+        bar.GetAttribute("role").Should().Be("group");
+    }
+
+    [Fact]
+    public void Dashboard_EditMode_DesktopLayout_RendersNoActionBar()
+    {
+        var provider = CreateMockProvider();
+        var registry = CreateMockRegistry();
+        SetupServices(provider, registry);
+
+        var cut = Render<TmDashboard>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Desktop));
+        cut.Find("button[title='Edit']").Click();
+
+        cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty();
+        cut.FindAll(".tm-dashboard-toolbar-right .tm-btn").Should().NotBeEmpty(
+            "the desktop toolbar keeps the edit actions");
+    }
+
     #endregion
 
     #region 5. Mobile Stacking (A1)

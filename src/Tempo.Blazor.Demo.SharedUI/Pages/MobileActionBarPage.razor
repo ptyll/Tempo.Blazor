@@ -17,7 +17,7 @@
         <h2>@Loc["TmMobileActionBarDemo_AutoTitle"]</h2>
         <p>@Loc["TmMobileActionBarDemo_AutoDescription"]</p>
         <div class="mab-card">
-            <TmMobileActionBar Items="@_actions" MaxVisible="3" data-testid="mab-auto-bar">
+            <TmMobileActionBar Items="@_actions" MaxVisible="3" data-testid="mab-auto-bar" @ref="_actionBar">
                 <ChildContent>
                     <ul class="mab-docs">
                         <li>@Loc["TmMobileActionBarDemo_CardOne"]</li>
@@ -61,7 +61,11 @@
                         <TmMobileActionBar Items="@_actions"
                                            MaxVisible="3"
                                            Placement="ActionBarPlacement.FixedViewport"
-                                           LayoutMode="TmLayoutMode.Mobile" />
+                                           LayoutMode="TmLayoutMode.Mobile">
+                            <ChildContent>
+                                <p class="mab-fixed-docs">@Loc["TmMobileActionBarDemo_FixedBody"]</p>
+                            </ChildContent>
+                        </TmMobileActionBar>
                     }
                 </div>
             </div>
@@ -92,12 +96,15 @@
     private bool _showConfirm;
     private bool _showFixed;
     private string _lastAction = "—";
+    private TmMobileActionBar? _actionBar;
     private IReadOnlyList<TmActionItem> _actions = [];
 
-    protected override void OnInitialized()
+    // X14/X18: built per parameter set (not once in OnInitialized), so a culture switch
+    // re-renders the action labels in the new language. The EventCallback receiver is this
+    // page, so its own markup (the dialog, the last-action line) re-renders when an action
+    // mutates state.
+    protected override void OnParametersSet()
     {
-        // The EventCallback receiver is this page, so its own markup (the dialog, the
-        // last-action line) re-renders when an action mutates state.
         _actions =
         [
             new TmActionItem
@@ -118,6 +125,16 @@
             },
             new TmActionItem
             {
+                Id = "print",
+                // X18: a disabled action on the bar — the target renders but never invokes.
+                Label = Loc["TmMobileActionBarDemo_ActionPrint"],
+                Icon = IconNames.Printer,
+                Priority = 95,
+                Disabled = true,
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmMobileActionBarDemo_ActionPrint")),
+            },
+            new TmActionItem
+            {
                 Id = "duplicate",
                 Label = Loc["TmMobileActionBarDemo_ActionDuplicate"],
                 Icon = IconNames.Copy,
@@ -127,9 +144,11 @@
             new TmActionItem
             {
                 Id = "archive",
+                // X18: a disabled action inside the overflow menu — the initial focus skips it.
                 Label = Loc["TmMobileActionBarDemo_ActionArchive"],
                 Icon = "archive",
                 Priority = 70,
+                Disabled = true,
                 OnClick = EventCallback.Factory.Create(this, () => Record("TmMobileActionBarDemo_ActionArchive")),
             },
             new TmActionItem
@@ -158,12 +177,18 @@
         return Task.CompletedTask;
     }
 
-    private void HandleConfirmResult(bool? result)
+    private async Task HandleConfirmResult(bool? result)
     {
         _showConfirm = false;
         if (result == true)
         {
             _lastAction = Loc["TmMobileActionBarDemo_ActionDelete"];
+            // X13: the confirmed action closes the More sheet (CloseMoreAsync) and focus returns
+            // to the More trigger — the menu must not stay open for an item that just ran.
+            if (_actionBar is not null)
+            {
+                await _actionBar.CloseMoreAsync();
+            }
         }
     }
 }

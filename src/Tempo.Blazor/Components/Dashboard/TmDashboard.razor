@@ -415,13 +415,15 @@
     private bool _dataLoaded;
     private IReadOnlyList<TmActionItem> _editModeActions = [];
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (_dataLoaded) return;
+    // X14: the edit actions are rebuilt per parameter set (not once in OnInitialized), so a
+    // culture change re-renders the labels in the new language.
+    protected override void OnParametersSet() => BuildEditModeActions();
 
+    private void BuildEditModeActions()
+    {
         // The mobile edit-mode action bar (F5) renders the same three actions as the desktop
-        // toolbar; priority keeps the order stable when a future action joins the overflow.
-        // The EventCallback receiver is the dashboard, so its own markup re-renders on activation.
+        // toolbar. The EventCallback receiver is the dashboard, so its own markup re-renders on
+        // activation; Priority is only an overflow rank — the bar renders in Items order.
         _editModeActions =
         [
             new TmActionItem
@@ -444,11 +446,16 @@
             {
                 Id = "cancel-edit",
                 Label = Loc["TmDashboard_CancelEdit"],
-                Icon = "x",
+                Icon = IconNames.X,
                 Priority = 80,
                 OnClick = EventCallback.Factory.Create(this, CancelEdit),
             },
         ];
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_dataLoaded) return;
 
         await LoadDashboardsList();
 

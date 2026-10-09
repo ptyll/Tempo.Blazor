@@ -96,6 +96,8 @@
   "TmMobileActionBarDemo_ActionDuplicate": "Dupliquer",
   "TmMobileActionBarDemo_ActionArchive": "Archiver",
   "TmMobileActionBarDemo_ActionDelete": "Supprimer",
+  "TmMobileActionBarDemo_ActionPrint": "Imprimer",
+  "TmMobileActionBarDemo_FixedBody": "Ce contenu défile sous la barre ancrée au viewport ; la réserve sous elle égale la hauteur de la barre.",
   "TmMobileActionBarDemo_ConfirmDeleteTitle": "Supprimer le document ?",
   "TmMobileActionBarDemo_ConfirmDeleteMessage": "Le document sera déplacé dans la corbeille. Vous pourrez le restaurer plus tard.",
   "TmMobileActionBarDemo_LastAction": "Dernière action",

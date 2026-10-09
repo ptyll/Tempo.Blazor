@@ -96,6 +96,8 @@
   "TmMobileActionBarDemo_ActionDuplicate": "Duplicate",
   "TmMobileActionBarDemo_ActionArchive": "Archive",
   "TmMobileActionBarDemo_ActionDelete": "Delete",
+  "TmMobileActionBarDemo_ActionPrint": "Print",
+  "TmMobileActionBarDemo_FixedBody": "This content scrolls under the viewport-anchored bar; the reserve below equals the bar height.",
   "TmMobileActionBarDemo_ConfirmDeleteTitle": "Delete document?",
   "TmMobileActionBarDemo_ConfirmDeleteMessage": "The document will be moved to the trash. You can restore it later.",
   "TmMobileActionBarDemo_LastAction": "Last action",
