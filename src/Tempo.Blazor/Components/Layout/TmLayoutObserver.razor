@@ -37,6 +37,7 @@
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmLayoutObserver>? _dotNetRef;
     private bool _observing;
+    private TmLayoutBreakpoints _observedBreakpoints = TmLayoutBreakpoints.Default;
     private bool _disposed;
     private TmLayoutMode? _measured;
     private TmLayoutMode _resolved;
@@ -157,8 +158,19 @@
     /// <summary>True when this observer measures its own root. A forced mode, or Auto under a forced ancestor, does not.</summary>
     private bool Measures => LayoutMode == TmLayoutMode.Auto && Parent is not { Mode: not TmLayoutMode.Auto };
 
+    private TmLayoutBreakpoints EffectiveBreakpoints => Breakpoints ?? TmLayoutBreakpoints.Default;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Re-register when the thresholds changed: the module classifies with what it was given, so
+        // the same width must be re-evaluated against the new pair (it reports on the next frame).
+        if (_observing && !_disposed && _module is not null && EffectiveBreakpoints != _observedBreakpoints)
+        {
+            _observedBreakpoints = EffectiveBreakpoints;
+            await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
+            return;
+        }
+
         if (!Measures || _observing || _attaching || _disposed) return;
 
         // Set before the first await, so a second render during the import cannot start another one.
@@ -178,12 +190,15 @@
 
         _observing = true;
         _attaching = false;
-        await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, new
-        {
-            breakpoints = new { sm = TmBreakpoints.Sm, md = TmBreakpoints.Md, lg = TmBreakpoints.Lg },
-        });
+        _observedBreakpoints = EffectiveBreakpoints;
+        await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
         if (_disposed) await ReleaseAsync();
     }
+
+    private static object ObserveOptions(TmLayoutBreakpoints breakpoints) => new
+    {
+        breakpoints = new { sm = breakpoints.Sm, md = TmBreakpoints.Md, lg = breakpoints.Lg },
+    };
 
     /// <summary>Called by layout-observer.js when the measured mode changes. An unchanged mode is ignored.</summary>
     /// <param name="mode">One of <c>desktop</c>, <c>tablet</c>, <c>mobile</c>.</param>

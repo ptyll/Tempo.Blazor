@@ -19,7 +19,13 @@ public sealed record TmLayoutBreakpoints
     /// <exception cref="ArgumentOutOfRangeException">Thrown unless <c>0 &lt; sm &lt; lg</c>.</exception>
     public TmLayoutBreakpoints(int sm, int lg)
     {
-        throw new NotImplementedException();
+        if (sm <= 0)
+            throw new ArgumentOutOfRangeException(nameof(sm), sm, "The mobile threshold must be a positive number of CSS pixels.");
+        if (lg <= sm)
+            throw new ArgumentOutOfRangeException(nameof(lg), lg, "The desktop threshold must be greater than the mobile threshold.");
+
+        Sm = sm;
+        Lg = lg;
     }
 
     /// <summary>Below this width a container is <see cref="TmLayoutMode.Mobile"/>.</summary>
@@ -32,6 +38,11 @@ public sealed record TmLayoutBreakpoints
     /// <param name="widthPx">The container's inline size in CSS pixels.</param>
     public TmLayoutMode Classify(double widthPx)
     {
-        throw new NotImplementedException();
+        if (!double.IsFinite(widthPx) || widthPx < 0)
+            throw new ArgumentOutOfRangeException(nameof(widthPx), widthPx, "A container width must be a finite, non-negative number of CSS pixels.");
+
+        if (widthPx < Sm) return TmLayoutMode.Mobile;
+        if (widthPx < Lg) return TmLayoutMode.Tablet;
+        return TmLayoutMode.Desktop;
     }
 }
