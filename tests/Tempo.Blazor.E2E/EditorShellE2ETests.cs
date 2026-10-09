@@ -4,8 +4,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// F6 lane: TmEditorShell and TmSidePanel on the real components — the /editor-shell demo page
-/// at 1440 (desktop), 1024 with touch (tablet) and 390/320 with touch (mobile). Every screenshot
+/// F6 lane: TmEditorShell and TmSidePanel on the real components — the /editor-shell demo page.
+/// The AUTO shell is driven at real sizes: 1440 (desktop), 1280 and 768 (tablet: docked panels, one
+/// expanded, no modal), and 390/320 with touch (mobile sheet / tabs); a second shell uses custom
+/// thresholds (desktop from 1200, mobile below 768). Every screenshot
 /// is viewport-only at the real viewport height (FullPage resets touch emulation — the F5 lesson),
 /// and computed values (bounding boxes, positions, track counts) are asserted, not only tokens.
 /// </summary>
@@ -127,11 +129,16 @@ public class EditorShellE2ETests : WasmTestBase
             "the strip next to an expanded panel is the collapse toggle");
         var controls = await toggle.GetAttributeAsync("aria-controls");
         Assert.IsFalse(string.IsNullOrEmpty(controls));
+        Assert.AreEqual("ASIDE", await page.EvaluateAsync<string>("id => document.getElementById(id)?.tagName ?? '", controls!),
+            "aria-controls names the real panel, not a hidden anchor");
 
         await toggle.ClickAsync();
         var rail = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__rail--left");
         await Assertions.Expect(rail).ToBeVisibleAsync();
         Assert.AreEqual(0, await page.Locator("[data-testid='editor-shell'] [data-region='left']").CountAsync());
+        var railButton = rail.Locator("button");
+        Assert.AreEqual("false", await railButton.GetAttributeAsync("aria-expanded"), "a rail expand button reads collapsed");
+        Assert.IsNull(await railButton.GetAttributeAsync("aria-controls"), "its panel is not rendered, so no aria-controls");
         await CaptureViewportOnlyAsync(page, "1440-collapsed-rail");
 
         await rail.Locator("button").ClickAsync();
@@ -167,84 +174,6 @@ public class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(page.Locator("[data-testid='editor-shell'] [data-region='left']")).ToBeVisibleAsync();
     }
 
-    // ── Tablet ──────────────────────────────────────────────────────────────
-    // At a 1024 viewport the app sidebar leaves the auto shell ~632px, so the auto shell honestly
-    // resolves mobile (the F1 contract: a component resolves from its own width). The demo page
-    // therefore ships a forced-tablet shell section; the tablet side-sheet behaviour is driven
-    // against it, and the honest auto-shell resolution is asserted alongside.
-
-    [TestMethod]
-    public async Task Demo_1024_Tablet_OnePromotedSideSheet_CanvasVisible()
-    {
-        var context = await CreateTouchContextAsync(1024, 768);
-        var page = await GotoEditorShellAsync(context, 1024, 768);
-        RegisterContext(context);
-
-        var tablet = page.Locator("[data-testid='editor-shell-tablet']");
-
-        // Open the left panel from its strip toggle: a single promoted side sheet appears.
-        await tablet.Locator(".tm-editor-shell__panel-toggle--left").ClickAsync();
-        var drawers = tablet.Locator(".tm-drawer");
-        Assert.AreEqual(1, await drawers.CountAsync(), "tablet renders at most one side sheet");
-        await Assertions.Expect(tablet.Locator("[data-region='canvas']")).ToBeVisibleAsync();
-
-        // A modal viewport surface: promoted to the top layer.
-        Assert.AreEqual("manual", await drawers.First.GetAttributeAsync("popover"),
-            "the tablet side sheet must promote its root");
-
-        // The auto shell resolves from its own container — at 1024 minus the app sidebar that is
-        // below the mobile breakpoint, so it honestly renders the mobile panels sheet.
-        Assert.AreEqual("mobile",
-            await page.Locator("[data-testid='editor-shell']").GetAttributeAsync("data-layout"));
-
-        await CaptureViewportOnlyAsync(page, "1024-tablet-sheet");
-    }
-
-    [TestMethod]
-    public async Task Demo_1024_Tablet_EscapeClosesSheet_AndRestoresFocusToToggle()
-    {
-        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = 1024, Height = 768 },
-            IgnoreHTTPSErrors = true,
-        });
-        var page = await context.NewPageAsync();
-        RegisterContext(context);
-        await page.GotoAsync($"{BaseUrl}{Route}");
-        await WaitForAppReadyAsync(page);
-
-        var tablet = page.Locator("[data-testid='editor-shell-tablet']");
-
-        // Open the right panel from its strip toggle: a single promoted side sheet appears.
-        // (A modal sheet inerts everything behind it, so the user can only ever open one panel at
-        // a time from the toggles — the both-open reveal path is host state, covered in bUnit.)
-        var toggle = tablet.Locator(".tm-editor-shell__panel-toggle--right");
-        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"));
-        await toggle.ClickAsync();
-        var sheet = tablet.Locator(".tm-drawer--right");
-        await Assertions.Expect(sheet).ToBeVisibleAsync();
-        Assert.AreEqual("manual", await sheet.GetAttributeAsync("popover"));
-        // While the modal sheet is open the toggle is inert behind it and unmounts (by design);
-        // aria-expanded is asserted when it comes back on every close path below.
-
-        // The sheet header close button closes it and returns focus to the trigger.
-        await sheet.Locator(".tm-drawer__close").ClickAsync();
-        await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
-        Assert.AreEqual(0, await tablet.Locator(".tm-drawer").CountAsync());
-        await Assertions.Expect(toggle).ToBeVisibleAsync();
-        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"),
-            "aria-expanded must read false after the sheet close button");
-
-        // Reopen and press Escape: the sheet closes and focus returns to the trigger
-        // (aria-expanded stays accurate on every close path).
-        await toggle.ClickAsync();
-        await Assertions.Expect(sheet).ToBeVisibleAsync();
-        await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
-        await WaitForFocusOnToggleAsync(page, "right");        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"));
-        await CaptureViewportOnlyAsync(page, "1024-after-escape");
-    }
-
     // ── Mobile ──────────────────────────────────────────────────────────────
 
     [TestMethod]
@@ -261,11 +190,11 @@ public class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(sheet).ToBeVisibleAsync();
         Assert.IsNull(await sheet.GetAttributeAsync("popover"), "the inline panels sheet must not promote");
 
-        // Tabs presentation: one tablist, one selected tabpanel.
-        var tabs = page.Locator(".tm-editor-shell__tab");
+        // Sheet presentation with two open panels: a Left/Right tab strip inside the sheet.
+        var tabs = page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab");
         Assert.AreEqual(2, await tabs.CountAsync());
         Assert.AreEqual("true", await tabs.First.GetAttributeAsync("aria-selected"));
-        Assert.AreEqual(1, await page.Locator("[role='tabpanel']").CountAsync());
+        Assert.AreEqual(1, await page.Locator(".tm-editor-shell__sheet [role='tabpanel']:not([hidden])").CountAsync());
 
         // The mobile action bar: 3 tiles + More, sitting at the bottom of the shell.
         var bar = page.Locator("[data-testid='editor-shell'] .tm-mobile-action-bar__bar");
@@ -287,8 +216,8 @@ public class EditorShellE2ETests : WasmTestBase
         // The sheet must show real content: header + a usable body, inside the panels host.
         var panelBody = await page.Locator(".tm-editor-shell__sheet .tm-drawer__body").BoundingBoxAsync();
         Assert.IsTrue(panelBody is { Height: > 60 }, $"the sheet body must be visible (height {panelBody?.Height})");
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet [role='tabpanel']")).ToBeVisibleAsync();
-        await CaptureViewportOnlyAsync(page, "390-mobile-tabs-sheet");
+        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet [role='tabpanel']:not([hidden])")).ToBeVisibleAsync();
+        await CaptureViewportOnlyAsync(page, "390-mobile-sheet");
     }
 
     [TestMethod]
@@ -298,7 +227,7 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
 
-        var tabs = page.Locator(".tm-editor-shell__tab");
+        var tabs = page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab");
         await tabs.Nth(1).ClickAsync();
         Assert.AreEqual("true", await tabs.Nth(1).GetAttributeAsync("aria-selected"));
         await Assertions.Expect(page.Locator("[role='tabpanel'] [data-testid='es-properties']")).ToBeVisibleAsync();
@@ -321,6 +250,8 @@ public class EditorShellE2ETests : WasmTestBase
         var reopen = page.Locator(".tm-editor-shell__panel-toggle--mobile");
         await Assertions.Expect(reopen).ToBeVisibleAsync();
         Assert.AreEqual("false", await reopen.GetAttributeAsync("aria-expanded"));
+        Assert.IsNull(await reopen.GetAttributeAsync("aria-controls"), "the sheet it controls is not rendered");
+        StringAssert.Contains(await reopen.InnerTextAsync(), "Blocks", "the closed affordance is labelled, not a bare chevron");
         await CaptureViewportOnlyAsync(page, "390-mobile-sheet-closed");
 
         await reopen.ClickAsync();
@@ -353,7 +284,7 @@ public class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator("[data-testid='editor-shell'] .tm-mobile-action-bar__bar")).ToBeVisibleAsync();
         // A tab label stays on ONE line (no mid-word break of the fr "Propriétés").
-        var tabHeights = await page.EvaluateAsync<double[]>("() => [...document.querySelectorAll('.tm-editor-shell__tab')].map(t => t.getBoundingClientRect().height)");
+        var tabHeights = await page.EvaluateAsync<double[]>("() => [...document.querySelectorAll('.tm-editor-shell__sheet .tm-editor-shell__tab')].map(t => t.getBoundingClientRect().height)");
         Assert.IsTrue(tabHeights.Length == 2 && tabHeights.All(h => h < 40), $"tab labels must not wrap: {string.Join(',', tabHeights)}");
         await CaptureViewportOnlyAsync(page, "320-mobile-fr");
     }
@@ -377,35 +308,6 @@ public class EditorShellE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task Demo_1024_Tablet_BackdropAndDoneClose_RestoreFocusToTheToggle()
-    {
-        var page = await OpenPlainPageAsync(1024, 768);
-        RegisterContext(page.Context);
-        await WaitForAppReadyAsync(page);
-
-        var tablet = page.Locator("[data-testid='editor-shell-tablet']");
-        var toggle = tablet.Locator(".tm-editor-shell__panel-toggle--right");
-        var sheet = tablet.Locator(".tm-drawer--right");
-
-        await toggle.ClickAsync();
-        await Assertions.Expect(sheet).ToBeVisibleAsync();
-        // The backdrop (a click far from the right-hand sheet) is a close path.
-        await page.Mouse.ClickAsync(60, 400);
-        await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
-        await WaitForFocusOnToggleAsync(page, "right");
-        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"));
-
-        // Open the LEFT panel the same way; Escape; focus returns to the LEFT toggle.
-        var leftToggle = tablet.Locator(".tm-editor-shell__panel-toggle--left");
-        await leftToggle.ClickAsync();
-        await Assertions.Expect(tablet.Locator(".tm-drawer--left")).ToBeVisibleAsync();
-        await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(tablet.Locator(".tm-drawer")).ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 5000 });
-        await WaitForFocusOnToggleAsync(page, "left");
-        Assert.AreEqual("false", await leftToggle.GetAttributeAsync("aria-expanded"));
-    }
-
-    [TestMethod]
     public async Task Demo_390_Mobile_EscapeAndClose_ReturnFocusToThePanelsToggle_AndSurviveALayoutFlip()
     {
         var context = await CreateTouchContextAsync(390, 844);
@@ -422,7 +324,7 @@ public class EditorShellE2ETests : WasmTestBase
         // Reopen, then close with Escape: focus lands on the toggle again.
         await reopen.ClickAsync();
         await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
-        await page.Locator(".tm-editor-shell__tab").First.FocusAsync();
+        await page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").First.FocusAsync();
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeHiddenAsync(
             new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
@@ -493,7 +395,7 @@ public class EditorShellE2ETests : WasmTestBase
         RegisterContext(context);
 
         var heights = await page.EvaluateAsync<double[]>(
-            "() => [...document.querySelectorAll('.tm-editor-shell__tab')].map(t => t.getBoundingClientRect().height)");
+            "() => [...document.querySelectorAll('.tm-editor-shell__sheet .tm-editor-shell__tab')].map(t => t.getBoundingClientRect().height)");
         Assert.AreEqual(2, heights.Length);
         Assert.IsTrue(heights.All(h => h < 40), $"tab labels must not wrap: {string.Join(',', heights)}");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= 320"));
@@ -545,10 +447,373 @@ public class EditorShellE2ETests : WasmTestBase
             .Select(m => double.Parse(m.Value, System.Globalization.CultureInfo.InvariantCulture)).Take(3).ToArray();
         return nums.Length < 3 ? 1 : (0.2126 * nums[0] + 0.7152 * nums[1] + 0.0722 * nums[2]) / 255.0;
     }
+    // ── Tablet = docked panels (Q1) at real sizes, AUTO shell ───────────────
+
+    private static string Shell => "[data-testid='editor-shell']";
+
+    private static async Task<double> WidthOfAsync(IPage page, string selector)
+        => await page.EvaluateAsync<double>("s => document.querySelector(s).getBoundingClientRect().width", selector);
+
+    private static string ExpectedLayout(double width, int sm, int lg) => width < sm ? "mobile" : width < lg ? "tablet" : "desktop";
+
+    [TestMethod]
+    public async Task Demo_1280_AutoShell_ResolvesTablet_DockedPanelsNoModalNoInert_FocusUntouched()
+    {
+        var page = await OpenPlainPageAsync(1280, 800);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+        var width = await WidthOfAsync(page, Shell);
+        Assert.IsTrue(width is >= 640 and < 1024, $"1280 minus the app sidebar leaves a tablet-sized container ({width}px)");
+
+        // Docked, not modal: no drawer, no popover, nothing inert, no focus trap, canvas operable.
+        Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync(), "tablet opens no modal surface");
+        Assert.AreEqual(0, await page.Locator("[inert]").CountAsync(), "nothing is inert on a first tablet render");
+        Assert.AreEqual(0, await page.Locator("[popover]:popover-open").CountAsync());
+        Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync(), "at most one panel is expanded");
+        await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--left")).ToBeVisibleAsync();
+        Assert.AreEqual("BODY", await page.EvaluateAsync<string>("() => document.activeElement.tagName"), "the shell moved no focus on load");
+        Assert.AreEqual(1, await shell.Locator("[role='separator']").CountAsync(), "the one expanded docked panel is resizable");
+
+        // The canvas is operable: its block takes a click.
+        await shell.Locator("[data-testid='es-canvas-block']").ClickAsync();
+        Assert.AreEqual(0, await page.Locator("[inert]").CountAsync());
+
+        await CaptureViewportOnlyAsync(page, "1280-tablet");
+    }
+
+    [TestMethod]
+    public async Task Demo_1280_Tablet_ExpandingTheRail_RailsTheOtherPanel_WithoutAModalOrAnEscape()
+    {
+        var page = await OpenPlainPageAsync(1280, 800);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+
+        await shell.Locator(".tm-editor-shell__rail--left button").ClickAsync();
+
+        await Assertions.Expect(shell.Locator("aside[data-region='left']")).ToBeVisibleAsync();
+        await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--right")).ToBeVisibleAsync();
+        Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync(), "expanding one rails the other");
+        Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync());
+        Assert.AreEqual(0, await page.Locator("[inert]").CountAsync());
+        await CaptureViewportOnlyAsync(page, "1280-tablet-left-expanded");
+    }
+
+    [TestMethod]
+    public async Task Demo_1440_To_1280_Flip_KeepsFocusAndAtMostOneExpandedPanel()
+    {
+        var page = await OpenPlainPageAsync(1440, 900);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "desktop");
+        Assert.AreEqual(2, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
+
+        await shell.Locator("[data-testid='es-block-search'] input").FocusAsync();
+        await page.SetViewportSizeAsync(1280, 800);
+
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+        Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
+        Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync());
+        Assert.AreEqual(0, await page.Locator("[inert]").CountAsync());
+        Assert.AreEqual("BODY", await page.EvaluateAsync<string>("() => document.activeElement.tagName"),
+            "the focused toolbox input unmounted with its rail; the shell must not grab focus (focus is lost to body, not stolen)");
+    }
+
+    [TestMethod]
+    public async Task Demo_768_Touch_Tablet_DockedPanels()
+    {
+        var context = await CreateTouchContextAsync(768, 1024);
+        var page = await GotoEditorShellAsync(context, 768, 1024);
+        RegisterContext(context);
+
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+        Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync());
+        Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation must be on");
+        await CaptureViewportOnlyAsync(page, "768-tablet");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch survives the screenshot");
+    }
+
+    [TestMethod]
+    public async Task Demo_1024_Touch_AutoShell_ResolvesFromItsContainer()
+    {
+        var context = await CreateTouchContextAsync(1024, 768);
+        var page = await GotoEditorShellAsync(context, 1024, 768);
+        RegisterContext(context);
+
+        var shell = page.Locator(Shell);
+        var width = await WidthOfAsync(page, Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", ExpectedLayout(width, 640, 1024));
+        await CaptureViewportOnlyAsync(page, "1024-auto");
+    }
+
+    // ── Per-instance thresholds (Q3) ────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Demo_1440_CustomThresholdShell_ClassifiesWithItsOwnPair_WhileTheDefaultShellDoesNot()
+    {
+        var page = await OpenPlainPageAsync(1440, 900);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+
+        var defaults = page.Locator(Shell);
+        var custom = page.Locator("[data-testid='editor-shell-thresholds']");
+        var defaultWidth = await WidthOfAsync(page, Shell);
+        var customWidth = await WidthOfAsync(page, "[data-testid='editor-shell-thresholds']");
+        Assert.IsTrue(defaultWidth is >= 1024 and < 1200, $"the 1440 page leaves both shells a 1024-1199px container ({defaultWidth}px)");
+
+        await Assertions.Expect(defaults).ToHaveAttributeAsync("data-layout", "desktop");
+        await Assertions.Expect(custom).ToHaveAttributeAsync("data-layout", ExpectedLayout(customWidth, 768, 1200));
+        Assert.AreEqual("tablet", await custom.GetAttributeAsync("data-layout"),
+            "the same width is desktop with the defaults (>=1024) and tablet with an e-mail-like (768, 1200) pair");
+    }
+
+    [TestMethod]
+    public async Task Demo_1280_CustomThresholdShell_TabletRail_UsesTheToolboxIconStrip()
+    {
+        var page = await OpenPlainPageAsync(1280, 800);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+        var custom = page.Locator("[data-testid='editor-shell-thresholds']");
+        await Assertions.Expect(custom).ToHaveAttributeAsync("data-layout", "tablet");
+
+        await Assertions.Expect(custom.Locator(".tm-editor-shell__rail--left [data-testid='es-rail-icons-thresholds']")).ToBeAttachedAsync();
+        Assert.AreEqual(1, await custom.Locator("aside.tm-editor-shell__panel").CountAsync());
+    }
+
+    // ── Resizer + persistence (Q4) ──────────────────────────────────────────
+
+    private const string StorageKey = "tempo.tm-editor-shell.editor-shell-demo";
+
+    [TestMethod]
+    public async Task Demo_1440_Resizer_PointerDragAndKeyboard_ClampToMinMaxAndTheCanvas_Persist_AndRestoreAfterReload()
+    {
+        var page = await OpenPlainPageAsync(1440, 900);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+
+        var separator = page.Locator($"{Shell} [role='separator'][data-side='left']");
+        await Assertions.Expect(separator).ToBeVisibleAsync();
+        Assert.AreEqual("vertical", await separator.GetAttributeAsync("aria-orientation"));
+        Assert.AreEqual("200", await separator.GetAttributeAsync("aria-valuemin"));
+        Assert.AreEqual("480", await separator.GetAttributeAsync("aria-valuemax"));
+        Assert.AreEqual("280", await separator.GetAttributeAsync("aria-valuenow"));
+        Assert.IsFalse(string.IsNullOrEmpty(await separator.GetAttributeAsync("aria-label")));
+        Assert.IsNull(await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')"), "nothing is stored before the user resizes");
+
+        // Pointer drag: +60px.
+        var box = (await separator.BoundingBoxAsync())!;
+        var y = box.Y + box.Height / 2;
+        await page.Mouse.MoveAsync(box.X + box.Width / 2, y);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(box.X + box.Width / 2 + 30, y, new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.MoveAsync(box.X + box.Width / 2 + 60, y, new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.UpAsync();
+
+        var aside = page.Locator($"{Shell} aside[data-region='left']");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "340");
+        Assert.AreEqual(340, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the panel follows the pointer");
+        var stored = await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')");
+        Assert.IsNotNull(stored, "a user resize persists under the key");
+        StringAssert.Contains(stored, "\"left\"");
+        Assert.IsFalse(stored.Contains("\"right\""), "only the panel the user resized is stored");
+
+        // Keyboard: ArrowRight +16, ArrowLeft -16, Shift+ArrowRight +64, Home = min, End = max/clamped by the canvas.
+        await separator.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "356");
+        await page.Keyboard.PressAsync("ArrowLeft");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "340");
+        await page.Keyboard.PressAsync("Shift+ArrowRight");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "404");
+        await page.Keyboard.PressAsync("Home");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "200");
+        await page.Keyboard.PressAsync("End");
+        await page.WaitForTimeoutAsync(300);
+        var endWidth = int.Parse((await separator.GetAttributeAsync("aria-valuenow"))!);
+        Assert.IsTrue(endWidth is > 200 and <= 480, $"End goes to the maximum or as far as the canvas allows ({endWidth})");
+        var canvasWidth = await WidthOfAsync(page, $"{Shell} [data-region='canvas']");
+        Assert.IsTrue(canvasWidth >= 399, $"the canvas never drops below MinCanvasWidth ({canvasWidth}px)");
+
+        // Settle on 320 and reload: the stored width is restored.
+        await separator.FocusAsync();
+        await page.Keyboard.PressAsync("Home");
+        for (var i = 0; i < 8; i++) await page.Keyboard.PressAsync("ArrowRight");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "328");
+
+        await page.ReloadAsync();
+        await WaitForAppReadyAsync(page);
+        var restored = page.Locator($"{Shell} [role='separator'][data-side='left']");
+        await Assertions.Expect(restored).ToHaveAttributeAsync("aria-valuenow", "328", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        Assert.AreEqual(328, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the stored width is applied on load");
+        Assert.IsNotNull(await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')"));
+        await CaptureViewportOnlyAsync(page, "1440-resized-restored");
+    }
+
+    [TestMethod]
+    public async Task Demo_1440_Resizer_MalformedStoredValue_IsIgnored_NeverInjectedIntoTheStyle()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        await context.AddInitScriptAsync($"localStorage.setItem('{StorageKey}', JSON.stringify({{ left: {{ w: '300px; background:red', base: '280px' }}, right: {{ w: 99999, base: '320px' }} }}))");
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}{Route}");
+        await WaitForAppReadyAsync(page);
+
+        var aside = page.Locator($"{Shell} aside[data-region='left']");
+        await Assertions.Expect(aside).ToBeVisibleAsync();
+        Assert.AreEqual(280, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")));
+        Assert.AreEqual(320, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='right']")), "an out-of-range stored width is ignored");
+        Assert.IsFalse((await aside.GetAttributeAsync("style"))!.Contains("red"));
+    }
+
+    // ── Mobile: canvas stays alive beside the sheet (F1), host-driven snap/tab, Tabs presentation ──
+
+    [TestMethod]
+    public async Task Demo_390_Mobile_CanvasIsAliveWhileTheSheetIsOpen_TapScrollAndHostDrivenTab()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+
+        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
+        Assert.AreEqual("0", await page.Locator(".tm-editor-shell__sheet").GetAttributeAsync("data-snap-index"), "the half snap");
+
+        var inside = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const stage = document.querySelector("[data-testid='editor-shell'] .tm-editor-shell__stage").getBoundingClientRect();
+                const hit = document.elementFromPoint(stage.left + stage.width / 2, stage.top + 40);
+                return !!hit && !!hit.closest("[data-testid='editor-shell'] [data-region='canvas']");
+            }
+            """);
+        Assert.IsTrue(inside, "the point 40px below the stage top lands in the canvas, not on a sheet wrapper");
+
+        // Wheel scrolls the canvas (its content overflows the part the sheet leaves free).
+        var canvas = page.Locator($"{Shell} .tm-editor-shell__stage [data-region='canvas']");
+        var box = (await canvas.BoundingBoxAsync())!;
+        await page.Mouse.MoveAsync(box.X + box.Width / 2, box.Y + 40);
+        await page.Mouse.WheelAsync(0, 120);
+        await page.WaitForTimeoutAsync(250);
+        Assert.IsTrue(await canvas.EvaluateAsync<double>("e => e.scrollTop") > 0, "a wheel over the canvas scrolls it");
+
+        // A tap on a canvas block lands (the host then switches the sheet to Properties).
+        await canvas.EvaluateAsync("e => e.scrollTop = 0");
+        await page.Locator("[data-testid='es-canvas-block']").TapAsync();
+        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").Nth(1)).ToHaveAttributeAsync("aria-selected", "true");
+        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet [role='tabpanel'][data-region='right']")).ToBeVisibleAsync();
+        await CaptureViewportOnlyAsync(page, "390-canvas-alive-properties");
+    }
+
+    [TestMethod]
+    public async Task Demo_390_AutoHeightHost_DoesNotCollapseTheStage()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+
+        await page.EvaluateAsync("() => { const h = document.querySelector('.es-shell-host'); h.style.blockSize = 'auto'; h.style.minBlockSize = '0'; }");
+        await page.WaitForTimeoutAsync(300);
+
+        var stage = await page.EvaluateAsync<double>("() => document.querySelector(\"[data-testid='editor-shell'] .tm-editor-shell__stage\").getBoundingClientRect().height");
+        Assert.IsTrue(stage >= 200, $"an auto-height host must not collapse the container-type:size stage to 0 (was {stage}px)");
+    }
+
+    [TestMethod]
+    public async Task Demo_390_TabsPresentation_FullRegionTablist_NoSheet()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+
+        await page.Locator("[data-testid='es-presentation-toggle']").ClickAsync();
+
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell.Locator(".tm-editor-shell__tabs--region [role='tab']")).ToHaveCountAsync(3);
+        Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync(), "Tabs presentation has no sheet");
+        var labels = await shell.Locator(".tm-editor-shell__tabs--region [role='tab']").AllInnerTextsAsync();
+        CollectionAssert.AreEqual(new[] { "Blocks", "Canvas", "Properties" }, labels.Select(l => l.Trim()).ToArray());
+        await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Canvas");
+
+        await shell.Locator("[role='tab']").Nth(2).ClickAsync();
+        await Assertions.Expect(shell.Locator("[role='tabpanel'][data-region='right']")).ToBeVisibleAsync();
+        await Assertions.Expect(shell.Locator("[role='tabpanel'][data-region='canvas']")).ToBeHiddenAsync();
+        var controls = await shell.Locator("[role='tab'][aria-selected='true']").GetAttributeAsync("aria-controls");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("id => !!document.getElementById(id)", controls!), "each tab controls a real tabpanel");
+        await CaptureViewportOnlyAsync(page, "390-tabs-properties");
+    }
+
+    // ── Focus is never stolen (F6) ──────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Demo_390_ProgrammaticClose_DoesNotStealTheFocusTheHostMoved()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
+
+        // The host button closes the panels programmatically; it keeps the focus it just received.
+        var hostButton = page.Locator("[data-testid='es-host-toggle-panels']");
+        await hostButton.ScrollIntoViewIfNeededAsync();
+        await hostButton.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+        await page.WaitForTimeoutAsync(400);
+        Assert.AreEqual("es-host-toggle-panels", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''"),
+            "the shell must not pull focus from the host control to its own toggle");
+    }
+
+    [TestMethod]
+    public async Task Demo_390_SwipeClose_DoesNotStealFocusFromAnActionBarButton_ButEscapeReturnsItToTheToggle()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        var sheet = page.Locator(".tm-editor-shell__sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+
+        // Focus an action-bar tile (outside the sheet), then swipe the sheet away from its handle.
+        await page.Locator($"{Shell} .tm-mobile-action-bar__bar [data-action-id='redo']").FocusAsync();
+        var handle = (await sheet.Locator(".tm-sheet__handle").BoundingBoxAsync())!;
+        var x = handle.X + handle.Width / 2;
+        var y = handle.Y + handle.Height / 2;
+        await page.Mouse.MoveAsync(x, y);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(x, y + 150, new MouseMoveOptions { Steps = 6 });
+        await page.Mouse.MoveAsync(x, y + 420, new MouseMoveOptions { Steps = 6 });
+        await page.Mouse.UpAsync();
+
+        await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+        await page.WaitForTimeoutAsync(400);
+        Assert.AreEqual("redo", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-action-id') ?? ''"),
+            "a swipe-close must leave focus on the control the user was on");
+
+        // Escape from inside the sheet still returns focus to the toggle (focus was in the sheet).
+        await page.Locator(".tm-editor-shell__panel-toggle--mobile").ClickAsync();
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        await sheet.Locator(".tm-editor-shell__tab").First.FocusAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+        await page.WaitForFunctionAsync("() => document.activeElement?.classList.contains('tm-editor-shell__panel-toggle--mobile')",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
+    }
+
     // ── Side panel ──────────────────────────────────────────────────────────
 
     [TestMethod]
-    public async Task SidePanel_1440_Docked_390_Sheet()
+    public async Task SidePanel_1440_Docked_BelowDesktop_Sheet()
     {
         var context = await CreateTouchContextAsync(1440, 900);
         var page = await GotoEditorShellAsync(context, 1440, 900);
@@ -557,13 +822,28 @@ public class EditorShellE2ETests : WasmTestBase
         var panel = page.Locator("[data-testid='side-panel'].tm-side-panel--docked");
         await Assertions.Expect(panel).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
         Assert.AreEqual(0, await page.Locator("[data-testid='side-panel'] .tm-drawer").CountAsync());
-        await CaptureViewportOnlyAsync(page, "1440-side-panel-docked");
+        Assert.AreEqual("ASIDE", await panel.EvaluateAsync<string>("e => e.tagName"));
+        Assert.IsFalse(string.IsNullOrEmpty(await panel.GetAttributeAsync("aria-labelledby")), "the docked aside is named by its title");
 
-        // 390: the same inspector becomes a modal bottom sheet (promoted).
+        // Frame the side-panel section so the docked panel is IN the shot (F15).
+        await page.EvaluateAsync("() => document.querySelector(\"[data-testid='side-panel-section']\").scrollIntoView({ block: 'start' })");
+        await page.WaitForTimeoutAsync(250);
+        await page.Mouse.MoveAsync(0, 0);
+        var shot = Path.Combine(ShotDir, "1440-side-panel-docked.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = shot, FullPage = false });
+        var inFrame = await page.EvaluateAsync<bool>("() => { const r = document.querySelector(\"[data-testid='side-panel']\").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }");
+        Assert.IsTrue(inFrame, "the docked side panel must be in the screenshot");
+
+        // Below desktop the same inspector starts closed (a modal sheet would cover the demo) and
+        // opens as a sheet from the demo toggle; the sheet is promoted.
         await page.SetViewportSizeAsync(390, 844);
+        await Assertions.Expect(page.Locator(".tm-side-panel-sheet")).ToHaveCountAsync(0);
+        await page.Locator("[data-testid='side-panel-toggle']").ScrollIntoViewIfNeededAsync();
+        await page.Locator("[data-testid='side-panel-toggle']").ClickAsync();
         var sheet = page.Locator(".tm-side-panel-sheet.tm-drawer--bottom");
         await Assertions.Expect(sheet).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
         Assert.AreEqual("manual", await sheet.GetAttributeAsync("popover"));
+        Assert.IsFalse(string.IsNullOrEmpty(await sheet.GetAttributeAsync("aria-label")), "the sheet has an accessible name");
         await CaptureViewportOnlyAsync(page, "390-side-panel-sheet");
     }
 }
