@@ -367,7 +367,7 @@
         {
             _scrollRegionAttached = true;
             _scrollRegion ??= new ScrollRegionInterop(JS);
-            await _scrollRegion.AttachAsync(_body, LabelledBy);
+            await _scrollRegion.AttachAsync(_body, LabelledBy, LabelledBy is null ? AriaLabel : null);
         }
         else if (!IsOpen && _scrollRegionAttached)
         {

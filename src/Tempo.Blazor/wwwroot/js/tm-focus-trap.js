@@ -401,9 +401,11 @@ const scrollRegions = new Map();
  * @param {HTMLElement} element the scroller
  * @param {string} id the caller's key, so a re-attach replaces the observer
  * @param {string|null} labelledBy the id of the element that names the region, when it has a title
+ * @param {string|null} label the accessible name used when there is no title id (an inline sheet
+ *        named only by its aria-label); a title id wins
  * @returns {() => void} stop
  */
-export function syncScrollRegion(element, id, labelledBy = null) {
+export function syncScrollRegion(element, id, labelledBy = null, label = null) {
     stopScrollRegion(id);
     if (!element) return () => {};
 
@@ -415,11 +417,15 @@ export function syncScrollRegion(element, id, labelledBy = null) {
             if (labelledBy) {
                 element.setAttribute('role', 'region');
                 element.setAttribute('aria-labelledby', labelledBy);
+            } else if (label) {
+                element.setAttribute('role', 'region');
+                element.setAttribute('aria-label', label);
             }
         } else {
             element.removeAttribute('tabindex');
             element.removeAttribute('role');
             element.removeAttribute('aria-labelledby');
+            element.removeAttribute('aria-label');
         }
     };
 
@@ -443,5 +449,6 @@ export function stopScrollRegion(id) {
         region.element.removeAttribute('tabindex');
         region.element.removeAttribute('role');
         region.element.removeAttribute('aria-labelledby');
+        region.element.removeAttribute('aria-label');
     }
 }

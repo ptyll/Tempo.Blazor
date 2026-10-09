@@ -29,9 +29,10 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
 
     /// <summary>
     /// Starts watching <paramref name="element"/>. <paramref name="labelledBy"/> names the region
-    /// when the scroller has a title; null leaves it nameless. A second attach replaces the first.
+    /// when the scroller has a title; <paramref name="label"/> names it when there is no title id (an
+    /// aria-label-only surface); both null leaves it nameless. A second attach replaces the first.
     /// </summary>
-    public async Task AttachAsync(ElementReference element, string? labelledBy)
+    public async Task AttachAsync(ElementReference element, string? labelledBy, string? label = null)
     {
         if (_disposed) return;
         try
@@ -45,7 +46,7 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
             }
             if (module is null) return;
 
-            await module.InvokeVoidAsync("syncScrollRegion", element, _id, labelledBy);
+            await module.InvokeVoidAsync("syncScrollRegion", element, _id, labelledBy, label);
             if (_disposed)
             {
                 await StopOrDropAsync(module);
