@@ -381,9 +381,12 @@
 
 - **`TmDashboard` edit mode on mobile renders its actions through `TmMobileActionBar` instead of
   the wrapping toolbar.** Below the mobile breakpoint the toolbar's Add/Save/Cancel buttons are
-  no longer rendered in edit mode (the bar owns them; view mode keeps its Edit entry point), and
-  the bar markup (`.tm-mobile-action-bar`) appears as the last child of the dashboard root. A
-  host that restyled the mobile edit toolbar should target the bar classes:
+  hidden by CSS in edit mode (the bar owns them; view mode keeps its Edit entry point), and
+  the bar markup (`.tm-mobile-action-bar`) appears as the last child of the dashboard root. The
+  desktop toolbar is untouched above the breakpoint. Note: in mobile edit mode the
+  `data-testid="dashboard-add-widget"` hook lives on the hidden desktop toolbar — the bar's Add
+  Widget action carries `data-action-id="add-widget"` instead. A host that restyled the mobile
+  edit toolbar should target the bar classes:
 
   ```html
   <!-- before (mobile edit mode) -->
@@ -393,8 +396,8 @@
     <button class="tm-btn tm-btn-ghost">…Cancel</button>
   </div>
   <!-- after (mobile edit mode) -->
-  <div class="tm-mobile-action-bar tm-mobile-action-bar--sticky" data-layout="mobile">
-    <div class="tm-mobile-action-bar__bar tm-mobile-action-bar__bar--sticky" role="toolbar" …>…</div>
+  <div class="tm-mobile-action-bar tm-mobile-action-bar--sticky tm-mobile-action-bar--bare" data-layout="mobile">
+    <div class="tm-mobile-action-bar__bar tm-mobile-action-bar__bar--sticky" role="group" …>…</div>
   </div>
   ```
 
@@ -450,8 +453,15 @@
   anchoring to the viewport with the bottom safe area, and `Inline` renders the bar statically.
   With the default `Auto` visibility the bar exists only below the mobile breakpoint, resolved
   from the container (or from the viewport scope for `FixedViewport`); `LayoutMode` forces a mode
-  for hosts and bUnit tests. The content region above the bar gets a bottom padding equal to the
-  bar height, so nothing is covered at 320 or 390. `docs/responsive-conventions.md` documents the
+  for hosts and bUnit tests. The `ChildContent` region renders above the bar at every layout —
+  only the bar hides above the breakpoint — and, unlike `TmToolbar`'s free-form fragments, it is
+  the content the bar belongs to: the bar reserves nothing for it except the FixedViewport
+  placement, where the region's bottom padding equals the bar height (the published
+  `--tm-mobile-action-bar-reserve-block-size` token) so nothing is covered at 320 or 390.
+  Bar actions are the bar's own tile buttons (icon over a two-line label), not `TmButton`, and
+  `Priority` is only an overflow rank — the bar and the menu render in `Items` order. The public
+  `CloseMoreAsync()` lets a host close the "More" menu after a confirmed `KeepMenuOpen` action.
+  `docs/responsive-conventions.md` documents the
   bottom-navigation-vs-action-bar split; the demo page is `/mobile-action-bar`; the wireframe
   stencil registers the `action-bar` role. Reference usage: `TmDashboard` edit mode on mobile
   renders Add/Save/Cancel through the bar instead of the wrapping toolbar.

@@ -69,7 +69,29 @@ focus on the first `menuitem`/`option`, not on Done.
 `ResolvedLayoutChanged`; the dropdown titles its sheet with the trigger text. Anchoring options
 (`Placement`, `Align`, `Offset`, `MatchAnchorWidth`, …) apply to the popover only.
 
+### The action-surface overflow menu (F5)
+
+`TmMobileActionBar` (and F4's toolbar overflow, which reuses the same contract) opens its
+"More" menu through `TmOverlayPanel` — the anchored popover on a desktop viewport, the shared
+bottom sheet on a mobile one. The host contract every action surface must honour:
+
+- The trigger is a real element passed as the panel's explicit `Anchor` (never a virtual
+  anchor), carries `aria-haspopup="menu"`, `aria-expanded` and `aria-controls` pointing at the
+  panel's stable `Id`, and the menu renders `role="menu"` / `role="menuitem"`.
+- The initial focus moves to the first **enabled** menuitem (never a disabled one — `focus()`
+  on a disabled button is a no-op and would leave focus on `<body>`); when every overflow item
+  is disabled, the trigger renders disabled instead of opening an inert menu.
+- The default invocation closes the menu **before** running the action, and focus returns to
+  the trigger on every close path — Escape, outside pointer, Done and selection — in the
+  popover presentation too (a light popover close does not restore focus by itself; the
+  surface restores it, the `TmDropdown.SelectItemAsync` pattern).
+- `KeepMenuOpen="true"` is for actions that open another surface (a confirm dialog): the menu
+  stays, the surface promotes *after* it (rule 8), and the host closes the menu afterwards
+  through `CloseMoreAsync()` — focus then returns to the trigger.
+
 ### Modality of dialog popups
+
+
 
 A `Role="dialog"` popup that must trap focus (calendar popups) passes
 `TrapFocus="true"`: the `TmFocusScope` **is** the panel root, so Tab cycles inside, the

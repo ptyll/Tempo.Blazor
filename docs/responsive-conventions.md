@@ -198,6 +198,28 @@ Two bottom bars exist and they are not interchangeable:
   into a "More" menu that composes `TmOverlayPanel` — the anchored popover on desktop, the
   shared bottom-sheet primitive on a mobile viewport.
 
+  Host rules that come with the bar:
+
+  - **Never anchor a `FixedViewport` bar next to `TmBottomNavigation`** — two bars must not
+    fight for the viewport bottom edge. If a page genuinely needs both, the action bar is the
+    component-scoped one (`StickyContainer`) and the navigation keeps the viewport edge; a
+    deliberate stack must offset the bar (custom property) and is the host's own design debt.
+  - **The content reserve is published**: `--tm-mobile-action-bar-reserve-block-size`
+    (tokens.css) defaults to the bar height plus the bottom safe area and is what the
+    `FixedViewport` body padding consumes. A host scrolling content under a fixed bar reads the
+    same token for its own `scroll-padding-bottom`, so focused content is never hidden behind
+    the bar.
+  - **`position: sticky` breaks under an `overflow: hidden` or `overflow: auto` ancestor**
+    (the scroll container becomes the sticky box's viewport — often the component itself, so
+    the bar can never move). `overflow: clip` is fine. Render the bar outside clipped
+    ancestors; a transformed/filtered/contained ancestor re-anchors a `FixedViewport` bar per
+    CSS too.
+  - **Without `ChildContent` the bar's own root is the sticky box** (`--bare`): the sticky
+    containing block spans the host component instead of a bar-height wrapper, so a bare
+    container like the dashboard's actually sticks.
+  - **The safe-area inset is zero unless the host page sets `viewport-fit=cover`** on its
+    viewport meta (see Touch above).
+
 ## Motion
 
 Anything these utilities animate (the reveal, the dashboard handles) drops its transition under
