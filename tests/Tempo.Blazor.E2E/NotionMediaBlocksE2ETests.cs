@@ -39,8 +39,17 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
         await para.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
+
+        var sourceBlockId = await para.EvaluateAsync<string?>(
+            "el => el.closest('[data-notion-block]')?.getAttribute('data-block-id')");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(sourceBlockId), "The clicked paragraph must carry a block id.");
+
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(1000);
+        // The Enter split is an async aggregate-session round-trip; keystrokes typed meanwhile
+        // are buffered and replayed into the new block once it exists. A fixed delay can still
+        // observe the PRE-split block — the recorded id then never changes type, because the
+        // buffered "/" + selection convert the real new block instead (deterministic timeout).
+        await NotionE2ETestBase.WaitForBlockFocusToMoveAsync(page, sourceBlockId!);
 
         var insertedBlockId = await page.EvaluateAsync<string?>("""
             () => document.activeElement?.closest?.('[data-notion-block]')?.getAttribute('data-block-id')
