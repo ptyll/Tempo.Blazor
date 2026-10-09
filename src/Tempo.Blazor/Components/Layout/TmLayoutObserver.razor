@@ -137,6 +137,12 @@
     {
         if (ChildContent is not null && LayoutContent is not null)
             throw new InvalidOperationException("Set ChildContent or LayoutContent, not both. LayoutContent is how an owner branches its own markup on the resolved layout.");
+
+        // The overlays that resolve from the viewport scope measure it with an internal probe that
+        // classifies with the shared defaults. A viewport-scope observer with another pair would
+        // disagree with them, so per-instance thresholds belong to container observers only.
+        if (IsViewportScope && Breakpoints is not null && Breakpoints != TmLayoutBreakpoints.Default)
+            throw new InvalidOperationException("Breakpoints cannot be set on the viewport-scope observer (IsViewportScope): the overlays that read the viewport scope classify it with the shared TmLayoutBreakpoints.Default. Use Breakpoints on a container observer.");
     }
 
     protected override async Task OnParametersSetAsync()
