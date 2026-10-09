@@ -11783,6 +11783,48 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "TmLayoutBreakpoints",
+      "kind": "Record",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Abstractions.Layout",
+      "description": "The two widths that decide a container's TmLayoutMode: below Sm it is mobile, from Lg up it is desktop, in between it is tablet. Default is TmBreakpoints.Sm / Lg (640 / 1024). A component that owns a layout observer (TmEditorShell.Breakpoints) can pass its own pair; stylesheets keep the shared literals.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutBreakpoints.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Classify",
+          "kind": "Method",
+          "type": "TmLayoutMode",
+          "description": "The layout a measured container width resolves to under these thresholds (half-open, like Classify).",
+          "parameters": [
+            {
+              "name": "widthPx",
+              "type": "double"
+            }
+          ]
+        },
+        {
+          "name": "Default",
+          "kind": "Property",
+          "type": "static TmLayoutBreakpoints",
+          "description": "The thresholds every component shares: 640 / 1024."
+        },
+        {
+          "name": "Lg",
+          "kind": "Property",
+          "type": "int",
+          "description": "From this width up a container is Desktop."
+        },
+        {
+          "name": "Sm",
+          "kind": "Property",
+          "type": "int",
+          "description": "Below this width a container is Mobile."
+        }
+      ]
+    },
+    {
       "itemName": "TmLayoutContext",
       "kind": "Record",
       "category": "Layout",
@@ -36051,11 +36093,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1477,
-    "manualItemCount": 1477,
-    "generatedItemCount": 1460,
+    "itemCount": 1478,
+    "manualItemCount": 1478,
+    "generatedItemCount": 1461,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1460
+    "publicApiTypeCount": 1461
   }
 }

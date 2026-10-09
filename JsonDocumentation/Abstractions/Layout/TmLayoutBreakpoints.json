@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Layout",
+  "namespace": "Tempo.Blazor.Abstractions.Layout",
+  "description": "The two widths that decide a container's TmLayoutMode: below Sm it is mobile, from Lg up it is desktop, in between it is tablet. Default is TmBreakpoints.Sm / Lg (640 / 1024). A component that owns a layout observer (TmEditorShell.Breakpoints) can pass its own pair; stylesheets keep the shared literals.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutBreakpoints.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmLayoutBreakpoints"
+}

@@ -106,6 +106,12 @@ else if (Open)
     /// <summary>Main body content.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>Optional footer rendered below the body (apply / cancel actions of an inspector). Sticky at the bottom of the docked panel and of the sheet.</summary>
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    /// <summary>The edge the panel belongs to: <see cref="SidePanelSide.Right"/> (default, an inspector) or <see cref="SidePanelSide.Left"/> (a navigation or task panel). Decides the edge the side sheet slides in from.</summary>
+    [Parameter] public SidePanelSide Side { get; set; } = SidePanelSide.Right;
+
     /// <summary>
     /// Width of the docked panel and of the side sheet. Ignored by the bottom sheet, which sizes
     /// from its snap point.
@@ -137,6 +143,9 @@ else if (Open)
 
     /// <summary>The container's layout — a side panel is positioned against its container (F1 contract).</summary>
     [CascadingParameter] public TmLayoutContext? Container { get; set; }
+
+    /// <summary>The viewport's layout. The sheet presentation is positioned against the viewport (side sheet vs bottom sheet), so it reads this scope; without one the container decides.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     private TmLayoutContext Context => new(LayoutMode, TmLayout.Resolve(LayoutMode, Container, null, InitialMode));
 

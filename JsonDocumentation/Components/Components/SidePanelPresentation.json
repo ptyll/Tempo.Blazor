@@ -10,7 +10,7 @@
   "members": [
     {
       "name": "Auto",
-      "description": "Follows the container's layout: docked in-flow below the desktop breakpoint (1024px), a modal side sheet on a tablet container, a modal bottom sheet on a mobile container."
+      "description": "Docks in-flow when the container resolves Desktop (1024px and up by default); otherwise a modal sheet whose geometry follows the viewport — a side sheet on a tablet or desktop viewport, a bottom sheet on a mobile viewport."
     },
     {
       "name": "Docked",

@@ -316,11 +316,60 @@
     /// <summary>The right panel title — the mobile tab label and the tablet side-sheet title.</summary>
     [Parameter] public string? RightTitle { get; set; }
 
-    /// <summary>Width of the left panel (the desktop column and the tablet side sheet). Default 280px.</summary>
+    /// <summary>Width of the left panel (a docked column on desktop and tablet). A CSS pixel length, default 280px. Two-way with <see cref="LeftWidthChanged"/>: a user resize raises the callback with the new "NNNpx" value.</summary>
     [Parameter] public string LeftWidth { get; set; } = "280px";
 
-    /// <summary>Width of the right panel (the desktop column and the tablet side sheet). Default 320px.</summary>
+    /// <summary>Raised when the user resizes the left panel (pointer drag or keyboard on its separator).</summary>
+    [Parameter] public EventCallback<string> LeftWidthChanged { get; set; }
+
+    /// <summary>Width of the right panel (a docked column on desktop and tablet). A CSS pixel length, default 320px. Two-way with <see cref="RightWidthChanged"/>.</summary>
     [Parameter] public string RightWidth { get; set; } = "320px";
+
+    /// <summary>Raised when the user resizes the right panel (pointer drag or keyboard on its separator).</summary>
+    [Parameter] public EventCallback<string> RightWidthChanged { get; set; }
+
+    /// <summary>Smallest width, in CSS pixels, the left panel can be resized to. Default 200.</summary>
+    [Parameter] public int MinLeftWidth { get; set; } = 200;
+
+    /// <summary>Largest width, in CSS pixels, the left panel can be resized to. Default 480.</summary>
+    [Parameter] public int MaxLeftWidth { get; set; } = 480;
+
+    /// <summary>Smallest width, in CSS pixels, the right panel can be resized to. Default 240.</summary>
+    [Parameter] public int MinRightWidth { get; set; } = 240;
+
+    /// <summary>Largest width, in CSS pixels, the right panel can be resized to. Default 560.</summary>
+    [Parameter] public int MaxRightWidth { get; set; } = 560;
+
+    /// <summary>The canvas width, in CSS pixels, a resize never takes away: dragging a panel stops where the canvas would drop below it. Default 400.</summary>
+    [Parameter] public int MinCanvasWidth { get; set; } = 400;
+
+    /// <summary>
+    /// Per-instance layout thresholds for this shell. Null (default) uses <see cref="TmLayoutBreakpoints.Default"/>
+    /// (mobile below 640, desktop from 1024). An editor whose content needs different steps — say
+    /// desktop from 1200 and mobile below 768 — passes <c>new TmLayoutBreakpoints(768, 1200)</c>.
+    /// </summary>
+    [Parameter] public TmLayoutBreakpoints? Breakpoints { get; set; }
+
+    /// <summary>The panel a mobile layout shows: the selected tab of the sheet (<see cref="EditorShellPanel.Left"/> or <see cref="EditorShellPanel.Right"/>) or of the Tabs presentation (<see cref="EditorShellPanel.None"/> is the canvas tab). Two-way with <see cref="ActiveMobilePanelChanged"/>.</summary>
+    [Parameter] public EditorShellPanel ActiveMobilePanel { get; set; }
+
+    /// <summary>Raised when the user selects another mobile tab.</summary>
+    [Parameter] public EventCallback<EditorShellPanel> ActiveMobilePanelChanged { get; set; }
+
+    /// <summary>The snap of the mobile panels sheet (0 = half height, 1 = full). Two-way with <see cref="MobileSheetSnapIndexChanged"/>.</summary>
+    [Parameter] public int MobileSheetSnapIndex { get; set; }
+
+    /// <summary>Raised when a gesture or the keyboard moves the mobile sheet to another snap.</summary>
+    [Parameter] public EventCallback<int> MobileSheetSnapIndexChanged { get; set; }
+
+    /// <summary>The label of the canvas tab in the <see cref="MobilePanelPresentation.Tabs"/> presentation. Null uses the localized default.</summary>
+    [Parameter] public string? CanvasTitle { get; set; }
+
+    /// <summary>Content rendered inside the left panel's collapsed rail, below the expand button (an icon strip of the toolbox).</summary>
+    [Parameter] public RenderFragment? LeftRail { get; set; }
+
+    /// <summary>Content rendered inside the right panel's collapsed rail, below the expand button.</summary>
+    [Parameter] public RenderFragment? RightRail { get; set; }
 
     /// <summary>
     /// When set, the effective panel widths persist to (and restore from) the host's localStorage

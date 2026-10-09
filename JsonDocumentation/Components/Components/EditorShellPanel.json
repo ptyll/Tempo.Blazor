@@ -2,12 +2,16 @@
   "kind": "Enum",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.Layout",
-  "description": "Identifies a side panel of the TmEditorShell — the Left toolbox-style panel and the Right properties-style panel. Used by CollapsedPanels to render a panel as a slim rail instead of its full width.",
+  "description": "Identifies a side panel of the TmEditorShell — the Left toolbox-style panel and the Right properties-style panel. Used by CollapsedPanels to render a panel as a slim rail instead of its full width, and by ActiveMobilePanel to name the panel a mobile layout shows.",
   "packageId": "Tempo.Blazor",
   "sourcePath": "src/Tempo.Blazor/Components/Layout/EditorShellPanel.cs",
   "documentationStatus": "documented",
   "itemName": "EditorShellPanel",
   "members": [
+    {
+      "name": "None",
+      "description": "No panel: nothing collapsed, or for ActiveMobilePanel the shell default (the canvas tab of the Tabs presentation, the first open panel of the sheet)."
+    },
     {
       "name": "Left",
       "description": "The left panel (a toolbox, a block list, navigation)."
