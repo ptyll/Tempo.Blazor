@@ -7,10 +7,11 @@ namespace Tempo.Blazor.E2E;
 /// <summary>
 /// F5 lane: the mobile action bar on the real components — the /mobile-action-bar demo page
 /// and the TmDashboard edit mode — at 390 and 320 with touch emulation, plus 1440 to prove
-/// the hidden/desktop behaviour. Screenshots are viewport-only (FullPage resets touch
-/// emulation); the touch capture helper resizes the viewport to the scroll height, while the
-/// sticky checks MUST keep the real 844-high viewport — a stretched screenshot hides sticky
-/// failures (F5 review round 1, X2c).
+/// the hidden/desktop behaviour. Every screenshot is viewport-only at the real viewport
+/// height (FullPage resets touch emulation; a viewport stretched to the page height pins
+/// every sticky element and hides sticky failures — F5 review round 2, Y13): the sticky-bar
+/// helper scrolls the bar into its pinning range before the capture, the sheet/dialog shots
+/// rely on the surfaces being viewport-anchored.
 /// </summary>
 [TestClass]
 public class MobileActionBarE2ETests : WasmTestBase
@@ -35,27 +36,6 @@ public class MobileActionBarE2ETests : WasmTestBase
     }
 
     /// <summary>
-    /// Viewport-only screenshot that keeps touch emulation intact: resize the viewport to the
-    /// scroll height instead of using FullPage.
-    /// </summary>
-    private async Task<string> CaptureTouchViewportAsync(IPage page, int width, string name)
-    {
-        var height = await page.EvaluateAsync<int>(
-            "() => Math.min(Math.ceil(document.documentElement.scrollHeight), 4000)");
-        await page.SetViewportSizeAsync(width, height);
-        await page.WaitForTimeoutAsync(200); // let the sticky bar and transitions settle
-        await page.Mouse.MoveAsync(0, 0);
-        await page.EvaluateAsync("() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
-
-        var path = Path.Combine(ShotDir, $"{name}.png");
-        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
-
-        var coarse = await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches");
-        Assert.IsTrue(coarse, "(pointer: coarse) must still match after the touch screenshot");
-        return path;
-    }
-
-    /// <summary>
     /// Viewport-only capture WITHOUT touching the viewport size — the only honest way to
     /// screenshot a sticky bar (a viewport stretched to the page height pins every sticky
     /// element to the page bottom and hides the failure).
@@ -69,6 +49,49 @@ public class MobileActionBarE2ETests : WasmTestBase
         var path = Path.Combine(ShotDir, $"{name}.png");
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
         return path;
+    }
+
+    /// <summary>
+    /// Y13: label shots are VIEWPORT-CLIPPED at the real viewport height. The sticky bar is
+    /// scrolled into its pinning range first (container bottom at the viewport bottom), so the
+    /// capture shows the bar exactly where a user sees it — never a page-height stretch.
+    /// </summary>
+    private async Task<string> CaptureStickyBarViewportAsync(IPage page, ILocator bar, string name)
+    {
+        await bar.EvaluateAsync(
+            """
+            el => {
+                const box = el.closest('.tm-mobile-action-bar');
+                const top = box.getBoundingClientRect().top + window.scrollY;
+                window.scrollTo(0, Math.max(0, top + box.offsetHeight - window.innerHeight));
+            }
+            """);
+        return await CaptureViewportOnlyAsync(page, name);
+    }
+
+    /// <summary>
+    /// Y6: no label line may be an orphan narrower than 12px (the fr-320 "Partage|r" defect) —
+    /// measured per rendered line box through a Range, not from the token.
+    /// </summary>
+    private static async Task AssertNoOrphanLabelLinesAsync(ILocator bar)
+    {
+        var labels = bar.Locator(".tm-mobile-action-bar__label-text");
+        var count = await labels.CountAsync();
+        for (var i = 0; i < count; i++)
+        {
+            var noOrphan = await labels.Nth(i).EvaluateAsync<bool>(
+                """
+                el => {
+                    const range = document.createRange();
+                    range.selectNodeContents(el);
+                    const lines = [...range.getClientRects()]
+                        .filter(r => r.width > 0 && r.height > 0);
+                    return lines.length > 0 && lines.every(r => r.width >= 12);
+                }
+                """);
+            var text = (await labels.Nth(i).TextContentAsync())?.Trim();
+            Assert.IsTrue(noOrphan, $"label \"{text}\" must not leave a mid-word orphan line under 12px");
+        }
     }
 
     /// <summary>Asserts the bar is pinned to the viewport bottom edge (sticky, ±1 px).</summary>
@@ -122,7 +145,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         await bar.Locator(".tm-mobile-action-bar__action", new() { HasText = "Share" }).ClickAsync();
         await Assertions.Expect(page.Locator("[data-testid='mab-last-action']")).ToContainTextAsync("Share");
 
-        await CaptureTouchViewportAsync(page, 390, "390-bar");
+        await CaptureStickyBarViewportAsync(page, bar, "390-bar");
 
         // The More menu presents as the F3 bottom sheet on a phone. Focus the trigger first:
         // a touch tap does not move focus, and the focus scope restores to whatever was
@@ -135,7 +158,8 @@ public class MobileActionBarE2ETests : WasmTestBase
         var menu = sheet.Locator("[role='menu']");
         await Assertions.Expect(menu).ToBeVisibleAsync();
         var menuItems = menu.Locator("[role='menuitem']");
-        Assert.AreEqual(3, await menuItems.CountAsync(), "Duplicate, Archive and Delete overflow");
+        // Duplicate, Focus title, Archive and Delete overflow (the Y8 focus-move action included).
+        Assert.AreEqual(4, await menuItems.CountAsync(), "Duplicate, Focus title, Archive and Delete overflow");
 
         // X18: the disabled demo item shows up disabled inside the menu too.
         Assert.AreEqual(1, await menu.Locator("[role='menuitem'][disabled]").CountAsync(),
@@ -150,12 +174,12 @@ public class MobileActionBarE2ETests : WasmTestBase
             "() => document.activeElement?.textContent?.trim() ?? ''");
         Assert.AreEqual("Duplicate", focusedLabel, "the disabled item is skipped by the initial focus");
 
-        await CaptureTouchViewportAsync(page, 390, "390-more-sheet");
+        await CaptureViewportOnlyAsync(page, "390-more-sheet");
 
         // The destructive item opens a confirm dialog: it must paint ABOVE the sheet.
         // probe4: elementFromPoint skips inert elements, so strip inert (and restore it
         // synchronously) to make the paint-order assertion honest.
-        await menuItems.Nth(2).ClickAsync(); // Delete (index 2: Duplicate, Archive, Delete)
+        await menuItems.Nth(3).ClickAsync(); // Delete (index 3: Duplicate, Focus title, Archive, Delete)
         var dialogPanel = page.Locator(".tm-modal-container");
         await dialogPanel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
@@ -194,13 +218,17 @@ public class MobileActionBarE2ETests : WasmTestBase
         // The item opted into KeepMenuOpen: the sheet stays open behind the dialog.
         await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToBeVisibleAsync();
 
-        await CaptureTouchViewportAsync(page, 390, "390-confirm-above-sheet");
+        await CaptureViewportOnlyAsync(page, "390-confirm-above-sheet");
 
         // X13: confirming Delete closes the sheet (the host calls CloseMoreAsync) and focus
         // returns to the More trigger.
         await page.Locator(".tm-dialog .tm-dialog-btn-ok").ClickAsync();
         await Assertions.Expect(dialogPanel).ToBeHiddenAsync();
         await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToBeHiddenAsync();
+        // Y1: the confirmed close flows through the controlled IsOpenChanged — the trigger must
+        // not keep announcing an expanded menu.
+        Assert.AreEqual("false", await moreButton.GetAttributeAsync("aria-expanded"),
+            "aria-expanded resets after the confirmed CloseMoreAsync flow");
         // The demo closes the More sheet from the confirmed Delete result.
         Assert.AreEqual(0, await page.Locator(".tm-overlay-panel-sheet:visible").CountAsync(),
             "the demo closes the More sheet from the confirmed Delete result");
@@ -209,7 +237,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             null,
             new PageWaitForFunctionOptions { Timeout = 5000 });
 
-        await CaptureTouchViewportAsync(page, 390, "390-after-confirm-ok");
+        await CaptureStickyBarViewportAsync(page, bar, "390-after-confirm-ok");
     }
 
     [TestMethod]
@@ -252,7 +280,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         var firstButton = await bar.Locator(".tm-mobile-action-bar__action").First.BoundingBoxAsync();
         Assert.IsTrue(firstButton!.Height >= 44, $"button height {firstButton.Height}");
 
-        await CaptureTouchViewportAsync(page, 320, "320-bar-cs");
+        await CaptureStickyBarViewportAsync(page, bar, "320-bar-cs");
     }
 
     [DataTestMethod]
@@ -277,6 +305,8 @@ public class MobileActionBarE2ETests : WasmTestBase
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         await AssertLabelsFitTwoLinesAsync(bar);
+        // Y6: no mid-word orphan lines (the fr "Partage|r" defect) at the narrowest width.
+        await AssertNoOrphanLabelLinesAsync(bar);
 
         var actions = bar.Locator(".tm-mobile-action-bar__action");
         var count = await actions.CountAsync();
@@ -287,7 +317,121 @@ public class MobileActionBarE2ETests : WasmTestBase
             Assert.IsTrue(box!.Height >= 44, $"action {i} must keep the 44px touch target, was {box.Height}");
         }
 
-        await CaptureTouchViewportAsync(page, 320, $"320-bar-{culture}");
+        await CaptureStickyBarViewportAsync(page, bar, $"320-bar-{culture}");
+    }
+
+    [TestMethod]
+    public async Task Demo_320_FrenchFixedViewport_ReserveEqualsBarHeight_WhenLabelsWrap()
+    {
+        // Y4: the reserve token derives from the two-line tile floor, so at 320 fr — where every
+        // label wraps — the FixedViewport body reserve still equals the REAL bar box.
+        var context = await CreateTouchContextAsync(320, 740);
+        await context.AddInitScriptAsync(
+            """
+            localStorage.setItem('tm-demo-culture', 'fr');
+            document.cookie = 'tm-demo-culture=fr; path=/';
+            """);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        await page.Locator("[data-testid='mab-toggle-fixed']").ClickAsync();
+        var fixedRoot = page.Locator("[data-testid='mab-variant-fixed'] .tm-mobile-action-bar");
+        var fixedBar = fixedRoot.Locator(".tm-mobile-action-bar__bar");
+        await fixedBar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // fr 320 wraps the demo labels onto two lines — the reserve must still match.
+        await AssertLabelsFitTwoLinesAsync(fixedBar);
+        var barBox = await fixedBar.BoundingBoxAsync();
+        var reserve = await fixedRoot.Locator(".tm-mobile-action-bar__body")
+            .EvaluateAsync<string>("el => getComputedStyle(el).paddingBottom");
+        var reservePx = double.Parse(reserve.Replace("px", "", StringComparison.Ordinal), CultureInfo.InvariantCulture);
+        Assert.AreEqual(barBox!.Height, reservePx, delta: 1.5,
+            $"the FixedViewport reserve ({reservePx}) must equal the real bar box ({barBox.Height}) even with wrapped labels");
+
+        await CaptureViewportOnlyAsync(page, "320-fixed-fr-reserve");
+    }
+
+    [TestMethod]
+    public async Task Demo_390_MoreSheet_AriaExpanded_FalseAfterEveryClosePath()
+    {
+        // Y1 (R2-M1): the More trigger's aria-expanded must return to "false" on EVERY sheet close
+        // path — Escape, Done, backdrop and item select each leave it "true" before the fix (axe:
+        // aria-valid-attr-value, because aria-controls then points at an absent id).
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var more = bar.Locator(".tm-mobile-action-bar__more");
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+
+        async Task OpenAndAssertExpandedAsync()
+        {
+            await more.FocusAsync();
+            await more.ClickAsync();
+            await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            Assert.AreEqual("true", await more.GetAttributeAsync("aria-expanded"));
+        }
+
+        // Escape.
+        await OpenAndAssertExpandedAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"), "after sheet Escape");
+
+        // Sheet Done.
+        await OpenAndAssertExpandedAsync();
+        await sheet.Locator(".tm-overlay-panel-sheet__done").ClickAsync();
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"), "after sheet Done");
+
+        // Backdrop.
+        await OpenAndAssertExpandedAsync();
+        await page.Locator("[data-tm-backdrop]").ClickAsync();
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"), "after the backdrop click");
+
+        // Item select.
+        await OpenAndAssertExpandedAsync();
+        await sheet.Locator("[role='menuitem']", new() { HasText = "Duplicate" }).ClickAsync();
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"), "after an item select");
+        await Assertions.Expect(page.Locator("[data-testid='mab-last-action']")).ToContainTextAsync("Duplicate");
+    }
+
+    [TestMethod]
+    public async Task Demo_390_MenuActionThatMovesFocus_KeepsItThere()
+    {
+        // Y8: the menu closes and its focus restore lands BEFORE the action runs — an action that
+        // moves focus elsewhere must win, not race a late restore back to the More trigger.
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var more = bar.Locator(".tm-mobile-action-bar__more");
+        await more.FocusAsync();
+        await more.ClickAsync();
+
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await sheet.Locator("[role='menuitem']", new() { HasText = "Focus title" }).ClickAsync();
+
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement === document.querySelector('.mab-header h1')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 5000 });
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"),
+            "the focus-moving action still closes the menu first");
     }
 
     /// <summary>
@@ -413,10 +557,22 @@ public class MobileActionBarE2ETests : WasmTestBase
         // the More trigger — never <body>.
         await page.Keyboard.PressAsync("Enter"); // activates the first menuitem (Duplicate)
         await Assertions.Expect(panel).ToBeHiddenAsync();
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"),
+            "aria-expanded resets after a popover item select (Y1)");
         await page.WaitForFunctionAsync(
             "() => document.activeElement?.classList?.contains('tm-mobile-action-bar__more') ?? false",
             null,
             new PageWaitForFunctionOptions { Timeout = 5000 });
+
+        // Y1: the same for the keyboard dismissal — Escape closes the popover and the trigger
+        // stops announcing an expanded menu.
+        await page.Keyboard.PressAsync("Enter"); // reopens the popover
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("true", await more.GetAttributeAsync("aria-expanded"));
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(panel).ToBeHiddenAsync();
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"),
+            "aria-expanded resets after popover Escape (Y1)");
     }
 
     [TestMethod]
@@ -555,20 +711,53 @@ public class MobileActionBarE2ETests : WasmTestBase
         var bar = page.Locator(".tm-dashboard .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // The three edit actions live on the bar as tile buttons, and the wrapping toolbar
-        // actions are gone.
+        // The three edit actions live on the bar as tile buttons — the save action carries the
+        // SHORT mobile label (Y11), the desktop toolbar keeps the full wording. The wrapping
+        // toolbar actions are gone.
         var labels = await bar.Locator(".tm-mobile-action-bar__label-text").AllTextContentsAsync();
-        CollectionAssert.AreEqual(new List<string> { "Add Widget", "Save Changes", "Cancel" }, labels.ToList(),
+        CollectionAssert.AreEqual(new List<string> { "Add Widget", "Save", "Cancel" }, labels.ToList(),
             "dashboard edit actions render through the mobile action bar");
         Assert.AreEqual(0, await page.Locator(".tm-dashboard-toolbar-right .tm-btn:visible").CountAsync(),
             "the desktop toolbar actions must not render twice on mobile");
 
-        await CaptureTouchViewportAsync(page, 390, "390-dashboard-edit");
+        await CaptureStickyBarViewportAsync(page, bar, "390-dashboard-edit");
 
         // The bar's actions are wired: Add Widget opens the widget selector.
         await bar.Locator(".tm-mobile-action-bar__action", new() { HasText = "Add Widget" }).ClickAsync();
         await page.Locator(".tm-widget-selector-overlay").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
+
+    [TestMethod]
+    public async Task Dashboard_320_EditMode_FrenchLabels_NotClamped_NoOrphans()
+    {
+        // Y11 (review round 2, m2): fr 320 clamped "Enregistrer les…" to a single-line ellipsis.
+        // The bar tile now carries the short label; the two-line floor and break-word
+        // hyphenation must render every label whole — no clamp, no mid-word orphan line.
+        var context = await CreateTouchContextAsync(320, 740);
+        await context.AddInitScriptAsync(
+            """
+            localStorage.setItem('tm-demo-culture', 'fr');
+            document.cookie = 'tm-demo-culture=fr; path=/';
+            """);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/dashboard");
+        await WaitForAppReadyAsync(page);
+
+        await page.Locator("[data-testid='dashboard-edit']").ClickAsync();
+        var bar = page.Locator(".tm-dashboard .tm-mobile-action-bar__bar");
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var labels = bar.Locator(".tm-mobile-action-bar__label-text");
+        var texts = (await labels.AllTextContentsAsync()).Select(t => t.Trim()).ToList();
+        CollectionAssert.AreEqual(new List<string> { "Ajouter un widget", "Enregistrer", "Annuler" }, texts,
+            "the fr edit actions render whole through the bar");
+
+        await AssertLabelsFitTwoLinesAsync(bar);
+        await AssertNoOrphanLabelLinesAsync(bar);
+
+        await CaptureStickyBarViewportAsync(page, bar, "320-dashboard-edit-fr");
     }
 
     [TestMethod]
