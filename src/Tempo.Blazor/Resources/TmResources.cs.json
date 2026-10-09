@@ -2390,6 +2390,8 @@
   "TmEditorShellDemo_ActionValidate": "Validovat",
   "TmEditorShellDemo_ActionSave": "Uložit",
   "TmEditorShellDemo_LastAction": "Poslední akce",
+  "TmEditorShellDemo_ForcedTabletTitle": "Rozložení tablet (vynucené)",
+  "TmEditorShellDemo_ForcedTabletIntro": "Stejný rámec s vynuceným rozložením tablet: každý otevřený panel je modální postranní sheet a zobrazuje se nejvýše jeden, bez ohledu na velikost okna.",
   "TmSidePanelDemo_Title": "Postranní panel",
   "TmSidePanelDemo_Intro": "Samostatný responzivní inspektor: na desktopu ukotven v kontejneru, na tabletu jako modální postranní sheet, na mobilu jako spodní sheet. Zmenšujte okno a sledujte, jak se přizpůsobí.",
   "TmSidePanelDemo_InspectorTitle": "Detail události",

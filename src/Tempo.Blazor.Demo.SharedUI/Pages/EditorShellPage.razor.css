@@ -24,9 +24,13 @@
 
 @media (width < 640px) {
     .es-shell-host {
-        block-size: calc(100dvh - 220px);
-        min-block-size: 480px;
+        block-size: calc(100dvh - 120px);
+        min-block-size: 520px;
     }
+}
+
+.es-shell-host--short {
+    block-size: 420px;
 }
 
 .es-editor-header {

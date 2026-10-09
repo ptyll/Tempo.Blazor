@@ -84,6 +84,37 @@
         </TmEditorShell>
     </div>
 
+    @* The forced-tablet preview would paint a modal side sheet even on a phone; render it only
+       when the viewport is not mobile. *@
+    @if (Viewport is not { IsMobile: true })
+    {
+        <section class="es-forced-tablet-section" data-testid="forced-tablet-section">
+            <h2>@Loc["TmEditorShellDemo_ForcedTabletTitle"]</h2>
+            <p>@Loc["TmEditorShellDemo_ForcedTabletIntro"]</p>
+            <div class="es-shell-host es-shell-host--short" data-testid="editor-shell-tablet-host">
+                <TmEditorShell LayoutMode="TmLayoutMode.Tablet"
+                               LeftTitle="@Loc["TmEditorShellDemo_Blocks"]"
+                               RightTitle="@Loc["TmEditorShellDemo_Properties"]"
+                               @bind-LeftOpen="_tabletLeftOpen"
+                               @bind-RightOpen="_tabletRightOpen"
+                               data-testid="editor-shell-tablet">
+                    <Header>
+                        <h2>@Loc["TmEditorShellDemo_EditorTitle"]</h2>
+                    </Header>
+                    <Left>
+                        <div class="es-toolbox"><p class="es-last-action">@Loc["TmEditorShellDemo_Blocks"]</p></div>
+                    </Left>
+                    <Canvas>
+                        <div class="es-canvas"><div class="es-canvas__card"><p>@Loc["TmEditorShellDemo_CanvasBody"]</p></div></div>
+                    </Canvas>
+                    <Right>
+                        <div class="es-props"><p>@Loc["TmEditorShellDemo_Properties"]</p></div>
+                    </Right>
+                </TmEditorShell>
+            </div>
+        </section>
+    }
+
     <section class="es-side-panel-section" data-testid="side-panel-section">
         <h2>@Loc["TmSidePanelDemo_Title"]</h2>
         <p>@Loc["TmSidePanelDemo_Intro"]</p>
@@ -91,6 +122,7 @@
             <TmSidePanel @bind-Open="_inspectorOpen"
                          Title="@Loc["TmSidePanelDemo_InspectorTitle"]"
                          Width="320px"
+                         RestoreFocusTargetId="side-panel-toggle"
                          data-testid="side-panel">
                 <HeaderActions>
                     <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordInspect">@Loc["TmSidePanelDemo_ActionInspect"]</TmButton>
@@ -100,7 +132,7 @@
                 </ChildContent>
             </TmSidePanel>
             <div class="es-side-panel-host__content">
-                <TmButton OnClick="ToggleInspector" aria-pressed="@InspectorPressed" data-testid="side-panel-toggle">
+                <TmButton OnClick="ToggleInspector" aria-pressed="@InspectorPressed" id="side-panel-toggle" data-testid="side-panel-toggle">
                     @(_inspectorOpen ? Loc["TmSidePanelDemo_HideInspector"] : Loc["TmSidePanelDemo_ShowInspector"])
                 </TmButton>
                 <p class="es-last-action" data-testid="es-last-action">@Loc["TmEditorShellDemo_LastAction"]: @_lastAction</p>
@@ -112,8 +144,15 @@
 @code {
     private TmEditorShell? _shell;
     private ElementReference _title;
+
+    /// <summary>The app-level viewport scope (MainLayout) — gates the forced-tablet preview off
+    /// phone-sized viewports, where its modal side sheet would cover the mobile demos.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
+
     private bool _leftOpen = true;
     private bool _rightOpen = true;
+    private bool _tabletLeftOpen = false;
+    private bool _tabletRightOpen = false;
     private EditorShellPanel _collapsed;
     private bool _inspectorOpen = true;
     private string _lastAction = "—";

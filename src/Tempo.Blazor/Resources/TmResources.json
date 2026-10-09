@@ -2385,6 +2385,8 @@
   "TmEditorShellDemo_ActionValidate": "Validate",
   "TmEditorShellDemo_ActionSave": "Save",
   "TmEditorShellDemo_LastAction": "Last action",
+  "TmEditorShellDemo_ForcedTabletTitle": "Tablet layout (forced)",
+  "TmEditorShellDemo_ForcedTabletIntro": "The same shell with a forced tablet layout: each open panel is a modal side sheet and at most one shows at a time, whatever the window size.",
   "TmSidePanelDemo_Title": "Side panel",
   "TmSidePanelDemo_Intro": "A standalone responsive inspector: docked in-flow on a desktop container, a modal side sheet on a tablet container, a bottom sheet on mobile. Shrink the window to watch it adapt.",
   "TmSidePanelDemo_InspectorTitle": "Event detail",
