@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    activate, deactivate, isInnermost, isTopmost, syncScrollRegion, stopScrollRegion, focusIfLost, __resetForTests,
+    activate, deactivate, isInnermost, isTopmost, syncScrollRegion, stopScrollRegion, focusIfLost, focusWithin, __resetForTests,
 } from '../tm-focus-trap.js';
 
 test.beforeEach(() => __resetForTests());
@@ -824,4 +824,24 @@ test('a non-modal trap ignores Escape while focus is outside it (the canvas behi
     document.dispatch('keydown', escapeEvent());
 
     assert.deepEqual(sheetEscape.calls, []);
+});
+
+// ── F6 r2 G4: focusWithin tells the host whether focus is inside a surface it is about to remove ──
+
+test('focusWithin is true only while the active element is inside the container', () => {
+    const body = element();
+    const panel = element(body);
+    const inside = element(panel);
+    const outside = element(body);
+    installDom(body);
+
+    document.activeElement = inside;
+    assert.equal(focusWithin(panel), true);
+    document.activeElement = panel;
+    assert.equal(focusWithin(panel), true, 'the container itself counts');
+    document.activeElement = outside;
+    assert.equal(focusWithin(panel), false);
+    document.activeElement = body;
+    assert.equal(focusWithin(panel), false, 'focus on the body is lost, not inside');
+    assert.equal(focusWithin(null), false);
 });

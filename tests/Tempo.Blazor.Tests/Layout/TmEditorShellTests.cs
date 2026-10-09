@@ -865,4 +865,106 @@ public class TmEditorShellTests : LocalizationTestBase
         (focusIfLost.Invocations.Last().Arguments[0] as string).Should().Be(
             cut.Find(".tm-editor-shell__rail--left button").Id);
     }
+
+    // ── F6 r2 G4: focus never drops to <body> when the SHELL removes the focused element ──
+
+    private BunitJSModuleInterop FocusModule(bool focusWithin = false)
+    {
+        var module = JSInterop.SetupModule(FocusTrapModule);
+        module.Setup<bool>("focusIfLost", _ => true).SetResult(true);
+        module.Setup<bool>("focusWithin", _ => true).SetResult(focusWithin);
+        return module;
+    }
+
+    private static IReadOnlyList<JSRuntimeInvocation> FocusIfLostCalls(BunitJSModuleInterop module)
+        => module.Invocations.Where(i => i.Identifier == "focusIfLost").ToList();
+
+    [Fact]
+    public void Mobile_ReopeningFromTheClosedBar_MovesFocusToTheSelectedSheetTab_ThroughFocusIfLost()
+    {
+        var module = FocusModule();
+        var host = new Host { Left = false, Right = false };
+        var cut = RenderControlled(TmLayoutMode.Mobile, host);
+        cut.Find(".tm-editor-shell__panel-toggle--mobile").Click();
+        Sync(cut, host, TmLayoutMode.Mobile);
+
+        var selectedTab = cut.Find(".tm-editor-shell__sheet [role='tab'][aria-selected='true']");
+        cut.WaitForAssertion(() => FocusIfLostCalls(module).Should().NotBeEmpty());
+        FocusIfLostCalls(module).Last().Arguments[0].Should().Be(selectedTab.Id,
+            "the closed bar unmounts with focus on it: focus is lost by construction, so it moves to the selected sheet tab");
+    }
+
+    [Fact]
+    public void Mobile_ReopeningWithOnePanel_MovesFocusToTheSheetHeading()
+    {
+        var module = FocusModule();
+        var leftOpen = false;
+        var cut = Render<TmEditorShell>(p =>
+        {
+            p.Add(x => x.LayoutMode, TmLayoutMode.Mobile);
+            p.Add(x => x.LeftTitle, "Blocks");
+            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
+            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
+            p.Add(x => x.LeftOpen, leftOpen);
+            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
+        });
+        cut.Find(".tm-editor-shell__panel-toggle--mobile").Click();
+        cut.Render(p => p.Add(x => x.LeftOpen, leftOpen));
+
+        var heading = cut.Find(".tm-editor-shell__sheet .tm-drawer__title");
+        heading.GetAttribute("tabindex").Should().Be("-1", "a heading can take programmatic focus");
+        cut.WaitForAssertion(() => FocusIfLostCalls(module).Should().NotBeEmpty());
+        FocusIfLostCalls(module).Last().Arguments[0].Should().Be(heading.Id);
+    }
+
+    [Fact]
+    public void Tabs_HostSetsActiveMobilePanel_FocusMovesToTheNewTab_OnlyIfItWasInTheHiddenPanelOrLost()
+    {
+        var module = FocusModule();
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
+
+        cut.Render(p => p.Add(x => x.ActiveMobilePanel, EditorShellPanel.Right));
+
+        cut.WaitForAssertion(() => FocusIfLostCalls(module).Should().NotBeEmpty());
+        var call = FocusIfLostCalls(module).Last();
+        call.Arguments[0].Should().Be(cut.FindAll("[role='tab']")[2].Id, "focus follows to the Properties tab");
+        call.Arguments[1].Should().Be(cut.Find("[role='tabpanel'][data-region='canvas']").Id,
+            "the container is the panel being hidden: focus elsewhere (a host button) is never stolen");
+    }
+
+    [Fact]
+    public void Tabs_ClickingATab_ArmsNoFocusRestore_TheFocusIsOnTheTabAlready()
+    {
+        var module = FocusModule();
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
+
+        cut.FindAll("[role='tab']")[2].Click();
+        cut.Render(p => p.Add(x => x.ActiveMobilePanel, EditorShellPanel.Right));
+
+        FocusIfLostCalls(module).Should().BeEmpty("a user-selected tab (and its host echo) has focus already");
+    }
+
+    [Fact]
+    public void LayoutFlip_DesktopToTablet_FocusInsideThePanelThatGetsRailed_MovesToItsRailButton()
+    {
+        var module = FocusModule(focusWithin: true);
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Tablet));
+
+        cut.WaitForAssertion(() => FocusIfLostCalls(module).Should().NotBeEmpty());
+        FocusIfLostCalls(module).Last().Arguments[0].Should().Be(cut.Find(".tm-editor-shell__rail--left > button").Id,
+            "the focused toolbox element unmounted with its panel: the rail's expand button takes focus");
+    }
+
+    [Fact]
+    public void LayoutFlip_DesktopToTablet_FocusElsewhere_IsNotMoved()
+    {
+        var module = FocusModule();
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Tablet));
+
+        FocusIfLostCalls(module).Should().BeEmpty("focus was not inside the panel that got railed (page load: body)");
+    }
 }

@@ -527,8 +527,26 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
         Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync());
         Assert.AreEqual(0, await page.Locator("[inert]").CountAsync());
-        Assert.IsFalse(await page.EvaluateAsync<bool>("""() => !!document.activeElement?.closest("[data-testid='editor-shell'] .tm-editor-shell__rail")"""),
-            "the focused toolbox input unmounted with its panel; the shell must not move focus onto a rail");
+        await page.WaitForFunctionAsync("""() => !!document.activeElement?.closest("[data-testid='editor-shell'] .tm-editor-shell__rail--left")""",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
+    }
+
+    [TestMethod]
+    public async Task Demo_1440_To_1280_Flip_FocusOnTheCanvas_StaysOnTheCanvas()
+    {
+        var page = await OpenPlainPageAsync(1440, 900);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "desktop");
+
+        await shell.Locator("[data-testid='es-canvas-block']").FocusAsync();
+        await page.SetViewportSizeAsync(1280, 800);
+
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+        await page.WaitForTimeoutAsync(500);
+        Assert.AreEqual("es-canvas-block", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''"),
+            "a focus outside the panel that got railed is never moved");
     }
 
     [TestMethod]
@@ -881,6 +899,67 @@ public class EditorShellE2ETests : WasmTestBase
             null, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
+    // ── F6 r2 G4: focus never drops to <body> when the shell removes/hides the focused element ──
+
+    private const string ActiveIsInSheet = "() => !!document.activeElement?.closest(\"[data-testid='editor-shell'] .tm-editor-shell__sheet\")";
+
+    [TestMethod]
+    public async Task Demo_390_ReopenFromTheClosedBar_WithTheKeyboard_FocusMovesToTheSelectedSheetTab()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
+        var reopen = page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile");
+        await Assertions.Expect(reopen).ToBeVisibleAsync();
+        await reopen.FocusAsync();
+
+        await page.Keyboard.PressAsync("Enter");
+
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => document.activeElement?.getAttribute('role') === 'tab' && document.activeElement.getAttribute('aria-selected') === 'true'",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
+        Assert.IsTrue(await page.EvaluateAsync<bool>(ActiveIsInSheet), "focus is inside the reopened sheet, not on <body>");
+    }
+
+    [TestMethod]
+    public async Task Demo_390_TabsPresentation_HostSwitchesToProperties_FocusFollowsFromTheCanvasBlock()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        await page.Locator("[data-testid='es-presentation-toggle']").ClickAsync();
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Canvas");
+
+        await shell.Locator("[data-testid='es-canvas-block']").FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+
+        await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Properties");
+        await page.WaitForFunctionAsync("() => document.activeElement?.getAttribute('role') === 'tab' && document.activeElement.textContent.trim() === 'Properties'",
+            null, new PageWaitForFunctionOptions { Timeout = 5000 });
+    }
+
+    [TestMethod]
+    public async Task Demo_390_TabsPresentation_HostSwitch_DoesNotStealFocusFromAHostButton()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        await page.Locator("[data-testid='es-presentation-toggle']").ClickAsync();
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Canvas");
+
+        // The presentation toggle is a host button: switching the presentation resets the active panel
+        // programmatically while that button holds focus. Focus must stay on it.
+        var hostButton = page.Locator("[data-testid='es-presentation-toggle']");
+        await hostButton.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(500);
+
+        Assert.AreEqual("es-presentation-toggle", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''"),
+            "a focus on a host control is never moved by the shell");
+    }
     // ── Side panel ──────────────────────────────────────────────────────────
 
     [TestMethod]
