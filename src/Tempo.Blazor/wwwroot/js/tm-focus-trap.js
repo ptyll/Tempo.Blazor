@@ -71,11 +71,16 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
             // preventDefault (plus stopImmediatePropagation at window capture). Honour the flag so
             // one gesture still means one layer if ordering ever lets this listener run anyway.
             if (e.key !== 'Escape' || e.defaultPrevented) return;
-            // Only the topmost trap closes. A sheet behind a dialog must not close on the same key.
-            if (!isTopmost(id)) return;
-            // A non-modal surface closes only when focus is inside it. Escape on the canvas behind
-            // an inline sheet belongs to the page.
-            if (!modal && !element.contains(document.activeElement)) return;
+            if (modal) {
+                // Only the topmost modal closes. A dialog over a dialog must not close both.
+                if (!isTopmost(id)) return;
+            }
+            else if (!ownsEscape(id, element)) {
+                // A non-modal surface (an inline sheet) closes by FOCUS OWNERSHIP, not registration
+                // order: a page can hold several inline sheets, and the one that holds focus is not
+                // necessarily the last one that activated (F6 r2 G3).
+                return;
+            }
             escapeHandler.invokeMethodAsync('HandleFocusTrapEscapeAsync');
         };
         document.addEventListener('keydown', escHandler);
@@ -170,6 +175,23 @@ export function isInnermost(id) {
     if (!trap) return false;
     for (const [otherId, other] of traps) {
         if (otherId !== id && trap.element.contains(other.element)) return false;
+    }
+    return true;
+}
+
+/**
+ * Whether a NON-MODAL trap owns the Escape key: focus is inside it, no modal trap registered after it
+ * is active (a dialog over the editor owns Escape), and no nested trap that holds focus is more
+ * specific (one Escape closes one layer — the innermost surface that contains focus).
+ */
+function ownsEscape(id, element) {
+    const active = document.activeElement;
+    if (!active || !element.contains(active)) return false;
+    let seen = false;
+    for (const [otherId, other] of traps) {
+        if (otherId === id) { seen = true; continue; }
+        if (seen && other.modal) return false;
+        if (other.element !== element && element.contains(other.element) && other.element.contains(active)) return false;
     }
     return true;
 }
