@@ -581,4 +581,40 @@ public class TmEditorShellResizerTests : LocalizationTestBase
 
         raised.Should().Equal(new[] { "336px" }, "320 measured + 16, not the 280 fallback + 16");
     }
+
+    // ── F6 r2 G8 ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Separator_AriaValueMax_IsTheWidthTheUserCanActuallyReach_GivenMinCanvasWidth()
+    {
+        // 450px canvas, 400 minimum: the left panel (280) can grow by 50 only, not up to the 480 max.
+        Module(canvas: 450);
+
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[role='separator'][data-side='left']").GetAttribute("aria-valuemax").Should().Be("330"));
+        cut.Find("[role='separator'][data-side='left']").GetAttribute("aria-valuemin").Should().Be("200");
+    }
+
+    [Fact]
+    public void Separator_AriaValueMax_IsTheConfiguredMax_WhenTheCanvasHasRoom()
+    {
+        Module(canvas: 2000);
+
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.WaitForAssertion(() => cut.Find("[role='separator'][data-side='right']").GetAttribute("aria-valuemax").Should().Be("560"));
+    }
+
+    [Fact]
+    public void Separator_AriaValueMax_NeverDropsBelowTheCurrentWidth()
+    {
+        // A canvas already below its minimum: growth is refused, but valuenow must stay <= valuemax.
+        Module(canvas: 300);
+
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.WaitForAssertion(() => cut.Find("[role='separator'][data-side='left']").GetAttribute("aria-valuemax").Should().Be("280"));
+    }
 }

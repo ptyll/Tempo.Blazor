@@ -738,6 +738,39 @@ public class EditorShellE2ETests : WasmTestBase
         await CaptureViewportOnlyAsync(page, "1440-resized-restored");
     }
     [TestMethod]
+    public async Task Demo_768_Touch_Resizer_HitAreaIsWiderThanTheVisualStrip_DragEightPixelsOffWorks()
+    {
+        // F6 r2 G8: under (pointer: coarse) the 6px strip is a poor target; the hit area is widened.
+        var context = await CreateTouchContextAsync(768, 1024);
+        var page = await GotoEditorShellAsync(context, 768, 1024);
+        RegisterContext(context);
+        var shell = page.Locator(Shell);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+        var separator = shell.Locator("[role='separator']");
+        await Assertions.Expect(separator).ToBeVisibleAsync();
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation must be on");
+
+        var hit = await page.EvaluateAsync<double>("() => parseFloat(getComputedStyle(document.querySelector(\"[data-testid='editor-shell'] .tm-editor-shell__resizer\"), '::before').width) || 0");
+        Assert.IsTrue(hit >= 24, $"the coarse-pointer hit area (::before) is at least 24px wide ({hit}px)");
+
+        var box = (await separator.BoundingBoxAsync())!;
+        var asideBefore = await WidthOfAsync(page, $"{Shell} aside.tm-editor-shell__panel--right");
+        var cdp = await context.NewCDPSessionAsync(page);
+        var x = box.X + box.Width / 2 + 8;   // 8px off the visual strip
+        var y = box.Y + 300;
+        await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object> { ["type"] = "touchStart", ["touchPoints"] = new[] { new Dictionary<string, object> { ["x"] = x, ["y"] = y } } });
+        for (var i = 1; i <= 10; i++)
+        {
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object> { ["type"] = "touchMove", ["touchPoints"] = new[] { new Dictionary<string, object> { ["x"] = x + 6 * i, ["y"] = y } } });
+            await page.WaitForTimeoutAsync(16);
+        }
+        await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object> { ["type"] = "touchEnd", ["touchPoints"] = Array.Empty<object>() });
+        await page.WaitForTimeoutAsync(500);
+
+        var asideAfter = await WidthOfAsync(page, $"{Shell} aside.tm-editor-shell__panel--right");
+        Assert.IsTrue(asideAfter < asideBefore - 30, $"a touch drag 8px off the strip resizes the right panel ({asideBefore} -> {asideAfter})");
+    }
+    [TestMethod]
     public async Task Demo_1440_Resizer_MalformedStoredValue_IsIgnored_NeverInjectedIntoTheStyle()
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
