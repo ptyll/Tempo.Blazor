@@ -627,3 +627,69 @@ test('raise lands the pushing pinned root on top of the other pinned roots', () 
         unpinRoot(b);
     }
 });
+
+test('an inline sheet accepts an explicit basis element, not a hard-coded .tm-drawer lookup', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(200);
+    // The panel has NO .tm-drawer ancestor (an embedded editor shell sheet): closest stays null.
+    sheet.closest = () => null;
+    const basis = { getBoundingClientRect: () => ({ height: 400 }) };
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'explicit-basis', { track: false, basis });
+
+    // 40px down of a 200px sheet is 0.4 of the 400px basis. Of the 800px viewport the same drag
+    // would dismiss, so a snap here proves the explicit basis won.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 140, timeStamp: 200 });
+    grab.dispatch('pointerup', { pointerId: 1, clientY: 140, timeStamp: 400 });
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'a small drag inside the explicit basis must not dismiss');
+    delete globalThis.window;
+});
+
+test('a legacy boolean track argument still works alongside the options object', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(200);
+    const hostBox = { getBoundingClientRect: () => ({ height: 400 }) };
+    sheet.closest = () => hostBox;
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'legacy-inline', false);
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, clientY: 140, timeStamp: 200 });
+    grab.dispatch('pointerup', { button: 0, pointerId: 1, clientY: 140, timeStamp: 400 });
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync');
+    delete globalThis.window;
+});
+
+test('trackViewport writes the lengths on an explicit tracking root when given one', () => {
+    const root = { props: new Map(), classList: { contains: () => false, toggle: () => {} } };
+    const explicit = { props: new Map(), classList: { contains: () => false, toggle: () => {} } };
+    const viewport = { height: 430, offsetTop: 12 };
+    globalThis.window = {
+        innerHeight: 844,
+        visualViewport: viewport,
+        addEventListener() {},
+        removeEventListener() {},
+    };
+
+    const stop = trackViewport(root, null, explicit);
+    assert.equal(explicit.props.get('--tm-sheet-viewport'), '430px', 'the explicit root carries the lengths');
+    assert.equal(root.props.size, 0, 'the sheet root itself is left alone');
+    stop();
+    delete globalThis.window;
+});
+
+test('attachGesture forwards an explicit viewport tracking root', () => {
+    installWindow(430);
+    const sheet = panel(400);
+    const trackingRoot = { props: new Map(), classList: { contains: () => false, toggle: () => {} } };
+    sheet.closest = () => null;
+    const sink = host();
+    attachGesture(null, sheet, [1], false, sink, 'explicit-track-root', { viewportRoot: trackingRoot });
+
+    assert.equal(trackingRoot.props.get('--tm-sheet-viewport'), '430px');
+    assert.equal(sheet.props.size, 0, 'no class-name closest lookup ran on the panel');
+    delete globalThis.window;
+});
