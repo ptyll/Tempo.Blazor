@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace Tempo.Blazor.Helpers;
@@ -30,6 +31,24 @@ internal sealed class FocusIfLostInterop : IAsyncDisposable
             var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
             if (_disposed || module is null) return false;
             return await module.InvokeAsync<bool>("focusIfLost", elementId, containerId);
+        }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
+        return false;
+    }
+
+    /// <summary>Whether focus currently sits inside the element. False where JS is unavailable.</summary>
+    public async Task<bool> FocusWithinAsync(ElementReference element)
+    {
+        if (_disposed) return false;
+        try
+        {
+            var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            if (_disposed || module is null) return false;
+            return await module.InvokeAsync<bool>("focusWithin", element);
         }
         catch (JSException) { }
         catch (JSDisconnectedException) { }

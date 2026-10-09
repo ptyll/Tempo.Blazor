@@ -125,7 +125,7 @@
                                 }
                                 else
                                 {
-                                    <h2 class="tm-drawer__title">@PanelTitle(SheetActive)</h2>
+                                    <h2 class="tm-drawer__title" id="@_sheetHeadingId" tabindex="-1">@PanelTitle(SheetActive)</h2>
                                 }
                                 <button type="button"
                                         class="tm-editor-shell__sheet-close tm-touch-target"
@@ -193,6 +193,7 @@
     private readonly string _leftPanelId = $"tm-editor-shell-left-panel-{Guid.NewGuid():N}";
     private readonly string _rightPanelId = $"tm-editor-shell-right-panel-{Guid.NewGuid():N}";
     private readonly string _canvasPanelId = $"tm-editor-shell-canvas-panel-{Guid.NewGuid():N}";
+    private readonly string _sheetHeadingId = $"tm-editor-shell-sheet-heading-{Guid.NewGuid():N}";
 
     // State derived from parameters, written only from OnParametersSet / the layout callback
     // (never while rendering — F10): the resolved layout, the tablet one-expanded rule, the mobile
@@ -216,6 +217,7 @@
     // focus the user (or the host) put elsewhere is never stolen.
     private EditorShellPanel _focusSideAfter;
     private bool _focusMobileToggleAfter;
+    private bool _focusSheetAfter;
     private FocusIfLostInterop? _focus;
 
     // Widths. The host owns LeftWidth/RightWidth; a USER resize (pointer or keyboard) is a separate
@@ -426,6 +428,9 @@
     {
         if (side == EditorShellPanel.Left) _leftHandle = element; else _rightHandle = element;
     }
+
+    private bool SheetShown => _resolved == TmLayoutMode.Mobile
+        && MobilePanelPresentation == MobilePanelPresentation.Sheet && AnyPanelOpen;
 
     private bool HasMobileActions => MobileActions is { Count: > 0 };
     private bool AnyPanelOpen => (LeftOpen && Left is not null) || (RightOpen && Right is not null);
@@ -692,12 +697,16 @@
     private async Task CloseAllPanelsAsync()
     {
         _focusMobileToggleAfter = true;
+        _focusSheetAfter = false;
         if (LeftOpen && Left is not null) await LeftOpenChanged.InvokeAsync(false);
         if (RightOpen && Right is not null) await RightOpenChanged.InvokeAsync(false);
     }
 
     private async Task OpenAllPanelsFromToggleAsync()
     {
+        // The closed bar unmounts as the sheet mounts, taking the focus with it: re-assert it on the
+        // sheet once it is shown (through focusIfLost, so a focus placed elsewhere stays).
+        _focusSheetAfter = true;
         if (Left is not null) await LeftOpenChanged.InvokeAsync(true);
         if (Right is not null) await RightOpenChanged.InvokeAsync(true);
     }
@@ -774,6 +783,12 @@
             await _focus.FocusIfLostAsync(_mobileToggleId);
         }
 
+        if (_focusSheetAfter && SheetShown)
+        {
+            _focusSheetAfter = false;
+            await _focus.FocusIfLostAsync(OpenPanelCount > 1 ? TabId(SheetActive) : _sheetHeadingId);
+        }
+
         if (_focusTabAfter is { } tab)
         {
             var from = _focusTabFrom;
@@ -783,6 +798,14 @@
             // container", so it moves — a focus the user placed elsewhere still does not.
             await _focus.FocusIfLostAsync(tab, from);
         }
+    }
+
+    /// <summary>The tab a mobile layout shows right now (Tabs presentation, or a Sheet with two open panels); null when none applies.</summary>
+    private EditorShellPanel? CurrentMobileTab()
+    {
+        if (_resolved != TmLayoutMode.Mobile) return null;
+        if (MobilePanelPresentation == MobilePanelPresentation.Tabs) return TabsActive;
+        return OpenPanelCount > 1 ? SheetActive : null;
     }
 
     // ── Layout / derived state ──────────────────────────────────────────────
@@ -807,7 +830,17 @@
         if (ActiveMobilePanel != _activeParamSeen)
         {
             _activeParamSeen = ActiveMobilePanel;
+            var before = CurrentMobileTab();
             _active = ActiveMobilePanel;
+            var after = CurrentMobileTab();
+            // A HOST-driven switch (a block selected on the canvas) hides the panel that may hold
+            // focus: focus follows to the new tab only if it was inside the hidden panel or lost. A
+            // user-picked tab has focus already (and its host echo changes nothing here).
+            if (before is { } from && after is { } to && from != to)
+            {
+                _focusTabAfter = TabId(to);
+                _focusTabFrom = PanelDomId(from);
+            }
         }
 
         await SyncAsync();
@@ -824,6 +857,7 @@
     {
         var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, InitialMode);
         var flipped = _stateInitialised && resolved != _resolved;
+        var priorEffective = _stateInitialised ? EffectiveCollapsed(_resolved) : CollapsedPanels;
         _resolved = resolved;
 
         var raiseSnap = false;
@@ -866,6 +900,19 @@
 
         var effective = ComputeEffectiveCollapsed(resolved);
         _effectiveCollapsed = effective;
+
+        // A panel that was docked-expanded and is railed by this pass (a desktop -> tablet flip, a host
+        // collapse) unmounts the control that may hold focus: ask before the render removes it.
+        var newlyRailed = resolved == TmLayoutMode.Mobile ? EditorShellPanel.None : effective & ~priorEffective;
+        foreach (var side in new[] { EditorShellPanel.Left, EditorShellPanel.Right })
+        {
+            if (!newlyRailed.HasFlag(side) || !_attachedResizers.ContainsKey(side)) continue;
+            _focus ??= new FocusIfLostInterop(JS);
+            if (await _focus.FocusWithinAsync(side == EditorShellPanel.Left ? _leftAside : _rightAside))
+            {
+                _focusSideAfter = side;
+            }
+        }
 
         var raiseCollapsed = false;
         if (effective == CollapsedPanels)

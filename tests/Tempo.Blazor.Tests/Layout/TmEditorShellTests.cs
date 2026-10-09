@@ -237,8 +237,8 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.FindAll(".tm-drawer").Should().BeEmpty();
         cut.FindAll("[inert]").Should().BeEmpty();
         raised.Should().Be(EditorShellPanel.Left);
-        JSInterop.Invocations.Where(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase))
-            .Should().BeEmpty("the flip never moves focus");
+        JSInterop.Invocations.Where(i => i.Identifier == "focusIfLost")
+            .Should().BeEmpty("the flip moves no focus when it was not inside the panel that got railed");
     }
 
     // ── Rail slots (F13) ────────────────────────────────────────────────────

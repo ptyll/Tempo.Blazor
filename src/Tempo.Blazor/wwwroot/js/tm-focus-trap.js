@@ -348,6 +348,21 @@ export function focusIfLost(target, container = null) {
     if (!lost) return false;
     return focusOf(element);
 }
+/**
+ * Whether focus currently sits inside a surface a host is about to remove or hide. The host asks
+ * BEFORE the render that unmounts it (the DOM is still the old one), then re-asserts focus on the
+ * replacing control afterwards through focusIfLost.
+ * @param {HTMLElement|string|null} container the surface (element or id)
+ * @returns {boolean}
+ */
+export function focusWithin(container) {
+    const region = typeof container === 'string'
+        ? (document.getElementById ? document.getElementById(container) : null)
+        : container;
+    const active = document.activeElement;
+    return !!region && !!active && typeof region.contains === 'function' && region.contains(active);
+}
+
 function restoreFocus(trap) {
     // A non-modal surface restores focus only if it held it. Restoring while the user is on the
     // canvas behind an inline sheet would steal that focus.
