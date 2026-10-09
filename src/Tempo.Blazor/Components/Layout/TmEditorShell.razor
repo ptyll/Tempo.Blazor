@@ -114,7 +114,7 @@
                                   CloseOnEscape="true"
                                   AriaLabel="@SheetAriaLabel"
                                   LayoutMode="@(layout.Resolved)"
-                                  RestoreFocusTargetId="@MobileRestoreTargetId">
+                                  AdditionalAttributes="SheetFocusAttributes">
                             <HeaderContent>
                                 @if (OpenPanelCount > 1)
                                 {
@@ -441,10 +441,11 @@
         _ => CanvasTitle ?? Loc["TmEditorShell_Canvas"],
     };
 
-    // The sheet is replaced by the panels toggle, so that is where a close from INSIDE it lands. The
-    // non-modal trap skips the restore when focus already sits on a live element elsewhere (the host
-    // button, an action-bar tile), so this never steals.
-    private string MobileRestoreTargetId => _mobileToggleId;
+    // The focus trap restores during disposal — before the panels toggle exists in the DOM — so it
+    // falls back to the element focused when the sheet opened (the page heading) and then blocks the
+    // shell's own restore. The shell owns it: the trap's restore is switched off (the scope reads
+    // data-restore-focus) and RestoreFocusAsync moves focus to the toggle only if it was lost.
+    private static readonly Dictionary<string, object> SheetFocusAttributes = new() { ["data-restore-focus"] = "false" };
 
     private string SheetAriaLabel => OpenPanelCount > 1 ? PanelsTitle : PanelTitle(SheetActive);
 
