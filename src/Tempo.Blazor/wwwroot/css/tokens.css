@@ -268,12 +268,19 @@
   /* ── Mobile action bar (F5) ─────────────────────────────────
      The content reserve for hosts that anchor TmMobileActionBar with Placement=FixedViewport:
      the bar is position:fixed (out of flow), so the content scrolling under it needs clearance
-     equal to the bar height plus the bottom safe area. The value derives from the same tokens
-     the bar is built from, never a magic number. StickyContainer/Inline bars reserve nothing —
-     they sit in flow at the end of the content. Hosts read this token (e.g. for their own
-     scroll-padding-bottom); the component's own with-bar rule uses it too. */
+     equal to the bar height plus the bottom safe area. Y4: the value derives from the SAME
+     terms the component's --tm-mobile-action-bar-height is built from — the tile is floored at
+     its two-line height (icon + gap + two xs lines on the tight leading + vertical padding), so
+     the reserve equals the real bar box even when a label wraps. StickyContainer/Inline bars
+     reserve nothing — they sit in flow at the end of the content. Hosts read this token (e.g.
+     for their own scroll-padding-bottom); the component's own with-bar rule uses it too. */
   --tm-mobile-action-bar-reserve-block-size:
-      calc(var(--tm-touch-target) + var(--tm-space-4) + 1px + env(safe-area-inset-bottom, 0px));
+      calc(var(--tm-space-2) + var(--tm-space-2) + var(--tm-border-width)
+           + max(var(--tm-touch-target),
+                 calc(1rem + var(--tm-space-1)
+                      + (2 * var(--tm-font-size-xs) * var(--tm-line-height-tight))
+                      + var(--tm-space-1)))
+           + env(safe-area-inset-bottom, 0px));
 
   /* ── Alias Tokens (used by components) ──────────────────────── */
   --tm-surface:                var(--tm-bg-surface);

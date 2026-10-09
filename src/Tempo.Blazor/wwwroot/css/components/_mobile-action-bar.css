@@ -3,9 +3,19 @@
    TmBottomNavigation which is application chrome). FixedViewport is a deliberate opt-in. */
 
 .tm-mobile-action-bar {
+  /* Y4: the tile is FLOORED at its two-line height, so the bar height is constant whether a
+     label wraps or not — and the FixedViewport reserve (tokens.css, same terms) always matches
+     the real bar box. Terms: icon (1rem, IconSize.Sm) + gap + two xs label lines on the tight
+     leading + the tile's vertical padding (space-1/2 each side, border-box). */
+  --tm-mobile-action-bar-tile-block:
+      calc(1rem + var(--tm-space-1)
+           + (2 * var(--tm-font-size-xs) * var(--tm-line-height-tight))
+           + var(--tm-space-1));
   /* The bar height drives the bar itself and the FixedViewport content reserve, so the two can
      never drift apart. The safe-area inset only applies to the reserve pair below. */
-  --tm-mobile-action-bar-height: calc(var(--tm-touch-target) + var(--tm-space-4));
+  --tm-mobile-action-bar-height:
+      calc(var(--tm-space-2) + var(--tm-space-2) + var(--tm-border-width)
+           + max(var(--tm-touch-target), var(--tm-mobile-action-bar-tile-block)));
   display: block;
 }
 
@@ -30,7 +40,7 @@
    --tm-mobile-action-bar-reserve-block-size token (docs/responsive-conventions.md B4). */
 .tm-mobile-action-bar--fixed .tm-mobile-action-bar__body--with-bar {
   padding-bottom: var(--tm-mobile-action-bar-reserve-block-size,
-      calc(var(--tm-mobile-action-bar-height) + 1px + env(safe-area-inset-bottom, 0px)));
+      calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px)));
 }
 
 .tm-mobile-action-bar__bar {
@@ -40,7 +50,7 @@
   padding: var(--tm-space-2);
   padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
   background: var(--tm-bg-surface);
-  border-top: 1px solid var(--tm-border-color);
+  border-top: var(--tm-border-width) solid var(--tm-border-color);
   min-height: var(--tm-mobile-action-bar-height);
 }
 
@@ -60,10 +70,12 @@
 
 /* X3: the bar's own tile action — a raw button, never .tm-btn (the .tm-btn contract fixes the
    height and forbids white-space overrides, which is exactly what made labels illegible at
-   320/390). The icon sits above a label clamped to two lines; the full label stays in the DOM,
-   so no title attribute duplicates the accessible name. All actions stay neutral — text and
-   icon in --tm-text-primary, none highlighted. */
-.tm-mobile-action-bar__bar .tm-mobile-action-bar__action {
+   320/390). The Y6 More trigger shares these rules through the selector list — it is a tile
+   like every other action. The icon sits above a label clamped to two lines; the full label
+   stays in the DOM, so no title attribute duplicates the accessible name. All actions stay
+   neutral — text and icon in --tm-text-primary, none highlighted. */
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action,
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__more {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
@@ -71,24 +83,32 @@
   align-items: center;
   justify-content: center;
   gap: var(--tm-space-1);
-  min-height: var(--tm-touch-target);
+  /* Y4: floored at the two-line tile block (never below the touch target), so a wrapping label
+     grows nothing — the bar height is already reserved. */
+  min-height: max(var(--tm-touch-target), var(--tm-mobile-action-bar-tile-block));
   height: auto;
-  /* The vertical half-space keeps a one-line tile at exactly the touch target: together with
-     the bar's padding + border it makes the bar's real box equal
-     --tm-mobile-action-bar-reserve-block-size, so the FixedViewport reserve covers it exactly. */
   padding: calc(var(--tm-space-1) / 2) var(--tm-space-1);
   border: none;
   background: transparent;
   color: var(--tm-text-primary);
+  /* Y5: a raw button would otherwise render the UA font (Arial under an Inter root). */
+  font: inherit;
   font-size: var(--tm-font-size-xs);
+  line-height: var(--tm-line-height-tight);
   cursor: pointer;
 }
 
-.tm-mobile-action-bar__bar .tm-mobile-action-bar__action:hover {
-  background: var(--tm-bg-muted);
+/* Y7: hover feedback is pointer-only — under touch emulation a tapped tile must not keep a
+   hover backdrop, and disabled tiles never paint one. */
+@media (hover: hover) {
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__action:hover:not(:disabled),
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__more:hover:not(:disabled) {
+    background: var(--tm-bg-muted);
+  }
 }
 
-.tm-mobile-action-bar__bar .tm-mobile-action-bar__action:disabled {
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action:disabled,
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__more:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -100,14 +120,17 @@
   flex-shrink: 0;
 }
 
-/* Two-line clamp with anywhere-wrapping: short labels stay whole, long ones (cs/fr at 320)
-   wrap instead of truncating into a single-line ellipsis. */
+/* Two-line clamp: short labels stay whole, long ones (cs/fr at 320) wrap instead of truncating
+   into a single-line ellipsis. Y6: break-word + hyphenation (the host sets lang) instead of
+   anywhere — a word 1–2px wider than the tile no longer orphans a single character onto its
+   own line ("Partage|r" in fr at 320). */
 .tm-mobile-action-bar__label-text {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
   white-space: normal;
   text-align: center;
   max-width: 100%;
@@ -145,13 +168,19 @@
   border-radius: var(--tm-radius-control);
   background: transparent;
   color: var(--tm-text-primary);
+  /* Y5: inherit the host font like the tiles, then set the menu size. */
+  font: inherit;
   font-size: var(--tm-font-size-sm);
+  line-height: var(--tm-line-height-tight);
   text-align: start;
   cursor: pointer;
 }
 
-.tm-mobile-action-bar__menu-item:hover {
-  background: var(--tm-bg-muted);
+/* Y7: pointer-only hover, never on a disabled item. */
+@media (hover: hover) {
+  .tm-mobile-action-bar__menu-item:hover:not(:disabled) {
+    background: var(--tm-bg-muted);
+  }
 }
 
 .tm-mobile-action-bar__menu-item:disabled {
