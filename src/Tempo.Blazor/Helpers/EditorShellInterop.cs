@@ -39,7 +39,7 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     }
 
     /// <summary>Stores the widths JSON for the key. Best-effort.</summary>
-    public async Task SaveWidthsAsync(string key, string json)
+    public async Task SaveWidthsAsync(string key, string? json)
     {
         if (_disposed) return;
         try
@@ -73,33 +73,36 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     }
 }
 
+/// <summary>A user-resized panel width and the host-supplied width it was resized FROM (the base).</summary>
+/// <param name="W">The width in whole CSS pixels the user chose.</param>
+/// <param name="Base">The width string the host supplied when the user resized; a stored value applies only while the host still supplies the same one.</param>
+internal sealed record StoredWidth(int W, string Base);
+
 /// <summary>
-/// The (de)serialization of the persisted <c>TmEditorShell</c> panel widths — a small JSON object
-/// with an optional <c>left</c> and <c>right</c> CSS width. Versionless on purpose: unknown
-/// members are ignored, so a newer writer never breaks an older reader.
+/// The (de)serialization of the persisted <c>TmEditorShell</c> panel widths. Only user-resized
+/// widths are stored, each as <c>{"w":300,"base":"280px"}</c>; reads validate every field and ignore
+/// anything else, so a stale, hand-edited or previous-format value never reaches the style attribute.
 /// </summary>
 internal static class EditorShellWidths
 {
-    public static string Serialize(string left, string right)
-        => JsonSerializer.Serialize(new Dictionary<string, string> { ["left"] = left, ["right"] = right });
+    /// <summary>Serializes the user-resized widths; null when there is nothing to store.</summary>
+    public static string? Serialize(StoredWidth? left, StoredWidth? right) => throw new NotImplementedException();
 
-    /// <summary>Parses stored JSON. A null/malformed payload yields (null, null).</summary>
-    public static (string? Left, string? Right) Parse(string json)
-    {
-        try
-        {
-            var widths = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-            if (widths is null) return (null, null);
-            return (StringOrNull(widths, "left"), StringOrNull(widths, "right"));
-        }
-        catch (JsonException)
-        {
-            return (null, null);
-        }
-    }
+    /// <summary>Parses stored JSON. A null, malformed or unrecognised payload yields (null, null).</summary>
+    public static (StoredWidth? Left, StoredWidth? Right) Parse(string? json) => throw new NotImplementedException();
+}
 
-    private static string? StringOrNull(Dictionary<string, JsonElement> widths, string key)
-        => widths.TryGetValue(key, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
+/// <summary>
+/// The pure resize rules shared by the keyboard path (C#) and the pointer path
+/// (<c>tm-editor-shell.js clampWidth</c>): clamp to the min/max width and keep the canvas at least
+/// its minimum, and parse a plain pixel length without ever trusting a raw string.
+/// </summary>
+internal static class EditorShellResize
+{
+    /// <summary>The clamped panel width in whole pixels.</summary>
+    public static double Clamp(double requested, double current, int min, int max, double canvas, int minCanvas)
+        => throw new NotImplementedException();
+
+    /// <summary>Parses a plain "NNNpx" length; anything else (rem, %, calc, trailing junk) is rejected.</summary>
+    public static bool TryParsePx(string? value, out int px) => throw new NotImplementedException();
 }

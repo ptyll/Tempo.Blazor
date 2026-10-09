@@ -823,8 +823,8 @@
         var (left, right) = EditorShellWidths.Parse(stored);
         if (left is not null || right is not null)
         {
-            _effectiveLeftWidth = left;
-            _effectiveRightWidth = right;
+            _effectiveLeftWidth = left is null ? null : $"{left.W}px";
+            _effectiveRightWidth = right is null ? null : $"{right.W}px";
             StateHasChanged();
         }
     }
@@ -833,8 +833,14 @@
     {
         if (string.IsNullOrEmpty(PersistWidthsKey)) return;
         _shellJs ??= new EditorShellInterop(JS);
-        await _shellJs.SaveWidthsAsync(PersistWidthsKey, EditorShellWidths.Serialize(LeftWidth, RightWidth));
+        await _shellJs.SaveWidthsAsync(PersistWidthsKey, EditorShellWidths.Serialize(new StoredWidth(0, LeftWidth), new StoredWidth(0, RightWidth)));
     }
+
+    /// <summary>Commits a width the pointer drag in <c>tm-editor-shell.js</c> settled on.</summary>
+    /// <param name="side"><c>left</c> or <c>right</c>.</param>
+    /// <param name="width">The width in CSS pixels; clamped and validated again here.</param>
+    [JSInvokable("OnResizeCommitted")]
+    public Task HandleResizeCommitted(string side, int width) => throw new NotImplementedException();
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
