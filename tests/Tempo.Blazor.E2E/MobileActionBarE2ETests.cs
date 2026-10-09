@@ -649,6 +649,13 @@ public class MobileActionBarE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
         await WaitForAppReadyAsync(page);
         await page.SetViewportSizeAsync(390, 700);
+        // The tiles inherit the host webfont (font: inherit) — a late font swap shifts the card
+        // layout between the scroll and the pin measurement. Settle the fonts first so the
+        // sticky assertion measures a stable box.
+        await page.WaitForFunctionAsync(
+            "() => document.fonts.status === 'loaded'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 15000 });
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -665,6 +672,7 @@ public class MobileActionBarE2ETests : WasmTestBase
             }
             """);
         Assert.IsTrue(pinCut > 5, $"the fold must cut the card (bottom offset {pinCut}px) for the pin to engage");
+        await page.WaitForTimeoutAsync(200); // settle the pin before measuring
         await AssertBarPinnedToViewportBottomAsync(page, bar);
 
         await CaptureViewportOnlyAsync(page, "390-auto-card-mid-sticky");
