@@ -250,3 +250,45 @@ test('a dotnet reference that rejects does not surface an unhandled rejection', 
     s.handle.dispatch('pointerup', move(340));
     await new Promise(resolve => setTimeout(resolve, 0));
 });
+
+// ── F6 r2 G7: pointer-capture release and mid-drag detach ───────────────────────────────────
+
+test('the drag releases the pointer capture of ITS pointer id (the argument is required)', () => {
+    const s = stage();
+    const released = [];
+    s.handle.releasePointerCapture = (id) => { released.push(id); s.handle.captured = null; };
+    attachResize(s.handle, s.asideEl, s.main, s.dotnet, 'left', { side: 'left', min: 200, max: 480, minCanvas: 400 });
+
+    s.handle.dispatch('pointerdown', down(300, 11));
+    s.handle.dispatch('pointermove', move(340, 11));
+    s.handle.dispatch('pointerup', move(340, 11));
+
+    assert.deepEqual(released, [11], 'releasePointerCapture(pointerId) - without the id the real DOM throws and the capture leaks');
+});
+
+test('detaching mid-drag restores the live width and releases the capture', () => {
+    const s = stage({ aside: 280 });
+    const released = [];
+    s.handle.releasePointerCapture = (id) => { released.push(id); };
+    attachResize(s.handle, s.asideEl, s.main, s.dotnet, 'left', { side: 'left', min: 200, max: 480, minCanvas: 400 });
+
+    s.handle.dispatch('pointerdown', down(300, 5));
+    s.handle.dispatch('pointermove', move(380, 5));
+    assert.equal(s.styles.get('--tm-editor-shell-panel-width'), '360px');
+
+    detachResize('left');
+
+    assert.equal(s.styles.get('--tm-editor-shell-panel-width'), '280px', 'a panel that collapses mid-drag must not keep the dragged width');
+    assert.deepEqual(released, [5]);
+    assert.equal(s.calls.length, 0, 'a detached drag commits nothing');
+    assert.equal(s.attrs.get('aria-valuenow'), '280');
+});
+
+test('detaching with no drag in progress touches nothing', () => {
+    const s = stage({ aside: 280 });
+    attachResize(s.handle, s.asideEl, s.main, s.dotnet, 'left', { side: 'left', min: 200, max: 480, minCanvas: 400 });
+
+    detachResize('left');
+
+    assert.equal(s.styles.size, 0);
+});
