@@ -485,6 +485,24 @@ public class TmEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task MobileSheet_AnOutOfRangeSnapIndex_IsClampedToTheSnapCount_AndRaisesNothingWhenAlreadyAtTheTop()
+    {
+        // F6 r2 G10: a host value past the last snap (here 7 of 2 snaps) must be the top snap in the
+        // shell's own shadow too, otherwise the drawer's "already at the top" report looks like a change.
+        var raised = new List<int>();
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobileSheetSnapIndex, 7);
+            p.Add(x => x.MobileSheetSnapIndexChanged, EventCallback.Factory.Create<int>(this, v => raised.Add(v)));
+        });
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("1");
+
+        // A gesture that settles on the top snap it is already at (the drawer reports index 1).
+        await cut.InvokeAsync(() => cut.FindComponent<TmDrawer>().Instance.HandleSheetSnappedAsync(1));
+
+        raised.Should().BeEmpty("the sheet is already at the top snap: nothing changed");
+    }
+    [Fact]
     public void Mobile_ClosedSheet_RendersALabelledAffordance_WithNoAriaControls()
     {
         var cut = RenderShell(TmLayoutMode.Mobile, p =>
