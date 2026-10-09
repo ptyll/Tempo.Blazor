@@ -74,4 +74,44 @@ public class EditorShellDocsTests
         }
         unreleased.Should().NotContain("tablet** shows at most one modal side sheet");
     }
+
+    // ── F6 r2 G12: joined lines from the round-1 edit tooling ───────────────
+
+    [Fact]
+    public void Sources_HaveNoStatementsOrBulletsGluedOntoTheSameLine()
+    {
+        foreach (var path in new[]
+        {
+            new[] { "src", "Tempo.Blazor", "Components", "Layout", "TmEditorShell.razor" },
+            new[] { "src", "Tempo.Blazor.Demo.SharedUI", "Pages", "EditorShellPage.razor" },
+        })
+        {
+            var lines = Read(path).Split('\n');
+            for (var i = 0; i < lines.Length; i++)
+            {
+                System.Text.RegularExpressions.Regex.IsMatch(lines[i], @"[;}>]\s{4,}(RenderFragment|return|<StatusBar>|<Right>)")
+                    .Should().BeFalse($"{string.Join('/', path)}:{i + 1} joins two statements/elements on one line: {lines[i].Trim()}");
+            }
+        }
+
+        var changelog = Read("CHANGELOG.md");
+        changelog.Should().NotContain("roles.- `", "each changelog bullet starts on its own line");
+    }
+
+    [Fact]
+    public void EditorShellDoc_DocumentsTheR2Behaviour()
+    {
+        var doc = Read("docs", "editor-shell.md");
+        foreach (var term in new[]
+        {
+            "viewport-scope",             // never Breakpoints on the viewport observer
+            "re-measures with the default thresholds", // host nesting its own Auto observer
+            "host-bound `CollapsedPanels`",           // tablet rule writes into the host's state
+            "treats `Left` | `Right` as `None`",      // ActiveMobilePanel in Tabs
+            "restore counts as a user value",         // LeftWidthChanged on restore
+        })
+        {
+            doc.Should().Contain(term, $"docs/editor-shell.md must document: {term}");
+        }
+    }
 }
