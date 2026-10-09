@@ -269,7 +269,9 @@ public class TmMobileActionBarTests : LocalizationTestBase
         cut.Find(".tm-mobile-action-bar__more").Click();
         cut.FindAll("[role='menuitem']")[0].Click();
 
-        calls.Should().Be(1);
+        // Y8: the action runs after a Task.Yield — bUnit pumps that continuation asynchronously,
+        // so the assertion waits for it (the TmDropdown.SelectItemAsync pattern).
+        cut.WaitForAssertion(() => calls.Should().Be(1));
         cut.FindAll("[role='menu']").Should().BeEmpty();
     }
 
@@ -559,19 +561,21 @@ public class TmMobileActionBarTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task CloseMoreAsync_ClosesTheMenu()
+    public void CloseMoreAsync_ClosesTheMenu()
     {
-        // X13: a host closes the sheet after a confirmed KeepMenuOpen action.
-        var cut = Render<TmMobileActionBar>(p => p
+        // X13: a host closes the sheet after a confirmed KeepMenuOpen action. The host call is
+        // dispatched through a real DOM event (the test host component), exactly how a host's
+        // event handler reaches CloseMoreAsync in production.
+        var cut = Render<TmMobileActionBarTestHost>(p => p
             .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
             .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
 
         cut.Find(".tm-mobile-action-bar__more").Click();
         cut.FindAll("[role='menu']").Should().NotBeEmpty();
 
-        await cut.Instance.CloseMoreAsync();
+        cut.Find("#host-close-more").Click();
 
-        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.WaitForAssertion(() => cut.FindAll("[role='menu']").Should().BeEmpty());
     }
 
     [Fact]
