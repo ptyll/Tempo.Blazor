@@ -466,6 +466,30 @@
   stencil registers the `action-bar` role. Reference usage: `TmDashboard` edit mode on mobile
   renders Add/Save/Cancel through the bar instead of the wrapping toolbar.
 
+- `TmEditorShell` and `TmSidePanel` (F6, `Tempo.Blazor.Components.Layout`): the responsive frame for
+  canvas editors and a standalone inspector. `TmEditorShell` exposes the slots `Header`, `Toolbar`,
+  `Left`, `Canvas`, `Right`, `StatusBar` and `MobileActions` (`IReadOnlyList<TmActionItem>`, rendered
+  by `TmMobileActionBar`). It resolves its own layout from its container (`LayoutMode` /
+  `InitialMode` / `ResolvedLayoutChanged`): **desktop** is three columns with a strip toggle per
+  panel (hide / collapse to a 44px rail / expand, `aria-expanded` + `aria-controls`),
+  **tablet** shows at most one modal side sheet (the most recently opened panel wins; closing it
+  reveals the other), **mobile** is the canvas plus an inline, non-modal bottom sheet (snaps
+  50% / 100%, two-way snap index) in a positioned stage, with `MobilePanelPresentation.Tabs`
+  switching Blocks/Properties through a `role="tablist"` strip. `LeftOpen`, `RightOpen` and
+  `CollapsedPanels` (`[Flags] EditorShellPanel`) are two-way; `LeftWidth`/`RightWidth` plus the
+  optional `PersistWidthsKey` (localStorage) size the panels. Every close path (Escape, header
+  close, backdrop, swipe, a host closing a panel itself) returns focus to the panel toggle, and a
+  viewport flip (mobile → desktop → mobile) never reopens a closed sheet. `TmSidePanel` is the
+  docked-or-sheet inspector (`SidePanelPresentation` `Auto | Docked | Sheet`: docked on desktop, a
+  modal side sheet on tablet, a modal bottom sheet on mobile; `Open` two-way, `Title`,
+  `HeaderActions`, `Width`, `RestoreFocusTargetId`). Both compose `TmDrawer` — no local sheet,
+  gesture or focus logic. `docs/editor-shell.md` documents the pattern for the DiagramEditor,
+  Wireframe, Signing designer, PdfAnnotator and Modeling editors; the demo page is `/editor-shell`;
+  the wireframe stencil registers the `editor-shell` and `side-panel` roles.
+- `tm-sheet.js` accepts an explicit basis element and an explicit track-viewport flag for an inline
+  sheet, the browser top-layer promotion helpers moved to `tm-top-layer.js` (the `tm-sheet.js`
+  exports re-export them, so every existing caller keeps working), and the `TmDrawer` and
+  `TmModal` bodies now become a keyboard-reachable scroll region while they overflow.
 ### Changed
 
 - Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
