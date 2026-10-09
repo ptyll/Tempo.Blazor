@@ -221,9 +221,9 @@ public class ProvenanceComparisonTests
             + "__tests__ and *.md under wwwroot/js. 'Read and empty' must not look like "
             + "'never read'");
         // js/__tests__/overlay.test.mjs + overlay-lifecycle.test.mjs + layout-observer.test.mjs +
-        // tm-sheet.test.mjs + tm-focus-trap.test.mjs — the Node tests ship in the repo, never in
-        // the nupkg.
-        denominator.PackExcludedFiles.Should().Be(5);
+        // tm-sheet.test.mjs + tm-focus-trap.test.mjs + tm-editor-shell.test.mjs — the Node tests
+        // ship in the repo, never in the nupkg.
+        denominator.PackExcludedFiles.Should().Be(6);
     }
 
     /// <summary>

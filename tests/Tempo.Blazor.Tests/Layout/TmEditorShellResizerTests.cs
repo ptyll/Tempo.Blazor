@@ -232,7 +232,7 @@ public class TmEditorShellResizerTests : LocalizationTestBase
         raised.Should().Equal("200px");
 
         cut.Find("[role='separator'][data-side='left']").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
-        raised.Should().Equal(["200px"], "already at the minimum: no change, no callback");
+        raised.Should().Equal(new[] { "200px" }, "already at the minimum: no change, no callback");
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public class TmEditorShellResizerTests : LocalizationTestBase
 
         cut.Find("[role='separator'][data-side='left']").KeyDown(new KeyboardEventArgs { Key = "End" });
 
-        raised.Should().Equal("330px", "450 - 400 = 50px of room, not the 200px up to the maximum");
+        raised.Should().Equal(new[] { "330px" }, "450 - 400 = 50px of room, not the 200px up to the maximum");
     }
 
     [Fact]

@@ -87,14 +87,41 @@
     box-shadow: inset var(--tm-focus-ring);
 }
 
-/* A collapsed panel: a slim rail carrying only the expand button. */
+/* The resize separator on a docked panel's inner edge. A 6px grabber (the pointer-capture drag lives
+   in tm-editor-shell.js; the arrow keys are handled in Blazor). Wider hit area on touch devices. */
+.tm-editor-shell__resizer {
+    align-self: stretch;
+    flex-shrink: 0;
+    inline-size: var(--tm-space-1-5);
+    margin-inline: calc(-0.5 * var(--tm-space-1-5));
+    position: relative;
+    z-index: 1;
+    cursor: col-resize;
+    touch-action: none;
+    background: transparent;
+}
+
+.tm-editor-shell__resizer:hover,
+.tm-editor-shell__resizer--dragging {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-editor-shell__resizer:focus-visible {
+    outline: none;
+    background: var(--tm-color-primary-subtle);
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+/* A collapsed panel: a slim rail carrying only the expand button (and the optional rail slot). */
 .tm-editor-shell__rail {
     align-self: stretch;
     inline-size: var(--tm-touch-target);
     flex-shrink: 0;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-2);
+    overflow-y: auto;
     padding-block-start: var(--tm-space-2);
     background: var(--tm-bg-surface);
     border-inline-end: 1px solid var(--tm-color-border-subtle);

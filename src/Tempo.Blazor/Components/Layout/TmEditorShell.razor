@@ -35,7 +35,7 @@
         @if (!layout.IsMobile)
         {
             var collapsed = EffectiveCollapsed(layout.Resolved);
-            <div class="tm-editor-shell__main" data-region="main">
+            <div class="tm-editor-shell__main" data-region="main" @ref="_main">
                 @RenderDockedSide(EditorShellPanel.Left, collapsed)
                 <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
                 @RenderDockedSide(EditorShellPanel.Right, collapsed)
@@ -219,13 +219,26 @@
     private bool _focusMobileToggleAfter;
     private FocusIfLostInterop? _focus;
 
-    private string? _effectiveLeftWidth;
-    private string? _effectiveRightWidth;
-    private bool _widthsLoaded;
-    private bool _disposed;
+    // Widths. The host owns LeftWidth/RightWidth; a USER resize (pointer or keyboard) is a separate
+    // overlay on top: _user* is the width the user chose and _userBase* the host width it was chosen
+    // from. Persistence stores only that overlay, and a stored value applies on load only while the
+    // host still supplies the same base (decision F6-SHELL-RESIZER).
+    private int? _userLeft;
+    private int? _userRight;
+    private string? _userBaseLeft;
+    private string? _userBaseRight;
     private string? _lastLeftWidth;
     private string? _lastRightWidth;
+    private bool _widthsLoaded;
+    private bool _disposed;
     private EditorShellInterop? _shellJs;
+    private DotNetObjectReference<TmEditorShell>? _dotNetRef;
+    private ElementReference _main;
+    private ElementReference _leftAside;
+    private ElementReference _rightAside;
+    private ElementReference _leftHandle;
+    private ElementReference _rightHandle;
+    private readonly Dictionary<EditorShellPanel, string> _attachedResizers = new();
 
     /// <summary>Content of the top header region (a title, breadcrumbs, the primary save action).</summary>
     [Parameter] public RenderFragment? Header { get; set; }
@@ -392,8 +405,28 @@
         }
     }
 
-    private string EffectiveLeftWidth => _effectiveLeftWidth ?? LeftWidth;
-    private string EffectiveRightWidth => _effectiveRightWidth ?? RightWidth;
+    private string EffectiveLeftWidth => _userLeft is { } w ? $"{w}px" : LeftWidth;
+    private string EffectiveRightWidth => _userRight is { } w ? $"{w}px" : RightWidth;
+
+    private int CurrentWidthPx(EditorShellPanel side)
+    {
+        var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
+        // A non-pixel host width (rem, %) cannot be stepped from; the side's default is the origin.
+        return EditorShellResize.TryParsePx(text, out var px) ? px : side == EditorShellPanel.Left ? 280 : 320;
+    }
+
+    private int MinWidth(EditorShellPanel side) => side == EditorShellPanel.Left ? MinLeftWidth : MinRightWidth;
+    private int MaxWidth(EditorShellPanel side) => side == EditorShellPanel.Left ? MaxLeftWidth : MaxRightWidth;
+
+    private void CaptureAside(EditorShellPanel side, ElementReference element)
+    {
+        if (side == EditorShellPanel.Left) _leftAside = element; else _rightAside = element;
+    }
+
+    private void CaptureHandle(EditorShellPanel side, ElementReference element)
+    {
+        if (side == EditorShellPanel.Left) _leftHandle = element; else _rightHandle = element;
+    }
 
     private bool HasMobileActions => MobileActions is { Count: > 0 };
     private bool AnyPanelOpen => (LeftOpen && Left is not null) || (RightOpen && Right is not null);
@@ -498,24 +531,51 @@
         }
 
         var width = isLeft ? EffectiveLeftWidth : EffectiveRightWidth;
-        return @<text>
-            <aside class="tm-editor-shell__panel tm-editor-shell__panel--@lower"
-                   id="@panelId"
-                   data-region="@lower"
-                   aria-label="@title"
-                   style="--tm-editor-shell-panel-width: @width">@content</aside>
-            <button type="button"
-                    id="@toggleId"
-                    class="tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--@lower"
-                    aria-expanded="true"
-                    aria-controls="@panelId"
-                    aria-label="@(isLeft ? Loc["TmEditorShell_CollapseLeftPanel"] : Loc["TmEditorShell_CollapseRightPanel"])"
-                    @onclick="() => CollapseAsync(side)">
-                <TmIcon Name="@(isLeft ? IconNames.ChevronLeft : IconNames.ChevronRight)" Size="IconSize.Sm" />
-            </button>
-        </text>;
+        var current = CurrentWidthPx(side);
+        var min = side == EditorShellPanel.Left ? MinLeftWidth : MinRightWidth;
+        var max = side == EditorShellPanel.Left ? MaxLeftWidth : MaxRightWidth;
+        RenderFragment aside = builder =>
+        {
+            builder.OpenElement(0, "aside");
+            builder.AddAttribute(1, "class", $"tm-editor-shell__panel tm-editor-shell__panel--{lower}");
+            builder.AddAttribute(2, "id", panelId);
+            builder.AddAttribute(3, "data-region", lower);
+            builder.AddAttribute(4, "aria-label", title);
+            builder.AddAttribute(5, "style", $"--tm-editor-shell-panel-width: {width}");
+            builder.AddElementReferenceCapture(6, e => CaptureAside(side, e));
+            builder.AddContent(7, content);
+            builder.CloseElement();
+        };        RenderFragment toggle = @<button type="button"
+                              id="@toggleId"
+                              class="tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--@lower"
+                              aria-expanded="true"
+                              aria-controls="@panelId"
+                              aria-label="@(isLeft ? Loc["TmEditorShell_CollapseLeftPanel"] : Loc["TmEditorShell_CollapseRightPanel"])"
+                              @onclick="() => CollapseAsync(side)">
+            <TmIcon Name="@(isLeft ? IconNames.ChevronLeft : IconNames.ChevronRight)" Size="IconSize.Sm" />
+        </button>;
+        // The separator is the panel's INNER edge: [aside][separator][strip] on the left and
+        // [strip][separator][aside] on the right, so it always touches the aside it resizes.
+        RenderFragment separator = builder =>
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "role", "separator");
+            builder.AddAttribute(2, "class", $"tm-editor-shell__resizer tm-editor-shell__resizer--{lower}");
+            builder.AddAttribute(3, "data-side", lower);
+            builder.AddAttribute(4, "aria-orientation", "vertical");
+            builder.AddAttribute(5, "aria-valuenow", current.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.AddAttribute(6, "aria-valuemin", min.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.AddAttribute(7, "aria-valuemax", max.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            builder.AddAttribute(8, "aria-controls", panelId);
+            builder.AddAttribute(9, "aria-label", isLeft ? Loc["TmEditorShell_ResizeLeftPanel"] : Loc["TmEditorShell_ResizeRightPanel"]);
+            builder.AddAttribute(10, "tabindex", "0");
+            builder.AddAttribute(11, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => OnSeparatorKeyAsync(side, e)));
+            builder.AddElementReferenceCapture(12, e => CaptureHandle(side, e));
+            builder.CloseElement();
+        };        return isLeft
+            ? @<text>@aside@separator@toggle</text>
+            : @<text>@toggle@separator@aside</text>;
     }
-
     // ── Mobile chrome ───────────────────────────────────────────────────────
 
     /// <summary>The closed-state affordance of the Sheet presentation: a labelled bar naming what is behind it.</summary>
@@ -792,6 +852,12 @@
         if (raiseCollapsed) await CollapsedPanelsChanged.InvokeAsync(effective);
     }
 
+    /// <summary>
+    /// A width the host supplies. If it is not just the echo of a width the user chose (a bound
+    /// <c>@bind-LeftWidth</c> hands the user''s value straight back), the host is overriding: the
+    /// user''s overlay for that side is dropped and the stored entry removed, so the explicit host
+    /// width wins until the user resizes again.
+    /// </summary>
     private async Task SyncWidthsAsync()
     {
         if (_lastLeftWidth is null)
@@ -801,47 +867,163 @@
             return;
         }
 
-        if (_lastLeftWidth == LeftWidth && _lastRightWidth == RightWidth) return;
-        _lastLeftWidth = LeftWidth;
-        _lastRightWidth = RightWidth;
-        // A host-driven width change becomes effective and is what persistence stores.
-        _effectiveLeftWidth = LeftWidth;
-        _effectiveRightWidth = RightWidth;
-        if (_widthsLoaded) await PersistWidthsAsync();
+        var changed = false;
+        if (_lastLeftWidth != LeftWidth)
+        {
+            _lastLeftWidth = LeftWidth;
+            if (_userLeft is { } w && LeftWidth != $"{w}px")
+            {
+                _userLeft = null;
+                _userBaseLeft = null;
+                changed = true;
+            }
+        }
+        if (_lastRightWidth != RightWidth)
+        {
+            _lastRightWidth = RightWidth;
+            if (_userRight is { } w && RightWidth != $"{w}px")
+            {
+                _userRight = null;
+                _userBaseRight = null;
+                changed = true;
+            }
+        }
+
+        if (changed) await PersistWidthsAsync();
     }
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await RestoreFocusAsync();
+        await SyncResizersAsync();
 
         if (!firstRender || string.IsNullOrEmpty(PersistWidthsKey) || _widthsLoaded) return;
         _widthsLoaded = true;
         _shellJs ??= new EditorShellInterop(JS);
         var stored = await _shellJs.LoadWidthsAsync(PersistWidthsKey);
-        if (string.IsNullOrEmpty(stored)) return;
+        if (_disposed) return;
         var (left, right) = EditorShellWidths.Parse(stored);
-        if (left is not null || right is not null)
+        var applied = false;
+        // A stored width is applied only while it is still valid for THIS host configuration: the
+        // host supplies the same base width it was resized from and the value is inside the limits.
+        if (_userLeft is null && left is not null && left.Base == LeftWidth && left.W >= MinLeftWidth && left.W <= MaxLeftWidth)
         {
-            _effectiveLeftWidth = left is null ? null : $"{left.W}px";
-            _effectiveRightWidth = right is null ? null : $"{right.W}px";
-            StateHasChanged();
+            _userLeft = left.W;
+            _userBaseLeft = left.Base;
+            applied = true;
         }
+        if (_userRight is null && right is not null && right.Base == RightWidth && right.W >= MinRightWidth && right.W <= MaxRightWidth)
+        {
+            _userRight = right.W;
+            _userBaseRight = right.Base;
+            applied = true;
+        }
+        if (applied) StateHasChanged();
     }
 
     private async Task PersistWidthsAsync()
     {
-        if (string.IsNullOrEmpty(PersistWidthsKey)) return;
+        if (string.IsNullOrEmpty(PersistWidthsKey) || _disposed) return;
         _shellJs ??= new EditorShellInterop(JS);
-        await _shellJs.SaveWidthsAsync(PersistWidthsKey, EditorShellWidths.Serialize(new StoredWidth(0, LeftWidth), new StoredWidth(0, RightWidth)));
+        var left = _userLeft is { } l ? new StoredWidth(l, _userBaseLeft ?? LeftWidth) : null;
+        var right = _userRight is { } r ? new StoredWidth(r, _userBaseRight ?? RightWidth) : null;
+        await _shellJs.SaveWidthsAsync(PersistWidthsKey, EditorShellWidths.Serialize(left, right));
+    }
+
+    // ── Resize separators ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Keeps the pointer-drag registrations in step with what is rendered: one per EXPANDED docked
+    /// panel, re-attached only when its clamp inputs change (so a re-render never tears down a drag
+    /// in progress), detached when the panel collapses, hides or the layout turns mobile.
+    /// </summary>
+    private async Task SyncResizersAsync()
+    {
+        if (_disposed) return;
+        var collapsed = EffectiveCollapsed(_resolved);
+        foreach (var side in new[] { EditorShellPanel.Left, EditorShellPanel.Right })
+        {
+            var wanted = _resolved != TmLayoutMode.Mobile && IsExpanded(side, collapsed);
+            var id = side == EditorShellPanel.Left ? "left" : "right";
+            if (!wanted)
+            {
+                if (_attachedResizers.Remove(side) && _shellJs is not null) await _shellJs.DetachResizeAsync(id);
+                continue;
+            }
+
+            var key = $"{MinWidth(side)}:{MaxWidth(side)}:{MinCanvasWidth}";
+            if (_attachedResizers.TryGetValue(side, out var attached) && attached == key) continue;
+            _shellJs ??= new EditorShellInterop(JS);
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            _attachedResizers[side] = key;
+            await _shellJs.AttachResizeAsync(id,
+                side == EditorShellPanel.Left ? _leftHandle : _rightHandle,
+                side == EditorShellPanel.Left ? _leftAside : _rightAside,
+                _main, _dotNetRef, id, MinWidth(side), MaxWidth(side), MinCanvasWidth);
+        }
+    }
+
+    private async Task OnSeparatorKeyAsync(EditorShellPanel side, KeyboardEventArgs args)
+    {
+        var step = args.ShiftKey ? 64 : 16;
+        // The left panel's separator is on its right edge: ArrowRight grows it. The right panel's
+        // separator is on its left edge: ArrowLeft grows it.
+        var grow = side == EditorShellPanel.Left ? "ArrowRight" : "ArrowLeft";
+        var shrink = side == EditorShellPanel.Left ? "ArrowLeft" : "ArrowRight";
+        var current = CurrentWidthPx(side);
+        double requested;
+        if (args.Key == grow) requested = current + step;
+        else if (args.Key == shrink) requested = current - step;
+        else if (args.Key == "Home") requested = MinWidth(side);
+        else if (args.Key == "End") requested = MaxWidth(side);
+        else return;
+
+        _shellJs ??= new EditorShellInterop(JS);
+        var canvas = await _shellJs.MeasureCanvasAsync(_main);
+        var width = (int)EditorShellResize.Clamp(requested, current, MinWidth(side), MaxWidth(side), canvas, MinCanvasWidth);
+        await CommitWidthAsync(side, width);
     }
 
     /// <summary>Commits a width the pointer drag in <c>tm-editor-shell.js</c> settled on.</summary>
     /// <param name="side"><c>left</c> or <c>right</c>.</param>
     /// <param name="width">The width in CSS pixels; clamped and validated again here.</param>
     [JSInvokable("OnResizeCommitted")]
-    public Task HandleResizeCommitted(string side, int width) => throw new NotImplementedException();
+    public Task HandleResizeCommitted(string side, int width)
+    {
+        if (_disposed) return Task.CompletedTask;
+        var panel = side switch
+        {
+            "left" => EditorShellPanel.Left,
+            "right" => EditorShellPanel.Right,
+            _ => EditorShellPanel.None,
+        };
+        if (panel == EditorShellPanel.None) return Task.CompletedTask;
+        var clamped = (int)EditorShellResize.Clamp(width, CurrentWidthPx(panel), MinWidth(panel), MaxWidth(panel), double.NaN, MinCanvasWidth);
+        return InvokeAsync(() => CommitWidthAsync(panel, clamped));
+    }
 
+    private async Task CommitWidthAsync(EditorShellPanel side, int width)
+    {
+        if (_disposed || width == CurrentWidthPx(side) && (side == EditorShellPanel.Left ? _userLeft : _userRight) is not null) return;
+        if (width == CurrentWidthPx(side)) return;
+
+        if (side == EditorShellPanel.Left)
+        {
+            _userBaseLeft ??= LeftWidth;
+            _userLeft = width;
+            await LeftWidthChanged.InvokeAsync($"{width}px");
+        }
+        else
+        {
+            _userBaseRight ??= RightWidth;
+            _userRight = width;
+            await RightWidthChanged.InvokeAsync($"{width}px");
+        }
+
+        await PersistWidthsAsync();
+        StateHasChanged();
+    }
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
@@ -849,5 +1031,7 @@
         _disposed = true;
         if (_shellJs is not null) await _shellJs.DisposeAsync();
         if (_focus is not null) await _focus.DisposeAsync();
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
     }
 }
