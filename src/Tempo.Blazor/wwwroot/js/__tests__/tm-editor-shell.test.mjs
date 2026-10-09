@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    attachResize, canvasWidth, clampWidth, detachResize, loadPanelWidths, savePanelWidths, __resetForTests,
+    attachResize, canvasWidth, clampWidth, detachResize, measureWidth, loadPanelWidths, savePanelWidths, __resetForTests,
 } from '../tm-editor-shell.js';
 
 test.beforeEach(() => {
@@ -291,4 +291,10 @@ test('detaching with no drag in progress touches nothing', () => {
     detachResize('left');
 
     assert.equal(s.styles.size, 0);
+});
+
+test('measureWidth reads the rendered width of an element, -1 when it cannot be measured', () => {
+    assert.equal(measureWidth({ getBoundingClientRect: () => ({ width: 319.6 }) }), 320);
+    assert.equal(measureWidth(null), -1);
+    assert.equal(measureWidth({}), -1);
 });

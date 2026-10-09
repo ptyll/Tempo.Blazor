@@ -29,10 +29,11 @@ public class TmEditorShellResizerTests : LocalizationTestBase
         public Func<IEnumerable<JSRuntimeInvocation>> Load = null!;
     }
 
-    private Mod Module(double canvas = 700, string? stored = null, Exception? loadError = null)
+    private Mod Module(double canvas = 700, string? stored = null, Exception? loadError = null, double asideWidth = 300)
     {
         var module = JSInterop.SetupModule(ShellModule);
         module.Setup<double>("measureCanvas", _ => true).SetResult(canvas);
+        module.Setup<double>("measureWidth", _ => true).SetResult(asideWidth);
         var attach = module.SetupVoid("attachResize", _ => true); attach.SetVoidResult();
         var detach = module.SetupVoid("detachResize", _ => true); detach.SetVoidResult();
         var save = module.SetupVoid("savePanelWidths", _ => true); save.SetVoidResult();
@@ -496,5 +497,88 @@ public class TmEditorShellResizerTests : LocalizationTestBase
 
         var act = async () => await cut.Instance.HandleResizeCommitted("left", 300);
         await act.Should().NotThrowAsync();
+    }
+
+    // ── F6 r2 G6 ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Persist_ARestoredWidth_IsReportedThroughTheWidthCallbacks()
+    {
+        Module(stored: Stored("\"left\":{\"w\":300,\"base\":\"280px\"}", "\"right\":{\"w\":400,\"base\":\"320px\"}"));
+        var left = new List<string>();
+        var right = new List<string>();
+
+        RenderShell(TmLayoutMode.Desktop, p =>
+        {
+            p.Add(x => x.PersistWidthsKey, "demo");
+            p.Add(x => x.LeftWidthChanged, EventCallback.Factory.Create<string>(this, v => left.Add(v)));
+            p.Add(x => x.RightWidthChanged, EventCallback.Factory.Create<string>(this, v => right.Add(v)));
+        });
+
+        left.Should().Equal(new[] { "300px" }, "a restore counts as a user value, so a bound host learns about it");
+        right.Should().Equal(new[] { "400px" });
+    }
+
+    [Fact]
+    public void Persist_AKeySetAfterTheFirstRender_IsLoadedWhenItAppears()
+    {
+        var module = Module(stored: Stored("\"left\":{\"w\":300,\"base\":\"280px\"}"));
+        var cut = RenderShell(TmLayoutMode.Desktop);
+        module.Load().Should().BeEmpty("no key yet");
+
+        cut.Render(p => p.Add(x => x.PersistWidthsKey, "late"));
+
+        cut.WaitForAssertion(() => module.Load().Should().HaveCount(1));
+        cut.WaitForAssertion(() => Width(cut, "left").Should().Contain("300px"));
+    }
+
+    [Fact]
+    public void Persist_AChangedKey_LoadsTheNewKey()
+    {
+        var module = Module();
+        var cut = RenderShell(TmLayoutMode.Desktop, p => p.Add(x => x.PersistWidthsKey, "one"));
+        cut.WaitForAssertion(() => module.Load().Should().HaveCount(1));
+
+        cut.Render(p => p.Add(x => x.PersistWidthsKey, "two"));
+
+        cut.WaitForAssertion(() => module.Load().Should().HaveCount(2));
+        module.Load().Last().Arguments[0].Should().Be("two");
+    }
+
+    [Fact]
+    public async Task Persist_ResizingBackToTheHostWidth_RemovesTheStoredOverride()
+    {
+        var module = Module();
+        var raised = new List<string>();
+        var cut = RenderShell(TmLayoutMode.Desktop, p =>
+        {
+            p.Add(x => x.PersistWidthsKey, "demo");
+            p.Add(x => x.LeftWidthChanged, EventCallback.Factory.Create<string>(this, v => raised.Add(v)));
+        });
+        cut.WaitForAssertion(() => module.Load().Should().HaveCount(1));
+        await cut.InvokeAsync(() => cut.Instance.HandleResizeCommitted("left", 350));
+        EditorShellWidths.Parse((string?)module.Save().Last().Arguments[1]).Left.Should().NotBeNull();
+
+        await cut.InvokeAsync(() => cut.Instance.HandleResizeCommitted("left", 280));
+
+        module.Save().Last().Arguments[1].Should().BeNull("the user is back on the host width: nothing is left to store");
+        raised.Should().Equal("350px", "280px");
+        Width(cut, "left").Should().Contain("280px");
+    }
+
+    [Fact]
+    public void Keyboard_FromANonPixelHostWidth_StepsFromTheMeasuredAsideWidth()
+    {
+        Module(asideWidth: 320);
+        var raised = new List<string>();
+        var cut = RenderShell(TmLayoutMode.Desktop, p =>
+        {
+            p.Add(x => x.LeftWidth, "20rem");
+            p.Add(x => x.LeftWidthChanged, EventCallback.Factory.Create<string>(this, v => raised.Add(v)));
+        });
+
+        cut.Find("[role='separator'][data-side='left']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+
+        raised.Should().Equal(new[] { "336px" }, "320 measured + 16, not the 280 fallback + 16");
     }
 }
