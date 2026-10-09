@@ -350,6 +350,19 @@ public class TmEditorShellResizerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Separator_AttachesWithTheSideAndLimits_TheJsModuleNeedsForTheDragDirection()
+    {
+        var module = Module();
+        var cut = RenderShell();
+        cut.WaitForAssertion(() => module.Attach().Should().HaveCount(2));
+
+        var options = module.Attach().Select(i => System.Text.Json.JsonSerializer.Serialize(i.Arguments[5])).ToList();
+
+        options.Should().Contain("{\"side\":\"left\",\"min\":200,\"max\":480,\"minCanvas\":400}");
+        options.Should().Contain("{\"side\":\"right\",\"min\":240,\"max\":560,\"minCanvas\":400}");
+    }
+
+    [Fact]
     public void Separator_ReattachOnlyWhenTheClampInputsChange_NotOnEveryRender()
     {
         var module = Module();
