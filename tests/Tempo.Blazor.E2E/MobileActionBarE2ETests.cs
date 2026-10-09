@@ -582,8 +582,7 @@ public class MobileActionBarE2ETests : WasmTestBase
         // X10: the trigger advertises the menu like every other popup trigger.
         Assert.AreEqual("menu", await more.GetAttributeAsync("aria-haspopup"));
         Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"));
-        var controls = await more.GetAttributeAsync("aria-controls");
-        Assert.IsFalse(string.IsNullOrEmpty(controls), "aria-controls points at the panel Id");
+        Assert.IsNull(await more.GetAttributeAsync("aria-controls"), "F6 r2 G15: no aria-controls while the menu panel is not rendered");
 
         // Keyboard: Enter opens the popover (native button activation — Enter fires on keydown).
         await more.FocusAsync();
@@ -592,6 +591,8 @@ public class MobileActionBarE2ETests : WasmTestBase
         await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         Assert.AreEqual("true", await more.GetAttributeAsync("aria-expanded"));
+        var controls = await more.GetAttributeAsync("aria-controls");
+        Assert.IsFalse(string.IsNullOrEmpty(controls), "aria-controls points at the panel Id while it is open");
         Assert.AreEqual(controls, await panel.GetAttributeAsync("id"));
 
         // X4: a real surface — background, border and shadow, not the transparent reset.
