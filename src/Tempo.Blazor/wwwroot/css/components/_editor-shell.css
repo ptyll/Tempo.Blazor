@@ -155,6 +155,11 @@
     flex-direction: column;
 }
 
+/* Tabs presentation: the strip, the regions, the status bar and the action bar stack in one column. */
+.tm-editor-shell__main--tabs {
+    gap: 0;
+}
+
 /* The stage is the positioned host of the inline (non-modal) panels sheet: the sheet fills it and
    anchors to its bottom edge, and its snaps are fractions of this box. A size container so the
    canvas can reserve the sheet's half-height snap in container units. The inline drawer root is
