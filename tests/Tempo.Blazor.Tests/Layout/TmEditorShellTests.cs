@@ -765,6 +765,18 @@ public class TmEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
+    public void MobileSheet_AlwaysDeclaresThePanelsToggleAsItsRestoreTarget()
+    {
+        // The trap's default restore is "the element focused when the sheet opened" (often the page
+        // heading). A close from INSIDE the sheet (close button, Escape) must land on the toggle the
+        // sheet is replaced by; a non-modal trap already skips the restore when focus sits elsewhere.
+        var cut = RenderShell(TmLayoutMode.Mobile);
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-restore-target")
+            .Should().StartWith("tm-editor-shell-mobile-toggle-");
+    }
+
+    [Fact]
     public void Focus_AfterAStripCollapse_UsesFocusIfLostOnTheRailButton()
     {
         var module = JSInterop.SetupModule(FocusTrapModule);
