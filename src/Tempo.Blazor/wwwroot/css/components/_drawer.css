@@ -275,7 +275,7 @@
 
 /* ── Top layer (U1/U2) ───────────────────────────────────
    A MODAL drawer root carries popover="manual" at EVERY position and is promoted via
-   showPopover (tm-sheet.js), so an ancestor stacking context — a sticky TmTopBar under
+   showPopover (tm-top-layer.js), so an ancestor stacking context — a sticky TmTopBar under
    TmBottomNavigation, a transformed host — can neither confine nor cover it, and nothing opened
    from inside it paints invisible under it. The UA popover defaults the drawer rules do not set
    are reset at zero specificity (:where), matching the .tm-overlay-panel reset: margin:auto

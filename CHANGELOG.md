@@ -468,29 +468,45 @@
 
 - `TmEditorShell` and `TmSidePanel` (F6, `Tempo.Blazor.Components.Layout`): the responsive frame for
   canvas editors and a standalone inspector. `TmEditorShell` exposes the slots `Header`, `Toolbar`,
-  `Left`, `Canvas`, `Right`, `StatusBar` and `MobileActions` (`IReadOnlyList<TmActionItem>`, rendered
-  by `TmMobileActionBar`). It resolves its own layout from its container (`LayoutMode` /
-  `InitialMode` / `ResolvedLayoutChanged`): **desktop** is three columns with a strip toggle per
-  panel (hide / collapse to a 44px rail / expand, `aria-expanded` + `aria-controls`),
-  **tablet** shows at most one modal side sheet (the most recently opened panel wins; closing it
-  reveals the other), **mobile** is the canvas plus an inline, non-modal bottom sheet (snaps
-  50% / 100%, two-way snap index) in a positioned stage, with `MobilePanelPresentation.Tabs`
-  switching Blocks/Properties through a `role="tablist"` strip. `LeftOpen`, `RightOpen` and
-  `CollapsedPanels` (`[Flags] EditorShellPanel`) are two-way; `LeftWidth`/`RightWidth` plus the
-  optional `PersistWidthsKey` (localStorage) size the panels. Every close path (Escape, header
-  close, backdrop, swipe, a host closing a panel itself) returns focus to the panel toggle, and a
-  viewport flip (mobile → desktop → mobile) never reopens a closed sheet. `TmSidePanel` is the
-  docked-or-sheet inspector (`SidePanelPresentation` `Auto | Docked | Sheet`: docked on desktop, a
-  modal side sheet on tablet, a modal bottom sheet on mobile; `Open` two-way, `Title`,
-  `HeaderActions`, `Width`, `RestoreFocusTargetId`). Both compose `TmDrawer` — no local sheet,
-  gesture or focus logic. `docs/editor-shell.md` documents the pattern for the DiagramEditor,
-  Wireframe, Signing designer, PdfAnnotator and Modeling editors; the demo page is `/editor-shell`;
-  the wireframe stencil registers the `editor-shell` and `side-panel` roles.
-- `tm-sheet.js` accepts an explicit basis element and an explicit track-viewport flag for an inline
+  `Left`, `Canvas`, `Right`, `StatusBar`, `MobileActions` (`IReadOnlyList<TmActionItem>`, rendered
+  by `TmMobileActionBar`) and the optional rail slots `LeftRail` / `RightRail`. It resolves its own
+  layout from its container (`LayoutMode` / `InitialMode` / `ResolvedLayoutChanged`) with
+  per-instance thresholds (`Breakpoints`, a `TmLayoutBreakpoints(sm, lg)`; the same optional
+  parameter exists on `TmLayoutObserver`). **Desktop** and **tablet** are docked panels with a strip
+  toggle each (hide / collapse to a 44px rail / expand, `aria-expanded`, `aria-controls` only while
+  the controlled panel is rendered); on tablet **at most one panel is expanded** and there is no
+  modal. **Mobile** is the canvas plus an inline, non-modal bottom sheet (snaps 50% / 100%) with a
+  Left/Right tab strip when two panels are open, or `MobilePanelPresentation.Tabs` — a full-region
+  `Left | Canvas | Right` `tablist` (`CanvasTitle`). `ActiveMobilePanel` and `MobileSheetSnapIndex`
+  are two-way so a host can switch to the properties on a block selection and collapse the sheet on
+  an "add block" action; the Toolbar slot is not rendered on mobile when `MobileActions` is set.
+  `LeftOpen`, `RightOpen`, `CollapsedPanels` (`[Flags] EditorShellPanel`, now with `None = 0`) and
+  `LeftWidth` / `RightWidth` are two-way. Each expanded docked panel has a resize **separator**
+  (`role="separator"`, pointer drag + arrow keys, `MinLeftWidth` / `MaxLeftWidth` /
+  `MinRightWidth` / `MaxRightWidth`, never below `MinCanvasWidth`); `PersistWidthsKey` persists only
+  user-resized widths to `localStorage` (validated, an explicit host width wins). Focus returns to a
+  replaced trigger only when focus was lost. `TmSidePanel` is the docked-or-sheet inspector
+  (`SidePanelPresentation` `Auto | Docked | Sheet`: docked when its container resolves Desktop, a
+  modal sheet otherwise whose side/bottom geometry follows the viewport scope; `Open` two-way,
+  `Title`, `HeaderActions`, `FooterContent`, `Side` (`SidePanelSide.Left | Right`), `Width`,
+  `RestoreFocusTargetId`). Both compose `TmDrawer` — no local sheet, gesture or focus logic.
+  `docs/editor-shell.md` documents the pattern (incl. the e-mail editor mapping) for the
+  DiagramEditor, Wireframe, Signing designer, PdfAnnotator, Modeling and e-mail editors; the demo
+  page is `/editor-shell`; the wireframe stencil registers the `editor-shell` and `side-panel` roles.- `tm-sheet.js` accepts an explicit basis element and an explicit track-viewport flag for an inline
   sheet, the browser top-layer promotion helpers moved to `tm-top-layer.js` (the `tm-sheet.js`
   exports re-export them, so every existing caller keeps working), and the `TmDrawer` and
-  `TmModal` bodies now become a keyboard-reachable scroll region while they overflow.
+  `TmModal` bodies now become a keyboard-reachable scroll region while they overflow (see
+  **Changed**).
 ### Changed
+
+- **`TmDrawer` and `TmModal` bodies that overflow gain a tab stop.** Both now run the shared
+  `syncScrollRegion` (`tm-focus-trap.js`), exactly like `TmDialog` already did: while the body
+  overflows it becomes `role="region"` with `tabindex="0"` (named by the title when there is one) so
+  a keyboard user can scroll it; a body that fits grows no extra tab stop and the region never takes
+  initial focus. *Before:* the overflowing body was not focusable, so keyboard users could not scroll
+  it and Tab went straight from the header to the first control. *After:* one extra Tab stop on the
+  scroller, only while it overflows. Tests that count tab stops inside a long drawer or modal body,
+  or that snapshot the body element, will see the `tabindex` / `role` attributes.
 
 - Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
   `{0} čekajících změn`, `{0} řádků`) now use a neutral phrasing (`Počet: {0}`, `Komentáře: {0}`,

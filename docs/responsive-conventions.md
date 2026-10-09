@@ -23,6 +23,12 @@ reads the stylesheets to prove they match.
 - **Tablet** — from 640px up to, but not including, 1024px
 - **Desktop** — 1024px and above
 
+**Per-instance thresholds.** `TmLayoutObserver` and `TmEditorShell` take an optional
+`Breakpoints` (`TmLayoutBreakpoints(sm, lg)`, default `TmLayoutBreakpoints.Default` = the table
+above) for a component whose content needs other mode boundaries (an e-mail editor: mobile below 768,
+desktop from 1200). It moves only the *markup* branch — a stylesheet keeps the shared literals — and
+classification stays half-open. See [editor-shell.md](editor-shell.md).
+
 A new `@media` or `@container` condition uses one of these four widths. `TmBreakpointsTests` scans
 every `src/**/wwwroot/**/*.css` for `@container` widths; `@media` widths are held by
 `media-width-baseline.txt`, which is shrink-only and counts each occurrence.
