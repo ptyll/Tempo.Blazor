@@ -945,7 +945,7 @@
         foreach (var side in new[] { EditorShellPanel.Left, EditorShellPanel.Right })
         {
             var wanted = _resolved != TmLayoutMode.Mobile && IsExpanded(side, collapsed);
-            var id = side == EditorShellPanel.Left ? "left" : "right";
+            var id = ResizerId(side);
             if (!wanted)
             {
                 if (_attachedResizers.Remove(side) && _shellJs is not null) await _shellJs.DetachResizeAsync(id);
@@ -963,6 +963,11 @@
                 _main, _dotNetRef, id, MinWidth(side), MaxWidth(side), MinCanvasWidth);
         }
     }
+
+    // One shell instance, one registration per side: the module keeps a single map, so a shared
+    // "left"/"right" key would make the second shell on a page detach the first one's drag.
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
+    private string ResizerId(EditorShellPanel side) => $"{_instanceId}-{(side == EditorShellPanel.Left ? "left" : "right")}";
 
     private async Task OnSeparatorKeyAsync(EditorShellPanel side, KeyboardEventArgs args)
     {
