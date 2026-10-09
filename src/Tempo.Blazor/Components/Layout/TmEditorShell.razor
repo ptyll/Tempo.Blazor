@@ -623,7 +623,11 @@
         var next = collapsed & ~side;
         var other = side == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
         // Tablet: at most one expanded panel — opening one rails the other.
-        if (_resolved == TmLayoutMode.Tablet && IsExpanded(other, collapsed)) next |= other;
+        if (_resolved == TmLayoutMode.Tablet)
+        {
+            if (IsExpanded(other, collapsed)) next |= other;
+            ApplyTabletWinner(side, next);
+        }
         if (next != CollapsedPanels) await CollapsedPanelsChanged.InvokeAsync(next);
         if (side == EditorShellPanel.Left) await LeftOpenChanged.InvokeAsync(true);
         else await RightOpenChanged.InvokeAsync(true);
@@ -642,8 +646,40 @@
         var next = collapsed & ~side;
         var other = side == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
         if (_resolved == TmLayoutMode.Tablet && IsExpanded(other, collapsed)) next |= other;
-        _tabletWinner = side;
+        ApplyTabletWinner(side, next);
         await CollapsedPanelsChanged.InvokeAsync(next);
+    }
+
+    /// <summary>
+    /// The user picked the expanded panel on a tablet layout: remember it and apply the swap NOW,
+    /// before the callback is raised, so it takes effect even when the host binds nothing or ignores
+    /// <see cref="CollapsedPanelsChanged"/> (the rail the shell imposed itself must stay operable).
+    /// </summary>
+    private void ApplyTabletWinner(EditorShellPanel winner, EditorShellPanel raised)
+    {
+        if (_resolved != TmLayoutMode.Tablet) return;
+        _tabletWinner = winner;
+        _effectiveCollapsed = ComputeEffectiveCollapsed(_resolved);
+        // The set about to be raised is the one now in effect: the next parameter pass must not
+        // raise it a second time.
+        if (_effectiveCollapsed == raised) _lastRaisedCollapsed = raised == CollapsedPanels ? null : raised;
+    }
+
+    /// <summary>
+    /// The collapse set in effect for a layout: the host's <see cref="CollapsedPanels"/>, plus — on
+    /// tablet, when both panels would be expanded — the panel that did not win. A pure computation
+    /// over parameters and <c>_tabletWinner</c>: safe to call from handlers and from the parameter pass.
+    /// </summary>
+    private EditorShellPanel ComputeEffectiveCollapsed(TmLayoutMode resolved)
+    {
+        var leftExpanded = LeftOpen && Left is not null && !CollapsedPanels.HasFlag(EditorShellPanel.Left);
+        var rightExpanded = RightOpen && Right is not null && !CollapsedPanels.HasFlag(EditorShellPanel.Right);
+        var effective = CollapsedPanels;
+        if (resolved == TmLayoutMode.Tablet && leftExpanded && rightExpanded)
+        {
+            effective |= _tabletWinner == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
+        }
+        return effective;
     }
 
     private Task OnMobileSheetClosed(bool open) => open ? Task.CompletedTask : CloseAllPanelsAsync();
@@ -828,11 +864,7 @@
         _prevHostLeftExpanded = leftExpanded;
         _prevHostRightExpanded = rightExpanded;
 
-        var effective = CollapsedPanels;
-        if (resolved == TmLayoutMode.Tablet && leftExpanded && rightExpanded)
-        {
-            effective |= _tabletWinner == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
-        }
+        var effective = ComputeEffectiveCollapsed(resolved);
         _effectiveCollapsed = effective;
 
         var raiseCollapsed = false;
