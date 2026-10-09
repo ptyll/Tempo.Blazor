@@ -52,6 +52,7 @@ else
 @code {
     private readonly OverlayLayout _layout = new();
     private readonly string _morePanelId = $"tm-mab-more-{Guid.NewGuid():N}";
+    private readonly string _moreButtonId = $"tm-mab-more-btn-{Guid.NewGuid():N}";
     private TmOverlayPanel? _morePanel;
     private ElementReference _moreButton;
     private ElementReference _firstMenuItem;
@@ -229,43 +230,46 @@ else
             builder.OpenRegion(2);
             builder.OpenElement(0, "button");
             builder.AddAttribute(1, "type", "button");
-            builder.AddAttribute(2, "class", "tm-btn tm-btn-secondary tm-btn-sm tm-mobile-action-bar__more tm-touch-target");
-            builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
-            builder.AddAttribute(4, "aria-haspopup", "menu");
-            builder.AddAttribute(5, "aria-expanded", _moreOpen ? "true" : "false");
-            builder.AddAttribute(6, "aria-controls", _morePanelId);
+            // The trigger needs an id: TmOverlayPanel's sheet restores focus through
+            // Anchor.Id — without it a programmatic CloseMoreAsync leaves focus on <body>.
+            builder.AddAttribute(2, "id", _moreButtonId);
+            builder.AddAttribute(3, "class", "tm-btn tm-btn-secondary tm-btn-sm tm-mobile-action-bar__more tm-touch-target");
+            builder.AddAttribute(4, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
+            builder.AddAttribute(5, "aria-haspopup", "menu");
+            builder.AddAttribute(6, "aria-expanded", _moreOpen ? "true" : "false");
+            builder.AddAttribute(7, "aria-controls", _morePanelId);
             // X11: an overflow of nothing but disabled items has nothing to invoke.
-            builder.AddAttribute(7, "disabled", moreDisabled);
-            builder.OpenElement(8, "span");
-            builder.AddAttribute(9, "class", "tm-btn-label");
-            builder.OpenComponent<TmIcon>(10);
-            builder.AddAttribute(11, "Name", IconNames.MoreHorizontal);
-            builder.AddAttribute(12, "Size", IconSize.Sm);
+            builder.AddAttribute(8, "disabled", moreDisabled);
+            builder.OpenElement(9, "span");
+            builder.AddAttribute(10, "class", "tm-btn-label");
+            builder.OpenComponent<TmIcon>(11);
+            builder.AddAttribute(12, "Name", IconNames.MoreHorizontal);
+            builder.AddAttribute(13, "Size", IconSize.Sm);
             builder.CloseComponent();
-            builder.OpenElement(13, "span");
-            builder.AddAttribute(14, "class", "tm-mobile-action-bar__label-text");
-            builder.AddContent(15, EffectiveMoreLabel);
+            builder.OpenElement(14, "span");
+            builder.AddAttribute(15, "class", "tm-mobile-action-bar__label-text");
+            builder.AddContent(16, EffectiveMoreLabel);
             builder.CloseElement();
             builder.CloseElement();
             // After the attributes and content: an element-reference capture may not sit between
             // an element frame and its attributes (RenderTreeBuilder assertion).
-            builder.AddElementReferenceCapture(16, reference => _moreButton = reference);
+            builder.AddElementReferenceCapture(17, reference => _moreButton = reference);
             builder.CloseElement();
 
-            builder.OpenComponent<TmOverlayPanel>(17);
-            builder.AddComponentParameter(18, "Id", _morePanelId);
-            builder.AddComponentParameter(19, "Anchor", _moreButton);
+            builder.OpenComponent<TmOverlayPanel>(18);
+            builder.AddComponentParameter(19, "Id", _morePanelId);
+            builder.AddComponentParameter(20, "Anchor", _moreButton);
             // X4: the panel carries the bar's own surface class — without it the zero-specificity
             // reset leaves the popover transparent (container-mobile on a desktop viewport).
-            builder.AddComponentParameter(20, "Class", "tm-mobile-action-bar__menu-panel");
-            builder.AddComponentParameter(21, "Role", "menu");
-            builder.AddComponentParameter(22, "Title", EffectiveMoreLabel);
-            builder.AddComponentParameter(23, "MobilePresentation", PanelPresentation.Auto);
-            builder.AddComponentParameter(24, "InitialMode", context.Resolved);
-            builder.AddComponentParameter(25, "OnOpened", EventCallback.Factory.Create(this, HandleMoreOpened));
-            builder.AddComponentParameter(26, "OnDismissed", EventCallback.Factory.Create<string>(this, _ => HandleMoreDismissed()));
-            builder.AddAttribute(27, "ChildContent", (RenderFragment)(b => BuildMenu(b, overflow)));
-            builder.AddComponentReferenceCapture(28, value => _morePanel = (TmOverlayPanel)value);
+            builder.AddComponentParameter(21, "Class", "tm-mobile-action-bar__menu-panel");
+            builder.AddComponentParameter(22, "Role", "menu");
+            builder.AddComponentParameter(23, "Title", EffectiveMoreLabel);
+            builder.AddComponentParameter(24, "MobilePresentation", PanelPresentation.Auto);
+            builder.AddComponentParameter(25, "InitialMode", context.Resolved);
+            builder.AddComponentParameter(26, "OnOpened", EventCallback.Factory.Create(this, HandleMoreOpened));
+            builder.AddComponentParameter(27, "OnDismissed", EventCallback.Factory.Create<string>(this, _ => HandleMoreDismissed()));
+            builder.AddAttribute(28, "ChildContent", (RenderFragment)(b => BuildMenu(b, overflow)));
+            builder.AddComponentReferenceCapture(29, value => _morePanel = (TmOverlayPanel)value);
             builder.CloseComponent();
             builder.CloseRegion();
         }
@@ -358,10 +362,15 @@ else
     /// <summary>
     /// Closes the "More" menu when it is open (a no-op otherwise). Use after a confirmed
     /// <see cref="TmActionItem.KeepMenuOpen"/> action — e.g. the host's delete flow closes the
-    /// sheet once the user confirms; focus returns to the "More" trigger.
+    /// sheet once the user confirms; focus returns to the "More" trigger (the flag is consumed
+    /// in OnAfterRenderAsync, so the restore survives a sibling surface that also disposes in
+    /// the same render batch and would otherwise land focus on &lt;body&gt;).
     /// </summary>
     public Task CloseMoreAsync()
-        => _morePanel?.SetOpenAsync(false) ?? Task.CompletedTask;
+    {
+        _focusMoreAfterClose = true;
+        return _morePanel?.SetOpenAsync(false) ?? Task.CompletedTask;
+    }
 
     /// <summary>Fires once per open, after the panel is actually displayed (the m3 contract).</summary>
     private void HandleMoreOpened()

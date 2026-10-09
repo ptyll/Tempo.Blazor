@@ -30,7 +30,7 @@
    --tm-mobile-action-bar-reserve-block-size token (docs/responsive-conventions.md B4). */
 .tm-mobile-action-bar--fixed .tm-mobile-action-bar__body--with-bar {
   padding-bottom: var(--tm-mobile-action-bar-reserve-block-size,
-      calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px)));
+      calc(var(--tm-mobile-action-bar-height) + 1px + env(safe-area-inset-bottom, 0px)));
 }
 
 .tm-mobile-action-bar__bar {
@@ -73,7 +73,10 @@
   gap: var(--tm-space-1);
   min-height: var(--tm-touch-target);
   height: auto;
-  padding: var(--tm-space-1);
+  /* The vertical half-space keeps a one-line tile at exactly the touch target: together with
+     the bar's padding + border it makes the bar's real box equal
+     --tm-mobile-action-bar-reserve-block-size, so the FixedViewport reserve covers it exactly. */
+  padding: calc(var(--tm-space-1) / 2) var(--tm-space-1);
   border: none;
   background: transparent;
   color: var(--tm-text-primary);

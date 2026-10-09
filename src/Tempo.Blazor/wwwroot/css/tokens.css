@@ -273,7 +273,7 @@
      they sit in flow at the end of the content. Hosts read this token (e.g. for their own
      scroll-padding-bottom); the component's own with-bar rule uses it too. */
   --tm-mobile-action-bar-reserve-block-size:
-      calc(var(--tm-touch-target) + var(--tm-space-4) + env(safe-area-inset-bottom, 0px));
+      calc(var(--tm-touch-target) + var(--tm-space-4) + 1px + env(safe-area-inset-bottom, 0px));
 
   /* ── Alias Tokens (used by components) ──────────────────────── */
   --tm-surface:                var(--tm-bg-surface);

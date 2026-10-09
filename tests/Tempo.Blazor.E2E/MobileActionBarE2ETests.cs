@@ -362,7 +362,9 @@ public class MobileActionBarE2ETests : WasmTestBase
         Assert.IsTrue(Math.Abs(fixedBox!.Y + fixedBox.Height - viewport.Height) < 2,
             "the FixedViewport bar sits on the viewport bottom edge");
 
-        // X2 (b): only the FixedViewport variant reserves body height — equal to the bar height.
+        // X2 (b): only the FixedViewport variant reserves body height, equal to the bar's real
+        // box (token = touch target + bar padding + border; the tile's min-height floors the
+        // content at the touch target, so the equality is deterministic for one-line labels).
         var fixedPadding = await fixedRoot.Locator(".tm-mobile-action-bar__body")
             .EvaluateAsync<string>("el => getComputedStyle(el).paddingBottom");
         var fixedPaddingPx = double.Parse(fixedPadding.Replace("px", "", StringComparison.Ordinal), CultureInfo.InvariantCulture);
@@ -400,20 +402,12 @@ public class MobileActionBarE2ETests : WasmTestBase
         Assert.AreEqual(controls, await panel.GetAttributeAsync("id"));
 
         // X4: a real surface — background, border and shadow, not the transparent reset.
-        var paint = await panel.EvaluateAsync<(string Background, string BorderTopWidth, string BoxShadow)>(
-            """
-            el => {
-                const style = getComputedStyle(el);
-                return {
-                    Background: style.backgroundColor,
-                    BorderTopWidth: style.borderTopWidth,
-                    BoxShadow: style.boxShadow,
-                };
-            }
-            """);
-        Assert.AreNotEqual("rgba(0, 0, 0, 0)", paint.Background, "the popover must not be transparent");
-        Assert.AreEqual("1px", paint.BorderTopWidth, "the popover carries a 1px border");
-        Assert.AreNotEqual("none", paint.BoxShadow, "the popover carries the popover shadow");
+        var background = await panel.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        var borderTopWidth = await panel.EvaluateAsync<string>("el => getComputedStyle(el).borderTopWidth");
+        var boxShadow = await panel.EvaluateAsync<string>("el => getComputedStyle(el).boxShadow");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", background, "the popover must not be transparent");
+        Assert.AreEqual("1px", borderTopWidth, "the popover carries a 1px border");
+        Assert.AreNotEqual("none", boxShadow, "the popover carries the popover shadow");
 
         // X5: choosing an item (KeepMenuOpen=false) closes the popover and restores focus to
         // the More trigger — never <body>.
@@ -481,32 +475,67 @@ public class MobileActionBarE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task Demo_390_AutoCard_BarSticksAtViewportBottom_MidScroll()
+    public async Task Demo_390_AutoCard_BarSticksAtViewportBottom_WhileTheCardStraddlesTheFold()
     {
-        // X2 (c): same proof for the demo's Auto card — mid-scroll at the real 844-high viewport.
+        // X2 (c): sticky proof for the demo's Auto card at a real (not page-height) viewport.
+        // The card is shorter than the page: at 844px the fold cuts only ~1px of it, so use a
+        // 700px-high viewport to give the pin a real holding range (SetViewportSize keeps the
+        // touch emulation; only FullPage screenshots reset it).
         var context = await CreateTouchContextAsync(390, 844);
         var page = await context.NewPageAsync();
         RegisterContext(context);
         await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
         await WaitForAppReadyAsync(page);
+        await page.SetViewportSizeAsync(390, 700);
 
-        var root = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar");
-        var bar = root.Locator(".tm-mobile-action-bar__bar");
+        var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
-        // Scroll until the card's bottom edge passes the viewport bottom: the bar must pin.
+        // Scroll so the fold cuts 40px into the card (card bottom 40px below the viewport
+        // bottom — solidly inside the sticky range): the bar is pinned to the viewport bottom.
+        var pinCut = await page.EvaluateAsync<double>(
+            """
+            () => {
+                const card = document.querySelector("[data-testid='mab-auto-bar']");
+                const top = card.getBoundingClientRect().top + window.scrollY;
+                window.scrollTo(0, Math.max(0, top + card.offsetHeight - window.innerHeight - 40));
+                return card.getBoundingClientRect().bottom - window.innerHeight;
+            }
+            """);
+        Assert.IsTrue(pinCut > 5, $"the fold must cut the card (bottom offset {pinCut}px) for the pin to engage");
+        await AssertBarPinnedToViewportBottomAsync(page, bar);
+
+        await CaptureViewportOnlyAsync(page, "390-auto-card-mid-sticky");
+
+        // Scroll until the whole card is in view: the sticky range is exhausted, the bar sits
+        // in flow at the card's bottom edge (no pinning, no floating above the content).
         await page.EvaluateAsync(
             """
             () => {
                 const card = document.querySelector("[data-testid='mab-auto-bar']");
                 const top = card.getBoundingClientRect().top + window.scrollY;
-                window.scrollTo(0, top + card.offsetHeight - window.innerHeight + 60);
+                window.scrollTo(0, top - 60);
             }
             """);
         await page.WaitForTimeoutAsync(200);
-        await AssertBarPinnedToViewportBottomAsync(page, bar);
+        var settled = await page.EvaluateAsync<(double BarBottom, double CardBottom)>(
+            """
+            () => {
+                const card = document.querySelector("[data-testid='mab-auto-bar']");
+                const bar = document.querySelector("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
+                return {
+                    BarBottom: bar.getBoundingClientRect().bottom,
+                    CardBottom: card.getBoundingClientRect().bottom,
+                };
+            }
+            """);
+        Assert.IsTrue(Math.Abs(settled.BarBottom - settled.CardBottom) <= 1.5,
+            $"with the card fully in view the bar sits at the card's bottom edge (bar {settled.BarBottom}, card {settled.CardBottom})");
 
-        await CaptureViewportOnlyAsync(page, "390-auto-card-mid-sticky");
+        // Back into the pin range: the pin engages again.
+        await page.EvaluateAsync("() => window.scrollTo(0, 0)");
+        await page.WaitForTimeoutAsync(200);
+        await AssertBarPinnedToViewportBottomAsync(page, bar);
     }
 
     [TestMethod]
