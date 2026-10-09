@@ -37,13 +37,18 @@ public class ImageEndpointTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task GetImageStream_ReturnsRedirectAndConsumesTicket()
+    public async Task GetImageStream_ServesSvgInlineAndConsumesTicket()
     {
+        // The stream endpoint serves the local SVG asset inline (no redirect): the lightbox
+        // loads it straight from the response.
         var ticketResponse = await _client.PostAsync("/api/images/1/ticket", null);
         var ticket = await ticketResponse.Content.ReadFromJsonAsync<TicketResponse>();
 
         var streamResponse = await _client.GetAsync(ticket!.TicketUrl);
-        Assert.Equal(HttpStatusCode.Redirect, streamResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, streamResponse.StatusCode);
+        Assert.Equal("image/svg+xml", streamResponse.Content.Headers.ContentType?.MediaType);
+        var body = await streamResponse.Content.ReadAsStringAsync();
+        Assert.False(string.IsNullOrWhiteSpace(body));
 
         var secondResponse = await _client.GetAsync(ticket.TicketUrl);
         Assert.Equal(HttpStatusCode.NotFound, secondResponse.StatusCode);

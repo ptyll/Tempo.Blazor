@@ -318,6 +318,14 @@ else
         return _morePanel?.SetOpenAsync(true) ?? Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Closes the "More" menu when it is open (a no-op otherwise). Use after a confirmed
+    /// <see cref="TmActionItem.KeepMenuOpen"/> action — e.g. the host's delete flow closes the
+    /// sheet once the user confirms, and focus returns to the "More" trigger.
+    /// </summary>
+    public Task CloseMoreAsync()
+        => throw new NotImplementedException();
+
     /// <summary>Fires once per open, after the panel is actually displayed (the m3 contract).</summary>
     private void HandleMoreOpened()
     {

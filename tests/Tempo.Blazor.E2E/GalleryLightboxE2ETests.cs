@@ -64,6 +64,16 @@ public class GalleryLightboxE2ETests : WasmTestBase
         StringAssert.Contains(counter, "1");
         StringAssert.Contains(counter, "8");
 
+        // X8 (F5 review): the seeded SVGs carry explicit width/height, so the image paints at a
+        // real size — a viewBox-only SVG collapses the <img> to 0×0 inside the flex wrap.
+        var img = lightbox.Locator(".tm-lightbox-img");
+        var imgBox = await img.BoundingBoxAsync();
+        Assert.IsNotNull(imgBox, "the lightbox image must render a box");
+        Assert.IsTrue(imgBox!.Width >= 200, $"the lightbox image must be at least 200px wide, was {imgBox.Width}");
+        var naturalWidth = await img.EvaluateAsync<int>("el => el.naturalWidth");
+        Assert.IsTrue(naturalWidth > 0, "the lightbox image must have decoded (naturalWidth > 0)");
+        await Assertions.Expect(img).ToBeVisibleAsync();
+
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = Path.Combine(ShotDir, "390-lightbox-open.png"),
@@ -89,6 +99,41 @@ public class GalleryLightboxE2ETests : WasmTestBase
         var focusInsideLightbox = await page.EvaluateAsync<bool>(
             "() => !!document.activeElement?.closest?.('.tm-lightbox')");
         Assert.IsFalse(focusInsideLightbox, "focus must not stay inside the closed lightbox");
+    }
+
+    [TestMethod]
+    public async Task Gallery_Lightbox_1440_ImagePaints_AtDesktopWidth()
+    {
+        // X8: re-captured at 1440 — the first committed shot was an empty lightbox because the
+        // seeded SVGs had no width/height.
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/gallery");
+        await WaitForAppReadyAsync(page);
+
+        var items = page.Locator(".tm-gallery-item");
+        await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await items.First.ClickAsync();
+
+        var lightbox = page.Locator(".tm-lightbox");
+        await lightbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var img = lightbox.Locator(".tm-lightbox-img");
+        var imgBox = await img.BoundingBoxAsync();
+        Assert.IsNotNull(imgBox, "the lightbox image must render a box");
+        Assert.IsTrue(imgBox!.Width >= 200, $"the lightbox image must be at least 200px wide, was {imgBox.Width}");
+        var naturalWidth = await img.EvaluateAsync<int>("el => el.naturalWidth");
+        Assert.IsTrue(naturalWidth > 0, "the lightbox image must have decoded (naturalWidth > 0)");
+        await Assertions.Expect(img).ToBeVisibleAsync();
+
+        await page.ScreenshotAsync(new PageScreenshotOptions
+        {
+            Path = Path.Combine(ShotDir, "1440-lightbox-open.png"),
+            FullPage = false,
+        });
+
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(lightbox).ToBeHiddenAsync();
     }
 
     private static string FindRepoRoot()
