@@ -254,6 +254,10 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.AreEqual("false", await reopen.GetAttributeAsync("aria-expanded"));
         Assert.IsNull(await reopen.GetAttributeAsync("aria-controls"), "the sheet it controls is not rendered");
         StringAssert.Contains(await reopen.InnerTextAsync(), "Blocks", "the closed affordance is labelled, not a bare chevron");
+        var toggleBox = (await reopen.BoundingBoxAsync())!;
+        var labelBox = (await reopen.Locator(".tm-editor-shell__panel-toggle-label").BoundingBoxAsync())!;
+        Assert.IsTrue(toggleBox.Width >= 160, $"the labelled bar is wide enough to SHOW its label under touch (coarse pointer) too ({toggleBox.Width}px)");
+        Assert.IsTrue(labelBox.Width >= 60 && labelBox.X + labelBox.Width <= toggleBox.X + toggleBox.Width + 1, "the label is painted inside the bar, not clipped");
         await CaptureViewportOnlyAsync(page, "390-mobile-sheet-closed");
 
         await reopen.ClickAsync();
