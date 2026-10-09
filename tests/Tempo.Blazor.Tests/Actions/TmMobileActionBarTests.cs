@@ -551,12 +551,16 @@ public class TmMobileActionBarTests : LocalizationTestBase
         var more = cut.Find(".tm-mobile-action-bar__more");
         more.GetAttribute("aria-haspopup").Should().Be("menu");
         more.GetAttribute("aria-expanded").Should().Be("false");
-        var controls = more.GetAttribute("aria-controls");
-        controls.Should().NotBeNullOrEmpty();
+        // F6 r2 G15: the controlled menu panel is not rendered while closed, so the trigger names no
+        // target (aria-controls must reference an element that exists).
+        more.HasAttribute("aria-controls").Should().BeFalse("the menu panel is absent while the menu is closed");
 
         more.Click();
 
-        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+        var open = cut.Find(".tm-mobile-action-bar__more");
+        open.GetAttribute("aria-expanded").Should().Be("true");
+        var controls = open.GetAttribute("aria-controls");
+        controls.Should().NotBeNullOrEmpty();
         cut.Find(".tm-mobile-action-bar__menu-panel").Id.Should().Be(controls);
     }
 
