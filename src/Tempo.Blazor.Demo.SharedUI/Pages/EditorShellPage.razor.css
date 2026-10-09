@@ -1,0 +1,187 @@
+.es-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-4);
+}
+
+.es-header h1 {
+    margin: 0 0 var(--tm-space-1);
+}
+
+.es-header p {
+    margin: 0;
+    color: var(--tm-color-text-muted);
+}
+
+/* A definite height so the shell's inner layout (canvas scroll, panels sheet, bar) is real. */
+.es-shell-host {
+    block-size: 720px;
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    overflow: hidden;
+}
+
+@media (width < 640px) {
+    .es-shell-host {
+        block-size: calc(100dvh - 220px);
+        min-block-size: 480px;
+    }
+}
+
+.es-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.es-editor-header h2 {
+    margin: 0;
+    font-size: var(--tm-text-lg, 1.125rem);
+}
+
+.es-editor-header__state {
+    font-size: var(--tm-text-sm, 0.875rem);
+    color: var(--tm-color-text-muted);
+}
+
+.es-editor-toolbar {
+    display: flex;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.es-toolbox {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3);
+}
+
+.es-toolbox__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--tm-space-2);
+}
+
+.es-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-3) var(--tm-space-2);
+    font-size: var(--tm-text-xs, 0.75rem);
+    color: var(--tm-color-text);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.es-block:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.es-block:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.es-canvas {
+    display: flex;
+    justify-content: center;
+}
+
+.es-canvas__card {
+    inline-size: min(100%, 420px);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    padding: var(--tm-space-4);
+}
+
+.es-canvas__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    color: var(--tm-color-primary);
+    margin-block-end: var(--tm-space-3);
+}
+
+.es-canvas__hero {
+    text-align: center;
+    background: var(--tm-color-primary-subtle);
+    border-radius: var(--tm-radius-card);
+    padding: var(--tm-space-6) var(--tm-space-4);
+}
+
+.es-canvas__hero h3 {
+    margin: 0 0 var(--tm-space-2);
+}
+
+.es-canvas__hero p {
+    margin: 0 0 var(--tm-space-4);
+    color: var(--tm-color-text-muted);
+}
+
+.es-canvas__button {
+    display: inline-block;
+    padding: var(--tm-space-2) var(--tm-space-6);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-white);
+    border-radius: var(--tm-radius-control);
+}
+
+.es-canvas__footer {
+    margin: var(--tm-space-4) 0 0;
+    text-align: center;
+    font-size: var(--tm-text-xs, 0.75rem);
+    color: var(--tm-color-text-muted);
+}
+
+.es-props {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3);
+}
+
+.es-props__heading {
+    margin: 0;
+    font-size: var(--tm-text-base, 1rem);
+}
+
+.es-side-panel-section h2 {
+    margin: 0 0 var(--tm-space-1);
+}
+
+.es-side-panel-section > p {
+    margin: 0 0 var(--tm-space-3);
+    color: var(--tm-color-text-muted);
+}
+
+.es-side-panel-host {
+    display: flex;
+    gap: var(--tm-space-3);
+    align-items: flex-start;
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-workspace);
+}
+
+.es-side-panel-host .tm-side-panel--docked {
+    max-block-size: 320px;
+}
+
+.es-side-panel-host__content {
+    flex: 1;
+    min-inline-size: 0;
+}
+
+.es-last-action {
+    margin-block-start: var(--tm-space-3);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-text-sm, 0.875rem);
+}

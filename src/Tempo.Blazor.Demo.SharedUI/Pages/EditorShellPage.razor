@@ -1,0 +1,239 @@
+@page "/editor-shell"
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Layout
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmEditorShellDemo_Title"] – Tempo.Blazor</PageTitle>
+
+<div class="es-page">
+    <header class="es-header">
+        <h1 tabindex="-1" @ref="_title">@Loc["TmEditorShellDemo_Title"]</h1>
+        <p>@Loc["TmEditorShellDemo_Intro"]</p>
+    </header>
+
+    <div class="es-shell-host" data-testid="editor-shell-host">
+        <TmEditorShell @ref="_shell"
+                       LeftTitle="@Loc["TmEditorShellDemo_Blocks"]"
+                       RightTitle="@Loc["TmEditorShellDemo_Properties"]"
+                       @bind-LeftOpen="_leftOpen"
+                       @bind-RightOpen="_rightOpen"
+                       @bind-CollapsedPanels="_collapsed"
+                       MobilePanelPresentation="MobilePanelPresentation.Tabs"
+                       MobileActions="_mobileActions"
+                       PersistWidthsKey="editor-shell-demo"
+                       data-testid="editor-shell">
+            <Header>
+                <div class="es-editor-header">
+                    <h2>@Loc["TmEditorShellDemo_EditorTitle"]</h2>
+                    <span class="es-editor-header__state">@Loc["TmEditorShellDemo_SavedState"]</span>
+                </div>
+            </Header>
+            <Toolbar>
+                <div class="es-editor-toolbar" role="group" aria-label="@Loc["TmEditorShellDemo_ToolbarLabel"]">
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordUndo">@Loc["TmEditorShellDemo_ActionUndo"]</TmButton>
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordRedo">@Loc["TmEditorShellDemo_ActionRedo"]</TmButton>
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordPreview">@Loc["TmEditorShellDemo_ActionPreview"]</TmButton>
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordValidate">@Loc["TmEditorShellDemo_ActionValidate"]</TmButton>
+                </div>
+            </Toolbar>
+            <Left>
+                <div class="es-toolbox">
+                    <TmSearchInput Placeholder="@Loc["TmEditorShellDemo_SearchBlocks"]" data-testid="es-block-search" />
+                    <div class="es-toolbox__grid" data-testid="es-block-grid">
+                        @foreach (var block in _blocks)
+                        {
+                            <button type="button" class="es-block" data-block-id="@block.Id" @onclick="() => SelectBlock(block.Id)">
+                                <TmIcon Name="@block.Icon" />
+                                <span>@Loc[block.LabelKey]</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </Left>
+            <Canvas>
+                <div class="es-canvas" data-testid="es-canvas">
+                    <div class="es-canvas__card">
+                        <div class="es-canvas__logo">
+                            <TmIcon Name="zap" Size="IconSize.Lg" />
+                            <strong>@Loc["TmEditorShellDemo_Brand"]</strong>
+                        </div>
+                        <div class="es-canvas__hero">
+                            <h3>@Loc["TmEditorShellDemo_CanvasHeading"]</h3>
+                            <p>@Loc["TmEditorShellDemo_CanvasBody"]</p>
+                            <span class="es-canvas__button">@Loc["TmEditorShellDemo_CanvasAction"]</span>
+                        </div>
+                        <p class="es-canvas__footer">@Loc["TmEditorShellDemo_CanvasFooter"]</p>
+                    </div>
+                </div>
+            </Canvas>
+            <Right>
+                <div class="es-props" data-testid="es-properties">
+                    <h3 class="es-props__heading">@Loc["TmEditorShellDemo_Properties"]</h3>
+                    <TmFormField Label="@Loc["TmEditorShellDemo_PropButtonText"]">
+                        <TmTextInput Value="@_buttonText" ValueChanged="OnButtonTextChanged" data-testid="es-prop-input" />
+                    </TmFormField>
+                    <TmFormField Label="@Loc["TmEditorShellDemo_PropAlignment"]">
+                        <TmSelect TValue="string" Value="@_alignment" ValueChanged="OnAlignmentChanged" Options="@_alignOptions" data-testid="es-prop-align" />
+                    </TmFormField>
+                </div>
+            </Right>
+            <StatusBar>
+                <span data-testid="es-status">@Loc["TmEditorShellDemo_StatusBar"]</span>
+            </StatusBar>
+        </TmEditorShell>
+    </div>
+
+    <section class="es-side-panel-section" data-testid="side-panel-section">
+        <h2>@Loc["TmSidePanelDemo_Title"]</h2>
+        <p>@Loc["TmSidePanelDemo_Intro"]</p>
+        <div class="es-side-panel-host">
+            <TmSidePanel @bind-Open="_inspectorOpen"
+                         Title="@Loc["TmSidePanelDemo_InspectorTitle"]"
+                         Width="320px"
+                         data-testid="side-panel">
+                <HeaderActions>
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordInspect">@Loc["TmSidePanelDemo_ActionInspect"]</TmButton>
+                </HeaderActions>
+                <ChildContent>
+                    <p>@Loc["TmSidePanelDemo_InspectorBody"]</p>
+                </ChildContent>
+            </TmSidePanel>
+            <div class="es-side-panel-host__content">
+                <TmButton OnClick="ToggleInspector" aria-pressed="@InspectorPressed" data-testid="side-panel-toggle">
+                    @(_inspectorOpen ? Loc["TmSidePanelDemo_HideInspector"] : Loc["TmSidePanelDemo_ShowInspector"])
+                </TmButton>
+                <p class="es-last-action" data-testid="es-last-action">@Loc["TmEditorShellDemo_LastAction"]: @_lastAction</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private TmEditorShell? _shell;
+    private ElementReference _title;
+    private bool _leftOpen = true;
+    private bool _rightOpen = true;
+    private EditorShellPanel _collapsed;
+    private bool _inspectorOpen = true;
+    private string _lastAction = "—";
+    private string _buttonText = "Start now";
+    private string _alignment = "center";
+
+    private readonly (string Id, string Icon, string LabelKey)[] _blocks =
+    [
+        ("text", "type", "TmEditorShellDemo_BlockText"),
+        ("image", "image", "TmEditorShellDemo_BlockImage"),
+        ("button", "mouse-pointer", "TmEditorShellDemo_BlockButton"),
+        ("divider", "minus", "TmEditorShellDemo_BlockDivider"),
+        ("heading", "type", "TmEditorShellDemo_BlockHeading"),
+        ("spacer", "minus", "TmEditorShellDemo_BlockSpacer"),
+    ];
+
+    private IReadOnlyList<SelectOption<string>> _alignOptions = [];
+
+    private IReadOnlyList<TmActionItem> _mobileActions = [];
+
+    private string InspectorPressed => _inspectorOpen ? "true" : "false";
+
+    // X14/X18: built per parameter set so a culture switch re-renders the labels; the
+    // EventCallback receiver is this page, so its own markup re-renders when an action runs.
+    protected override void OnParametersSet()
+    {
+        _alignOptions =
+        [
+            new SelectOption<string>("left", Loc["TmEditorShellDemo_AlignLeft"]),
+            new SelectOption<string>("center", Loc["TmEditorShellDemo_AlignCenter"]),
+            new SelectOption<string>("right", Loc["TmEditorShellDemo_AlignRight"]),
+        ];
+        _mobileActions =
+        [
+            new TmActionItem
+            {
+                Id = "undo",
+                Label = Loc["TmEditorShellDemo_ActionUndo"],
+                Icon = "rotate-ccw",
+                Priority = 100,
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmEditorShellDemo_ActionUndo")),
+            },
+            new TmActionItem
+            {
+                Id = "redo",
+                Label = Loc["TmEditorShellDemo_ActionRedo"],
+                Icon = "rotate-cw",
+                Priority = 90,
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmEditorShellDemo_ActionRedo")),
+            },
+            new TmActionItem
+            {
+                Id = "preview",
+                Label = Loc["TmEditorShellDemo_ActionPreview"],
+                Icon = "eye",
+                Priority = 80,
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmEditorShellDemo_ActionPreview")),
+            },
+            new TmActionItem
+            {
+                Id = "validate",
+                Label = Loc["TmEditorShellDemo_ActionValidate"],
+                Icon = "check-circle",
+                Priority = 70,
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmEditorShellDemo_ActionValidate")),
+            },
+            new TmActionItem
+            {
+                Id = "save",
+                Label = Loc["TmEditorShellDemo_ActionSave"],
+                Icon = "save",
+                Priority = 60,
+                OnClick = EventCallback.Factory.Create(this, SaveAsync),
+            },
+        ];
+    }
+
+    private Task RecordUndo() => Record("TmEditorShellDemo_ActionUndo");
+    private Task RecordRedo() => Record("TmEditorShellDemo_ActionRedo");
+    private Task RecordPreview() => Record("TmEditorShellDemo_ActionPreview");
+    private Task RecordValidate() => Record("TmEditorShellDemo_ActionValidate");
+    private Task RecordInspect() => Record("TmSidePanelDemo_ActionInspect");
+
+    private Task Record(string key)
+    {
+        _lastAction = Loc[key];
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        _lastAction = Loc["TmEditorShellDemo_ActionSave"];
+        // A focus-moving action: wins deterministically over any pending focus restore.
+        try
+        {
+            await _title.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // Best-effort only (the title may be off-screen on mobile).
+        }
+    }
+
+    private void SelectBlock(string id)
+    {
+        _lastAction = id;
+    }
+
+    private void OnButtonTextChanged(string value)
+    {
+        _buttonText = value;
+    }
+
+    private void OnAlignmentChanged(string value)
+    {
+        _alignment = value;
+    }
+
+    private void ToggleInspector()
+    {
+        _inspectorOpen = !_inspectorOpen;
+    }
+}
