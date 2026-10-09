@@ -113,10 +113,13 @@ export function attachResize(handle, panel, main, dotnet, id, options) {
     };
 
     const finish = () => {
+        const captured = pointerId;
         dragging = false;
         pointerId = null;
         handle.classList?.remove('tm-editor-shell__resizer--dragging');
-        try { handle.releasePointerCapture?.(); } catch { /* already released */ }
+        // The pointer id is required: releasePointerCapture() with no argument throws in a real DOM,
+        // and the swallowed error left the capture held until the pointer went up.
+        try { if (captured !== null) handle.releasePointerCapture?.(captured); } catch { /* already released */ }
         if (typeof document !== 'undefined') document.removeEventListener?.('keydown', onEscape);
     };
 
@@ -167,12 +170,19 @@ export function attachResize(handle, panel, main, dotnet, id, options) {
         if (RESIZE_KEYS.has(event.key)) event.preventDefault?.();
     };
 
+    // A panel that collapses, hides or flips layout mid-drag: put the live width back and let go.
+    const abort = () => {
+        if (!dragging) return;
+        show(startWidth);
+        finish();
+    };
+
     handle.addEventListener('pointerdown', onDown);
     handle.addEventListener('pointermove', onMove);
     handle.addEventListener('pointerup', onUp);
     handle.addEventListener('pointercancel', onCancel);
     handle.addEventListener('keydown', onKey);
-    resizers.set(id, { handle, onDown, onMove, onUp, onCancel, onKey, onEscape });
+    resizers.set(id, { handle, onDown, onMove, onUp, onCancel, onKey, onEscape, abort });
 }
 
 /** Removes the resize registered under the id. Safe to call twice or for an unknown id. */
@@ -180,6 +190,7 @@ export function detachResize(id) {
     const entry = resizers.get(id);
     if (!entry) return;
     resizers.delete(id);
+    entry.abort?.();
     entry.handle.removeEventListener('pointerdown', entry.onDown);
     entry.handle.removeEventListener('pointermove', entry.onMove);
     entry.handle.removeEventListener('pointerup', entry.onUp);
