@@ -594,6 +594,42 @@ public class TmEditorShellTests : LocalizationTestBase
         desktop.Find("[data-region='toolbar']").Should().NotBeNull("only a mobile layout hides the toolbar");
     }
 
+    [Theory]
+    [InlineData(MobilePanelPresentation.Sheet)]
+    [InlineData(MobilePanelPresentation.Tabs)]
+    public async Task CustomBreakpoints_TheMobileActionBarFollowsTheShellsResolvedMode_NotItsOwnDefaultMeasurement(MobilePanelPresentation presentation)
+    {
+        // F6 r2 G2: with Breakpoints(768, 1200) a 700px container is MOBILE for the shell (the Toolbar
+        // slot is hidden, the bar replaces it). The internal bar must not re-measure the same
+        // container with the DEFAULT thresholds (700 => tablet => bar hidden): undo/redo/preview
+        // would be unreachable.
+        var cut = Render<TmEditorShell>(p =>
+        {
+            p.Add(x => x.Breakpoints, new TmLayoutBreakpoints(768, 1200));
+            p.Add(x => x.LeftTitle, "Blocks");
+            p.Add(x => x.RightTitle, "Properties");
+            p.Add(x => x.Toolbar, builder => builder.AddContent(0, "Shell toolbar"));
+            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
+            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
+            p.Add(x => x.Right, builder => builder.AddContent(0, "Right props"));
+            p.Add(x => x.MobileActions, Actions);
+            p.Add(x => x.MobilePanelPresentation, presentation);
+        });
+
+        await cut.InvokeAsync(() => cut.FindComponents<TmLayoutObserver>()[0].Instance.OnLayoutModeChanged("mobile"));
+        cut.Find("[data-testid='tm-editor-shell']").GetAttribute("data-layout").Should().Be("mobile");
+        cut.FindAll("[data-region='toolbar']").Should().BeEmpty("the action bar replaces the toolbar on a mobile shell");
+
+        // The bar's own observer measures the same container with the default thresholds.
+        var barObserver = cut.FindComponents<TmLayoutObserver>().Single(o => o.Instance.Class?.Contains("tm-mobile-action-bar") == true);
+        await cut.InvokeAsync(() => barObserver.Instance.OnLayoutModeChanged("tablet"));
+
+        cut.FindAll(".tm-mobile-action-bar__bar").Should().HaveCount(1, "the actions must stay reachable on a mobile shell");
+        cut.FindComponent<TmMobileActionBar>().Instance.LayoutMode.Should().Be(TmLayoutMode.Mobile,
+            "the shell forces its mobile-only child to the shell's resolved mode");
+        cut.FindComponents<TmLayoutObserver>().Single(o => o.Instance.Class?.Contains("tm-mobile-action-bar") == true)
+            .Instance.LayoutMode.Should().Be(TmLayoutMode.Mobile);
+    }
     [Fact]
     public void Mobile_NoMobileActions_RendersNoBar()
     {
