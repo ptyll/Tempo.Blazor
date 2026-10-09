@@ -20,6 +20,10 @@ public static class ImageEndpoints
             return Results.Ok(new { ticketUrl = $"/api/images/stream/{ticket}" });
         });
 
+        // Serves the image content inline (no redirect): the demo images are local SVG assets
+        // linked into the API output from Tempo.Blazor.Demo.SharedUI/wwwroot/gallery, so the
+        // lightbox works without internet access. AppContext.BaseDirectory (not ContentRootPath)
+        // is where the linked content lands under `dotnet run`.
         group.MapGet("/stream/{ticket}", (string ticket, MockImageStore store) =>
         {
             var imageId = store.ResolveTicket(ticket);
@@ -28,7 +32,10 @@ public static class ImageEndpoints
             var image = store.Images.FirstOrDefault(i => i.Id == imageId);
             if (image is null) return Results.NotFound();
 
-            return Results.Redirect(image.Url ?? $"https://picsum.photos/seed/{imageId}/1200/900");
+            var path = Path.Combine(AppContext.BaseDirectory, "gallery", $"photo-{image.Id}.svg");
+            if (!File.Exists(path)) return Results.NotFound();
+
+            return Results.File(path, contentType: "image/svg+xml");
         });
 
         group.MapDelete("/{imageId}", (string imageId, MockImageStore store) =>

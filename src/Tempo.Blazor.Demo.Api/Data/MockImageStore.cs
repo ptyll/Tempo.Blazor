@@ -5,12 +5,21 @@ namespace Tempo.Blazor.Demo.Api.Data;
 
 public class MockImageStore
 {
-    public List<GalleryImageDto> Images { get; } = Enumerable.Range(1, 24)
+    // Local demo images: the SVG files live in Tempo.Blazor.Demo.SharedUI/wwwroot/gallery so every
+    // demo host serves them at the page origin (thumbnails), and the API serves the same files as
+    // inline content for the lightbox ticket endpoint. The previous picsum.photos URLs needed
+    // internet access, so the gallery rendered empty in offline E2E runs and TmLightbox could
+    // never be exercised (F3 carry-forward).
+    public const int ImageCount = 8;
+
+    public const string GalleryAssetBase = "_content/Tempo.Blazor.Demo.SharedUI/gallery";
+
+    public List<GalleryImageDto> Images { get; } = Enumerable.Range(1, ImageCount)
         .Select(i => new GalleryImageDto(
             Id: i.ToString(),
             Title: $"Photo {i}",
-            ThumbnailUrl: $"https://picsum.photos/seed/{i}/200/150",
-            Url: $"https://picsum.photos/seed/{i}/1200/900",
+            ThumbnailUrl: $"{GalleryAssetBase}/photo-{i}.svg",
+            Url: $"{GalleryAssetBase}/photo-{i}.svg",
             UploadedAt: DateTime.Today.AddDays(-i),
             UploadedBy: i % 3 == 0 ? "Alice" : i % 3 == 1 ? "Bob" : "Carol",
             FileSizeBytes: 100_000 + i * 15_000

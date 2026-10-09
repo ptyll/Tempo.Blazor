@@ -21,6 +21,12 @@
     <ProjectReference Include="..\Tempo.Blazor.WebPush\Tempo.Blazor.WebPush.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The gallery demo images live in Demo.SharedUI/wwwroot so every demo host serves them at the
+         page origin (thumbnails); the API serves the same files through the lightbox ticket
+         endpoint, so they are linked into the API output as content. -->
+    <Content Include="..\Tempo.Blazor.Demo.SharedUI\wwwroot\gallery\*.svg" Link="gallery\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
