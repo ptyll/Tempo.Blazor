@@ -135,28 +135,28 @@
                                 </button>
                             </HeaderContent>
                             <ChildContent>
-                                @if (OpenPanelCount > 1)
+                                @* ONE wrapper per open panel at a fixed position: closing the other panel
+                                   only changes this wrapper's attributes (tabpanel <-> plain panel), so the
+                                   host's content is never re-parented or remounted (F6 r2 G11). *@
+                                @if (LeftOpen && Left is not null)
                                 {
-                                    <div role="tabpanel"
+                                    <div @key="EditorShellPanel.Left"
+                                         role="@(OpenPanelCount > 1 ? "tabpanel" : null)"
                                          id="@_leftPanelId"
-                                         aria-labelledby="@TabId(EditorShellPanel.Left)"
-                                         class="tm-editor-shell__tabpanel"
+                                         aria-labelledby="@(OpenPanelCount > 1 ? TabId(EditorShellPanel.Left) : null)"
+                                         class="@(OpenPanelCount > 1 ? "tm-editor-shell__tabpanel" : "tm-editor-shell__sheet-panel")"
                                          data-region="left"
-                                         hidden="@(SheetActive != EditorShellPanel.Left)">@Left</div>
-                                    <div role="tabpanel"
+                                         hidden="@(OpenPanelCount > 1 && SheetActive != EditorShellPanel.Left)">@Left</div>
+                                }
+                                @if (RightOpen && Right is not null)
+                                {
+                                    <div @key="EditorShellPanel.Right"
+                                         role="@(OpenPanelCount > 1 ? "tabpanel" : null)"
                                          id="@_rightPanelId"
-                                         aria-labelledby="@TabId(EditorShellPanel.Right)"
-                                         class="tm-editor-shell__tabpanel"
+                                         aria-labelledby="@(OpenPanelCount > 1 ? TabId(EditorShellPanel.Right) : null)"
+                                         class="@(OpenPanelCount > 1 ? "tm-editor-shell__tabpanel" : "tm-editor-shell__sheet-panel")"
                                          data-region="right"
-                                         hidden="@(SheetActive != EditorShellPanel.Right)">@Right</div>
-                                }
-                                else if (SheetActive == EditorShellPanel.Left)
-                                {
-                                    <div class="tm-editor-shell__sheet-panel" id="@_leftPanelId" data-region="left">@Left</div>
-                                }
-                                else
-                                {
-                                    <div class="tm-editor-shell__sheet-panel" id="@_rightPanelId" data-region="right">@Right</div>
+                                         hidden="@(OpenPanelCount > 1 && SheetActive != EditorShellPanel.Right)">@Right</div>
                                 }
                             </ChildContent>
                         </TmDrawer>
@@ -210,6 +210,7 @@
     private int _snap;
     private int _snapParamSeen = int.MinValue;
     private EditorShellPanel _active;
+    private EditorShellPanel? _lastSheetTab;
     private EditorShellPanel _activeParamSeen = (EditorShellPanel)(-1);
 
     // F5/F6 focus-restore pattern: the owning surface arms a flag before a state change that
@@ -747,6 +748,7 @@
         var current = MobilePanelPresentation == MobilePanelPresentation.Tabs ? TabsActive : SheetActive;
         if (current == key) return;
         _active = key;
+        if (MobilePanelPresentation == MobilePanelPresentation.Sheet) _lastSheetTab = key;
         await ActiveMobilePanelChanged.InvokeAsync(key);
     }
 
@@ -851,6 +853,7 @@
             _snapParamSeen = MobileSheetSnapIndex;
             _snap = Math.Clamp(MobileSheetSnapIndex, 0, DefaultSnaps.Length - 1);
         }
+        var activeParamChanged = false;
         if (ActiveMobilePanel != _activeParamSeen)
         {
             _activeParamSeen = ActiveMobilePanel;
@@ -865,10 +868,20 @@
                 _focusTabAfter = TabId(to);
                 _focusTabFrom = PanelDomId(from);
             }
+            activeParamChanged = true;
         }
 
         await SyncAsync();
         await SyncWidthsAsync();
+
+        // The host closed the panel the sheet was showing (no gesture): the effective tab moved on
+        // its own, so a bound ActiveMobilePanel must hear about it. A host-set value or a user tab
+        // pick already is the host's knowledge and raises nothing here.
+        var sheetTab = SheetShown ? SheetActive : (EditorShellPanel?)null;
+        var movedByClose = !activeParamChanged && _lastSheetTab is { } was && sheetTab is { } now && was != now
+            && OpenPanelCount > 0;
+        _lastSheetTab = sheetTab;
+        if (movedByClose) await ActiveMobilePanelChanged.InvokeAsync(sheetTab!.Value);
     }
 
     /// <summary>
