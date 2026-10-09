@@ -703,3 +703,16 @@ test('attachGesture forwards an explicit viewport tracking root', () => {
     assert.equal(sheet.props.size, 0, 'no class-name closest lookup ran on the panel');
     delete globalThis.window;
 });
+
+// F16 (F6 round 1): tm-sheet.js re-exports the top-layer helpers, it does not copy them. Two
+// copies would mean two pinned-root registries — a toast container pinned through one module
+// would never be re-raised by a promote through the other.
+test('tm-sheet.js re-exports the very same helpers as tm-top-layer.js (one registry)', async () => {
+    const sheet = await import('../tm-sheet.js');
+    const topLayer = await import('../tm-top-layer.js');
+
+    for (const name of ['pinRoot', 'unpinRoot', 'promote', 'demote', 'raise']) {
+        assert.equal(typeof topLayer[name], 'function', `${name} lives in tm-top-layer.js`);
+        assert.strictEqual(sheet[name], topLayer[name], `${name} must be the same function object, not a copy`);
+    }
+});
