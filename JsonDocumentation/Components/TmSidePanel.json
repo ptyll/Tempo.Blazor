@@ -9,6 +9,7 @@
   "parameters": [
     { "name": "Presentation", "type": "SidePanelPresentation", "isRequired": false, "default": "Auto", "description": "How the panel presents itself: Auto follows the container layout (docked on desktop, sheet otherwise); Docked and Sheet pin the choice." },
     { "name": "Open", "type": "bool", "isRequired": false, "description": "Whether the panel is open. Two-way with OpenChanged." },
+    { "name": "OpenChanged", "type": "EventCallback<bool>", "isRequired": false, "description": "Raised when the panel should open or close (every close path funnels through here)." },
     { "name": "Title", "type": "string?", "isRequired": false, "description": "Title shown in the panel header; also the accessible name of the sheet." },
     { "name": "RestoreFocusTargetId", "type": "string?", "isRequired": false, "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default." },
     { "name": "HeaderActions", "type": "RenderFragment?", "isRequired": false, "description": "Optional actions rendered in the header, next to the close button." },

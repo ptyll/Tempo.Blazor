@@ -133,7 +133,7 @@
     display: inline-block;
     padding: var(--tm-space-2) var(--tm-space-6);
     background: var(--tm-color-primary);
-    color: var(--tm-color-white);
+    color: var(--tm-color-on-primary);
     border-radius: var(--tm-radius-control);
 }
 
@@ -153,7 +153,7 @@
 
 .es-props__heading {
     margin: 0;
-    font-size: var(--tm-text-base, 1rem);
+    font-size: var(--tm-text-md);
 }
 
 .es-side-panel-section h2 {
@@ -175,7 +175,7 @@
     background: var(--tm-bg-workspace);
 }
 
-.es-side-panel-host .tm-side-panel--docked {
+.es-side-panel-host ::deep .tm-side-panel--docked {
     max-block-size: 320px;
 }
 

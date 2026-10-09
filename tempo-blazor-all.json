@@ -18135,7 +18135,7 @@
               "name": "LeftOpenChanged",
               "type": "EventCallback<bool>",
               "isRequired": false,
-              "description": "Raised when the left panel should open or close."
+              "description": "Raised when the left panel should open or close (every close path funnels through here)."
             },
             {
               "name": "LeftTitle",

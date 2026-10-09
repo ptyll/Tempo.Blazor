@@ -2,6 +2,12 @@
    TmSidePanel — the docked-or-sheet responsive inspector
    ═══════════════════════════════════════════════════════ */
 
+/* The shared root class of both presentations (the docked root; the sheet root carries it as an extra class). */
+.tm-side-panel {
+    box-sizing: border-box;
+    min-inline-size: 0;
+}
+
 /* Docked: an in-flow panel the host places (a grid column, a flex child). */
 .tm-side-panel--docked {
     display: flex;
@@ -27,7 +33,7 @@
     flex: 1;
     min-inline-size: 0;
     margin: 0;
-    font-size: var(--tm-text-base, 1rem);
+    font-size: var(--tm-text-md);
     font-weight: var(--tm-font-weight-semibold, 600);
     color: var(--tm-color-text);
     overflow-wrap: break-word;

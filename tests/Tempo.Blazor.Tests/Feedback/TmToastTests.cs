@@ -223,7 +223,7 @@ public class TmToastTests : LocalizationTestBase
     [Fact]
     public void Container_Raises_OnEveryPush_EvenAtTheMaxVisibleCap()
     {
-        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
         module.SetupVoid("pinRoot", _ => true).SetVoidResult();
         module.SetupVoid("raise", _ => true).SetVoidResult();
 
@@ -244,7 +244,7 @@ public class TmToastTests : LocalizationTestBase
     [Fact]
     public void Container_Raises_WhenAVisibleToastExpiresAndAnotherPushesInOneRender()
     {
-        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
         module.SetupVoid("pinRoot", _ => true).SetVoidResult();
         module.SetupVoid("raise", _ => true).SetVoidResult();
 
@@ -269,7 +269,7 @@ public class TmToastTests : LocalizationTestBase
     [Fact]
     public void Container_Demotes_WhenTheLastToastLeaves_AndUnpins()
     {
-        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-sheet.js");
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
         module.SetupVoid("pinRoot", _ => true).SetVoidResult();
         module.SetupVoid("unpinRoot", _ => true).SetVoidResult();
         module.SetupVoid("raise", _ => true).SetVoidResult();
