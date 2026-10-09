@@ -738,6 +738,108 @@ public class TmMobileActionBarTests : LocalizationTestBase
         (after - before).Should().Be(0, "CloseMoreAsync on a closed menu must not move focus");
     }
 
+    // ── Review round 3 (Z1, MAJOR): with the sheet open, hiding the bar — above the mobile
+    //    breakpoint or by the host emptying the overflow — disposes the controlled panel
+    //    WITHOUT an IsOpenChanged, so the open state went stale and the sheet REOPENED by
+    //    itself when the bar came back (phone rotation portrait → landscape → portrait). Also:
+    //    a best-effort FocusAsync on an element the panel already disposed throws JSException
+    //    ("Unable to focus an invalid element") — only InvalidOperationException was caught,
+    //    so ~half the flips ended in an unhandled exception + #blazor-error-ui. ───────────────
+
+    [Fact]
+    public void MoreMenu_DoesNotReopen_WhenBarHidesAboveBreakpointAndReturns()
+    {
+        // Z1: the bar hides above the mobile breakpoint while the menu is open — the panel and
+        // the trigger leave the DOM with no IsOpenChanged. The bar must reset its open state,
+        // or the sheet reopens by itself when the bar comes back (phone rotation).
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        // Landscape wider than the breakpoint: the bar (and the More trigger) do not render.
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Desktop));
+        cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty();
+        cut.FindAll(".tm-overlay-panel-sheet").Should().BeEmpty();
+
+        // ...and back to portrait: the bar renders again — the menu must stay closed.
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "the menu must not reopen by itself after the bar hid while it was open");
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.FindAll(".tm-overlay-panel-sheet").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MoreMenu_DoesNotReopen_WhenOverflowEmptiesAndRefills()
+    {
+        // Z1: the same staleness through a host Items change — the overflow empties (no More
+        // trigger rendered) while the menu is open, then refills.
+        var items = Actions("One", "Two", "Three", "Four");
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, items));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        cut.Render(p => p.Add(x => x.Items, Actions("One", "Two")));
+        cut.FindAll(".tm-mobile-action-bar__more").Should().BeEmpty();
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+
+        cut.Render(p => p.Add(x => x.Items, items));
+
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "the menu must not reopen by itself after the overflow emptied while it was open");
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BestEffortFocus_CatchesJSException_AtEveryFocusAsyncSite()
+    {
+        // Z1: in a real browser the focus target can leave the DOM between the render and the
+        // best-effort focus move — focus() then throws JSException "Unable to focus an invalid
+        // element". bUnit cannot drive this (ElementReference.FocusAsync has no JSRuntime
+        // attached in bUnit and throws InvalidOperationException instead — the live-browser
+        // proof is the round-3 flip E2E), so this is a source guard: every FocusAsync site in
+        // the bar must catch JSException alongside InvalidOperationException (the TmDropdown
+        // pattern). Pre-fix the catch was InvalidOperationException-only, so ~half the
+        // 390→1100→390 flips ended in an unhandled exception and #blazor-error-ui (which kills
+        // a Server circuit).
+        var razor = File.ReadAllText(RepoPath(
+            "src", "Tempo.Blazor", "Components", "Actions", "TmMobileActionBar.razor"));
+
+        var focusSites = System.Text.RegularExpressions.Regex.Matches(razor, @"FocusAsync\(");
+        focusSites.Count.Should().BeGreaterThanOrEqualTo(2,
+            "the initial menuitem focus and the trigger focus restore are both best-effort");
+
+        foreach (System.Text.RegularExpressions.Match site in focusSites)
+        {
+            var windowStart = Math.Max(0, site.Index - 500);
+            var preceding = razor[windowStart..site.Index];
+            preceding.Should().Contain("JSException",
+                $"the best-effort focus at offset {site.Index} must swallow JSException (Z1)");
+        }
+    }
+
+    [Fact]
+    public void MoreMenu_Open_WithoutJsRuntime_DoesNotThrow()
+    {
+        // bUnit runs with no JSRuntime attached to element references: the best-effort focus
+        // move throws InvalidOperationException, which the bar must keep swallowing (Z1 keeps
+        // that catch and adds JSException beside it).
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        var act = () => cut.Find(".tm-mobile-action-bar__more").Click();
+        act.Should().NotThrow();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+    }
+
     private static string BarCss(bool stripComments = false)
     {
         var css = File.ReadAllText(RepoPath(
