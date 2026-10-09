@@ -335,6 +335,21 @@ public class TmEditorShellResizerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TwoShellsOnOnePage_RegisterDistinctResizerIds()
+    {
+        // The module keeps its registrations in one map: two shells that both used "left" would
+        // detach each other (the second silently killed the first shell's drag).
+        var module = Module();
+        var first = RenderShell();
+        var second = RenderShell();
+        first.WaitForAssertion(() => module.Attach().Should().HaveCount(4));
+
+        var ids = module.Attach().Select(i => (string)i.Arguments[4]!).ToList();
+
+        ids.Should().OnlyHaveUniqueItems("every shell instance owns its own registrations");
+    }
+
+    [Fact]
     public void Separator_ReattachOnlyWhenTheClampInputsChange_NotOnEveryRender()
     {
         var module = Module();
