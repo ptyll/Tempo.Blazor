@@ -727,3 +727,101 @@ test('focusIfLost resolves ids and refuses a missing or detached target', () => 
     detached.isConnected = false;
     assert.equal(focusIfLost(detached), false);
 });
+
+// ── F6 r2 G3: non-modal traps close on focus ownership, not registration order ──
+
+function escapeEvent() {
+    const e = { key: 'Escape', defaultPrevented: false };
+    return e;
+}
+
+test('two non-modal traps: Escape with focus in the FIRST closes only the first (order-independent)', () => {
+    const body = element();
+    const first = element(body);
+    const second = element(body);
+    const insideFirst = element(first);
+    installDom(body);
+    const firstEscape = handler();
+    const secondEscape = handler();
+
+    activate(first, 'first', firstEscape, true, null, false);
+    activate(second, 'second', secondEscape, true, null, false);
+    document.activeElement = insideFirst;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(firstEscape.calls, ['HandleFocusTrapEscapeAsync'], 'the sheet that holds focus closes');
+    assert.deepEqual(secondEscape.calls, [], 'the later-registered sheet that does not hold focus stays open');
+});
+
+test('two non-modal traps: Escape with focus in the LAST closes only the last', () => {
+    const body = element();
+    const first = element(body);
+    const second = element(body);
+    const insideSecond = element(second);
+    installDom(body);
+    const firstEscape = handler();
+    const secondEscape = handler();
+
+    activate(first, 'first', firstEscape, true, null, false);
+    activate(second, 'second', secondEscape, true, null, false);
+    document.activeElement = insideSecond;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(secondEscape.calls, ['HandleFocusTrapEscapeAsync']);
+    assert.deepEqual(firstEscape.calls, []);
+});
+
+test('a modal trap registered AFTER a non-modal one owns Escape even when focus is in the sheet', () => {
+    const body = element();
+    const sheet = element(body);
+    const insideSheet = element(sheet);
+    const dialog = element(body);
+    installDom(body);
+    const sheetEscape = handler();
+    const dialogEscape = handler();
+
+    activate(sheet, 'sheet', sheetEscape, true, null, false);
+    activate(dialog, 'dialog', dialogEscape, true, null, true);
+    document.activeElement = insideSheet;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(dialogEscape.calls, ['HandleFocusTrapEscapeAsync'], 'the later modal wins');
+    assert.deepEqual(sheetEscape.calls, [], 'the sheet behind a dialog must not close on the same key');
+});
+
+test('nested non-modal traps: the innermost one that holds focus closes, not the outer', () => {
+    const body = element();
+    const outer = element(body);
+    const inner = element(outer);
+    const insideInner = element(inner);
+    installDom(body);
+    const outerEscape = handler();
+    const innerEscape = handler();
+
+    activate(outer, 'outer', outerEscape, true, null, false);
+    activate(inner, 'inner', innerEscape, true, null, false);
+    document.activeElement = insideInner;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(innerEscape.calls, ['HandleFocusTrapEscapeAsync']);
+    assert.deepEqual(outerEscape.calls, [], 'one Escape closes one layer');
+});
+
+test('a non-modal trap ignores Escape while focus is outside it (the canvas behind belongs to the page)', () => {
+    const body = element();
+    const sheet = element(body);
+    const canvas = element(body);
+    installDom(body);
+    const sheetEscape = handler();
+
+    activate(sheet, 'sheet', sheetEscape, true, null, false);
+    document.activeElement = canvas;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(sheetEscape.calls, []);
+});
