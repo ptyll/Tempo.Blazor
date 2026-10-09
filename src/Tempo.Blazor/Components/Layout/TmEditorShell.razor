@@ -210,7 +210,6 @@
     private int _snapParamSeen = int.MinValue;
     private EditorShellPanel _active;
     private EditorShellPanel _activeParamSeen = (EditorShellPanel)(-1);
-    private bool _mobileOpenedFromToggle;
 
     // F5/F6 focus-restore pattern: the owning surface arms a flag before a state change that
     // replaces its trigger and re-asserts focus from OnAfterRenderAsync — through focusIfLost, so a
@@ -442,7 +441,10 @@
         _ => CanvasTitle ?? Loc["TmEditorShell_Canvas"],
     };
 
-    private string? MobileRestoreTargetId => _mobileOpenedFromToggle ? _mobileToggleId : null;
+    // The sheet is replaced by the panels toggle, so that is where a close from INSIDE it lands. The
+    // non-modal trap skips the restore when focus already sits on a live element elsewhere (the host
+    // button, an action-bar tile), so this never steals.
+    private string MobileRestoreTargetId => _mobileToggleId;
 
     private string SheetAriaLabel => OpenPanelCount > 1 ? PanelsTitle : PanelTitle(SheetActive);
 
@@ -652,7 +654,6 @@
     /// </summary>
     private async Task CloseAllPanelsAsync()
     {
-        _mobileOpenedFromToggle = false;
         _focusMobileToggleAfter = true;
         if (LeftOpen && Left is not null) await LeftOpenChanged.InvokeAsync(false);
         if (RightOpen && Right is not null) await RightOpenChanged.InvokeAsync(false);
@@ -660,7 +661,6 @@
 
     private async Task OpenAllPanelsFromToggleAsync()
     {
-        _mobileOpenedFromToggle = true;
         if (Left is not null) await LeftOpenChanged.InvokeAsync(true);
         if (Right is not null) await RightOpenChanged.InvokeAsync(true);
     }
@@ -798,7 +798,6 @@
             _focusMobileToggleAfter = false;
             _focusTabAfter = null;
             _focusTabFrom = null;
-            _mobileOpenedFromToggle = false;
             if (_snap != 0)
             {
                 _snap = 0;
