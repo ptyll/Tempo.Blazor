@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    activate, deactivate, isInnermost, isTopmost, syncScrollRegion, stopScrollRegion, __resetForTests,
+    activate, deactivate, isInnermost, isTopmost, syncScrollRegion, stopScrollRegion, focusIfLost, __resetForTests,
 } from '../tm-focus-trap.js';
 
 test.beforeEach(() => __resetForTests());
@@ -661,4 +661,69 @@ test('a null element is a no-op that still stops any previous region', () => {
 
     assert.equal(content.getAttribute('tabindex'), null, 'the null attach stopped the previous region');
     assert.doesNotThrow(() => stop());
+});
+
+// ── focusIfLost (F6 r1): the restore a host surface runs after ITS surface closed. It moves focus
+// only when focus was lost (body / disconnected) or was inside the closing surface — never when the
+// user or the host put focus on another live element.
+function withDocument(active, body, byId = {}) {
+    installDom(body);
+    globalThis.document.activeElement = active;
+    globalThis.document.getElementById = id => byId[id] ?? null;
+}
+
+test('focusIfLost focuses the target when focus fell to the body', () => {
+    const body = element();
+    const target = element(body);
+    withDocument(body, body);
+
+    assert.equal(focusIfLost(target), true);
+    assert.equal(target.focusCalls, 1);
+});
+
+test('focusIfLost leaves focus alone when another live element holds it', () => {
+    const body = element();
+    const toolbarButton = element(body);
+    toolbarButton.isConnected = true;
+    const target = element(body);
+    withDocument(toolbarButton, body);
+
+    assert.equal(focusIfLost(target), false);
+    assert.equal(target.focusCalls, 0, 'a focus the user placed elsewhere must never be stolen');
+});
+
+test('focusIfLost focuses when the active element is inside the closing container', () => {
+    const body = element();
+    const container = element(body);
+    const inside = element(container);
+    inside.isConnected = true;
+    const target = element(body);
+    withDocument(inside, body);
+
+    assert.equal(focusIfLost(target, container), true);
+    assert.equal(target.focusCalls, 1);
+});
+
+test('focusIfLost focuses when the active element left the DOM', () => {
+    const body = element();
+    const gone = element(body);
+    gone.isConnected = false;
+    const target = element(body);
+    withDocument(gone, body);
+
+    assert.equal(focusIfLost(target), true);
+});
+
+test('focusIfLost resolves ids and refuses a missing or detached target', () => {
+    const body = element();
+    const target = element(body);
+    withDocument(body, body, { toggle: target });
+
+    assert.equal(focusIfLost('toggle'), true);
+    assert.equal(target.focusCalls, 1);
+    assert.equal(focusIfLost('missing'), false);
+    assert.equal(focusIfLost(null), false);
+    const detached = element(body);
+    detached.isConnected = false;
+    assert.equal(focusIfLost(detached), false);
 });

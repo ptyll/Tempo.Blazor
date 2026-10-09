@@ -1,20 +1,25 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Layout;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Layout;
 
 /// <summary>
-/// TDD tests for <see cref="TmEditorShell"/> — the responsive three-region editor frame
-/// (desktop columns, tablet side sheets with at most one open, mobile canvas + inline sheet
-/// or tabs + the F5 action bar).
+/// TDD tests for <see cref="TmEditorShell"/> — the responsive three-region editor frame:
+/// desktop and tablet are DOCKED panels (tablet: at most one expanded, no modal), mobile is the
+/// canvas + an inline bottom sheet (Left/Right tabs when two panels are open) or a full-region
+/// Left | Canvas | Right tablist, plus the F5 action bar. F6 review round 1, decisions Q1 and Q2.
 /// </summary>
 public class TmEditorShellTests : LocalizationTestBase
 {
+    private const string FocusTrapModule = "./_content/Tempo.Blazor/js/tm-focus-trap.js";
+
     private static IReadOnlyList<TmActionItem> Actions =>
     [
         new TmActionItem { Id = "save", Label = "Save", OnClick = EventCallback.Factory.Create(new object(), () => { }) },
@@ -53,106 +58,253 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.FindAll(".tm-drawer").Should().BeEmpty();
     }
 
-    // ── Tablet ──────────────────────────────────────────────────────────────
+    // ── Tablet = docked panels (Q1=A): collapsed rails, at most ONE expanded, no modal ─────
 
     [Fact]
-    public void Tablet_RendersAtMostOneSideSheet()
+    public void Tablet_FirstRender_IsDockedWithNoModalSurface()
     {
         var cut = RenderShell(TmLayoutMode.Tablet);
 
-        cut.FindAll(".tm-drawer").Should().HaveCount(1, "both panels open must render exactly one side sheet");
-        cut.FindAll(".tm-drawer")[0].ClassList.Should().Contain("tm-drawer--left");
+        cut.FindAll(".tm-drawer").Should().BeEmpty("tablet never opens a modal sheet");
+        cut.FindAll("[popover]").Should().BeEmpty();
+        cut.FindAll("[inert]").Should().BeEmpty("nothing is inert on a first tablet render");
+        cut.FindAll("[aria-modal='true']").Should().BeEmpty();
+        cut.FindComponents<TmFocusScope>().Should().BeEmpty("a docked tablet owns no focus trap");
         cut.Find("[data-region='canvas']").TextContent.Should().Contain("Canvas body");
+        JSInterop.Invocations.Where(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase))
+            .Should().BeEmpty("a tablet first render must not move focus");
     }
 
     [Fact]
-    public void Tablet_ClosingTheActiveSideSheet_RevealsTheOther()
+    public void Tablet_BothOpen_RendersExactlyOneExpandedPanelAndARailForTheOther()
     {
-        var leftOpen = true;
-        var rightOpen = true;
-        var cut = Render<TmEditorShell>(p =>
+        var cut = RenderShell(TmLayoutMode.Tablet);
+
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(1, "at most one panel is expanded");
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("right",
+            "the inspector stays expanded, the toolbox is the rail (the e-mail editor mapping)");
+        cut.Find(".tm-editor-shell__rail--left").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Tablet_HonoursCollapsedPanels_BothRailed()
+    {
+        var cut = RenderShell(TmLayoutMode.Tablet, p =>
+            p.Add(x => x.CollapsedPanels, EditorShellPanel.Left | EditorShellPanel.Right));
+
+        cut.FindAll("aside.tm-editor-shell__panel").Should().BeEmpty();
+        cut.FindAll(".tm-editor-shell__rail").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Tablet_FirstRender_RaisesCollapsedPanelsChanged_ForTheRailedSide()
+    {
+        EditorShellPanel? raised = null;
+        RenderShell(TmLayoutMode.Tablet, p => p.Add(x => x.CollapsedPanelsChanged,
+            EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v)));
+
+        raised.Should().Be(EditorShellPanel.Left,
+            "the shell rails the second panel and tells the host, so a bound state stays truthful");
+    }
+
+    [Fact]
+    public void Tablet_AtMostOneExpanded_EvenWhenTheHostIgnoresTheCallback()
+    {
+        // The host never applies CollapsedPanels: the render itself must still hold the invariant.
+        var cut = RenderShell(TmLayoutMode.Tablet, p => p.Add(x => x.CollapsedPanelsChanged,
+            EventCallback.Factory.Create<EditorShellPanel>(this, _ => { })));
+
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(1);
+        cut.Render(p => p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body 2")));
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Tablet_ExpandingTheRail_RailsTheOtherPanel_AndRaisesTheNewCollapsedSet()
+    {
+        EditorShellPanel? raised = null;
+        var cut = RenderShell(TmLayoutMode.Tablet, p =>
         {
-            p.Add(x => x.LayoutMode, TmLayoutMode.Tablet);
-            p.Add(x => x.LeftTitle, "Blocks");
-            p.Add(x => x.RightTitle, "Properties");
-            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
-            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
-            p.Add(x => x.Right, builder => builder.AddContent(0, "Right props"));
-            p.Add(x => x.LeftOpen, leftOpen);
-            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
-            p.Add(x => x.RightOpen, rightOpen);
-            p.Add(x => x.RightOpenChanged, EventCallback.Factory.Create<bool>(this, v => rightOpen = v));
+            p.Add(x => x.CollapsedPanels, EditorShellPanel.Left);
+            p.Add(x => x.CollapsedPanelsChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v));
         });
 
-        cut.Find(".tm-drawer--left .tm-drawer__close").Click();
-        leftOpen.Should().Be(false);
+        cut.Find(".tm-editor-shell__rail--left button").Click();
 
+        raised.Should().Be(EditorShellPanel.Right, "expanding left rails right: one expanded panel at a time");
+    }
+
+    [Fact]
+    public void Tablet_OpeningAHiddenPanelFromItsToggle_RailsTheOther()
+    {
+        EditorShellPanel? raised = null;
+        bool? leftOpen = null;
+        var cut = RenderShell(TmLayoutMode.Tablet, p =>
+        {
+            p.Add(x => x.LeftOpen, false);
+            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
+            p.Add(x => x.CollapsedPanelsChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v));
+        });
+
+        cut.Find(".tm-editor-shell__panel-toggle--left").Click();
+
+        leftOpen.Should().Be(true);
+        raised.Should().Be(EditorShellPanel.Right, "the right panel (expanded) becomes the rail");
+    }
+
+    [Fact]
+    public void Tablet_HostOpensRight_RightIsExpandedAndLeftRailed()
+    {
+        EditorShellPanel? raised = null;
+        var cut = RenderShell(TmLayoutMode.Tablet, p =>
+        {
+            p.Add(x => x.RightOpen, false);
+            p.Add(x => x.CollapsedPanelsChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v));
+        });
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("left");
+
+        cut.Render(p => p.Add(x => x.RightOpen, true));
+
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(1);
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("right");
+        cut.Find(".tm-editor-shell__rail--left").Should().NotBeNull();
+        raised.Should().Be(EditorShellPanel.Left);
+        cut.FindAll(".tm-drawer").Should().BeEmpty("one Escape is never needed: there is no modal");
+    }
+
+    [Fact]
+    public void LeftOpenRightOpen_MeanTheSameOnDesktopAndTablet()
+    {
+        foreach (var mode in new[] { TmLayoutMode.Desktop, TmLayoutMode.Tablet })
+        {
+            var cut = RenderShell(mode, p => p.Add(x => x.LeftOpen, false));
+
+            cut.FindAll("[data-region='left']").Should().BeEmpty($"{mode}: a hidden panel renders no content");
+            var toggle = cut.Find(".tm-editor-shell__panel-toggle--left");
+            toggle.GetAttribute("aria-expanded").Should().Be("false", mode.ToString());
+            toggle.HasAttribute("aria-controls").Should().BeFalse($"{mode}: nothing is rendered for it to control");
+        }
+    }
+
+    [Fact]
+    public void LayoutFlip_DesktopToTablet_KeepsTheCanvasAndTheInspector_NoModalNoInert()
+    {
+        EditorShellPanel? raised = null;
+        var cut = RenderShell(TmLayoutMode.Desktop, p =>
+            p.Add(x => x.CollapsedPanelsChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v)));
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(2);
+
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Tablet));
+
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(1);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        cut.FindAll("[inert]").Should().BeEmpty();
+        raised.Should().Be(EditorShellPanel.Left);
+        JSInterop.Invocations.Where(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase))
+            .Should().BeEmpty("the flip never moves focus");
+    }
+
+    // ── Rail slots (F13) ────────────────────────────────────────────────────
+
+    [Fact]
+    public void Rail_RendersTheRailSlotUnderTheExpandButton_OnlyWhileCollapsed()
+    {
+        var cut = RenderShell(TmLayoutMode.Desktop, p =>
+        {
+            p.Add(x => x.CollapsedPanels, EditorShellPanel.Left);
+            p.Add(x => x.LeftRail, builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddAttribute(1, "class", "my-rail-icon");
+                builder.CloseElement();
+            });
+            p.Add(x => x.RightRail, builder => builder.AddContent(0, "right-rail-content"));
+        });
+
+        cut.Find(".tm-editor-shell__rail--left .my-rail-icon").Should().NotBeNull();
+        cut.Markup.Should().NotContain("right-rail-content", "the right panel is expanded: its rail slot is not shown");
+
+        cut.Render(p => p.Add(x => x.CollapsedPanels, EditorShellPanel.None));
+        cut.FindAll(".my-rail-icon").Should().BeEmpty();
+    }
+
+    // ── aria-controls / aria-expanded correctness (F5) ──────────────────────
+
+    [Fact]
+    public void Desktop_ExpandedToggle_ControlsTheRealAside()
+    {
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        var toggle = cut.Find(".tm-editor-shell__panel-toggle--left");
+        toggle.GetAttribute("aria-expanded").Should().Be("true");
+        var target = cut.Find($"#{toggle.GetAttribute("aria-controls")}");
+        target.TagName.Should().Be("ASIDE");
+        target.GetAttribute("data-region").Should().Be("left");
+        cut.FindAll("[data-panel-anchor]").Should().BeEmpty("the hidden anchor spans are gone");
+        cut.FindAll("span[hidden]").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Desktop_RailButton_IsCollapsedAndOmitsAriaControls()
+    {
+        var cut = RenderShell(TmLayoutMode.Desktop, p => p.Add(x => x.CollapsedPanels, EditorShellPanel.Left));
+
+        var button = cut.Find(".tm-editor-shell__rail--left button");
+        button.GetAttribute("aria-expanded").Should().Be("false", "the panel content is not shown");
+        button.HasAttribute("aria-controls").Should().BeFalse("the controlled panel is not rendered");
+    }
+
+    [Fact]
+    public void Tablet_DockedToggle_ControlsTheRealAside()
+    {
+        var cut = RenderShell(TmLayoutMode.Tablet);
+
+        var toggle = cut.Find(".tm-editor-shell__panel-toggle--right");
+        var target = cut.Find($"#{toggle.GetAttribute("aria-controls")}");
+        target.TagName.Should().Be("ASIDE");
+        target.GetAttribute("data-region").Should().Be("right");
+    }
+
+    [Fact]
+    public void Toggles_SurviveEveryStateTransitionWithTheRightAttributes()
+    {
+        // F8: the toggle helper renders inside its own region; walking every state must keep the
+        // attributes of one state from leaking into the next.
+        var leftOpen = true;
+        var collapsed = EditorShellPanel.None;
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("true");
+        collapsed = EditorShellPanel.Left;
+        cut.Render(p => p.Add(x => x.CollapsedPanels, collapsed));
+        var rail = cut.Find(".tm-editor-shell__rail--left button");
+        rail.GetAttribute("aria-expanded").Should().Be("false");
+        rail.HasAttribute("aria-controls").Should().BeFalse();
+
+        leftOpen = false;
         cut.Render(p => p.Add(x => x.LeftOpen, leftOpen));
-        var drawer = cut.Find(".tm-drawer");
-        drawer.ClassList.Should().Contain("tm-drawer--right");
+        var show = cut.Find(".tm-editor-shell__panel-toggle--left");
+        show.GetAttribute("aria-expanded").Should().Be("false");
+        show.HasAttribute("aria-controls").Should().BeFalse();
+
+        leftOpen = true;
+        collapsed = EditorShellPanel.None;
+        cut.Render(p => { p.Add(x => x.LeftOpen, leftOpen); p.Add(x => x.CollapsedPanels, collapsed); });
+        var hide = cut.Find(".tm-editor-shell__panel-toggle--left");
+        hide.GetAttribute("aria-expanded").Should().Be("true");
+        cut.Find($"#{hide.GetAttribute("aria-controls")}").TagName.Should().Be("ASIDE");
     }
 
     [Fact]
-    public void Tablet_OpeningTheSecondPanel_SwitchesTheSheet()
+    public void Aside_IsNamedAfterItsPanelTitle()
     {
-        var leftOpen = true;
-        var rightOpen = false;
-        var cut = Render<TmEditorShell>(p =>
-        {
-            p.Add(x => x.LayoutMode, TmLayoutMode.Tablet);
-            p.Add(x => x.LeftTitle, "Blocks");
-            p.Add(x => x.RightTitle, "Properties");
-            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
-            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
-            p.Add(x => x.Right, builder => builder.AddContent(0, "Right props"));
-            p.Add(x => x.LeftOpen, leftOpen);
-            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
-            p.Add(x => x.RightOpen, rightOpen);
-            p.Add(x => x.RightOpenChanged, EventCallback.Factory.Create<bool>(this, v => rightOpen = v));
-        });
+        var cut = RenderShell(TmLayoutMode.Desktop);
 
-        cut.Find(".tm-editor-shell__panel-toggle--right").Click();
-        rightOpen.Should().Be(true);
-
-        cut.Render(p => p.Add(x => x.RightOpen, rightOpen));
-        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
+        cut.Find("aside[data-region='left']").GetAttribute("aria-label").Should().Be("Blocks");
+        cut.Find("aside[data-region='right']").GetAttribute("aria-label").Should().Be("Properties");
     }
 
-    [Fact]
-    public void Tablet_ClosingTheRevealedSheet_ClosesThatPanel()
-    {
-        // Regression: the close callback must target the sheet ACTUALLY rendered (the fallback
-        // side), not the stale most-recent side — otherwise the revealed sheet can never close.
-        var leftOpen = true;
-        var rightOpen = true;
-        var cut = Render<TmEditorShell>(p =>
-        {
-            p.Add(x => x.LayoutMode, TmLayoutMode.Tablet);
-            p.Add(x => x.LeftTitle, "Blocks");
-            p.Add(x => x.RightTitle, "Properties");
-            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
-            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
-            p.Add(x => x.Right, builder => builder.AddContent(0, "Right props"));
-            p.Add(x => x.LeftOpen, leftOpen);
-            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
-            p.Add(x => x.RightOpen, rightOpen);
-            p.Add(x => x.RightOpenChanged, EventCallback.Factory.Create<bool>(this, v => rightOpen = v));
-        });
-
-        // Close the left (active) sheet — the right one takes over.
-        cut.Find(".tm-drawer--left .tm-drawer__close").Click();
-        cut.Render(p => p.Add(x => x.LeftOpen, leftOpen));
-        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
-
-        // Closing the revealed right sheet must close the RIGHT panel (not re-fire the left one).
-        cut.Find(".tm-drawer--right .tm-drawer__close").Click();
-        rightOpen.Should().Be(false);
-
-        cut.Render(p => p.Add(x => x.RightOpen, rightOpen));
-        cut.FindAll(".tm-drawer").Should().BeEmpty("both panels are closed now");
-    }
-
-    // ── Mobile ──────────────────────────────────────────────────────────────
+    // ── Mobile, Sheet presentation (default): canvas + inline bottom sheet ──────
 
     [Fact]
     public void Mobile_RendersCanvasPanelSheetAndActionBar()
@@ -166,6 +318,17 @@ public class TmEditorShellTests : LocalizationTestBase
         sheet.TextContent.Should().Contain("Left tools");
         sheet.TextContent.Should().Contain("Right props");
         cut.FindAll(".tm-mobile-action-bar__bar").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Mobile_Sheet_IsAChildOfThePositionedStage_NotOfAnOverlayWrapper()
+    {
+        // F1: the wrapper that covered the stage (and ate the canvas pointer events) is gone.
+        var cut = RenderShell(TmLayoutMode.Mobile);
+
+        cut.FindAll(".tm-editor-shell__panels").Should().BeEmpty();
+        cut.Find(".tm-editor-shell__sheet").ParentElement!.ClassList.Should().Contain("tm-editor-shell__stage");
+        cut.Find(".tm-editor-shell__stage [data-region='canvas']").Should().NotBeNull();
     }
 
     [Fact]
@@ -189,51 +352,223 @@ public class TmEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
-    public void MobilePanelPresentationTabs_RendersTabs()
+    public void MobileSheet_TwoOpenPanels_ShowLeftRightTabsInTheSheet()
     {
-        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
+        var cut = RenderShell(TmLayoutMode.Mobile);
 
-        var tablist = cut.Find("[role='tablist']");
-        tablist.QuerySelectorAll("[role='tab']").Should().HaveCount(2);
-        cut.FindAll("[role='tabpanel']").Should().HaveCount(1, "only the selected panel renders");
+        var tablist = cut.Find(".tm-editor-shell__sheet [role='tablist']");
+        var tabs = tablist.QuerySelectorAll("[role='tab']");
+        tabs.Should().HaveCount(2);
+        tabs[0].TextContent.Trim().Should().Be("Blocks");
+        tabs[1].TextContent.Trim().Should().Be("Properties");
+        tabs[0].GetAttribute("aria-selected").Should().Be("true");
+        tabs[1].GetAttribute("aria-selected").Should().Be("false");
+
+        // Each tab controls a REAL tabpanel; the inactive panel stays in the DOM (toolbox state
+        // survives a tab switch) but hidden.
+        foreach (var tab in tabs)
+        {
+            var panel = cut.Find($"#{tab.GetAttribute("aria-controls")}");
+            panel.GetAttribute("role").Should().Be("tabpanel");
+            panel.GetAttribute("aria-labelledby").Should().Be(tab.Id);
+        }
+        cut.Find("[role='tabpanel'][data-region='left']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeTrue();
     }
 
     [Fact]
-    public void Mobile_Tabs_SelectingAShowsThatPanel()
+    public void MobileSheet_SelectingATab_RaisesActiveMobilePanelChanged_AndShowsThatPanel()
+    {
+        EditorShellPanel? raised = null;
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.ActiveMobilePanelChanged,
+            EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v)));
+
+        cut.FindAll("[role='tab']")[1].Click();
+
+        raised.Should().Be(EditorShellPanel.Right);
+        cut.FindAll("[role='tab']")[1].GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find("[role='tabpanel'][data-region='left']").HasAttribute("hidden").Should().BeTrue();
+    }
+
+    [Fact]
+    public void MobileSheet_HostSetsActiveMobilePanelRight_PropertiesAreShown()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.ActiveMobilePanel, EditorShellPanel.Left));
+        cut.FindAll("[role='tab']")[0].GetAttribute("aria-selected").Should().Be("true");
+
+        cut.Render(p => p.Add(x => x.ActiveMobilePanel, EditorShellPanel.Right));
+
+        cut.FindAll("[role='tab']")[1].GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeFalse();
+    }
+
+    [Fact]
+    public void MobileSheet_OneOpenPanel_NoTablist_TitledByThatPanel()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.RightOpen, false));
+
+        cut.FindAll(".tm-editor-shell__sheet [role='tablist']").Should().BeEmpty();
+        cut.Find(".tm-editor-shell__sheet .tm-drawer__title").TextContent.Trim().Should().Be("Blocks");
+        cut.Find(".tm-editor-shell__sheet").TextContent.Should().NotContain("Right props");
+    }
+
+    [Fact]
+    public void MobileSheet_HasAnAccessibleName()
+    {
+        // F7: the inline sheet root is role=dialog; it must carry a name.
+        var cut = RenderShell(TmLayoutMode.Mobile);
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("aria-label").Should().Be("Panels");
+        cut.Find(".tm-editor-shell__sheet [role='tablist']").GetAttribute("aria-label").Should().Be("Panels");
+    }
+
+    [Fact]
+    public void MobileSheet_SnapIndexIsTwoWay()
+    {
+        int? raised = null;
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobileSheetSnapIndex, 1);
+            p.Add(x => x.MobileSheetSnapIndexChanged, EventCallback.Factory.Create<int>(this, v => raised = v));
+        });
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("1",
+            "the host-supplied snap is rendered");
+
+        cut.Find(".tm-sheet__handle").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        raised.Should().Be(0, "a handle gesture raises the new snap to the host");
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
+
+        cut.Render(p => p.Add(x => x.MobileSheetSnapIndex, 0));
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
+        cut.Render(p => p.Add(x => x.MobileSheetSnapIndex, 1));
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("1",
+            "a host that sets the snap (collapse/expand on a block action) is honoured");
+    }
+
+    [Fact]
+    public void Mobile_ClosedSheet_RendersALabelledAffordance_WithNoAriaControls()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.LeftOpen, false);
+            p.Add(x => x.RightOpen, false);
+        });
+
+        var toggle = cut.Find(".tm-editor-shell__panel-toggle--mobile");
+        toggle.TextContent.Should().Contain("Blocks").And.Contain("Properties", "the closed state names what is behind it");
+        toggle.GetAttribute("aria-expanded").Should().Be("false");
+        toggle.HasAttribute("aria-controls").Should().BeFalse("the sheet it controls is not rendered");
+    }
+
+    // ── Mobile, Tabs presentation: Left | Canvas | Right, no sheet ──────────
+
+    [Fact]
+    public void MobileTabs_RendersAFullRegionTablist_NoSheet()
     {
         var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
 
-        var rightTab = cut.FindAll("[role='tab']")[1];
-        rightTab.GetAttribute("aria-selected").Should().Be("false");
-        rightTab.Click();
+        cut.FindAll(".tm-drawer").Should().BeEmpty("the Tabs presentation has no sheet");
+        var tabs = cut.Find("[role='tablist']").QuerySelectorAll("[role='tab']");
+        tabs.Select(t => t.TextContent.Trim()).Should().Equal("Blocks", "Canvas", "Properties");
+        tabs[1].GetAttribute("aria-selected").Should().Be("true", "the canvas is the default tab");
+        cut.Find("[role='tabpanel'][data-region='canvas']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find("[role='tabpanel'][data-region='left']").HasAttribute("hidden").Should().BeTrue();
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeTrue();
+        foreach (var tab in tabs)
+        {
+            cut.Find($"#{tab.GetAttribute("aria-controls")}").GetAttribute("aria-labelledby").Should().Be(tab.Id);
+        }
+    }
 
-        cut.FindAll("[role='tab']")[1].GetAttribute("aria-selected").Should().Be("true");
-        cut.Find("[role='tabpanel']").TextContent.Should().Contain("Right props");
+    [Fact]
+    public void MobileTabs_CanvasTitle_IsCustomisable_AndLocalisedByDefault()
+    {
+        var custom = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs);
+            p.Add(x => x.CanvasTitle, "Content");
+        });
+        custom.FindAll("[role='tab']")[1].TextContent.Trim().Should().Be("Content");
+
+        var cs = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
+        cs.FindAll("[role='tab']")[1].TextContent.Trim().Should().Be("Canvas");
+    }
+
+    [Fact]
+    public void MobileTabs_SelectingATab_RaisesTheCallback_AndShowsThatRegion()
+    {
+        EditorShellPanel? raised = null;
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs);
+            p.Add(x => x.ActiveMobilePanelChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v));
+        });
+
+        cut.FindAll("[role='tab']")[2].Click();
+
+        raised.Should().Be(EditorShellPanel.Right);
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeFalse();
+        cut.Find("[role='tabpanel'][data-region='canvas']").HasAttribute("hidden").Should().BeTrue();
+
+        cut.FindAll("[role='tab']")[1].Click();
+        raised.Should().Be(EditorShellPanel.None, "the canvas tab is EditorShellPanel.None");
+    }
+
+    [Fact]
+    public void MobileTabs_HostSetsActiveMobilePanel_SwitchesTheRegion()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
+
+        cut.Render(p => p.Add(x => x.ActiveMobilePanel, EditorShellPanel.Right));
+
+        cut.Find("[role='tabpanel'][data-region='right']").HasAttribute("hidden").Should().BeFalse();
+        cut.FindAll("[role='tab']")[2].GetAttribute("aria-selected").Should().Be("true");
+    }
+
+    [Fact]
+    public void MobileTabs_ArrowKeysRoveBetweenTabs()
+    {
+        EditorShellPanel? raised = null;
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs);
+            p.Add(x => x.ActiveMobilePanelChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised = v));
+        });
+
+        cut.FindAll("[role='tab']")[1].KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+
+        raised.Should().Be(EditorShellPanel.Right);
+    }
+
+    // ── Mobile chrome (F12) ─────────────────────────────────────────────────
+
+    [Fact]
+    public void Mobile_ToolbarSlot_IsHiddenWhenMobileActionsAreSet()
+    {
+        var withActions = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobileActions, Actions));
+        withActions.FindAll("[data-region='toolbar']").Should().BeEmpty("the action bar replaces the toolbar on a phone");
+
+        var without = RenderShell(TmLayoutMode.Mobile);
+        without.Find("[data-region='toolbar']").TextContent.Should().Contain("Shell toolbar");
+
+        var desktop = RenderShell(TmLayoutMode.Desktop, p => p.Add(x => x.MobileActions, Actions));
+        desktop.Find("[data-region='toolbar']").Should().NotBeNull("only a mobile layout hides the toolbar");
+    }
+
+    [Fact]
+    public void Mobile_NoMobileActions_RendersNoBar()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile);
+
+        cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty();
     }
 
     // ── Two-way panel state ─────────────────────────────────────────────────
 
     [Fact]
-    public void LeftOpenRightOpen_TwoWay()
-    {
-        var leftOpen = true;
-        var cut = Render<TmEditorShell>(p =>
-        {
-            p.Add(x => x.LayoutMode, TmLayoutMode.Tablet);
-            p.Add(x => x.LeftTitle, "Blocks");
-            p.Add(x => x.RightTitle, "Properties");
-            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
-            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
-            p.Add(x => x.LeftOpen, leftOpen);
-            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
-        });
-
-        cut.Find(".tm-drawer__close").Click();
-        leftOpen.Should().Be(false);
-    }
-
-    [Fact]
-    public void Desktop_HiddenPanel_RendersToggleWithExpandedStateAndControls()
+    public void Desktop_HiddenPanel_RendersToggleWithCollapsedStateAndNoControls()
     {
         var leftOpen = false;
         var cut = Render<TmEditorShell>(p =>
@@ -250,9 +585,7 @@ public class TmEditorShellTests : LocalizationTestBase
 
         var toggle = cut.Find(".tm-editor-shell__panel-toggle--left");
         toggle.GetAttribute("aria-expanded").Should().Be("false");
-        var controls = toggle.GetAttribute("aria-controls");
-        controls.Should().NotBeNullOrEmpty();
-        cut.Find($"#{controls}").Should().NotBeNull();
+        toggle.HasAttribute("aria-controls").Should().BeFalse();
         cut.FindAll("[data-region='left']").Should().BeEmpty();
 
         toggle.Click();
@@ -268,8 +601,7 @@ public class TmEditorShellTests : LocalizationTestBase
             p.Add(x => x.CollapsedPanels, EditorShellPanel.Left));
 
         cut.FindAll("[data-region='left']").Should().BeEmpty();
-        var rail = cut.Find(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle");
-        rail.GetAttribute("aria-expanded").Should().Be("true");
+        cut.Find(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle").Should().NotBeNull();
     }
 
     // ── Slots ───────────────────────────────────────────────────────────────
@@ -284,7 +616,7 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.Find("[data-region='status-bar']").TextContent.Should().Contain("Status text");
     }
 
-    // ── Close paths, aria-expanded and layout flips (the F5 focus-restore pattern) ──
+    // ── Close paths, focus restore and layout flips (the F5 pattern) ─────────
 
     private sealed class Host
     {
@@ -320,38 +652,12 @@ public class TmEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task Tablet_EscapeAndBackdrop_CloseTheSheet_AndTheToggleReadsCollapsed()
-    {
-        var host = new Host { Right = false };
-        var cut = RenderControlled(TmLayoutMode.Tablet, host);
-
-        // Escape arrives through the focus scope's document-level listener.
-        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
-        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
-        host.Left.Should().BeFalse("Escape must close the sheet through the controlled callback");
-        Sync(cut, host, TmLayoutMode.Tablet);
-        cut.FindAll(".tm-drawer").Should().BeEmpty();
-        var toggle = cut.Find(".tm-editor-shell__panel-toggle--left");
-        toggle.GetAttribute("aria-expanded").Should().Be("false");
-        cut.Find($"#{toggle.GetAttribute("aria-controls")}").Should().NotBeNull();
-
-        // Reopen from the toggle, then close through the backdrop.
-        toggle.Click();
-        host.Left.Should().BeTrue();
-        Sync(cut, host, TmLayoutMode.Tablet);
-        cut.Find(".tm-drawer__overlay").Click();
-        host.Left.Should().BeFalse("the backdrop is a close path too");
-        Sync(cut, host, TmLayoutMode.Tablet);
-        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
-    }
-
-    [Fact]
     public async Task Mobile_EscapeAndCloseButton_CloseThePanels_AndTheReopenToggleIsCollapsed()
     {
         var host = new Host();
         var cut = RenderControlled(TmLayoutMode.Mobile, host);
 
-        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        var scope = cut.FindComponent<TmFocusScope>();
         await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
         host.Left.Should().BeFalse();
         host.Right.Should().BeFalse();
@@ -388,73 +694,92 @@ public class TmEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
-    public void LayoutFlip_TabletMobileTablet_DoesNotReopenAClosedSheet()
+    public void LayoutFlip_TabletMobileTablet_NeverRaisesAModalAndKeepsTheHostsOpenState()
     {
         var host = new Host { Right = false };
         var cut = RenderControlled(TmLayoutMode.Tablet, host);
-        cut.Find(".tm-drawer__close").Click();
-        Sync(cut, host, TmLayoutMode.Tablet);
         cut.FindAll(".tm-drawer").Should().BeEmpty();
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("left");
 
         Sync(cut, host, TmLayoutMode.Mobile);
-        cut.FindAll(".tm-drawer").Should().BeEmpty();
         Sync(cut, host, TmLayoutMode.Tablet);
+
         cut.FindAll(".tm-drawer").Should().BeEmpty();
-        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
+        host.Left.Should().BeTrue("a flip must not close what the host opened");
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("left");
     }
 
     [Fact]
-    public void LayoutFlip_ResetsTheMobileSheetSnap()
+    public void LayoutFlip_ResetsTheMobileSheetSnap_AndTellsTheHost()
     {
+        int? raised = null;
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobileSheetSnapIndex, 1);
+            p.Add(x => x.MobileSheetSnapIndexChanged, EventCallback.Factory.Create<int>(this, v => raised = v));
+        });
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("1");
+
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Desktop));
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
+        raised.Should().Be(0, "the host is told the snap was reset, so a bound value stays truthful");
+    }
+
+    [Fact]
+    public void ProgrammaticClose_OnDesktop_RendersTheCollapsedToggle()
+    {
+        var host = new Host { Right = false };
+        var cut = RenderControlled(TmLayoutMode.Desktop, host);
+
+        // The host closes the panel itself — no gesture involved.
+        host.Left = false;
+        Sync(cut, host, TmLayoutMode.Desktop);
+
+        cut.FindAll("[data-region='left']").Should().BeEmpty();
+        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    // ── Focus restore never steals focus (F6) ───────────────────────────────
+
+    [Fact]
+    public void Focus_AfterAProgrammaticMobileClose_UsesFocusIfLost_NeverAnUnconditionalFocus()
+    {
+        var module = JSInterop.SetupModule(FocusTrapModule);
+        var focusIfLost = module.Setup<bool>("focusIfLost", _ => true);
+        focusIfLost.SetResult(false);
         var host = new Host();
         var cut = RenderControlled(TmLayoutMode.Mobile, host);
-        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
 
-        Sync(cut, host, TmLayoutMode.Desktop);
+        host.Left = false;
+        host.Right = false;
         Sync(cut, host, TmLayoutMode.Mobile);
 
-        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
+        cut.WaitForAssertion(() => focusIfLost.Invocations.Should().NotBeEmpty());
+        var target = focusIfLost.Invocations.Last().Arguments[0] as string;
+        target.Should().Be(cut.Find(".tm-editor-shell__panel-toggle--mobile").Id,
+            "the restore targets the panels toggle, through the helper that checks focus was lost");
+        JSInterop.Invocations.Where(i => i.Identifier == "Blazor._internal.domWrapper.focus")
+            .Should().BeEmpty("an unconditional element.FocusAsync would steal a focus the user placed elsewhere");
     }
 
     [Fact]
-    public void ProgrammaticClose_OnTablet_RendersTheCollapsedToggle()
+    public void Focus_AfterAStripCollapse_UsesFocusIfLostOnTheRailButton()
     {
-        var host = new Host { Right = false };
-        var cut = RenderControlled(TmLayoutMode.Tablet, host);
+        var module = JSInterop.SetupModule(FocusTrapModule);
+        var focusIfLost = module.Setup<bool>("focusIfLost", _ => true);
+        focusIfLost.SetResult(true);
+        var collapsed = EditorShellPanel.None;
+        var cut = RenderShell(TmLayoutMode.Desktop, p => p.Add(x => x.CollapsedPanelsChanged,
+            EventCallback.Factory.Create<EditorShellPanel>(this, v => collapsed = v)));
 
-        // The host closes the panel itself — no sheet gesture involved.
-        host.Left = false;
-        Sync(cut, host, TmLayoutMode.Tablet);
+        cut.Find(".tm-editor-shell__panel-toggle--left").Click();
+        collapsed.Should().Be(EditorShellPanel.Left);
+        cut.Render(p => p.Add(x => x.CollapsedPanels, collapsed));
 
-        cut.FindAll(".tm-drawer").Should().BeEmpty();
-        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
-    }
-
-    [Fact]
-    public void FocusRestore_EveryFocusAsyncSite_SwallowsJsExceptionToo()
-    {
-        // bUnit attaches no JSRuntime to element references, so FocusAsync only ever throws
-        // InvalidOperationException here; the JSException half (a detached element in a real
-        // browser) is pinned by this source guard plus the live-browser E2E.
-        var root = AppContext.BaseDirectory;
-        var dir = new DirectoryInfo(root);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
-        dir.Should().NotBeNull();
-        var source = File.ReadAllText(Path.Combine(dir!.FullName, "src", "Tempo.Blazor", "Components", "Layout", "TmEditorShell.razor"));
-
-        var sites = System.Text.RegularExpressions.Regex.Matches(source, @"\.FocusAsync\(");
-        sites.Count.Should().BeGreaterThan(0);
-        foreach (System.Text.RegularExpressions.Match site in sites)
-        {
-            var window = source.Substring(site.Index, Math.Min(700, source.Length - site.Index));
-            window.Should().Contain("JSException", "every best-effort focus move must swallow JSException");
-        }
-    }
-    [Fact]
-    public void Desktop_NoMobileActions_RendersNoBar()
-    {
-        var cut = RenderShell(TmLayoutMode.Mobile);
-
-        cut.FindAll(".tm-mobile-action-bar__bar").Should().BeEmpty();
+        cut.WaitForAssertion(() => focusIfLost.Invocations.Should().NotBeEmpty());
+        (focusIfLost.Invocations.Last().Arguments[0] as string).Should().Be(
+            cut.Find(".tm-editor-shell__rail--left button").Id);
     }
 }

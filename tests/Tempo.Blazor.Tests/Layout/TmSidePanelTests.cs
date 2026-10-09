@@ -202,4 +202,144 @@ public class TmSidePanelTests : LocalizationTestBase
 
         cut.Find(".tm-drawer").GetAttribute("data-layout").Should().Be("tablet");
     }
+
+    // ── F4: the sheet's geometry follows the VIEWPORT, the dock-vs-sheet choice the container ──
+
+    [Fact]
+    public void Auto_MobileContainerOnDesktopViewport_RendersRightSideSheet()
+    {
+        var cut = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+
+        cut.FindAll(".tm-side-panel--docked").Should().BeEmpty("a mobile container never docks");
+        var sheet = cut.Find(".tm-drawer");
+        sheet.ClassList.Should().Contain("tm-drawer--right",
+            "a desktop viewport has room for a side sheet even when the container is narrow");
+        sheet.ClassList.Should().NotContain("tm-drawer--bottom");
+    }
+
+    [Fact]
+    public void Auto_DesktopContainerOnMobileViewport_StaysDocked_AndASheetWouldBeBottom()
+    {
+        var docked = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+        docked.FindAll(".tm-side-panel--docked").Should().HaveCount(1);
+
+        var sheet = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .Add(x => x.Presentation, SidePanelPresentation.Sheet)
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+        sheet.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom");
+    }
+
+    [Fact]
+    public void Auto_WithoutAViewportScope_FallsBackToTheContainer()
+    {
+        var cut = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom");
+    }
+
+    [Fact]
+    public void ForcedMode_BeatsTheViewportScope_AndIsForwardedToTheDrawer()
+    {
+        var cut = Render<TmSidePanel>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+
+        var sheet = cut.Find(".tm-drawer");
+        sheet.ClassList.Should().Contain("tm-drawer--bottom");
+        sheet.GetAttribute("data-layout").Should().Be("mobile");
+    }
+
+    // ── F7 / F14: names, Side, FooterContent, header gap ────────────────────
+
+    [Fact]
+    public void Docked_Aside_IsLabelledByItsTitle()
+    {
+        var cut = RenderPanel(TmLayoutMode.Desktop, p => p.Add(x => x.Title, "Event detail"));
+
+        var aside = cut.Find("aside.tm-side-panel");
+        var labelledBy = aside.GetAttribute("aria-labelledby");
+        labelledBy.Should().NotBeNullOrEmpty();
+        cut.Find($"#{labelledBy}").TextContent.Should().Contain("Event detail");
+    }
+
+    [Fact]
+    public void Docked_WithoutTitle_GetsALocalisedDefaultName()
+    {
+        var cut = RenderPanel(TmLayoutMode.Desktop);
+
+        cut.Find("aside.tm-side-panel").GetAttribute("aria-label").Should().Be("Side panel");
+    }
+
+    [Fact]
+    public void Sheet_WithoutTitle_GetsALocalisedDefaultName()
+    {
+        var cut = RenderPanel(TmLayoutMode.Tablet);
+
+        cut.Find(".tm-drawer").GetAttribute("aria-label").Should().Be("Side panel");
+    }
+
+    [Fact]
+    public void Side_Left_MakesTheSideSheetSlideInFromTheLeft()
+    {
+        var cut = RenderPanel(TmLayoutMode.Tablet, p => p.Add(x => x.Side, SidePanelSide.Left));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--left");
+    }
+
+    [Fact]
+    public void Side_IsReflectedOnTheDockedRoot()
+    {
+        var left = RenderPanel(TmLayoutMode.Desktop, p => p.Add(x => x.Side, SidePanelSide.Left));
+        left.Find("aside.tm-side-panel").GetAttribute("data-side").Should().Be("left");
+
+        var right = RenderPanel(TmLayoutMode.Desktop);
+        right.Find("aside.tm-side-panel").GetAttribute("data-side").Should().Be("right");
+    }
+
+    [Fact]
+    public void FooterContent_RendersBelowTheBody_InBothPresentations()
+    {
+        RenderFragment footer = b => { b.OpenElement(0, "button"); b.AddAttribute(1, "class", "apply"); b.AddContent(2, "Apply"); b.CloseElement(); };
+
+        var docked = RenderPanel(TmLayoutMode.Desktop, p => p.Add(x => x.FooterContent, footer));
+        docked.Find("aside.tm-side-panel .tm-side-panel__footer .apply").Should().NotBeNull();
+
+        var sheet = RenderPanel(TmLayoutMode.Tablet, p => p.Add(x => x.FooterContent, footer));
+        sheet.Find(".tm-drawer .tm-drawer__footer .apply").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void NoFooter_RendersNoFooterRegion()
+    {
+        RenderPanel(TmLayoutMode.Desktop).FindAll(".tm-side-panel__footer").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Sheet_HeaderActions_AreSeparatedFromTheTitle()
+    {
+        var cut = RenderPanel(TmLayoutMode.Tablet, p => p
+            .Add(x => x.Title, "Event detail")
+            .Add(x => x.HeaderActions, b => b.AddContent(0, "Inspect")));
+
+        // The title and the actions share one flexible group so the gap is a CSS concern of the
+        // side-panel stylesheet, not of the drawer's space-between header.
+        cut.Find(".tm-drawer__header .tm-side-panel__header-actions").Should().NotBeNull();
+        cut.Find(".tm-drawer__header .tm-drawer__title").Should().NotBeNull();
+    }
 }
