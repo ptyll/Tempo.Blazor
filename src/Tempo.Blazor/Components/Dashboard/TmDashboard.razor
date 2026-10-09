@@ -437,7 +437,10 @@
             new TmActionItem
             {
                 Id = "save-layout",
-                Label = Loc["TmDashboard_SaveChanges"],
+                // Y11: the bar tile gets the SHORT mobile label — "Enregistrer les modifications"
+                // clamped illegibly at 320 fr (review round 2, m2). The desktop toolbar keeps the
+                // full wording.
+                Label = Loc["TmDashboard_SaveChangesShort"],
                 Icon = IconNames.Save,
                 Priority = 90,
                 OnClick = EventCallback.Factory.Create(this, SaveLayout),

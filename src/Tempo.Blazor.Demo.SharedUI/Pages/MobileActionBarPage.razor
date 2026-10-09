@@ -9,7 +9,7 @@
 
 <div class="mab-page">
     <header class="mab-header">
-        <h1>@Loc["TmMobileActionBarDemo_Title"]</h1>
+        <h1 tabindex="-1" @ref="_title">@Loc["TmMobileActionBarDemo_Title"]</h1>
         <p>@Loc["TmMobileActionBarDemo_Intro"]</p>
     </header>
 
@@ -97,6 +97,7 @@
     private bool _showFixed;
     private string _lastAction = "—";
     private TmMobileActionBar? _actionBar;
+    private ElementReference _title;
     private IReadOnlyList<TmActionItem> _actions = [];
 
     // X14/X18: built per parameter set (not once in OnInitialized), so a culture switch
@@ -143,6 +144,16 @@
             },
             new TmActionItem
             {
+                // Y8: an action that moves focus elsewhere — the menu's focus restore to the More
+                // trigger must land BEFORE the action runs, so this focus move wins (E2E-asserted).
+                Id = "focus-title",
+                Label = Loc["TmMobileActionBarDemo_ActionFocusTitle"],
+                Icon = IconNames.Target,
+                Priority = 75,
+                OnClick = EventCallback.Factory.Create(this, FocusTitle),
+            },
+            new TmActionItem
+            {
                 Id = "archive",
                 // X18: a disabled action inside the overflow menu — the initial focus skips it.
                 Label = Loc["TmMobileActionBarDemo_ActionArchive"],
@@ -169,6 +180,11 @@
     {
         _lastAction = Loc[key];
         return Task.CompletedTask;
+    }
+
+    private async Task FocusTitle()
+    {
+        await _title.FocusAsync();
     }
 
     private Task OpenConfirm()

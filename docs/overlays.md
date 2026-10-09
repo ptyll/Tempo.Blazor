@@ -91,8 +91,6 @@ bottom sheet on a mobile one. The host contract every action surface must honour
 
 ### Modality of dialog popups
 
-
-
 A `Role="dialog"` popup that must trap focus (calendar popups) passes
 `TrapFocus="true"`: the `TmFocusScope` **is** the panel root, so Tab cycles inside, the
 background goes inert, and `aria-modal="true"` is enforced by a real trap rather than promised
