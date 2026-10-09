@@ -1,7 +1,6 @@
 @namespace Tempo.Blazor.Components.Actions
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Layout
-@using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Layout
 @using Tempo.Blazor.Components.Overlay
@@ -11,7 +10,7 @@
 @inject ILogger<OverlayLayout> LayoutLogger
 
 @* F5 mobile action bar. The bar belongs to its component's container: the default
-   StickyContainer placement sticks inside the component's own box (position: sticky,
+   StickyContainer placement sticks inside the component's own container (position: sticky,
    never fixed against the viewport). FixedViewport is a deliberate opt-in and resolves
    its visibility from the viewport scope like every other viewport-anchored surface
    (decision F1-LAYOUT-CONTRACT). The "More" menu composes TmOverlayPanel (F3): the
@@ -52,20 +51,28 @@ else
 
 @code {
     private readonly OverlayLayout _layout = new();
+    private readonly string _morePanelId = $"tm-mab-more-{Guid.NewGuid():N}";
     private TmOverlayPanel? _morePanel;
     private ElementReference _moreButton;
     private ElementReference _firstMenuItem;
     private bool _focusMoreItemPending;
+    private bool _focusMoreAfterClose;
+    private bool _moreOpen;
 
-    /// <summary>The actions. Higher <see cref="TmActionItem.Priority"/> renders earlier; the items
-    /// beyond <see cref="MaxVisible"/> move into the "More" menu, keeping that order.</summary>
+    /// <summary>
+    /// The actions. The bar and the "More" menu render in Items order — <see cref="TmActionItem.Priority"/>
+    /// is only an overflow rank: the lowest-priority items move into the menu first, ties drop
+    /// the last item first (partitioned by <c>ActionOverflowLayout</c>).
+    /// </summary>
     [Parameter] public IReadOnlyList<TmActionItem>? Items { get; set; }
 
     /// <summary>
-    /// Content the bar belongs to — rendered above it. For <see cref="ActionBarPlacement.StickyContainer"/>
-    /// and <see cref="ActionBarPlacement.FixedViewport"/> the region gets a bottom padding equal to
-    /// the bar height, so the last content stays reachable with no overlap (at 320 and 390 alike);
-    /// <see cref="ActionBarPlacement.Inline"/> needs none and gets none.
+    /// Content the bar belongs to — rendered above it at every layout (never hidden with the
+    /// bar). For <see cref="ActionBarPlacement.FixedViewport"/> the region gets a bottom padding
+    /// equal to the bar height while the bar renders, so the last content stays reachable with
+    /// no overlap (at 320 and 390 alike); <see cref="ActionBarPlacement.StickyContainer"/> and
+    /// <see cref="ActionBarPlacement.Inline"/> bars sit in flow at the end of the content and
+    /// reserve nothing — a padding reserve there would double-book an empty band at scroll end.
     /// </summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
@@ -88,7 +95,8 @@ else
     /// The layout the visibility resolves from. <see cref="TmLayoutMode.Auto"/> follows the
     /// container (or the viewport scope for <see cref="ActionBarPlacement.FixedViewport"/>);
     /// a forced value never measures, so a test can render the bar without a DOM. The bar hides
-    /// whenever the resolved layout is above the mobile breakpoint (tablet and desktop).
+    /// whenever the resolved layout is above the mobile breakpoint (tablet and desktop); the
+    /// <see cref="ChildContent"/> always renders.
     /// </summary>
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
@@ -120,6 +128,10 @@ else
             ActionBarPlacement.Inline => "tm-mobile-action-bar--inline",
             _ => "tm-mobile-action-bar--sticky",
         },
+        // X2: with no ChildContent the root itself is the sticky box — otherwise the bar's
+        // containing block is its own root and sticky could never move (the bare TmDashboard
+        // reference case).
+        ChildContent is null ? "tm-mobile-action-bar--bare" : null,
         Class,
     }.Where(static c => !string.IsNullOrWhiteSpace(c)));
 
@@ -131,14 +143,6 @@ else
 
     private int EffectiveMaxVisible => Math.Max(1, MaxVisible);
 
-    private IReadOnlyList<TmActionItem> OrderedItems => (Items ?? [])
-        .OrderByDescending(static item => item.Priority)
-        .ToList();
-
-    private IReadOnlyList<TmActionItem> VisibleItems => OrderedItems.Take(EffectiveMaxVisible).ToList();
-
-    private IReadOnlyList<TmActionItem> OverflowItems => OrderedItems.Skip(EffectiveMaxVisible).ToList();
-
     private string BarModifierClass => Placement switch
     {
         ActionBarPlacement.FixedViewport => "tm-mobile-action-bar__bar--fixed",
@@ -147,22 +151,36 @@ else
     };
 
     /// <summary>The bar body: the host content region (when given) and the action group itself.
-    /// Rendered only below the mobile breakpoint — above it the bar does not exist.</summary>
+    /// The content region renders at every layout — only the role=group bar is gated on the
+    /// mobile breakpoint.</summary>
     private RenderFragment<TmLayoutContext> RenderBar => context => builder =>
     {
-        if (!context.IsMobile)
-        {
-            return;
-        }
-
         builder.OpenRegion(0);
+
+        var items = Items ?? [];
+        var showBar = context.IsMobile && items.Count > 0;
+
         if (ChildContent is not null)
         {
+            // The modifier marks "the bar renders"; which placement consumes the reserve is the
+            // stylesheet's decision (today: only FixedViewport — X2 (b)).
+            var bodyClass = showBar
+                ? "tm-mobile-action-bar__body tm-mobile-action-bar__body--with-bar"
+                : "tm-mobile-action-bar__body";
             builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "class", "tm-mobile-action-bar__body");
+            builder.AddAttribute(1, "class", bodyClass);
             builder.AddContent(2, ChildContent);
             builder.CloseElement();
         }
+
+        if (!showBar)
+        {
+            builder.CloseRegion();
+            return;
+        }
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, EffectiveMaxVisible);
+        var moreDisabled = overflow.Count > 0 && overflow.All(static item => item.Disabled);
 
         builder.OpenElement(3, "div");
         builder.AddAttribute(4, "class", $"tm-mobile-action-bar__bar {BarModifierClass}");
@@ -171,115 +189,130 @@ else
         builder.AddAttribute(5, "role", "group");
         builder.AddAttribute(6, "aria-label", EffectiveAriaLabel);
 
-        var sequence = 7;
-        foreach (var item in VisibleItems)
+        foreach (var item in visible)
         {
-            builder.OpenComponent<TmButton>(sequence++);
-            // .tm-touch-target opts the buttons into the 44px minimum (the .tm-btn contract
-            // forbids restyling height from this stylesheet). The icon renders inside the
-            // label span: the bar's CSS stacks icon over text on the span itself.
-            builder.AddAttribute(sequence++, "Class", "tm-mobile-action-bar__action tm-touch-target");
-            builder.AddAttribute(sequence++, "Size", ButtonSize.Sm);
-            builder.AddAttribute(sequence++, "Disabled", item.Disabled);
-            builder.AddAttribute(sequence++, "title", item.Label);
-            builder.AddAttribute(sequence++, "OnClick", EventCallback.Factory.Create(this, () => InvokeItemAsync(item)));
-            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => BuildActionLabel(b, item)));
-            builder.CloseComponent();
+            // X3: the bar's own tile button (icon over a two-line label), never .tm-btn — the
+            // .tm-btn contract (fixed height, nowrap label) made labels illegible at 320/390.
+            // The full label stays in the DOM (clamped to two lines), so no title attribute is
+            // needed — it would only duplicate the accessible name.
+            builder.OpenRegion(1);
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "class", "tm-mobile-action-bar__action tm-touch-target");
+            builder.AddAttribute(3, "disabled", item.Disabled);
+            builder.AddAttribute(4, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
+            builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
+            builder.AddAttribute(5, "onclick", EventCallback.Factory.Create(this, () => InvokeItemAsync(item)));
+            if (!string.IsNullOrEmpty(item.Icon))
+            {
+                builder.OpenElement(6, "span");
+                builder.AddAttribute(7, "class", "tm-mobile-action-bar__icon");
+                builder.OpenComponent<TmIcon>(8);
+                builder.AddAttribute(9, "Name", item.Icon);
+                builder.AddAttribute(10, "Size", IconSize.Sm);
+                builder.CloseComponent();
+                builder.CloseElement();
+            }
+            builder.OpenElement(11, "span");
+            builder.AddAttribute(12, "class", "tm-mobile-action-bar__label-text");
+            builder.AddContent(13, item.Label);
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseRegion();
         }
 
-        var overflow = OverflowItems;
         if (overflow.Count > 0)
         {
             // The More trigger is a raw button (the dashboard's own pattern): the panel gets its
             // element as an explicit Anchor, so the popover positions against it and the sheet's
             // focus restore resolves the trigger by element reference — never a stale node.
-            builder.OpenElement(sequence++, "button");
-            builder.AddAttribute(sequence++, "type", "button");
-            builder.AddAttribute(sequence++, "class", "tm-btn tm-btn-secondary tm-btn-sm tm-mobile-action-bar__more tm-touch-target");
-            builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
-            builder.OpenElement(sequence++, "span");
-            builder.AddAttribute(sequence++, "class", "tm-btn-label");
-            builder.OpenComponent<TmIcon>(sequence++);
-            builder.AddAttribute(sequence++, "Name", IconNames.MoreHorizontal);
-            builder.AddAttribute(sequence++, "Size", IconSize.Sm);
+            builder.OpenRegion(2);
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "class", "tm-btn tm-btn-secondary tm-btn-sm tm-mobile-action-bar__more tm-touch-target");
+            builder.AddAttribute(3, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
+            builder.AddAttribute(4, "aria-haspopup", "menu");
+            builder.AddAttribute(5, "aria-expanded", _moreOpen ? "true" : "false");
+            builder.AddAttribute(6, "aria-controls", _morePanelId);
+            // X11: an overflow of nothing but disabled items has nothing to invoke.
+            builder.AddAttribute(7, "disabled", moreDisabled);
+            builder.OpenElement(8, "span");
+            builder.AddAttribute(9, "class", "tm-btn-label");
+            builder.OpenComponent<TmIcon>(10);
+            builder.AddAttribute(11, "Name", IconNames.MoreHorizontal);
+            builder.AddAttribute(12, "Size", IconSize.Sm);
             builder.CloseComponent();
-            builder.OpenElement(sequence++, "span");
-            builder.AddAttribute(sequence++, "class", "tm-mobile-action-bar__label-text");
-            builder.AddContent(sequence++, EffectiveMoreLabel);
+            builder.OpenElement(13, "span");
+            builder.AddAttribute(14, "class", "tm-mobile-action-bar__label-text");
+            builder.AddContent(15, EffectiveMoreLabel);
             builder.CloseElement();
             builder.CloseElement();
             // After the attributes and content: an element-reference capture may not sit between
             // an element frame and its attributes (RenderTreeBuilder assertion).
-            builder.AddElementReferenceCapture(sequence++, reference => _moreButton = reference);
+            builder.AddElementReferenceCapture(16, reference => _moreButton = reference);
             builder.CloseElement();
 
-            builder.OpenComponent<TmOverlayPanel>(sequence++);
-            builder.AddComponentParameter(sequence++, "Anchor", _moreButton);
-            builder.AddComponentParameter(sequence++, "Role", "menu");
-            builder.AddComponentParameter(sequence++, "Title", EffectiveMoreLabel);
-            builder.AddComponentParameter(sequence++, "MobilePresentation", PanelPresentation.Auto);
-            builder.AddComponentParameter(sequence++, "InitialMode", context.Resolved);
-            builder.AddComponentParameter(sequence++, "OnOpened", EventCallback.Factory.Create(this, HandleMoreOpened));
-            builder.AddComponentParameter(sequence++, "OnDismissed", EventCallback.Factory.Create<string>(this, _ => HandleMoreDismissed()));
-            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => BuildMenu(b, overflow)));
-            builder.AddComponentReferenceCapture(sequence++, value => _morePanel = (TmOverlayPanel)value);
+            builder.OpenComponent<TmOverlayPanel>(17);
+            builder.AddComponentParameter(18, "Id", _morePanelId);
+            builder.AddComponentParameter(19, "Anchor", _moreButton);
+            // X4: the panel carries the bar's own surface class — without it the zero-specificity
+            // reset leaves the popover transparent (container-mobile on a desktop viewport).
+            builder.AddComponentParameter(20, "Class", "tm-mobile-action-bar__menu-panel");
+            builder.AddComponentParameter(21, "Role", "menu");
+            builder.AddComponentParameter(22, "Title", EffectiveMoreLabel);
+            builder.AddComponentParameter(23, "MobilePresentation", PanelPresentation.Auto);
+            builder.AddComponentParameter(24, "InitialMode", context.Resolved);
+            builder.AddComponentParameter(25, "OnOpened", EventCallback.Factory.Create(this, HandleMoreOpened));
+            builder.AddComponentParameter(26, "OnDismissed", EventCallback.Factory.Create<string>(this, _ => HandleMoreDismissed()));
+            builder.AddAttribute(27, "ChildContent", (RenderFragment)(b => BuildMenu(b, overflow)));
+            builder.AddComponentReferenceCapture(28, value => _morePanel = (TmOverlayPanel)value);
             builder.CloseComponent();
+            builder.CloseRegion();
         }
 
         builder.CloseElement();
         builder.CloseRegion();
     };
 
-    /// <summary>The stacked icon-over-label content of a bar action (rendered inside TmButton's
-    /// own <c>span.tm-btn-label</c>, so the bar's span opt-in stacks and truncates it).</summary>
-    private static void BuildActionLabel(RenderTreeBuilder builder, TmActionItem item)
-    {
-        if (!string.IsNullOrEmpty(item.Icon))
-        {
-            builder.OpenComponent<TmIcon>(0);
-            builder.AddAttribute(1, "Name", item.Icon);
-            builder.AddAttribute(2, "Size", IconSize.Sm);
-            builder.CloseComponent();
-        }
-        builder.OpenElement(3, "span");
-        builder.AddAttribute(4, "class", "tm-mobile-action-bar__label-text");
-        builder.AddContent(5, item.Label);
-        builder.CloseElement();
-    }
-
     private void BuildMenu(RenderTreeBuilder builder, IReadOnlyList<TmActionItem> overflow)
     {
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", "tm-mobile-action-bar__menu");
+        var capturedFirstEnabled = false;
         for (var i = 0; i < overflow.Count; i++)
         {
             var item = overflow[i];
-            var seq = 16 * (i + 1);
-            builder.OpenElement(seq, "button");
-            builder.AddAttribute(seq + 1, "type", "button");
-            builder.AddAttribute(seq + 2, "role", "menuitem");
-            builder.AddAttribute(seq + 3, "class", "tm-mobile-action-bar__menu-item");
-            builder.AddAttribute(seq + 4, "disabled", item.Disabled);
-            builder.AddAttribute(seq + 5, "title", item.Label);
-            builder.AddAttribute(seq + 7, "onclick", EventCallback.Factory.Create(this, () => InvokeMenuItemAsync(item)));
+            builder.OpenRegion(16 * (i + 1));
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "type", "button");
+            builder.AddAttribute(2, "role", "menuitem");
+            builder.AddAttribute(3, "class", "tm-mobile-action-bar__menu-item");
+            builder.AddAttribute(4, "disabled", item.Disabled);
+            builder.AddAttribute(5, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
+            builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
+            builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, () => InvokeMenuItemAsync(item)));
             if (!string.IsNullOrEmpty(item.Icon))
             {
-                builder.OpenComponent<TmIcon>(seq + 8);
-                builder.AddAttribute(seq + 9, "Name", item.Icon);
-                builder.AddAttribute(seq + 10, "Size", IconSize.Sm);
+                builder.OpenComponent<TmIcon>(7);
+                builder.AddAttribute(8, "Name", item.Icon);
+                builder.AddAttribute(9, "Size", IconSize.Sm);
                 builder.CloseComponent();
             }
-            builder.OpenElement(seq + 11, "span");
-            builder.AddAttribute(seq + 12, "class", "tm-mobile-action-bar__menu-label");
-            builder.AddContent(seq + 13, item.Label);
+            builder.OpenElement(10, "span");
+            builder.AddAttribute(11, "class", "tm-mobile-action-bar__menu-label");
+            builder.AddContent(12, item.Label);
             builder.CloseElement();
-            if (i == 0)
+            if (!capturedFirstEnabled && !item.Disabled)
             {
+                // X11: the initial focus skips disabled items — focus() on a disabled button is a
+                // no-op and would leave focus on <body>.
+                capturedFirstEnabled = true;
                 // After the attributes and content: an element-reference capture may not sit
                 // between an element frame and its attributes (RenderTreeBuilder assertion).
-                builder.AddElementReferenceCapture(seq + 14, reference => _firstMenuItem = reference);
+                builder.AddElementReferenceCapture(13, reference => _firstMenuItem = reference);
             }
             builder.CloseElement();
+            builder.CloseRegion();
         }
         builder.CloseElement();
     }
@@ -304,6 +337,10 @@ else
         // returns focus to this menuitem.
         if (!item.KeepMenuOpen && _morePanel is not null)
         {
+            // X5: the light popover close does not restore focus (overlay.js close() leaves it
+            // wherever the destroyed menu had it — often <body>), so the bar restores it
+            // itself: flag consumed in OnAfterRenderAsync, the TmDropdown.SelectItemAsync pattern.
+            _focusMoreAfterClose = true;
             await _morePanel.CloseAsync();
         }
 
@@ -321,22 +358,23 @@ else
     /// <summary>
     /// Closes the "More" menu when it is open (a no-op otherwise). Use after a confirmed
     /// <see cref="TmActionItem.KeepMenuOpen"/> action — e.g. the host's delete flow closes the
-    /// sheet once the user confirms, and focus returns to the "More" trigger.
+    /// sheet once the user confirms; focus returns to the "More" trigger.
     /// </summary>
     public Task CloseMoreAsync()
-        => throw new NotImplementedException();
+        => _morePanel?.SetOpenAsync(false) ?? Task.CompletedTask;
 
     /// <summary>Fires once per open, after the panel is actually displayed (the m3 contract).</summary>
     private void HandleMoreOpened()
     {
-        // Sheet mode focuses the first menuitem through TmOverlayPanel's InitialFocusSelector;
-        // the popover needs the same move, gated on OnOpened so the focus cannot land on a
-        // still-hidden panel.
+        _moreOpen = true;
+        // Sheet mode and popover mode both move focus to the first ENABLED menuitem, gated on
+        // OnOpened so the focus cannot land on a still-hidden panel.
         _focusMoreItemPending = true;
     }
 
     private void HandleMoreDismissed()
     {
+        _moreOpen = false;
         _focusMoreItemPending = false;
     }
 
@@ -362,6 +400,19 @@ else
             catch (InvalidOperationException)
             {
                 // The menu closed before the focus move (fast Escape): nothing to focus.
+            }
+        }
+
+        if (_focusMoreAfterClose)
+        {
+            _focusMoreAfterClose = false;
+            try
+            {
+                await _moreButton.FocusAsync(preventScroll: true);
+            }
+            catch (InvalidOperationException)
+            {
+                // The trigger left the DOM before the focus move: nothing to focus.
             }
         }
     }

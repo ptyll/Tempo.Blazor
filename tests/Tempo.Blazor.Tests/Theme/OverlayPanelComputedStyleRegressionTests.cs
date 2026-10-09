@@ -79,9 +79,11 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // TmQueryInput passes no Class: the box lives on the nested <ul.tm-query-input__dropdown>,
         // asserted separately in QueryInput_NestedDropdown_KeepsItsSurfaceBorderAndPadding.
         new("TmQueryInput.razor", null, null, null, null, null),
-        // F5: TmMobileActionBar's "More" menu passes no Class either — the menu styling lives on
-        // the content wrapper (.tm-mobile-action-bar__menu), not the panel surface.
-        new("TmMobileActionBar.razor", null, null, null, null, null),
+        // F5: TmMobileActionBar's "More" menu passes its own surface class — the popover-mode
+        // panel (container-mobile on a desktop viewport) must paint background/border/padding
+        // like every other menu consumer.
+        new("TmMobileActionBar.razor", "tm-mobile-action-bar__menu-panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
         new("TmContextMenu.razor", "tm-context-menu",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "0.25rem", null),
         new("TmNotificationBell.razor", "tm-notification-bell__dropdown",

@@ -78,8 +78,8 @@ public class ActionOverflowLayoutTests
 
         var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible);
 
-        visible.Select(i => i.Id).Should().Equal("a");
-        overflow.Select(i => i.Id).Should().Equal("b");
+        visible.Select(i => i.Id).Should().Equal("b");
+        overflow.Select(i => i.Id).Should().Equal("a");
     }
 
     [Fact]

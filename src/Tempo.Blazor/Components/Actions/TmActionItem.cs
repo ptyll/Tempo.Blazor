@@ -16,16 +16,17 @@ public sealed class TmActionItem
     /// </summary>
     public string Id { get; set; } = string.Empty;
 
-    /// <summary>The user-visible label. Names the rendered button (and its full-text <c>title</c>).</summary>
+    /// <summary>The user-visible label. Names the rendered button and stays fully in the DOM.</summary>
     public string Label { get; set; } = string.Empty;
 
     /// <summary>Optional icon name (an <c>IconNames</c> value or a registered icon).</summary>
     public string? Icon { get; set; }
 
     /// <summary>
-    /// Ordering hint: higher priority actions render earlier (farther left in LTR). Items with
-    /// equal priority keep the order of <c>Items</c>. Overflow into the "More" menu keeps this
-    /// order, so the least important actions land in the menu first.
+    /// Overflow rank ONLY — it never changes the render order. The bar and the "More" menu render
+    /// in the order of <c>Items</c>; the items beyond the visible budget move into the menu by
+    /// ascending priority (the lowest priority overflows first, ties drop the last item first).
+    /// Disabled items still count towards the budget.
     /// </summary>
     public int Priority { get; set; }
 

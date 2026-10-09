@@ -265,6 +265,16 @@
   --tm-form-action-bar-reserve-block-size:
       calc(var(--tm-input-height-md) + 4 * var(--tm-space-2) + 2px + env(safe-area-inset-bottom, 0px));
 
+  /* ── Mobile action bar (F5) ─────────────────────────────────
+     The content reserve for hosts that anchor TmMobileActionBar with Placement=FixedViewport:
+     the bar is position:fixed (out of flow), so the content scrolling under it needs clearance
+     equal to the bar height plus the bottom safe area. The value derives from the same tokens
+     the bar is built from, never a magic number. StickyContainer/Inline bars reserve nothing —
+     they sit in flow at the end of the content. Hosts read this token (e.g. for their own
+     scroll-padding-bottom); the component's own with-bar rule uses it too. */
+  --tm-mobile-action-bar-reserve-block-size:
+      calc(var(--tm-touch-target) + var(--tm-space-4) + env(safe-area-inset-bottom, 0px));
+
   /* ── Alias Tokens (used by components) ──────────────────────── */
   --tm-surface:                var(--tm-bg-surface);
   --tm-surface-secondary:      var(--tm-bg-surface-secondary);

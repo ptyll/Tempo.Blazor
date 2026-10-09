@@ -15,7 +15,7 @@
       "name": "Label",
       "type": "string",
       "isRequired": true,
-      "description": "The user-visible label. Names the rendered button (and its full-text title)."
+      "description": "The user-visible label. Names the rendered button and stays fully in the DOM."
     },
     {
       "name": "Icon",
@@ -28,7 +28,7 @@
       "type": "int",
       "isRequired": false,
       "default": "0",
-      "description": "Ordering hint: higher priority actions render earlier (farther left in LTR). Items with equal priority keep the order of Items; overflow into the \"More\" menu keeps this order."
+      "description": "Overflow rank ONLY — it never changes the render order. The bar and the \"More\" menu render in the order of Items; the items beyond the visible budget move into the menu by ascending priority (the lowest priority overflows first, ties drop the last item first). Disabled items still count towards the budget."
     },
     {
       "name": "Disabled",

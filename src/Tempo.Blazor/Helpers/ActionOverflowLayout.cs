@@ -20,5 +20,29 @@ internal static class ActionOverflowLayout
     public static (IReadOnlyList<TmActionItem> Visible, IReadOnlyList<TmActionItem> Overflow) Partition(
         IReadOnlyList<TmActionItem> items,
         int maxVisible)
-        => throw new NotImplementedException();
+    {
+        var budget = Math.Max(1, maxVisible);
+        if (items.Count <= budget)
+        {
+            return (items, []);
+        }
+
+        var overflowCount = items.Count - budget;
+        var overflowIndexes = items
+            .Select((item, index) => (Item: item, Index: index))
+            .OrderBy(entry => entry.Item.Priority)
+            .ThenByDescending(entry => entry.Index)
+            .Take(overflowCount)
+            .Select(entry => entry.Index)
+            .ToHashSet();
+
+        var visible = new List<TmActionItem>(budget);
+        var overflow = new List<TmActionItem>(overflowCount);
+        for (var i = 0; i < items.Count; i++)
+        {
+            (overflowIndexes.Contains(i) ? overflow : visible).Add(items[i]);
+        }
+
+        return (visible, overflow);
+    }
 }

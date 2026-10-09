@@ -537,8 +537,11 @@ public class TmMobileActionBarTests : LocalizationTestBase
     [Fact]
     public void MoreTrigger_HasMenuAriaAttributes()
     {
-        // X10: haspopup/expanded/controls like every other popup trigger in the library.
+        // X10: haspopup/expanded/controls like every other popup trigger in the library. A
+        // desktop viewport context makes the menu present as the anchored popover (the sheet
+        // branch does not render the panel Class/Id).
         var cut = Render<TmMobileActionBar>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
             .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
             .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
 
@@ -574,8 +577,11 @@ public class TmMobileActionBarTests : LocalizationTestBase
     public void MoreMenu_PanelCarriesTheSurfaceClass()
     {
         // X4 (MAJOR): the popover-mode More menu must paint a surface — the panel carries the
-        // bar's own surface class instead of accepting the transparent default.
+        // bar's own surface class instead of accepting the transparent default. The desktop
+        // viewport context forces the popover presentation (in sheet mode the drawer owns the
+        // surface and the panel Class is not rendered).
         var cut = Render<TmMobileActionBar>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
             .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
             .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
 

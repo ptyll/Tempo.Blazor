@@ -3,20 +3,34 @@
    TmBottomNavigation which is application chrome). FixedViewport is a deliberate opt-in. */
 
 .tm-mobile-action-bar {
-  /* The bar height drives both the bar itself and the content region's bottom padding, so the
-     two can never drift apart. The safe-area inset only applies to the padding pair below. */
+  /* The bar height drives the bar itself and the FixedViewport content reserve, so the two can
+     never drift apart. The safe-area inset only applies to the reserve pair below. */
   --tm-mobile-action-bar-height: calc(var(--tm-touch-target) + var(--tm-space-4));
   display: block;
 }
 
-.tm-mobile-action-bar__body {
-  padding-bottom: calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px));
+/* X2 (a): with no ChildContent the ROOT is the sticky box. Otherwise the bar's containing block
+   is its own root, the box has no room to move in, and sticky never engages (the bare
+   TmDashboard reference case: Save/Cancel were only reachable after scrolling past every
+   widget). The bar itself stays in flow, static inside the sticky root. */
+.tm-mobile-action-bar--sticky.tm-mobile-action-bar--bare {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--tm-z-sticky);
 }
 
-/* An inline bar sits at the end of the content in normal flow: nothing can scroll under it,
-   so the region above it needs no clearance. */
-.tm-mobile-action-bar--inline .tm-mobile-action-bar__body {
-  padding-bottom: 0;
+.tm-mobile-action-bar--bare .tm-mobile-action-bar__bar--sticky {
+  position: static;
+}
+
+/* X2 (b): the content reserve exists ONLY for the FixedViewport placement — fixed positioning
+   takes the bar out of flow, so the content below it needs clearance equal to the bar height.
+   Sticky and inline bars sit in flow at the end of the content; a padding reserve there
+   double-books an empty band at scroll end. Hosts may override the published
+   --tm-mobile-action-bar-reserve-block-size token (docs/responsive-conventions.md B4). */
+.tm-mobile-action-bar--fixed .tm-mobile-action-bar__body--with-bar {
+  padding-bottom: var(--tm-mobile-action-bar-reserve-block-size,
+      calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px)));
 }
 
 .tm-mobile-action-bar__bar {
@@ -44,32 +58,69 @@
   z-index: var(--tm-z-sticky);
 }
 
-.tm-mobile-action-bar__bar .tm-btn {
+/* X3: the bar's own tile action — a raw button, never .tm-btn (the .tm-btn contract fixes the
+   height and forbids white-space overrides, which is exactly what made labels illegible at
+   320/390). The icon sits above a label clamped to two lines; the full label stays in the DOM,
+   so no title attribute duplicates the accessible name. All actions stay neutral — text and
+   icon in --tm-text-primary, none highlighted. */
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action {
   flex: 1 1 0;
-  /* Never height/white-space here (the .tm-btn modifier contract): a shrinking context caps the
-     button box with flex and truncates ON THE SPAN (decision F2-BTN-LABEL-SPAN). */
   min-width: 0;
-  max-width: 100%;
-}
-
-/* The label span opts into truncation and stacks icon over text — the reference mobile layout
-   (output/imagegen/tempo-reimagined/TmDashboard/dashboard--mobile.png): the icon no longer
-   competes with the text for the row's width, so short labels stay whole at 320 and 390. */
-.tm-mobile-action-bar__bar .tm-btn .tm-btn-label {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--tm-space-1);
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
+  min-height: var(--tm-touch-target);
+  height: auto;
+  padding: var(--tm-space-1);
+  border: none;
+  background: transparent;
+  color: var(--tm-text-primary);
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
 }
 
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action:hover {
+  background: var(--tm-bg-muted);
+}
+
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tm-mobile-action-bar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Two-line clamp with anywhere-wrapping: short labels stay whole, long ones (cs/fr at 320)
+   wrap instead of truncating into a single-line ellipsis. */
 .tm-mobile-action-bar__label-text {
-  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* X4: the popover-mode "More" menu must paint a real surface. The zero-specificity reset in
+   _overlay-panel.css leaves a consumer-less panel transparent — container-mobile on a desktop
+   viewport is a real case (a dashboard in a narrow column). */
+.tm-mobile-action-bar__menu-panel {
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  box-shadow: var(--tm-shadow-popover);
+  padding: var(--tm-space-1);
+  min-width: 12rem;
 }
 
 /* The "More" menu entries. */
