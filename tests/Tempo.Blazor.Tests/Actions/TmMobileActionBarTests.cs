@@ -818,9 +818,10 @@ public class TmMobileActionBarTests : LocalizationTestBase
 
         foreach (System.Text.RegularExpressions.Match site in focusSites)
         {
-            var windowStart = Math.Max(0, site.Index - 500);
-            var preceding = razor[windowStart..site.Index];
-            preceding.Should().Contain("JSException",
+            // The swallowing catch sits right AFTER the call site (the try/catch block).
+            var windowEnd = Math.Min(razor.Length, site.Index + 700);
+            var following = razor[site.Index..windowEnd];
+            following.Should().Contain("JSException",
                 $"the best-effort focus at offset {site.Index} must swallow JSException (Z1)");
         }
     }

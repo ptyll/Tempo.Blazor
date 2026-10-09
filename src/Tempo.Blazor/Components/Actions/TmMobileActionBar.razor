@@ -7,6 +7,7 @@
 @using Tempo.Blazor.Helpers
 @using Microsoft.AspNetCore.Components.Rendering
 @using Microsoft.Extensions.Logging
+@using Microsoft.JSInterop
 @inject ILogger<OverlayLayout> LayoutLogger
 
 @* F5 mobile action bar. The bar belongs to its component's container: the default
@@ -177,6 +178,12 @@ else
 
         if (!showBar)
         {
+            // Z1 (round 3): the bar does not render a More trigger here — above the mobile
+            // breakpoint or with no items. The controlled panel (and the trigger) left the DOM
+            // with no IsOpenChanged, so the open state is reset right here: otherwise the sheet
+            // REOPENS by itself when the bar comes back (phone rotation portrait → landscape →
+            // portrait, or the host emptying the Items while the sheet is open).
+            ResetMoreState();
             builder.CloseRegion();
             return;
         }
@@ -184,6 +191,13 @@ else
         var (visible, overflow) = ActionOverflowLayout.Partition(items, EffectiveMaxVisible);
         var moreDisabled = overflow.Count > 0 && overflow.All(static item => item.Disabled);
         _moreTriggerRendered = overflow.Count > 0;
+        if (!_moreTriggerRendered)
+        {
+            // Z1: the same reset through the other path — the bar renders but nothing overflows,
+            // so the trigger and the panel do not exist and a stale _moreOpen would reopen the
+            // sheet once the overflow refills.
+            ResetMoreState();
+        }
 
         builder.OpenElement(3, "div");
         builder.AddAttribute(4, "class", $"tm-mobile-action-bar__bar {BarModifierClass}");
@@ -401,6 +415,21 @@ else
         return _morePanel.SetOpenAsync(false);
     }
 
+    /// <summary>
+    /// Z1 (round 3): resets everything the rendered More trigger/panel owned. Called from the
+    /// render itself whenever the bar does NOT render a trigger — the controlled panel is
+    /// disposed on that render without an <c>IsOpenChanged</c>, so the state cannot be reset by
+    /// the callback; doing it here (plain field writes, no <c>StateHasChanged</c>) cannot loop
+    /// the render and always runs BEFORE the trigger/panel come back.
+    /// </summary>
+    private void ResetMoreState()
+    {
+        _moreOpen = false;
+        _focusMoreItemPending = false;
+        _focusMoreAfterClose = false;
+        _moreTriggerRendered = false;
+    }
+
     /// <summary>Fires once per open, after the panel is actually displayed (the m3 contract).</summary>
     private void HandleMoreOpened()
     {
@@ -443,9 +472,13 @@ else
             {
                 await _firstMenuItem.FocusAsync();
             }
-            catch (InvalidOperationException)
+            catch (Exception ex) when (ex is InvalidOperationException or JSException)
             {
-                // The menu closed before the focus move (fast Escape): nothing to focus.
+                // Z1: the menu closed before the focus move (fast Escape) or the element left the
+                // DOM — focus() then throws JSException "Unable to focus an invalid element"
+                // (a real browser; bUnit throws InvalidOperationException with no JSRuntime).
+                // Best-effort only (the TmDropdown pattern): an unhandled one would surface as
+                // #blazor-error-ui and kill a Server circuit.
             }
         }
 
@@ -464,9 +497,11 @@ else
             {
                 await _moreButton.FocusAsync(preventScroll: true);
             }
-            catch (InvalidOperationException)
+            catch (Exception ex) when (ex is InvalidOperationException or JSException)
             {
-                // The trigger left the DOM before the focus move: nothing to focus.
+                // Z1: the trigger left the DOM before the focus move (the bar hid or the overflow
+                // emptied): nothing to focus. JSException — a detached element in a real browser —
+                // is swallowed alongside InvalidOperationException (the bUnit no-JSRuntime case).
             }
         }
     }
