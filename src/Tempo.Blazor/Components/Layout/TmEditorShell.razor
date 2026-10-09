@@ -21,6 +21,7 @@
                   Class="@RootClasses"
                   AdditionalAttributes="@ShellAttributes">
     <LayoutContent Context="layout">
+        @{ BeginLayoutPass(layout.Resolved); }
         @if (Header is not null)
         {
             <div class="tm-editor-shell__header" data-region="header">@Header</div>
@@ -87,11 +88,10 @@
         else
         {
             <div class="tm-editor-shell__main tm-editor-shell__main--mobile" data-region="main">
+                @* The stage is the positioned host of the inline panels sheet: the sheet overlays the
+                   lower part of the canvas and its snap fractions are fractions of the stage. *@
+                <div class="tm-editor-shell__stage @(AnyPanelOpen ? "tm-editor-shell__stage--sheet-open" : null)">
                 <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
-                @if (StatusBar is not null)
-                {
-                    <div class="tm-editor-shell__status" data-region="status-bar">@StatusBar</div>
-                }
                 @if (AnyPanelOpen)
                 {
                     <div class="tm-editor-shell__panels" data-region="panels">
@@ -193,7 +193,12 @@
                         </TmDrawer>
                     </div>
                 }
-                else if (HasAnyPanelContent)
+                </div>
+                @if (StatusBar is not null)
+                {
+                    <div class="tm-editor-shell__status" data-region="status-bar">@StatusBar</div>
+                }
+                @if (!AnyPanelOpen && HasAnyPanelContent)
                 {
                     @RenderPanelToggle(null)
                 }
@@ -226,6 +231,20 @@
     private bool _leftOpenedFromToggle;
     private bool _rightOpenedFromToggle;
     private bool _mobileOpenedFromToggle;
+    // F5 focus-restore pattern: the owning surface arms a flag before a close and re-asserts the
+    // trigger focus in OnAfterRenderAsync, so the restore survives the focus trap's own (possibly
+    // stale or late) restore on every close path.
+    private EditorShellPanel? _focusSideToggleAfterClose;
+    private bool _focusMobileToggleAfterClose;
+    private ElementReference _leftToggleElement;
+    private ElementReference _rightToggleElement;
+    private ElementReference _mobileToggleElement;
+    private bool _leftToggleRendered;
+    private bool _rightToggleRendered;
+    private bool _mobileToggleRendered;
+    private TmLayoutMode _renderedLayout = TmLayoutMode.Auto;
+    private EditorShellPanel? _shownTabletSheet;
+    private bool _mobileSheetShown;
     private int _mobileSnapIndex;
     private string? _effectiveLeftWidth;
     private string? _effectiveRightWidth;
@@ -429,6 +448,7 @@
             builder.AddAttribute(++seq, "aria-controls", anchorId);
             builder.AddAttribute(++seq, "aria-label", expandLabel);
             builder.AddAttribute(++seq, "onclick", EventCallback.Factory.Create(this, () => ExpandAsync(side)));
+            builder.AddElementReferenceCapture(++seq, r => CaptureToggle(side, r));
             builder.OpenComponent<TmIcon>(++seq);
             builder.AddAttribute(++seq, "Name", side == EditorShellPanel.Left ? IconNames.ChevronRight : IconNames.ChevronLeft);
             builder.AddAttribute(++seq, "Size", IconSize.Sm);
@@ -473,6 +493,7 @@
             builder.AddAttribute(++seq, "aria-controls", _leftAnchorId);
             builder.AddAttribute(++seq, "aria-label", PanelsTitle);
             builder.AddAttribute(++seq, "onclick", EventCallback.Factory.Create(this, OpenAllPanelsFromToggleAsync));
+            builder.AddElementReferenceCapture(++seq, r => { _mobileToggleElement = r; _mobileToggleRendered = true; });
             builder.OpenComponent<TmIcon>(++seq);
             builder.AddAttribute(++seq, "Name", "chevron-up");
             builder.AddAttribute(++seq, "Size", IconSize.Sm);
@@ -501,6 +522,7 @@
         builder.AddAttribute(++seq, "aria-label", label);
         builder.AddAttribute(++seq, "onclick", EventCallback.Factory.Create(this, () =>
             open ? CollapseAsync(side.Value) : OpenSideFromToggleAsync(side.Value)));
+        builder.AddElementReferenceCapture(++seq, r => CaptureToggle(side.Value, r));
         builder.OpenComponent<TmIcon>(++seq);
         builder.AddAttribute(++seq, "Name", icon);
         builder.AddAttribute(++seq, "Size", IconSize.Sm);
@@ -513,6 +535,7 @@
     private async Task OpenSideFromToggleAsync(EditorShellPanel side)
     {
         _tabletSide = side;
+        _focusSideToggleAfterClose = side;
         if (side == EditorShellPanel.Left) _leftOpenedFromToggle = true;
         else _rightOpenedFromToggle = true;
         if (side == EditorShellPanel.Left) await LeftOpenChanged.InvokeAsync(true);
@@ -521,20 +544,35 @@
 
     private async Task CollapseAsync(EditorShellPanel side)
     {
+        _focusSideToggleAfterClose = side;
         await CollapsedPanelsChanged.InvokeAsync(CollapsedPanels | side);
     }
 
     private async Task ExpandAsync(EditorShellPanel side)
     {
+        _focusSideToggleAfterClose = side;
         await CollapsedPanelsChanged.InvokeAsync(CollapsedPanels & ~side);
     }
 
     private Task OnTabletSheetClosed(bool open)
     {
         if (open) return Task.CompletedTask;
-        return _tabletSide == EditorShellPanel.Left
+        // Close the sheet ACTUALLY rendered — with both panels open that is the most-recent side,
+        // but after a fallback switch it is the other one (closing it must not re-fire the stale
+        // side's callback, which would leave this sheet open forever).
+        var side = TabletSheetSide;
+        // Arm the focus restore on EVERY close path (Escape, header close, backdrop, swipe all
+        // funnel here): the toggle re-appears in the next render and the shell re-asserts focus
+        // on it from OnAfterRenderAsync, whatever the focus trap restored (or failed to restore).
+        if (side is not null)
+        {
+            _focusSideToggleAfterClose = side;
+        }
+        return side == EditorShellPanel.Left
             ? LeftOpenChanged.InvokeAsync(false)
-            : RightOpenChanged.InvokeAsync(false);
+            : side == EditorShellPanel.Right
+                ? RightOpenChanged.InvokeAsync(false)
+                : Task.CompletedTask;
     }
 
     private Task OnMobileSheetClosed(bool open)
@@ -550,6 +588,7 @@
     private async Task CloseAllPanelsAsync()
     {
         _mobileOpenedFromToggle = false;
+        _focusMobileToggleAfterClose = true;
         if (LeftOpen && Left is not null) await LeftOpenChanged.InvokeAsync(false);
         if (RightOpen && Right is not null) await RightOpenChanged.InvokeAsync(false);
     }
@@ -591,6 +630,106 @@
         }
     }
 
+    // ── Focus restore (the F5 pattern) ──────────────────────────────────────
+
+    private void CaptureToggle(EditorShellPanel side, ElementReference element)
+    {
+        if (side == EditorShellPanel.Left)
+        {
+            _leftToggleElement = element;
+            _leftToggleRendered = true;
+        }
+        else
+        {
+            _rightToggleElement = element;
+            _rightToggleRendered = true;
+        }
+    }
+
+    /// <summary>
+    /// Runs at the top of every layout pass. Resets what only a rendered trigger/panel owns, so
+    /// state can never outlive its DOM: the rendered-toggle flags are recomputed by this pass, and
+    /// a layout flip (Mobile→Desktop→Mobile) drops every armed restore, "opened from toggle" hint
+    /// and the sheet snap — the panels never reopen at a stale snap (F5 round-3 lesson). Plain
+    /// field writes only (no StateHasChanged), so it cannot loop the render.
+    /// </summary>
+    private void BeginLayoutPass(TmLayoutMode resolved)
+    {
+        if (_renderedLayout != resolved)
+        {
+            if (_renderedLayout != TmLayoutMode.Auto)
+            {
+                _focusSideToggleAfterClose = null;
+                _focusMobileToggleAfterClose = false;
+                _leftOpenedFromToggle = false;
+                _rightOpenedFromToggle = false;
+                _mobileOpenedFromToggle = false;
+                _mobileSnapIndex = 0;
+            }
+            _renderedLayout = resolved;
+        }
+
+        _leftToggleRendered = false;
+        _rightToggleRendered = false;
+        _mobileToggleRendered = false;
+        _shownTabletSheet = resolved == TmLayoutMode.Tablet ? TabletSheetSide : null;
+        _mobileSheetShown = resolved == TmLayoutMode.Mobile && AnyPanelOpen;
+    }
+
+    /// <summary>
+    /// A host that closes a panel programmatically (it sets LeftOpen/RightOpen itself) never goes
+    /// through a sheet gesture: detect the displayed sheet disappearing and arm the same restore.
+    /// </summary>
+    private void DetectProgrammaticClose()
+    {
+        if (_shownTabletSheet is { } side && TabletSheetSide is null)
+        {
+            _focusSideToggleAfterClose = side;
+        }
+
+        if (_mobileSheetShown && !AnyPanelOpen)
+        {
+            _focusMobileToggleAfterClose = true;
+        }
+    }
+
+    private async Task RestoreToggleFocusAsync()
+    {
+        if (_focusSideToggleAfterClose is { } side)
+        {
+            _focusSideToggleAfterClose = null;
+            // A tablet sheet that is (still) displayed owns focus — never steal it behind the trap.
+            // The toggle must also actually be in the DOM (it unmounts while its sheet is open).
+            var rendered = side == EditorShellPanel.Left ? _leftToggleRendered : _rightToggleRendered;
+            if (_shownTabletSheet is null && rendered)
+            {
+                await TryFocusAsync(side == EditorShellPanel.Left ? _leftToggleElement : _rightToggleElement);
+            }
+        }
+
+        if (_focusMobileToggleAfterClose)
+        {
+            _focusMobileToggleAfterClose = false;
+            if (_mobileToggleRendered && !_mobileSheetShown)
+            {
+                await TryFocusAsync(_mobileToggleElement);
+            }
+        }
+    }
+
+    private static async Task TryFocusAsync(ElementReference element)
+    {
+        try
+        {
+            await element.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // Best-effort only: the toggle left the DOM before the move (JSException in a real
+            // browser) or no JS runtime is attached (bUnit throws InvalidOperationException).
+        }
+    }
+
     // ── Layout / widths ─────────────────────────────────────────────────────
 
     private Task OnResolvedLayoutChanged(TmLayoutMode mode) => ResolvedLayoutChanged.InvokeAsync(mode);
@@ -598,6 +737,8 @@
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        DetectProgrammaticClose();
+
         if (_lastLeftWidth is null)
         {
             _lastLeftWidth = LeftWidth;
@@ -617,6 +758,8 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await RestoreToggleFocusAsync();
+
         if (!firstRender || string.IsNullOrEmpty(PersistWidthsKey) || _widthsLoaded) return;
         _widthsLoaded = true;
         _shellJs ??= new EditorShellInterop(JS);

@@ -3,8 +3,9 @@
    ═══════════════════════════════════════════════════════ */
 
 /* The shell root IS the layout-observer root (the Class is forwarded). It lays out its regions as
-   a column and fills the height the host gives it. */
-.tm-editor-shell {
+   a column and fills the height the host gives it. The compound selector outranks the observer's
+   own `.tm-layout { display: block }`, whatever the stylesheet order. */
+.tm-layout.tm-editor-shell {
     display: flex;
     flex-direction: column;
     block-size: 100%;
@@ -127,21 +128,40 @@
     flex-direction: column;
 }
 
+/* The stage is the positioned host of the inline (non-modal) panels sheet: the sheet fills it and
+   anchors to its bottom edge, and its snaps are fractions of this box. A size container so the
+   canvas can reserve the sheet's half-height snap in container units. */
+.tm-editor-shell__stage {
+    position: relative;
+    flex: 1 1 0;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    container-type: size;
+}
+
 .tm-editor-shell__main--mobile .tm-editor-shell__canvas {
-    flex: 1;
+    flex: 1 1 0;
     min-block-size: 0;
 }
 
-/* The positioned host of the inline (non-modal) panels sheet — the sheet fills it and its snaps
-   are fractions of this box. */
-.tm-editor-shell__panels {
-    position: relative;
-    flex-shrink: 0;
-    block-size: min(48dvh, 26rem);
-    min-block-size: 12rem;
-    border-block-start: 1px solid var(--tm-color-border-subtle);
+/* While the sheet sits at its first snap the lower half of the canvas is covered: reserve it so
+   the last block stays scrollable into view. */
+.tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
+    padding-block-end: calc(50cqh + var(--tm-space-4));
 }
 
+.tm-editor-shell__main--mobile > .tm-mobile-action-bar,
+.tm-editor-shell__main--mobile > .tm-editor-shell__status {
+    flex-shrink: 0;
+}
+
+/* The sheet's positioned host: an overlay filling the stage. TmDrawer's inline rules already let
+   clicks through the root to the canvas and re-enable them on the panel. */
+.tm-editor-shell__panels {
+    position: absolute;
+    inset: 0;
+}
 .tm-editor-shell__panels-toggle {
     flex-shrink: 0;
     display: flex;
@@ -211,7 +231,7 @@
 .tm-editor-shell__tab {
     flex: 1;
     min-inline-size: 0;
-    padding: var(--tm-space-2) var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-1);
     font-size: var(--tm-text-sm, 0.875rem);
     font-weight: var(--tm-font-weight-medium, 500);
     color: var(--tm-color-text-muted);
@@ -219,8 +239,11 @@
     border: none;
     border-block-end: 2px solid transparent;
     cursor: pointer;
-    overflow-wrap: break-word;
-    hyphens: auto;
+    /* A tab label never breaks mid-word (fr "Propriétés" at 320): it stays on one line, and only
+       when a very long translation still does not fit does it ellipsise. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tm-editor-shell__tab:hover {

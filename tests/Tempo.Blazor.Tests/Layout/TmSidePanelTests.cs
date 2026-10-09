@@ -162,6 +162,38 @@ public class TmSidePanelTests : LocalizationTestBase
     // ── Resolution contract ─────────────────────────────────────────────────
 
     [Fact]
+    public void Sheet_RestoreFocusTargetId_IsForwardedToTheFocusScope()
+    {
+        var cut = RenderPanel(TmLayoutMode.Tablet, p => p.Add(x => x.RestoreFocusTargetId, "open-inspector"));
+
+        cut.Find(".tm-drawer").GetAttribute("data-restore-target").Should().Be("open-inspector");
+    }
+
+    [Fact]
+    public async Task Sheet_Escape_RaisesOpenChangedFalse()
+    {
+        bool? last = null;
+        var cut = RenderPanel(TmLayoutMode.Tablet, p =>
+            p.Add(x => x.OpenChanged, EventCallback.Factory.Create<bool>(this, v => last = v)));
+
+        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
+
+        last.Should().BeFalse("Escape funnels through the controlled OpenChanged");
+    }
+
+    [Fact]
+    public void Sheet_Backdrop_RaisesOpenChangedFalse()
+    {
+        bool? last = null;
+        var cut = RenderPanel(TmLayoutMode.Tablet, p =>
+            p.Add(x => x.OpenChanged, EventCallback.Factory.Create<bool>(this, v => last = v)));
+
+        cut.Find(".tm-drawer__overlay").Click();
+
+        last.Should().BeFalse();
+    }
+    [Fact]
     public void ForcedMode_NeverMeasures_ResolvesWithoutDom()
     {
         // A forced mode must not touch JS (no observer import attempt fails the render) — the

@@ -52,7 +52,9 @@ else if (Open)
               LayoutMode="@Context.Resolved"
               ShowOverlay="true"
               CloseOnOverlayClick="true"
-              CloseOnEscape="true">
+              CloseOnEscape="true"
+              RestoreFocusTargetId="@RestoreFocusTargetId"
+              AdditionalAttributes="SheetAttributes">
         <HeaderContent>
             @if (!string.IsNullOrEmpty(Title))
             {
@@ -88,6 +90,15 @@ else if (Open)
 
     /// <summary>Title shown in the panel header; also the accessible name of the sheet.</summary>
     [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// The id of the host element (typically the button that opened the panel) focus returns to
+    /// when the SHEET presentation closes — whichever way it closes (Escape, header close, the
+    /// backdrop, a swipe, or the host setting <see cref="Open"/> to false). Null keeps the focus
+    /// scope default (the element that was focused when the sheet opened). The docked panel is
+    /// in-flow and leaves focus management to the host.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>Optional actions rendered in the header, next to the close button.</summary>
     [Parameter] public RenderFragment? HeaderActions { get; set; }
@@ -128,6 +139,14 @@ else if (Open)
     [CascadingParameter] public TmLayoutContext? Container { get; set; }
 
     private TmLayoutContext Context => new(LayoutMode, TmLayout.Resolve(LayoutMode, Container, null, InitialMode));
+
+    /// <summary>The unmatched attributes ride the sheet root exactly like the docked root, so a
+    /// host's data-testid and ARIA wiring survive the presentation switch.</summary>
+    private Dictionary<string, object>? SheetAttributes =>
+        AdditionalAttributes is null && string.IsNullOrEmpty(DataTestId) ? null
+        : AdditionalAttributes is null ? new Dictionary<string, object> { ["data-testid"] = DataTestId! }
+        : DataTestId is null ? AdditionalAttributes
+        : new Dictionary<string, object>(AdditionalAttributes) { ["data-testid"] = DataTestId };
 
     private SidePanelPresentation EffectivePresentation =>
         Presentation == SidePanelPresentation.Auto

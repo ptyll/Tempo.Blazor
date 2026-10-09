@@ -118,6 +118,40 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
     }
 
+    [Fact]
+    public void Tablet_ClosingTheRevealedSheet_ClosesThatPanel()
+    {
+        // Regression: the close callback must target the sheet ACTUALLY rendered (the fallback
+        // side), not the stale most-recent side — otherwise the revealed sheet can never close.
+        var leftOpen = true;
+        var rightOpen = true;
+        var cut = Render<TmEditorShell>(p =>
+        {
+            p.Add(x => x.LayoutMode, TmLayoutMode.Tablet);
+            p.Add(x => x.LeftTitle, "Blocks");
+            p.Add(x => x.RightTitle, "Properties");
+            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
+            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
+            p.Add(x => x.Right, builder => builder.AddContent(0, "Right props"));
+            p.Add(x => x.LeftOpen, leftOpen);
+            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => leftOpen = v));
+            p.Add(x => x.RightOpen, rightOpen);
+            p.Add(x => x.RightOpenChanged, EventCallback.Factory.Create<bool>(this, v => rightOpen = v));
+        });
+
+        // Close the left (active) sheet — the right one takes over.
+        cut.Find(".tm-drawer--left .tm-drawer__close").Click();
+        cut.Render(p => p.Add(x => x.LeftOpen, leftOpen));
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
+
+        // Closing the revealed right sheet must close the RIGHT panel (not re-fire the left one).
+        cut.Find(".tm-drawer--right .tm-drawer__close").Click();
+        rightOpen.Should().Be(false);
+
+        cut.Render(p => p.Add(x => x.RightOpen, rightOpen));
+        cut.FindAll(".tm-drawer").Should().BeEmpty("both panels are closed now");
+    }
+
     // ── Mobile ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -250,6 +284,172 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.Find("[data-region='status-bar']").TextContent.Should().Contain("Status text");
     }
 
+    // ── Close paths, aria-expanded and layout flips (the F5 focus-restore pattern) ──
+
+    private sealed class Host
+    {
+        public bool Left = true;
+        public bool Right = true;
+    }
+
+    private IRenderedComponent<TmEditorShell> RenderControlled(TmLayoutMode mode, Host host, bool leftOnly = false)
+    {
+        return Render<TmEditorShell>(p =>
+        {
+            p.Add(x => x.LayoutMode, mode);
+            p.Add(x => x.LeftTitle, "Blocks");
+            p.Add(x => x.RightTitle, "Properties");
+            p.Add(x => x.Left, builder => builder.AddContent(0, "Left tools"));
+            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
+            p.Add(x => x.Right, builder => builder.AddContent(0, "Right props"));
+            p.Add(x => x.LeftOpen, host.Left);
+            p.Add(x => x.LeftOpenChanged, EventCallback.Factory.Create<bool>(this, v => host.Left = v));
+            p.Add(x => x.RightOpen, host.Right && !leftOnly);
+            p.Add(x => x.RightOpenChanged, EventCallback.Factory.Create<bool>(this, v => host.Right = v));
+        });
+    }
+
+    private static void Sync(IRenderedComponent<TmEditorShell> cut, Host host, TmLayoutMode mode)
+    {
+        cut.Render(p =>
+        {
+            p.Add(x => x.LayoutMode, mode);
+            p.Add(x => x.LeftOpen, host.Left);
+            p.Add(x => x.RightOpen, host.Right);
+        });
+    }
+
+    [Fact]
+    public async Task Tablet_EscapeAndBackdrop_CloseTheSheet_AndTheToggleReadsCollapsed()
+    {
+        var host = new Host { Right = false };
+        var cut = RenderControlled(TmLayoutMode.Tablet, host);
+
+        // Escape arrives through the focus scope's document-level listener.
+        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
+        host.Left.Should().BeFalse("Escape must close the sheet through the controlled callback");
+        Sync(cut, host, TmLayoutMode.Tablet);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        var toggle = cut.Find(".tm-editor-shell__panel-toggle--left");
+        toggle.GetAttribute("aria-expanded").Should().Be("false");
+        cut.Find($"#{toggle.GetAttribute("aria-controls")}").Should().NotBeNull();
+
+        // Reopen from the toggle, then close through the backdrop.
+        toggle.Click();
+        host.Left.Should().BeTrue();
+        Sync(cut, host, TmLayoutMode.Tablet);
+        cut.Find(".tm-drawer__overlay").Click();
+        host.Left.Should().BeFalse("the backdrop is a close path too");
+        Sync(cut, host, TmLayoutMode.Tablet);
+        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public async Task Mobile_EscapeAndCloseButton_CloseThePanels_AndTheReopenToggleIsCollapsed()
+    {
+        var host = new Host();
+        var cut = RenderControlled(TmLayoutMode.Mobile, host);
+
+        var scope = cut.FindComponent<Tempo.Blazor.Components.Feedback.TmFocusScope>();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
+        host.Left.Should().BeFalse();
+        host.Right.Should().BeFalse();
+        Sync(cut, host, TmLayoutMode.Mobile);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        var reopen = cut.Find(".tm-editor-shell__panel-toggle--mobile");
+        reopen.GetAttribute("aria-expanded").Should().Be("false");
+
+        reopen.Click();
+        Sync(cut, host, TmLayoutMode.Mobile);
+        cut.FindAll(".tm-editor-shell__panel-toggle--mobile").Should().BeEmpty("the toggle unmounts while the sheet is open");
+        cut.Find(".tm-editor-shell__sheet-close").Click();
+        host.Left.Should().BeFalse();
+        Sync(cut, host, TmLayoutMode.Mobile);
+        cut.Find(".tm-editor-shell__panel-toggle--mobile").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void LayoutFlip_MobileDesktopMobile_DoesNotReopenAnything()
+    {
+        var host = new Host();
+        var cut = RenderControlled(TmLayoutMode.Mobile, host);
+        cut.Find(".tm-editor-shell__sheet-close").Click();
+        Sync(cut, host, TmLayoutMode.Mobile);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+
+        Sync(cut, host, TmLayoutMode.Desktop);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        cut.FindAll("[data-region='left']").Should().BeEmpty("the host closed both panels");
+
+        Sync(cut, host, TmLayoutMode.Mobile);
+        cut.FindAll(".tm-drawer").Should().BeEmpty("a layout flip must not reopen the closed panels sheet");
+        cut.Find(".tm-editor-shell__panel-toggle--mobile").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void LayoutFlip_TabletMobileTablet_DoesNotReopenAClosedSheet()
+    {
+        var host = new Host { Right = false };
+        var cut = RenderControlled(TmLayoutMode.Tablet, host);
+        cut.Find(".tm-drawer__close").Click();
+        Sync(cut, host, TmLayoutMode.Tablet);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+
+        Sync(cut, host, TmLayoutMode.Mobile);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        Sync(cut, host, TmLayoutMode.Tablet);
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void LayoutFlip_ResetsTheMobileSheetSnap()
+    {
+        var host = new Host();
+        var cut = RenderControlled(TmLayoutMode.Mobile, host);
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
+
+        Sync(cut, host, TmLayoutMode.Desktop);
+        Sync(cut, host, TmLayoutMode.Mobile);
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0");
+    }
+
+    [Fact]
+    public void ProgrammaticClose_OnTablet_RendersTheCollapsedToggle()
+    {
+        var host = new Host { Right = false };
+        var cut = RenderControlled(TmLayoutMode.Tablet, host);
+
+        // The host closes the panel itself — no sheet gesture involved.
+        host.Left = false;
+        Sync(cut, host, TmLayoutMode.Tablet);
+
+        cut.FindAll(".tm-drawer").Should().BeEmpty();
+        cut.Find(".tm-editor-shell__panel-toggle--left").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void FocusRestore_EveryFocusAsyncSite_SwallowsJsExceptionToo()
+    {
+        // bUnit attaches no JSRuntime to element references, so FocusAsync only ever throws
+        // InvalidOperationException here; the JSException half (a detached element in a real
+        // browser) is pinned by this source guard plus the live-browser E2E.
+        var root = AppContext.BaseDirectory;
+        var dir = new DirectoryInfo(root);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "TempoBlazor.slnx"))) dir = dir.Parent;
+        dir.Should().NotBeNull();
+        var source = File.ReadAllText(Path.Combine(dir!.FullName, "src", "Tempo.Blazor", "Components", "Layout", "TmEditorShell.razor"));
+
+        var sites = System.Text.RegularExpressions.Regex.Matches(source, @"\.FocusAsync\(");
+        sites.Count.Should().BeGreaterThan(0);
+        foreach (System.Text.RegularExpressions.Match site in sites)
+        {
+            var window = source.Substring(site.Index, Math.Min(700, source.Length - site.Index));
+            window.Should().Contain("JSException", "every best-effort focus move must swallow JSException");
+        }
+    }
     [Fact]
     public void Desktop_NoMobileActions_RendersNoBar()
     {
