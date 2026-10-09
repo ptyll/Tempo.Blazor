@@ -5,6 +5,12 @@
     padding: var(--tm-space-4);
 }
 
+.es-host-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
 .es-header h1 {
     margin: 0 0 var(--tm-space-1);
 }
@@ -22,10 +28,20 @@
     overflow: hidden;
 }
 
+/* On a phone the host fills the viewport below the demo app bar (and the page heading), so the
+   mobile action bar is inside the first screen instead of below the fold. */
 @media (width < 640px) {
+    .es-page {
+        padding: var(--tm-space-2);
+    }
+
+    .es-header p {
+        display: none;
+    }
+
     .es-shell-host {
-        block-size: calc(100dvh - 120px);
-        min-block-size: 520px;
+        block-size: calc(100dvh - 8.5rem);
+        min-block-size: 22rem;
     }
 }
 
@@ -113,6 +129,48 @@
     margin-block-end: var(--tm-space-3);
 }
 
+.es-canvas__hero--block {
+    display: block;
+    inline-size: 100%;
+    color: inherit;
+    font: inherit;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.es-canvas__hero--block:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.es-rail-icons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.es-rail-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: var(--tm-color-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.es-rail-icon:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.es-rail-icon:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
 .es-canvas__hero {
     text-align: center;
     background: var(--tm-color-primary-subtle);
@@ -156,10 +214,12 @@
     font-size: var(--tm-text-md);
 }
 
+.es-thresholds-section h2,
 .es-side-panel-section h2 {
     margin: 0 0 var(--tm-space-1);
 }
 
+.es-thresholds-section > p,
 .es-side-panel-section > p {
     margin: 0 0 var(--tm-space-3);
     color: var(--tm-color-text-muted);

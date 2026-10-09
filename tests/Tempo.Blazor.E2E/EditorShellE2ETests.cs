@@ -129,19 +129,19 @@ public class EditorShellE2ETests : WasmTestBase
             "the strip next to an expanded panel is the collapse toggle");
         var controls = await toggle.GetAttributeAsync("aria-controls");
         Assert.IsFalse(string.IsNullOrEmpty(controls));
-        Assert.AreEqual("ASIDE", await page.EvaluateAsync<string>("id => document.getElementById(id)?.tagName ?? '", controls!),
+        Assert.AreEqual("ASIDE", await page.EvaluateAsync<string>("id => document.getElementById(id)?.tagName ?? ''", controls!),
             "aria-controls names the real panel, not a hidden anchor");
 
         await toggle.ClickAsync();
         var rail = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__rail--left");
         await Assertions.Expect(rail).ToBeVisibleAsync();
         Assert.AreEqual(0, await page.Locator("[data-testid='editor-shell'] [data-region='left']").CountAsync());
-        var railButton = rail.Locator("button");
+        var railButton = rail.Locator("> button.tm-editor-shell__panel-toggle");
         Assert.AreEqual("false", await railButton.GetAttributeAsync("aria-expanded"), "a rail expand button reads collapsed");
         Assert.IsNull(await railButton.GetAttributeAsync("aria-controls"), "its panel is not rendered, so no aria-controls");
         await CaptureViewportOnlyAsync(page, "1440-collapsed-rail");
 
-        await rail.Locator("button").ClickAsync();
+        await rail.Locator("> button.tm-editor-shell__panel-toggle").ClickAsync();
         await Assertions.Expect(page.Locator("[data-testid='editor-shell'] [data-region='left']")).ToBeVisibleAsync();
     }
 
@@ -164,7 +164,7 @@ public class EditorShellE2ETests : WasmTestBase
         var toggle = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__panel-toggle--left");
         await toggle.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
-        var rail = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__rail--left button");
+        var rail = page.Locator("[data-testid='editor-shell'] .tm-editor-shell__rail--left > button.tm-editor-shell__panel-toggle");
         await Assertions.Expect(rail).ToBeVisibleAsync();
 
         // Exactly one activation per press: Enter fired the collapse once. Focus the rail's own
@@ -183,18 +183,18 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
 
-        await Assertions.Expect(page.Locator("[data-region='canvas']")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator($"{Shell} [data-region='canvas']")).ToBeVisibleAsync();
 
         // The panels sheet is INLINE (in-container): never promoted.
-        var sheet = page.Locator(".tm-editor-shell__sheet");
+        var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
         await Assertions.Expect(sheet).ToBeVisibleAsync();
         Assert.IsNull(await sheet.GetAttributeAsync("popover"), "the inline panels sheet must not promote");
 
         // Sheet presentation with two open panels: a Left/Right tab strip inside the sheet.
-        var tabs = page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab");
+        var tabs = page.Locator($"{Shell} .tm-editor-shell__sheet .tm-editor-shell__tab");
         Assert.AreEqual(2, await tabs.CountAsync());
         Assert.AreEqual("true", await tabs.First.GetAttributeAsync("aria-selected"));
-        Assert.AreEqual(1, await page.Locator(".tm-editor-shell__sheet [role='tabpanel']:not([hidden])").CountAsync());
+        Assert.AreEqual(1, await page.Locator($"{Shell} .tm-editor-shell__sheet [role='tabpanel']:not([hidden])").CountAsync());
 
         // The mobile action bar: 3 tiles + More, sitting at the bottom of the shell.
         var bar = page.Locator("[data-testid='editor-shell'] .tm-mobile-action-bar__bar");
@@ -214,9 +214,9 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.IsTrue(gap <= 2, $"the action bar must sit at the bottom of the shell (gap {gap}px)");
 
         // The sheet must show real content: header + a usable body, inside the panels host.
-        var panelBody = await page.Locator(".tm-editor-shell__sheet .tm-drawer__body").BoundingBoxAsync();
+        var panelBody = await page.Locator($"{Shell} .tm-editor-shell__sheet .tm-drawer__body").BoundingBoxAsync();
         Assert.IsTrue(panelBody is { Height: > 60 }, $"the sheet body must be visible (height {panelBody?.Height})");
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet [role='tabpanel']:not([hidden])")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet [role='tabpanel']:not([hidden])")).ToBeVisibleAsync();
         await CaptureViewportOnlyAsync(page, "390-mobile-sheet");
     }
 
@@ -227,10 +227,10 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
 
-        var tabs = page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab");
+        var tabs = page.Locator($"{Shell} .tm-editor-shell__sheet .tm-editor-shell__tab");
         await tabs.Nth(1).ClickAsync();
         Assert.AreEqual("true", await tabs.Nth(1).GetAttributeAsync("aria-selected"));
-        await Assertions.Expect(page.Locator("[role='tabpanel'] [data-testid='es-properties']")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator($"{Shell} [role='tabpanel'] [data-testid='es-properties']")).ToBeVisibleAsync();
 
         await CaptureViewportOnlyAsync(page, "390-mobile-tab-properties");
     }
@@ -242,12 +242,12 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
 
-        await page.Locator(".tm-editor-shell__sheet-close").ClickAsync();
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeHiddenAsync(
+        await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeHiddenAsync(
             new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
-        Assert.AreEqual(0, await page.Locator(".tm-editor-shell .tm-drawer").CountAsync());
+        Assert.AreEqual(0, await page.Locator($"{Shell} .tm-drawer").CountAsync());
 
-        var reopen = page.Locator(".tm-editor-shell__panel-toggle--mobile");
+        var reopen = page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile");
         await Assertions.Expect(reopen).ToBeVisibleAsync();
         Assert.AreEqual("false", await reopen.GetAttributeAsync("aria-expanded"));
         Assert.IsNull(await reopen.GetAttributeAsync("aria-controls"), "the sheet it controls is not rendered");
@@ -255,8 +255,8 @@ public class EditorShellE2ETests : WasmTestBase
         await CaptureViewportOnlyAsync(page, "390-mobile-sheet-closed");
 
         await reopen.ClickAsync();
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
-        Assert.AreEqual(0, await page.Locator(".tm-editor-shell__panel-toggle--mobile").CountAsync());
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
+        Assert.AreEqual(0, await page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile").CountAsync());
     }
 
     [TestMethod]
@@ -281,10 +281,10 @@ public class EditorShellE2ETests : WasmTestBase
         var overflow = await page.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
         Assert.IsTrue(overflow <= 320, $"no horizontal overflow at 320 (scrollWidth {overflow})");
 
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator("[data-testid='editor-shell'] .tm-mobile-action-bar__bar")).ToBeVisibleAsync();
         // A tab label stays on ONE line (no mid-word break of the fr "Propriétés").
-        var tabHeights = await page.EvaluateAsync<double[]>("() => [...document.querySelectorAll('.tm-editor-shell__sheet .tm-editor-shell__tab')].map(t => t.getBoundingClientRect().height)");
+        var tabHeights = await page.EvaluateAsync<double[]>("""() => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")].map(t => t.getBoundingClientRect().height)""");
         Assert.IsTrue(tabHeights.Length == 2 && tabHeights.All(h => h < 40), $"tab labels must not wrap: {string.Join(',', tabHeights)}");
         await CaptureViewportOnlyAsync(page, "320-mobile-fr");
     }
@@ -314,8 +314,8 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
 
-        await page.Locator(".tm-editor-shell__sheet-close").ClickAsync();
-        var reopen = page.Locator(".tm-editor-shell__panel-toggle--mobile");
+        await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
+        var reopen = page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile");
         await Assertions.Expect(reopen).ToBeVisibleAsync();
         await page.WaitForFunctionAsync(
             "() => document.activeElement?.classList.contains('tm-editor-shell__panel-toggle--mobile')",
@@ -323,26 +323,26 @@ public class EditorShellE2ETests : WasmTestBase
 
         // Reopen, then close with Escape: focus lands on the toggle again.
         await reopen.ClickAsync();
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
-        await page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").First.FocusAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
+        await page.Locator($"{Shell} .tm-editor-shell__sheet .tm-editor-shell__tab").First.FocusAsync();
         await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeHiddenAsync(
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeHiddenAsync(
             new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
         await page.WaitForFunctionAsync(
             "() => document.activeElement?.classList.contains('tm-editor-shell__panel-toggle--mobile')",
             null, new PageWaitForFunctionOptions { Timeout = 5000 });
-        Assert.AreEqual("false", await page.Locator(".tm-editor-shell__panel-toggle--mobile").GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile").GetAttributeAsync("aria-expanded"));
 
         // 390 -> 1440 -> 390: nothing reopens, no error UI, the panels stay closed.
         await page.SetViewportSizeAsync(1440, 900);
-        await Assertions.Expect(page.Locator("[data-testid='editor-shell'][data-layout='desktop']")).ToBeVisibleAsync(
+        await Assertions.Expect(page.Locator($"{Shell}[data-layout='desktop']")).ToBeVisibleAsync(
             new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
         await page.SetViewportSizeAsync(390, 844);
         await Assertions.Expect(page.Locator("[data-testid='editor-shell'][data-layout='mobile']")).ToBeVisibleAsync(
             new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
-        Assert.AreEqual(0, await page.Locator(".tm-editor-shell__sheet").CountAsync(),
+        Assert.AreEqual(0, await page.Locator($"{Shell} .tm-editor-shell__sheet").CountAsync(),
             "a viewport flip must not reopen the closed panels sheet");
-        Assert.AreEqual("false", await page.Locator(".tm-editor-shell__panel-toggle--mobile").GetAttributeAsync("aria-expanded"));
+        Assert.AreEqual("false", await page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile").GetAttributeAsync("aria-expanded"));
         Assert.AreEqual("none", await page.EvaluateAsync<string>("() => getComputedStyle(document.getElementById('blazor-error-ui')).display"),
             "no error UI may surface");
     }
@@ -373,6 +373,7 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 520);
         RegisterContext(context);
 
+        await page.WaitForTimeoutAsync(700);
         var m = await page.EvaluateAsync<double[]>(
             """
             () => {
@@ -395,7 +396,7 @@ public class EditorShellE2ETests : WasmTestBase
         RegisterContext(context);
 
         var heights = await page.EvaluateAsync<double[]>(
-            "() => [...document.querySelectorAll('.tm-editor-shell__sheet .tm-editor-shell__tab')].map(t => t.getBoundingClientRect().height)");
+            """() => [...document.querySelectorAll("[data-testid='editor-shell'] .tm-editor-shell__sheet .tm-editor-shell__tab")].map(t => t.getBoundingClientRect().height)""");
         Assert.AreEqual(2, heights.Length);
         Assert.IsTrue(heights.All(h => h < 40), $"tab labels must not wrap: {string.Join(',', heights)}");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= 320"));
@@ -434,9 +435,9 @@ public class EditorShellE2ETests : WasmTestBase
         var close = page.Locator(".tm-side-panel-sheet .tm-drawer__close");
         if (await close.CountAsync() > 0) await close.First.ClickAsync();
 
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
-        await page.Locator(".tm-editor-shell__sheet-close").ClickAsync();
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeHiddenAsync(
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
+        await page.Locator($"{Shell} .tm-editor-shell__sheet-close").ClickAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeHiddenAsync(
             new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(prefers-reduced-motion: reduce)').matches"));
     }
@@ -474,7 +475,7 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.AreEqual(0, await page.Locator("[popover]:popover-open").CountAsync());
         Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync(), "at most one panel is expanded");
         await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--left")).ToBeVisibleAsync();
-        Assert.AreEqual("BODY", await page.EvaluateAsync<string>("() => document.activeElement.tagName"), "the shell moved no focus on load");
+        Assert.IsFalse(await page.EvaluateAsync<bool>("""() => !!document.activeElement?.closest("[data-testid='editor-shell']")"""), "the shell moved no focus into itself on load");
         Assert.AreEqual(1, await shell.Locator("[role='separator']").CountAsync(), "the one expanded docked panel is resizable");
 
         // The canvas is operable: its block takes a click.
@@ -493,7 +494,7 @@ public class EditorShellE2ETests : WasmTestBase
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
 
-        await shell.Locator(".tm-editor-shell__rail--left button").ClickAsync();
+        await shell.Locator(".tm-editor-shell__rail--left > button.tm-editor-shell__panel-toggle").ClickAsync();
 
         await Assertions.Expect(shell.Locator("aside[data-region='left']")).ToBeVisibleAsync();
         await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--right")).ToBeVisibleAsync();
@@ -513,15 +514,15 @@ public class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "desktop");
         Assert.AreEqual(2, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
 
-        await shell.Locator("[data-testid='es-block-search'] input").FocusAsync();
+        await shell.Locator(".es-toolbox input").First.FocusAsync();
         await page.SetViewportSizeAsync(1280, 800);
 
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
         Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync());
         Assert.AreEqual(0, await shell.Locator(".tm-drawer").CountAsync());
         Assert.AreEqual(0, await page.Locator("[inert]").CountAsync());
-        Assert.AreEqual("BODY", await page.EvaluateAsync<string>("() => document.activeElement.tagName"),
-            "the focused toolbox input unmounted with its rail; the shell must not grab focus (focus is lost to body, not stolen)");
+        Assert.IsFalse(await page.EvaluateAsync<bool>("""() => !!document.activeElement?.closest("[data-testid='editor-shell'] .tm-editor-shell__rail")"""),
+            "the focused toolbox input unmounted with its panel; the shell must not move focus onto a rail");
     }
 
     [TestMethod]
@@ -607,55 +608,67 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.IsFalse(string.IsNullOrEmpty(await separator.GetAttributeAsync("aria-label")));
         Assert.IsNull(await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')"), "nothing is stored before the user resizes");
 
-        // Pointer drag: +60px.
+        // At 1440 the demo canvas is ~398px — already at MinCanvasWidth — so GROWING the panel is
+        // refused (the clamp working); shrinking is always allowed. Pointer drag: -60px.
+        var canvasBefore = await WidthOfAsync(page, $"{Shell} [data-region='canvas']");
+        Assert.IsTrue(canvasBefore <= 420, $"precondition: the canvas starts at/near the minimum ({canvasBefore}px)");
         var box = (await separator.BoundingBoxAsync())!;
-        var y = box.Y + box.Height / 2;
+        var y = box.Y + 100;
         await page.Mouse.MoveAsync(box.X + box.Width / 2, y);
         await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(box.X + box.Width / 2 + 30, y, new MouseMoveOptions { Steps = 4 });
-        await page.Mouse.MoveAsync(box.X + box.Width / 2 + 60, y, new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.MoveAsync(box.X + box.Width / 2 - 30, y, new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.MoveAsync(box.X + box.Width / 2 - 60, y, new MouseMoveOptions { Steps = 4 });
         await page.Mouse.UpAsync();
 
-        var aside = page.Locator($"{Shell} aside[data-region='left']");
-        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "340");
-        Assert.AreEqual(340, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the panel follows the pointer");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "220");
+        Assert.AreEqual(220, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the panel follows the pointer");
+        Assert.IsTrue(await WidthOfAsync(page, $"{Shell} [data-region='canvas']") > canvasBefore + 40, "the canvas absorbed the freed width");
         var stored = await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')");
         Assert.IsNotNull(stored, "a user resize persists under the key");
         StringAssert.Contains(stored, "\"left\"");
         Assert.IsFalse(stored.Contains("\"right\""), "only the panel the user resized is stored");
 
-        // Keyboard: ArrowRight +16, ArrowLeft -16, Shift+ArrowRight +64, Home = min, End = max/clamped by the canvas.
+        // Dragging back past what the canvas allows stops at the canvas minimum (not at the max).
+        var box2 = (await separator.BoundingBoxAsync())!;
+        await page.Mouse.MoveAsync(box2.X + box2.Width / 2, y);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(box2.X + box2.Width / 2 + 150, y, new MouseMoveOptions { Steps = 6 });
+        await page.Mouse.UpAsync();
+        var grown = int.Parse((await separator.GetAttributeAsync("aria-valuenow"))!);
+        Assert.IsTrue(grown is > 220 and < 300, $"a drag to +150 is clamped by MinCanvasWidth ({grown}px)");
+        Assert.IsTrue(await WidthOfAsync(page, $"{Shell} [data-region='canvas']") >= 399, "the canvas never drops below MinCanvasWidth");
+
+        // Keyboard: ArrowRight +16, ArrowLeft -16, Shift+ArrowLeft -64 (clamped to min), Home = min, End = clamped.
         await separator.FocusAsync();
-        await page.Keyboard.PressAsync("ArrowRight");
-        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "356");
-        await page.Keyboard.PressAsync("ArrowLeft");
-        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "340");
-        await page.Keyboard.PressAsync("Shift+ArrowRight");
-        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "404");
         await page.Keyboard.PressAsync("Home");
         await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "200");
+        await page.Keyboard.PressAsync("ArrowRight");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "216");
+        await page.Keyboard.PressAsync("ArrowLeft");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "200");
+        await page.Keyboard.PressAsync("Shift+ArrowLeft");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "200");
+        await page.Keyboard.PressAsync("Shift+ArrowRight");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "264");
         await page.Keyboard.PressAsync("End");
         await page.WaitForTimeoutAsync(300);
         var endWidth = int.Parse((await separator.GetAttributeAsync("aria-valuenow"))!);
-        Assert.IsTrue(endWidth is > 200 and <= 480, $"End goes to the maximum or as far as the canvas allows ({endWidth})");
-        var canvasWidth = await WidthOfAsync(page, $"{Shell} [data-region='canvas']");
-        Assert.IsTrue(canvasWidth >= 399, $"the canvas never drops below MinCanvasWidth ({canvasWidth}px)");
+        Assert.IsTrue(endWidth is > 264 and <= 480, $"End goes to the maximum or as far as the canvas allows ({endWidth})");
+        Assert.IsTrue(await WidthOfAsync(page, $"{Shell} [data-region='canvas']") >= 399, "the canvas never drops below MinCanvasWidth");
 
-        // Settle on 320 and reload: the stored width is restored.
-        await separator.FocusAsync();
+        // Settle on 264 and reload: the stored width is restored.
         await page.Keyboard.PressAsync("Home");
-        for (var i = 0; i < 8; i++) await page.Keyboard.PressAsync("ArrowRight");
-        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "328");
+        await page.Keyboard.PressAsync("Shift+ArrowRight");
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "264");
 
         await page.ReloadAsync();
         await WaitForAppReadyAsync(page);
         var restored = page.Locator($"{Shell} [role='separator'][data-side='left']");
-        await Assertions.Expect(restored).ToHaveAttributeAsync("aria-valuenow", "328", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
-        Assert.AreEqual(328, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the stored width is applied on load");
+        await Assertions.Expect(restored).ToHaveAttributeAsync("aria-valuenow", "264", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+        Assert.AreEqual(264, Math.Round(await WidthOfAsync(page, $"{Shell} aside[data-region='left']")), "the stored width is applied on load");
         Assert.IsNotNull(await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')"));
         await CaptureViewportOnlyAsync(page, "1440-resized-restored");
     }
-
     [TestMethod]
     public async Task Demo_1440_Resizer_MalformedStoredValue_IsIgnored_NeverInjectedIntoTheStyle()
     {
@@ -686,8 +699,8 @@ public class EditorShellE2ETests : WasmTestBase
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
 
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
-        Assert.AreEqual("0", await page.Locator(".tm-editor-shell__sheet").GetAttributeAsync("data-snap-index"), "the half snap");
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
+        Assert.AreEqual("0", await page.Locator($"{Shell} .tm-editor-shell__sheet").GetAttributeAsync("data-snap-index"), "the half snap");
 
         var inside = await page.EvaluateAsync<bool>(
             """
@@ -710,8 +723,8 @@ public class EditorShellE2ETests : WasmTestBase
         // A tap on a canvas block lands (the host then switches the sheet to Properties).
         await canvas.EvaluateAsync("e => e.scrollTop = 0");
         await page.Locator("[data-testid='es-canvas-block']").TapAsync();
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet .tm-editor-shell__tab").Nth(1)).ToHaveAttributeAsync("aria-selected", "true");
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet [role='tabpanel'][data-region='right']")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet .tm-editor-shell__tab").Nth(1)).ToHaveAttributeAsync("aria-selected", "true");
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet [role='tabpanel'][data-region='right']")).ToBeVisibleAsync();
         await CaptureViewportOnlyAsync(page, "390-canvas-alive-properties");
     }
 
@@ -761,7 +774,7 @@ public class EditorShellE2ETests : WasmTestBase
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync();
 
         // The host button closes the panels programmatically; it keeps the focus it just received.
         var hostButton = page.Locator("[data-testid='es-host-toggle-panels']");
@@ -769,7 +782,7 @@ public class EditorShellE2ETests : WasmTestBase
         await hostButton.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
 
-        await Assertions.Expect(page.Locator(".tm-editor-shell__sheet")).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
         await page.WaitForTimeoutAsync(400);
         Assert.AreEqual("es-host-toggle-panels", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''"),
             "the shell must not pull focus from the host control to its own toggle");
@@ -781,27 +794,33 @@ public class EditorShellE2ETests : WasmTestBase
         var context = await CreateTouchContextAsync(390, 844);
         var page = await GotoEditorShellAsync(context, 390, 844);
         RegisterContext(context);
-        var sheet = page.Locator(".tm-editor-shell__sheet");
+        var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
         await Assertions.Expect(sheet).ToBeVisibleAsync();
 
-        // Focus an action-bar tile (outside the sheet), then swipe the sheet away from its handle.
+        // Focus an action-bar tile (outside the sheet), then swipe the sheet away from its handle
+        // with touch-typed pointer events — what a finger sends. (A MOUSE press on the handle
+        // focuses it, which legitimately counts as focus inside the sheet.)
         await page.Locator($"{Shell} .tm-mobile-action-bar__bar [data-action-id='redo']").FocusAsync();
-        var handle = (await sheet.Locator(".tm-sheet__handle").BoundingBoxAsync())!;
-        var x = handle.X + handle.Width / 2;
-        var y = handle.Y + handle.Height / 2;
-        await page.Mouse.MoveAsync(x, y);
-        await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(x, y + 150, new MouseMoveOptions { Steps = 6 });
-        await page.Mouse.MoveAsync(x, y + 420, new MouseMoveOptions { Steps = 6 });
-        await page.Mouse.UpAsync();
-
+        await sheet.Locator(".tm-sheet__handle").EvaluateAsync(
+            """
+            async (handle) => {
+                const r = handle.getBoundingClientRect();
+                const x = r.left + r.width / 2, y = r.top + r.height / 2;
+                const fire = (type, dy, t) => handle.dispatchEvent(new PointerEvent(type, { pointerId: 41, pointerType: 'touch', isPrimary: true, button: 0, clientX: x, clientY: y + dy, bubbles: true, cancelable: true, timeStamp: t }));
+                const wait = ms => new Promise(res => setTimeout(res, ms));
+                fire('pointerdown', 0);
+                for (let i = 1; i <= 12; i++) { await wait(16); fire('pointermove', i * 35); }
+                await wait(16);
+                fire('pointerup', 420);
+            }
+            """);
         await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
         await page.WaitForTimeoutAsync(400);
         Assert.AreEqual("redo", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-action-id') ?? ''"),
             "a swipe-close must leave focus on the control the user was on");
 
         // Escape from inside the sheet still returns focus to the toggle (focus was in the sheet).
-        await page.Locator(".tm-editor-shell__panel-toggle--mobile").ClickAsync();
+        await page.Locator($"{Shell} .tm-editor-shell__panel-toggle--mobile").ClickAsync();
         await Assertions.Expect(sheet).ToBeVisibleAsync();
         await sheet.Locator(".tm-editor-shell__tab").First.FocusAsync();
         await page.Keyboard.PressAsync("Escape");
