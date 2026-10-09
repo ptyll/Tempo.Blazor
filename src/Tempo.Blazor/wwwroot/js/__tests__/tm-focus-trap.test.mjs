@@ -612,6 +612,28 @@ test('an overflowing scroller without a title stays a nameless tabindex=0 region
     stopScrollRegion('untitled');
 });
 
+test('an overflowing scroller without a title id is named by the aria-label fallback (F6 r2 G9)', () => {
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'labelled', null, 'Panels');
+
+    assert.equal(content.getAttribute('tabindex'), '0');
+    assert.equal(content.getAttribute('role'), 'region');
+    assert.equal(content.getAttribute('aria-label'), 'Panels');
+    assert.equal(content.getAttribute('aria-labelledby'), null);
+
+    stopScrollRegion('labelled');
+    assert.equal(content.getAttribute('aria-label'), null, 'stopping clears the name it wrote');
+});
+
+test('a title id wins over the aria-label fallback', () => {
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'both', 'title-9', 'Panels');
+
+    assert.equal(content.getAttribute('aria-labelledby'), 'title-9');
+    assert.equal(content.getAttribute('aria-label'), null);
+
+    stopScrollRegion('both');
+});
 test('a resize re-decides the attributes and stopping clears them', () => {
     let overflows = true;
     const content = {

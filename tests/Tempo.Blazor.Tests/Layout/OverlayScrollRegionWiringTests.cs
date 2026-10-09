@@ -44,6 +44,22 @@ public class OverlayScrollRegionWiringTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Drawer_WithoutATitle_NamesItsScrollRegionByTheAriaLabel()
+    {
+        // F6 r2 G9: an inline sheet has header content, not a Title - its overflowing body used to be
+        // a nameless tab stop.
+        var module = FocusTrap();
+
+        Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Modal, false)
+            .Add(x => x.Position, DrawerPosition.Bottom)
+            .Add(x => x.AriaLabel, "Panels")
+            .AddChildContent("Body"));
+
+        module.Invocations["syncScrollRegion"].Single().Arguments[3].Should().Be("Panels");
+    }
+    [Fact]
     public void Drawer_CloseStopsTheScrollRegion()
     {
         var module = FocusTrap();
