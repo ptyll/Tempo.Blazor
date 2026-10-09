@@ -130,11 +130,15 @@
 
 /* The stage is the positioned host of the inline (non-modal) panels sheet: the sheet fills it and
    anchors to its bottom edge, and its snaps are fractions of this box. A size container so the
-   canvas can reserve the sheet's half-height snap in container units. */
+   canvas can reserve the sheet's half-height snap in container units. The inline drawer root is
+   click-through (pointer-events:none, only its panel is interactive), so the canvas outside the
+   sheet panel keeps the pointer (F1). */
 .tm-editor-shell__stage {
     position: relative;
     flex: 1 1 0;
-    min-block-size: 0;
+    /* container-type:size sizes the stage from its parent only; an auto-height host would collapse
+       it to 0, so the stage keeps a floor that still shows the canvas and the sheet (F11). */
+    min-block-size: 15rem;
     display: flex;
     flex-direction: column;
     container-type: size;
@@ -156,27 +160,25 @@
     flex-shrink: 0;
 }
 
-/* The sheet's positioned host: an overlay filling the stage. TmDrawer's inline rules already let
-   clicks through the root to the canvas and re-enable them on the panel. */
-.tm-editor-shell__panels {
-    position: absolute;
-    inset: 0;
-}
-.tm-editor-shell__panels-toggle {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: center;
-    padding: var(--tm-space-1);
-    background: var(--tm-bg-surface);
+/* The closed-state affordance of the mobile sheet: a labelled bar ("Blocks · Properties"). */
+.tm-editor-shell__panel-toggle--mobile {
+    inline-size: auto;
+    min-block-size: var(--tm-touch-target);
+    align-self: stretch;
+    gap: var(--tm-space-2);
+    padding-inline: var(--tm-space-3);
+    border: none;
     border-block-start: 1px solid var(--tm-color-border-subtle);
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: var(--tm-font-weight-medium, 500);
+    color: var(--tm-color-text);
 }
 
-.tm-editor-shell__panel-toggle--mobile {
-    inline-size: var(--tm-touch-target);
-    block-size: var(--tm-touch-target);
-    align-self: auto;
-    border: 1px solid var(--tm-color-border-subtle);
-    border-radius: var(--tm-radius-control);
+.tm-editor-shell__panel-toggle-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* The sheet surface itself (the class rides on the TmDrawer root). */
@@ -261,6 +263,33 @@
 }
 
 .tm-editor-shell__tabpanel {
+    min-block-size: 0;
+}
+
+.tm-editor-shell__tabpanel[hidden] {
+    display: none;
+}
+
+/* Tabs presentation (Left | Canvas | Right): the strip sits above the full-height regions. */
+.tm-editor-shell__tabs--region {
+    flex-shrink: 0;
+    background: var(--tm-bg-surface);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-editor-shell__tabpanels {
+    flex: 1 1 0;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-editor-shell__tabpanels > .tm-editor-shell__tabpanel:not([hidden]) {
+    flex: 1 1 0;
+    overflow: auto;
+}
+
+.tm-editor-shell__sheet-panel {
     min-block-size: 0;
 }
 

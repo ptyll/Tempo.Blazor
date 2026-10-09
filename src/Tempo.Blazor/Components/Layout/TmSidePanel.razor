@@ -15,6 +15,9 @@
         <aside class="tm-side-panel tm-side-panel--docked @Class"
                style="--tm-side-panel-width: @Width"
                data-layout="@Context.CssModifier"
+               data-side="@SideName"
+               aria-labelledby="@(HasTitle ? _titleId : null)"
+               aria-label="@(HasTitle ? null : DefaultName)"
                data-testid="@RootTestId("tm-side-panel")"
                @attributes="AdditionalAttributes">
             <header class="tm-side-panel__header">
@@ -36,6 +39,10 @@
             <div class="tm-side-panel__body">
                 @ChildContent
             </div>
+            @if (FooterContent is not null)
+            {
+                <footer class="tm-side-panel__footer">@FooterContent</footer>
+            }
         </aside>
     }
 }
@@ -43,17 +50,18 @@ else if (Open)
 {
     <TmDrawer IsOpen="true"
               IsOpenChanged="OnOpenChanged"
-              Position="@(Context.IsMobile ? DrawerPosition.Bottom : DrawerPosition.Right)"
+              Position="@SheetPosition"
               Modal="true"
               Width="@Width"
               Class="@($"tm-side-panel-sheet {Class}")"
               Title="@Title"
-              AriaLabel="@Title"
-              LayoutMode="@Context.Resolved"
+              AriaLabel="@(HasTitle ? Title : DefaultName)"
+              LayoutMode="@(LayoutMode)"
               ShowOverlay="true"
               CloseOnOverlayClick="true"
               CloseOnEscape="true"
               RestoreFocusTargetId="@RestoreFocusTargetId"
+              FooterContent="FooterContent"
               AdditionalAttributes="SheetAttributes">
         <HeaderContent>
             @if (!string.IsNullOrEmpty(Title))
@@ -75,8 +83,9 @@ else if (Open)
     private bool _reportedInitialised;
 
     /// <summary>
-    /// How the panel presents itself. <see cref="SidePanelPresentation.Auto"/> docks below the
-    /// desktop breakpoint and composes a modal sheet (side on tablet, bottom on mobile) otherwise;
+    /// How the panel presents itself. <see cref="SidePanelPresentation.Auto"/> docks when its
+    /// CONTAINER resolves Desktop and composes a modal sheet otherwise — a side sheet, or a bottom
+    /// sheet when the VIEWPORT resolves Mobile;
     /// <see cref="SidePanelPresentation.Docked"/> and <see cref="SidePanelPresentation.Sheet"/> pin
     /// the choice at every width.
     /// </summary>
@@ -148,6 +157,24 @@ else if (Open)
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     private TmLayoutContext Context => new(LayoutMode, TmLayout.Resolve(LayoutMode, Container, null, InitialMode));
+
+    /// <summary>
+    /// The layout the SHEET geometry follows (side vs bottom): the forced mode, else the viewport
+    /// scope, else — with no scope — the container. Docked-vs-sheet stays on the container: whether
+    /// the panel has room in its host is a container question, where a modal surface sits is a
+    /// viewport one.
+    /// </summary>
+    private TmLayoutMode SheetMode => LayoutMode != TmLayoutMode.Auto
+        ? LayoutMode
+        : Viewport?.Resolved ?? Context.Resolved;
+
+    private DrawerPosition SheetPosition => SheetMode == TmLayoutMode.Mobile
+        ? DrawerPosition.Bottom
+        : Side == SidePanelSide.Left ? DrawerPosition.Left : DrawerPosition.Right;
+
+    private bool HasTitle => !string.IsNullOrEmpty(Title);
+    private string DefaultName => Loc["TmSidePanel_DefaultTitle"];
+    private string SideName => Side == SidePanelSide.Left ? "left" : "right";
 
     /// <summary>The unmatched attributes ride the sheet root exactly like the docked root, so a
     /// host's data-testid and ARIA wiring survive the presentation switch.</summary>

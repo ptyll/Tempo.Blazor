@@ -299,6 +299,33 @@ function focusOf(target) {
     try { target.focus(); return true; } catch { return false; }
 }
 
+/**
+ * Moves focus to a host's own trigger after ITS surface closed — but only when focus is actually
+ * lost: on the body, on an element that left the DOM, or inside the closing container. A focus the
+ * user (or the host) placed on another live element is never stolen. The host surfaces that re-assert
+ * a toggle's focus after their own re-render (TmEditorShell) use this instead of an unconditional
+ * element.focus().
+ * @param {HTMLElement|string|null} target the element, or its id
+ * @param {HTMLElement|string|null} container the closing surface (element or id); focus inside it counts as lost
+ * @returns {boolean} true when focus was moved
+ */
+export function focusIfLost(target, container = null) {
+    const element = typeof target === 'string'
+        ? (document.getElementById ? document.getElementById(target) : null)
+        : target;
+    if (!element || element.isConnected === false || typeof element.focus !== 'function') return false;
+
+    const region = typeof container === 'string'
+        ? (document.getElementById ? document.getElementById(container) : null)
+        : container;
+    const active = document.activeElement;
+    const lost = !active
+        || active === document.body
+        || active.isConnected === false
+        || (!!region && typeof region.contains === 'function' && region.contains(active));
+    if (!lost) return false;
+    return focusOf(element);
+}
 function restoreFocus(trap) {
     // A non-modal surface restores focus only if it held it. Restoring while the user is on the
     // canvas behind an inline sheet would steal that focus.

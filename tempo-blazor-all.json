@@ -18139,7 +18139,7 @@
               "name": "CollapsedPanels",
               "type": "EditorShellPanel",
               "isRequired": true,
-              "description": "Panels rendered collapsed to a slim rail. Two-way with CollapsedPanelsChanged.",
+              "description": "Panels rendered collapsed to a slim rail. Two-way with CollapsedPanelsChanged. On tablet at most one panel is expanded: the shell rails the other and raises the callback.",
               "default": "0"
             },
             {
@@ -18172,7 +18172,7 @@
               "name": "Left",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "The left panel (a toolbox, a block list). A docked column on desktop, a side sheet on tablet, part of the mobile panels sheet."
+              "description": "The left panel (a toolbox, a block list). A docked, resizable column on desktop and tablet (a rail when collapsed), part of the mobile panels sheet or tabs."
             },
             {
               "name": "LeftOpen",
@@ -18197,7 +18197,7 @@
               "name": "LeftTitle",
               "type": "string?",
               "isRequired": false,
-              "description": "The left panel title — the mobile tab label and the tablet side-sheet title."
+              "description": "The left panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label."
             },
             {
               "name": "LeftWidth",
@@ -18289,7 +18289,7 @@
               "name": "Right",
               "type": "RenderFragment?",
               "isRequired": false,
-              "description": "The right panel (an inspector, properties). A docked column on desktop, a side sheet on tablet, part of the mobile panels sheet."
+              "description": "The right panel (an inspector, properties). A docked, resizable column on desktop and tablet (a rail when collapsed), part of the mobile panels sheet or tabs."
             },
             {
               "name": "RightOpen",
@@ -18314,7 +18314,7 @@
               "name": "RightTitle",
               "type": "string?",
               "isRequired": false,
-              "description": "The right panel title — the mobile tab label and the tablet side-sheet title."
+              "description": "The right panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label."
             },
             {
               "name": "RightWidth",
@@ -18356,6 +18356,7 @@
             "tm-editor-shell__sheet",
             "tm-editor-shell__tabs",
             "tm-editor-shell__tab",
+            "tm-editor-shell__tabpanel",
             "tm-editor-shell__sheet-close"
           ],
           "examples": [

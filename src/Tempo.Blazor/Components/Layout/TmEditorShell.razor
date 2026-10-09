@@ -9,10 +9,11 @@
 @inject IJSRuntime JS
 
 @* F6 editor shell. The shell is a container-owned component: it resolves its own layout from its
-   root (TmLayoutObserver), so a host can embed it at any width and a test can force a mode. It
-   never copies sheet, gesture, focus or top-layer logic: the tablet side sheets compose a modal
-   TmDrawer (which promotes itself), the mobile panels compose an inline non-modal TmDrawer with an
-   explicit basis element, and the mobile actions reuse TmMobileActionBar (F5). *@
+   root (TmLayoutObserver), so a host can embed it at any width and a test can force a mode. It never
+   copies sheet, gesture, focus or top-layer logic. Desktop AND tablet render docked panels (tablet:
+   at most one expanded, the other a rail — never a modal, decision F6-SHELL-PANEL-STATES); mobile
+   renders the canvas with an inline non-modal TmDrawer bottom sheet (Sheet) or a Left | Canvas |
+   Right tablist (Tabs), plus the F5 action bar. *@
 
 <TmLayoutObserver LayoutMode="LayoutMode"
                   InitialMode="InitialMode"
@@ -22,129 +23,109 @@
                   Class="@RootClasses"
                   AdditionalAttributes="@ShellAttributes">
     <LayoutContent Context="layout">
-        @{ BeginLayoutPass(layout.Resolved); }
         @if (Header is not null)
         {
             <div class="tm-editor-shell__header" data-region="header">@Header</div>
         }
-        @if (Toolbar is not null)
+        @if (Toolbar is not null && !(layout.IsMobile && HasMobileActions))
         {
             <div class="tm-editor-shell__toolbar" data-region="toolbar">@Toolbar</div>
         }
 
-        @if (layout.IsDesktop)
+        @if (!layout.IsMobile)
         {
+            var collapsed = EffectiveCollapsed(layout.Resolved);
             <div class="tm-editor-shell__main" data-region="main">
-                @RenderDesktopSide(EditorShellPanel.Left)
+                @RenderDockedSide(EditorShellPanel.Left, collapsed)
                 <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
-                @RenderDesktopSide(EditorShellPanel.Right)
+                @RenderDockedSide(EditorShellPanel.Right, collapsed)
             </div>
         }
-        else if (layout.IsTablet)
+        else if (MobilePanelPresentation == MobilePanelPresentation.Tabs)
         {
-            <div class="tm-editor-shell__main" data-region="main">
-                @if (!LeftOpen)
+            <div class="tm-editor-shell__main tm-editor-shell__main--mobile tm-editor-shell__main--tabs" data-region="main">
+                <div class="tm-editor-shell__tabs tm-editor-shell__tabs--region" role="tablist" aria-label="@PanelsTitle">
+                    @if (Left is not null)
+                    {
+                        @RenderTab(EditorShellPanel.Left)
+                    }
+                    @RenderTab(EditorShellPanel.None)
+                    @if (Right is not null)
+                    {
+                        @RenderTab(EditorShellPanel.Right)
+                    }
+                </div>
+                <div class="tm-editor-shell__tabpanels">
+                    @if (Left is not null)
+                    {
+                        <div role="tabpanel"
+                             id="@_leftPanelId"
+                             aria-labelledby="@TabId(EditorShellPanel.Left)"
+                             class="tm-editor-shell__tabpanel"
+                             data-region="left"
+                             hidden="@(TabsActive != EditorShellPanel.Left)">@Left</div>
+                    }
+                    <div role="tabpanel"
+                         id="@_canvasPanelId"
+                         aria-labelledby="@TabId(EditorShellPanel.None)"
+                         class="tm-editor-shell__tabpanel tm-editor-shell__canvas"
+                         data-region="canvas"
+                         hidden="@(TabsActive != EditorShellPanel.None)">@Canvas</div>
+                    @if (Right is not null)
+                    {
+                        <div role="tabpanel"
+                             id="@_rightPanelId"
+                             aria-labelledby="@TabId(EditorShellPanel.Right)"
+                             class="tm-editor-shell__tabpanel"
+                             data-region="right"
+                             hidden="@(TabsActive != EditorShellPanel.Right)">@Right</div>
+                    }
+                </div>
+                @if (StatusBar is not null)
                 {
-                    @RenderPanelToggle(EditorShellPanel.Left)
+                    <div class="tm-editor-shell__status" data-region="status-bar">@StatusBar</div>
                 }
-                <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
-                @if (!RightOpen)
+                @if (HasMobileActions)
                 {
-                    @RenderPanelToggle(EditorShellPanel.Right)
+                    <TmMobileActionBar Items="@MobileActions" />
                 }
             </div>
-            @* At most one side sheet: the most recently opened panel wins, and closing it reveals
-               the other when that one is open too (decision F6-TABLET-ONE-SIDE-SHEET). *@
-            @if (TabletSheetSide == EditorShellPanel.Left)
-            {
-                <TmDrawer IsOpen="true"
-                          IsOpenChanged="OnTabletSheetClosed"
-                          Position="DrawerPosition.Left"
-                          Modal="true"
-                          Width="@EffectiveLeftWidth"
-                          Class="tm-editor-shell__side-sheet"
-                          Title="@LeftTitle"
-                          LayoutMode="@(layout.Resolved)"
-                          RestoreFocusTargetId="@(_leftOpenedFromToggle ? _leftToggleId : null)"
-                          CloseOnEscape="true">
-                    <ChildContent>@Left</ChildContent>
-                </TmDrawer>
-            }
-            else if (TabletSheetSide == EditorShellPanel.Right)
-            {
-                <TmDrawer IsOpen="true"
-                          IsOpenChanged="OnTabletSheetClosed"
-                          Position="DrawerPosition.Right"
-                          Modal="true"
-                          Width="@EffectiveRightWidth"
-                          Class="tm-editor-shell__side-sheet"
-                          Title="@RightTitle"
-                          LayoutMode="@(layout.Resolved)"
-                          RestoreFocusTargetId="@(_rightOpenedFromToggle ? _rightToggleId : null)"
-                          CloseOnEscape="true">
-                    <ChildContent>@Right</ChildContent>
-                </TmDrawer>
-            }
         }
         else
         {
             <div class="tm-editor-shell__main tm-editor-shell__main--mobile" data-region="main">
-                @* The stage is the positioned host of the inline panels sheet: the sheet overlays the
-                   lower part of the canvas and its snap fractions are fractions of the stage. *@
+                @* The stage is the positioned host of the inline panels sheet: the sheet fills it,
+                   anchors to its bottom edge and its snap fractions are fractions of the stage. The
+                   sheet root is click-through, so the canvas keeps the pointer outside the sheet panel. *@
                 <div class="tm-editor-shell__stage @(AnyPanelOpen ? "tm-editor-shell__stage--sheet-open" : null)">
-                <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
-                @if (AnyPanelOpen)
-                {
-                    <div class="tm-editor-shell__panels" data-region="panels">
+                    <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
+                    @if (AnyPanelOpen)
+                    {
                         <TmDrawer IsOpen="true"
                                   IsOpenChanged="OnMobileSheetClosed"
                                   Position="DrawerPosition.Bottom"
                                   Modal="false"
                                   Class="tm-editor-shell__sheet"
                                   SnapPoints="DefaultSnaps"
-                                  @bind-SnapIndex="_mobileSnapIndex"
+                                  SnapIndex="_snap"
+                                  SnapIndexChanged="OnSnapChanged"
                                   ShowOverlay="false"
                                   ShowCloseButton="false"
                                   CloseOnEscape="true"
+                                  AriaLabel="@SheetAriaLabel"
                                   LayoutMode="@(layout.Resolved)"
                                   RestoreFocusTargetId="@MobileRestoreTargetId">
                             <HeaderContent>
-                                @if (MobilePanelPresentation == MobilePanelPresentation.Tabs && OpenPanelCount > 1)
+                                @if (OpenPanelCount > 1)
                                 {
                                     <div class="tm-editor-shell__tabs" role="tablist" aria-label="@PanelsTitle">
-                                        @if (LeftOpen && Left is not null)
-                                        {
-                                            <button type="button"
-                                                    role="tab"
-                                                    id="@LeftTabId"
-                                                    class="tm-editor-shell__tab"
-                                                    aria-selected="@LeftTabSelected"
-                                                    tabindex="@LeftTabTabIndex"
-                                                    @ref="_leftTab"
-                                                    @onclick="() => SelectMobileTab(EditorShellPanel.Left)"
-                                                    @onkeydown="HandleTabKeydown">
-                                                @(LeftTitle ?? Loc["TmEditorShell_LeftPanel"])
-                                            </button>
-                                        }
-                                        @if (RightOpen && Right is not null)
-                                        {
-                                            <button type="button"
-                                                    role="tab"
-                                                    id="@RightTabId"
-                                                    class="tm-editor-shell__tab"
-                                                    aria-selected="@RightTabSelected"
-                                                    tabindex="@RightTabTabIndex"
-                                                    @ref="_rightTab"
-                                                    @onclick="() => SelectMobileTab(EditorShellPanel.Right)"
-                                                    @onkeydown="HandleTabKeydown">
-                                                @(RightTitle ?? Loc["TmEditorShell_RightPanel"])
-                                            </button>
-                                        }
+                                        @RenderTab(EditorShellPanel.Left)
+                                        @RenderTab(EditorShellPanel.Right)
                                     </div>
                                 }
                                 else
                                 {
-                                    <h2 class="tm-drawer__title">@PanelsTitle</h2>
+                                    <h2 class="tm-drawer__title">@PanelTitle(SheetActive)</h2>
                                 }
                                 <button type="button"
                                         class="tm-editor-shell__sheet-close tm-touch-target"
@@ -154,46 +135,32 @@
                                 </button>
                             </HeaderContent>
                             <ChildContent>
-                                @if (MobilePanelPresentation == MobilePanelPresentation.Tabs && OpenPanelCount > 1)
+                                @if (OpenPanelCount > 1)
                                 {
                                     <div role="tabpanel"
-                                         id="@ActiveMobileTabPanelId"
-                                         aria-labelledby="@ActiveMobileTabId"
+                                         id="@_leftPanelId"
+                                         aria-labelledby="@TabId(EditorShellPanel.Left)"
                                          class="tm-editor-shell__tabpanel"
-                                         data-region="@(_mobileTab == EditorShellPanel.Left ? "left" : "right")">
-                                        @if (_mobileTab == EditorShellPanel.Left)
-                                        {
-                                            @Left
-                                        }
-                                        else
-                                        {
-                                            @Right
-                                        }
-                                    </div>
+                                         data-region="left"
+                                         hidden="@(SheetActive != EditorShellPanel.Left)">@Left</div>
+                                    <div role="tabpanel"
+                                         id="@_rightPanelId"
+                                         aria-labelledby="@TabId(EditorShellPanel.Right)"
+                                         class="tm-editor-shell__tabpanel"
+                                         data-region="right"
+                                         hidden="@(SheetActive != EditorShellPanel.Right)">@Right</div>
+                                }
+                                else if (SheetActive == EditorShellPanel.Left)
+                                {
+                                    <div class="tm-editor-shell__sheet-panel" id="@_leftPanelId" data-region="left">@Left</div>
                                 }
                                 else
                                 {
-                                    @if (LeftOpen && Left is not null)
-                                    {
-                                        @if (OpenPanelCount > 1)
-                                        {
-                                            <h3 class="tm-editor-shell__panel-heading">@LeftTitle</h3>
-                                        }
-                                        <div class="tm-editor-shell__stacked-panel" data-region="left">@Left</div>
-                                    }
-                                    @if (RightOpen && Right is not null)
-                                    {
-                                        @if (OpenPanelCount > 1)
-                                        {
-                                            <h3 class="tm-editor-shell__panel-heading">@RightTitle</h3>
-                                        }
-                                        <div class="tm-editor-shell__stacked-panel" data-region="right">@Right</div>
-                                    }
+                                    <div class="tm-editor-shell__sheet-panel" id="@_rightPanelId" data-region="right">@Right</div>
                                 }
                             </ChildContent>
                         </TmDrawer>
-                    </div>
-                }
+                    }
                 </div>
                 @if (StatusBar is not null)
                 {
@@ -201,9 +168,9 @@
                 }
                 @if (!AnyPanelOpen && HasAnyPanelContent)
                 {
-                    @RenderPanelToggle(null)
+                    @RenderMobileToggle()
                 }
-                @if (MobileActions is { Count: > 0 })
+                @if (HasMobileActions)
                 {
                     <TmMobileActionBar Items="@MobileActions" />
                 }
@@ -222,31 +189,36 @@
 
     private readonly string _leftToggleId = $"tm-editor-shell-left-toggle-{Guid.NewGuid():N}";
     private readonly string _rightToggleId = $"tm-editor-shell-right-toggle-{Guid.NewGuid():N}";
-    private readonly string _leftAnchorId = $"tm-editor-shell-left-anchor-{Guid.NewGuid():N}";
-    private readonly string _rightAnchorId = $"tm-editor-shell-right-anchor-{Guid.NewGuid():N}";
+    private readonly string _mobileToggleId = $"tm-editor-shell-mobile-toggle-{Guid.NewGuid():N}";
     private readonly string _leftPanelId = $"tm-editor-shell-left-panel-{Guid.NewGuid():N}";
     private readonly string _rightPanelId = $"tm-editor-shell-right-panel-{Guid.NewGuid():N}";
+    private readonly string _canvasPanelId = $"tm-editor-shell-canvas-panel-{Guid.NewGuid():N}";
 
-    private EditorShellPanel _tabletSide = EditorShellPanel.Left;
-    private EditorShellPanel _mobileTab = EditorShellPanel.Left;
-    private bool _leftOpenedFromToggle;
-    private bool _rightOpenedFromToggle;
+    // State derived from parameters, written only from OnParametersSet / the layout callback
+    // (never while rendering — F10): the resolved layout, the tablet one-expanded rule, the mobile
+    // snap / tab shadows that mirror a two-way host parameter.
+    private TmLayoutMode? _measured;
+    private TmLayoutMode _resolved = TmLayoutMode.Desktop;
+    private bool _stateInitialised;
+    private bool _prevHostLeftExpanded;
+    private bool _prevHostRightExpanded;
+    private EditorShellPanel _tabletWinner = EditorShellPanel.Right;
+    private EditorShellPanel _effectiveCollapsed;
+    private EditorShellPanel? _lastRaisedCollapsed;
+    private bool _prevSheetShown;
+    private int _snap;
+    private int _snapParamSeen = int.MinValue;
+    private EditorShellPanel _active;
+    private EditorShellPanel _activeParamSeen = (EditorShellPanel)(-1);
     private bool _mobileOpenedFromToggle;
-    // F5 focus-restore pattern: the owning surface arms a flag before a close and re-asserts the
-    // trigger focus in OnAfterRenderAsync, so the restore survives the focus trap's own (possibly
-    // stale or late) restore on every close path.
-    private EditorShellPanel? _focusSideToggleAfterClose;
-    private bool _focusMobileToggleAfterClose;
-    private ElementReference _leftToggleElement;
-    private ElementReference _rightToggleElement;
-    private ElementReference _mobileToggleElement;
-    private bool _leftToggleRendered;
-    private bool _rightToggleRendered;
-    private bool _mobileToggleRendered;
-    private TmLayoutMode _renderedLayout = TmLayoutMode.Auto;
-    private EditorShellPanel? _shownTabletSheet;
-    private bool _mobileSheetShown;
-    private int _mobileSnapIndex;
+
+    // F5/F6 focus-restore pattern: the owning surface arms a flag before a state change that
+    // replaces its trigger and re-asserts focus from OnAfterRenderAsync — through focusIfLost, so a
+    // focus the user (or the host) put elsewhere is never stolen.
+    private EditorShellPanel _focusSideAfter;
+    private bool _focusMobileToggleAfter;
+    private FocusIfLostInterop? _focus;
+
     private string? _effectiveLeftWidth;
     private string? _effectiveRightWidth;
     private bool _widthsLoaded;
@@ -254,43 +226,40 @@
     private string? _lastLeftWidth;
     private string? _lastRightWidth;
     private EditorShellInterop? _shellJs;
-    private ElementReference _leftTab;
-    private ElementReference _rightTab;
 
     /// <summary>Content of the top header region (a title, breadcrumbs, the primary save action).</summary>
     [Parameter] public RenderFragment? Header { get; set; }
 
-    /// <summary>Content of the toolbar region below the header (undo/redo, preview, validate).</summary>
+    /// <summary>Content of the toolbar region below the header (undo/redo, preview, validate). It is rendered inside the shell's layout cascade, so it can read the cascaded <see cref="TmLayoutContext"/> and adapt. Not rendered on a mobile layout when <see cref="MobileActions"/> is set — the action bar replaces it.</summary>
     [Parameter] public RenderFragment? Toolbar { get; set; }
 
-    /// <summary>The left panel (a toolbox, a block list). A docked column on desktop, a side sheet
-    /// on tablet and part of the mobile panels sheet.</summary>
+    /// <summary>The left panel (a toolbox, a block list). A docked column on desktop and tablet (a rail when collapsed) and part of the mobile panels sheet or tabs.</summary>
     [Parameter] public RenderFragment? Left { get; set; }
 
     /// <summary>The central canvas. Rendered at every layout.</summary>
     [Parameter] public RenderFragment? Canvas { get; set; }
 
-    /// <summary>The right panel (an inspector, properties). A docked column on desktop, a side
-    /// sheet on tablet and part of the mobile panels sheet.</summary>
+    /// <summary>The right panel (an inspector, properties). A docked column on desktop and tablet (a rail when collapsed) and part of the mobile panels sheet or tabs.</summary>
     [Parameter] public RenderFragment? Right { get; set; }
 
     /// <summary>Optional status bar content, rendered below the main region (inside it, above the
-    /// panels sheet, on mobile).</summary>
+    /// action bar, on mobile).</summary>
     [Parameter] public RenderFragment? StatusBar { get; set; }
 
     /// <summary>
     /// The shell's mobile actions, rendered through <see cref="TmMobileActionBar"/> at the bottom
-    /// of a mobile layout (hidden automatically above the mobile breakpoint).
+    /// of a mobile layout (hidden automatically above the mobile breakpoint). When set, the
+    /// <see cref="Toolbar"/> slot is not rendered on a mobile layout: the actions replace it.
     /// </summary>
     [Parameter] public IReadOnlyList<TmActionItem>? MobileActions { get; set; }
 
-    /// <summary>Whether the left panel is open. Two-way with <see cref="LeftOpenChanged"/>.</summary>
+    /// <summary>Whether the left panel is open. Two-way with <see cref="LeftOpenChanged"/>. Means the same on desktop and tablet; the mobile Tabs presentation ignores it.</summary>
     [Parameter] public bool LeftOpen { get; set; } = true;
 
     /// <summary>Raised when the left panel should open or close.</summary>
     [Parameter] public EventCallback<bool> LeftOpenChanged { get; set; }
 
-    /// <summary>Whether the right panel is open. Two-way with <see cref="RightOpenChanged"/>.</summary>
+    /// <summary>Whether the right panel is open. Two-way with <see cref="RightOpenChanged"/>. Means the same on desktop and tablet; the mobile Tabs presentation ignores it.</summary>
     [Parameter] public bool RightOpen { get; set; } = true;
 
     /// <summary>Raised when the right panel should open or close.</summary>
@@ -298,23 +267,22 @@
 
     /// <summary>
     /// Panels rendered collapsed to a slim rail instead of their full width. Two-way with
-    /// <see cref="CollapsedPanelsChanged"/> so the shell's own collapse/expand buttons can update
-    /// it (the host stays in control through the bind).
+    /// <see cref="CollapsedPanelsChanged"/>: the shell's own collapse/expand buttons raise it. On a
+    /// tablet layout at most ONE panel is expanded — when two panels would be, the shell rails the
+    /// other and raises this callback with the new set.
     /// </summary>
     [Parameter] public EditorShellPanel CollapsedPanels { get; set; }
 
     /// <summary>Raised when a panel is collapsed to, or expanded from, its rail.</summary>
     [Parameter] public EventCallback<EditorShellPanel> CollapsedPanelsChanged { get; set; }
 
-    /// <summary>How the open panels present on a mobile layout. Default
-    /// <see cref="MobilePanelPresentation.Sheet"/> (every open panel stacked); <see cref="MobilePanelPresentation.Tabs"/>
-    /// switches between them through a tab strip inside the sheet.</summary>
+    /// <summary>How the open panels present on a mobile layout. <see cref="MobilePanelPresentation.Sheet"/> (default) keeps the canvas visible with a bottom sheet — a Left/Right tab strip inside it when both panels are open; <see cref="MobilePanelPresentation.Tabs"/> is a full-region Left | Canvas | Right tablist with no sheet.</summary>
     [Parameter] public MobilePanelPresentation MobilePanelPresentation { get; set; } = MobilePanelPresentation.Sheet;
 
-    /// <summary>The left panel title — the mobile tab label and the tablet side-sheet title.</summary>
+    /// <summary>The left panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label.</summary>
     [Parameter] public string? LeftTitle { get; set; }
 
-    /// <summary>The right panel title — the mobile tab label and the tablet side-sheet title.</summary>
+    /// <summary>The right panel title — the dock's accessible name, the mobile tab label and the mobile closed-state label.</summary>
     [Parameter] public string? RightTitle { get; set; }
 
     /// <summary>Width of the left panel (a docked column on desktop and tablet). A CSS pixel length, default 280px. Two-way with <see cref="LeftWidthChanged"/>: a user resize raises the callback with the new "NNNpx" value.</summary>
@@ -351,16 +319,16 @@
     /// </summary>
     [Parameter] public TmLayoutBreakpoints? Breakpoints { get; set; }
 
-    /// <summary>The panel a mobile layout shows: the selected tab of the sheet (<see cref="EditorShellPanel.Left"/> or <see cref="EditorShellPanel.Right"/>) or of the Tabs presentation (<see cref="EditorShellPanel.None"/> is the canvas tab). Two-way with <see cref="ActiveMobilePanelChanged"/>.</summary>
+    /// <summary>The panel a mobile layout shows: the selected tab of the sheet (<see cref="EditorShellPanel.Left"/> or <see cref="EditorShellPanel.Right"/>) or of the Tabs presentation (<see cref="EditorShellPanel.None"/> is the canvas tab). Two-way with <see cref="ActiveMobilePanelChanged"/>, so a host can switch to the properties when a block is selected.</summary>
     [Parameter] public EditorShellPanel ActiveMobilePanel { get; set; }
 
     /// <summary>Raised when the user selects another mobile tab.</summary>
     [Parameter] public EventCallback<EditorShellPanel> ActiveMobilePanelChanged { get; set; }
 
-    /// <summary>The snap of the mobile panels sheet (0 = half height, 1 = full). Two-way with <see cref="MobileSheetSnapIndexChanged"/>.</summary>
+    /// <summary>The snap of the mobile panels sheet (0 = half height, 1 = full). Two-way with <see cref="MobileSheetSnapIndexChanged"/>, so a host can collapse the sheet on an "add block" action.</summary>
     [Parameter] public int MobileSheetSnapIndex { get; set; }
 
-    /// <summary>Raised when a gesture or the keyboard moves the mobile sheet to another snap.</summary>
+    /// <summary>Raised when a gesture or the keyboard moves the mobile sheet to another snap, and when a layout flip resets it.</summary>
     [Parameter] public EventCallback<int> MobileSheetSnapIndexChanged { get; set; }
 
     /// <summary>The label of the canvas tab in the <see cref="MobilePanelPresentation.Tabs"/> presentation. Null uses the localized default.</summary>
@@ -402,6 +370,9 @@
     /// <summary>Additional HTML attributes applied to the shell root.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>The cascaded layout of an ancestor observer, when the shell is nested in one (the same input its own observer resolves with).</summary>
+    [CascadingParameter] public TmLayoutContext? Parent { get; set; }
+
     private string RootClasses => string.Join(" ", new[] { "tm-editor-shell", Class }
         .Where(static c => !string.IsNullOrWhiteSpace(c)));
 
@@ -424,211 +395,195 @@
     private string EffectiveLeftWidth => _effectiveLeftWidth ?? LeftWidth;
     private string EffectiveRightWidth => _effectiveRightWidth ?? RightWidth;
 
+    private bool HasMobileActions => MobileActions is { Count: > 0 };
     private bool AnyPanelOpen => (LeftOpen && Left is not null) || (RightOpen && Right is not null);
     private bool HasAnyPanelContent => Left is not null || Right is not null;
-
     private int OpenPanelCount => (LeftOpen && Left is not null ? 1 : 0) + (RightOpen && Right is not null ? 1 : 0);
 
     private string PanelsTitle => Loc["TmEditorShell_Panels"];
 
-    private string LeftTabId => $"{_leftToggleId}-tab";
-    private string RightTabId => $"{_rightToggleId}-tab";
+    private string PanelTitle(EditorShellPanel side) => side switch
+    {
+        EditorShellPanel.Left => LeftTitle ?? Loc["TmEditorShell_LeftPanel"],
+        EditorShellPanel.Right => RightTitle ?? Loc["TmEditorShell_RightPanel"],
+        _ => CanvasTitle ?? Loc["TmEditorShell_Canvas"],
+    };
 
-    private string LeftTabSelected => _mobileTab == EditorShellPanel.Left ? "true" : "false";
-    private string RightTabSelected => _mobileTab == EditorShellPanel.Right ? "true" : "false";
-    private string LeftTabTabIndex => _mobileTab == EditorShellPanel.Left ? "0" : "-1";
-    private string RightTabTabIndex => _mobileTab == EditorShellPanel.Right ? "0" : "-1";
+    private string? MobileRestoreTargetId => _mobileOpenedFromToggle ? _mobileToggleId : null;
 
-    private string ActiveMobileTabId => _mobileTab == EditorShellPanel.Left ? LeftTabId : RightTabId;
-    private string ActiveMobileTabPanelId => _mobileTab == EditorShellPanel.Left
-        ? $"{_leftPanelId}-tabpanel" : $"{_rightPanelId}-tabpanel";
+    private string SheetAriaLabel => OpenPanelCount > 1 ? PanelsTitle : PanelTitle(SheetActive);
 
-    private string? MobileRestoreTargetId => _mobileOpenedFromToggle ? _leftToggleId : null;
-
-    /// <summary>The side whose sheet renders on a tablet layout: the most recently opened panel,
-    /// falling back to the other side when its panel is closed or has no content.</summary>
-    private EditorShellPanel? TabletSheetSide
+    /// <summary>The panel the Sheet presentation shows: the selected tab when two panels are open, otherwise the one open panel.</summary>
+    private EditorShellPanel SheetActive
     {
         get
         {
-            if (IsSideRenderable(_tabletSide)) return _tabletSide;
-            var other = _tabletSide == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
-            return IsSideRenderable(other) ? other : null;
+            var leftOpen = LeftOpen && Left is not null;
+            var rightOpen = RightOpen && Right is not null;
+            if (leftOpen && rightOpen) return _active == EditorShellPanel.Right ? EditorShellPanel.Right : EditorShellPanel.Left;
+            return leftOpen ? EditorShellPanel.Left : EditorShellPanel.Right;
         }
     }
 
-    private bool IsSideRenderable(EditorShellPanel side) => side switch
+    /// <summary>The tab the Tabs presentation shows; None is the canvas.</summary>
+    private EditorShellPanel TabsActive => _active switch
     {
-        EditorShellPanel.Left => LeftOpen && Left is not null,
-        _ => RightOpen && Right is not null,
+        EditorShellPanel.Left when Left is not null => EditorShellPanel.Left,
+        EditorShellPanel.Right when Right is not null => EditorShellPanel.Right,
+        _ => EditorShellPanel.None,
     };
 
-    // ── Desktop side chrome ─────────────────────────────────────────────────
+    private EditorShellPanel EffectiveCollapsed(TmLayoutMode resolved)
+        => resolved == TmLayoutMode.Tablet ? _effectiveCollapsed : CollapsedPanels;
 
-    private RenderFragment RenderDesktopSide(EditorShellPanel side) => builder =>
+    private bool IsExpanded(EditorShellPanel side, EditorShellPanel collapsed) => side == EditorShellPanel.Left
+        ? LeftOpen && Left is not null && !collapsed.HasFlag(EditorShellPanel.Left)
+        : RightOpen && Right is not null && !collapsed.HasFlag(EditorShellPanel.Right);
+
+    private string TabId(EditorShellPanel key) => key switch
     {
-        var open = side == EditorShellPanel.Left ? LeftOpen : RightOpen;
-        var collapsed = CollapsedPanels.HasFlag(side);
-        var content = side == EditorShellPanel.Left ? Left : Right;
-        if (content is null) return;
+        EditorShellPanel.Left => $"{_leftPanelId}-tab",
+        EditorShellPanel.Right => $"{_rightPanelId}-tab",
+        _ => $"{_canvasPanelId}-tab",
+    };
+
+    private string PanelDomId(EditorShellPanel key) => key switch
+    {
+        EditorShellPanel.Left => _leftPanelId,
+        EditorShellPanel.Right => _rightPanelId,
+        _ => _canvasPanelId,
+    };
+
+    // ── Docked chrome (desktop and tablet) ──────────────────────────────────
+
+    private RenderFragment RenderDockedSide(EditorShellPanel side, EditorShellPanel collapsedSet)
+    {
+        var isLeft = side == EditorShellPanel.Left;
+        var content = isLeft ? Left : Right;
+        if (content is null) return static _ => { };
+
+        var open = isLeft ? LeftOpen : RightOpen;
+        var lower = isLeft ? "left" : "right";
+        var toggleId = isLeft ? _leftToggleId : _rightToggleId;
+        var panelId = isLeft ? _leftPanelId : _rightPanelId;
+        var title = PanelTitle(side);
 
         if (!open)
         {
-            RenderPanelToggle(side)(builder);
-            return;
+            return @<button type="button"
+                            id="@toggleId"
+                            class="tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--@lower"
+                            aria-expanded="false"
+                            aria-label="@(isLeft ? Loc["TmEditorShell_ShowLeftPanel"] : Loc["TmEditorShell_ShowRightPanel"])"
+                            @onclick="() => OpenSideFromToggleAsync(side)">
+                <TmIcon Name="@IconNames.Sidebar" Size="IconSize.Sm" />
+            </button>;
         }
 
-        var lower = side.ToString().ToLowerInvariant();
-        var toggleId = side == EditorShellPanel.Left ? _leftToggleId : _rightToggleId;
-        var anchorId = side == EditorShellPanel.Left ? _leftAnchorId : _rightAnchorId;
-
-        if (collapsed)
+        if (collapsedSet.HasFlag(side))
         {
-            var expandLabel = side == EditorShellPanel.Left
-                ? Loc["TmEditorShell_ExpandLeftPanel"] : Loc["TmEditorShell_ExpandRightPanel"];
-            var seq = 0;
-            builder.OpenElement(seq, "div");
-            builder.AddAttribute(++seq, "class", $"tm-editor-shell__rail tm-editor-shell__rail--{lower}");
-            builder.AddAttribute(++seq, "data-region", $"rail-{lower}");
-            builder.OpenElement(++seq, "button");
-            builder.AddAttribute(++seq, "type", "button");
-            builder.AddAttribute(++seq, "id", toggleId);
-            builder.AddAttribute(++seq, "class", "tm-editor-shell__panel-toggle");
-            builder.AddAttribute(++seq, "aria-expanded", "true");
-            builder.AddAttribute(++seq, "aria-controls", anchorId);
-            builder.AddAttribute(++seq, "aria-label", expandLabel);
-            builder.AddAttribute(++seq, "onclick", EventCallback.Factory.Create(this, () => ExpandAsync(side)));
-            builder.AddElementReferenceCapture(++seq, r => CaptureToggle(side, r));
-            builder.OpenComponent<TmIcon>(++seq);
-            builder.AddAttribute(++seq, "Name", side == EditorShellPanel.Left ? IconNames.ChevronRight : IconNames.ChevronLeft);
-            builder.AddAttribute(++seq, "Size", IconSize.Sm);
-            builder.CloseComponent();
-            builder.CloseElement();
-            builder.CloseElement();
-            return;
+            var rail = isLeft ? LeftRail : RightRail;
+            return @<div class="tm-editor-shell__rail tm-editor-shell__rail--@lower" data-region="rail-@lower">
+                @* The panel behind a rail is not rendered, so the button reports collapsed and has no aria-controls. *@
+                <button type="button"
+                        id="@toggleId"
+                        class="tm-editor-shell__panel-toggle"
+                        aria-expanded="false"
+                        aria-label="@(isLeft ? Loc["TmEditorShell_ExpandLeftPanel"] : Loc["TmEditorShell_ExpandRightPanel"])"
+                        @onclick="() => ExpandAsync(side)">
+                    <TmIcon Name="@(isLeft ? IconNames.ChevronRight : IconNames.ChevronLeft)" Size="IconSize.Sm" />
+                </button>
+                @rail
+            </div>;
         }
 
-        var panelId = side == EditorShellPanel.Left ? _leftPanelId : _rightPanelId;
-        var width = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
-        builder.OpenElement(0, "aside");
-        builder.AddAttribute(1, "class", $"tm-editor-shell__panel tm-editor-shell__panel--{lower}");
-        builder.AddAttribute(2, "data-region", lower);
-        builder.AddAttribute(3, "id", panelId);
-        builder.AddAttribute(4, "style", $"--tm-editor-shell-panel-width: {width}");
-        builder.AddContent(5, content);
-        builder.CloseElement();
+        var width = isLeft ? EffectiveLeftWidth : EffectiveRightWidth;
+        return @<text>
+            <aside class="tm-editor-shell__panel tm-editor-shell__panel--@lower"
+                   id="@panelId"
+                   data-region="@lower"
+                   aria-label="@title"
+                   style="--tm-editor-shell-panel-width: @width">@content</aside>
+            <button type="button"
+                    id="@toggleId"
+                    class="tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--@lower"
+                    aria-expanded="true"
+                    aria-controls="@panelId"
+                    aria-label="@(isLeft ? Loc["TmEditorShell_CollapseLeftPanel"] : Loc["TmEditorShell_CollapseRightPanel"])"
+                    @onclick="() => CollapseAsync(side)">
+                <TmIcon Name="@(isLeft ? IconNames.ChevronLeft : IconNames.ChevronRight)" Size="IconSize.Sm" />
+            </button>
+        </text>;
+    }
 
-        RenderPanelToggle(side)(builder);
-    };
+    // ── Mobile chrome ───────────────────────────────────────────────────────
 
-    // ── Panel toggle (one button per side in every state) ───────────────────
-
-    private RenderFragment RenderPanelToggle(EditorShellPanel? side) => builder =>
+    /// <summary>The closed-state affordance of the Sheet presentation: a labelled bar naming what is behind it.</summary>
+    private RenderFragment RenderMobileToggle()
     {
-        var seq = 0;
-        builder.OpenElement(seq, "span");
-        builder.AddAttribute(++seq, "hidden", true);
-        builder.AddAttribute(++seq, "id", side == EditorShellPanel.Right ? _rightAnchorId : _leftAnchorId);
-        builder.AddAttribute(++seq, "data-panel-anchor", side?.ToString().ToLowerInvariant() ?? "panels");
-        builder.CloseElement();
-
-        if (side is null)
+        var label = string.Join(" · ", new[]
         {
-            // Mobile: both panels closed — one button reopens the panels sheet.
-            builder.OpenElement(++seq, "button");
-            builder.AddAttribute(++seq, "type", "button");
-            builder.AddAttribute(++seq, "id", _leftToggleId);
-            builder.AddAttribute(++seq, "class", "tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--mobile");
-            builder.AddAttribute(++seq, "aria-expanded", "false");
-            builder.AddAttribute(++seq, "aria-controls", _leftAnchorId);
-            builder.AddAttribute(++seq, "aria-label", PanelsTitle);
-            builder.AddAttribute(++seq, "onclick", EventCallback.Factory.Create(this, OpenAllPanelsFromToggleAsync));
-            builder.AddElementReferenceCapture(++seq, r => { _mobileToggleElement = r; _mobileToggleRendered = true; });
-            builder.OpenComponent<TmIcon>(++seq);
-            builder.AddAttribute(++seq, "Name", "chevron-up");
-            builder.AddAttribute(++seq, "Size", IconSize.Sm);
-            builder.CloseComponent();
-            builder.CloseElement();
-            return;
-        }
+            Left is not null ? PanelTitle(EditorShellPanel.Left) : null,
+            Right is not null ? PanelTitle(EditorShellPanel.Right) : null,
+        }.Where(static t => !string.IsNullOrEmpty(t)));
 
-        var open = side == EditorShellPanel.Left ? LeftOpen : RightOpen;
-        var isLeft = side == EditorShellPanel.Left;
-        var toggleId = isLeft ? _leftToggleId : _rightToggleId;
-        var anchorId = isLeft ? _leftAnchorId : _rightAnchorId;
-        var label = !open
-            ? (isLeft ? Loc["TmEditorShell_ShowLeftPanel"] : Loc["TmEditorShell_ShowRightPanel"])
-            : (isLeft ? Loc["TmEditorShell_CollapseLeftPanel"] : Loc["TmEditorShell_CollapseRightPanel"]);
-        var icon = !open
-            ? IconNames.Sidebar
-            : (isLeft ? IconNames.ChevronLeft : IconNames.ChevronRight);
+        return @<button type="button"
+                        id="@_mobileToggleId"
+                        class="tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--mobile"
+                        aria-expanded="false"
+                        @onclick="OpenAllPanelsFromToggleAsync">
+            <TmIcon Name="chevron-up" Size="IconSize.Sm" />
+            <span class="tm-editor-shell__panel-toggle-label">@label</span>
+        </button>;
+    }
 
-        builder.OpenElement(++seq, "button");
-        builder.AddAttribute(++seq, "type", "button");
-        builder.AddAttribute(++seq, "id", toggleId);
-        builder.AddAttribute(++seq, "class", $"tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--{side.ToString().ToLowerInvariant()}");
-        builder.AddAttribute(++seq, "aria-expanded", open ? "true" : "false");
-        builder.AddAttribute(++seq, "aria-controls", anchorId);
-        builder.AddAttribute(++seq, "aria-label", label);
-        builder.AddAttribute(++seq, "onclick", EventCallback.Factory.Create(this, () =>
-            open ? CollapseAsync(side.Value) : OpenSideFromToggleAsync(side.Value)));
-        builder.AddElementReferenceCapture(++seq, r => CaptureToggle(side.Value, r));
-        builder.OpenComponent<TmIcon>(++seq);
-        builder.AddAttribute(++seq, "Name", icon);
-        builder.AddAttribute(++seq, "Size", IconSize.Sm);
-        builder.CloseComponent();
-        builder.CloseElement();
-    };
+    private RenderFragment RenderTab(EditorShellPanel key)
+    {
+        var selected = (MobilePanelPresentation == MobilePanelPresentation.Tabs ? TabsActive : SheetActive) == key;
+        return @<button type="button"
+                        role="tab"
+                        id="@TabId(key)"
+                        class="tm-editor-shell__tab"
+                        aria-selected="@(selected ? "true" : "false")"
+                        aria-controls="@PanelDomId(key)"
+                        tabindex="@(selected ? "0" : "-1")"
+                        @onclick="() => SelectTabAsync(key)"
+                        @onkeydown="e => HandleTabKeydownAsync(key, e)">@PanelTitle(key)</button>;
+    }
 
     // ── Panel state ─────────────────────────────────────────────────────────
 
     private async Task OpenSideFromToggleAsync(EditorShellPanel side)
     {
-        _tabletSide = side;
-        _focusSideToggleAfterClose = side;
-        if (side == EditorShellPanel.Left) _leftOpenedFromToggle = true;
-        else _rightOpenedFromToggle = true;
+        _focusSideAfter = side;
+        var collapsed = EffectiveCollapsed(_resolved);
+        var next = collapsed & ~side;
+        var other = side == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
+        // Tablet: at most one expanded panel — opening one rails the other.
+        if (_resolved == TmLayoutMode.Tablet && IsExpanded(other, collapsed)) next |= other;
+        if (next != CollapsedPanels) await CollapsedPanelsChanged.InvokeAsync(next);
         if (side == EditorShellPanel.Left) await LeftOpenChanged.InvokeAsync(true);
         else await RightOpenChanged.InvokeAsync(true);
     }
 
     private async Task CollapseAsync(EditorShellPanel side)
     {
-        _focusSideToggleAfterClose = side;
-        await CollapsedPanelsChanged.InvokeAsync(CollapsedPanels | side);
+        _focusSideAfter = side;
+        await CollapsedPanelsChanged.InvokeAsync(EffectiveCollapsed(_resolved) | side);
     }
 
     private async Task ExpandAsync(EditorShellPanel side)
     {
-        _focusSideToggleAfterClose = side;
-        await CollapsedPanelsChanged.InvokeAsync(CollapsedPanels & ~side);
+        _focusSideAfter = side;
+        var collapsed = EffectiveCollapsed(_resolved);
+        var next = collapsed & ~side;
+        var other = side == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
+        if (_resolved == TmLayoutMode.Tablet && IsExpanded(other, collapsed)) next |= other;
+        _tabletWinner = side;
+        await CollapsedPanelsChanged.InvokeAsync(next);
     }
 
-    private Task OnTabletSheetClosed(bool open)
-    {
-        if (open) return Task.CompletedTask;
-        // Close the sheet ACTUALLY rendered — with both panels open that is the most-recent side,
-        // but after a fallback switch it is the other one (closing it must not re-fire the stale
-        // side's callback, which would leave this sheet open forever).
-        var side = TabletSheetSide;
-        // Arm the focus restore on EVERY close path (Escape, header close, backdrop, swipe all
-        // funnel here): the toggle re-appears in the next render and the shell re-asserts focus
-        // on it from OnAfterRenderAsync, whatever the focus trap restored (or failed to restore).
-        if (side is not null)
-        {
-            _focusSideToggleAfterClose = side;
-        }
-        return side == EditorShellPanel.Left
-            ? LeftOpenChanged.InvokeAsync(false)
-            : side == EditorShellPanel.Right
-                ? RightOpenChanged.InvokeAsync(false)
-                : Task.CompletedTask;
-    }
-
-    private Task OnMobileSheetClosed(bool open)
-    {
-        return open ? Task.CompletedTask : CloseAllPanelsAsync();
-    }
+    private Task OnMobileSheetClosed(bool open) => open ? Task.CompletedTask : CloseAllPanelsAsync();
 
     /// <summary>
     /// Closing the mobile panels (sheet close button, Escape or the swipe) collapses both panels;
@@ -638,7 +593,7 @@
     private async Task CloseAllPanelsAsync()
     {
         _mobileOpenedFromToggle = false;
-        _focusMobileToggleAfterClose = true;
+        _focusMobileToggleAfter = true;
         if (LeftOpen && Left is not null) await LeftOpenChanged.InvokeAsync(false);
         if (RightOpen && Right is not null) await RightOpenChanged.InvokeAsync(false);
     }
@@ -650,145 +605,195 @@
         if (Right is not null) await RightOpenChanged.InvokeAsync(true);
     }
 
-    private void SelectMobileTab(EditorShellPanel side) => _mobileTab = side;
+    private async Task OnSnapChanged(int index)
+    {
+        if (index == _snap) return;
+        _snap = index;
+        await MobileSheetSnapIndexChanged.InvokeAsync(index);
+    }
+
+    private async Task SelectTabAsync(EditorShellPanel key)
+    {
+        var current = MobilePanelPresentation == MobilePanelPresentation.Tabs ? TabsActive : SheetActive;
+        if (current == key) return;
+        _active = key;
+        await ActiveMobilePanelChanged.InvokeAsync(key);
+    }
 
     // ── Tab roving ──────────────────────────────────────────────────────────
 
-    private async Task HandleTabKeydown(KeyboardEventArgs args)
+    private List<EditorShellPanel> TabOrder()
     {
-        if (OpenPanelCount < 2) return;
-        var target = args.Key switch
+        if (MobilePanelPresentation == MobilePanelPresentation.Tabs)
         {
-            "ArrowRight" or "ArrowDown" => _mobileTab == EditorShellPanel.Left
-                ? EditorShellPanel.Right : EditorShellPanel.Left,
-            "ArrowLeft" or "ArrowUp" => _mobileTab == EditorShellPanel.Left
-                ? EditorShellPanel.Right : EditorShellPanel.Left,
-            "Home" => EditorShellPanel.Left,
-            "End" => EditorShellPanel.Right,
-            _ => (EditorShellPanel?)null,
+            var all = new List<EditorShellPanel>();
+            if (Left is not null) all.Add(EditorShellPanel.Left);
+            all.Add(EditorShellPanel.None);
+            if (Right is not null) all.Add(EditorShellPanel.Right);
+            return all;
+        }
+        return [EditorShellPanel.Left, EditorShellPanel.Right];
+    }
+
+    private async Task HandleTabKeydownAsync(EditorShellPanel current, KeyboardEventArgs args)
+    {
+        var order = TabOrder();
+        var index = order.IndexOf(current);
+        if (index < 0 || order.Count < 2) return;
+        EditorShellPanel? target = args.Key switch
+        {
+            "ArrowRight" => order[(index + 1) % order.Count],
+            "ArrowLeft" => order[(index - 1 + order.Count) % order.Count],
+            "Home" => order[0],
+            "End" => order[^1],
+            _ => null,
         };
-        if (target is null || !IsSideRenderable(target.Value)) return;
-        SelectMobileTab(target.Value);
-        try
-        {
-            if (target.Value == EditorShellPanel.Left) await _leftTab.FocusAsync();
-            else await _rightTab.FocusAsync();
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or JSException)
-        {
-            // Best-effort only: the tab may have left the DOM or JS may be unavailable (bUnit).
-        }
+        if (target is null) return;
+        await SelectTabAsync(target.Value);
+        _focusTabAfter = TabId(target.Value);
+        _focusTabFrom = TabId(current);
     }
 
-    // ── Focus restore (the F5 pattern) ──────────────────────────────────────
+    private string? _focusTabAfter;
+    private string? _focusTabFrom;
 
-    private void CaptureToggle(EditorShellPanel side, ElementReference element)
+    // ── Focus restore (the F5 pattern, through focusIfLost) ─────────────────
+
+    private async Task RestoreFocusAsync()
     {
-        if (side == EditorShellPanel.Left)
+        if (_disposed) return;
+        _focus ??= new FocusIfLostInterop(JS);
+
+        if (_focusSideAfter != EditorShellPanel.None)
         {
-            _leftToggleElement = element;
-            _leftToggleRendered = true;
+            var side = _focusSideAfter;
+            _focusSideAfter = EditorShellPanel.None;
+            await _focus.FocusIfLostAsync(side == EditorShellPanel.Left ? _leftToggleId : _rightToggleId);
         }
-        else
+
+        if (_focusMobileToggleAfter)
         {
-            _rightToggleElement = element;
-            _rightToggleRendered = true;
+            _focusMobileToggleAfter = false;
+            await _focus.FocusIfLostAsync(_mobileToggleId);
+        }
+
+        if (_focusTabAfter is { } tab)
+        {
+            var from = _focusTabFrom;
+            _focusTabAfter = null;
+            _focusTabFrom = null;
+            // A roving move leaves the previous tab: focus there counts as "inside the closing
+            // container", so it moves — a focus the user placed elsewhere still does not.
+            await _focus.FocusIfLostAsync(tab, from);
         }
     }
 
-    /// <summary>
-    /// Runs at the top of every layout pass. Resets what only a rendered trigger/panel owns, so
-    /// state can never outlive its DOM: the rendered-toggle flags are recomputed by this pass, and
-    /// a layout flip (Mobile→Desktop→Mobile) drops every armed restore, "opened from toggle" hint
-    /// and the sheet snap — the panels never reopen at a stale snap (F5 round-3 lesson). Plain
-    /// field writes only (no StateHasChanged), so it cannot loop the render.
-    /// </summary>
-    private void BeginLayoutPass(TmLayoutMode resolved)
+    // ── Layout / derived state ──────────────────────────────────────────────
+
+    private async Task OnResolvedLayoutChanged(TmLayoutMode mode)
     {
-        if (_renderedLayout != resolved)
-        {
-            if (_renderedLayout != TmLayoutMode.Auto)
-            {
-                _focusSideToggleAfterClose = null;
-                _focusMobileToggleAfterClose = false;
-                _leftOpenedFromToggle = false;
-                _rightOpenedFromToggle = false;
-                _mobileOpenedFromToggle = false;
-                _mobileSnapIndex = 0;
-            }
-            _renderedLayout = resolved;
-        }
-
-        _leftToggleRendered = false;
-        _rightToggleRendered = false;
-        _mobileToggleRendered = false;
-        _shownTabletSheet = resolved == TmLayoutMode.Tablet ? TabletSheetSide : null;
-        _mobileSheetShown = resolved == TmLayoutMode.Mobile && AnyPanelOpen;
+        _measured = mode;
+        await SyncAsync();
+        await ResolvedLayoutChanged.InvokeAsync(mode);
     }
-
-    /// <summary>
-    /// A host that closes a panel programmatically (it sets LeftOpen/RightOpen itself) never goes
-    /// through a sheet gesture: detect the displayed sheet disappearing and arm the same restore.
-    /// </summary>
-    private void DetectProgrammaticClose()
-    {
-        if (_shownTabletSheet is { } side && TabletSheetSide is null)
-        {
-            _focusSideToggleAfterClose = side;
-        }
-
-        if (_mobileSheetShown && !AnyPanelOpen)
-        {
-            _focusMobileToggleAfterClose = true;
-        }
-    }
-
-    private async Task RestoreToggleFocusAsync()
-    {
-        if (_focusSideToggleAfterClose is { } side)
-        {
-            _focusSideToggleAfterClose = null;
-            // A tablet sheet that is (still) displayed owns focus — never steal it behind the trap.
-            // The toggle must also actually be in the DOM (it unmounts while its sheet is open).
-            var rendered = side == EditorShellPanel.Left ? _leftToggleRendered : _rightToggleRendered;
-            if (_shownTabletSheet is null && rendered)
-            {
-                await TryFocusAsync(side == EditorShellPanel.Left ? _leftToggleElement : _rightToggleElement);
-            }
-        }
-
-        if (_focusMobileToggleAfterClose)
-        {
-            _focusMobileToggleAfterClose = false;
-            if (_mobileToggleRendered && !_mobileSheetShown)
-            {
-                await TryFocusAsync(_mobileToggleElement);
-            }
-        }
-    }
-
-    private static async Task TryFocusAsync(ElementReference element)
-    {
-        try
-        {
-            await element.FocusAsync(preventScroll: true);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or JSException)
-        {
-            // Best-effort only: the toggle left the DOM before the move (JSException in a real
-            // browser) or no JS runtime is attached (bUnit throws InvalidOperationException).
-        }
-    }
-
-    // ── Layout / widths ─────────────────────────────────────────────────────
-
-    private Task OnResolvedLayoutChanged(TmLayoutMode mode) => ResolvedLayoutChanged.InvokeAsync(mode);
 
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
-        DetectProgrammaticClose();
+        // The two-way shadows adopt a host value only when the host CHANGED it: a host that ignores
+        // the callback must not have its stale value re-imposed over what the user just did.
+        if (MobileSheetSnapIndex != _snapParamSeen)
+        {
+            _snapParamSeen = MobileSheetSnapIndex;
+            _snap = Math.Max(0, MobileSheetSnapIndex);
+        }
+        if (ActiveMobilePanel != _activeParamSeen)
+        {
+            _activeParamSeen = ActiveMobilePanel;
+            _active = ActiveMobilePanel;
+        }
 
+        await SyncAsync();
+        await SyncWidthsAsync();
+    }
+
+    /// <summary>
+    /// Derives the state that only the parameters (and the layout callback) own: the resolved
+    /// layout, the flip reset, the programmatic-close focus arming and the tablet "one expanded
+    /// panel" rule. Plain field writes plus the callbacks the host must hear about — never while
+    /// rendering.
+    /// </summary>
+    private async Task SyncAsync()
+    {
+        var resolved = TmLayout.Resolve(LayoutMode, Parent, _measured, InitialMode);
+        var flipped = _stateInitialised && resolved != _resolved;
+        _resolved = resolved;
+
+        var raiseSnap = false;
+        if (flipped)
+        {
+            // A layout flip (Mobile→Desktop→Mobile) drops every armed restore, the "opened from
+            // toggle" hint and the sheet snap — the panels never reopen at a stale snap.
+            _focusSideAfter = EditorShellPanel.None;
+            _focusMobileToggleAfter = false;
+            _focusTabAfter = null;
+            _focusTabFrom = null;
+            _mobileOpenedFromToggle = false;
+            if (_snap != 0)
+            {
+                _snap = 0;
+                raiseSnap = true;
+            }
+        }
+
+        // A host that closes the mobile sheet itself never goes through a gesture: detect the
+        // displayed sheet disappearing (on the same layout) and arm the focus restore.
+        var sheetNow = resolved == TmLayoutMode.Mobile
+            && MobilePanelPresentation == MobilePanelPresentation.Sheet && AnyPanelOpen;
+        if (!flipped && _prevSheetShown && !sheetNow && resolved == TmLayoutMode.Mobile)
+        {
+            _focusMobileToggleAfter = true;
+        }
+        _prevSheetShown = sheetNow;
+
+        // Tablet = docked panels with AT MOST ONE expanded (decision F6-SHELL-PANEL-STATES). When
+        // the host state would expand two, the panel that became expanded most recently wins
+        // (default: the inspector), the other is railed and the host is told.
+        var leftExpanded = LeftOpen && Left is not null && !CollapsedPanels.HasFlag(EditorShellPanel.Left);
+        var rightExpanded = RightOpen && Right is not null && !CollapsedPanels.HasFlag(EditorShellPanel.Right);
+        var leftNew = leftExpanded && !_prevHostLeftExpanded;
+        var rightNew = rightExpanded && !_prevHostRightExpanded;
+        if (leftNew && !rightNew) _tabletWinner = EditorShellPanel.Left;
+        else if (rightNew) _tabletWinner = EditorShellPanel.Right;
+        _prevHostLeftExpanded = leftExpanded;
+        _prevHostRightExpanded = rightExpanded;
+
+        var effective = CollapsedPanels;
+        if (resolved == TmLayoutMode.Tablet && leftExpanded && rightExpanded)
+        {
+            effective |= _tabletWinner == EditorShellPanel.Left ? EditorShellPanel.Right : EditorShellPanel.Left;
+        }
+        _effectiveCollapsed = effective;
+
+        var raiseCollapsed = false;
+        if (effective == CollapsedPanels)
+        {
+            _lastRaisedCollapsed = null;
+        }
+        else if (_lastRaisedCollapsed != effective)
+        {
+            _lastRaisedCollapsed = effective;
+            raiseCollapsed = true;
+        }
+
+        _stateInitialised = true;
+
+        if (raiseSnap) await MobileSheetSnapIndexChanged.InvokeAsync(0);
+        if (raiseCollapsed) await CollapsedPanelsChanged.InvokeAsync(effective);
+    }
+
+    private async Task SyncWidthsAsync()
+    {
         if (_lastLeftWidth is null)
         {
             _lastLeftWidth = LeftWidth;
@@ -808,7 +813,7 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await RestoreToggleFocusAsync();
+        await RestoreFocusAsync();
 
         if (!firstRender || string.IsNullOrEmpty(PersistWidthsKey) || _widthsLoaded) return;
         _widthsLoaded = true;
@@ -837,5 +842,6 @@
         if (_disposed) return;
         _disposed = true;
         if (_shellJs is not null) await _shellJs.DisposeAsync();
+        if (_focus is not null) await _focus.DisposeAsync();
     }
 }

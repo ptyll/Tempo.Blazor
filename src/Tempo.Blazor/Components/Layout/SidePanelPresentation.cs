@@ -8,8 +8,8 @@ namespace Tempo.Blazor.Components.Layout;
 public enum SidePanelPresentation
 {
     /// <summary>
-    /// Follows the container's layout: docked in-flow below the desktop breakpoint (1024px), a
-    /// modal side sheet on a tablet container, a modal bottom sheet on a mobile container.
+    /// Docked in-flow when the panel's CONTAINER resolves Desktop (1024px and up by default); a
+    /// modal sheet otherwise — a side sheet, or a bottom sheet when the VIEWPORT resolves Mobile.
     /// </summary>
     Auto,
 
@@ -17,7 +17,7 @@ public enum SidePanelPresentation
     /// controls whether it renders at all.</summary>
     Docked,
 
-    /// <summary>The panel renders as a modal sheet at every width: a side sheet on desktop and
-    /// tablet containers, a bottom sheet on a mobile container.</summary>
+    /// <summary>The panel renders as a modal sheet at every width: a side sheet, or a bottom sheet
+    /// when the viewport resolves Mobile.</summary>
     Sheet,
 }
