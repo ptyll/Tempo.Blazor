@@ -1446,7 +1446,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
 
         yield return new WireframeComponentSchema
         {
-            Type = "TmMobileActionBar", Category = "Navigation", DisplayName = "Mobile Action Bar",
+            Type = "TmMobileActionBar", Category = "Toolbar", DisplayName = "Mobile Action Bar",
             DefaultWidth = 360, DefaultHeight = 60,
             Props =
             [
