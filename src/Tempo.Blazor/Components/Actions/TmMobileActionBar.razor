@@ -259,7 +259,8 @@ else
             builder.AddAttribute(4, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
             builder.AddAttribute(5, "aria-haspopup", "menu");
             builder.AddAttribute(6, "aria-expanded", _moreOpen ? "true" : "false");
-            builder.AddAttribute(7, "aria-controls", _morePanelId);
+            // aria-controls only while the controlled panel exists (it is rendered only while open).
+            if (_moreOpen) builder.AddAttribute(7, "aria-controls", _morePanelId);
             // X11: an overflow of nothing but disabled items has nothing to invoke.
             builder.AddAttribute(8, "disabled", moreDisabled);
             builder.OpenElement(9, "span");
