@@ -985,4 +985,74 @@ public class TmEditorShellTests : LocalizationTestBase
 
         FocusIfLostCalls(module).Should().BeEmpty("focus was not inside the panel that got railed (page load: body)");
     }
+
+    // ── F6 r2 G11: closing one of two sheet panels never re-parents the other's content ──
+
+    private sealed class MountCounter : ComponentBase
+    {
+        public static int Mounts;
+        protected override void OnInitialized() => Mounts++;
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+            => builder.AddContent(0, "probe");
+    }
+
+    private static RenderFragment CounterFragment => builder =>
+    {
+        builder.OpenComponent<MountCounter>(0);
+        builder.CloseComponent();
+    };
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void MobileSheet_ClosingOneOfTwoPanels_DoesNotRemountTheOthersContent(bool closeRight)
+    {
+        MountCounter.Mounts = 0;
+        var cut = Render<TmEditorShell>(p =>
+        {
+            p.Add(x => x.LayoutMode, TmLayoutMode.Mobile);
+            p.Add(x => x.Left, CounterFragment);
+            p.Add(x => x.Right, CounterFragment);
+            p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body"));
+        });
+        var mountsBefore = MountCounter.Mounts;
+        mountsBefore.Should().Be(2, "both panels mount once");
+
+        cut.Render(p => p.Add(closeRight ? x => x.RightOpen : x => x.LeftOpen, false));
+
+        MountCounter.Mounts.Should().Be(2, "the surviving panel keeps its component instance (its toolbox state, a focused input)");
+        cut.FindAll(".tm-editor-shell__sheet [data-region]").Should().HaveCount(1);
+
+        cut.Render(p => p.Add(closeRight ? x => x.RightOpen : x => x.LeftOpen, true));
+        MountCounter.Mounts.Should().Be(3, "only the re-opened panel mounts again");
+    }
+
+    [Fact]
+    public void MobileSheet_TheHostClosingThePanelTheSheetShowed_RaisesActiveMobilePanelChanged_WithTheNewTab()
+    {
+        var raised = new List<EditorShellPanel>();
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.ActiveMobilePanel, EditorShellPanel.Right);
+            p.Add(x => x.ActiveMobilePanelChanged, EventCallback.Factory.Create<EditorShellPanel>(this, v => raised.Add(v)));
+        });
+        cut.FindAll("[role='tab']")[1].GetAttribute("aria-selected").Should().Be("true");
+
+        cut.Render(p => p.Add(x => x.RightOpen, false));
+
+        raised.Should().Equal(new[] { EditorShellPanel.Left }, "the effective sheet tab moved to Blocks because the host closed Properties");
+    }
+
+    [Fact]
+    public void MobileSheet_AUserTabSelection_RaisesActiveMobilePanelChangedExactlyOnce()
+    {
+        var raised = new List<EditorShellPanel>();
+        var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.ActiveMobilePanelChanged,
+            EventCallback.Factory.Create<EditorShellPanel>(this, v => raised.Add(v))));
+
+        cut.FindAll("[role='tab']")[1].Click();
+        cut.Render(p => p.Add(x => x.Canvas, builder => builder.AddContent(0, "again")));
+
+        raised.Should().Equal(new[] { EditorShellPanel.Right });
+    }
 }
