@@ -90,4 +90,50 @@ public class ActionOverflowLayoutTests
         visible.Should().BeEmpty();
         overflow.Should().BeEmpty();
     }
+
+    // ── Y10 (review round 2): the generic partition — F4's toolbar overflow ranks its own item
+    //    type through the same helper instead of duplicating the ordering rules. ──────────────
+
+    [Fact]
+    public void Partition_GenericRankSelector_AppliesTheSameOrderingRules()
+    {
+        var items = new[]
+        {
+            (Id: "a", Rank: 0),
+            (Id: "b", Rank: 10),
+            (Id: "c", Rank: 5),
+            (Id: "d", Rank: 5),
+        };
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 2, rank: static item => item.Rank);
+
+        // The visible list keeps the Items order; the overflow picks the lowest rank first and a
+        // tie drops the last item — the same rules as the TmActionItem overload.
+        visible.Select(i => i.Id).Should().Equal("b", "c");
+        overflow.Select(i => i.Id).Should().Equal("a", "d");
+    }
+
+    [Fact]
+    public void Partition_GenericMaxVisibleBelowOne_ClampsToOne()
+    {
+        var items = new[] { (Id: "a", Rank: 10), (Id: "b", Rank: 20) };
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 0, rank: static item => item.Rank);
+
+        visible.Select(i => i.Id).Should().Equal("b");
+        overflow.Select(i => i.Id).Should().Equal("a");
+    }
+
+    [Fact]
+    public void Partition_ActionItemOverload_DelegatesToTheGenericPartition()
+    {
+        // The TmActionItem overload is a thin facade: same lists, same order — the single
+        // implementation the ordering rules live in.
+        var items = Items(Item("a", 0), Item("b", 10), Item("c", 5));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 2);
+
+        visible.Select(i => i.Id).Should().Equal("b", "c");
+        overflow.Select(i => i.Id).Should().Equal("a");
+    }
 }

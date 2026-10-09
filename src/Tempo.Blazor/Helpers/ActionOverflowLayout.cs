@@ -20,6 +20,18 @@ internal static class ActionOverflowLayout
     public static (IReadOnlyList<TmActionItem> Visible, IReadOnlyList<TmActionItem> Overflow) Partition(
         IReadOnlyList<TmActionItem> items,
         int maxVisible)
+        => Partition(items, maxVisible, static item => item.Priority);
+
+    /// <summary>
+    /// The generic partition (Y10, review round 2): the ordering rules — visible budget,
+    /// ascending rank overflows first, ties drop the last item, both lists keep the Items order —
+    /// in one implementation any action surface ranks its own item type through. The
+    /// <c>TmActionItem</c> overload delegates here; F4's toolbar overflow builds on this.
+    /// </summary>
+    public static (IReadOnlyList<T> Visible, IReadOnlyList<T> Overflow) Partition<T>(
+        IReadOnlyList<T> items,
+        int maxVisible,
+        Func<T, int> rank)
     {
         var budget = Math.Max(1, maxVisible);
         if (items.Count <= budget)
@@ -30,14 +42,14 @@ internal static class ActionOverflowLayout
         var overflowCount = items.Count - budget;
         var overflowIndexes = items
             .Select((item, index) => (Item: item, Index: index))
-            .OrderBy(entry => entry.Item.Priority)
+            .OrderBy(entry => rank(entry.Item))
             .ThenByDescending(entry => entry.Index)
             .Take(overflowCount)
             .Select(entry => entry.Index)
             .ToHashSet();
 
-        var visible = new List<TmActionItem>(budget);
-        var overflow = new List<TmActionItem>(overflowCount);
+        var visible = new List<T>(budget);
+        var overflow = new List<T>(overflowCount);
         for (var i = 0; i < items.Count; i++)
         {
             (overflowIndexes.Contains(i) ? overflow : visible).Add(items[i]);
