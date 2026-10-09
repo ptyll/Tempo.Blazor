@@ -135,6 +135,43 @@ public class TmEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Tablet_Unbound_ExpandingTheImposedRail_SwapsTheExpandedPanel()
+    {
+        // F6 r2 G1: the shell itself imposed the left rail (both panels were open) and the host binds
+        // NOTHING — no CollapsedPanels, no handler. The expand button must still swap the panels.
+        var cut = RenderShell(TmLayoutMode.Tablet);
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("right");
+
+        cut.Find(".tm-editor-shell__rail--left > button").Click();
+
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("left",
+            "the swap applies even when the host never applies CollapsedPanelsChanged");
+        cut.FindAll("aside.tm-editor-shell__panel").Should().HaveCount(1);
+        cut.Find(".tm-editor-shell__rail--right").Should().NotBeNull("the other panel is now the rail");
+        cut.FindAll(".tm-editor-shell__rail--left").Should().BeEmpty();
+
+        // ... and back: the swap is repeatable.
+        cut.Find(".tm-editor-shell__rail--right > button").Click();
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("right");
+        cut.Find(".tm-editor-shell__rail--left").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Tablet_Unbound_ExpandingTheRail_RaisesTheNewCollapsedSetOnce_AndSurvivesAHostRerender()
+    {
+        var raised = new List<EditorShellPanel>();
+        var cut = RenderShell(TmLayoutMode.Tablet, p => p.Add(x => x.CollapsedPanelsChanged,
+            EventCallback.Factory.Create<EditorShellPanel>(this, v => raised.Add(v))));
+        raised.Clear();
+
+        cut.Find(".tm-editor-shell__rail--left > button").Click();
+        cut.Render(p => p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas body 2")));
+
+        raised.Should().Equal(new[] { EditorShellPanel.Right }, "one raise for the swap, no duplicate from the next parameter pass");
+        cut.Find("aside.tm-editor-shell__panel").GetAttribute("data-region").Should().Be("left",
+            "an unrelated host re-render must not undo the user's swap");
+    }
+    [Fact]
     public void Tablet_OpeningAHiddenPanelFromItsToggle_RailsTheOther()
     {
         EditorShellPanel? raised = null;

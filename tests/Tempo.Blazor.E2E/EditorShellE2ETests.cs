@@ -594,6 +594,30 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.AreEqual(1, await custom.Locator("aside.tm-editor-shell__panel").CountAsync());
     }
 
+    [TestMethod]
+    public async Task Demo_1280_UnboundThresholdShell_ExpandingTheImposedRail_SwapsThePanels()
+    {
+        // F6 r2 G1: the thresholds demo shell binds NOTHING (no CollapsedPanels, no handlers), so the
+        // tablet rail is imposed by the shell itself; its expand button must still work.
+        var page = await OpenPlainPageAsync(1280, 800);
+        RegisterContext(page.Context);
+        await WaitForAppReadyAsync(page);
+        const string custom = "[data-testid='editor-shell-thresholds']";
+        var shell = page.Locator(custom);
+        await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
+        await Assertions.Expect(shell.Locator("aside[data-region='right']")).ToBeVisibleAsync();
+        await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--left")).ToBeVisibleAsync();
+
+        await shell.Locator(".tm-editor-shell__rail--left > button.tm-editor-shell__panel-toggle").ClickAsync();
+
+        await Assertions.Expect(shell.Locator("aside[data-region='left']")).ToBeVisibleAsync();
+        await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--right")).ToBeVisibleAsync();
+        Assert.AreEqual(1, await shell.Locator("aside.tm-editor-shell__panel").CountAsync(), "expanding one rails the other");
+
+        await shell.Locator(".tm-editor-shell__rail--right > button.tm-editor-shell__panel-toggle").ClickAsync();
+        await Assertions.Expect(shell.Locator("aside[data-region='right']")).ToBeVisibleAsync();
+        await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--left")).ToBeVisibleAsync();
+    }
     // ── Resizer + persistence (Q4) ──────────────────────────────────────────
 
     private const string StorageKey = "tempo.tm-editor-shell.editor-shell-demo";
