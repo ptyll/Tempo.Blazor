@@ -167,6 +167,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmTopBar"] = ["navigation-bar"],
             ["TmSidebar"] = ["sidebar"],
             ["TmDrawer"] = ["drawer"],
+            ["TmEditorShell"] = ["editor-shell"],
+            ["TmSidePanel"] = ["side-panel"],
             ["TmSection"] = ["section"],
             ["TmCommandPalette"] = ["command-palette", "search-input"],
             ["TmKeyboardShortcutsHelp"] = ["keyboard-shortcuts"],
@@ -262,6 +264,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             "__group__",
             "TmCard",
             "TmDrawer",
+            "TmEditorShell",
+            "TmSidePanel",
             "TmSection",
             "TmStackLayout",
             "TmModal",
@@ -1532,6 +1536,37 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("placement", "Placement", PropType.Enum,   "right",  cat: "Appearance",
                     opts: ["left","right"]),
                 P("width",     "Width",     PropType.Int,    400,      cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmEditorShell", Category = "Layout", DisplayName = "Editor Shell",
+            DefaultWidth = 960, DefaultHeight = 560,
+            IsContainer = true,
+            Props =
+            [
+                P("leftTitle",    "Left Panel Title",    PropType.String, "Blocks",     cat: "Content"),
+                P("rightTitle",   "Right Panel Title",   PropType.String, "Properties", cat: "Content"),
+                P("leftOpen",     "Left Panel Open",     PropType.Bool,   true,         cat: "State"),
+                P("rightOpen",    "Right Panel Open",    PropType.Bool,   true,         cat: "State"),
+                P("mobilePanels", "Mobile Presentation", PropType.Enum, "sheet", cat: "Appearance",
+                    opts: ["sheet", "tabs"]),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSidePanel", Category = "Layout", DisplayName = "Side Panel",
+            DefaultWidth = 360, DefaultHeight = 420,
+            IsContainer = true,
+            Props =
+            [
+                P("title",        "Title",       PropType.String, "Panel", cat: "Content"),
+                P("open",         "Open",        PropType.Bool,   true,    cat: "State"),
+                P("presentation", "Presentation", PropType.Enum,  "auto",  cat: "Appearance",
+                    opts: ["auto", "docked", "sheet"]),
+                P("width",        "Width",       PropType.Int,    360,     cat: "Appearance"),
             ]
         };
 

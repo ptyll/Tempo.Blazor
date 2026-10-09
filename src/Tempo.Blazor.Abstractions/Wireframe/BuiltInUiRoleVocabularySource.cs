@@ -122,7 +122,9 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("screening-result-panel", "Screening results", "Lists compliance screening findings with severity and confidence, and confirm/dismiss resolution.", "screening findings", "vysledky kontrol", "TmScreeningResultPanel"),
         R("data-import", "Data import", "Guides a file import: upload CSV/XLSX, map columns to a schema, dry-run validation, batched import with progress.", "import wizard", "import dat", "TmDataImport"),
         R("redaction-layer", "Redaction layer", "Marks rectangles over a document or image and exports a copy with the content destructively removed.", "blackout", "zacerneni", "TmRedactionLayer"),
-        R("map", "Map", "Displays an interactive geographic map with markers or clusters.", "geographic map", "mapa", "TmMap")
+        R("map", "Map", "Displays an interactive geographic map with markers or clusters.", "geographic map", "mapa", "TmMap"),
+        R("editor-shell", "Editor shell", "Frames a canvas editor with header, toolbar, collapsible side panels, a status bar and mobile actions.", "editor frame", "editor layout", "editorovy ramec", "TmEditorShell"),
+        R("side-panel", "Side panel", "Responsive inspector panel that docks in-flow on desktop and presents as a sheet on narrower containers.", "inspector panel", "properties panel", "bocni panel", "TmSidePanel")
     ];
 
     /// <inheritdoc/>

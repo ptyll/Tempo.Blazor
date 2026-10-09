@@ -28,6 +28,8 @@
 @import "components/_toolbar.css";
 @import "components/_sheet.css";
 @import "components/_drawer.css";
+@import "components/_editor-shell.css";
+@import "components/_side-panel.css";
 @import "components/_section.css";
 @import "components/_keyboard-shortcuts.css";
 @import "components/_stack-layout.css";

@@ -1,0 +1,37 @@
+{
+  "itemName": "TmSidePanel",
+  "kind": "Component",
+  "category": "Layout",
+  "description": "Standalone responsive inspector panel. Auto docks in-flow on a desktop container and composes a modal TmDrawer (side sheet on tablet, bottom sheet on mobile) on narrower ones; Docked and Sheet pin the choice at every width. For editors with a dedicated frame see TmEditorShell.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout"
+  ],
+  "parameters": [
+    { "name": "Presentation", "type": "SidePanelPresentation", "isRequired": false, "default": "Auto", "description": "How the panel presents itself: Auto follows the container layout (docked on desktop, sheet otherwise); Docked and Sheet pin the choice." },
+    { "name": "Open", "type": "bool", "isRequired": false, "description": "Whether the panel is open. Two-way with OpenChanged." },
+    { "name": "Title", "type": "string?", "isRequired": false, "description": "Title shown in the panel header; also the accessible name of the sheet." },
+    { "name": "HeaderActions", "type": "RenderFragment?", "isRequired": false, "description": "Optional actions rendered in the header, next to the close button." },
+    { "name": "ChildContent", "type": "RenderFragment?", "isRequired": false, "description": "Main body content." },
+    { "name": "Width", "type": "string", "isRequired": false, "default": "\"360px\"", "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet." },
+    { "name": "LayoutMode", "type": "TmLayoutMode", "isRequired": false, "default": "Auto", "description": "The layout the presentation resolves from. Auto follows the nearest unnamed layout context; a forced value renders that mode without a DOM." },
+    { "name": "InitialMode", "type": "TmLayoutMode", "isRequired": false, "default": "Desktop", "description": "The layout rendered before the first measurement." },
+    { "name": "ResolvedLayoutChanged", "type": "EventCallback<TmLayoutMode>", "isRequired": false, "description": "Raised when the resolved layout changes. The initial value is not a change." },
+    { "name": "Class", "type": "string?", "isRequired": false, "description": "Extra CSS classes for the root (the docked root, or the sheet root through TmDrawer.Class)." }
+  ],
+  "cssClasses": [
+    "tm-side-panel",
+    "tm-side-panel--docked",
+    "tm-side-panel__header",
+    "tm-side-panel__title",
+    "tm-side-panel__header-actions",
+    "tm-side-panel__close",
+    "tm-side-panel__body",
+    "tm-side-panel-sheet"
+  ],
+  "examples": [
+    {
+      "title": "Responsive event detail inspector",
+      "code": "<TmSidePanel @bind-Open=\"detailOpen\" Title=\"Event detail\">\n    <HeaderActions>\n        <TmButton OnClick=\"Delete\">Delete</TmButton>\n    </HeaderActions>\n    <p>Detail body…</p>\n</TmSidePanel>"
+    }
+  ]
+}

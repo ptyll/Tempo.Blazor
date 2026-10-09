@@ -1,0 +1,54 @@
+{
+  "itemName": "TmEditorShell",
+  "kind": "Component",
+  "category": "Layout",
+  "description": "Responsive three-region editor frame: Header/Toolbar on top, Left and Right panels around the Canvas, an optional StatusBar, and mobile actions. Desktop renders docked columns with collapse rails, tablet renders at most one modal side sheet (TmDrawer), mobile renders the canvas with the panels in an inline non-modal bottom sheet (stacked or tabbed) above the mobile action bar.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Components.Actions"
+  ],
+  "parameters": [
+    { "name": "Header", "type": "RenderFragment?", "isRequired": false, "description": "Content of the top header region (a title, breadcrumbs, the primary save action)." },
+    { "name": "Toolbar", "type": "RenderFragment?", "isRequired": false, "description": "Content of the toolbar region below the header." },
+    { "name": "Left", "type": "RenderFragment?", "isRequired": false, "description": "The left panel (a toolbox, a block list). A docked column on desktop, a side sheet on tablet, part of the mobile panels sheet." },
+    { "name": "Canvas", "type": "RenderFragment?", "isRequired": false, "description": "The central canvas. Rendered at every layout." },
+    { "name": "Right", "type": "RenderFragment?", "isRequired": false, "description": "The right panel (an inspector, properties). A docked column on desktop, a side sheet on tablet, part of the mobile panels sheet." },
+    { "name": "StatusBar", "type": "RenderFragment?", "isRequired": false, "description": "Optional status bar content, rendered below the main region (inside it, above the panels sheet, on mobile)." },
+    { "name": "MobileActions", "type": "IReadOnlyList<TmActionItem>?", "isRequired": false, "description": "The shell's mobile actions, rendered through TmMobileActionBar at the bottom of a mobile layout." },
+    { "name": "LeftOpen", "type": "bool", "isRequired": false, "default": "true", "description": "Whether the left panel is open. Two-way with LeftOpenChanged." },
+    { "name": "RightOpen", "type": "bool", "isRequired": false, "default": "true", "description": "Whether the right panel is open. Two-way with RightOpenChanged." },
+    { "name": "CollapsedPanels", "type": "EditorShellPanel", "isRequired": false, "default": "0", "description": "Panels rendered collapsed to a slim rail. Two-way with CollapsedPanelsChanged." },
+    { "name": "MobilePanelPresentation", "type": "MobilePanelPresentation", "isRequired": false, "default": "Sheet", "description": "How the open panels present on a mobile layout: stacked in one sheet, or switched through a tab strip inside the sheet." },
+    { "name": "LeftTitle", "type": "string?", "isRequired": false, "description": "The left panel title — the mobile tab label and the tablet side-sheet title." },
+    { "name": "RightTitle", "type": "string?", "isRequired": false, "description": "The right panel title — the mobile tab label and the tablet side-sheet title." },
+    { "name": "LeftWidth", "type": "string", "isRequired": false, "default": "\"280px\"", "description": "Width of the left panel (the desktop column and the tablet side sheet)." },
+    { "name": "RightWidth", "type": "string", "isRequired": false, "default": "\"320px\"", "description": "Width of the right panel (the desktop column and the tablet side sheet)." },
+    { "name": "PersistWidthsKey", "type": "string?", "isRequired": false, "description": "When set, the effective panel widths persist to (and restore from) localStorage under this key." },
+    { "name": "LayoutMode", "type": "TmLayoutMode", "isRequired": false, "default": "Auto", "description": "The layout the shell renders. Auto measures the shell's own root; a forced value renders that mode without a DOM." },
+    { "name": "InitialMode", "type": "TmLayoutMode", "isRequired": false, "default": "Desktop", "description": "The layout rendered before the first measurement." },
+    { "name": "ResolvedLayoutChanged", "type": "EventCallback<TmLayoutMode>", "isRequired": false, "description": "Raised when the rendered layout changes. The initial value is not a change." },
+    { "name": "Class", "type": "string?", "isRequired": false, "description": "Extra CSS classes for the shell root." }
+  ],
+  "cssClasses": [
+    "tm-editor-shell",
+    "tm-editor-shell__header",
+    "tm-editor-shell__toolbar",
+    "tm-editor-shell__main",
+    "tm-editor-shell__canvas",
+    "tm-editor-shell__panel",
+    "tm-editor-shell__panel-toggle",
+    "tm-editor-shell__rail",
+    "tm-editor-shell__status",
+    "tm-editor-shell__panels",
+    "tm-editor-shell__sheet",
+    "tm-editor-shell__tabs",
+    "tm-editor-shell__tab",
+    "tm-editor-shell__sheet-close"
+  ],
+  "examples": [
+    {
+      "title": "Three-region editor with mobile actions",
+      "code": "<TmEditorShell LeftTitle=\"Blocks\" RightTitle=\"Properties\"\n               @bind-LeftOpen=\"leftOpen\" @bind-RightOpen=\"rightOpen\"\n               MobileActions=\"actions\">\n    <Header><h2>Welcome e-mail</h2></Header>\n    <Toolbar><TmButton OnClick=\"Undo\">Undo</TmButton></Toolbar>\n    <Left><!-- block toolbox --></Left>\n    <Canvas><!-- the editor canvas --></Canvas>\n    <Right><!-- block properties --></Right>\n    <StatusBar>All changes saved</StatusBar>\n</TmEditorShell>"
+    }
+  ]
+}

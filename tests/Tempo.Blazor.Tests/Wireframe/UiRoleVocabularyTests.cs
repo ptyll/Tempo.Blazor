@@ -84,7 +84,7 @@ public sealed class UiRoleVocabularyTests
         var vocabulary = new UiRoleVocabulary([new BuiltInUiRoleVocabularySource()]);
 
         vocabulary.GetAll().Should().HaveCountGreaterThanOrEqualTo(60);
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(118);
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(120);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

@@ -664,8 +664,14 @@ test('a legacy boolean track argument still works alongside the options object',
 });
 
 test('trackViewport writes the lengths on an explicit tracking root when given one', () => {
-    const root = { props: new Map(), classList: { contains: () => false, toggle: () => {} } };
-    const explicit = { props: new Map(), classList: { contains: () => false, toggle: () => {} } };
+    const makeRoot = () => {
+        const root = { props: new Map() };
+        root.style = { setProperty(name, value) { root.props.set(name, value); } };
+        root.classList = { contains: () => false, toggle: () => {} };
+        return root;
+    };
+    const root = makeRoot();
+    const explicit = makeRoot();
     const viewport = { height: 430, offsetTop: 12 };
     globalThis.window = {
         innerHeight: 844,
@@ -673,6 +679,8 @@ test('trackViewport writes the lengths on an explicit tracking root when given o
         addEventListener() {},
         removeEventListener() {},
     };
+    viewport.addEventListener = () => {};
+    viewport.removeEventListener = () => {};
 
     const stop = trackViewport(root, null, explicit);
     assert.equal(explicit.props.get('--tm-sheet-viewport'), '430px', 'the explicit root carries the lengths');
@@ -684,7 +692,9 @@ test('trackViewport writes the lengths on an explicit tracking root when given o
 test('attachGesture forwards an explicit viewport tracking root', () => {
     installWindow(430);
     const sheet = panel(400);
-    const trackingRoot = { props: new Map(), classList: { contains: () => false, toggle: () => {} } };
+    const trackingRoot = { props: new Map() };
+    trackingRoot.style = { setProperty(name, value) { trackingRoot.props.set(name, value); } };
+    trackingRoot.classList = { contains: () => false, toggle: () => {} };
     sheet.closest = () => null;
     const sink = host();
     attachGesture(null, sheet, [1], false, sink, 'explicit-track-root', { viewportRoot: trackingRoot });

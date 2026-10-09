@@ -9,18 +9,19 @@ namespace Tempo.Blazor.Helpers;
 /// and the <c>TmToastContainer</c>. Each root carries <c>popover="manual"</c> and is promoted to
 /// the browser top layer after its opening render, so the top-layer order equals the open order
 /// and no promoted surface can cover one opened later from inside it. The DOM stays in place —
-/// the trap, inert and Escape are unchanged. Wraps the shared <c>tm-sheet</c> module, imported
+/// the trap, inert and Escape are unchanged. Wraps the shared <c>tm-top-layer</c> module, imported
 /// lazily on first use (safe to construct during prerender).
 /// </summary>
 /// <remarks>
 /// Every interop is guarded: where JS is unavailable the surface renders exactly as before,
 /// fixed-positioned in its z-index band. Roots that unmount on close (drawer, modal, dialog) only
 /// promote; roots that stay in the DOM (the toast container) raise on each push and demote when
-/// empty.
+/// empty. The helpers live in the <c>tm-top-layer</c> module since F6; <c>tm-sheet.js</c>
+/// re-exports them for hosts that still import them from there.
 /// </remarks>
 internal sealed class TopLayerInterop : IAsyncDisposable
 {
-    private const string ModulePath = "./_content/Tempo.Blazor/js/tm-sheet.js";
+    private const string ModulePath = "./_content/Tempo.Blazor/js/tm-top-layer.js";
 
     private readonly IJSRuntime _js;
     private IJSObjectReference? _module;

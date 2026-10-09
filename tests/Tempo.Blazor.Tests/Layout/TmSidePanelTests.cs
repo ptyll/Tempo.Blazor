@@ -120,7 +120,7 @@ public class TmSidePanelTests : LocalizationTestBase
         var cut = RenderPanel(TmLayoutMode.Tablet);
         cut.FindAll(".tm-drawer").Should().HaveCount(1);
 
-        cut.SetParametersAndRender(p => p.Add(x => x.Open, false));
+        cut.Render(p => p.Add(x => x.Open, false));
 
         cut.FindAll(".tm-drawer").Should().BeEmpty();
     }

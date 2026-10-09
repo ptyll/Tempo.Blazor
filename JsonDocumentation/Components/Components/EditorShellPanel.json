@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "Identifies a side panel of the TmEditorShell — the Left toolbox-style panel and the Right properties-style panel. Used by CollapsedPanels to render a panel as a slim rail instead of its full width.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/EditorShellPanel.cs",
+  "documentationStatus": "documented",
+  "itemName": "EditorShellPanel",
+  "members": [
+    {
+      "name": "Left",
+      "description": "The left panel (a toolbox, a block list, navigation)."
+    },
+    {
+      "name": "Right",
+      "description": "The right panel (an inspector, properties, event detail)."
+    }
+  ],
+  "usageExample": "<TmEditorShell @bind-CollapsedPanels=\"collapsed\" …>…</TmEditorShell>"
+}

@@ -74,7 +74,7 @@
                 }
             </div>
 
-            <div class="tm-drawer__body">
+            <div @ref="_body" class="tm-drawer__body">
                 @ChildContent
             </div>
 
@@ -219,7 +219,10 @@
     private TmSheetHandle? _handle;
     private ElementReference _panel;
     private ElementReference _header;
+    private ElementReference _body;
     private SheetInterop? _sheet;
+    private ScrollRegionInterop? _scrollRegion;
+    private bool _scrollRegionAttached;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
     private bool _promoted;
@@ -356,6 +359,21 @@
         {
             _promoted = false;
         }
+
+        // A long body becomes a keyboard-reachable region only while it overflows (the TmDialog
+        // scroller contract); a short drawer grows no extra tab stop. Named by the title when one
+        // names the drawer.
+        if (IsOpen && !_scrollRegionAttached)
+        {
+            _scrollRegionAttached = true;
+            _scrollRegion ??= new ScrollRegionInterop(JS);
+            await _scrollRegion.AttachAsync(_body, LabelledBy);
+        }
+        else if (!IsOpen && _scrollRegionAttached)
+        {
+            _scrollRegionAttached = false;
+            if (_scrollRegion is not null) await _scrollRegion.DetachAsync();
+        }
     }
 
     private async Task AttachGestureAsync()
@@ -366,7 +384,11 @@
         // The handle is the gesture target when there is one. Without it the header follows the
         // finger — never the scrolling body, which has to keep scrolling.
         ElementReference? target = ShowHandle && _handle is not null ? _handle.Element : _header;
-        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef, trackViewport: Modal);
+        // An inline sheet measures its snaps against its own root (the positioned host it fills),
+        // passed explicitly — the module no longer depends on the hard-coded .tm-drawer lookup
+        // (F6 carry-forward). A modal sheet tracks the visible viewport.
+        await _sheet.AttachAsync(target, _panel, _snaps, SwipeToDismiss, _dotNetRef,
+            trackViewport: Modal, basis: Modal ? null : _scope?.Element);
         if (_disposed) await _sheet.DetachAsync();
     }
 
@@ -455,6 +477,7 @@
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
         if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }

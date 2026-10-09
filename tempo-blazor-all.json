@@ -4765,6 +4765,27 @@
           ]
         },
         {
+          "itemName": "EditorShellPanel",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "Identifies a side panel of the TmEditorShell — the Left toolbox-style panel and the Right properties-style panel. Used by CollapsedPanels to render a panel as a slim rail instead of its full width.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/EditorShellPanel.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Left",
+              "description": "The left panel (a toolbox, a block list, navigation)."
+            },
+            {
+              "name": "Right",
+              "description": "The right panel (an inspector, properties, event detail)."
+            }
+          ],
+          "usageExample": "<TmEditorShell @bind-CollapsedPanels=\"collapsed\" …>…</TmEditorShell>"
+        },
+        {
           "itemName": "ExpressionVariable",
           "kind": "Record",
           "category": "Components",
@@ -5748,6 +5769,27 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "MobilePanelPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "How the TmEditorShell presents its Left/Right panels on a mobile layout: both stacked in one sheet, or switched through a tab strip inside the sheet.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/MobilePanelPresentation.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Sheet",
+              "description": "One bottom sheet whose body stacks every open panel, in Left, Right order."
+            },
+            {
+              "name": "Tabs",
+              "description": "A tab strip (role=\"tablist\") inside the sheet switches between the open panels — one panel visible at a time."
+            }
+          ],
+          "usageExample": "<TmEditorShell MobilePanelPresentation=\"MobilePanelPresentation.Tabs\" …>…</TmEditorShell>"
+        },
+        {
           "itemName": "MobilePresentation",
           "kind": "Enum",
           "category": "Components",
@@ -6053,6 +6095,31 @@
               "description": "Horizontal breadcrumb-style strip."
             }
           ]
+        },
+        {
+          "itemName": "SidePanelPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "How a TmSidePanel presents itself at a given container width. Distinct from the F3 PanelPresentation (the anchored popover vs sheet choice): a side panel docks in-flow or composes TmDrawer as a sheet — it is never an anchored popover.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/SidePanelPresentation.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Auto",
+              "description": "Follows the container's layout: docked in-flow below the desktop breakpoint (1024px), a modal side sheet on a tablet container, a modal bottom sheet on a mobile container."
+            },
+            {
+              "name": "Docked",
+              "description": "The panel renders docked in-flow at every width. Open controls whether it renders at all."
+            },
+            {
+              "name": "Sheet",
+              "description": "The panel renders as a modal sheet at every width: a side sheet on desktop and tablet containers, a bottom sheet on a mobile container."
+            }
+          ],
+          "usageExample": "<TmSidePanel Presentation=\"SidePanelPresentation.Auto\" @bind-Open=\"open\" Title=\"Event detail\">…</TmSidePanel>"
         },
         {
           "itemName": "SkeletonVariant",
@@ -17993,6 +18060,190 @@
           ]
         },
         {
+          "itemName": "TmEditorShell",
+          "kind": "Component",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "Responsive three-region editor frame: Header/Toolbar on top, Left and Right panels around the Canvas, an optional StatusBar, and mobile actions. Desktop renders docked columns with collapse rails, tablet renders at most one modal side sheet (TmDrawer), mobile renders the canvas with the panels in an inline non-modal bottom sheet (stacked or tabbed) above the mobile action bar.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/TmEditorShell.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Actions",
+            "@using Tempo.Blazor.Components.Layout"
+          ],
+          "parameters": [
+            {
+              "name": "Canvas",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The central canvas. Rendered at every layout."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra CSS classes for the shell root."
+            },
+            {
+              "name": "CollapsedPanels",
+              "type": "EditorShellPanel",
+              "isRequired": true,
+              "description": "Panels rendered collapsed to a slim rail. Two-way with CollapsedPanelsChanged.",
+              "default": "0"
+            },
+            {
+              "name": "CollapsedPanelsChanged",
+              "type": "EventCallback<EditorShellPanel>",
+              "isRequired": false,
+              "description": "Raised when a panel is collapsed to, or expanded from, its rail."
+            },
+            {
+              "name": "Header",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content of the top header region (a title, breadcrumbs, the primary save action)."
+            },
+            {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout rendered before the first measurement."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the shell renders. Auto measures the shell's own root; a forced value renders that mode without a DOM."
+            },
+            {
+              "name": "Left",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The left panel (a toolbox, a block list). A docked column on desktop, a side sheet on tablet, part of the mobile panels sheet."
+            },
+            {
+              "name": "LeftOpen",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the left panel is open. Two-way with LeftOpenChanged."
+            },
+            {
+              "name": "LeftOpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the left panel should open or close."
+            },
+            {
+              "name": "LeftTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The left panel title — the mobile tab label and the tablet side-sheet title."
+            },
+            {
+              "name": "LeftWidth",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"280px\"",
+              "description": "Width of the left panel (the desktop column and the tablet side sheet)."
+            },
+            {
+              "name": "MobileActions",
+              "type": "IReadOnlyList<TmActionItem>?",
+              "isRequired": false,
+              "description": "The shell's mobile actions, rendered through TmMobileActionBar at the bottom of a mobile layout."
+            },
+            {
+              "name": "MobilePanelPresentation",
+              "type": "MobilePanelPresentation",
+              "isRequired": false,
+              "default": "MobilePanelPresentation.Sheet",
+              "description": "How the open panels present on a mobile layout: stacked in one sheet, or switched through a tab strip inside the sheet."
+            },
+            {
+              "name": "PersistWidthsKey",
+              "type": "string?",
+              "isRequired": false,
+              "description": "When set, the effective panel widths persist to (and restore from) localStorage under this key."
+            },
+            {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the rendered layout changes. The initial value is not a change."
+            },
+            {
+              "name": "Right",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The right panel (an inspector, properties). A docked column on desktop, a side sheet on tablet, part of the mobile panels sheet."
+            },
+            {
+              "name": "RightOpen",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the right panel is open. Two-way with RightOpenChanged."
+            },
+            {
+              "name": "RightOpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the right panel should open or close."
+            },
+            {
+              "name": "RightTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The right panel title — the mobile tab label and the tablet side-sheet title."
+            },
+            {
+              "name": "RightWidth",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"320px\"",
+              "description": "Width of the right panel (the desktop column and the tablet side sheet)."
+            },
+            {
+              "name": "StatusBar",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional status bar content, rendered below the main region (inside it, above the panels sheet, on mobile)."
+            },
+            {
+              "name": "Toolbar",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content of the toolbar region below the header."
+            }
+          ],
+          "cssClasses": [
+            "tm-editor-shell",
+            "tm-editor-shell__header",
+            "tm-editor-shell__toolbar",
+            "tm-editor-shell__main",
+            "tm-editor-shell__canvas",
+            "tm-editor-shell__panel",
+            "tm-editor-shell__panel-toggle",
+            "tm-editor-shell__rail",
+            "tm-editor-shell__status",
+            "tm-editor-shell__panels",
+            "tm-editor-shell__sheet",
+            "tm-editor-shell__tabs",
+            "tm-editor-shell__tab",
+            "tm-editor-shell__sheet-close"
+          ],
+          "examples": [
+            {
+              "title": "Three-region editor with mobile actions",
+              "code": "<TmEditorShell LeftTitle=\"Blocks\" RightTitle=\"Properties\"\n               @bind-LeftOpen=\"leftOpen\" @bind-RightOpen=\"rightOpen\"\n               MobileActions=\"actions\">\n    <Header><h2>Welcome e-mail</h2></Header>\n    <Toolbar><TmButton OnClick=\"Undo\">Undo</TmButton></Toolbar>\n    <Left><!-- block toolbox --></Left>\n    <Canvas><!-- the editor canvas --></Canvas>\n    <Right><!-- block properties --></Right>\n    <StatusBar>All changes saved</StatusBar>\n</TmEditorShell>"
+            }
+          ]
+        },
+        {
           "itemName": "TmKeyboardShortcutsHelp",
           "kind": "Component",
           "category": "Layout",
@@ -18308,6 +18559,107 @@
             {
               "title": "Basic sidebar with navigation items",
               "code": "<TmSidebar Items=\"navItems\" Collapsed=\"sidebarCollapsed\" OnToggle=\"() => sidebarCollapsed = !sidebarCollapsed\">\n    <Header>\n        <img src=\"logo.svg\" alt=\"Logo\" />\n    </Header>\n</TmSidebar>"
+            }
+          ]
+        },
+        {
+          "itemName": "TmSidePanel",
+          "kind": "Component",
+          "category": "Layout",
+          "namespace": "Tempo.Blazor.Components.Layout",
+          "description": "Standalone responsive inspector panel. Auto docks in-flow on a desktop container and composes a modal TmDrawer (side sheet on tablet, bottom sheet on mobile) on narrower ones; Docked and Sheet pin the choice at every width. For editors with a dedicated frame see TmEditorShell.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Layout/TmSidePanel.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Layout"
+          ],
+          "parameters": [
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Main body content."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra CSS classes for the root (the docked root, or the sheet root through TmDrawer.Class)."
+            },
+            {
+              "name": "HeaderActions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Optional actions rendered in the header, next to the close button."
+            },
+            {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout rendered before the first measurement."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the presentation resolves from. Auto follows the nearest unnamed layout context; a forced value renders that mode without a DOM."
+            },
+            {
+              "name": "Open",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the panel is open. Two-way with OpenChanged."
+            },
+            {
+              "name": "OpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the panel should open or close (every close path funnels through here)."
+            },
+            {
+              "name": "Presentation",
+              "type": "SidePanelPresentation",
+              "isRequired": false,
+              "default": "SidePanelPresentation.Auto",
+              "description": "How the panel presents itself: Auto follows the container layout (docked on desktop, sheet otherwise); Docked and Sheet pin the choice."
+            },
+            {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the resolved layout changes. The initial value is not a change."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Title shown in the panel header; also the accessible name of the sheet."
+            },
+            {
+              "name": "Width",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"360px\"",
+              "description": "Width of the docked panel and of the side sheet. Ignored by the bottom sheet."
+            }
+          ],
+          "cssClasses": [
+            "tm-side-panel",
+            "tm-side-panel--docked",
+            "tm-side-panel__header",
+            "tm-side-panel__title",
+            "tm-side-panel__header-actions",
+            "tm-side-panel__close",
+            "tm-side-panel__body",
+            "tm-side-panel-sheet"
+          ],
+          "examples": [
+            {
+              "title": "Responsive event detail inspector",
+              "code": "<TmSidePanel @bind-Open=\"detailOpen\" Title=\"Event detail\">\n    <HeaderActions>\n        <TmButton OnClick=\"Delete\">Delete</TmButton>\n    </HeaderActions>\n    <p>Detail body…</p>\n</TmSidePanel>"
             }
           ]
         },
@@ -25133,6 +25485,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_editor-shell.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_editor-toolbar.css",
           "kind": "Css"
         },
@@ -25413,6 +25769,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_side-panel.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_sidebar-nav.css",
           "kind": "Css"
         },
@@ -25637,11 +25997,19 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-editor-shell.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-focus-trap.js",
           "kind": "JavaScript"
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-sheet.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-top-layer.js",
           "kind": "JavaScript"
         },
         {
@@ -25670,12 +26038,12 @@
         }
       ],
       "summary": {
-        "itemCount": 355,
-        "manualItemCount": 355,
-        "generatedItemCount": 347,
+        "itemCount": 360,
+        "manualItemCount": 360,
+        "generatedItemCount": 352,
         "generatedOnlyItemCount": 0,
-        "componentCount": 199,
-        "publicApiTypeCount": 148
+        "componentCount": 201,
+        "publicApiTypeCount": 151
       }
     },
     {
@@ -111272,10 +111640,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3180,
-    "manualItemCount": 3180,
+    "itemCount": 3185,
+    "manualItemCount": 3185,
     "generatedOnlyItemCount": 0,
-    "componentCount": 470,
-    "publicApiTypeCount": 2657
+    "componentCount": 472,
+    "publicApiTypeCount": 2660
   }
 }

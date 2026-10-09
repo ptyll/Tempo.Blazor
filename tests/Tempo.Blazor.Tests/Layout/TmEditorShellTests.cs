@@ -17,7 +17,7 @@ public class TmEditorShellTests : LocalizationTestBase
 {
     private static IReadOnlyList<TmActionItem> Actions =>
     [
-        new TmActionItem { Id = "save", Label = "Save", OnClick = EventCallback.Factory.Create<object>(new object(), () => { }) },
+        new TmActionItem { Id = "save", Label = "Save", OnClick = EventCallback.Factory.Create(new object(), () => { }) },
     ];
 
     private IRenderedComponent<TmEditorShell> RenderShell(
@@ -87,7 +87,7 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.Find(".tm-drawer--left .tm-drawer__close").Click();
         leftOpen.Should().Be(false);
 
-        cut.SetParametersAndRender(p => p.Add(x => x.LeftOpen, leftOpen));
+        cut.Render(p => p.Add(x => x.LeftOpen, leftOpen));
         var drawer = cut.Find(".tm-drawer");
         drawer.ClassList.Should().Contain("tm-drawer--right");
     }
@@ -114,7 +114,7 @@ public class TmEditorShellTests : LocalizationTestBase
         cut.Find(".tm-editor-shell__panel-toggle--right").Click();
         rightOpen.Should().Be(true);
 
-        cut.SetParametersAndRender(p => p.Add(x => x.RightOpen, rightOpen));
+        cut.Render(p => p.Add(x => x.RightOpen, rightOpen));
         cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
     }
 
@@ -160,7 +160,7 @@ public class TmEditorShellTests : LocalizationTestBase
         var cut = RenderShell(TmLayoutMode.Mobile, p => p.Add(x => x.MobilePanelPresentation, MobilePanelPresentation.Tabs));
 
         var tablist = cut.Find("[role='tablist']");
-        tablist.FindAll("[role='tab']").Should().HaveCount(2);
+        tablist.QuerySelectorAll("[role='tab']").Should().HaveCount(2);
         cut.FindAll("[role='tabpanel']").Should().HaveCount(1, "only the selected panel renders");
     }
 
@@ -234,7 +234,7 @@ public class TmEditorShellTests : LocalizationTestBase
             p.Add(x => x.CollapsedPanels, EditorShellPanel.Left));
 
         cut.FindAll("[data-region='left']").Should().BeEmpty();
-        var rail = cut.Find(".tm-editor-shell__rail--left");
+        var rail = cut.Find(".tm-editor-shell__rail--left .tm-editor-shell__panel-toggle");
         rail.GetAttribute("aria-expanded").Should().Be("true");
     }
 

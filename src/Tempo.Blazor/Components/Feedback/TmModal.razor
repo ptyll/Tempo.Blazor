@@ -73,7 +73,7 @@
                 </div>
                 
                 @* Body *@
-                <div class="tm-modal-body">
+                <div @ref="_body" class="tm-modal-body">
                     @ChildContent
                 </div>
                 
@@ -215,6 +215,8 @@
     private TopLayerInterop? _topLayer;
     private DotNetObjectReference<TmModal>? _dotNetRef;
     private TmFocusScope? _scope;
+    private ScrollRegionInterop? _scrollRegion;
+    private ElementReference _body;
     private readonly OverlayLayout _layout = new();
 
     private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, InitialMode);
@@ -298,7 +300,23 @@
         {
             _promoted = false;
         }
+
+        // A long body becomes a keyboard-reachable region only while it actually overflows (the
+        // TmDialog scroller contract); a short modal grows no extra tab stop.
+        if (Show && !_scrollRegionAttached)
+        {
+            _scrollRegionAttached = true;
+            _scrollRegion ??= new ScrollRegionInterop(JS);
+            await _scrollRegion.AttachAsync(_body, string.IsNullOrEmpty(Title) ? null : _titleId);
+        }
+        else if (!Show && _scrollRegionAttached)
+        {
+            _scrollRegionAttached = false;
+            if (_scrollRegion is not null) await _scrollRegion.DetachAsync();
+        }
     }
+
+    private bool _scrollRegionAttached;
 
     private async Task AttachGestureAsync()
     {
@@ -335,6 +353,7 @@
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
         if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();
     }

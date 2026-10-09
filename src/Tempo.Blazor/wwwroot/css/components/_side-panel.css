@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════
+   TmSidePanel — the docked-or-sheet responsive inspector
+   ═══════════════════════════════════════════════════════ */
+
+/* Docked: an in-flow panel the host places (a grid column, a flex child). */
+.tm-side-panel--docked {
+    display: flex;
+    flex-direction: column;
+    inline-size: var(--tm-side-panel-width, 360px);
+    max-inline-size: 100%;
+    min-block-size: 0;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-card);
+    overflow: hidden;
+}
+
+.tm-side-panel__header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-block-end: 1px solid var(--tm-color-border-subtle);
+}
+
+.tm-side-panel__title {
+    flex: 1;
+    min-inline-size: 0;
+    margin: 0;
+    font-size: var(--tm-text-base, 1rem);
+    font-weight: var(--tm-font-weight-semibold, 600);
+    color: var(--tm-color-text);
+    overflow-wrap: break-word;
+}
+
+.tm-side-panel__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex-shrink: 0;
+}
+
+.tm-side-panel__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-8);
+    block-size: var(--tm-space-8);
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    border: none;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-side-panel__close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-side-panel__close:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-side-panel__body {
+    flex: 1;
+    min-block-size: 0;
+    overflow: auto;
+    padding: var(--tm-space-3);
+}
+
+/* The sheet presentation rides on the TmDrawer root via TmSidePanel's Class. The drawer already
+   owns the panel geometry; this only keeps a phone-width sheet from exceeding the viewport. */
+.tm-side-panel-sheet .tm-drawer__panel {
+    max-inline-size: 100vw;
+}
+
+@media (pointer: coarse) {
+    .tm-side-panel__close {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+}

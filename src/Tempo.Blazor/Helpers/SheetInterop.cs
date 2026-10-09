@@ -32,6 +32,9 @@ internal sealed class SheetInterop : IAsyncDisposable
     /// <summary>
     /// Attaches the gesture and the viewport tracking. <paramref name="handle"/> is what the finger
     /// grabs; <paramref name="panel"/> is what moves. A null handle tracks the viewport only.
+    /// <paramref name="basis"/> is the explicit inline host element an inline (non-tracking) sheet
+    /// measures its snaps against — without it the module falls back to the legacy
+    /// <c>.tm-drawer</c> closest lookup (F6 carry-forward).
     /// </summary>
     public async Task AttachAsync<T>(
         ElementReference? handle,
@@ -39,7 +42,8 @@ internal sealed class SheetInterop : IAsyncDisposable
         double[] snaps,
         bool swipeToDismiss,
         DotNetObjectReference<T>? host,
-        bool trackViewport = true) where T : class
+        bool trackViewport = true,
+        ElementReference? basis = null) where T : class
     {
         if (_disposed) return;
         try
@@ -53,7 +57,10 @@ internal sealed class SheetInterop : IAsyncDisposable
 
             if (module is null) return;
 
-            await module.InvokeVoidAsync("attachGesture", handle, panel, snaps, swipeToDismiss, host, _id, trackViewport);
+            var options = basis.HasValue
+                ? new { track = trackViewport, basis = basis.Value }
+                : (object)trackViewport;
+            await module.InvokeVoidAsync("attachGesture", handle, panel, snaps, swipeToDismiss, host, _id, options);
             if (_disposed)
             {
                 await module.InvokeVoidAsync("detach", _id);
