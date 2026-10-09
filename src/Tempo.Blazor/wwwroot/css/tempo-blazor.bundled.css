@@ -235,7 +235,7 @@ to{transform:translateX(0);}
 .tm-editor-shell__tab:focus-visible{outline:none;box-shadow:inset var(--tm-focus-ring);}
 .tm-editor-shell__tabpanel{min-block-size:0;}
 .tm-editor-shell__tabpanel[hidden]{display:none;}
-.tm-editor-shell__tabs--region{flex-shrink:0;background:var(--tm-bg-surface);border-block-end:1px solid var(--tm-color-border-subtle);}
+.tm-editor-shell__tabs--region{flex:0 0 auto;background:var(--tm-bg-surface);border-block-end:1px solid var(--tm-color-border-subtle);}
 .tm-editor-shell__tabpanels{flex:1 1 0;min-block-size:0;display:flex;flex-direction:column;}
 .tm-editor-shell__tabpanels>.tm-editor-shell__tabpanel:not([hidden]){flex:1 1 0;overflow:auto;}
 .tm-editor-shell__sheet-panel{min-block-size:0;}

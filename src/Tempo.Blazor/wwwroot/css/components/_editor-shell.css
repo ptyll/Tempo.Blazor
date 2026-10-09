@@ -297,9 +297,11 @@
     display: none;
 }
 
-/* Tabs presentation (Left | Canvas | Right): the strip sits above the full-height regions. */
+/* Tabs presentation (Left | Canvas | Right): the strip is a one-row bar above the full-height
+   regions, never a stretched flex child (the base .tm-editor-shell__tabs flex:1 would give it the
+   height of the whole region). */
 .tm-editor-shell__tabs--region {
-    flex-shrink: 0;
+    flex: 0 0 auto;
     background: var(--tm-bg-surface);
     border-block-end: 1px solid var(--tm-color-border-subtle);
 }
