@@ -112,6 +112,19 @@
     box-shadow: inset var(--tm-focus-ring);
 }
 
+/* Under a coarse pointer the 6px strip is a poor target: an invisible ::before widens the hit area
+   (the strip stays the visual affordance and the ARIA element). */
+@media (pointer: coarse) {
+    .tm-editor-shell__resizer::before {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 50%;
+        inline-size: var(--tm-space-6);
+        margin-inline-start: calc(-0.5 * var(--tm-space-6));
+    }
+}
+
 /* A collapsed panel: a slim rail carrying only the expand button (and the optional rail slot). */
 .tm-editor-shell__rail {
     align-self: stretch;

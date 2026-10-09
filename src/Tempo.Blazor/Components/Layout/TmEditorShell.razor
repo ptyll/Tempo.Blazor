@@ -231,6 +231,7 @@
     private string? _lastLeftWidth;
     private string? _lastRightWidth;
     private string? _loadedKey;
+    private double _canvasWidth = double.NaN;
     private bool _disposed;
     private EditorShellInterop? _shellJs;
     private DotNetObjectReference<TmEditorShell>? _dotNetRef;
@@ -426,6 +427,19 @@
         return double.IsNaN(measured) ? CurrentWidthPx(side) : (int)measured;
     }
 
+    /// <summary>
+    /// The widest the user can actually make a panel: the configured maximum, but never beyond what
+    /// the canvas can give up while keeping <see cref="MinCanvasWidth"/> (measured after render). Never
+    /// below the width in effect, so <c>aria-valuenow</c> stays inside the announced range.
+    /// </summary>
+    private int ReachableMax(EditorShellPanel side, int current)
+    {
+        var configured = side == EditorShellPanel.Left ? MaxLeftWidth : MaxRightWidth;
+        if (double.IsNaN(_canvasWidth)) return configured;
+        var room = Math.Max(0, (int)Math.Floor(_canvasWidth) - MinCanvasWidth);
+        return Math.Max(Math.Min(configured, current + room), Math.Min(configured, current));
+    }
+
     private int MinWidth(EditorShellPanel side) => side == EditorShellPanel.Left ? MinLeftWidth : MinRightWidth;
     private int MaxWidth(EditorShellPanel side) => side == EditorShellPanel.Left ? MaxLeftWidth : MaxRightWidth;
 
@@ -551,7 +565,7 @@
         var width = isLeft ? EffectiveLeftWidth : EffectiveRightWidth;
         var current = CurrentWidthPx(side);
         var min = side == EditorShellPanel.Left ? MinLeftWidth : MinRightWidth;
-        var max = side == EditorShellPanel.Left ? MaxLeftWidth : MaxRightWidth;
+        var max = ReachableMax(side, current);
         RenderFragment aside = builder =>
         {
             builder.OpenElement(0, "aside");
@@ -986,6 +1000,7 @@
     {
         await RestoreFocusAsync();
         await SyncResizersAsync();
+        await SyncCanvasWidthAsync();
 
         // The key may be set after the first render or change later: load whenever it differs from the
         // one already loaded (a null key disables persistence and forgets the loaded key).
@@ -1066,6 +1081,26 @@
                 side == EditorShellPanel.Left ? _leftAside : _rightAside,
                 _main, _dotNetRef, side == EditorShellPanel.Left ? "left" : "right", MinWidth(side), MaxWidth(side), MinCanvasWidth);
         }
+    }
+
+    /// <summary>
+    /// Measures the canvas after each render while panels are docked, so the separators can announce
+    /// the width the user can really reach. Re-renders only when the measurement changes.
+    /// </summary>
+    private async Task SyncCanvasWidthAsync()
+    {
+        if (_disposed) return;
+        var docked = _resolved != TmLayoutMode.Mobile && _attachedResizers.Count > 0;
+        if (!docked)
+        {
+            _canvasWidth = double.NaN;
+            return;
+        }
+        _shellJs ??= new EditorShellInterop(JS);
+        var measured = await _shellJs.MeasureCanvasAsync(_main);
+        if (_disposed || measured.Equals(_canvasWidth)) return;
+        _canvasWidth = measured;
+        StateHasChanged();
     }
 
     // One shell instance, one registration per side: the module keeps a single map, so a shared

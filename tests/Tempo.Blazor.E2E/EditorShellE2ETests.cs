@@ -671,7 +671,10 @@ public class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(separator).ToBeVisibleAsync();
         Assert.AreEqual("vertical", await separator.GetAttributeAsync("aria-orientation"));
         Assert.AreEqual("200", await separator.GetAttributeAsync("aria-valuemin"));
-        Assert.AreEqual("480", await separator.GetAttributeAsync("aria-valuemax"));
+        // F6 r2 G8: the announced maximum is the REACHABLE one - at 1440 the ~398px canvas has no
+        // room above MinCanvasWidth, so it is the current width, not the configured 480.
+        var announcedMax = int.Parse((await separator.GetAttributeAsync("aria-valuemax"))!);
+        Assert.IsTrue(announcedMax is >= 280 and < 480, $"aria-valuemax reflects what the canvas allows ({announcedMax})");
         Assert.AreEqual("280", await separator.GetAttributeAsync("aria-valuenow"));
         Assert.IsFalse(string.IsNullOrEmpty(await separator.GetAttributeAsync("aria-label")));
         Assert.IsNull(await page.EvaluateAsync<string?>($"() => localStorage.getItem('{StorageKey}')"), "nothing is stored before the user resizes");
