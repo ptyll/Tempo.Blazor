@@ -202,6 +202,12 @@ public class UnconstrainedClassOwnershipTests
         // loads after _button.css by design, and the footer rule is a strictly narrower context
         // (.tm-modal--sheet footer), which is the whole opt-in (decision F2-BTN-LABEL-SPAN).
         ".tm-btn-label Tempo.Blazor/_button.css|Tempo.Blazor/_modal.css",
+
+        // F5: the mobile action bar stacks icon over text ON THE LABEL SPAN itself (display: flex;
+        // column) inside .tm-mobile-action-bar__bar — the same sanctioned span opt-in as the sheet
+        // footer, in a context only the bar renders in (Override on display; _mobile-action-bar.css
+        // loads after _button.css by design).
+        ".tm-btn-label Tempo.Blazor/_button.css|Tempo.Blazor/_mobile-action-bar.css",
     ];
 
     [Fact]

@@ -81,7 +81,7 @@ else
     /// <summary>The "More" menu trigger label. Falls back to the localized default.</summary>
     [Parameter] public string? MoreLabel { get; set; }
 
-    /// <summary>Accessible name of the bar (<c>role="toolbar"</c>). Falls back to the localized default.</summary>
+    /// <summary>Accessible name of the bar (<c>role="group"</c>). Falls back to the localized default.</summary>
     [Parameter] public string? AriaLabel { get; set; }
 
     /// <summary>
@@ -146,7 +146,7 @@ else
         _ => "tm-mobile-action-bar__bar--sticky",
     };
 
-    /// <summary>The bar body: the host content region (when given) and the toolbar itself.
+    /// <summary>The bar body: the host content region (when given) and the action group itself.
     /// Rendered only below the mobile breakpoint — above it the bar does not exist.</summary>
     private RenderFragment<TmLayoutContext> RenderBar => context => builder =>
     {
@@ -166,7 +166,9 @@ else
 
         builder.OpenElement(3, "div");
         builder.AddAttribute(4, "class", $"tm-mobile-action-bar__bar {BarModifierClass}");
-        builder.AddAttribute(5, "role", "toolbar");
+        // role="group" (not "toolbar"): the 2.8.17 guard ships no toolbar role without a roving
+        // tabindex mechanism — a set of plain buttons with an accessible name is an honest group.
+        builder.AddAttribute(5, "role", "group");
         builder.AddAttribute(6, "aria-label", EffectiveAriaLabel);
 
         var sequence = 7;

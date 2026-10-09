@@ -111,9 +111,3 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .tm-mobile-action-bar__menu-item {
-    transition: none;
-  }
-}

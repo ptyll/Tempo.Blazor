@@ -43,7 +43,7 @@
       "name": "AriaLabel",
       "type": "string?",
       "isRequired": false,
-      "description": "Accessible name of the bar (role=\"toolbar\"). Falls back to the localized default."
+      "description": "Accessible name of the bar (role=\"group\"). Falls back to the localized default."
     },
     {
       "name": "LayoutMode",
