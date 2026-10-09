@@ -38,8 +38,8 @@ public class EditorShellE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(200);
         // Frame the shell host at the top of the viewport so the shot shows the editor, not the
         // page chrome above it (still a viewport-only capture at the real viewport height).
-        await page.EvaluateAsync("() => document.querySelector('[data-testid=\"editor-shell-host\"]')?.scrollIntoView({ block: 'start' }); window.scrollBy(0, -84)");
-        await page.WaitForTimeoutAsync(150);
+        await page.EvaluateAsync("() => { document.querySelector('[data-testid=\"editor-shell-host\"]')?.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy({ top: -84, behavior: 'instant' }); }");
+        await page.WaitForTimeoutAsync(400);
         await page.Mouse.MoveAsync(0, 0);
         await page.EvaluateAsync("() => document.activeElement instanceof HTMLElement && document.activeElement.blur()");
         var path = Path.Combine(ShotDir, $"{name}.png");
@@ -218,6 +218,8 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.IsTrue(panelBody is { Height: > 60 }, $"the sheet body must be visible (height {panelBody?.Height})");
         await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet [role='tabpanel']:not([hidden])")).ToBeVisibleAsync();
         await CaptureViewportOnlyAsync(page, "390-mobile-sheet");
+        var barBottom = await page.EvaluateAsync<double>("() => document.querySelector(\"[data-testid=\u0027editor-shell\u0027] .tm-mobile-action-bar__bar\").getBoundingClientRect().bottom");
+        Assert.IsTrue(barBottom <= 844 + 1, $"the mobile action bar is inside the first screen after framing the host (bottom {barBottom}px)");
     }
 
     [TestMethod]
@@ -758,6 +760,8 @@ public class EditorShellE2ETests : WasmTestBase
         CollectionAssert.AreEqual(new[] { "Blocks", "Canvas", "Properties" }, labels.Select(l => l.Trim()).ToArray());
         await Assertions.Expect(shell.Locator("[role='tab'][aria-selected='true']")).ToHaveTextAsync("Canvas");
 
+        var stripHeight = await shell.Locator(".tm-editor-shell__tabs--region").EvaluateAsync<double>("e => e.getBoundingClientRect().height");
+        Assert.IsTrue(stripHeight is > 30 and < 64, $"the Left | Canvas | Right strip is one tab row tall, not a stretched region ({stripHeight}px)");
         await shell.Locator("[role='tab']").Nth(2).ClickAsync();
         await Assertions.Expect(shell.Locator("[role='tabpanel'][data-region='right']")).ToBeVisibleAsync();
         await Assertions.Expect(shell.Locator("[role='tabpanel'][data-region='canvas']")).ToBeHiddenAsync();
@@ -845,13 +849,13 @@ public class EditorShellE2ETests : WasmTestBase
         Assert.IsFalse(string.IsNullOrEmpty(await panel.GetAttributeAsync("aria-labelledby")), "the docked aside is named by its title");
 
         // Frame the side-panel section so the docked panel is IN the shot (F15).
-        await page.EvaluateAsync("() => document.querySelector(\"[data-testid='side-panel-section']\").scrollIntoView({ block: 'start' })");
-        await page.WaitForTimeoutAsync(250);
+        await page.EvaluateAsync("() => document.querySelector(\"[data-testid=\u0027side-panel-section\u0027]\").scrollIntoView({ block: \u0027center\u0027, behavior: \u0027instant\u0027 })");
+        await page.WaitForTimeoutAsync(500);
         await page.Mouse.MoveAsync(0, 0);
+        var inFrame = await page.EvaluateAsync<bool>("() => { const r = document.querySelector(\"[data-testid=\u0027side-panel\u0027]\").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }");
+        Assert.IsTrue(inFrame, "the docked side panel must be fully inside the viewport before the screenshot");
         var shot = Path.Combine(ShotDir, "1440-side-panel-docked.png");
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = shot, FullPage = false });
-        var inFrame = await page.EvaluateAsync<bool>("() => { const r = document.querySelector(\"[data-testid='side-panel']\").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }");
-        Assert.IsTrue(inFrame, "the docked side panel must be in the screenshot");
 
         // Below desktop the same inspector starts closed (a modal sheet would cover the demo) and
         // opens as a sheet from the demo toggle; the sheet is promoted.
