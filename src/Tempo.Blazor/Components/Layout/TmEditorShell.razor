@@ -230,7 +230,7 @@
     private string? _userBaseRight;
     private string? _lastLeftWidth;
     private string? _lastRightWidth;
-    private bool _widthsLoaded;
+    private string? _loadedKey;
     private bool _disposed;
     private EditorShellInterop? _shellJs;
     private DotNetObjectReference<TmEditorShell>? _dotNetRef;
@@ -414,6 +414,16 @@
         var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
         // A non-pixel host width (rem, %) cannot be stepped from; the side's default is the origin.
         return EditorShellResize.TryParsePx(text, out var px) ? px : side == EditorShellPanel.Left ? 280 : 320;
+    }
+
+    /// <summary>The width the keyboard steps from: the pixel width in effect, or — for a non-pixel host width (rem, %) — the width the panel actually renders at.</summary>
+    private async Task<int> CurrentWidthMeasuredAsync(EditorShellPanel side)
+    {
+        var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
+        if (EditorShellResize.TryParsePx(text, out var px)) return px;
+        _shellJs ??= new EditorShellInterop(JS);
+        var measured = await _shellJs.MeasureWidthAsync(side == EditorShellPanel.Left ? _leftAside : _rightAside);
+        return double.IsNaN(measured) ? CurrentWidthPx(side) : (int)measured;
     }
 
     private int MinWidth(EditorShellPanel side) => side == EditorShellPanel.Left ? MinLeftWidth : MinRightWidth;
@@ -977,28 +987,43 @@
         await RestoreFocusAsync();
         await SyncResizersAsync();
 
-        if (!firstRender || string.IsNullOrEmpty(PersistWidthsKey) || _widthsLoaded) return;
-        _widthsLoaded = true;
+        // The key may be set after the first render or change later: load whenever it differs from the
+        // one already loaded (a null key disables persistence and forgets the loaded key).
+        if (string.IsNullOrEmpty(PersistWidthsKey))
+        {
+            _loadedKey = null;
+            return;
+        }
+        if (_loadedKey == PersistWidthsKey) return;
+        _loadedKey = PersistWidthsKey;
         _shellJs ??= new EditorShellInterop(JS);
         var stored = await _shellJs.LoadWidthsAsync(PersistWidthsKey);
-        if (_disposed) return;
+        if (_disposed || _loadedKey != PersistWidthsKey) return;
         var (left, right) = EditorShellWidths.Parse(stored);
         var applied = false;
+        int? restoredLeft = null;
+        int? restoredRight = null;
         // A stored width is applied only while it is still valid for THIS host configuration: the
         // host supplies the same base width it was resized from and the value is inside the limits.
         if (_userLeft is null && left is not null && left.Base == LeftWidth && left.W >= MinLeftWidth && left.W <= MaxLeftWidth)
         {
             _userLeft = left.W;
             _userBaseLeft = left.Base;
+            restoredLeft = left.W;
             applied = true;
         }
         if (_userRight is null && right is not null && right.Base == RightWidth && right.W >= MinRightWidth && right.W <= MaxRightWidth)
         {
             _userRight = right.W;
             _userBaseRight = right.Base;
+            restoredRight = right.W;
             applied = true;
         }
-        if (applied) StateHasChanged();
+        if (!applied) return;
+        StateHasChanged();
+        // A restore counts as a user value: a host that binds the widths learns about it.
+        if (restoredLeft is { } l) await LeftWidthChanged.InvokeAsync($"{l}px");
+        if (restoredRight is { } r) await RightWidthChanged.InvokeAsync($"{r}px");
     }
 
     private async Task PersistWidthsAsync()
@@ -1055,7 +1080,8 @@
         // separator is on its left edge: ArrowLeft grows it.
         var grow = side == EditorShellPanel.Left ? "ArrowRight" : "ArrowLeft";
         var shrink = side == EditorShellPanel.Left ? "ArrowLeft" : "ArrowRight";
-        var current = CurrentWidthPx(side);
+        _shellJs ??= new EditorShellInterop(JS);
+        var current = await CurrentWidthMeasuredAsync(side);
         double requested;
         if (args.Key == grow) requested = current + step;
         else if (args.Key == shrink) requested = current - step;
@@ -1063,7 +1089,6 @@
         else if (args.Key == "End") requested = MaxWidth(side);
         else return;
 
-        _shellJs ??= new EditorShellInterop(JS);
         var canvas = await _shellJs.MeasureCanvasAsync(_main);
         var width = (int)EditorShellResize.Clamp(requested, current, MinWidth(side), MaxWidth(side), canvas, MinCanvasWidth);
         await CommitWidthAsync(side, width);
@@ -1089,19 +1114,24 @@
 
     private async Task CommitWidthAsync(EditorShellPanel side, int width)
     {
-        if (_disposed || width == CurrentWidthPx(side) && (side == EditorShellPanel.Left ? _userLeft : _userRight) is not null) return;
-        if (width == CurrentWidthPx(side)) return;
+        if (_disposed) return;
+        // A non-pixel host width has no pixel value to compare with: any committed width is a change.
+        var effective = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
+        if (EditorShellResize.TryParsePx(effective, out var currentPx) && width == currentPx) return;
 
         if (side == EditorShellPanel.Left)
         {
             _userBaseLeft ??= LeftWidth;
-            _userLeft = width;
+            // Back on the width the host supplied: the override is gone, so nothing stays stored.
+            _userLeft = EditorShellResize.TryParsePx(_userBaseLeft, out var baseLeft) && baseLeft == width ? null : width;
+            if (_userLeft is null) _userBaseLeft = null;
             await LeftWidthChanged.InvokeAsync($"{width}px");
         }
         else
         {
             _userBaseRight ??= RightWidth;
-            _userRight = width;
+            _userRight = EditorShellResize.TryParsePx(_userBaseRight, out var baseRight) && baseRight == width ? null : width;
+            if (_userRight is null) _userBaseRight = null;
             await RightWidthChanged.InvokeAsync($"{width}px");
         }
 

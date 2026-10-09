@@ -61,6 +61,20 @@ internal sealed class EditorShellInterop : IAsyncDisposable
         return double.NaN;
     }
 
+    /// <summary>The rendered width of an element in CSS pixels, or NaN when it cannot be measured.</summary>
+    public async Task<double> MeasureWidthAsync(ElementReference element)
+    {
+        try
+        {
+            var module = await ModuleAsync();
+            if (module is null) return double.NaN;
+            var width = await module.InvokeAsync<double>("measureWidth", element);
+            return width < 0 ? double.NaN : width;
+        }
+        catch (Exception ex) when (IsBenign(ex)) { }
+        return double.NaN;
+    }
+
     /// <summary>Attaches the pointer-drag resize to a separator; a second attach with the same id replaces the first.</summary>
     public async Task AttachResizeAsync<T>(string id, ElementReference handle, ElementReference panel, ElementReference main,
         DotNetObjectReference<T> dotnet, string side, int min, int max, int minCanvas) where T : class

@@ -48,6 +48,17 @@ export function measureCanvas(main) {
 }
 
 /**
+ * The rendered width of an element in whole pixels, or -1 when it cannot be measured. The keyboard
+ * path steps from this when the host width is not a plain pixel length (rem, %).
+ * @param {HTMLElement|null} element the panel
+ * @returns {number}
+ */
+export function measureWidth(element) {
+    const width = element?.getBoundingClientRect?.().width;
+    return typeof width === 'number' && Number.isFinite(width) ? Math.round(width) : -1;
+}
+
+/**
  * Reads the stored panel widths JSON, or null when nothing is stored / storage is unavailable.
  * @param {string} key the host-chosen persistence key
  * @returns {string|null}
