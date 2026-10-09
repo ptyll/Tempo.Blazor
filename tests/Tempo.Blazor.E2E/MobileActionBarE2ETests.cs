@@ -405,6 +405,55 @@ public class MobileActionBarE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task Demo_390_MoreSheet_DoesNotReopenAfterViewportFlip()
+    {
+        // Z1 (round 3, MAJOR): with the sheet open, widening past the breakpoint hides the Auto
+        // bar — the controlled panel is disposed WITHOUT an IsOpenChanged, so a stale open
+        // state made the sheet REOPEN by itself on the way back (phone rotation portrait →
+        // landscape → portrait), and the best-effort focus move onto the disposed menu element
+        // threw an unhandled JSException ("Unable to focus an invalid element") in about half
+        // the runs — #blazor-error-ui, a dead Server circuit in Blazor Server.
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        var pageErrors = new List<string>();
+        page.PageError += (_, e) => pageErrors.Add(e);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var more = bar.Locator(".tm-mobile-action-bar__more");
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+
+        await more.FocusAsync();
+        await more.ClickAsync();
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        Assert.AreEqual("true", await more.GetAttributeAsync("aria-expanded"),
+            "the sheet is open before the flip");
+
+        // Landscape wider than the mobile breakpoint: the Auto bar does not render at all.
+        await page.SetViewportSizeAsync(1100, 844);
+        await Assertions.Expect(bar).ToHaveCountAsync(0);
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+
+        // ...and back to portrait: the bar renders again — the sheet must stay closed.
+        await page.SetViewportSizeAsync(390, 844);
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await page.WaitForTimeoutAsync(1500); // settle: a stale reopen or the focus JSException lands here
+
+        Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"),
+            "the sheet must not reopen by itself after the bar hid while it was open");
+        await Assertions.Expect(sheet).ToBeHiddenAsync();
+        Assert.AreEqual(0, await page.Locator(".tm-overlay-panel-sheet:visible").CountAsync(),
+            "no sheet visible after the flip back");
+        await Assertions.Expect(page.Locator("#blazor-error-ui")).ToBeHiddenAsync();
+        pageErrors.Should().BeEmpty();
+
+        await CaptureViewportOnlyAsync(page, "390-after-flip-no-reopen");
+    }
+
+    [TestMethod]
     public async Task Demo_390_MenuActionThatMovesFocus_KeepsItThere()
     {
         // Y8: the menu closes and its focus restore lands BEFORE the action runs — an action that
