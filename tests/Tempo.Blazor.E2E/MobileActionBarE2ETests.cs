@@ -554,7 +554,13 @@ public class MobileActionBarE2ETests : WasmTestBase
         Assert.AreNotEqual("none", boxShadow, "the popover carries the popover shadow");
 
         // X5: choosing an item (KeepMenuOpen=false) closes the popover and restores focus to
-        // the More trigger — never <body>.
+        // the More trigger — never <body>. Wait for the initial-focus move to land first: a
+        // premature Enter would re-activate the still-focused More trigger instead of the
+        // menuitem and the popover would stay open.
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.getAttribute('role') === 'menuitem'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 5000 });
         await page.Keyboard.PressAsync("Enter"); // activates the first menuitem (Duplicate)
         await Assertions.Expect(panel).ToBeHiddenAsync();
         Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"),
