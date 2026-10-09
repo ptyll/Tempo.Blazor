@@ -421,6 +421,7 @@
 
         // The mobile edit-mode action bar (F5) renders the same three actions as the desktop
         // toolbar; priority keeps the order stable when a future action joins the overflow.
+        // The EventCallback receiver is the dashboard, so its own markup re-renders on activation.
         _editModeActions =
         [
             new TmActionItem
@@ -429,7 +430,7 @@
                 Label = Loc["TmDashboard_AddWidget"],
                 Icon = IconNames.Plus,
                 Priority = 100,
-                OnClick = () => { OpenWidgetSelector(); return Task.CompletedTask; },
+                OnClick = EventCallback.Factory.Create(this, OpenWidgetSelector),
             },
             new TmActionItem
             {
@@ -437,7 +438,7 @@
                 Label = Loc["TmDashboard_SaveChanges"],
                 Icon = IconNames.Save,
                 Priority = 90,
-                OnClick = SaveLayout,
+                OnClick = EventCallback.Factory.Create(this, SaveLayout),
             },
             new TmActionItem
             {
@@ -445,7 +446,7 @@
                 Label = Loc["TmDashboard_CancelEdit"],
                 Icon = "x",
                 Priority = 80,
-                OnClick = () => { CancelEdit(); return Task.CompletedTask; },
+                OnClick = EventCallback.Factory.Create(this, CancelEdit),
             },
         ];
 

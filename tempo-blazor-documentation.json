@@ -660,7 +660,7 @@
       "examples": [
         {
           "title": "Edit-mode action bar",
-          "code": "<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\">\n    <ChildContent>\n        @* the component content the bar belongs to *@\n    </ChildContent>\n</TmMobileActionBar>\n\n@code {\n    private readonly IReadOnlyList<TmActionItem> _actions =\n    [\n        new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = AddAsync },\n        new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = SaveAsync },\n        new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = CancelAsync },\n    ];\n}"
+          "code": "<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\">\n    <ChildContent>\n        @* the component content the bar belongs to *@\n    </ChildContent>\n</TmMobileActionBar>\n\n@code {\n    private readonly IReadOnlyList<TmActionItem> _actions =\n    [\n        new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = EventCallback.Factory.Create(this, AddAsync) },\n        new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = EventCallback.Factory.Create(this, SaveAsync) },\n        new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = EventCallback.Factory.Create(this, CancelAsync) },\n    ];\n}"
         }
       ]
     },
@@ -6176,6 +6176,12 @@
           "description": "Stable identity of the action (used as a render key). When empty, Label identifies the item. Must not start with tm- when it lands in a CSS class or id — that prefix is reserved for library-internal stems (scoped-CSS ownership sweep)."
         },
         {
+          "name": "KeepMenuOpen",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true, the \"More\" menu stays open after the action runs — use for actions that open another surface (a confirm dialog, a picker): the surface promotes AFTER the sheet, so it paints above it (top-layer order = open order), and closing it returns focus to this item. The default (false) closes the sheet BEFORE the action runs: focus returns to the \"More\" trigger and the action runs with no menu bookkeeping behind it."
+        },
+        {
           "name": "Label",
           "kind": "Property",
           "type": "string",
@@ -6184,8 +6190,8 @@
         {
           "name": "OnClick",
           "kind": "Property",
-          "type": "Func<Task>?",
-          "description": "The action itself. Invoked exactly once per user activation."
+          "type": "EventCallback",
+          "description": "The action itself. Invoked exactly once per user activation. Create the callback with EventCallback.Factory.Create(this, …) — the receiver is the owning component, so its markup re-renders automatically when the action mutates state (e.g. opens a sibling dialog); a default (empty) callback is a no-op."
         },
         {
           "name": "Priority",
@@ -6229,15 +6235,22 @@
         },
         {
           "name": "OnClick",
-          "type": "Func<Task>?",
+          "type": "EventCallback",
           "isRequired": false,
-          "description": "The action itself. Invoked exactly once per user activation."
+          "description": "The action itself. Invoked exactly once per user activation. Create the callback with EventCallback.Factory.Create(this, …) — the receiver is the owning component, so its markup re-renders automatically when the action mutates state; a default (empty) callback is a no-op."
+        },
+        {
+          "name": "KeepMenuOpen",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "When true, the \"More\" menu stays open after the action runs — use for actions that open another surface (a confirm dialog, a picker): the surface promotes AFTER the sheet, so it paints above it (top-layer order = open order), and closing it returns focus to this item. The default closes the sheet BEFORE the action runs: focus returns to the \"More\" trigger and the action runs with no menu bookkeeping behind it."
         }
       ],
       "examples": [
         {
           "title": "Edit-mode actions for TmMobileActionBar",
-          "code": "private readonly IReadOnlyList<TmActionItem> _actions =\n[\n    new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = AddAsync },\n    new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = SaveAsync },\n    new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = CancelAsync },\n];\n\n<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\" />"
+          "code": "private readonly IReadOnlyList<TmActionItem> _actions =\n[\n    new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100,\n            OnClick = EventCallback.Factory.Create(this, AddAsync) },\n    new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90,\n            OnClick = EventCallback.Factory.Create(this, SaveAsync) },\n    new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80,\n            OnClick = EventCallback.Factory.Create(this, CancelAsync) },\n];\n\n<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\" />"
         }
       ]
     },

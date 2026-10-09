@@ -52,9 +52,21 @@
   max-width: 100%;
 }
 
+/* The label span opts into truncation and stacks icon over text — the reference mobile layout
+   (output/imagegen/tempo-reimagined/TmDashboard/dashboard--mobile.png): the icon no longer
+   competes with the text for the row's width, so short labels stay whole at 320 and 390. */
 .tm-mobile-action-bar__bar .tm-btn .tm-btn-label {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tm-space-1);
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.tm-mobile-action-bar__label-text {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.ActionBar;
 using Tempo.Blazor.Tests.Localization;
@@ -18,7 +19,8 @@ public class TmMobileActionBarTests : LocalizationTestBase
         int priority = 0,
         string? icon = null,
         bool disabled = false,
-        Func<Task>? onClick = null)
+        bool keepMenuOpen = false,
+        EventCallback? onClick = null)
         => new()
         {
             Id = label,
@@ -26,7 +28,8 @@ public class TmMobileActionBarTests : LocalizationTestBase
             Icon = icon,
             Priority = priority,
             Disabled = disabled,
-            OnClick = onClick,
+            KeepMenuOpen = keepMenuOpen,
+            OnClick = onClick ?? default,
         };
 
     private static IReadOnlyList<TmActionItem> Actions(params string[] labels)
@@ -229,7 +232,7 @@ public class TmMobileActionBarTests : LocalizationTestBase
                 Action("One"),
                 Action("Two"),
                 Action("Three"),
-                Action("Four", onClick: () => { calls++; return Task.CompletedTask; }),
+                Action("Four", onClick: EventCallback.Factory.Create(this, () => { calls++; return Task.CompletedTask; })),
             }));
 
         cut.Find(".tm-mobile-action-bar__more").Click();
@@ -237,6 +240,28 @@ public class TmMobileActionBarTests : LocalizationTestBase
 
         calls.Should().Be(1);
         cut.FindAll("[role='menu']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MenuItem_KeepMenuOpen_LeavesTheMenuOpen()
+    {
+        var calls = 0;
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                Action("One"),
+                Action("Two"),
+                Action("Three"),
+                Action("Four", keepMenuOpen: true,
+                    onClick: EventCallback.Factory.Create(this, () => { calls++; return Task.CompletedTask; })),
+            }));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.FindAll("[role='menuitem']")[0].Click();
+
+        calls.Should().Be(1);
+        cut.FindAll("[role='menu']").Should().NotBeEmpty("a KeepMenuOpen item must not close the menu");
     }
 
     [Fact]

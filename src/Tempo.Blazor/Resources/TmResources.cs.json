@@ -88,6 +88,8 @@
   "TmMobileActionBarDemo_ForcedDescription": "Stejný panel s vynuceným mobilním rozložením, takže se vykreslí v jakékoli šířce okna. Druhá varianta záměrně kotví k viewportu (FixedViewport); třetí je statická (Inline).",
   "TmMobileActionBarDemo_StickyLabel": "Sticky kontejner",
   "TmMobileActionBarDemo_FixedLabel": "Fixed viewport",
+  "TmMobileActionBarDemo_ShowFixed": "Zobrazit panel kotvící k viewportu",
+  "TmMobileActionBarDemo_HideFixed": "Skrýt panel kotvící k viewportu",
   "TmMobileActionBarDemo_InlineLabel": "Inline",
   "TmMobileActionBarDemo_ActionShare": "Sdílet",
   "TmMobileActionBarDemo_ActionEdit": "Upravit",

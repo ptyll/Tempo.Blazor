@@ -88,6 +88,8 @@
   "TmMobileActionBarDemo_ForcedDescription": "La même barre avec une disposition mobile forcée, pour qu'elle s'affiche à n'importe quelle largeur. La deuxième variante s'ancre volontairement au viewport (FixedViewport) ; la troisième est statique (Inline).",
   "TmMobileActionBarDemo_StickyLabel": "Sticky conteneur",
   "TmMobileActionBarDemo_FixedLabel": "Fixed viewport",
+  "TmMobileActionBarDemo_ShowFixed": "Afficher la barre ancrée au viewport",
+  "TmMobileActionBarDemo_HideFixed": "Masquer la barre ancrée au viewport",
   "TmMobileActionBarDemo_InlineLabel": "Inline",
   "TmMobileActionBarDemo_ActionShare": "Partager",
   "TmMobileActionBarDemo_ActionEdit": "Modifier",

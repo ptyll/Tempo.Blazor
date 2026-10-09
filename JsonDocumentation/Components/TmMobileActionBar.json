@@ -91,7 +91,7 @@
   "examples": [
     {
       "title": "Edit-mode action bar",
-      "code": "<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\">\n    <ChildContent>\n        @* the component content the bar belongs to *@\n    </ChildContent>\n</TmMobileActionBar>\n\n@code {\n    private readonly IReadOnlyList<TmActionItem> _actions =\n    [\n        new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = AddAsync },\n        new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = SaveAsync },\n        new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = CancelAsync },\n    ];\n}"
+      "code": "<TmMobileActionBar Items=\"_actions\" MaxVisible=\"3\">\n    <ChildContent>\n        @* the component content the bar belongs to *@\n    </ChildContent>\n</TmMobileActionBar>\n\n@code {\n    private readonly IReadOnlyList<TmActionItem> _actions =\n    [\n        new() { Id = \"add\", Label = \"Add\", Icon = IconNames.Plus, Priority = 100, OnClick = EventCallback.Factory.Create(this, AddAsync) },\n        new() { Id = \"save\", Label = \"Save\", Icon = IconNames.Save, Priority = 90, OnClick = EventCallback.Factory.Create(this, SaveAsync) },\n        new() { Id = \"cancel\", Label = \"Cancel\", Icon = \"x\", Priority = 80, OnClick = EventCallback.Factory.Create(this, CancelAsync) },\n    ];\n}"
     }
   ]
 }

@@ -53,6 +53,7 @@ else
 @code {
     private readonly OverlayLayout _layout = new();
     private TmOverlayPanel? _morePanel;
+    private ElementReference _moreButton;
     private ElementReference _firstMenuItem;
     private bool _focusMoreItemPending;
 
@@ -172,26 +173,46 @@ else
         foreach (var item in VisibleItems)
         {
             builder.OpenComponent<TmButton>(sequence++);
-            builder.AddAttribute(sequence++, "Class", "tm-mobile-action-bar__action");
-            builder.AddAttribute(sequence++, "Icon", item.Icon);
+            // .tm-touch-target opts the buttons into the 44px minimum (the .tm-btn contract
+            // forbids restyling height from this stylesheet). The icon renders inside the
+            // label span: the bar's CSS stacks icon over text on the span itself.
+            builder.AddAttribute(sequence++, "Class", "tm-mobile-action-bar__action tm-touch-target");
+            builder.AddAttribute(sequence++, "Size", ButtonSize.Sm);
             builder.AddAttribute(sequence++, "Disabled", item.Disabled);
             builder.AddAttribute(sequence++, "title", item.Label);
             builder.AddAttribute(sequence++, "OnClick", EventCallback.Factory.Create(this, () => InvokeItemAsync(item)));
-            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => b.AddContent(0, item.Label)));
+            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => BuildActionLabel(b, item)));
             builder.CloseComponent();
         }
 
         var overflow = OverflowItems;
         if (overflow.Count > 0)
         {
-            builder.OpenComponent<TmButton>(sequence++);
-            builder.AddAttribute(sequence++, "Class", "tm-mobile-action-bar__more");
-            builder.AddAttribute(sequence++, "Icon", IconNames.MoreHorizontal);
-            builder.AddAttribute(sequence++, "OnClick", EventCallback.Factory.Create(this, OpenMoreAsync));
-            builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(b => b.AddContent(0, EffectiveMoreLabel)));
+            // The More trigger is a raw button (the dashboard's own pattern): the panel gets its
+            // element as an explicit Anchor, so the popover positions against it and the sheet's
+            // focus restore resolves the trigger by element reference — never a stale node.
+            builder.OpenElement(sequence++, "button");
+            builder.AddAttribute(sequence++, "type", "button");
+            builder.AddAttribute(sequence++, "class", "tm-btn tm-btn-secondary tm-btn-sm tm-mobile-action-bar__more tm-touch-target");
+            builder.AddAttribute(sequence++, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-btn-label");
+            builder.OpenComponent<TmIcon>(sequence++);
+            builder.AddAttribute(sequence++, "Name", IconNames.MoreHorizontal);
+            builder.AddAttribute(sequence++, "Size", IconSize.Sm);
             builder.CloseComponent();
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-mobile-action-bar__label-text");
+            builder.AddContent(sequence++, EffectiveMoreLabel);
+            builder.CloseElement();
+            builder.CloseElement();
+            // After the attributes and content: an element-reference capture may not sit between
+            // an element frame and its attributes (RenderTreeBuilder assertion).
+            builder.AddElementReferenceCapture(sequence++, reference => _moreButton = reference);
+            builder.CloseElement();
 
             builder.OpenComponent<TmOverlayPanel>(sequence++);
+            builder.AddComponentParameter(sequence++, "Anchor", _moreButton);
             builder.AddComponentParameter(sequence++, "Role", "menu");
             builder.AddComponentParameter(sequence++, "Title", EffectiveMoreLabel);
             builder.AddComponentParameter(sequence++, "MobilePresentation", PanelPresentation.Auto);
@@ -206,6 +227,23 @@ else
         builder.CloseElement();
         builder.CloseRegion();
     };
+
+    /// <summary>The stacked icon-over-label content of a bar action (rendered inside TmButton's
+    /// own <c>span.tm-btn-label</c>, so the bar's span opt-in stacks and truncates it).</summary>
+    private static void BuildActionLabel(RenderTreeBuilder builder, TmActionItem item)
+    {
+        if (!string.IsNullOrEmpty(item.Icon))
+        {
+            builder.OpenComponent<TmIcon>(0);
+            builder.AddAttribute(1, "Name", item.Icon);
+            builder.AddAttribute(2, "Size", IconSize.Sm);
+            builder.CloseComponent();
+        }
+        builder.OpenElement(3, "span");
+        builder.AddAttribute(4, "class", "tm-mobile-action-bar__label-text");
+        builder.AddContent(5, item.Label);
+        builder.CloseElement();
+    }
 
     private void BuildMenu(RenderTreeBuilder builder, IReadOnlyList<TmActionItem> overflow)
     {
@@ -246,27 +284,30 @@ else
 
     private async Task InvokeItemAsync(TmActionItem item)
     {
-        if (item.Disabled || item.OnClick is null)
+        if (item.Disabled)
         {
             return;
         }
 
-        await item.OnClick();
+        await item.OnClick.InvokeAsync();
     }
 
     private async Task InvokeMenuItemAsync(TmActionItem item)
     {
-        // Close first: the sheet pops down and focus returns to the "More" trigger before the
-        // action runs, so an action that opens its own dialog promotes AFTER the sheet and
-        // always paints above it (top-layer order = open order, docs/overlays.md rule 8).
-        if (_morePanel is not null)
+        // Default (KeepMenuOpen=false): close first — the sheet pops down and focus returns to
+        // the "More" trigger before the action runs, so the action runs with no menu
+        // bookkeeping behind it. KeepMenuOpen=true is for actions that open another surface:
+        // the sheet stays, the surface promotes AFTER it and always paints above it
+        // (top-layer order = open order, docs/overlays.md rule 8), and closing the surface
+        // returns focus to this menuitem.
+        if (!item.KeepMenuOpen && _morePanel is not null)
         {
             await _morePanel.CloseAsync();
         }
 
-        if (!item.Disabled && item.OnClick is not null)
+        if (!item.Disabled)
         {
-            await item.OnClick();
+            await item.OnClick.InvokeAsync();
         }
     }
 

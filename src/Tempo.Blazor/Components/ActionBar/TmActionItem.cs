@@ -1,5 +1,7 @@
 namespace Tempo.Blazor.Components.ActionBar;
 
+using Microsoft.AspNetCore.Components;
+
 /// <summary>
 /// A single action offered by an action surface (the F5 <c>TmMobileActionBar</c>, the F4 overflow
 /// toolbar, and any future action host). The model is deliberately free of rendering concerns:
@@ -30,6 +32,21 @@ public sealed class TmActionItem
     /// <summary>Disables the action. Disabled items render as disabled buttons/menuitems.</summary>
     public bool Disabled { get; set; }
 
-    /// <summary>The action itself. Invoked exactly once per user activation.</summary>
-    public Func<Task>? OnClick { get; set; }
+    /// <summary>
+    /// The action itself. Invoked exactly once per user activation. Create the callback with
+    /// <c>EventCallback.Factory.Create(this, …)</c> — the receiver is the owning component, so
+    /// its markup re-renders automatically when the action mutates state (e.g. opens a sibling
+    /// dialog); a default (empty) callback is a no-op.
+    /// </summary>
+    public EventCallback OnClick { get; set; }
+
+    /// <summary>
+    /// When <see langword="true"/>, the "More" menu stays open after the action runs — use for
+    /// actions that open another surface (a confirm dialog, a picker): the surface promotes
+    /// AFTER the sheet, so it paints above it (top-layer order = open order), and closing it
+    /// returns focus to this item. The default (<see langword="false"/>) closes the sheet
+    /// BEFORE the action runs: focus returns to the "More" trigger and the action runs with no
+    /// menu bookkeeping behind it.
+    /// </summary>
+    public bool KeepMenuOpen { get; set; }
 }

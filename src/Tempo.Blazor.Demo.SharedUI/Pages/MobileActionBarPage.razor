@@ -44,11 +44,25 @@
             </div>
             <div class="mab-variant" data-testid="mab-variant-fixed">
                 <h3>@Loc["TmMobileActionBarDemo_FixedLabel"]</h3>
+                <p class="mab-variant-note">
+                    <button type="button"
+                            class="tm-btn tm-btn-secondary tm-btn-sm"
+                            data-testid="mab-toggle-fixed"
+                            aria-pressed="@(_showFixed ? "true" : "false")"
+                            @onclick="() => _showFixed = !_showFixed">
+                        @(_showFixed ? Loc["TmMobileActionBarDemo_HideFixed"] : Loc["TmMobileActionBarDemo_ShowFixed"])
+                    </button>
+                </p>
                 <div class="mab-card mab-card--tall">
-                    <TmMobileActionBar Items="@_actions"
-                                       MaxVisible="3"
-                                       Placement="ActionBarPlacement.FixedViewport"
-                                       LayoutMode="TmLayoutMode.Mobile" />
+                    @if (_showFixed)
+                    {
+                        @* A viewport-anchored bar is deliberate: it pins to the bottom edge of
+                           the whole window, so the demo renders it on demand only. *@
+                        <TmMobileActionBar Items="@_actions"
+                                           MaxVisible="3"
+                                           Placement="ActionBarPlacement.FixedViewport"
+                                           LayoutMode="TmLayoutMode.Mobile" />
+                    }
                 </div>
             </div>
             <div class="mab-variant" data-testid="mab-variant-inline">
@@ -76,11 +90,14 @@
 
 @code {
     private bool _showConfirm;
+    private bool _showFixed;
     private string _lastAction = "—";
     private IReadOnlyList<TmActionItem> _actions = [];
 
     protected override void OnInitialized()
     {
+        // The EventCallback receiver is this page, so its own markup (the dialog, the
+        // last-action line) re-renders when an action mutates state.
         _actions =
         [
             new TmActionItem
@@ -89,7 +106,7 @@
                 Label = Loc["TmMobileActionBarDemo_ActionShare"],
                 Icon = IconNames.Share,
                 Priority = 100,
-                OnClick = () => Record("TmMobileActionBarDemo_ActionShare"),
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmMobileActionBarDemo_ActionShare")),
             },
             new TmActionItem
             {
@@ -97,7 +114,7 @@
                 Label = Loc["TmMobileActionBarDemo_ActionEdit"],
                 Icon = "edit",
                 Priority = 90,
-                OnClick = () => Record("TmMobileActionBarDemo_ActionEdit"),
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmMobileActionBarDemo_ActionEdit")),
             },
             new TmActionItem
             {
@@ -105,7 +122,7 @@
                 Label = Loc["TmMobileActionBarDemo_ActionDuplicate"],
                 Icon = IconNames.Copy,
                 Priority = 80,
-                OnClick = () => Record("TmMobileActionBarDemo_ActionDuplicate"),
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmMobileActionBarDemo_ActionDuplicate")),
             },
             new TmActionItem
             {
@@ -113,7 +130,7 @@
                 Label = Loc["TmMobileActionBarDemo_ActionArchive"],
                 Icon = "archive",
                 Priority = 70,
-                OnClick = () => Record("TmMobileActionBarDemo_ActionArchive"),
+                OnClick = EventCallback.Factory.Create(this, () => Record("TmMobileActionBarDemo_ActionArchive")),
             },
             new TmActionItem
             {
@@ -121,7 +138,10 @@
                 Label = Loc["TmMobileActionBarDemo_ActionDelete"],
                 Icon = IconNames.Trash,
                 Priority = 60,
-                OnClick = OpenConfirm,
+                // Opens a confirm dialog: the More sheet stays open beneath it — the dialog
+                // promotes after the sheet and paints above it, and Escape unwinds in order.
+                KeepMenuOpen = true,
+                OnClick = EventCallback.Factory.Create(this, OpenConfirm),
             },
         ];
     }

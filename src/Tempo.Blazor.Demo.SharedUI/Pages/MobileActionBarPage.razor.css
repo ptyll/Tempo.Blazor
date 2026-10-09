@@ -87,3 +87,7 @@
   color: var(--tm-text-primary);
   margin: 0 0 var(--tm-space-2);
 }
+
+.mab-variant-note {
+  margin: 0 0 var(--tm-space-2);
+}

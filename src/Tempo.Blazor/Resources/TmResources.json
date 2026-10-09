@@ -88,6 +88,8 @@
   "TmMobileActionBarDemo_ForcedDescription": "The same bar with a forced mobile layout, so it renders at any window width. The second variant anchors to the viewport deliberately (FixedViewport); the third is static (Inline).",
   "TmMobileActionBarDemo_StickyLabel": "Sticky container",
   "TmMobileActionBarDemo_FixedLabel": "Fixed viewport",
+  "TmMobileActionBarDemo_ShowFixed": "Show the viewport-anchored bar",
+  "TmMobileActionBarDemo_HideFixed": "Hide the viewport-anchored bar",
   "TmMobileActionBarDemo_InlineLabel": "Inline",
   "TmMobileActionBarDemo_ActionShare": "Share",
   "TmMobileActionBarDemo_ActionEdit": "Edit",
