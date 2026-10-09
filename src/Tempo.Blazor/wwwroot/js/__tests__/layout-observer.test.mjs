@@ -149,3 +149,26 @@ test('observe refuses a missing root instead of observing the document', async (
 
     await assert.rejects(observe(null, dotNet(), 'pane'), /root/);
 });
+
+// Per-instance thresholds (F6 round 1, Q3): the observer classifies with whatever pair C# feeds it,
+// so an editor shell can go desktop from 1200 and mobile below 768 without a second code path.
+test('classifyWidth honours per-instance thresholds', () => {
+    const email = { sm: 768, lg: 1200 };
+    assert.equal(classifyWidth(767, email), 'mobile');
+    assert.equal(classifyWidth(768, email), 'tablet');
+    assert.equal(classifyWidth(1199, email), 'tablet');
+    assert.equal(classifyWidth(1200, email), 'desktop');
+});
+
+test('observe re-registered with new thresholds reclassifies the same width', async () => {
+    __resetForTests();
+    installFakeResizeObserver();
+    const root = element('shell');
+    const dotnet = dotNet();
+
+    await observe(root, dotnet, 'shell', { initialWidth: 886, breakpoints });
+    await observe(root, dotnet, 'shell', { initialWidth: 886, breakpoints: { sm: 768, lg: 1200 } });
+    await observe(root, dotnet, 'shell', { initialWidth: 886, breakpoints: { sm: 900, lg: 1200 } });
+
+    assert.deepEqual(dotnet.calls.map(call => call.args[0]), ['tablet', 'tablet', 'mobile']);
+});
