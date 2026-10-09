@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Actions;
@@ -612,6 +613,125 @@ public class TmMobileActionBarTests : LocalizationTestBase
         cut.FindAll("[role='menuitem']")
             .Select(i => i.GetAttribute("data-action-id"))
             .Should().Equal("Blocked", "Free");
+    }
+
+    // ── Review round 2 (R2-M1 / Y1, Y2): the More trigger's aria-expanded must track the REAL
+    //    panel state on every close path, and CloseMoreAsync on a closed menu must be a strict
+    //    no-op (no focus steal). ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AriaExpanded_ResetsToFalse_AfterPopoverItemSelect()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        var more = cut.Find(".tm-mobile-action-bar__more");
+        more.Click();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        cut.FindAll("[role='menuitem']")[0].Click();
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "selecting an item closes the menu — the trigger must not announce an open menu");
+    }
+
+    [Fact]
+    public async Task AriaExpanded_ResetsToFalse_AfterCloseMoreAsync()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        await cut.InvokeAsync(() => cut.Instance.CloseMoreAsync());
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "CloseMoreAsync closes the menu — aria-expanded must follow");
+    }
+
+    [Fact]
+    public void AriaExpanded_ResetsToFalse_AfterSheetItemSelect()
+    {
+        // No viewport cascade: the panel resolves to its InitialMode (mobile) and presents as the
+        // bottom sheet — the exact surface where the round-2 probe found the stale value.
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        cut.FindAll("[role='menuitem']")[0].Click();
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "a sheet item select closes the sheet through the drawer's own path");
+    }
+
+    [Fact]
+    public void AriaExpanded_ResetsToFalse_AfterSheetDone()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        // The sheet header Done closes through the drawer's own IsOpenChanged — the bar must see it.
+        cut.Find(".tm-overlay-panel-sheet__done").Click();
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "sheet Done closes the menu without ever raising OnDismissed");
+    }
+
+    [Fact]
+    public async Task AriaExpanded_ResetsToFalse_AfterEscapeDismissal()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
+
+        // overlay.js raises NotifyDismissedAsync("escape") on Escape — the same path for the
+        // popover and the sheet (the sheet routes its Escape through ApplyOpenAsync).
+        await cut.InvokeAsync(() => cut.FindComponent<TmOverlayPanel>().Instance.NotifyDismissedAsync("escape"));
+
+        cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded")
+            .Should().Be("false", "Escape closes the menu on every presentation");
+    }
+
+    [Fact]
+    public async Task CloseMoreAsync_WhenClosed_DoesNotFocusTheTrigger()
+    {
+        // Y2: CloseMoreAsync is documented as a no-op on a closed menu — arming the focus restore
+        // unconditionally stole focus from wherever the user was.
+        var cut = Render<TmMobileActionBar>(p => p
+            .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, Actions("One", "Two", "Three", "Four")));
+
+        var before = JSInterop.Invocations
+            .Count(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+
+        await cut.InvokeAsync(() => cut.Instance.CloseMoreAsync());
+        cut.Render(); // a later host re-render must not pick up a stale focus-restore flag
+
+        var after = JSInterop.Invocations
+            .Count(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+        (after - before).Should().Be(0, "CloseMoreAsync on a closed menu must not move focus");
     }
 
     private static string BarCss(bool stripComments = false)
