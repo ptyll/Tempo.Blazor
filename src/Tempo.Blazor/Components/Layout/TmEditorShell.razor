@@ -960,7 +960,7 @@
             await _shellJs.AttachResizeAsync(id,
                 side == EditorShellPanel.Left ? _leftHandle : _rightHandle,
                 side == EditorShellPanel.Left ? _leftAside : _rightAside,
-                _main, _dotNetRef, id, MinWidth(side), MaxWidth(side), MinCanvasWidth);
+                _main, _dotNetRef, side == EditorShellPanel.Left ? "left" : "right", MinWidth(side), MaxWidth(side), MinCanvasWidth);
         }
     }
 
