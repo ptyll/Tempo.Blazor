@@ -115,7 +115,7 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1000);
-        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=500", new PageGotoOptions
+        await page.GotoAsync($"{BaseUrl}/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=3000", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,
             Timeout = 60_000
@@ -129,18 +129,21 @@ public sealed class DocumentEditorCanvasHistorySaveE2ETests : WasmTestBase
 
         // Assert the transient autosave-pending state BEFORE the a11y poll — the poll can outlast
         // the debounce window and flip the status to "Saving..." before the expect observes it.
+        // The page runs with autosaveMs=3000 so the pending state is a real multi-second DOM
+        // state; at 500ms the pending render can land after the debounce already fired on a
+        // contended runner, and the sampler would never observe it.
         await Assertions.Expect(page.GetByTestId("document-pending-status"))
             .ToContainTextAsync("Autosave pending", new() { Timeout = 5_000 });
         await WaitForA11yTextAsync(page, marker);
         await Assertions.Expect(page.GetByTestId("document-save-message"))
-            .ToContainTextAsync("Autosaved", new() { Timeout = 12_000 });
+            .ToContainTextAsync("Autosaved", new() { Timeout = 20_000 });
         await WaitForDirtyStateAsync(page, expectedDirty: false);
 
         await NavigateWithinBlazorAsync(page, "/canvas-engine-host?documentId=phase-5-canvas-render");
         await page.WaitForFunctionAsync(
             "() => document.querySelector('[data-testid=\"document-canvas-page\"]')?.getAttribute('data-canvas-model-document-id') === 'phase-5-canvas-render'",
             options: new PageWaitForFunctionOptions { Timeout = 20_000 });
-        await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=500");
+        await NavigateWithinBlazorAsync(page, $"/canvas-engine-host?documentId={Phase12DocumentId}&showToolbar=true&autosaveMs=3000");
         await WaitForPhase12ReadyAsync(page);
         await WaitForA11yTextAsync(page, marker);
     }
