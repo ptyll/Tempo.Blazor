@@ -849,7 +849,7 @@
         if (MobileSheetSnapIndex != _snapParamSeen)
         {
             _snapParamSeen = MobileSheetSnapIndex;
-            _snap = Math.Max(0, MobileSheetSnapIndex);
+            _snap = Math.Clamp(MobileSheetSnapIndex, 0, DefaultSnaps.Length - 1);
         }
         if (ActiveMobilePanel != _activeParamSeen)
         {
