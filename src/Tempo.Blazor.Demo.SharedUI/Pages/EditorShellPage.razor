@@ -58,12 +58,18 @@
         <p>@Loc["TmEditorShellDemo_ThresholdsIntro"]</p>
         <div class="es-shell-host es-shell-host--short" data-testid="editor-shell-thresholds-host">
             <TmEditorShell Breakpoints="_emailBreakpoints"
+                           MobileActions="_mobileActions"
                            LeftTitle="@Loc["TmEditorShellDemo_Blocks"]"
                            RightTitle="@Loc["TmEditorShellDemo_Properties"]"
                            data-testid="editor-shell-thresholds">
                 <Header>
                     <h2>@Loc["TmEditorShellDemo_EditorTitle"]</h2>
                 </Header>
+                <Toolbar>
+                    <div class="es-editor-toolbar" role="group" aria-label="@Loc["TmEditorShellDemo_ToolbarLabel"]" data-testid="es-toolbar-thresholds">
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="RecordUndo">@Loc["TmEditorShellDemo_ActionUndo"]</TmButton>
+                    </div>
+                </Toolbar>
                 <Left>@Toolbox("-thresholds")</Left>
                 <LeftRail>@ToolboxRail("-thresholds")</LeftRail>
                 <Canvas>@EmailCanvas("-thresholds")</Canvas>

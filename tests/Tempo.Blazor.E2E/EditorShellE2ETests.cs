@@ -618,6 +618,26 @@ public class EditorShellE2ETests : WasmTestBase
         await Assertions.Expect(shell.Locator("aside[data-region='right']")).ToBeVisibleAsync();
         await Assertions.Expect(shell.Locator(".tm-editor-shell__rail--left")).ToBeVisibleAsync();
     }
+    [TestMethod]
+    public async Task Demo_CustomThresholdShell_At700pxContainer_IsMobile_BarVisible_ToolbarSlotAbsent()
+    {
+        // F6 r2 G2: Breakpoints(768, 1200) makes a 700px container MOBILE. The internal action bar
+        // must follow the shell (not re-measure with the 640/1024 defaults => tablet => hidden).
+        var context = await CreateTouchContextAsync(1024, 900);
+        var page = await GotoEditorShellAsync(context, 1024, 900);
+        RegisterContext(context);
+        const string custom = "[data-testid='editor-shell-thresholds']";
+        await page.EvaluateAsync("() => { const h = document.querySelector(\"[data-testid='editor-shell-thresholds-host']\"); h.style.width = '700px'; h.style.maxWidth = '700px'; }");
+
+        await Assertions.Expect(page.Locator(custom)).ToHaveAttributeAsync("data-layout", "mobile",
+            new LocatorAssertionsToHaveAttributeOptions { Timeout = 8000 });
+        var width = await WidthOfAsync(page, custom);
+        Assert.IsTrue(width is >= 640 and < 768, $"the host is a 700px container, where the defaults say tablet ({width}px)");
+        await page.WaitForTimeoutAsync(400);
+
+        await Assertions.Expect(page.Locator($"{custom} .tm-mobile-action-bar__bar")).ToBeVisibleAsync();
+        Assert.AreEqual(0, await page.Locator($"{custom} [data-region='toolbar']").CountAsync(), "the actions replace the Toolbar slot on a mobile shell");
+    }
     // ── Resizer + persistence (Q4) ──────────────────────────────────────────
 
     private const string StorageKey = "tempo.tm-editor-shell.editor-shell-demo";
