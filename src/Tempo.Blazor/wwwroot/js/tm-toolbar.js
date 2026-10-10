@@ -71,6 +71,7 @@ export function nextRovingIndex(count, current, key, rtl) {
 const CONTROL_SELECTOR = 'button.tm-toolbar-btn, button.tm-toolbar-more, [data-tm-toolbar-control]';
 // Controls that are not reachable: a collapsed bar copy (visibility:hidden) or anything inside the
 // open More menu / its panel (the menu has its own keyboard, tm-menu-nav.js).
+const COLLAPSED_SELECTOR = '.tm-toolbar-item--collapsed';
 const EXCLUDED_SELECTOR = '.tm-toolbar-item--collapsed, [role="menu"], .tm-overlay-panel';
 
 function isDisabled(control) {
@@ -91,68 +92,138 @@ function px(value) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+const DIVIDER = 'tm-toolbar-divider';
+const COLLAPSED = 'tm-toolbar-item--collapsed';
+const REDUNDANT = 'data-tm-divider-redundant';
+
+function isFlattened(child) {
+    const classes = child.classList;
+    if (classes?.contains('tm-toolbar-start') || classes?.contains('tm-toolbar-actions')) return true;
+    // A group wrapper (data-tm-toolbar-group, role="group" or ANY wrapper that holds items) is a layout box
+    // only: its children take the room. Registration is by the cascade at any depth, so measurement must
+    // see items at any depth too - otherwise a wrapped group looks like one fixed block with no items and
+    // the toolbar collapses everything into More forever.
+    if ('tmToolbarGroup' in (child.dataset ?? {})) return true;
+    return typeof child.querySelector === 'function' && child.querySelector(ITEM) !== null;
+}
+
 /**
- * Measures a bar (the .tm-toolbar element: its children are the start/actions containers and the
- * More trigger, and the containers' children are the buttons). The containers are flattened: only
- * their children take room. Items (data-tm-toolbar-item) are measured even when collapsed - a
- * collapsed button stays in the DOM out of flow and invisible precisely so its width is known.
- * Non-item children (title, divider, custom content) are fixed width including their margins;
- * out-of-flow ones (a popover panel) take no room. The More trigger is not an item: its real
- * width is used once it is rendered.
+ * Walks the bar in DOM order, flattening the start/actions containers and group wrappers.
+ * @param {Iterable<Element>} children the children of the bar
+ * @param {(child: Element, wrapper: boolean) => void} visit called for every leaf, and for every flattened wrapper (wrapper=true)
+ */
+function walk(children, visit) {
+    for (const child of Array.from(children)) {
+        if (isFlattened(child)) {
+            visit(child, true);
+            walk(child.children ?? [], visit);
+        } else {
+            visit(child, false);
+        }
+    }
+}
+
+/**
+ * Measures a bar (the .tm-toolbar element). The start/actions containers and any group wrapper are
+ * flattened: only their children take room (a wrapper's own padding and border count as fixed width).
+ * Items (data-tm-toolbar-item) are measured even when collapsed - a collapsed button stays in the DOM
+ * out of flow and invisible precisely so its width is known. Non-item children (title, divider, custom
+ * content) are fixed width including their margins; out-of-flow ones (a popover panel) take no room. The
+ * More trigger is not an item: its real width is used once it is rendered.
  * @param {HTMLElement} bar the toolbar row
- * @returns {{maxVisible:number, hasPinned:boolean, signature:string}}
+ * @returns {{maxVisible:number, hasPinned:boolean, signature:string|null, ids:string[], unmeasured:boolean}}
+ *   `ids` are the item ids in DOM order (the order of record, reported to .NET); `unmeasured` is true when
+ *   nothing could be measured (no items, or a bar with no width) - the caller must NOT report a fit then.
  */
 export function computeFit(bar) {
     const style = globalThis.getComputedStyle?.(bar);
     const gap = px(style?.columnGap) || px(style?.gap);
     const items = [];
+    const ids = [];
     let fixed = 0;
     let triggerWidth = DEFAULT_TRIGGER_WIDTH;
     let hasPinned = bar.dataset?.tmToolbarPinned === 'true';
 
-    const visit = children => {
-        for (const child of Array.from(children)) {
-            const classes = child.classList;
-            if (classes?.contains('tm-toolbar-start') || classes?.contains('tm-toolbar-actions')) {
-                visit(child.children ?? []);
-                continue;
-            }
-
-            if (classes?.contains('tm-toolbar-more')) {
-                if (child.offsetWidth > 0) triggerWidth = child.offsetWidth;
-                continue;
-            }
-
-            const data = child.dataset ?? {};
-            if ('tmToolbarItem' in data) {
-                if (data.pin === 'always') { hasPinned = true; continue; }
-                // Pinned (data-pin=never): never collapses, so it is plain fixed width on the bar.
-                if (data.pin === 'never') { fixed += outerWidth(child) + gap; continue; }
-                items.push({ width: outerWidth(child), rank: Number(data.rank) || 0 });
-                continue;
-            }
-
-            const childStyle = globalThis.getComputedStyle?.(child);
-            const position = childStyle?.position;
-            if (position === 'fixed' || position === 'absolute') continue;
-            if (child.offsetWidth > 0) fixed += outerWidth(child) + gap;
+    walk(bar.children, (child, wrapper) => {
+        const classes = child.classList;
+        if (wrapper) {
+            // start/actions carry no box of their own; a group wrapper may have padding/border.
+            const wrapperStyle = child.computed ?? globalThis.getComputedStyle?.(child);
+            fixed += px(wrapperStyle?.paddingLeft) + px(wrapperStyle?.paddingRight)
+                + px(wrapperStyle?.borderLeftWidth) + px(wrapperStyle?.borderRightWidth);
+            return;
         }
-    };
-    visit(bar.children);
+
+        if (classes?.contains('tm-toolbar-more')) {
+            if (child.offsetWidth > 0) triggerWidth = child.offsetWidth;
+            return;
+        }
+
+        const data = child.dataset ?? {};
+        if ('tmToolbarItem' in data) {
+            ids.push(String(data.tmToolbarItem));
+            if (data.pin === 'always') { hasPinned = true; return; }
+            // Pinned (data-pin=never): never collapses, so it is plain fixed width on the bar.
+            if (data.pin === 'never') { fixed += outerWidth(child) + gap; return; }
+            items.push({ width: outerWidth(child), rank: Number(data.rank) || 0 });
+            return;
+        }
+
+        const childStyle = globalThis.getComputedStyle?.(child);
+        const position = childStyle?.position;
+        if (position === 'fixed' || position === 'absolute') return;
+        if (child.offsetWidth > 0) fixed += outerWidth(child) + gap;
+    });
 
     const padding = px(style?.paddingLeft) + px(style?.paddingRight);
+    // Nothing measurable (no item in the DOM, or a bar that is not laid out - display:none, detached): a
+    // "0 fit" answer would collapse every button into More and never recover. Report nothing instead.
+    if (ids.length === 0 || !(bar.clientWidth > 0)) {
+        return { maxVisible: 0, hasPinned, signature: null, ids, unmeasured: true };
+    }
+
     const available = bar.clientWidth - padding - fixed;
     const maxVisible = chooseVisibleCount(items, available, gap, triggerWidth, hasPinned);
-    return { maxVisible, hasPinned, signature: `${maxVisible}|${items.length}|${hasPinned}` };
+    return { maxVisible, hasPinned, signature: `${maxVisible}|${items.length}|${hasPinned}|${ids.join(',')}`, ids, unmeasured: false };
 }
 
 function outerWidth(element) {
     const style = globalThis.getComputedStyle?.(element);
     return element.offsetWidth + px(style?.marginLeft) + px(style?.marginRight);
 }
-/** Stub (RED): marks dividers that separate nothing. */
-export function markRedundantDividers(bar) {}
 
+/**
+ * Marks the dividers that separate nothing with data-tm-divider-redundant (CSS hides them with
+ * visibility, so the measured width stays stable): a divider that is first/last among the visible
+ * content, or directly followed by another divider. The attribute is NOT observed (no mutation loop).
+ * @param {HTMLElement} bar the toolbar row
+ */
+export function markRedundantDividers(bar) {
+    const flow = [];
+    walk(bar.children, (child, wrapper) => {
+        if (wrapper) return;
+        const classes = child.classList;
+        if (classes?.contains('tm-toolbar-more')) return;
+        if (classes?.contains(DIVIDER)) { flow.push({ el: child, divider: true }); return; }
+        if (classes?.contains(COLLAPSED)) return;
+        const position = globalThis.getComputedStyle?.(child)?.position;
+        if (position === 'fixed' || position === 'absolute') return;
+        if (child.offsetWidth > 0) flow.push({ el: child, divider: false });
+    });
+
+    let seenContent = false;
+    for (let i = 0; i < flow.length; i++) {
+        const entry = flow[i];
+        if (!entry.divider) { seenContent = true; continue; }
+        const next = flow[i + 1];
+        const redundant = !seenContent || !next || next.divider;
+        if (redundant) {
+            if (!entry.el.hasAttribute(REDUNDANT)) entry.el.setAttribute(REDUNDANT, 'true');
+        } else if (entry.el.hasAttribute(REDUNDANT)) {
+            entry.el.removeAttribute(REDUNDANT);
+        }
+    }
+}
 const attached = new WeakMap();
 
 function refreshTabStops(state) {
@@ -173,13 +244,36 @@ function measure(state) {
     // The root IS the measured row; the selector exists so a host can point at an inner row.
     const bar = state.root.querySelector('[data-tm-toolbar-row]') ?? state.root;
     const fit = computeFit(bar);
+    if (fit.unmeasured) return;
+    markRedundantDividers(bar);
     if (fit.signature === state.lastSignature) return;
     state.lastSignature = fit.signature;
-    // Only the count crosses the interop boundary; C# decides which buttons leave
-    // (ToolbarOverflowLayout), so the ordering rule exists once.
+    // The count and the DOM order of the items cross the interop boundary; C# decides which buttons leave
+    // (ToolbarOverflowLayout, the shared partition) from that order, so the ordering rule exists once.
     try {
-        state.dotNetRef?.invokeMethodAsync('OnFitChanged', fit.maxVisible)?.catch(() => {});
+        state.dotNetRef?.invokeMethodAsync('OnFitChanged', fit.maxVisible, fit.ids)?.catch(() => {});
     } catch { /* the circuit is gone */ }
+}
+
+/**
+ * Focus never drops to <body> because the toolbar re-laid itself out: when the control that had focus
+ * collapsed into More (inert + hidden) or its menu item unmounted with the closing menu, hand focus to the More
+ * trigger, else to the last roving control. A focus that is still valid, or went elsewhere on purpose, is
+ * left alone.
+ */
+function restoreLostFocus(state) {
+    const last = state.lastFocus;
+    if (!last) return;
+    const doc = globalThis.document;
+    const active = doc?.activeElement;
+    if (active && active !== doc.body && active !== doc.documentElement) { state.lastFocus = null; return; }
+    const unreachable = last.isConnected === false || Boolean(last.closest?.(COLLAPSED_SELECTOR));
+    state.lastFocus = unreachable ? state.lastFocus : null;
+    if (!unreachable) return;
+    state.lastFocus = null;
+    const trigger = state.root.querySelector?.('button.tm-toolbar-more');
+    const target = trigger && !trigger.disabled ? trigger : (state.lastRoving?.isConnected !== false && !state.lastRoving?.closest?.(EXCLUDED_SELECTOR) ? state.lastRoving : rovingItems(state.root)[0]);
+    target?.focus?.();
 }
 
 function schedule(state) {
@@ -187,6 +281,10 @@ function schedule(state) {
     state.frame = globalThis.requestAnimationFrame(() => {
         state.frame = 0;
         if (state.disposed) return;
+        // The element left the document without a detach (a host that removed it, a lost circuit): let go of
+        // the observers and listeners instead of measuring a corpse every frame.
+        if (state.root.isConnected === false) { detach(state.root); return; }
+        restoreLostFocus(state);
         refreshTabStops(state);
         measure(state);
     });
@@ -228,15 +326,24 @@ export function attach(root, dotNetRef, options) {
         items[target].focus();
     };
     const onFocusIn = event => {
+        state.lastFocus = event.target;
         const items = rovingItems(root);
         if (!items.includes(event.target)) return;
+        state.lastRoving = event.target;
         for (const item of items) item.setAttribute('tabindex', item === event.target ? '0' : '-1');
+    };
+    const onFocusOut = event => {
+        // Focus moved to another element on purpose: never pull it back. (A null relatedTarget is a window blur
+        // or a focus fixup - the pass decides.)
+        if (event.relatedTarget) state.lastFocus = null;
     };
 
     root.addEventListener('keydown', onKeyDown);
     root.addEventListener('focusin', onFocusIn);
+    root.addEventListener('focusout', onFocusOut);
     state.onKeyDown = onKeyDown;
     state.onFocusIn = onFocusIn;
+    state.onFocusOut = onFocusOut;
 
     const schedulePass = () => schedule(state);
     if (state.options.overflow && typeof globalThis.ResizeObserver === 'function') {
@@ -249,7 +356,8 @@ export function attach(root, dotNetRef, options) {
         // Buttons come and go (a priority change, a conditional action): the roving set and the
         // measurement follow the DOM, coalesced into one frame.
         const mutation = new globalThis.MutationObserver(schedulePass);
-        mutation.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'disabled', 'data-rank', 'data-pin'] });
+        // data-tm-divider-redundant is deliberately NOT in the filter: the measurement sets it (no loop).
+        mutation.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'disabled', 'data-rank', 'data-pin'] });
         state.observers.push(mutation);
     }
 
@@ -271,6 +379,7 @@ export function detach(root) {
     state.frame = 0;
     root.removeEventListener('keydown', state.onKeyDown);
     root.removeEventListener('focusin', state.onFocusIn);
+    root.removeEventListener('focusout', state.onFocusOut);
     for (const control of Array.from(root.querySelectorAll(CONTROL_SELECTOR))) control.removeAttribute('tabindex');
     attached.delete(root);
 }

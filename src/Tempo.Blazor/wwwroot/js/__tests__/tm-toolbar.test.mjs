@@ -476,8 +476,8 @@ test('H2 a data-tm-toolbar-group wrapper is flattened like start/actions and col
 test('H2 an unmarked wrapper with items is flattened and its own padding counts as fixed width', () => {
     const bar = stubBar([
         wrapper([child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], { width: 150, padding: 20 }),
-    ], 150);
-    // buttons 50 + 8 + 50 = 108; wrapper padding 40 + one gap 8 = 48 fixed -> 108 > 150 - 48 = 102 -> one leaves: 50 + 8 + 44 = 102 <= 102.
+    ], 142);
+    // buttons 50 + 8 + 50 = 108; the wrapper's padding (40) is fixed -> 108 > 142 - 40 = 102 -> one leaves: 50 + 8 + 44 = 102 <= 102.
     assert.equal(computeFit(bar).maxVisible, 1);
 });
 

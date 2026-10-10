@@ -116,8 +116,8 @@
     internal void Register(TmToolbarButton button)
     {
         if (_disposed || _buttons.Contains(button)) return;
-        // Registration order is the written order of the initial render; a button added later joins
-        // at the end (the menu mirrors that order).
+        // Registration order is only the provisional order: a button added later joins at the end until
+        // tm-toolbar.js reports the DOM order (OnFitChanged), which is the order of record.
         _buttons.Add(button);
         Recompute();
     }
@@ -149,16 +149,32 @@
     }
 
     /// <summary>
-    /// Called by tm-toolbar.js when the number of collapsible buttons that fit changes. Only the count
-    /// crosses the interop boundary; which buttons leave is decided here (ToolbarOverflowLayout).
+    /// Called by tm-toolbar.js when the number of collapsible buttons that fit - or the DOM order of the
+    /// buttons - changes. The count and the item ids in DOM order cross the interop boundary; which buttons
+    /// leave is decided here (ToolbarOverflowLayout), over the DOM order (menu order and tie-break follow it).
     /// </summary>
     /// <param name="maxVisible">How many collapsible buttons stay on the bar.</param>
+    /// <param name="orderedIds">The item ids (<c>data-tm-toolbar-item</c>) in DOM order.</param>
     [JSInvokable]
     public Task OnFitChanged(int maxVisible, string[]? orderedIds = null)
     {
-        if (_maxVisible == maxVisible) return Task.CompletedTask;
+        var reordered = ApplyDomOrder(orderedIds);
+        if (_maxVisible == maxVisible && !reordered) return Task.CompletedTask;
         _maxVisible = maxVisible;
         return InvokeAsync(() => Recompute());
+    }
+
+    /// <summary>Re-sorts the registered buttons to the DOM order JS reported; ids it does not know keep their relative place at the end.</summary>
+    private bool ApplyDomOrder(string[]? orderedIds)
+    {
+        if (orderedIds is null || orderedIds.Length == 0) return false;
+        var position = new Dictionary<string, int>(orderedIds.Length, StringComparer.Ordinal);
+        for (var i = 0; i < orderedIds.Length; i++) position.TryAdd(orderedIds[i], i);
+        var sorted = _buttons.OrderBy(button => position.TryGetValue(button.MenuId, out var index) ? index : int.MaxValue).ToList();
+        if (sorted.SequenceEqual(_buttons)) return false;
+        _buttons.Clear();
+        _buttons.AddRange(sorted);
+        return true;
     }
 
     private void Recompute(bool refreshAll = false)

@@ -16,7 +16,7 @@
             disabled="@Disabled"
             inert="@Collapsed"
             aria-hidden="@(Collapsed ? "true" : null)"
-            data-tm-toolbar-item="@(Registered ? "" : null)"
+            data-tm-toolbar-item="@(Registered ? MenuId : null)"
             data-rank="@(Registered ? Rank.ToString() : null)"
             data-pin="@(Registered ? (Priority == ToolbarButtonPriority.Pinned ? "never" : "auto") : null)"
             @attributes="AdditionalAttributes"

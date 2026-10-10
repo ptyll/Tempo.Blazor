@@ -97,6 +97,13 @@
   visibility: hidden;
 }
 
+/* H4: tm-toolbar.js marks a divider that separates nothing (first/last among the visible content, or directly
+   followed by another divider - e.g. "Pan | | Find" at 390). visibility keeps its box, so the measured fixed width
+   stays stable and the fit cannot oscillate; display:none would feed back into the measurement. */
+.tm-toolbar-divider[data-tm-divider-redundant] {
+  visibility: hidden;
+}
+
 /* The More trigger shares the button look. */
 .tm-toolbar-more {
   display: inline-flex; align-items: center; justify-content: center;
