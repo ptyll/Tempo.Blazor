@@ -31,6 +31,19 @@
       "description": "Overflow rank ONLY — it never changes the render order. The bar and the \"More\" menu render in the order of Items; the items beyond the visible budget move into the menu by ascending priority (the lowest priority overflows first, ties drop the last item first). Disabled items still count towards the budget."
     },
     {
+      "name": "Overflow",
+      "type": "ActionOverflow",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Pins the item to the surface or to the overflow menu independently of Priority: Never keeps it on the surface (it counts against the visible budget), Always puts it in the \"More\" menu even when the budget would show it (it does not count), Auto (default) lets the budget and the Priority rank decide."
+    },
+    {
+      "name": "Danger",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Marks a destructive action. The overflow menu tints the entry with the danger colour so a destructive item keeps its meaning when it leaves the surface."
+    },    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,

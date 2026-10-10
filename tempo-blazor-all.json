@@ -3951,6 +3951,30 @@
           ]
         },
         {
+          "itemName": "ActionOverflow",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Actions",
+          "description": "Whether an action surface (TmMobileActionBar, TmToolbar) may move a TmActionItem into its overflow (\"More\") menu. The pin is independent of Priority: Priority ranks the Auto items against each other, the pin removes an item from that contest.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Actions/ActionOverflow.cs",
+          "documentationStatus": "merged",
+          "values": [
+            {
+              "name": "Auto",
+              "description": "The default: the item stays visible while the budget allows and overflows by Priority rank."
+            },
+            {
+              "name": "Never",
+              "description": "The item never overflows. It counts against the visible budget but is never chosen to leave the surface."
+            },
+            {
+              "name": "Always",
+              "description": "The item is always in the overflow menu, whatever the budget — never rendered on the surface itself."
+            }
+          ]
+        },
+        {
           "itemName": "AlertSeverity",
           "kind": "Enum",
           "category": "Components",
@@ -6257,6 +6281,12 @@
           "documentationStatus": "merged",
           "members": [
             {
+              "name": "Danger",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Marks a destructive action. The overflow menu tints the entry with the danger colour so a destructive item keeps its meaning when it leaves the surface."
+            },
+            {
               "name": "Disabled",
               "kind": "Property",
               "type": "bool",
@@ -6293,6 +6323,12 @@
               "description": "The action itself. Invoked exactly once per user activation. Create the callback with EventCallback.Factory.Create(this, …) — the receiver is the owning component, so its markup re-renders automatically when the action mutates state (e.g. opens a sibling dialog); a default (empty) callback is a no-op."
             },
             {
+              "name": "Overflow",
+              "kind": "Property",
+              "type": "ActionOverflow",
+              "description": "Pins the item to the surface or to the overflow menu, independently of Priority: Never keeps it on the surface, Always puts it in the \"More\" menu even when the budget would show it, Auto (default) lets the budget and the priority rank decide. Never-pinned items count against the visible budget; always-pinned items do not."
+            },
+            {
               "name": "Priority",
               "kind": "Property",
               "type": "int",
@@ -6324,6 +6360,20 @@
               "isRequired": false,
               "default": "0",
               "description": "Overflow rank ONLY — it never changes the render order. The bar and the \"More\" menu render in the order of Items; the items beyond the visible budget move into the menu by ascending priority (the lowest priority overflows first, ties drop the last item first). Disabled items still count towards the budget."
+            },
+            {
+              "name": "Overflow",
+              "type": "ActionOverflow",
+              "isRequired": false,
+              "default": "Auto",
+              "description": "Pins the item to the surface or to the overflow menu independently of Priority: Never keeps it on the surface (it counts against the visible budget), Always puts it in the \"More\" menu even when the budget would show it (it does not count), Auto (default) lets the budget and the Priority rank decide."
+            },
+            {
+              "name": "Danger",
+              "type": "bool",
+              "isRequired": false,
+              "default": "false",
+              "description": "Marks a destructive action. The overflow menu tints the entry with the danger colour so a destructive item keeps its meaning when it leaves the surface."
             },
             {
               "name": "Disabled",
@@ -26191,12 +26241,12 @@
         }
       ],
       "summary": {
-        "itemCount": 361,
-        "manualItemCount": 361,
-        "generatedItemCount": 353,
+        "itemCount": 362,
+        "manualItemCount": 362,
+        "generatedItemCount": 354,
         "generatedOnlyItemCount": 0,
         "componentCount": 201,
-        "publicApiTypeCount": 152
+        "publicApiTypeCount": 153
       }
     },
     {
@@ -111835,10 +111885,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3187,
-    "manualItemCount": 3187,
+    "itemCount": 3188,
+    "manualItemCount": 3188,
     "generatedOnlyItemCount": 0,
     "componentCount": 472,
-    "publicApiTypeCount": 2662
+    "publicApiTypeCount": 2663
   }
 }
