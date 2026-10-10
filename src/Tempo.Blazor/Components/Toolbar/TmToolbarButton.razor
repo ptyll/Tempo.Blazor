@@ -7,7 +7,14 @@
    Priority (rendered collapsed - out of flow, invisible, inert - so its width stays measurable),
    OverflowOnly buttons render only in the menu, and Labels decides the visible text. Standalone it
    behaves exactly like the pre-F4 button. *@
-@if (!OmittedFromBar)
+@if (OmittedFromBar)
+{
+    @* Zero-width, hidden, not a control: only its data-tm-toolbar-item id travels to tm-toolbar.js, which
+       reports it in DOM order (data-pin=always: recorded, never measured), so the menu keeps the button's
+       written slot instead of pushing it to the end. *@
+    <span hidden data-tm-toolbar-item="@MenuId" data-pin="always"></span>
+}
+else
 {
     <button type="button"
             class="tm-toolbar-btn tm-toolbar-btn--@Variant.ToString().ToLowerInvariant() @ModifierClasses"
