@@ -18208,7 +18208,7 @@
           "name": "LeftWidthChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised with the new \"NNNpx\" width when the user resizes the left panel (pointer drag or keyboard on its separator)."
+          "description": "Raised with the new \"NNNpx\" width when the user resizes the left panel (pointer drag or keyboard on its separator) and when a persisted width is restored on load (a restore counts as a user value)."
         },
         {
           "name": "MaxLeftWidth",
@@ -18275,7 +18275,7 @@
           "name": "PersistWidthsKey",
           "type": "string?",
           "isRequired": false,
-          "description": "When set, panel widths the USER resized persist to (and restore from) localStorage under this key. Stored values are validated against the min/max widths; a width the host supplies explicitly after a user resize wins."
+          "description": "When set, panel widths the USER resized persist to (and restore from) localStorage under this key. Only user-resized widths are stored (with the host width they were resized from); stored values are validated against the min/max widths and apply only while the host supplies that same width; a width the host supplies explicitly after a user resize wins. A restored width is reported through LeftWidthChanged/RightWidthChanged; a key set after the first render or changed later is loaded when it changes."
         },
         {
           "name": "ResolvedLayoutChanged",
@@ -18325,7 +18325,7 @@
           "name": "RightWidthChanged",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised with the new \"NNNpx\" width when the user resizes the right panel."
+          "description": "Raised with the new \"NNNpx\" width when the user resizes the right panel, and when a persisted width is restored on load."
         },
         {
           "name": "StatusBar",
