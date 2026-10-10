@@ -21,6 +21,7 @@ public class TmMobileActionBarTests : LocalizationTestBase
         string? icon = null,
         bool disabled = false,
         bool keepMenuOpen = false,
+        ActionOverflow overflow = ActionOverflow.Auto,
         EventCallback? onClick = null)
         => new()
         {
@@ -30,6 +31,7 @@ public class TmMobileActionBarTests : LocalizationTestBase
             Priority = priority,
             Disabled = disabled,
             KeepMenuOpen = keepMenuOpen,
+            Overflow = overflow,
             OnClick = onClick ?? default,
         };
 
@@ -60,6 +62,42 @@ public class TmMobileActionBarTests : LocalizationTestBase
         menuItems.Select(i => i.TextContent.Trim()).Should().Equal("Four", "Five");
     }
 
+    [Fact]
+    public void AlwaysPinnedItem_IsInTheMoreMenu_EvenWithinTheBudget()
+    {
+        // F4: the pin is shared with the toolbar overflow — a bar honours it too.
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                Action("One"),
+                Action("Hidden", overflow: ActionOverflow.Always),
+                Action("Two"),
+            }));
+
+        cut.FindAll(".tm-mobile-action-bar__action").Select(b => b.GetAttribute("data-action-id"))
+            .Should().Equal("One", "Two");
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.FindAll("[role='menuitem']").Select(i => i.GetAttribute("data-action-id"))
+            .Should().Equal("Hidden");
+    }
+
+    [Fact]
+    public void NeverPinnedItem_StaysOnTheBar_WhateverItsPriority()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.MaxVisible, 2)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                Action("Low", priority: 0, overflow: ActionOverflow.Never),
+                Action("Mid", priority: 5),
+                Action("High", priority: 9),
+            }));
+
+        cut.FindAll(".tm-mobile-action-bar__action").Select(b => b.GetAttribute("data-action-id"))
+            .Should().Equal("Low", "High");
+    }
     [Fact]
     public void NoOverflow_RendersNoMoreButton()
     {

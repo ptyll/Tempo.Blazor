@@ -23,6 +23,19 @@ internal static class ActionOverflowLayout
         => Partition(items, maxVisible, static item => item.Priority);
 
     /// <summary>
+    /// The pin-aware partition (F4): <see cref="ActionOverflow.Always"/> items are always in the
+    /// overflow list and never count against <paramref name="maxVisible"/>;
+    /// <see cref="ActionOverflow.Never"/> items are always visible and count against it (the
+    /// remaining budget — never below zero — is what the <see cref="ActionOverflow.Auto"/> items
+    /// share, ranked like the plain overload). Both lists keep the Items order.
+    /// </summary>
+    public static (IReadOnlyList<T> Visible, IReadOnlyList<T> Overflow) Partition<T>(
+        IReadOnlyList<T> items,
+        int maxVisible,
+        Func<T, int> rank,
+        Func<T, ActionOverflow> pin)
+        => throw new NotImplementedException();
+    /// <summary>
     /// The generic partition (Y10, review round 2): the ordering rules — visible budget,
     /// ascending rank overflows first, ties drop the last item, both lists keep the Items order —
     /// in one implementation any action surface ranks its own item type through. The

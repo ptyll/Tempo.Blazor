@@ -136,4 +136,99 @@ public class ActionOverflowLayoutTests
         visible.Select(i => i.Id).Should().Equal("b", "c");
         overflow.Select(i => i.Id).Should().Equal("a");
     }
+
+    // ── F4: the Overflow pins (Auto / Never / Always) ────────────────────────────────────────
+
+    private static TmActionItem Pinned(string id, ActionOverflow pin, int priority = 0)
+        => new() { Id = id, Label = id, Priority = priority, Overflow = pin };
+
+    [Fact]
+    public void Partition_AlwaysItems_AreInTheOverflowWhateverTheBudget()
+    {
+        var items = Items(Item("a", 10), Pinned("b", ActionOverflow.Always, 100), Item("c", 5));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 10);
+
+        visible.Select(i => i.Id).Should().Equal("a", "c");
+        overflow.Select(i => i.Id).Should().Equal("b");
+    }
+
+    [Fact]
+    public void Partition_AlwaysItems_DoNotCountAgainstTheVisibleBudget()
+    {
+        // Budget 2: a and c fit although the Always item sits between them.
+        var items = Items(Item("a", 1), Pinned("x", ActionOverflow.Always), Item("c", 2));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 2);
+
+        visible.Select(i => i.Id).Should().Equal("a", "c");
+        overflow.Select(i => i.Id).Should().Equal("x");
+    }
+
+    [Fact]
+    public void Partition_NeverItems_StayVisible_AndCountAgainstTheBudget()
+    {
+        // The Never item has the LOWEST priority (it would overflow first) yet stays; with a
+        // budget of 2 it leaves room for exactly one Auto item — the higher priority one.
+        var items = Items(Pinned("keep", ActionOverflow.Never, priority: 0), Item("a", 5), Item("b", 9));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 2);
+
+        visible.Select(i => i.Id).Should().Equal("keep", "b");
+        overflow.Select(i => i.Id).Should().Equal("a");
+    }
+
+    [Fact]
+    public void Partition_NeverItems_ExceedingTheBudget_AllStayVisible_AndEveryAutoOverflows()
+    {
+        var items = Items(
+            Pinned("n1", ActionOverflow.Never), Pinned("n2", ActionOverflow.Never), Item("a", 50));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 1);
+
+        visible.Select(i => i.Id).Should().Equal("n1", "n2");
+        overflow.Select(i => i.Id).Should().Equal("a");
+    }
+
+    [Fact]
+    public void Partition_MixedPins_PreserveItemsOrder_InBothLists()
+    {
+        var items = Items(
+            Item("a", 1), Pinned("b", ActionOverflow.Always), Pinned("c", ActionOverflow.Never),
+            Item("d", 7), Item("e", 3), Pinned("f", ActionOverflow.Always));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 3);
+
+        // Budget 3: c (Never) + the two best Auto items by rank (d=7, e=3); a (1) overflows.
+        visible.Select(i => i.Id).Should().Equal("c", "d", "e");
+        overflow.Select(i => i.Id).Should().Equal("a", "b", "f");
+    }
+
+    [Fact]
+    public void Partition_AutoOnly_IsUnchangedByThePinOverload()
+    {
+        var items = Items(Item("a", 0), Item("b", 10), Item("c", 5), Item("d", 5));
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(items, maxVisible: 2);
+
+        visible.Select(i => i.Id).Should().Equal("b", "c");
+        overflow.Select(i => i.Id).Should().Equal("a", "d");
+    }
+
+    [Fact]
+    public void Partition_GenericPinSelector_AppliesTheSamePinRules()
+    {
+        var items = new[]
+        {
+            (Id: "a", Rank: 1, Pin: ActionOverflow.Auto),
+            (Id: "b", Rank: 9, Pin: ActionOverflow.Always),
+            (Id: "c", Rank: 0, Pin: ActionOverflow.Never),
+        };
+
+        var (visible, overflow) = ActionOverflowLayout.Partition(
+            items, maxVisible: 1, rank: static i => i.Rank, pin: static i => i.Pin);
+
+        visible.Select(i => i.Id).Should().Equal("c");
+        overflow.Select(i => i.Id).Should().Equal("a", "b");
+    }
 }

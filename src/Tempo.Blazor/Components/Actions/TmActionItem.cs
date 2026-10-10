@@ -30,6 +30,21 @@ public sealed class TmActionItem
     /// </summary>
     public int Priority { get; set; }
 
+    /// <summary>
+    /// Pins the item to the surface or to the overflow menu, independently of
+    /// <see cref="Priority"/>: <see cref="ActionOverflow.Never"/> keeps it on the surface,
+    /// <see cref="ActionOverflow.Always"/> puts it in the "More" menu even when the budget would
+    /// show it, <see cref="ActionOverflow.Auto"/> (default) lets the budget and the priority rank
+    /// decide. Never-pinned items count against the visible budget; always-pinned items do not.
+    /// </summary>
+    public ActionOverflow Overflow { get; set; }
+
+    /// <summary>
+    /// Marks a destructive action. The overflow menu tints the entry with the danger colour so a
+    /// destructive item keeps its meaning when it leaves the surface.
+    /// </summary>
+    public bool Danger { get; set; }
+
     /// <summary>Disables the action. Disabled items render as disabled buttons/menuitems.</summary>
     public bool Disabled { get; set; }
 
