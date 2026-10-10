@@ -999,6 +999,29 @@ public class EditorShellE2ETests : WasmTestBase
     // ── Side panel ──────────────────────────────────────────────────────────
 
     [TestMethod]
+    public async Task SidePanel_1440_DemoExposesTheFooterSlot_AndTheLeftSide()
+    {
+        // F6 r2 G13: FooterContent and Side=Left are demonstrated, so they can be verified live.
+        var context = await CreateTouchContextAsync(1440, 900);
+        var page = await GotoEditorShellAsync(context, 1440, 900);
+        RegisterContext(context);
+
+        var panel = page.Locator("[data-testid='side-panel'].tm-side-panel--docked");
+        await Assertions.Expect(panel).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+        var footer = panel.Locator(".tm-side-panel__footer");
+        await Assertions.Expect(footer).ToBeVisibleAsync();
+        Assert.IsTrue(await footer.Locator("button").CountAsync() >= 2, "the footer hosts Apply / Cancel actions");
+        Assert.AreEqual("right", await panel.GetAttributeAsync("data-side"));
+
+        await page.Locator("[data-testid='side-panel-side-toggle']").ClickAsync();
+
+        var left = page.Locator("[data-testid='side-panel'].tm-side-panel--docked");
+        await Assertions.Expect(left).ToHaveAttributeAsync("data-side", "left");
+        var panelBox = (await left.BoundingBoxAsync())!;
+        var contentBox = (await page.Locator(".es-side-panel-host__content").BoundingBoxAsync())!;
+        Assert.IsTrue(panelBox.X < contentBox.X, "the Left side panel sits before the content");
+    }
+    [TestMethod]
     public async Task SidePanel_1440_Docked_BelowDesktop_Sheet()
     {
         var context = await CreateTouchContextAsync(1440, 900);
