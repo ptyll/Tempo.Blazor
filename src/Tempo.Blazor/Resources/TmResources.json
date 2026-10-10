@@ -80,6 +80,7 @@
   "TmOverlayPanel_SheetFallback": "Menu",
   "TmMobileActionBar_AriaLabel": "Action bar",
   "TmMobileActionBar_More": "More",
+  "TmToolbar_AriaLabel": "Toolbar",
   "TmMobileActionBarDemo_Title": "Mobile action bar",
   "TmMobileActionBarDemo_Intro": "A component-scoped action bar: up to three actions stay on the bar, the rest overflow into a More menu. Resize the window below 640 px (or open this page on a phone) and the bar appears; above the breakpoint it does not exist.",
   "TmMobileActionBarDemo_AutoTitle": "Auto visibility, sticky in the container",

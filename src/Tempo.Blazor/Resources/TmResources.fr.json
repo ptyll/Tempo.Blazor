@@ -80,6 +80,7 @@
   "TmOverlayPanel_SheetFallback": "Menu",
   "TmMobileActionBar_AriaLabel": "Barre d'actions",
   "TmMobileActionBar_More": "Plus",
+  "TmToolbar_AriaLabel": "Barre d'outils",
   "TmMobileActionBarDemo_Title": "Barre d'actions mobile",
   "TmMobileActionBarDemo_Intro": "Une barre d'actions propre au composant : trois actions au maximum restent sur la barre, les autres passent dans le menu Plus. Réduisez la fenêtre sous 640 px (ou ouvrez la page sur un téléphone) et la barre apparaît ; au-dessus du point de rupture, elle n'existe pas.",
   "TmMobileActionBarDemo_AutoTitle": "Visibilité automatique, collée au conteneur",

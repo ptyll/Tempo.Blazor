@@ -80,6 +80,7 @@
   "TmOverlayPanel_SheetFallback": "Nabídka",
   "TmMobileActionBar_AriaLabel": "Panel akcí",
   "TmMobileActionBar_More": "Více",
+  "TmToolbar_AriaLabel": "Nástroje",
   "TmMobileActionBarDemo_Title": "Mobilní panel akcí",
   "TmMobileActionBarDemo_Intro": "Panel akcí patřící komponentě: nejvýše tři akce zůstanou na panelu, ostatní přejdou do nabídky Více. Zmenšete okno pod 640 px (nebo si stránku otevřete v telefonu) a panel se objeví; nad bodem zlomu neexistuje.",
   "TmMobileActionBarDemo_AutoTitle": "Automatická viditelnost, přichycený v kontejneru",
