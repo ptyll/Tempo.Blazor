@@ -161,6 +161,16 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
             @"\.tm-toolbar-divider:[^{]*\{[^}]*display:\s*none",
             "display:none would feed back into the measurement");
     }
+    [Fact]
+    public void Ribbon_LabelBelowTiles_AreRoomyAndDividersSpanTheTileHeight()
+    {
+        // UX review vs diagram-editor--tablet.png: ribbon tiles have a roomy hit area (space-2 / space-3
+        // padding, not the 4px/8px of an inline button) and the group dividers run the tile's height.
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(@"\.tm-toolbar-btn--label-below\s*\{[^}]*padding:\s*var\(--tm-space-2\)\s+var\(--tm-space-3\)");
+        css.Should().MatchRegex(@"\.tm-toolbar:has\(\.tm-toolbar-btn--label-below\)\s+\.tm-toolbar-divider\s*\{[^}]*height:\s*2\.5rem");
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
