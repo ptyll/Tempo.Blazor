@@ -269,3 +269,74 @@ test('H16c without a dotNetRef (sheet / trap) nothing is wired, and detach remov
     detach(e2.m);
     assert.equal(e2.anchorListeners.size, 0);
 });
+
+// ── Review round 2 (I2): re-opening on the same trigger must not stack listeners ─────────────
+
+function multiAnchor() {
+    const listeners = [];
+    const anchor = {
+        contains: el => el === anchor,
+        addEventListener(type, fn, capture) { listeners.push({ type, fn, capture: Boolean(capture) }); },
+        removeEventListener(type, fn, capture) {
+            const index = listeners.findIndex(l => l.type === type && l.fn === fn && l.capture === Boolean(capture));
+            if (index >= 0) listeners.splice(index, 1);
+        },
+        fire(type, event) { for (const l of [...listeners]) if (l.type === type) l.fn(event); },
+        count: type => listeners.filter(l => l.type === type).length,
+    };
+    return anchor;
+}
+
+function openMenu(anchor, dotNet) {
+    const inside = item('A');
+    const m = stubMenu([inside]);
+    m.contains = el => el === inside || el === m;
+    attach(m, dotNet, anchor);
+    return { m, inside };
+}
+
+test('I2 re-opening on the same trigger leaves exactly one keydown and one focusout listener on it', () => {
+    const calls = [];
+    const dotNet = { invokeMethodAsync: (...a) => { calls.push(a); return Promise.resolve(true); } };
+    const anchor = multiAnchor();
+    openMenu(anchor, dotNet);
+    openMenu(anchor, dotNet); // the first menu unmounted without a detach call
+    openMenu(anchor, dotNet);
+    assert.equal(anchor.count('keydown'), 1);
+    assert.equal(anchor.count('focusout'), 1);
+});
+
+test('I2 after a re-open, Tab from the trigger INTO the new menu does not dismiss it', () => {
+    const calls = [];
+    const dotNet = { invokeMethodAsync: (...a) => { calls.push(a); return Promise.resolve(true); } };
+    const anchor = multiAnchor();
+    openMenu(anchor, dotNet);
+    const second = openMenu(anchor, dotNet);
+    anchor.fire('keydown', tab(anchor));
+    anchor.fire('focusout', { target: anchor, relatedTarget: second.inside });
+    assert.deepEqual(calls, []);
+});
+
+test('I2 a Tab from the trigger to the outside still dismisses the CURRENT menu after re-opens', () => {
+    const calls = [];
+    const dotNet = { invokeMethodAsync: (...a) => { calls.push(a); return Promise.resolve(true); } };
+    const anchor = multiAnchor();
+    openMenu(anchor, dotNet);
+    openMenu(anchor, dotNet);
+    anchor.fire('keydown', tab(anchor));
+    anchor.fire('focusout', { target: anchor, relatedTarget: { tagName: 'INPUT' } });
+    assert.deepEqual(calls, [['NotifyDismissedAsync', 'focus-out']]);
+});
+
+test('I2 a registration whose menu is gone dismisses nothing and removes its own trigger listeners', () => {
+    const calls = [];
+    const dotNet = { invokeMethodAsync: (...a) => { calls.push(a); return Promise.resolve(true); } };
+    const anchor = multiAnchor();
+    const { m } = openMenu(anchor, dotNet);
+    m.isConnected = false; // the popover closed and its element was removed
+    anchor.fire('keydown', tab(anchor));
+    anchor.fire('focusout', { target: anchor, relatedTarget: { tagName: 'INPUT' } });
+    assert.deepEqual(calls, [], 'a closed menu must not be dismissed again');
+    assert.equal(anchor.count('keydown'), 0);
+    assert.equal(anchor.count('focusout'), 0);
+});
