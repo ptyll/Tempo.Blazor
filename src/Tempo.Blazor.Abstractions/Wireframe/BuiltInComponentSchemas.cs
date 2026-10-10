@@ -1654,6 +1654,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title",  "Title",  PropType.String, "",    cat: "Content"),
                 P("sticky", "Sticky", PropType.Bool,   false, cat: "Appearance"),
+                P("overflow", "Overflow menu", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 
@@ -1665,6 +1666,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("label",    "Label",    PropType.String, "Action", cat: "Content"),
                 P("icon",     "Icon",     PropType.Icon,             cat: "Content"),
+                P("labelPosition", "Label position", PropType.Enum, "inline", cat: "Appearance",
+                    opts: ["inline","below","hidden"]),
                 P("disabled", "Disabled", PropType.Bool,   false,    cat: "Behavior"),
             ]
         };
