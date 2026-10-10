@@ -718,4 +718,78 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         Assert.IsTrue(fixedWidth > 200, $"with the host fix (flex: 1 1 auto; min-width: 0) the toolbar has room ({fixedWidth}px)");
         Assert.IsTrue(plainWidth < fixedWidth, $"without it the size container collapses toward zero intrinsic width ({plainWidth}px < {fixedWidth}px) - the documented breaking change");
     }
+
+    [TestMethod]
+    public async Task H16_AFocusedBarButtonThatCollapses_HandsFocusToTheMoreTrigger_NotBody()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-1100");
+        var bar = Bar(page, "toolbar-overflow-1100");
+        var paste = bar.Locator("button.tm-toolbar-btn", new LocatorLocatorOptions { HasTextString = "Paste" });
+        await paste.FocusAsync();
+        Assert.IsTrue(await paste.EvaluateAsync<bool>("el => el === document.activeElement"));
+
+        await page.SetViewportSizeAsync(520, 900);
+        await SettleAsync(page, "toolbar-overflow-1100");
+
+        Assert.IsTrue(await paste.EvaluateAsync<bool>("el => el.classList.contains('tm-toolbar-item--collapsed')"), "Paste (Secondary) collapsed at 520px");
+        var active = await page.EvaluateAsync<string>("() => document.activeElement?.classList.contains('tm-toolbar-more') ? 'more' : (document.activeElement?.tagName ?? 'none')");
+        Assert.AreEqual("more", active, "focus moved to the More trigger instead of dropping to <body>");
+    }
+
+    [TestMethod]
+    public async Task H16_TabOutOfAnOpenPopoverMenu_ClosesIt_AndAriaExpandedFollows()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // The popover is not in the tab order of the page after the menu: Tab moves focus out of menu AND trigger.
+        await page.Keyboard.PressAsync("Tab");
+
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        Assert.AreEqual("false", await trigger.GetAttributeAsync("aria-expanded"), "aria-expanded follows the dismissal");
+    }
+
+    [TestMethod]
+    public async Task H10_SplitButtonAndContextMenu_OpenedFromTheKeyboard_FocusTheirFirstItem_AndReturnFocusOnActivation()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
+            IgnoreHTTPSErrors = true,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/feedback", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
+        await WaitForAppReadyAsync(page);
+
+        var split = page.Locator(".tm-split-button__toggle").First;
+        await split.ScrollIntoViewIfNeededAsync();
+        await page.WaitForTimeoutAsync(1200);
+        await split.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menu]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Save as Draft", await page.EvaluateAsync<string>("() => document.activeElement.textContent.trim()"), "split button: first item focused on open");
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        var trigger = page.Locator(".tm-context-menu__trigger").First;
+        await trigger.ScrollIntoViewIfNeededAsync();
+        await page.WaitForTimeoutAsync(1200);
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menu]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Edit", await page.EvaluateAsync<string>("() => document.activeElement.textContent.trim()"), "context menu: first item focused on open");
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        await page.WaitForFunctionAsync("() => document.activeElement?.closest('.tm-context-menu__trigger') !== null", null, new PageWaitForFunctionOptions { Timeout = 5000 });
+    }
 }

@@ -266,7 +266,12 @@ function restoreLostFocus(state) {
     if (!last) return;
     const doc = globalThis.document;
     const active = doc?.activeElement;
-    if (active && active !== doc.body && active !== doc.documentElement) { state.lastFocus = null; return; }
+    if (active && active !== doc.body && active !== doc.documentElement) {
+        // Focus is somewhere real: keep following it while it is inside the bar (the next pass may collapse it),
+        // forget it once it left the toolbar on purpose.
+        state.lastFocus = state.root.contains?.(active) === true ? active : null;
+        return;
+    }
     const unreachable = last.isConnected === false || Boolean(last.closest?.(COLLAPSED_SELECTOR));
     state.lastFocus = unreachable ? state.lastFocus : null;
     if (!unreachable) return;

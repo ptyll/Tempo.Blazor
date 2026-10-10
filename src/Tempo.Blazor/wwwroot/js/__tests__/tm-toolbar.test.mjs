@@ -229,6 +229,7 @@ function installToolbar(controls, { width = 400, overflow = true, rtl = false, i
         isConnected: true,
         querySelector: selector => (selector === '[data-tm-toolbar-row]' ? bar : (/tm-toolbar-more/.test(selector) ? (root.moreTrigger ?? null) : null)),
         querySelectorAll: () => controls,
+        contains: el => controls.includes(el),
         addEventListener(type, fn) { listeners.set(type, fn); },
         removeEventListener(type) { listeners.delete(type); },
         fire(type, event) { listeners.get(type)?.(event); },
