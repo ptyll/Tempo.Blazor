@@ -304,13 +304,13 @@
     /// <summary>Width of the left panel (a docked column on desktop and tablet). A CSS pixel length, default 280px. Two-way with <see cref="LeftWidthChanged"/>: a user resize raises the callback with the new "NNNpx" value.</summary>
     [Parameter] public string LeftWidth { get; set; } = "280px";
 
-    /// <summary>Raised when the user resizes the left panel (pointer drag or keyboard on its separator).</summary>
+    /// <summary>Raised when the user resizes the left panel (pointer drag or keyboard on its separator) and when a persisted width is restored on load.</summary>
     [Parameter] public EventCallback<string> LeftWidthChanged { get; set; }
 
     /// <summary>Width of the right panel (a docked column on desktop and tablet). A CSS pixel length, default 320px. Two-way with <see cref="RightWidthChanged"/>.</summary>
     [Parameter] public string RightWidth { get; set; } = "320px";
 
-    /// <summary>Raised when the user resizes the right panel (pointer drag or keyboard on its separator).</summary>
+    /// <summary>Raised when the user resizes the right panel (pointer drag or keyboard on its separator) and when a persisted width is restored on load.</summary>
     [Parameter] public EventCallback<string> RightWidthChanged { get; set; }
 
     /// <summary>Smallest width, in CSS pixels, the left panel can be resized to. Default 200.</summary>
@@ -357,10 +357,14 @@
     [Parameter] public RenderFragment? RightRail { get; set; }
 
     /// <summary>
-    /// When set, the effective panel widths persist to (and restore from) the host's localStorage
-    /// under this key, so a returning user keeps the layout they left. Null (default) disables
-    /// persistence. The host-driven <see cref="LeftWidth"/>/<see cref="RightWidth"/> values are
-    /// what is stored whenever they change.
+    /// When set, panel widths the USER resized persist to (and restore from) localStorage under this
+    /// key, so a returning user keeps the layout they left. Only user-resized widths are stored,
+    /// together with the host width they were resized from; a stored value is validated against the
+    /// min/max widths and applies only while the host still supplies that same width, and an explicit
+    /// <see cref="LeftWidth"/>/<see cref="RightWidth"/> the host sets after a user resize wins. A
+    /// restored width is reported through <see cref="LeftWidthChanged"/>/<see cref="RightWidthChanged"/>
+    /// (a restore counts as a user value). A key set after the first render, or changed later, is
+    /// loaded when it appears. Null (default) disables persistence.
     /// </summary>
     [Parameter] public string? PersistWidthsKey { get; set; }
 
@@ -578,7 +582,8 @@
             builder.AddElementReferenceCapture(6, e => CaptureAside(side, e));
             builder.AddContent(7, content);
             builder.CloseElement();
-        };        RenderFragment toggle = @<button type="button"
+        };
+        RenderFragment toggle = @<button type="button"
                               id="@toggleId"
                               class="tm-editor-shell__panel-toggle tm-editor-shell__panel-toggle--@lower"
                               aria-expanded="true"
@@ -605,7 +610,8 @@
             builder.AddAttribute(11, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, e => OnSeparatorKeyAsync(side, e)));
             builder.AddElementReferenceCapture(12, e => CaptureHandle(side, e));
             builder.CloseElement();
-        };        return isLeft
+        };
+        return isLeft
             ? @<text>@aside@separator@toggle</text>
             : @<text>@toggle@separator@aside</text>;
     }

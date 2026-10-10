@@ -492,7 +492,8 @@
   `RestoreFocusTargetId`). Both compose `TmDrawer` — no local sheet, gesture or focus logic.
   `docs/editor-shell.md` documents the pattern (incl. the e-mail editor mapping) for the
   DiagramEditor, Wireframe, Signing designer, PdfAnnotator, Modeling and e-mail editors; the demo
-  page is `/editor-shell`; the wireframe stencil registers the `editor-shell` and `side-panel` roles.- `tm-sheet.js` accepts an explicit basis element and an explicit track-viewport flag for an inline
+  page is `/editor-shell`; the wireframe stencil registers the `editor-shell` and `side-panel` roles.
+- `tm-sheet.js` accepts an explicit basis element and an explicit track-viewport flag for an inline
   sheet, the browser top-layer promotion helpers moved to `tm-top-layer.js` (the `tm-sheet.js`
   exports re-export them, so every existing caller keeps working), and the `TmDrawer` and
   `TmModal` bodies now become a keyboard-reachable scroll region while they overflow (see
@@ -522,6 +523,21 @@
 
 ### Fixed
 
+- **F6 review round 2.** `TmEditorShell`: the tablet rail the shell imposes itself can be expanded
+  even when the host binds no `CollapsedPanels`; with `Breakpoints` the internal `TmMobileActionBar`
+  follows the shell's resolved mode (the actions stay reachable on a custom-threshold mobile shell),
+  and `TmLayoutObserver` rejects `Breakpoints` on the viewport-scope observer; Escape closes the
+  inline sheet that holds focus (non-modal focus traps close by focus ownership, not registration
+  order — two inline sheets on one page); focus no longer drops to `<body>` when the shell reopens
+  the sheet from its closed bar, when a host switches the Tabs panel, or when a desktop → tablet
+  flip rails the focused panel; restored widths are reported through `LeftWidthChanged` /
+  `RightWidthChanged`, a late or changed `PersistWidthsKey` loads, resizing back to the host width
+  clears the stored override, `aria-valuemax` is the reachable width and the resizer hit area is
+  wider under a coarse pointer; the resizer releases its pointer capture by pointer id and a
+  mid-drag detach restores the live width; an overflowing inline sheet body is named by its
+  `aria-label`; closing one of two sheet panels no longer remounts the other's content and a host
+  close that moves the sheet tab raises `ActiveMobilePanelChanged`; the `TmMobileActionBar` "More"
+  trigger omits `aria-controls` while its menu panel is not rendered.
 - **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
   content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
   menus and listboxes opened as sheets take initial focus on the first item, not Done;

@@ -61,8 +61,16 @@ a private flag that could disagree with the host.
 
 * hidden = `LeftOpen=false`; collapsed rail = `LeftOpen=true` + `CollapsedPanels` has the flag;
   expanded otherwise. Desktop and tablet are the same states.
+* The tablet "at most one expanded" rule **writes into the host-bound `CollapsedPanels`**: when two
+  panels would be expanded the shell rails the other one and raises `CollapsedPanelsChanged`. The
+  shell also applies the swap itself, so a rail it imposed can be expanded even when the host binds
+  nothing or ignores the callback. Host state stays the truth: after a tablet → desktop rotation the
+  railed panel is still a rail (the host-bound `CollapsedPanels` kept the flag) — that is intended;
+  the user expands it again.
 * `ActiveMobilePanel` is the selected mobile tab: `Left`/`Right` in the sheet, and in the Tabs
-  presentation `None` is the **canvas** tab. A host switches to the properties when a block is
+  presentation `None` is the **canvas** tab. The sheet treats `Left` | `Right` as `None` when that
+  panel is not open or has no content (it falls back to the one open panel), and raises
+  `ActiveMobilePanelChanged` when the effective tab moves because the host closed a panel. A host switches to the properties when a block is
   selected by setting `ActiveMobilePanel="EditorShellPanel.Right"`; it collapses the sheet on an
   "add block" action by setting `MobileSheetSnapIndex` (0 = half height). A layout flip resets the
   snap to 0 and raises the callback.
@@ -79,6 +87,15 @@ passes `Breakpoints="new TmLayoutBreakpoints(768, 1200)"` (desktop ≥ 1200, tab
 only the markup branch moves — structural CSS keeps the shared literals. Changing the pair at
 runtime re-registers the observer, so the same width is re-classified.
 
+The shell **forces its mobile-only children to its resolved mode**: the internal `TmMobileActionBar`
+receives `LayoutMode=Mobile`, so a 700px container is mobile for both the Toolbar slot (hidden) and
+the bar (shown) under `Breakpoints(768, 1200)`. Host content that nests its **own** `Auto`
+`TmLayoutObserver` inside a custom-threshold shell re-measures with the default thresholds — read
+the cascaded `TmLayoutContext` (the shell cascades its resolved mode) instead of observing again.
+**Never set `Breakpoints` on the viewport-scope observer** (`IsViewportScope="true"`): the overlays
+that read the viewport scope classify it with the defaults, so the observer throws on that
+combination. Per-instance thresholds belong to container observers.
+
 ### Resizing and persistence
 
 Each **expanded docked** panel (desktop and tablet) has a resize separator on its inner edge:
@@ -87,13 +104,19 @@ label ("Resize left panel"). Drag it (pointer capture; Escape cancels) or use th
 ArrowLeft/Right ±16px, Shift ±64px, Home = minimum, End = maximum. The width is clamped to
 `MinLeftWidth` / `MaxLeftWidth` (200 / 480) and `MinRightWidth` / `MaxRightWidth` (240 / 560) **and**
 never takes the canvas below `MinCanvasWidth` (400). A resize raises `LeftWidthChanged` /
-`RightWidthChanged` with the new `"NNNpx"`.
+`RightWidthChanged` with the new `"NNNpx"`. `aria-valuemax` is the width the user can really reach
+(the configured maximum, capped by what the canvas can give up above `MinCanvasWidth`); under a
+coarse pointer an invisible 24px hit area widens the 6px strip.
 
 `PersistWidthsKey` stores **only widths the user resized**, as `{"left":{"w":300,"base":"280px"}}`
 in `localStorage`. Precedence: a stored width applies on load only while the host still supplies the
 same `base` width and the value is a number inside the min/max range (raw strings are never put in
 a style); an explicit `LeftWidth` / `RightWidth` the host sets **after** a user resize wins and
 clears the stored entry (a bound `@bind-LeftWidth` echoing the user's value is not an override).
+A restore counts as a user value: a restored width is reported through `LeftWidthChanged` /
+`RightWidthChanged`. A `PersistWidthsKey` set after the first render, or changed later, is loaded when
+it changes; resizing back to the host width removes the stored override. For a non-pixel host width
+(`20rem`, `%`) the keyboard steps from the width the panel actually renders at.
 Storage errors, prerender and disposal are swallowed. Persisting `CollapsedPanels` is the host's job.
 
 ### Keyboard and focus
@@ -108,6 +131,14 @@ Storage errors, prerender and disposal are swallowed. Persisting `CollapsedPanel
   target is not rendered. A rail's expand button reads `aria-expanded="false"`. The mobile tabs use
   `role="tablist"` / `tab` / `tabpanel` (each tab `aria-controls` its panel) with arrow-key roving;
   the inline sheet and the docked asides carry an accessible name.
+* Focus is never dropped on `<body>` when the shell itself removes or hides the focused element:
+  reopening from the closed "Blocks · Properties" bar moves focus to the selected sheet tab (or the
+  heading when one panel is open); a host-driven `ActiveMobilePanel` switch in the Tabs presentation
+  moves focus to the new tab only when it was inside the hidden panel; a desktop → tablet flip moves
+  focus to the rail button only when it was inside the panel that got railed. All of it goes through
+  `focusIfLost`, so a focus on a host button or the canvas stays put. Escape closes the sheet that
+  holds focus (non-modal traps close by focus ownership, not by registration order — two inline
+  sheets on one page both work).
 * A viewport flip resets armed focus restores and the sheet snap, so a closed panel never reopens
   by itself.
 
