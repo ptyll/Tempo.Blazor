@@ -183,6 +183,15 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
         bundle.Should().NotMatchRegex(@"\\n\s*\.tm-toolbar", "the committed bundle must be rebuilt from the clean source");
         css.Should().MatchRegex(@"\.tm-toolbar-more\s*\{[^}]*min-width:\s*var\(--tm-touch-target\)");
     }
+    [Fact]
+    public void ToolbarButtons_NeverShrink_SoTheMeasuredWidthIsTheNaturalWidth()
+    {
+        // A flex item shrinks to its min-width (the 44px touch target on a coarse pointer) before the
+        // row overflows; the fit measurement then sees 44px buttons whose text spills over the next one.
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(@"\.tm-toolbar-btn\s*\{[^}]*flex-shrink:\s*0");
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

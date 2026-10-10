@@ -328,6 +328,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         {
             var b = await button.BoundingBoxAsync();
             Assert.IsTrue(b!.Height >= 43.5, $"toolbar buttons are touch targets (height {b.Height})");
+            var clipped = await button.EvaluateAsync<bool>("el => { const t = el.querySelector('.tm-toolbar-btn-text'); return !!t && el.scrollWidth > el.clientWidth + 1; }");
+            Assert.IsFalse(clipped, "a labelled button keeps its natural width - its text must not overflow the button box");
         }
 
         await ShootAsync(page, bar, "toolbar-390-closed");
