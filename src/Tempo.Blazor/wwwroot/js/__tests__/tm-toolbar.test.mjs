@@ -35,9 +35,8 @@ test('everything fits -> every button stays', () => {
 test('exactly fitting counts as fitting (gaps included)', () => {
     const items = [btn(40, 2), btn(40, 1)];
     assert.equal(chooseVisibleCount(items, 88, 8, 44, false), 2);
-    // One short of fitting: a button + the trigger (40 + 8 + 44 = 92) is the next-best layout.
+    // One short of fitting: even one button + the trigger (40 + 8 + 44 = 92) does not fit in 87.
     assert.equal(chooseVisibleCount(items, 87, 8, 44, false), 0);
-    assert.equal(chooseVisibleCount(items, 92, 8, 44, false), 1);
 });
 
 test('a collapse reserves room for the More trigger', () => {

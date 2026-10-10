@@ -1,5 +1,6 @@
 namespace Tempo.Blazor.Helpers;
 
+using Tempo.Blazor.Components.Actions;
 using Tempo.Blazor.Components.Toolbar;
 
 /// <summary>
@@ -11,7 +12,12 @@ using Tempo.Blazor.Components.Toolbar;
 internal static class ToolbarOverflowLayout
 {
     /// <summary>The overflow rank of a priority: Secondary leaves before Primary.</summary>
-    public static int Rank(ToolbarButtonPriority priority) => throw new NotImplementedException();
+    public static int Rank(ToolbarButtonPriority priority) => priority switch
+    {
+        ToolbarButtonPriority.OverflowOnly => 0,
+        ToolbarButtonPriority.Secondary => 1,
+        _ => 2,
+    };
 
     /// <summary>
     /// Partitions <paramref name="items"/>. <paramref name="maxVisible"/> is how many non-OverflowOnly
@@ -21,5 +27,11 @@ internal static class ToolbarOverflowLayout
     public static (IReadOnlyList<T> Bar, IReadOnlyList<T> Menu) Resolve<T>(
         IReadOnlyList<T> items,
         int? maxVisible,
-        Func<T, ToolbarButtonPriority> priority) => throw new NotImplementedException();
+        Func<T, ToolbarButtonPriority> priority)
+        => ActionOverflowLayout.Partition(
+            items,
+            // null = not measured / nothing to measure: the budget is every button there is.
+            maxVisible ?? Math.Max(1, items.Count),
+            item => Rank(priority(item)),
+            item => priority(item) == ToolbarButtonPriority.OverflowOnly ? ActionOverflow.Always : ActionOverflow.Auto);
 }
