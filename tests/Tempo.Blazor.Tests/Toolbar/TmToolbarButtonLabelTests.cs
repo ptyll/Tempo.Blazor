@@ -171,6 +171,18 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
         css.Should().MatchRegex(@"\.tm-toolbar-btn--label-below\s*\{[^}]*padding:\s*var\(--tm-space-2\)\s+var\(--tm-space-3\)");
         css.Should().MatchRegex(@"\.tm-toolbar:has\(\.tm-toolbar-btn--label-below\)\s+\.tm-toolbar-divider\s*\{[^}]*height:\s*2\.5rem");
     }
+    [Fact]
+    public void ToolbarStylesheet_HasNoStrayEscapeSequences_AndTheMoreTriggerKeepsItsFullRule()
+    {
+        // A literal backslash-n in a stylesheet (a scripted edit that did not expand the escape) makes the
+        // browser drop the rule that FOLLOWS it - here the More trigger shrank to 16x24 on a phone.
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+        var bundle = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "tempo-blazor.bundled.css"));
+
+        css.Should().NotContain("\\n", "no escape sequence belongs in a stylesheet");
+        bundle.Should().NotMatchRegex(@"\\n\s*\.tm-toolbar", "the committed bundle must be rebuilt from the clean source");
+        css.Should().MatchRegex(@"\.tm-toolbar-more\s*\{[^}]*min-width:\s*var\(--tm-touch-target\)");
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

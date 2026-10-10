@@ -158,7 +158,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         CollectionAssert.Contains(menu, "Export");
         CollectionAssert.Contains(menu, "Delete");
 
-        // No stray divider: a divider with no visible button after it inside its group is hidden.\n        var dangling = await bar.Locator(".tm-toolbar-divider").EvaluateAllAsync<bool[]>("""
+        // No stray divider: a divider with no visible button after it inside its group is hidden.
+        var dangling = await bar.Locator(".tm-toolbar-divider").EvaluateAllAsync<bool[]>("""
             els => els.map(d => { let n = d.nextElementSibling; while (n) { if (n.matches('button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)')) return false; n = n.nextElementSibling; } return getComputedStyle(d).visibility !== 'hidden'; })
             """);
         Assert.IsFalse(dangling.Any(x => x), "a divider followed only by collapsed buttons must not be painted");
@@ -488,5 +489,51 @@ public class ToolbarOverflowE2ETests : WasmTestBase
             $"reduced motion zeroes the button transition (was {duration})");
         Assert.IsTrue(triggerDuration.Split(',').All(d => double.Parse(d.Trim().TrimEnd('s'), CultureInfo.InvariantCulture) <= 0.001),
             $"and the More trigger's (was {triggerDuration})");
+    }
+
+    // ── the same menu keyboard on a plain TmDropdown (F5 carry-forward m8) ───────────────────────
+
+    [TestMethod]
+    public async Task Keyboard_TmDropdown_UsesTheSharedMenuKeyboard_OnDesktopAndInTheSheet()
+    {
+        foreach (var (width, height, touch) in new[] { (1440, 900, false), (390, 844, true) })
+        {
+            var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+            {
+                ViewportSize = new ViewportSize { Width = width, Height = height },
+                HasTouch = touch,
+                IsMobile = touch,
+                IgnoreHTTPSErrors = true,
+            });
+            RegisterContext(context);
+            var page = await context.NewPageAsync();
+            await page.GotoAsync($"{BaseUrl}/overlay", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 90000 });
+            await WaitForAppReadyAsync(page);
+
+            var trigger = page.Locator("[data-testid='overlay-mobile-dropdown'] .tm-dropdown-trigger");
+            await trigger.ScrollIntoViewIfNeededAsync();
+            await page.WaitForTimeoutAsync(1200);
+            await trigger.FocusAsync();
+            await page.Keyboard.PressAsync("Enter");
+            await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+            await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+            var items = await MenuTextsAsync(page);
+            Assert.AreEqual(3, items.Length, $"{width}: three entries");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: first item focused");
+            await page.Keyboard.PressAsync("ArrowDown");
+            Assert.AreEqual(items[1], await ActiveMenuItemAsync(page), $"{width}: ArrowDown");
+            await page.Keyboard.PressAsync("End");
+            Assert.AreEqual(items[2], await ActiveMenuItemAsync(page), $"{width}: End");
+            await page.Keyboard.PressAsync("Home");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: Home");
+            await page.Keyboard.PressAsync("ArrowUp");
+            Assert.AreEqual(items[2], await ActiveMenuItemAsync(page), $"{width}: ArrowUp wraps");
+            await page.Keyboard.PressAsync("x");
+            await page.WaitForTimeoutAsync(100);
+            Assert.AreEqual("Export as Excel (XLSX)", await ActiveMenuItemAsync(page), $"{width}: typeahead X");
+            await page.Keyboard.PressAsync("Escape");
+            await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+        }
     }
 }

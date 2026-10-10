@@ -51,7 +51,13 @@
   text-overflow: ellipsis;
 }
 
-/* A ribbon (label-below tiles): the group dividers run the tile's height, like the design's\n   separators between Zpět/Znovu, the edit tools and the tool modes. */\n.tm-toolbar:has(.tm-toolbar-btn--label-below) .tm-toolbar-divider {\n  height: 2.5rem;\n}\n\n/* F4 - an icon-only button keeps a finger-sized hit area on a coarse pointer. */
+/* A ribbon (label-below tiles): the group dividers run the tile's height, like the design's
+   separators between Zpět/Znovu, the edit tools and the tool modes. */
+.tm-toolbar:has(.tm-toolbar-btn--label-below) .tm-toolbar-divider {
+  height: 2.5rem;
+}
+
+/* F4 - an icon-only button keeps a finger-sized hit area on a coarse pointer. */
 @media (pointer: coarse) {
   .tm-toolbar-btn,
   .tm-toolbar-more {
@@ -81,7 +87,14 @@
   pointer-events: none;
 }
 
-/* A divider that only separates a group that has collapsed into More would be a stray rule: hide it with\n   visibility (it keeps its box, so the measured fixed width does not change and the fit cannot oscillate).\n   Only when collapsed buttons follow it and no visible button does - a divider before other content stays. */\n.tm-toolbar-divider:has(~ .tm-toolbar-item--collapsed):not(:has(~ .tm-toolbar-btn:not(.tm-toolbar-item--collapsed))) {\n  visibility: hidden;\n}\n\n/* The More trigger shares the button look. */
+/* A divider that only separates a group that has collapsed into More would be a stray rule: hide it with
+   visibility (it keeps its box, so the measured fixed width does not change and the fit cannot oscillate).
+   Only when collapsed buttons follow it and no visible button does - a divider before other content stays. */
+.tm-toolbar-divider:has(~ .tm-toolbar-item--collapsed):not(:has(~ .tm-toolbar-btn:not(.tm-toolbar-item--collapsed))) {
+  visibility: hidden;
+}
+
+/* The More trigger shares the button look. */
 .tm-toolbar-more {
   display: inline-flex; align-items: center; justify-content: center;
   flex-shrink: 0;
