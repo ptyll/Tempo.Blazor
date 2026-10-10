@@ -50,6 +50,7 @@ buttons can show their text next to or under the icon.
   tinted. On a phone-sized viewport the menu is the shared bottom sheet with 44px entries; an
   editor/formatting toolbar sets `OverflowPresentation="Popover"` so the user's selection survives
   (see the F4 decision in overlays.md).
+* **Known limitation.** The menu lists buttons in the order they registered with the toolbar — the written order of the first render. A button inserted *between* existing ones later (a conditional action that appears after the first render) joins the menu at the end, not at its written position; keep conditional actions at the end of a group or render them with a stable key.
 * The toolbar measures **its own width** — an editor panel in a 390px column collapses on a 1440px
   desktop.
 
