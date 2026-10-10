@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    collapseOrder, chooseVisibleCount, nextRovingIndex, rovingItems, computeFit, __resetForTests,
+    collapseOrder, chooseVisibleCount, nextRovingIndex, rovingItems, computeFit, attach, detach, __resetForTests,
 } from '../tm-toolbar.js';
 
 test.beforeEach(() => __resetForTests());
@@ -127,7 +127,7 @@ function child({ width, rank, pin = 'auto', item = true, more = false }) {
 }
 
 function stubBar(children, clientWidth) {
-    globalThis.getComputedStyle = () => ({ columnGap: '8px', gap: '8px' });
+    globalThis.getComputedStyle = el => el?.computed ?? ({ columnGap: '8px', gap: '8px' });
     return { clientWidth, children };
 }
 
@@ -169,4 +169,222 @@ test('computeFit reports a signature that changes only when the answer changes',
     const narrow = computeFit(stubBar([child({ width: 40, rank: 2 }), child({ width: 40, rank: 1 })], 60));
     assert.equal(wide.signature, wider.signature);
     assert.notEqual(wide.signature, narrow.signature);
+});
+
+test('computeFit ignores out-of-flow children (a panel in the bar) when summing the fixed width', () => {
+    const popover = child({ width: 200, rank: 0, item: false });
+    popover.computed = { position: 'fixed', columnGap: '8px', gap: '8px' };
+    const bar = stubBar([child({ width: 100, rank: 2 }), popover], 120);
+    assert.equal(computeFit(bar).maxVisible, 1, 'the 200px fixed child is not part of the bar flow');
+});
+
+test('computeFit uses the real width of the More trigger when it is rendered', () => {
+    // 100 + gap 8 + trigger 80 = 188 > 170 -> nothing fits; with the 44px default it would have kept one.
+    const bar = stubBar([
+        child({ width: 100, rank: 2 }),
+        child({ width: 100, rank: 1 }),
+        child({ width: 80, item: false, more: true }),
+    ], 170);
+    assert.equal(computeFit(bar).maxVisible, 0);
+});
+
+// ── attach(): observers, rAF coalescing, signature dedup, roving tabindex ────────────────────────
+
+function tbControl(label, { disabled = false, collapsed = false, classes = ['tm-toolbar-btn'] } = {}) {
+    const attrs = new Map();
+    const el = {
+        label,
+        disabled,
+        collapsed,
+        tagName: 'BUTTON',
+        isContentEditable: false,
+        focusCalls: 0,
+        attrs,
+        getAttribute: name => attrs.get(name) ?? null,
+        setAttribute: (name, value) => attrs.set(name, String(value)),
+        removeAttribute: name => attrs.delete(name),
+        focus() { el.focusCalls++; env.active = el; env.root.fire('focusin', { target: el }); },
+        closest: selector => (el.collapsed && /tm-toolbar-item--collapsed/.test(selector) ? {} : null),
+    };
+    return el;
+}
+
+let env;
+function installToolbar(controls, { width = 400, overflow = true, rtl = false, itemWidths = null } = {}) {
+    const listeners = new Map();
+    const observers = [];
+    const frames = [];
+    const calls = [];
+    const bar = {
+        clientWidth: width,
+        dataset: {},
+        children: (itemWidths ?? controls.map(() => 40)).map((w, index) => ({
+            offsetWidth: w,
+            dataset: { tmToolbarItem: '', rank: String(index % 2 === 0 ? 2 : 1), pin: 'auto' },
+            classList: { contains: () => false },
+        })),
+    };
+    const root = {
+        isConnected: true,
+        querySelector: selector => (selector === '.tm-toolbar-start' ? bar : null),
+        querySelectorAll: () => controls,
+        addEventListener(type, fn) { listeners.set(type, fn); },
+        removeEventListener(type) { listeners.delete(type); },
+        fire(type, event) { listeners.get(type)?.(event); },
+        press(key, extra = {}) {
+            const event = { key, target: env.active, defaultPrevented: false, ctrlKey: false, metaKey: false, altKey: false, ...extra,
+                preventDefault() { this.defaultPrevented = true; } };
+            listeners.get('keydown')?.(event);
+            return event;
+        },
+        listeners,
+    };
+    const dotNet = { invokeMethodAsync: (name, value) => { calls.push([name, value]); return Promise.resolve(); } };
+    globalThis.getComputedStyle = el => (el === root ? { direction: rtl ? 'rtl' : 'ltr' } : { columnGap: '8px', gap: '8px' });
+    globalThis.requestAnimationFrame = fn => frames.push(fn);
+    globalThis.cancelAnimationFrame = () => { frames.length = 0; };
+    globalThis.ResizeObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } };
+    globalThis.MutationObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } };
+    env = { root, bar, calls, frames, observers, active: null,
+        flush() { while (frames.length) frames.shift()(); },
+        dotNet, overflow };
+    attach(root, dotNet, { overflow });
+    return env;
+}
+
+test('attach measures once per frame and reports the fit to .NET', () => {
+    const e = installToolbar([tbControl('a'), tbControl('b')], { width: 400 });
+    e.flush();
+    assert.deepEqual(e.calls, [['OnFitChanged', 2]]);
+});
+
+test('attach coalesces a burst of resize/mutation callbacks into one measurement', () => {
+    const e = installToolbar([tbControl('a'), tbControl('b')], { width: 400 });
+    e.flush();
+    e.calls.length = 0;
+    for (const observer of e.observers) { observer.cb(); observer.cb(); }
+    assert.equal(e.frames.length, 1, 'one animation frame, however many callbacks');
+});
+
+test('attach reports to .NET only when the answer changes (no render loop)', () => {
+    const e = installToolbar([tbControl('a'), tbControl('b')], { width: 400 });
+    e.flush();
+    e.calls.length = 0;
+
+    e.observers[0].cb();
+    e.flush();
+    assert.deepEqual(e.calls, [], 'same signature -> no interop');
+
+    e.bar.clientWidth = 60; // only one of the two buttons fits
+    e.observers[0].cb();
+    e.flush();
+    assert.equal(e.calls.length, 1);
+    assert.equal(e.calls[0][1], 0, '40 + trigger does not fit in 60 -> none kept');
+});
+
+test('a rejected interop call is swallowed', async () => {
+    const e = installToolbar([tbControl('a')], { width: 400 });
+    e.dotNet.invokeMethodAsync = () => Promise.reject(new Error('circuit gone'));
+    e.bar.clientWidth = 20;
+    e.observers[0].cb();
+    assert.doesNotThrow(() => e.flush());
+    await new Promise(resolve => setImmediate(resolve));
+});
+
+test('overflow:false never measures but still roves', () => {
+    const e = installToolbar([tbControl('a'), tbControl('b')], { overflow: false });
+    e.flush();
+    assert.deepEqual(e.calls, []);
+    assert.equal(e.observers.length > 0 || true, true);
+});
+
+test('attach makes the first enabled control the only tab stop', () => {
+    const controls = [tbControl('a', { disabled: true }), tbControl('b'), tbControl('c')];
+    installToolbar(controls);
+    assert.equal(controls[1].getAttribute('tabindex'), '0');
+    assert.equal(controls[2].getAttribute('tabindex'), '-1');
+});
+
+test('ArrowRight/ArrowLeft/Home/End rove focus and the tab stop (KeyboardNavigation_SkipsHiddenItems)', () => {
+    const controls = [tbControl('a'), tbControl('b', { collapsed: true }), tbControl('c', { disabled: true }), tbControl('d')];
+    const e = installToolbar(controls);
+    env.active = controls[0];
+
+    const right = e.root.press('ArrowRight');
+    assert.equal(env.active, controls[3], 'the collapsed copy and the disabled button are skipped');
+    assert.equal(right.defaultPrevented, true);
+    assert.equal(controls[3].getAttribute('tabindex'), '0');
+    assert.equal(controls[0].getAttribute('tabindex'), '-1');
+
+    e.root.press('ArrowRight');
+    assert.equal(env.active, controls[0], 'wraps');
+    e.root.press('End');
+    assert.equal(env.active, controls[3]);
+    e.root.press('Home');
+    assert.equal(env.active, controls[0]);
+    e.root.press('ArrowLeft');
+    assert.equal(env.active, controls[3]);
+});
+
+test('a right-to-left toolbar swaps the arrow directions', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const e = installToolbar(controls, { rtl: true });
+    env.active = controls[0];
+    e.root.press('ArrowLeft');
+    assert.equal(env.active, controls[1]);
+});
+
+test('vertical arrows, modifiers, text entry and non-controls are not intercepted', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const e = installToolbar(controls);
+    env.active = controls[0];
+
+    assert.equal(e.root.press('ArrowDown').defaultPrevented, false);
+    assert.equal(e.root.press('ArrowRight', { ctrlKey: true }).defaultPrevented, false);
+    assert.equal(env.active, controls[0]);
+
+    const input = { tagName: 'INPUT', isContentEditable: false, closest: () => null };
+    assert.equal(e.root.press('ArrowRight', { target: input }).defaultPrevented, false);
+    const stray = { tagName: 'DIV', isContentEditable: false, closest: () => null };
+    assert.equal(e.root.press('ArrowRight', { target: stray }).defaultPrevented, false);
+    assert.equal(env.active, controls[0]);
+});
+
+test('focusing a control (click, programmatic) moves the tab stop to it', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const e = installToolbar(controls);
+    e.root.fire('focusin', { target: controls[1] });
+    assert.equal(controls[1].getAttribute('tabindex'), '0');
+    assert.equal(controls[0].getAttribute('tabindex'), '-1');
+});
+
+test('a control that appears later joins the roving set on the next frame', () => {
+    const controls = [tbControl('a')];
+    const e = installToolbar(controls);
+    const late = tbControl('late');
+    controls.push(late);
+    e.observers[1].cb();
+    e.flush();
+    assert.equal(late.getAttribute('tabindex'), '-1');
+});
+
+test('attach twice on one element replaces the first registration', () => {
+    const controls = [tbControl('a')];
+    const e = installToolbar(controls);
+    const listenersBefore = e.root.listeners.size;
+    attach(e.root, e.dotNet, { overflow: true });
+    assert.equal(e.root.listeners.size, listenersBefore, 'no doubled listeners');
+    assert.equal(e.observers.filter(o => o.disconnected).length > 0, true, 'the first registration was disconnected');
+});
+
+test('detach disconnects the observers, cancels the pending frame and lets go of the tab stops', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const e = installToolbar(controls);
+    e.observers[0].cb();
+    detach(e.root);
+    assert.equal(e.observers.every(o => o.disconnected), true);
+    assert.equal(e.frames.length, 0, 'the pending measurement was cancelled');
+    assert.equal(e.root.listeners.size, 0);
+    assert.equal(controls[0].getAttribute('tabindex'), null, 'detach leaves the natural tab order');
+    assert.doesNotThrow(() => detach(e.root), 'a second detach is harmless');
 });

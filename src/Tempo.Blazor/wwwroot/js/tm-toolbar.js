@@ -119,6 +119,22 @@ export function computeFit(bar) {
     return { maxVisible, hasPinned, signature: `${maxVisible}|${items.length}|${hasPinned}` };
 }
 
+/**
+ * Attaches the toolbar behaviour to a .tm-toolbar element: the roving tabindex always, the fit
+ * measurement when options.overflow is set.
+ * @param {HTMLElement} root the .tm-toolbar element
+ * @param {{invokeMethodAsync:Function}|null} dotNetRef receives OnFitChanged(maxVisible)
+ * @param {{overflow?:boolean}} options
+ */
+export function attach(root, dotNetRef, options) {
+    throw new Error('not implemented');
+}
+
+/** Detaches everything attach() set up on the element. */
+export function detach(root) {
+    throw new Error('not implemented');
+}
+
 /** Test seam: forgets every attached toolbar. */
 export function __resetForTests() {
 }
