@@ -6765,6 +6765,78 @@
       ]
     },
     {
+      "itemName": "ToolbarButtonPriority",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "How important a TmToolbarButton is when its TmToolbar runs out of room (Overflow = Menu). An overflow rank only: buttons render in written order. Generalises the DocumentEditor ToolbarItemPriority.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/ToolbarButtonPriority.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Primary",
+          "description": "The default. Stays on the toolbar until every Secondary button has moved into the More menu."
+        },
+        {
+          "name": "Secondary",
+          "description": "Moves into the More menu before any Primary button does."
+        },
+        {
+          "name": "OverflowOnly",
+          "description": "Always lives in the More menu and is never rendered on the toolbar itself."
+        }
+      ]
+    },
+    {
+      "itemName": "ToolbarLabelPosition",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "Where a TmToolbarButton shows its text label relative to the icon.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/ToolbarLabelPosition.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Inline",
+          "description": "Icon and label on one line (the default)."
+        },
+        {
+          "name": "Below",
+          "description": "The label sits under the icon - the ribbon style of the tablet mockups."
+        },
+        {
+          "name": "Hidden",
+          "description": "No visible label. The text stays the accessible name (aria-label) of the button."
+        }
+      ]
+    },
+    {
+      "itemName": "ToolbarLabels",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "Whether the toolbar's buttons show their text next to the icon.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/ToolbarLabels.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Auto",
+          "description": "The default: labels show, except on a narrow toolbar (below the mobile breakpoint, measured on the toolbar itself) where icon buttons fall back to icon only."
+        },
+        {
+          "name": "Icons",
+          "description": "Icon buttons never show their text; the text is still the accessible name."
+        },
+        {
+          "name": "IconsWithText",
+          "description": "Labels always show."
+        }
+      ]
+    },
+    {
       "itemName": "ToolbarMode",
       "kind": "Enum",
       "category": "Components",
@@ -6773,6 +6845,26 @@
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/ToolbarMode.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ToolbarOverflow",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "What TmToolbar does when its buttons do not fit.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/ToolbarOverflow.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "None",
+          "description": "The default: nothing collapses; the buttons render as written."
+        },
+        {
+          "name": "Menu",
+          "description": "Buttons that do not fit move into a More menu, lowest priority first; OverflowOnly buttons always live there. The menu is a dropdown that presents as a bottom sheet on a phone-sized viewport."
+        }
+      ]
     },
     {
       "itemName": "TooltipPosition",
@@ -24634,7 +24726,7 @@
       "kind": "Component",
       "category": "Toolbar",
       "namespace": "Tempo.Blazor.Components.Toolbar",
-      "description": "Horizontal toolbar with a start section (title + child content) and an actions section. Supports sticky positioning to remain visible during scrolling.",
+      "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons into a More menu (a dropdown that is a bottom sheet on phones); Labels controls the visible button text. Supports sticky positioning.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmToolbar.razor",
       "documentationStatus": "merged",
@@ -24649,6 +24741,12 @@
           "description": "Content for the right/actions section of the toolbar."
         },
         {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the toolbar. Falls back to Title, then the localized default."
+        },
+        {
           "name": "ChildContent",
           "type": "RenderFragment?",
           "isRequired": false,
@@ -24659,6 +24757,33 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class for the root element."
+        },
+        {
+          "name": "Labels",
+          "type": "ToolbarLabels",
+          "isRequired": true,
+          "description": "Whether icon buttons show their text. Auto shows it except on a narrow toolbar; a button's own LabelPosition of Hidden always wins.",
+          "default": "Auto"
+        },
+        {
+          "name": "Overflow",
+          "type": "ToolbarOverflow",
+          "isRequired": true,
+          "description": "What happens when the buttons do not fit. None keeps every button as written; Menu moves the lowest-priority buttons into a More menu and keeps OverflowOnly buttons there.",
+          "default": "None"
+        },
+        {
+          "name": "OverflowLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name and title of the More trigger. Falls back to the localized default."
+        },
+        {
+          "name": "OverflowPresentation",
+          "type": "PanelPresentation",
+          "isRequired": false,
+          "default": "PanelPresentation.Auto",
+          "description": "How the More menu presents on a phone-sized viewport. Auto is the bottom sheet; a toolbar whose actions need the editor focus or selection to stay put sets Popover."
         },
         {
           "name": "Sticky",
@@ -24678,7 +24803,14 @@
         "tm-toolbar--sticky",
         "tm-toolbar-start",
         "tm-toolbar-actions",
-        "tm-toolbar-title"
+        "tm-toolbar-title",
+        "tm-toolbar-more",
+        "tm-toolbar-more__panel",
+        "tm-toolbar-more__menu",
+        "tm-toolbar-more__item",
+        "tm-toolbar-more__item--danger",
+        "tm-toolbar-more__label",
+        "tm-toolbar-item--collapsed"
       ],
       "examples": [
         {
@@ -24688,6 +24820,10 @@
         {
           "title": "Sticky toolbar",
           "code": "<TmToolbar Title=\"Dashboard\" Sticky=\"true\">\n    <TmToolbarButton Icon=\"refresh\" Tooltip=\"Refresh\" OnClick=\"@Refresh\" />\n</TmToolbar>"
+        },
+        {
+          "title": "Overflow toolbar with priorities and labels below the icons",
+          "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\" Labels=\"ToolbarLabels.IconsWithText\" AriaLabel=\"Diagram tools\">\n    <TmToolbarButton Icon=\"save\" Text=\"Save\" LabelPosition=\"ToolbarLabelPosition.Below\" />\n    <TmToolbarButton Icon=\"copy\" Text=\"Copy\" Priority=\"ToolbarButtonPriority.Secondary\" />\n    <TmToolbarButton Icon=\"trash\" Text=\"Delete\" Priority=\"ToolbarButtonPriority.OverflowOnly\" />\n</TmToolbar>"
         }
       ]
     },
@@ -24723,10 +24859,24 @@
           "description": "Icon name from IconNames. Displayed before the text."
         },
         {
+          "name": "LabelPosition",
+          "type": "ToolbarLabelPosition",
+          "isRequired": true,
+          "description": "Where the Text label sits: next to the icon, under it, or hidden (the text then stays the accessible name).",
+          "default": "Inline"
+        },
+        {
           "name": "OnClick",
           "type": "EventCallback",
           "isRequired": false,
           "description": "Fires when the button is clicked."
+        },
+        {
+          "name": "Priority",
+          "type": "ToolbarButtonPriority",
+          "isRequired": true,
+          "description": "How important the button is when its TmToolbar runs out of room. An overflow rank only: buttons render in written order.",
+          "default": "Primary"
         },
         {
           "name": "Text",
@@ -24753,7 +24903,10 @@
         "tm-toolbar-btn--ghost",
         "tm-toolbar-btn--primary",
         "tm-toolbar-btn--danger",
-        "tm-toolbar-btn-text"
+        "tm-toolbar-btn-text",
+        "tm-toolbar-btn--label-below",
+        "tm-toolbar-btn--icon-only",
+        "tm-toolbar-btn--labels-auto"
       ],
       "examples": [
         {
@@ -26202,7 +26355,15 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-menu-nav.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-sheet.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-toolbar.js",
       "kind": "JavaScript"
     },
     {
@@ -26234,16 +26395,24 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-menu-nav.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-sheet.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toolbar.test.mjs",
       "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 362,
-    "manualItemCount": 362,
-    "generatedItemCount": 354,
+    "itemCount": 366,
+    "manualItemCount": 366,
+    "generatedItemCount": 358,
     "generatedOnlyItemCount": 0,
     "componentCount": 201,
-    "publicApiTypeCount": 153
+    "publicApiTypeCount": 157
   }
 }

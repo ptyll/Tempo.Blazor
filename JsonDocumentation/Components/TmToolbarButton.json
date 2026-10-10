@@ -49,6 +49,20 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the button element."
+    },
+    {
+      "name": "Priority",
+      "type": "ToolbarButtonPriority",
+      "isRequired": false,
+      "default": "Primary",
+      "description": "How important the button is when its TmToolbar runs out of room. An overflow rank only: buttons render in written order."
+    },
+    {
+      "name": "LabelPosition",
+      "type": "ToolbarLabelPosition",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "Where the Text label sits: next to the icon, under it, or hidden (the text then stays the accessible name)."
     }
   ],
   "cssClasses": [
@@ -56,7 +70,10 @@
     "tm-toolbar-btn--ghost",
     "tm-toolbar-btn--primary",
     "tm-toolbar-btn--danger",
-    "tm-toolbar-btn-text"
+    "tm-toolbar-btn-text",
+    "tm-toolbar-btn--label-below",
+    "tm-toolbar-btn--icon-only",
+    "tm-toolbar-btn--labels-auto"
   ],
   "examples": [
     {

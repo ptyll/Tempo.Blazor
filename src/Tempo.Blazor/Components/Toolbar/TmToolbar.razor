@@ -1,4 +1,7 @@
 @namespace Tempo.Blazor.Components.Toolbar
+@using Microsoft.JSInterop
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Overlay
 
 <div class="tm-toolbar @(Sticky ? "tm-toolbar--sticky" : string.Empty) @Class">
     <div class="tm-toolbar-start">
@@ -29,4 +32,39 @@
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// What happens when the buttons do not fit. <see cref="ToolbarOverflow.None"/> (default) keeps
+    /// every button as written; <see cref="ToolbarOverflow.Menu"/> moves the lowest-priority buttons
+    /// into a "More" menu and keeps <see cref="ToolbarButtonPriority.OverflowOnly"/> buttons there.
+    /// </summary>
+    [Parameter] public ToolbarOverflow Overflow { get; set; }
+
+    /// <summary>
+    /// Whether icon buttons show their text. <see cref="ToolbarLabels.Auto"/> (default) shows it
+    /// except on a mobile-width toolbar; a button's own <see cref="TmToolbarButton.LabelPosition"/>
+    /// of <see cref="ToolbarLabelPosition.Hidden"/> always wins.
+    /// </summary>
+    [Parameter] public ToolbarLabels Labels { get; set; }
+
+    /// <summary>Accessible name and title of the "More" trigger. Falls back to the localized default.</summary>
+    [Parameter] public string? OverflowLabel { get; set; }
+
+    /// <summary>Accessible name of the toolbar. Falls back to <see cref="Title"/>, then the localized default.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// How the "More" menu presents on a phone-sized viewport. <see cref="PanelPresentation.Auto"/>
+    /// (default) is the bottom sheet; a toolbar whose actions need the editor's focus or selection to
+    /// stay put sets <see cref="PanelPresentation.Popover"/> (docs/overlays.md, rule 6).
+    /// </summary>
+    [Parameter] public PanelPresentation OverflowPresentation { get; set; } = PanelPresentation.Auto;
+
+    /// <summary>Additional HTML attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>Called by tm-toolbar.js when the number of buttons that fit changes.</summary>
+    /// <param name="maxVisible">How many collapsible buttons stay on the bar.</param>
+    [JSInvokable]
+    public Task OnFitChanged(int maxVisible) => Task.CompletedTask;
 }

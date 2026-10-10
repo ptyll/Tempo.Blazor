@@ -226,7 +226,7 @@ function installToolbar(controls, { width = 400, overflow = true, rtl = false, i
     };
     const root = {
         isConnected: true,
-        querySelector: selector => (selector === '.tm-toolbar-start' ? bar : null),
+        querySelector: selector => (selector === '[data-tm-toolbar-row]' ? bar : null),
         querySelectorAll: () => controls,
         addEventListener(type, fn) { listeners.set(type, fn); },
         removeEventListener(type) { listeners.delete(type); },
@@ -387,4 +387,38 @@ test('detach disconnects the observers, cancels the pending frame and lets go of
     assert.equal(e.root.listeners.size, 0);
     assert.equal(controls[0].getAttribute('tabindex'), null, 'detach leaves the natural tab order');
     assert.doesNotThrow(() => detach(e.root), 'a second detach is harmless');
+});
+// ── the measured row: start/actions containers are flattened ─────────────────────────────────
+
+function container(className, children, width = 0) {
+    return {
+        offsetWidth: width,
+        dataset: {},
+        children,
+        classList: { contains: name => name === className },
+    };
+}
+
+test('computeFit flattens the start and actions containers into one row', () => {
+    // One Primary button in each container (60 + 60), a 30px title in start, the More trigger in actions.
+    const bar = stubBar([
+        container('tm-toolbar-start', [child({ width: 30, item: false }), child({ width: 60, rank: 2 })], 300),
+        container('tm-toolbar-actions', [child({ width: 60, rank: 1 }), child({ width: 50, item: false, more: true })], 200),
+    ], 400);
+    // fixed = 30 + 8; buttons 60 + 8 + 60 = 128; available = 400 - 38 = 362 -> both fit.
+    assert.equal(computeFit(bar).maxVisible, 2);
+    const narrow = stubBar([
+        container('tm-toolbar-start', [child({ width: 30, item: false }), child({ width: 60, rank: 2 })], 300),
+        container('tm-toolbar-actions', [child({ width: 60, rank: 1 }), child({ width: 50, item: false, more: true })], 200),
+    ], 140);
+    // available = 140 - 38 = 102: both = 128 > 102; one + the 50px trigger = 60 + 8 + 50 = 118 > 102 -> 0.
+    assert.equal(computeFit(narrow).maxVisible, 0);
+});
+
+test('a flattened container that is itself empty adds nothing', () => {
+    const bar = stubBar([
+        container('tm-toolbar-start', [child({ width: 60, rank: 2 })], 60),
+        container('tm-toolbar-actions', [], 0),
+    ], 100);
+    assert.equal(computeFit(bar).maxVisible, 1);
 });

@@ -1,0 +1,21 @@
+{
+  "itemName": "ToolbarButtonPriority",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Toolbar",
+  "description": "How important a TmToolbarButton is when its TmToolbar runs out of room (Overflow = Menu). An overflow rank only: buttons render in written order. Generalises the DocumentEditor ToolbarItemPriority.",
+  "values": [
+    {
+      "name": "Primary",
+      "description": "The default. Stays on the toolbar until every Secondary button has moved into the More menu."
+    },
+    {
+      "name": "Secondary",
+      "description": "Moves into the More menu before any Primary button does."
+    },
+    {
+      "name": "OverflowOnly",
+      "description": "Always lives in the More menu and is never rendered on the toolbar itself."
+    }
+  ]
+}

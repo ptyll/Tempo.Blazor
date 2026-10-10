@@ -38,6 +38,18 @@
     /// <summary>Visual style variant.</summary>
     [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Ghost;
 
+    /// <summary>
+    /// How important the button is when its <see cref="TmToolbar"/> runs out of room
+    /// (<see cref="ToolbarOverflow.Menu"/>). An overflow rank only: buttons render in written order.
+    /// </summary>
+    [Parameter] public ToolbarButtonPriority Priority { get; set; }
+
+    /// <summary>
+    /// Where the <see cref="Text"/> label sits: next to the icon (default), under it, or hidden (the
+    /// text then stays the accessible name). Only an icon button can hide its label.
+    /// </summary>
+    [Parameter] public ToolbarLabelPosition LabelPosition { get; set; }
+
     /// <summary>Additional CSS class for the button element.</summary>
     [Parameter] public string? Class { get; set; }
 

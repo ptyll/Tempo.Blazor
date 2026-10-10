@@ -2,7 +2,7 @@
   "itemName": "TmToolbar",
   "kind": "Component",
   "category": "Toolbar",
-  "description": "Horizontal toolbar with a start section (title + child content) and an actions section. Supports sticky positioning to remain visible during scrolling.",
+  "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons into a More menu (a dropdown that is a bottom sheet on phones); Labels controls the visible button text. Supports sticky positioning.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Toolbar"
   ],
@@ -36,6 +36,39 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "Overflow",
+      "type": "ToolbarOverflow",
+      "isRequired": false,
+      "default": "None",
+      "description": "What happens when the buttons do not fit. None keeps every button as written; Menu moves the lowest-priority buttons into a More menu and keeps OverflowOnly buttons there."
+    },
+    {
+      "name": "Labels",
+      "type": "ToolbarLabels",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Whether icon buttons show their text. Auto shows it except on a narrow toolbar; a button's own LabelPosition of Hidden always wins."
+    },
+    {
+      "name": "OverflowLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name and title of the More trigger. Falls back to the localized default."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the toolbar. Falls back to Title, then the localized default."
+    },
+    {
+      "name": "OverflowPresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the More menu presents on a phone-sized viewport. Auto is the bottom sheet; a toolbar whose actions need the editor focus or selection to stay put sets Popover."
     }
   ],
   "cssClasses": [
@@ -43,7 +76,14 @@
     "tm-toolbar--sticky",
     "tm-toolbar-start",
     "tm-toolbar-actions",
-    "tm-toolbar-title"
+    "tm-toolbar-title",
+    "tm-toolbar-more",
+    "tm-toolbar-more__panel",
+    "tm-toolbar-more__menu",
+    "tm-toolbar-more__item",
+    "tm-toolbar-more__item--danger",
+    "tm-toolbar-more__label",
+    "tm-toolbar-item--collapsed"
   ],
   "examples": [
     {
@@ -53,6 +93,10 @@
     {
       "title": "Sticky toolbar",
       "code": "<TmToolbar Title=\"Dashboard\" Sticky=\"true\">\n    <TmToolbarButton Icon=\"refresh\" Tooltip=\"Refresh\" OnClick=\"@Refresh\" />\n</TmToolbar>"
+    },
+    {
+      "title": "Overflow toolbar with priorities and labels below the icons",
+      "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\" Labels=\"ToolbarLabels.IconsWithText\" AriaLabel=\"Diagram tools\">\n    <TmToolbarButton Icon=\"save\" Text=\"Save\" LabelPosition=\"ToolbarLabelPosition.Below\" />\n    <TmToolbarButton Icon=\"copy\" Text=\"Copy\" Priority=\"ToolbarButtonPriority.Secondary\" />\n    <TmToolbarButton Icon=\"trash\" Text=\"Delete\" Priority=\"ToolbarButtonPriority.OverflowOnly\" />\n</TmToolbar>"
     }
   ]
 }
