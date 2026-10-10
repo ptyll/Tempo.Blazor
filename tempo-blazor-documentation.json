@@ -110,6 +110,7 @@
       "Tempo.Blazor.Components.TreeView",
       "Tempo.Blazor.Components.Workflow",
       "Tempo.Blazor.Configuration",
+      "Tempo.Blazor.Localization",
       "Tempo.Blazor.Resources",
       "Tempo.Blazor.Services"
     ]
@@ -6926,7 +6927,7 @@
           "name": "AddTempoBlazor",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
+          "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Singleton relative-time formatter over the localizer and the registered TimeProvider ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
           "parameters": [
             {
               "name": "services",
@@ -19315,6 +19316,39 @@
       ]
     },
     {
+      "itemName": "TmRelativeTimeFormatter",
+      "kind": "Class",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "The default ITmRelativeTimeFormatter: Tm_Time_* strings from ITmLocalizer, plural day forms from Loc.Plural, the current moment from a TimeProvider (system clock when none is registered) and calendar days judged in the time zone passed to Format. Registered as a singleton by AddTempoBlazor().",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTimeFormatter.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Format",
+          "kind": "Method",
+          "type": "string",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "DateTimeOffset"
+            },
+            {
+              "name": "now",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            },
+            {
+              "name": "timeZone",
+              "type": "TimeZoneInfo?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "TmBottomNavigation",
       "kind": "Component",
       "category": "Navigation",
@@ -24520,7 +24554,7 @@
       "kind": "Component",
       "category": "Timeline",
       "namespace": "Tempo.Blazor.Components.Timeline",
-      "description": "Vertical activity timeline displaying entries with author avatars, timestamps with relative formatting, content, and an internal/external badge. Supports filtering internal entries.",
+      "description": "Vertical activity timeline displaying entries with author avatars, timestamps formatted by the shared ITmRelativeTimeFormatter (just now, 5 min ago, yesterday at 4:20 PM, an absolute date from a week on), content, and an internal/external badge. Supports filtering internal entries.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Timeline/TmTimeline.razor",
       "documentationStatus": "merged",
@@ -26323,6 +26357,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/pointer-drag.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/query-input.js",
       "kind": "JavaScript"
     },
@@ -26391,6 +26429,14 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/scheduler-pointer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-editor-shell.test.mjs",
       "kind": "JavaScript"
     },
@@ -26412,11 +26458,11 @@
     }
   ],
   "summary": {
-    "itemCount": 366,
-    "manualItemCount": 366,
-    "generatedItemCount": 358,
+    "itemCount": 367,
+    "manualItemCount": 367,
+    "generatedItemCount": 359,
     "generatedOnlyItemCount": 0,
     "componentCount": 201,
-    "publicApiTypeCount": 157
+    "publicApiTypeCount": 158
   }
 }

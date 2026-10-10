@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.Localization",
+  "description": "The CLDR plural categories resource keys are written for; each maps to a key suffix (Key_One, Key_Few, Key_Many, Key_Other).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralCategory.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmPluralCategory"
+}

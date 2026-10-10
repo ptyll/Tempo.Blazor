@@ -1,0 +1,17 @@
+{
+  "kind": "Interface",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.Localization",
+  "description": "Formats a moment relative to now in the user's language: 'just now', '5 min ago', 'yesterday at 4:20 PM', 'in 3 days', and an absolute date from a week on. AddTempoBlazor() registers the default TmRelativeTimeFormatter over ITmLocalizer (Tm_Time_* strings) and the registered TimeProvider; register your own after it to replace it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmRelativeTimeFormatter.cs",
+  "documentationStatus": "authored",
+  "itemName": "ITmRelativeTimeFormatter",
+  "usedInComponents": [ "TmTimeline", "TmActivityTimeline", "TmActivityComments" ],
+  "examples": [
+    {
+      "title": "Deterministic formatting in a test",
+      "code": "var formatter = new TmRelativeTimeFormatter(localizer, fakeTimeProvider);\nformatter.Format(DateTimeOffset.UtcNow.AddMinutes(-5)); // \"5 min ago\""
+    }
+  ]
+}

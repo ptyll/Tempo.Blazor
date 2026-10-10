@@ -540,7 +540,8 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 - `dashboard.js` — required by `TmDashboard` (drag & resize grid)
 - `workflow-designer.js` — required by `TmWorkflowDesignerCanvas` (SVG drag, pan, zoom, transition creation)
 - `richEditor.js` — required by `TmRichEditorFull` / `TmRichEditorSimple` (contenteditable interop)
-- `scheduler.js` — required by `TmScheduler` (drag & drop events)
+- `scheduler.js` — required by `TmScheduler` (event resize; imports the shared `pointer-drag.js` from the same folder)
+- `pointer-drag.js` — the shared ES-module pointer-drag helper (capture by pointerId, threshold, long-press, cancel paths); never write a second drag implementation, see [docs/touch-interaction.md](docs/touch-interaction.md)
 - `signature-capture.js` — required by `TmSignatureCapture`
 
 Split package assets live under their own static-web-asset base paths:

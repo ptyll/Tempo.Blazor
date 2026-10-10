@@ -1,0 +1,16 @@
+{
+  "kind": "Class",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.Localization",
+  "description": "Loc.Plural(key, count, ...extra): resolves Key_One/_Few/_Many/_Other from the localizer culture's plural rules, falling back to Key_Other and then the plain Key, and formats it with the count as {0}.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmLocalizerPluralExtensions.cs",
+  "documentationStatus": "authored",
+  "itemName": "TmLocalizerPluralExtensions",
+  "examples": [
+    {
+      "title": "A counted text",
+      "code": "<span>@Loc.Plural(\"TmModelingIssuePanel_Count\", Issues.Count)</span> @* 1 nález · 3 nálezy · 7 nálezů *@"
+    }
+  ]
+}

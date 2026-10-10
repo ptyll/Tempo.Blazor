@@ -3,7 +3,7 @@
   "kind": "Interface",
   "category": "Localization",
   "namespace": "Tempo.Blazor.Localization",
-  "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library includes default implementations for English and Czech.",
+  "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library ships English, Czech and French. Counted texts use Loc.Plural (Key_One/_Few/_Many/_Other, see TmLocalizerPluralExtensions); Culture and TryGetString are default interface members, so existing implementations keep compiling.",
   "methods": [
     {
       "name": "GetString",

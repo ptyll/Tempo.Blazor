@@ -437,7 +437,81 @@
   </div>
   ```
 
+- **Counted texts are grammatical now: `Loc.Plural`, and the B16 stop-gap wording is gone.** Czech
+  counts used to read "Čekající změny: 3" (F0 neutral wording) or, before that, the wrong "1 čekajících
+  změn". Counted resources are now plural families (`Key_One` / `Key_Few` / `Key_Many` / `Key_Other`,
+  resolved by `TmPluralRules` from the localizer's culture): "1 čekající změna", "2 čekající změny",
+  "5 čekajících změn". The affected keys no longer exist as a single plain key —
+  `TmDocumentEditor_ReviewSummaryRevisions`, `…ReviewSummaryComments`, `TmDocumentEditor_CommentCount`,
+  `TmModelingIssuePanel_Count`, `TmModelingModelTree_Count`, `TmWireframeProps_ElementsCount`,
+  `TmNotificationBell_NewCount`, `TmNotionPageComment_BadgeLabel`,
+  `TmNotionPageHeader_UnresolvedComments`, `TmScreeningResultPanel_PendingCount` — and
+  `TmDocumentEditor_ReviewSummaryText` is now a two-slot joiner `"{0}, {1}"` over the new
+  `TmDocumentEditor_ReviewSummaryOpenComments_*` family. **Migration:** a host that overrides these
+  keys in its own `ITmLocalizer` keeps working (`Plural` falls back to the plain key), but it should
+  provide the families to get correct grammar:
+
+  ```csharp
+  // before - one plain key per language, wrong for 1 / 2-4 in Czech
+  ["TmModelingIssuePanel_Count"] = "Nálezy: {0}"
+  // after - one key per plural form the language needs
+  ["TmModelingIssuePanel_Count_One"]   = "{0} nález",
+  ["TmModelingIssuePanel_Count_Few"]   = "{0} nálezy",
+  ["TmModelingIssuePanel_Count_Many"]  = "{0} nálezu",
+  ["TmModelingIssuePanel_Count_Other"] = "{0} nálezů"
+  ```
+
+  See [docs/localization-plurals.md](docs/localization-plurals.md).
+
+- **Relative time is one shared formatter; the `TmTimeline_*Ago` keys are no longer read.**
+  `TmTimeline`, `TmActivityTimeline` and `TmActivityComments` ask `ITmRelativeTimeFormatter`
+  (registered by `AddTempoBlazor()`), which also says "yesterday at 4:20 PM", handles the future
+  ("in 3 h", "tomorrow at 9:00") and prints an absolute date from a week on. The strings are
+  `Tm_Time_*`; `TmTimeline_JustNow`, `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`,
+  `TmTimeline_DaysAgo` and `TmTimeline_DateFormat` are not used by the library any more (the
+  resources remain so a host that reads them is not broken). **Migration:** override
+  `Tm_Time_*` (or register your own `ITmRelativeTimeFormatter`) instead of `TmTimeline_*Ago`:
+
+  ```csharp
+  // before
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "TmTimeline_MinutesAgo"
+  // after
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "Tm_Time_MinutesAgo"
+  services.AddSingleton<ITmRelativeTimeFormatter, MyFormatter>();   // or replace the whole formatter
+  ```
+
+  Timestamps older than a week now show the absolute date in the culture format (`Tm_Time_DateFormat`)
+  instead of `TmTimeline_DateFormat`; a timestamp between one and six days old reads "2 days ago"
+  (it used to be a date after 24 hours).
+
+- **`scheduler.js` resizes with Pointer Events and loads `pointer-drag.js`.** The document-level
+  `mousedown`/`mousemove`/`mouseup` listeners are replaced by the shared helper, so a finger or pen can
+  resize an event (B13) and Escape or a browser takeover (`pointercancel`) rolls the resize back without
+  calling .NET. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the
+  `NotifyResizeComplete` callback are unchanged. **Migration:** the script now `import()`s
+  `pointer-drag.js` from the folder `scheduler.js` itself was served from, so both files must be
+  reachable from the same `_content/Tempo.Blazor/js/` path (no change for the standard static-asset
+  setup); a Content-Security-Policy that restricts `script-src` must allow that module like it allows
+  `scheduler.js`. `window.TempoBlazor.Scheduler.ready` is a new promise that resolves when the helper
+  is attached.
 ### Added
+
+- **`pointer-drag.js` — the one shared pointer-drag helper** (`_content/Tempo.Blazor/js/pointer-drag.js`,
+  F7): `attach(el, { threshold, longPressMs, selector, onStart, onMove, onEnd, onCancel, onRelease })`
+  with pointer capture by `pointerId`, a movement threshold, touch long-press that keeps scrolling
+  working, cancel on Escape / `pointercancel` / `lostpointercapture` / a missed mouse-up / `detach()`,
+  `touch-action` guidance (`.tm-touch-drag-handle`, `.tm-pointer-dragging`), one-shot click
+  suppression, `prefers-reduced-motion` reported to every callback, and per-instance state so several
+  components drag at once. `tm-editor-shell.js` (the F6 panel resizer) and `scheduler.js` (event resize,
+  B13: touch and pen now work, handles grow on coarse pointers) run on it. Every adopter must ship a
+  non-drag alternative (WCAG 2.5.7, `Alt`+arrows): see [docs/touch-interaction.md](docs/touch-interaction.md).
+- **`Loc.Plural("Key", n)`** — grammatical plurals from CLDR rules (`TmPluralRules`: cs/sk
+  one-few-many-other, pl, fr one-many-other, en one-other) over `Key_One/_Few/_Many/_Other`, falling
+  back to the plain key. New `ITmLocalizer.Culture` and `ITmLocalizer.TryGetString` are default
+  interface members, so existing `ITmLocalizer` implementations compile and work unchanged.
+- **`ITmRelativeTimeFormatter`** (Abstractions) with the default `TmRelativeTimeFormatter`
+  (`Tm_Time_*` in en/cs/fr, injectable `TimeProvider`, explicit time zone): "právě teď", "před 5 min",
+  "včera v 16:20", "zítra v 9:00", "za 5 dní", an absolute date from a week on (B19).
 
 - **Overflow toolbar (F4).** `TmToolbar.Overflow` (`None|Menu`), `Labels`
   (`Auto|Icons|IconsWithText`), `OverflowLabel`, `AriaLabel` and `OverflowPresentation`;

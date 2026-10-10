@@ -11887,7 +11887,7 @@
       "kind": "Interface",
       "category": "Localization",
       "namespace": "Tempo.Blazor.Localization",
-      "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library includes default implementations for English and Czech.",
+      "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library ships English, Czech and French. Counted texts use Loc.Plural (Key_One/_Few/_Many/_Other, see TmLocalizerPluralExtensions); Culture and TryGetString are default interface members, so existing implementations keep compiling.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmLocalizer.cs",
       "documentationStatus": "merged",
@@ -11943,6 +11943,107 @@
         {
           "title": "Usage in component",
           "code": "@inject ITmLocalizer Loc\n\n<button>@Loc[\"TmButton_Submit\"]</button>"
+        }
+      ]
+    },
+    {
+      "itemName": "ITmRelativeTimeFormatter",
+      "kind": "Interface",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "Formats a moment relative to now in the user's language: 'just now', '5 min ago', 'yesterday at 4:20 PM', 'in 3 days', and an absolute date from a week on. AddTempoBlazor() registers the default TmRelativeTimeFormatter over ITmLocalizer (Tm_Time_* strings) and the registered TimeProvider; register your own after it to replace it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmRelativeTimeFormatter.cs",
+      "documentationStatus": "merged",
+      "usedInComponents": [
+        "TmTimeline",
+        "TmActivityTimeline",
+        "TmActivityComments"
+      ],
+      "examples": [
+        {
+          "title": "Deterministic formatting in a test",
+          "code": "var formatter = new TmRelativeTimeFormatter(localizer, fakeTimeProvider);\nformatter.Format(DateTimeOffset.UtcNow.AddMinutes(-5)); // \"5 min ago\""
+        }
+      ]
+    },
+    {
+      "itemName": "TmLocalizerPluralExtensions",
+      "kind": "Class",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "Loc.Plural(key, count, ...extra): resolves Key_One/_Few/_Many/_Other from the localizer culture's plural rules, falling back to Key_Other and then the plain Key, and formats it with the count as {0}.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmLocalizerPluralExtensions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Plural",
+          "kind": "Method",
+          "type": "string",
+          "description": "Resolves the plural form of key for count and formats it.",
+          "parameters": [
+            {
+              "name": "localizer",
+              "type": "this ITmLocalizer"
+            },
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "count",
+              "type": "double"
+            },
+            {
+              "name": "extraArguments",
+              "type": "params object[]"
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "title": "A counted text",
+          "code": "<span>@Loc.Plural(\"TmModelingIssuePanel_Count\", Issues.Count)</span> @* 1 nález · 3 nálezy · 7 nálezů *@"
+        }
+      ]
+    },
+    {
+      "itemName": "TmPluralCategory",
+      "kind": "Enum",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "The CLDR plural categories resource keys are written for; each maps to a key suffix (Key_One, Key_Few, Key_Many, Key_Other).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralCategory.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmPluralRules",
+      "kind": "Class",
+      "category": "Localization",
+      "namespace": "Tempo.Blazor.Localization",
+      "description": "Selects the plural category (One, Few, Many, Other) of a number for a culture from the CLDR rules Tempo.Blazor ships strings for: cs/sk (1, 2-4, fractions, 5+), pl, fr (0-1, millions) and English/default (1, other). A region uses its language.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralRules.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Select",
+          "kind": "Method",
+          "type": "TmPluralCategory",
+          "description": "The category of count in culture.",
+          "parameters": [
+            {
+              "name": "culture",
+              "type": "CultureInfo"
+            },
+            {
+              "name": "count",
+              "type": "double"
+            }
+          ]
         }
       ]
     },
@@ -36093,11 +36194,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1478,
-    "manualItemCount": 1478,
-    "generatedItemCount": 1461,
+    "itemCount": 1482,
+    "manualItemCount": 1482,
+    "generatedItemCount": 1465,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1461
+    "publicApiTypeCount": 1465
   }
 }

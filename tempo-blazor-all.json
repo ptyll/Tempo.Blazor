@@ -112,6 +112,7 @@
           "Tempo.Blazor.Components.TreeView",
           "Tempo.Blazor.Components.Workflow",
           "Tempo.Blazor.Configuration",
+          "Tempo.Blazor.Localization",
           "Tempo.Blazor.Resources",
           "Tempo.Blazor.Services"
         ]
@@ -6928,7 +6929,7 @@
               "name": "AddTempoBlazor",
               "kind": "Method",
               "type": "IServiceCollection",
-              "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
+              "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Singleton relative-time formatter over the localizer and the registered TimeProvider ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
               "parameters": [
                 {
                   "name": "services",
@@ -19317,6 +19318,39 @@
           ]
         },
         {
+          "itemName": "TmRelativeTimeFormatter",
+          "kind": "Class",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "The default ITmRelativeTimeFormatter: Tm_Time_* strings from ITmLocalizer, plural day forms from Loc.Plural, the current moment from a TimeProvider (system clock when none is registered) and calendar days judged in the time zone passed to Format. Registered as a singleton by AddTempoBlazor().",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTimeFormatter.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Format",
+              "kind": "Method",
+              "type": "string",
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": "DateTimeOffset"
+                },
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset?",
+                  "default": "null"
+                },
+                {
+                  "name": "timeZone",
+                  "type": "TimeZoneInfo?",
+                  "default": "null"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "itemName": "TmBottomNavigation",
           "kind": "Component",
           "category": "Navigation",
@@ -24522,7 +24556,7 @@
           "kind": "Component",
           "category": "Timeline",
           "namespace": "Tempo.Blazor.Components.Timeline",
-          "description": "Vertical activity timeline displaying entries with author avatars, timestamps with relative formatting, content, and an internal/external badge. Supports filtering internal entries.",
+          "description": "Vertical activity timeline displaying entries with author avatars, timestamps formatted by the shared ITmRelativeTimeFormatter (just now, 5 min ago, yesterday at 4:20 PM, an absolute date from a week on), content, and an internal/external badge. Supports filtering internal entries.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Timeline/TmTimeline.razor",
           "documentationStatus": "merged",
@@ -26325,6 +26359,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/pointer-drag.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/query-input.js",
           "kind": "JavaScript"
         },
@@ -26393,6 +26431,14 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/scheduler-pointer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-editor-shell.test.mjs",
           "kind": "JavaScript"
         },
@@ -26414,12 +26460,12 @@
         }
       ],
       "summary": {
-        "itemCount": 366,
-        "manualItemCount": 366,
-        "generatedItemCount": 358,
+        "itemCount": 367,
+        "manualItemCount": 367,
+        "generatedItemCount": 359,
         "generatedOnlyItemCount": 0,
         "componentCount": 201,
-        "publicApiTypeCount": 157
+        "publicApiTypeCount": 158
       }
     },
     {
@@ -73796,7 +73842,7 @@
           "kind": "Interface",
           "category": "Localization",
           "namespace": "Tempo.Blazor.Localization",
-          "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library includes default implementations for English and Czech.",
+          "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library ships English, Czech and French. Counted texts use Loc.Plural (Key_One/_Few/_Many/_Other, see TmLocalizerPluralExtensions); Culture and TryGetString are default interface members, so existing implementations keep compiling.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmLocalizer.cs",
           "documentationStatus": "merged",
@@ -73852,6 +73898,107 @@
             {
               "title": "Usage in component",
               "code": "@inject ITmLocalizer Loc\n\n<button>@Loc[\"TmButton_Submit\"]</button>"
+            }
+          ]
+        },
+        {
+          "itemName": "ITmRelativeTimeFormatter",
+          "kind": "Interface",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "Formats a moment relative to now in the user's language: 'just now', '5 min ago', 'yesterday at 4:20 PM', 'in 3 days', and an absolute date from a week on. AddTempoBlazor() registers the default TmRelativeTimeFormatter over ITmLocalizer (Tm_Time_* strings) and the registered TimeProvider; register your own after it to replace it.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmRelativeTimeFormatter.cs",
+          "documentationStatus": "merged",
+          "usedInComponents": [
+            "TmTimeline",
+            "TmActivityTimeline",
+            "TmActivityComments"
+          ],
+          "examples": [
+            {
+              "title": "Deterministic formatting in a test",
+              "code": "var formatter = new TmRelativeTimeFormatter(localizer, fakeTimeProvider);\nformatter.Format(DateTimeOffset.UtcNow.AddMinutes(-5)); // \"5 min ago\""
+            }
+          ]
+        },
+        {
+          "itemName": "TmLocalizerPluralExtensions",
+          "kind": "Class",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "Loc.Plural(key, count, ...extra): resolves Key_One/_Few/_Many/_Other from the localizer culture's plural rules, falling back to Key_Other and then the plain Key, and formats it with the count as {0}.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmLocalizerPluralExtensions.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Plural",
+              "kind": "Method",
+              "type": "string",
+              "description": "Resolves the plural form of key for count and formats it.",
+              "parameters": [
+                {
+                  "name": "localizer",
+                  "type": "this ITmLocalizer"
+                },
+                {
+                  "name": "key",
+                  "type": "string"
+                },
+                {
+                  "name": "count",
+                  "type": "double"
+                },
+                {
+                  "name": "extraArguments",
+                  "type": "params object[]"
+                }
+              ]
+            }
+          ],
+          "examples": [
+            {
+              "title": "A counted text",
+              "code": "<span>@Loc.Plural(\"TmModelingIssuePanel_Count\", Issues.Count)</span> @* 1 nález · 3 nálezy · 7 nálezů *@"
+            }
+          ]
+        },
+        {
+          "itemName": "TmPluralCategory",
+          "kind": "Enum",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "The CLDR plural categories resource keys are written for; each maps to a key suffix (Key_One, Key_Few, Key_Many, Key_Other).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralCategory.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TmPluralRules",
+          "kind": "Class",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "Selects the plural category (One, Few, Many, Other) of a number for a culture from the CLDR rules Tempo.Blazor ships strings for: cs/sk (1, 2-4, fractions, 5+), pl, fr (0-1, millions) and English/default (1, other). A region uses its language.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/TmPluralRules.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Select",
+              "kind": "Method",
+              "type": "TmPluralCategory",
+              "description": "The category of count in culture.",
+              "parameters": [
+                {
+                  "name": "culture",
+                  "type": "CultureInfo"
+                },
+                {
+                  "name": "count",
+                  "type": "double"
+                }
+              ]
             }
           ]
         },
@@ -98002,12 +98149,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1478,
-        "manualItemCount": 1478,
-        "generatedItemCount": 1461,
+        "itemCount": 1482,
+        "manualItemCount": 1482,
+        "generatedItemCount": 1465,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1461
+        "publicApiTypeCount": 1465
       }
     },
     {
@@ -112058,10 +112205,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3192,
-    "manualItemCount": 3192,
+    "itemCount": 3197,
+    "manualItemCount": 3197,
     "generatedOnlyItemCount": 0,
     "componentCount": 472,
-    "publicApiTypeCount": 2667
+    "publicApiTypeCount": 2672
   }
 }
