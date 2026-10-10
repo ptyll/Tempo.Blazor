@@ -134,4 +134,40 @@ public class ActionOverflowMenuTests : LocalizationTestBase
         cut.FindAll("[role='menu']").Should().BeEmpty();
         cut.FindAll("button.test-trigger").Should().BeEmpty("with nothing to offer there is no trigger");
     }
+
+    [Fact]
+    public void ReorderWhileOpen_AnItemInFrontOfTheFirstEnabledOne_DoesNotCrashTheRenderer()
+    {
+        // H1 (UX B1): the first enabled item used to carry the only element-reference capture, added
+        // conditionally inside a keyed <button>. A reorder while open ([B] -> [A, B]) moved the capture
+        // frame to a different retained element and the diff threw "Unexpected frame type during
+        // RemoveOldFrame: ElementReferenceCapture" (#blazor-error-ui, dead page) - reachable by a resize
+        // or rotation with the menu open.
+        var cut = RenderMenu([Item("B")]);
+        cut.Find("button.test-trigger").Click();
+
+        var act = () => cut.Render(p => p.Add(c => c.Items, new List<TmActionItem> { Item("A"), Item("B") }));
+
+        act.Should().NotThrow();
+        cut.FindAll("[role='menuitem']").Select(i => i.GetAttribute("data-action-id")).Should().Equal("A", "B");
+
+        // and back, and with a disabled item taking the front: the capture never depends on position.
+        cut.Render(p => p.Add(c => c.Items, new List<TmActionItem> { Item("Off", disabled: true), Item("A"), Item("B") }));
+        cut.Render(p => p.Add(c => c.Items, new List<TmActionItem> { Item("B") }));
+        cut.FindAll("[role='menuitem']").Select(i => i.GetAttribute("data-action-id")).Should().Equal("B");
+    }
+
+    [Fact]
+    public void ReorderWhileOpen_ADisabledItemTakingTheFront_DoesNotCrashTheRenderer()
+    {
+        // The first-enabled item moves when a disabled one is inserted in front of it - the focus target
+        // is picked at focus time, so the render tree never depends on which item is first.
+        var cut = RenderMenu([Item("B")]);
+        cut.Find("button.test-trigger").Click();
+
+        var act = () => cut.Render(p => p.Add(c => c.Items, new List<TmActionItem> { Item("Off", disabled: true), Item("A"), Item("B") }));
+
+        act.Should().NotThrow();
+        cut.FindAll("[role='menuitem']").Select(i => i.GetAttribute("data-action-id")).Should().Equal("Off", "A", "B");
+    }
 }
