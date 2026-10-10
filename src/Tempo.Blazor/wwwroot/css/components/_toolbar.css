@@ -80,7 +80,7 @@
   pointer-events: none;
 }
 
-/* The More trigger shares the button look. */
+/* A divider that only separates a group that has collapsed into More would be a stray rule: hide it with\n   visibility (it keeps its box, so the measured fixed width does not change and the fit cannot oscillate).\n   Only when collapsed buttons follow it and no visible button does - a divider before other content stays. */\n.tm-toolbar-divider:has(~ .tm-toolbar-item--collapsed):not(:has(~ .tm-toolbar-btn:not(.tm-toolbar-item--collapsed))) {\n  visibility: hidden;\n}\n\n/* The More trigger shares the button look. */
 .tm-toolbar-more {
   display: inline-flex; align-items: center; justify-content: center;
   flex-shrink: 0;
