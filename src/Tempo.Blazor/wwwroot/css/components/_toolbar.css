@@ -22,6 +22,9 @@
   padding: var(--tm-space-1) var(--tm-space-2); background: none; border: none;
   border-radius: var(--tm-radius-md); cursor: pointer; font-size: var(--tm-font-size-sm);
   color: var(--tm-text-secondary); white-space: nowrap;
+  /* A button keeps its natural width: it leaves the bar into More (Overflow=Menu) instead of shrinking to
+     its touch-target min-width and spilling its label over the next button. */
+  flex-shrink: 0;
   transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
 }
 .tm-toolbar-btn:hover:not(:disabled) { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
