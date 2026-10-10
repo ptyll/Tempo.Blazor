@@ -194,6 +194,9 @@
         _end: function () {
             var s = this._session;
             if (!s) return;
+            // Put the Blazor-rendered geometry back FIRST: under Blazor WebAssembly the render that applies
+            // the new size runs synchronously inside invokeMethodAsync, and a later cleanup would overwrite it.
+            this._restoreGeometry(s);
             if (s.eventId && s.delta !== 0) {
                 this._notifyBlazorResize(s.dotNetRef, s.eventId, s.delta, s.resizeEdge);
             }
@@ -212,8 +215,13 @@
 
             s.eventElement.draggable = s.originalDraggable;
             s.eventElement.removeAttribute('data-resizing');
+            this._restoreGeometry(s);
+        },
 
-            // Put back what Blazor rendered; after a committed resize Blazor then re-renders the new geometry.
+        /** Puts back the inline geometry Blazor rendered; once per session (after a commit Blazor re-renders the new one). */
+        _restoreGeometry: function (s) {
+            if (s.restored) return;
+            s.restored = true;
             var style = s.eventElement.style;
             if (s.isTimeline) {
                 style.width = s.originalStyle.width;
