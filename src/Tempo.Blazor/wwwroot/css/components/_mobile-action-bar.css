@@ -188,6 +188,10 @@
   cursor: not-allowed;
 }
 
+.tm-mobile-action-bar__menu-item--danger {
+  color: var(--tm-color-danger);
+}
+
 .tm-mobile-action-bar__menu-label {
   min-width: 0;
   overflow: hidden;

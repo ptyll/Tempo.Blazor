@@ -22,11 +22,12 @@
   padding: var(--tm-space-1) var(--tm-space-2); background: none; border: none;
   border-radius: var(--tm-radius-md); cursor: pointer; font-size: var(--tm-font-size-sm);
   color: var(--tm-text-secondary); white-space: nowrap;
-  /* A button keeps its natural width: it leaves the bar into More (Overflow=Menu) instead of shrinking to
-     its touch-target min-width and spilling its label over the next button. */
-  flex-shrink: 0;
   transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
 }
+/* A button inside a TmToolbar keeps its natural width: it leaves the bar into More (Overflow=Menu) instead of
+   shrinking to its touch-target min-width and spilling its label over the next button. Scoped to the toolbar
+   (H5): a standalone .tm-toolbar-btn (TmDiagramEditor, TmModelingDiagramPreview) keeps the pre-F4 flex behaviour. */
+.tm-toolbar .tm-toolbar-btn { flex-shrink: 0; }
 .tm-toolbar-btn:hover:not(:disabled) { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
 .tm-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .tm-toolbar-btn--primary { background: var(--tm-color-primary); color: white; }
@@ -60,10 +61,11 @@
   height: 2.5rem;
 }
 
-/* F4 - an icon-only button keeps a finger-sized hit area on a coarse pointer. */
+/* F4 - a button inside a toolbar keeps a finger-sized hit area on a coarse pointer (scoped to .tm-toolbar:
+   a standalone toolbar button is unchanged). */
 @media (pointer: coarse) {
-  .tm-toolbar-btn,
-  .tm-toolbar-more {
+  .tm-toolbar .tm-toolbar-btn,
+  .tm-toolbar .tm-toolbar-more {
     min-width: var(--tm-touch-target);
     min-height: var(--tm-touch-target);
     justify-content: center;
