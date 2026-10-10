@@ -176,6 +176,26 @@
             </div>
         </div>
 
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-overflowonly-mid-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_OverflowOnlyMidTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_OverflowOnlyMidDescription"]</p>
+            </div>
+            <div class="p-4">
+                <div style="width: 1100px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_OverflowOnlyMidTitle"]"
+                               data-testid="toolbar-overflowonly-mid">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
         <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-shrink-card">
             <div class="p-4 border-b border-slate-200 dark:border-slate-700">
                 <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ShrinkTitle"]</h3>

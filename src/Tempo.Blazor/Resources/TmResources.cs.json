@@ -107,6 +107,8 @@
   "TmToolbarDemo_ConditionalTitle": "Podmíněné tlačítko",
   "TmToolbarDemo_ConditionalDescription": "Tlačítko vložené doprostřed lišty po prvním vykreslení: nabídka Více i pořadí odpadání se řídí pořadím v DOM.",
   "TmToolbarDemo_ConditionalToggle": "Vložit Otevřít doprostřed",
+  "TmToolbarDemo_OverflowOnlyMidTitle": "Tlačítko jen v nabídce uprostřed",
+  "TmToolbarDemo_OverflowOnlyMidDescription": "Exportovat je napsáno mezi Nový a Kopírovat a žije jen v nabídce Více: nabídka zachová toto pořadí.",
   "TmToolbarDemo_ShrinkTitle": "Hostitel se smrštěním na obsah",
   "TmToolbarDemo_ShrinkDescription": "Toolbar je kontejner bez vlastní šířky: v řádku space-between potřebuje flex: 1 1 auto; min-width: 0.",
   "TmToolbarDemo_ShrinkPlain": "Bez úpravy hostitele (zhroutí se)",

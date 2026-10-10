@@ -107,6 +107,8 @@
   "TmToolbarDemo_ConditionalTitle": "Bouton conditionnel",
   "TmToolbarDemo_ConditionalDescription": "Un bouton inséré au milieu de la barre après le premier rendu : le menu Plus et l'ordre de repli suivent l'ordre du DOM.",
   "TmToolbarDemo_ConditionalToggle": "Insérer Ouvrir au milieu",
+  "TmToolbarDemo_OverflowOnlyMidTitle": "Bouton réservé au menu au milieu",
+  "TmToolbarDemo_OverflowOnlyMidDescription": "Exporter est écrit entre Nouveau et Copier et ne vit que dans Plus : le menu conserve cette position.",
   "TmToolbarDemo_ShrinkTitle": "Hôte à largeur ajustée au contenu",
   "TmToolbarDemo_ShrinkDescription": "La barre est un conteneur sans largeur intrinsèque : dans une ligne space-between elle exige flex: 1 1 auto; min-width: 0.",
   "TmToolbarDemo_ShrinkPlain": "Sans correctif d'hôte (s'effondre)",

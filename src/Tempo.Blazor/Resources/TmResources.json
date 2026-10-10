@@ -107,6 +107,8 @@
   "TmToolbarDemo_ConditionalTitle": "Conditional button",
   "TmToolbarDemo_ConditionalDescription": "A button inserted in the middle of the bar after the first render: the More menu and the tie-break follow the DOM order.",
   "TmToolbarDemo_ConditionalToggle": "Insert Open mid-bar",
+  "TmToolbarDemo_OverflowOnlyMidTitle": "Overflow-only button in the middle",
+  "TmToolbarDemo_OverflowOnlyMidDescription": "Export is written between New and Copy and lives only in More: the menu keeps that written position.",
   "TmToolbarDemo_ShrinkTitle": "Shrink-to-fit host",
   "TmToolbarDemo_ShrinkDescription": "The toolbar is a size container with no intrinsic width: in a space-between flex row it needs flex: 1 1 auto; min-width: 0.",
   "TmToolbarDemo_ShrinkPlain": "Without the host fix (collapses)",

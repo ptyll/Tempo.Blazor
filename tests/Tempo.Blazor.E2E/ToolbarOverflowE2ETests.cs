@@ -757,6 +757,55 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task I1_AnOverflowOnlyButtonWrittenMidBar_KeepsItsPositionInTheMenu()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflowonly-mid");
+        var bar = Bar(page, "toolbar-overflowonly-mid");
+        // New (pinned), Export (OverflowOnly, written 2nd), Copy, Paste (Secondary): squeeze so the Secondary pair leaves.
+        await bar.EvaluateAsync("el => { el.parentElement.style.width = '260px'; }");
+        await SettleAsync(page, "toolbar-overflowonly-mid");
+
+        var collapsed = await CollapsedTextsAsync(bar);
+        Assert.IsTrue(collapsed.Length > 0, "a 260px bar cannot hold New + Copy + Paste");
+        await bar.Locator("button.tm-toolbar-more").ClickAsync();
+
+        var expected = new[] { "Export" }.Concat(collapsed).ToArray();
+        CollectionAssert.AreEqual(expected, (await MenuTextsAsync(page)).ToArray(),
+            "Export was written between New and Copy, so it precedes the collapsed Copy/Paste in the menu (the old order put it last)");
+        Assert.AreEqual(0, await bar.Locator("button.tm-toolbar-btn", new LocatorLocatorOptions { HasText = "Export" }).CountAsync(),
+            "Export has no button on the bar - only the hidden position marker");
+    }
+
+    [TestMethod]
+    public async Task I2_ReopeningTheMoreMenu_ThenShiftTabToTheTriggerAndTabBackIn_KeepsTheMenuOpen()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        await trigger.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await page.Keyboard.PressAsync("Shift+Tab");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => document.activeElement?.classList.contains('tm-toolbar-more') === true"), "Shift+Tab from the first item lands on the trigger");
+        await page.Keyboard.PressAsync("Tab");
+        await page.WaitForTimeoutAsync(300);
+
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        Assert.AreEqual("true", await trigger.GetAttributeAsync("aria-expanded"), "the stale first-open listener must not dismiss the re-opened menu");
+    }
+
+    [TestMethod]
     public async Task H10_SplitButtonAndContextMenu_OpenedFromTheKeyboard_FocusTheirFirstItem_AndReturnFocusOnActivation()
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
