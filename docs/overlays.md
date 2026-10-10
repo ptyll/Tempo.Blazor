@@ -41,12 +41,15 @@ lost. Those consumers stay on the `Popover` default — enforced by a source swe
 `TmOverlayPanelDefaultPresentationTests`. If a combobox ever wants a sheet, it needs a
 search-in-sheet design: the input moves into the sheet header and is autofocused there.
 
-> **F4 note — editor and formatting-toolbar overflow menus.** An overflow menu opened from an
-> editor or formatting toolbar counts as "the anchor keeps focus/selection": the user's text
-> selection lives in the anchor surface and a modal sheet would move focus to the sheet header,
-> collapsing the selection and any half-typed formatting command. Such menus stay on the
-> `Popover` presentation — or, if a host genuinely needs the sheet, they must restore the
-> selection when the sheet closes. Do not opt them into `Auto` in the F4 pass.
+> **F4 decision — toolbar overflow menus.** The core `TmToolbar` is an *action* toolbar: its "More"
+> menu holds commands (Export, Delete, …) and the toolbar owns no text selection, so its menu
+> follows the F3 default and is `Auto` — a bottom sheet on a phone-sized viewport
+> (`TmToolbar.OverflowPresentation="Auto"`). An **editor or formatting toolbar** is different:
+> the user's text selection lives in the surface the toolbar belongs to, and a modal sheet moves
+> focus to its header, collapsing the selection and any half-typed formatting command. Such a host
+> sets `OverflowPresentation="Popover"` — or, if it genuinely needs the sheet, restores the
+> selection when the sheet closes. `TmToolbar` cannot tell the two apart, so the choice is
+> explicit and documented here rather than guessed.
 
 In sheet mode the panel **composes `TmDrawer Position=Bottom`** (content height, `Modal`) — it
 never copies sheet, gesture or focus logic. The sheet header shows `Title` (fall back:
@@ -71,8 +74,9 @@ focus on the first `menuitem`/`option`, not on Done.
 
 ### The action-surface overflow menu (F5)
 
-`TmMobileActionBar` (and F4's toolbar overflow, which reuses the same contract) opens its
-"More" menu through `TmOverlayPanel` — the anchored popover on a desktop viewport, the shared
+`TmMobileActionBar` and the F4 `TmToolbar` overflow share ONE menu host (the internal
+`ActionOverflowMenu`, opened from C# because a Razor tag cannot bind an internal component) and
+open their "More" menu through `TmOverlayPanel` — the anchored popover on a desktop viewport, the shared
 bottom sheet on a mobile one. The host contract every action surface must honour:
 
 - The trigger is a real element passed as the panel's explicit `Anchor` (never a virtual
@@ -85,6 +89,14 @@ bottom sheet on a mobile one. The host contract every action surface must honour
   the trigger on every close path — Escape, outside pointer, Done and selection — in the
   popover presentation too (a light popover close does not restore focus by itself; the
   surface restores it, the `TmDropdown.SelectItemAsync` pattern).
+- The menu **keyboard** belongs to the panel, not to each host: `TmOverlayPanel` attaches
+  `tm-menu-nav.js` to every `Role="menu"` panel (the popover element or the sheet's content
+  wrapper) once per open — ArrowDown/ArrowUp rove through the enabled items and wrap, Home/End
+  jump to the ends, typeahead focuses the next label that starts with the typed characters
+  (diacritics and case ignored), and the focused item is the only tab stop. Disabled and hidden
+  items are skipped; Enter/Space stay with the native `<button>` (one activation per press) and
+  Escape stays with the overlay. `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both
+  overflow menus get it from the one owner of the role.
 - `KeepMenuOpen="true"` is for actions that open another surface (a confirm dialog): the menu
   stays, the surface promotes *after* it (rule 8), and the host closes the menu afterwards
   through `CloseMoreAsync()` — focus then returns to the trigger.

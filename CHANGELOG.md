@@ -24,6 +24,33 @@
   `.tm-overlay-panel-sheet` (or the unchanged trigger) instead. See
   [docs/overlays.md](docs/overlays.md).
 
+- **`TmToolbar` is now a real toolbar: `toolbar` role + roving tabindex, a measuring container,
+  and `Labels="Auto"` by default.** The root gains the `toolbar` role with an accessible name
+  (`AriaLabel`, else `Title`, else a localized "Toolbar"); its buttons become **one tab stop**
+  (ArrowLeft/ArrowRight, Home, End move between them; Tab leaves the toolbar); and the root is a
+  layout container (`container-type: inline-size; container-name: tm-toolbar; position: relative`)
+  because the labels and the overflow resolve from the toolbar's own width. The default
+  `Labels="Auto"` drops the text of **icon + text buttons** when the toolbar is narrower than 640px
+  (the text stays the `aria-label`); text-only buttons keep their text. Pass
+  `Labels="ToolbarLabels.IconsWithText"` for the old always-visible text. Nothing collapses unless
+  you opt in with `Overflow="ToolbarOverflow.Menu"`. A host that styled `.tm-toolbar` with its
+  own `position` / `container-type` or relied on every button being in the tab order must adjust.
+  A `TmToolbarButton` used **outside** a `TmToolbar` (`TmDiagramEditor`,
+  `TmModelingDiagramPreview`) is unchanged.
+
+  ```razor
+  @* before: every button was a tab stop, text always visible *@
+  <TmToolbar Title="Orders">
+      <TmToolbarButton Icon="@IconNames.Plus" Text="New" />
+  </TmToolbar>
+
+  @* after: same markup keeps working (one tab stop, labels drop below 640px of toolbar width);
+     opt in to the old always-visible text and to overflow explicitly *@
+  <TmToolbar Title="Orders" Labels="ToolbarLabels.IconsWithText" Overflow="ToolbarOverflow.Menu">
+      <TmToolbarButton Icon="@IconNames.Plus" Text="New" />
+      <TmToolbarButton Icon="@IconNames.Trash" Text="Delete" Priority="ToolbarButtonPriority.OverflowOnly" />
+  </TmToolbar>
+  ```
 - **`TmDatePicker`, `TmDateRangePicker` and `TmDateTimePicker` popup panels are now
   `TmFocusScope` roots** (`TrapFocus="true"`): the calendar popup traps Tab, marks the background
   `inert` and re-claims `aria-modal="true"` — the modality the `role="dialog"` popup always
@@ -403,6 +430,24 @@
 
 ### Added
 
+- **Overflow toolbar (F4).** `TmToolbar.Overflow` (`None|Menu`), `Labels`
+  (`Auto|Icons|IconsWithText`), `OverflowLabel`, `AriaLabel` and `OverflowPresentation`;
+  `TmToolbarButton.Priority` (`Primary|Secondary|OverflowOnly`) and `LabelPosition`
+  (`Inline|Below|Hidden`). The buttons that do not fit move into a More menu — the same shared
+  menu host as the F5 action bar, a bottom sheet on a phone — lowest priority first, `OverflowOnly`
+  always there; render order stays the written order. `tm-toolbar.js` measures how many buttons
+  fit (rAF-coalesced, signature dedup) and generalises the DocumentEditor's `toolbar-overflow.mjs`
+  (the editor migrates in its own plan). See [docs/toolbar.md](docs/toolbar.md).
+- **`TmActionItem.Overflow`** (`Auto|Never|Always`) pins an action to the bar or to the More
+  menu independently of `Priority`, and `TmActionItem.Danger` tints its menu entry; the shared
+  `ActionOverflowLayout.Partition` honours the pins for both the action bar and the toolbar.
+- **Menu keyboard for every `role=menu` surface.** `tm-menu-nav.js`, attached by
+  `TmOverlayPanel` to each `Role="menu"` panel (popover or sheet): ArrowUp/ArrowDown/Home/End
+  roving over the enabled items, typeahead (diacritic- and case-insensitive) and a roving tabindex —
+  `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both overflow menus get it with no
+  per-component code.
+- `TmToolbarButton` with `LabelPosition="Below"` stacks the label under the icon; `Hidden`
+  omits the text span and keeps the text as the accessible name.
 - `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
   `TmPopover`, with `LayoutMode` / `InitialMode` / `ResolvedLayoutChanged` forwarded by the two
   components. `TmOverlayPanel.TrapFocus` for dialog popups that must enforce their modality, and

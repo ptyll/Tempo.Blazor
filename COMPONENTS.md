@@ -5227,17 +5227,20 @@ Vertikální časová osa.
 
 ### TmToolbar
 
-Panel nástrojů s tlačítky.
+Panel nástrojů s tlačítky. Má roli toolbar s roving tabindexem (jeden tab stop, šipky vlevo/vpravo, Home/End). `Overflow=Menu` přesune tlačítka, která se nevejdou, do nabídky Více (nejdřív `Secondary`, `OverflowOnly` vždy); popisky řídí `Labels`. Viz [docs/toolbar.md](docs/toolbar.md).
 
 #### CSS třídy
 
 | Třída | Popis |
 |-------|-------|
-| `tm-toolbar` | Kořenový kontejner |
+| `tm-toolbar` | Kořenový kontejner (container `tm-toolbar`) |
 | `tm-toolbar--sticky` | Přilepený nahoře |
 | `tm-toolbar-start` | Levá strana |
 | `tm-toolbar-title` | Nadpis |
 | `tm-toolbar-actions` | Akce vpravo |
+| `tm-toolbar-more` | Tlačítko Více (overflow) |
+| `tm-toolbar-more__panel` / `__menu` / `__item` / `__label` | Nabídka Více |
+| `tm-toolbar-item--collapsed` | Tlačítko, které se nevešlo (mimo tok, neviditelné, inert) |
 
 #### Parametry
 
@@ -5247,6 +5250,11 @@ Panel nástrojů s tlačítky.
 | `ChildContent` | `RenderFragment` | — | Obsah (tlačítka) |
 | `Actions` | `RenderFragment?` | `null` | Akce vpravo |
 | `Sticky` | `bool` | `false` | Přilepený nahoře |
+| `Overflow` | `ToolbarOverflow` | `None` | `None` / `Menu` — přetečení do nabídky Více |
+| `Labels` | `ToolbarLabels` | `Auto` | `Auto` / `Icons` / `IconsWithText` — viditelné popisky |
+| `OverflowLabel` | `string?` | `null` | Název a tooltip tlačítka Více |
+| `AriaLabel` | `string?` | `null` | Přístupný název lišty |
+| `OverflowPresentation` | `PanelPresentation` | `Auto` | Prezentace nabídky Více na telefonu |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -5261,6 +5269,7 @@ Tlačítko v toolbaru.
 | `tm-toolbar-btn` | Základní třída tlačítka |
 | `tm-toolbar-btn-text` | Text tlačítka |
 | `tm-toolbar-btn--{variant}` | Varianta (dynamicky: `ghost`, `primary`, `secondary`, `danger`) |
+| `tm-toolbar-btn--label-below` / `--icon-only` / `--labels-auto` | Popisek pod ikonou / jen ikona / popisek mizí podle šířky lišty |
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
@@ -5270,6 +5279,8 @@ Tlačítko v toolbaru.
 | `OnClick` | `EventCallback` | — | Klik |
 | `Disabled` | `bool` | `false` | Zakázáno |
 | `Variant` | `ButtonVariant` | `Ghost` | Varianta |
+| `Priority` | `ToolbarButtonPriority` | `Primary` | `Primary` / `Secondary` / `OverflowOnly` — pořadí odchodu do Více (ne pořadí vykreslení) |
+| `LabelPosition` | `ToolbarLabelPosition` | `Inline` | `Inline` / `Below` / `Hidden` — poloha popisku |
 | `Class` | `string?` | `null` | CSS |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
