@@ -185,9 +185,9 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full">Interactive</span>
     </div>
     
-    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;">
+    <div class="showcase-card" style="min-height: 500px; position: relative; overflow: hidden;" data-testid="scheduler-interactive">
         <div class="mb-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-            <p class="text-sm text-slate-600 dark:text-slate-400">
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="scheduler-last-action">
                 <strong>Last Action:</strong> @_lastAction
             </p>
         </div>
@@ -393,7 +393,16 @@
 
     private void HandleEventChanged(TmScheduleEvent evt)
     {
-        _lastAction = $"Event moved: '{evt.Title}' to {evt.Start:g}";
+        // The scheduler hands the grid normalized copies: write the change back to the demo's own list,
+        // otherwise the next render restores the old times (a resize would visibly snap back).
+        var index = _interactiveEvents.FindIndex(e => e.Id == evt.Id);
+        if (index >= 0)
+        {
+            _interactiveEvents[index].Start = evt.Start;
+            _interactiveEvents[index].End = evt.End;
+        }
+
+        _lastAction = $"Event moved: '{evt.Title}' to {evt.Start:g} - {evt.End:t}";
         Toast.ShowSuccess($"Event '{evt.Title}' moved to {evt.Start:g}");
     }
 
