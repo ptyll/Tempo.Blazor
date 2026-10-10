@@ -4,10 +4,10 @@
 // unchanged, and every cancel path restores the event without notifying .NET.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
-const helperUrl = pathToFileURL(path.resolve(import.meta.dirname, '../pointer-drag.js')).href;
+const helperUrl = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../pointer-drag.js')).href;
 
 function bag() {
     const map = new Map();
