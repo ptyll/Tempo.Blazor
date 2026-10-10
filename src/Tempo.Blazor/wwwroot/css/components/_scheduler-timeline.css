@@ -118,6 +118,8 @@
 /* ── Resize handles ── */
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle {
     position: absolute;
+    /* The shared pointer-drag helper starts the resize from this handle: a finger must resize, not pan. */
+    touch-action: none;
     top: 0;
     bottom: 0;
     width: 8px;
@@ -128,6 +130,13 @@
 
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle:hover {
     background: rgba(255, 255, 255, 0.35);
+}
+
+/* A finger needs a larger target than a mouse (B13): the handle grows on coarse pointers. */
+@media (pointer: coarse) {
+    .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle {
+        width: var(--tm-space-4);
+    }
 }
 
 /* Left resize handle (start time) */

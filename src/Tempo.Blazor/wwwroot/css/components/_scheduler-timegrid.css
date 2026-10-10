@@ -264,6 +264,8 @@
 /* ── Resize handles ── */
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle {
     position: absolute;
+    /* The shared pointer-drag helper starts the resize from this handle: a finger must resize, not pan. */
+    touch-action: none;
     left: 0;
     right: 0;
     height: 6px;
@@ -275,6 +277,13 @@
 
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* A finger needs a larger target than a mouse (B13): the handle grows on coarse pointers. */
+@media (pointer: coarse) {
+    .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle {
+        height: var(--tm-space-4);
+    }
 }
 
 /* Top resize handle (start time) */
