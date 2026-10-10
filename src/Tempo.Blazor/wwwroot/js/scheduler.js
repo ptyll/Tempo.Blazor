@@ -129,6 +129,14 @@
                 eventId: eventElement.dataset.eventId,
                 dotNetRef: schedulerContainer ? this._dotNetRefs.get(schedulerContainer) : null,
                 originalDraggable: eventElement.draggable,
+                // Blazor renders the geometry inline (percentages of the day). A cancel must put THOSE back:
+                // clearing the properties would let the event collapse to its CSS min-height.
+                originalStyle: {
+                    left: eventElement.style.left || '',
+                    top: eventElement.style.top || '',
+                    width: eventElement.style.width || '',
+                    height: eventElement.style.height || ''
+                },
                 originalSize: isTimeline ? eventRect.width : eventRect.height,
                 originalLeft: isTimeline ? eventRect.left - containerRect.left : 0,
                 originalTop: !isTimeline ? eventRect.top - containerRect.top : 0,
@@ -205,14 +213,14 @@
             s.eventElement.draggable = s.originalDraggable;
             s.eventElement.removeAttribute('data-resizing');
 
-            // Reset styles to let Blazor re-render with the correct values
+            // Put back what Blazor rendered; after a committed resize Blazor then re-renders the new geometry.
             var style = s.eventElement.style;
             if (s.isTimeline) {
-                style.width = '';
-                if (s.resizeEdge === 'left') style.left = '';
+                style.width = s.originalStyle.width;
+                if (s.resizeEdge === 'left') style.left = s.originalStyle.left;
             } else {
-                style.height = '';
-                if (s.resizeEdge === 'top') style.top = '';
+                style.height = s.originalStyle.height;
+                if (s.resizeEdge === 'top') style.top = s.originalStyle.top;
             }
         },
 
