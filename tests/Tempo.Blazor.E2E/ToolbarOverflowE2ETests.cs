@@ -588,20 +588,23 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     [TestMethod]
     public async Task H1_Rotation_LandscapeToPortrait_WithTheMenuOpen_KeepsThePageAlive()
     {
+        // The 1100px demo toolbar always has a More trigger (Export/Delete are overflow-only) and fits 5 buttons at
+        // 844 but only a few at 390, so the open menu GAINS items in front of its first one when rotated.
         var page = await OpenAsync(844, 390, touch: true);
-        await SettleAsync(page, "toolbar-ribbon");
-        var bar = Bar(page, "toolbar-ribbon");
+        await SettleAsync(page, "toolbar-overflow-1100");
+        var bar = Bar(page, "toolbar-overflow-1100");
         await bar.Locator("button.tm-toolbar-more").TapAsync();
         await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        var before = await MenuTextsAsync(page);
 
         await page.SetViewportSizeAsync(390, 844);
         await page.WaitForTimeoutAsync(2500);
 
         Assert.IsFalse(await ErrorUiVisibleAsync(page), "rotating with the More menu open must not crash the renderer");
-        await SettleAsync(page, "toolbar-ribbon");
-        Assert.IsTrue(await bar.Locator("button.tm-toolbar-more").CountAsync() == 1, "the narrow ribbon still offers More");
+        var after = await MenuTextsAsync(page);
+        Assert.IsTrue(after.Length >= before.Length, $"the narrow toolbar lists at least as many entries ({before.Length} -> {after.Length})");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
     }
-
     [TestMethod]
     public async Task H2_ButtonsInsideAGroupWrapper_AreAllVisibleOnAWideBar_AndCollapseAndRecoverWhenNarrowed()
     {
