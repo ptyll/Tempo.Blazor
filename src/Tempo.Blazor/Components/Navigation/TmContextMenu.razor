@@ -1,7 +1,11 @@
 @namespace Tempo.Blazor.Components.Navigation
 @using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Helpers
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="tm-context-menu-wrapper @Class" @attributes="AdditionalAttributes">
+<div @ref="_wrapperRef" class="tm-context-menu-wrapper @Class" @attributes="AdditionalAttributes">
     <div class="tm-context-menu__trigger"
          @ref="_triggerRef"
          role="button"
@@ -29,6 +33,7 @@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
+                    OnOpened="FocusFirstItemAsync"
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
                     Offset="4"
@@ -43,6 +48,10 @@
 @code {
     private bool _isOpen;
     private ElementReference _triggerRef;
+    private ElementReference _wrapperRef;
+    private MenuNavInterop? _menuNav;
+    private bool _disposed;
+    private bool _focusTriggerAfterClose;
 
     private void SetOpen(bool open)
     {
@@ -70,7 +79,37 @@
     internal void CloseMenu()
     {
         _isOpen = false;
+        // docs/overlays.md rule 4: an item activation closes without overlay.js's focus restore - return focus to the
+        // trigger (the TmDropdown.SelectItemAsync pattern), or a keyboard activation leaves focus on <body>.
+        _focusTriggerAfterClose = true;
         StateHasChanged();
+    }
+
+    /// <summary>A keyboard-opened menu hands focus to its first enabled item (shared owner: MenuNavInterop).</summary>
+    private Task FocusFirstItemAsync() => _disposed ? Task.CompletedTask : (_menuNav ??= new MenuNavInterop(JS)).FocusFirstAsync(_wrapperRef);
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusTriggerAfterClose) return;
+        _focusTriggerAfterClose = false;
+        try
+        {
+            await _triggerRef.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        var menuNav = _menuNav;
+        _menuNav = null;
+        if (menuNav is not null) await menuNav.DisposeAsync();
     }
 
     // No wrapper-level Escape handler: overlay.js consumes Escape in the window capture phase

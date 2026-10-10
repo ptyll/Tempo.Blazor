@@ -12,8 +12,7 @@
 //     Tab leaves the menu instead of walking every entry.
 // Disabled (`disabled` / `aria-disabled="true"`) and hidden items are skipped everywhere. A key
 // pressed inside a text-entry element (a filter input in the menu) is never intercepted. Nothing
-// here activates an item - Enter/Space stay with the native <button> (one activation per press,
-// docs/keyboard-activation-convention.md) - and Escape stays with overlay.js / the sheet trap.
+// here activates an item - Enter/Space stay with the native <button> (one activation per press,// docs/keyboard-activation-convention.md) - and Escape stays with overlay.js / the sheet trap.
 
 const ITEM_SELECTOR = '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
 const TYPEAHEAD_RESET_MS = 700;
@@ -104,8 +103,12 @@ function rove(menu, focused) {
 /**
  * Attaches the menu keyboard to a role=menu element. Idempotent per element.
  * @param {HTMLElement|null} menu the menu element (popover root or sheet content wrapper)
+ * @param {{invokeMethodAsync:Function}|null} [dotNetRef] the popover panel (TmOverlayPanel); when given, a Tab that
+ *   moves focus out of BOTH the menu and its trigger dismisses the popover (NotifyDismissedAsync), so aria-expanded
+ *   never stays true behind a closed-over page. Omitted for the sheet, whose own trap/Done owns focus.
+ * @param {HTMLElement|null} [anchor] the trigger element of the popover
  */
-export function attach(menu) {
+export function attach(menu, dotNetRef = null, anchor = null) {
     if (!menu || attached.has(menu)) return;
 
     const state = { typed: '', typedAt: 0 };
@@ -145,7 +148,38 @@ export function attach(menu) {
 
     menu.addEventListener('keydown', onKeyDown);
     menu.addEventListener('focusin', onFocusIn);
-    attached.set(menu, { onKeyDown, onFocusIn });
+    const registration = { onKeyDown, onFocusIn, anchor: null };
+    attached.set(menu, registration);
+
+    if (dotNetRef && typeof dotNetRef.invokeMethodAsync === 'function') {
+        // Only a TAB-driven focus loss dismisses: a KeepMenuOpen item that opens a confirm dialog moves focus out
+        // programmatically and must keep the menu (docs/overlays.md, rule 8).
+        let tabbing = false;
+        let timer = 0;
+        const armTab = event => {
+            if (event.key !== 'Tab') return;
+            tabbing = true;
+            clearTimeout(timer);
+            timer = setTimeout(() => { tabbing = false; }, 0);
+        };
+        const owns = element => Boolean(element) && (menu.contains?.(element) === true || element === menu
+            || (anchor && (anchor === element || anchor.contains?.(element) === true)));
+        const onFocusOut = event => {
+            const wasTab = tabbing;
+            tabbing = false;
+            if (!wasTab || !event.relatedTarget || owns(event.relatedTarget)) return;
+            try { Promise.resolve(dotNetRef.invokeMethodAsync('NotifyDismissedAsync', 'focus-out')).catch(() => {}); } catch { /* the circuit is gone */ }
+        };
+        menu.addEventListener('keydown', armTab, true);
+        menu.addEventListener('focusout', onFocusOut);
+        registration.armTab = armTab;
+        registration.onFocusOut = onFocusOut;
+        if (anchor?.addEventListener) {
+            anchor.addEventListener('keydown', armTab, true);
+            anchor.addEventListener('focusout', onFocusOut);
+            registration.anchor = anchor;
+        }
+    }
 }
 
 /**
@@ -158,6 +192,12 @@ export function detach(menu) {
     if (!registration) return;
     menu.removeEventListener('keydown', registration.onKeyDown);
     menu.removeEventListener('focusin', registration.onFocusIn);
+    if (registration.onFocusOut) {
+        menu.removeEventListener('keydown', registration.armTab, true);
+        menu.removeEventListener('focusout', registration.onFocusOut);
+        registration.anchor?.removeEventListener?.('keydown', registration.armTab, true);
+        registration.anchor?.removeEventListener?.('focusout', registration.onFocusOut);
+    }
     attached.delete(menu);
 }
 

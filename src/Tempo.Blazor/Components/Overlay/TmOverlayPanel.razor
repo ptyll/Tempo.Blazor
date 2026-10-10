@@ -601,7 +601,17 @@
                 return;
             }
 
-            await _menuNav.InvokeVoidAsync("attach", element);
+            // A popover menu can be dismissed from JS (Tab out of menu AND trigger -> NotifyDismissedAsync, so the
+            // trigger's aria-expanded never goes stale); the sheet's own trap/Done owns focus, so it gets neither.
+            if (IsSheet || _dotNetRef is null)
+            {
+                await _menuNav.InvokeVoidAsync("attach", element);
+            }
+            else
+            {
+                await _menuNav.InvokeVoidAsync("attach", element, _dotNetRef, Anchor.Id is not null ? Anchor : (ElementReference?)null);
+            }
+
             _menuNavOnSheet = IsSheet;
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException
