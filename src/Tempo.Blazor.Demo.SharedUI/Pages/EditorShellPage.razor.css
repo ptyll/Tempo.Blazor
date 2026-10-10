@@ -235,6 +235,10 @@
     background: var(--tm-bg-workspace);
 }
 
+.es-side-panel-host--right {
+    flex-direction: row-reverse;
+}
+
 .es-side-panel-host ::deep .tm-side-panel--docked {
     max-block-size: 320px;
 }

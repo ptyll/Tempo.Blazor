@@ -81,11 +81,12 @@
     <section class="es-side-panel-section" data-testid="side-panel-section">
         <h2>@Loc["TmSidePanelDemo_Title"]</h2>
         <p>@Loc["TmSidePanelDemo_Intro"]</p>
-        <div class="es-side-panel-host">
+        <div class="es-side-panel-host @(_inspectorSide == SidePanelSide.Right ? "es-side-panel-host--right" : null)">
             <TmSidePanel Open="_inspectorOpen"
                          OpenChanged="OnInspectorOpenChanged"
                          Title="@Loc["TmSidePanelDemo_InspectorTitle"]"
                          Width="320px"
+                         Side="_inspectorSide"
                          RestoreFocusTargetId="side-panel-toggle"
                          data-testid="side-panel">
                 <HeaderActions>
@@ -94,11 +95,16 @@
                 <ChildContent>
                     <p>@Loc["TmSidePanelDemo_InspectorBody"]</p>
                 </ChildContent>
+                <FooterContent>
+                    <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="CloseInspector">@Loc["TmSidePanelDemo_ActionCancel"]</TmButton>
+                    <TmButton Size="ButtonSize.Sm" OnClick="ApplyInspector">@Loc["TmSidePanelDemo_ActionApply"]</TmButton>
+                </FooterContent>
             </TmSidePanel>
             <div class="es-side-panel-host__content">
                 <TmButton OnClick="ToggleInspector" aria-pressed="@InspectorPressed" id="side-panel-toggle" data-testid="side-panel-toggle">
                     @(_inspectorOpen ? Loc["TmSidePanelDemo_HideInspector"] : Loc["TmSidePanelDemo_ShowInspector"])
                 </TmButton>
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleInspectorSide" data-testid="side-panel-side-toggle">@(_inspectorSide == SidePanelSide.Left ? Loc["TmSidePanelDemo_SideRight"] : Loc["TmSidePanelDemo_SideLeft"])</TmButton>
                 <p class="es-last-action" data-testid="es-last-action">@Loc["TmEditorShellDemo_LastAction"]: @_lastAction</p>
             </div>
         </div>
@@ -121,6 +127,7 @@
     private int _snap;
     private bool _inspectorOpen;
     private bool _inspectorTouched;
+    private SidePanelSide _inspectorSide = SidePanelSide.Right;
     private readonly TmLayoutBreakpoints _emailBreakpoints = new(768, 1200);
     private string _lastAction = "—";
     private string _buttonText = "Start now";
@@ -317,6 +324,23 @@
     {
         _inspectorTouched = true;
         _inspectorOpen = !_inspectorOpen;
+    }
+
+    private void ToggleInspectorSide()
+    {
+        _inspectorSide = _inspectorSide == SidePanelSide.Left ? SidePanelSide.Right : SidePanelSide.Left;
+    }
+
+    private void CloseInspector()
+    {
+        _inspectorTouched = true;
+        _inspectorOpen = false;
+    }
+
+    private Task ApplyInspector()
+    {
+        CloseInspector();
+        return Record("TmSidePanelDemo_ActionApply");
     }
 
     private void OnInspectorOpenChanged(bool open)
