@@ -2,7 +2,7 @@
 // rules plus attach() against a stub menu, the way tm-editor-shell.test.mjs does it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextIndex, typeaheadMatch, attach, enabledItems, isAttached, focusFirst, __resetForTests } from '../tm-menu-nav.js';
+import { nextIndex, typeaheadMatch, attach, detach, enabledItems, isAttached, focusFirst, __resetForTests } from '../tm-menu-nav.js';
 
 test.beforeEach(() => __resetForTests());
 
@@ -203,4 +203,58 @@ test('focusFirst does nothing when the menu is not open or has no enabled item',
     assert.equal(focusFirst(null), false);
     const menuEl = { querySelectorAll: () => [item('A', { disabled: true })] };
     assert.equal(focusFirst({ querySelector: () => menuEl }), false);
+});
+
+// ── H16c: Tab out of an open popover menu closes it ──────────────────────────────────────────
+
+function dismissEnv() {
+    const calls = [];
+    const dotNet = { invokeMethodAsync: (name, ...args) => { calls.push([name, ...args]); return Promise.resolve(true); } };
+    const inside = item('A');
+    const m = stubMenu([inside]);
+    m.contains = el => el === inside || el === m;
+    const anchorListeners = new Map();
+    const anchor = {
+        contains: el => el === anchor,
+        addEventListener(type, fn) { anchorListeners.set(type, fn); },
+        removeEventListener(type) { anchorListeners.delete(type); },
+    };
+    return { calls, dotNet, m, inside, anchor, anchorListeners, outside: { tagName: 'INPUT' } };
+}
+
+test('H16c focus leaving both the menu and its trigger dismisses the popover (aria-expanded follows via IsOpenChanged)', () => {
+    const e = dismissEnv();
+    attach(e.m, e.dotNet, e.anchor);
+    e.m.listeners.get('focusout')({ target: e.inside, relatedTarget: e.outside });
+    assert.deepEqual(e.calls, [['NotifyDismissedAsync', 'focus-out']]);
+});
+
+test('H16c focus staying inside the menu, moving to the trigger, or going nowhere (null) does not dismiss', () => {
+    const e = dismissEnv();
+    attach(e.m, e.dotNet, e.anchor);
+    const focusout = e.m.listeners.get('focusout');
+    focusout({ target: e.inside, relatedTarget: e.inside });
+    focusout({ target: e.inside, relatedTarget: e.anchor });
+    focusout({ target: e.inside, relatedTarget: null });
+    assert.deepEqual(e.calls, []);
+});
+
+test('H16c the trigger losing focus to something outside both dismisses; to the menu does not', () => {
+    const e = dismissEnv();
+    attach(e.m, e.dotNet, e.anchor);
+    const focusout = e.anchorListeners.get('focusout');
+    focusout({ target: e.anchor, relatedTarget: e.inside });
+    assert.deepEqual(e.calls, []);
+    focusout({ target: e.anchor, relatedTarget: e.outside });
+    assert.deepEqual(e.calls, [['NotifyDismissedAsync', 'focus-out']]);
+});
+
+test('H16c without a dotNetRef (sheet / trap) nothing is wired, and detach removes the trigger listener', () => {
+    const e = dismissEnv();
+    attach(e.m);
+    assert.equal(e.m.listeners.has('focusout'), false);
+    const e2 = dismissEnv();
+    attach(e2.m, e2.dotNet, e2.anchor);
+    detach(e2.m);
+    assert.equal(e2.anchorListeners.size, 0);
 });

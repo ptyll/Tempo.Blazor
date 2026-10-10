@@ -134,4 +134,61 @@ public class TmOverlayPanelMenuKeyboardTests : LocalizationTestBase
         cut.Find("button.tm-dropdown-trigger").Click();
         cut.WaitForAssertion(() => nav.Invocations["focusFirst"].Should().HaveCount(2));
     }
+
+    [Fact]
+    public void MenuRole_Popover_PassesTheDotNetRefAndTheAnchorSoTabOutDismisses_SheetDoesNot()
+    {
+        // H16c: Tab out of an open popover menu closes it. tm-menu-nav.js needs the panel's dotNetRef
+        // (NotifyDismissedAsync) and the anchor to tell "focus left menu AND trigger" from "moved between them".
+        var nav = SetupMenuNav();
+        var popover = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Role, "menu")
+            .AddChildContent("<button role='menuitem'>One</button>"));
+        popover.WaitForAssertion(() => nav.Invocations["attach"].Should().ContainSingle());
+        nav.Invocations["attach"].Single().Arguments.Should().HaveCount(3, "element, dotNetRef, anchor");
+        nav.Invocations["attach"].Single().Arguments[1].Should().NotBeNull("a popover menu can be dismissed from JS");
+
+        var sheet = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Role, "menu")
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
+            .AddChildContent("<button role='menuitem'>One</button>"));
+        sheet.WaitForAssertion(() => nav.Invocations["attach"].Should().HaveCount(2));
+        nav.Invocations["attach"].Last().Arguments.Skip(1).Should().OnlyContain(a => a == null, "the sheet's own trap/Done owns focus");
+    }
+
+    [Fact]
+    public void TmSplitButton_OpenMovesFocusIntoTheMenu_OnceAfterTheOpen()
+    {
+        var nav = SetupMenuNav();
+        var cut = Render<Tempo.Blazor.Components.Buttons.TmSplitButton>(p => p
+            .Add(c => c.Text, "Save")
+            .AddChildContent("<button role='menuitem'>As copy</button>"));
+
+        cut.Find(".tm-split-button__toggle").Click();
+
+        cut.WaitForAssertion(() => nav.Invocations["focusFirst"].Should().ContainSingle());
+        cut.Render();
+        nav.Invocations["focusFirst"].Should().ContainSingle("a re-render of the open menu must not steal focus again");
+    }
+
+    [Fact]
+    public void TmContextMenu_OpenMovesFocusIntoTheMenu_AndAnItemActivationReturnsFocusToTheTrigger()
+    {
+        var nav = SetupMenuNav();
+        var cut = Render<Tempo.Blazor.Components.Navigation.TmContextMenu>(p => p
+            .Add(c => c.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .AddChildContent<Tempo.Blazor.Components.Navigation.TmContextMenuItem>(i => i.Add(x => x.Label, "Edit")));
+
+        cut.Find(".tm-context-menu__trigger").Click();
+        cut.WaitForAssertion(() => nav.Invocations["focusFirst"].Should().ContainSingle());
+
+        var focusBefore = JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus");
+        cut.Find("[role='menuitem']").Click();
+
+        cut.WaitForAssertion(() => JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus")
+            .Should().BeGreaterThan(focusBefore, "activating an item closes the menu and focus returns to the trigger, not <body>"));
+    }
 }
