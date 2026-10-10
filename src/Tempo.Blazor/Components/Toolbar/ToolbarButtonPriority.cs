@@ -1,0 +1,19 @@
+namespace Tempo.Blazor.Components.Toolbar;
+
+/// <summary>
+/// How important a <see cref="TmToolbarButton"/> is when its <see cref="TmToolbar"/> runs out of room
+/// (<see cref="ToolbarOverflow.Menu"/>). Generalises the DocumentEditor's <c>ToolbarItemPriority</c>
+/// (the editor migrates onto the core mechanism in its own plan). The priority is an overflow RANK
+/// only — buttons always render in the order they are written.
+/// </summary>
+public enum ToolbarButtonPriority
+{
+    /// <summary>The default. Stays on the toolbar until every Secondary button has moved into the "More" menu.</summary>
+    Primary,
+
+    /// <summary>Moves into the "More" menu before any Primary button does.</summary>
+    Secondary,
+
+    /// <summary>Always lives in the "More" menu and is never rendered on the toolbar itself.</summary>
+    OverflowOnly,
+}
