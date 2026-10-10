@@ -362,3 +362,58 @@ test('init after destroy works again', async () => {
     await scheduler.ready;
     assert.equal(doc.count('pointerdown'), 1);
 });
+
+// ── a cancelled resize puts back the INLINE geometry Blazor rendered (found by the real-browser E2E) ──
+
+test('Escape restores the inline height/top Blazor rendered instead of clearing them (no collapse to min-height)', () => {
+    const g = timegrid({ slot: 30 });
+    g.event.style.height = '4.1667%';
+    g.event.style.top = '58.3333%';
+    scheduler.registerInstance(g.grid, dotnet());
+
+    doc.dispatch('pointerdown', ev(g.top, { clientY: 100 }));
+    g.top.dispatch('pointermove', ev(g.top, { clientY: 60 }));
+    assert.notEqual(g.event.style.height, '4.1667%', 'precondition: the live resize changed it');
+    doc.dispatch('keydown', { key: 'Escape' });
+
+    assert.equal(g.event.style.height, '4.1667%');
+    assert.equal(g.event.style.top, '58.3333%');
+});
+
+test('pointercancel and a tap restore the inline geometry too; a timeline restores left/width', () => {
+    const g = timegrid();
+    g.event.style.height = '4.1667%';
+    scheduler.registerInstance(g.grid, dotnet());
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    g.bottom.dispatch('pointermove', ev(g.bottom, { clientY: 220 }));
+    g.bottom.dispatch('pointercancel', ev(g.bottom));
+    assert.equal(g.event.style.height, '4.1667%');
+
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160, pointerId: 2 }));
+    g.bottom.dispatch('pointerup', ev(g.bottom, { clientY: 160, pointerId: 2 }));
+    assert.equal(g.event.style.height, '4.1667%', 'a tap leaves the geometry alone');
+
+    const t = timeline();
+    t.event.style.left = '20.8333%';
+    t.event.style.width = '8.3333%';
+    scheduler.registerInstance(t.root, dotnet());
+    doc.dispatch('pointerdown', ev(t.left, { clientX: 300, pointerId: 3 }));
+    t.left.dispatch('pointermove', ev(t.left, { clientX: 250, pointerId: 3 }));
+    doc.dispatch('keydown', { key: 'Escape' });
+    assert.equal(t.event.style.left, '20.8333%');
+    assert.equal(t.event.style.width, '8.3333%');
+});
+
+test('a committed resize also restores the inline geometry first; Blazor then renders the new one', () => {
+    const g = timegrid({ slot: 30 });
+    g.event.style.height = '4.1667%';
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    g.bottom.dispatch('pointermove', ev(g.bottom, { clientY: 220 }));
+    g.bottom.dispatch('pointerup', ev(g.bottom, { clientY: 220 }));
+
+    assert.equal(ref.calls.length, 1);
+    assert.equal(g.event.style.height, '4.1667%', 'never left at min-height while .NET catches up');
+});
