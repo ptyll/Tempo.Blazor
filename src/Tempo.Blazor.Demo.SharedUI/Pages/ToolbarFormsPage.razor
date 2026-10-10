@@ -1,4 +1,6 @@
 @page "/toolbar-forms"
+@using Tempo.Blazor.Components.Toolbar
+@inject ITmLocalizer Loc
 <PageTitle>Toolbar & Forms – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -61,6 +63,98 @@
     </div>
 </section>
 
+<!-- Overflow toolbar (F4) -->
+<section class="demo-section" data-testid="toolbar-overflow-demo">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmToolbarDemo_OverflowTitle"]</h2>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmToolbarDemo_OverflowIntro"]</p>
+
+    <div class="space-y-6">
+        @foreach (var width in _toolbarWidths)
+        {
+            <div class="showcase-card p-0 overflow-hidden" data-testid="@($"toolbar-overflow-card-{width}")">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                    <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@string.Format(Loc["TmToolbarDemo_WidthLabel"], width)</h3>
+                </div>
+                <div class="p-4">
+                    <div style="width: @(width)px; max-width: 100%;">
+                        <TmToolbar Overflow="ToolbarOverflow.Menu"
+                                   AriaLabel="@Loc["TmToolbarDemo_AriaLabel"]"
+                                   data-testid="@($"toolbar-overflow-{width}")">
+                            <ChildContent>
+                                <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                                <TmToolbarButton Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                                <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                                <TmToolbarDivider />
+                                <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                                <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                                <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                                <TmToolbarButton Icon="@IconNames.Trash" Text="@Loc["TmToolbarDemo_Delete"]" Variant="ButtonVariant.Danger" Priority="ToolbarButtonPriority.OverflowOnly" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Delete"])" />
+                            </ChildContent>
+                        </TmToolbar>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-ribbon-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_RibbonTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_RibbonDescription"]</p>
+            </div>
+            <div class="p-4">
+                <TmToolbar Overflow="ToolbarOverflow.Menu"
+                           Labels="ToolbarLabels.IconsWithText"
+                           AriaLabel="@Loc["TmToolbarDemo_RibbonTitle"]"
+                           data-testid="toolbar-ribbon">
+                    <ChildContent>
+                        <TmToolbarButton Icon="@IconNames.MousePointer" Text="@Loc["TmToolbarDemo_Select"]" LabelPosition="ToolbarLabelPosition.Below" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Select"])" />
+                        <TmToolbarButton Icon="@IconNames.Hand" Text="@Loc["TmToolbarDemo_Pan"]" LabelPosition="ToolbarLabelPosition.Below" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Pan"])" />
+                        <TmToolbarDivider />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                        <TmToolbarDivider />
+                        <TmToolbarButton Icon="@IconNames.Layout" Text="@Loc["TmToolbarDemo_Layout"]" LabelPosition="ToolbarLabelPosition.Below" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Layout"])" />
+                        <TmToolbarButton Icon="@IconNames.Search" Text="@Loc["TmToolbarDemo_Find"]" LabelPosition="ToolbarLabelPosition.Below" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Find"])" />
+                    </ChildContent>
+                    <Actions>
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                    </Actions>
+                </TmToolbar>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-labels-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_LabelsTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_LabelsDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                <div style="width: 360px; max-width: 100%;">
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_LabelsAuto"]" data-testid="toolbar-labels-auto">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" />
+                    </TmToolbar>
+                </div>
+                <div style="width: 720px; max-width: 100%;">
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_LabelsAuto"]" data-testid="toolbar-labels-auto-wide">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        @if (_overflowLog is not null)
+        {
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="toolbar-overflow-log">
+                @Loc["TmToolbarDemo_LastAction"]: <span class="font-medium text-primary-600 dark:text-primary-400">@_overflowLog</span>
+            </p>
+        }
+    </div>
+</section>
 <!-- Form Layout -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -197,6 +291,8 @@
 
 @code {
     private string? _log;
+    private string? _overflowLog;
+    private static readonly int[] _toolbarWidths = [1100, 720, 380];
 
     // Form fields
     private string _firstName = string.Empty;
