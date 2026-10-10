@@ -349,4 +349,106 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         OpenMenu(cut);
         MenuLabels(cut).Should().Equal("Alpha", "Beta").And.NotContain("Save");
     }
+
+    private static string[] ItemIdsInDomOrder(IRenderedComponent<TmToolbar> cut)
+        => cut.FindAll("[data-tm-toolbar-item]").Select(i => i.GetAttribute("data-tm-toolbar-item")!).ToArray();
+
+    [Fact]
+    public void EveryBarButton_RendersItsStableMenuId_AsTheItemMarker()
+    {
+        // H3: the marker carries the id tm-toolbar.js reports back, so C# can re-sort to the DOM order.
+        SetupModule();
+        var cut = RenderToolbar(Buttons(new Spec("Alpha"), new Spec("Beta")));
+
+        var ids = ItemIdsInDomOrder(cut);
+        ids.Should().HaveCount(2).And.OnlyContain(id => !string.IsNullOrEmpty(id)).And.OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void MenuOrderAndTieBreak_FollowTheDomOrderReportedByJs_NotTheRegistrationOrder()
+    {
+        // H3 (code M2 + architect M1): A and C register first; B is a conditional button inserted BETWEEN them
+        // later. Registration order is A, C, B - the DOM (and what JS counts) is A, B, C. With room for two
+        // of three equal-rank buttons the LATER one in the bar leaves: C, not B.
+        SetupModule();
+        var includeB = false;
+        RenderFragment content = builder =>
+        {
+            builder.AddContent(0, Buttons(new Spec("A")));
+            if (includeB)
+            {
+                builder.OpenComponent<TmToolbarButton>(1);
+                builder.AddComponentParameter(0, nameof(TmToolbarButton.Text), "B");
+                builder.AddComponentParameter(1, nameof(TmToolbarButton.Icon), "plus");
+                builder.SetKey("B");
+                builder.CloseComponent();
+            }
+            builder.OpenComponent<TmToolbarButton>(2);
+            builder.AddComponentParameter(0, nameof(TmToolbarButton.Text), "C");
+            builder.AddComponentParameter(1, nameof(TmToolbarButton.Icon), "plus");
+            builder.SetKey("C");
+            builder.CloseComponent();
+        };
+        var cut = RenderToolbar(content);
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(2));
+
+        includeB = true;
+        cut.Render(p => p.Add(c => c.ChildContent, content));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+        BarButtons(cut).Should().Equal("A", "B", "C");
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(2, ItemIdsInDomOrder(cut)));
+
+        cut.FindAll(".tm-toolbar-item--collapsed").Select(b => b.TextContent.Trim()).Should().Equal(new[] { "C" },
+            "ties drop the LAST button of the bar, which is C once the order is the DOM order");
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("C");
+    }
+
+    [Fact]
+    public void MenuOrder_IsTheDomOrder_WhenSeveralButtonsLeave()
+    {
+        SetupModule();
+        var swapped = false;
+        RenderFragment content = builder =>
+        {
+            var specs = swapped
+                ? new[] { new Spec("B"), new Spec("A"), new Spec("C") }
+                : new[] { new Spec("A"), new Spec("B"), new Spec("C") };
+            builder.AddContent(0, Buttons(specs));
+        };
+        var cut = RenderToolbar(content);
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+
+        swapped = true;
+        cut.Render(p => p.Add(c => c.ChildContent, content));
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(1, ItemIdsInDomOrder(cut)));
+
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("A", "C");
+    }
+
+    [Fact]
+    public void ButtonsInsideAGroupWrapper_RegisterAndCollapseLikeDirectChildren()
+    {
+        // H2: the group marker (role=group + data-tm-toolbar-group) is a layout wrapper only; the buttons inside
+        // still register with the toolbar, are marked as items and reach the More menu.
+        SetupModule();
+        RenderFragment content = builder =>
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "role", "group");
+            builder.AddAttribute(2, "data-tm-toolbar-group", "");
+            builder.AddContent(3, Buttons(new Spec("One"), new Spec("Two"), new Spec("Three")));
+            builder.CloseElement();
+        };
+        var cut = RenderToolbar(content);
+        cut.WaitForAssertion(() => cut.FindAll("[role='group'] [data-tm-toolbar-item]").Should().HaveCount(3));
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(1, ItemIdsInDomOrder(cut)));
+
+        cut.FindAll("[role='group'] .tm-toolbar-item--collapsed").Should().HaveCount(2);
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("Two", "Three");
+    }
 }

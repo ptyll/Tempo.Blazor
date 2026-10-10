@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    collapseOrder, chooseVisibleCount, nextRovingIndex, rovingItems, computeFit, attach, detach, __resetForTests,
+    collapseOrder, chooseVisibleCount, nextRovingIndex, rovingItems, computeFit, markRedundantDividers, attach, detach, __resetForTests,
 } from '../tm-toolbar.js';
 
 test.beforeEach(() => __resetForTests());
@@ -118,10 +118,10 @@ test('rovingItems skips disabled, collapsed and in-menu controls (KeyboardNaviga
 
 // ── computeFit: measuring a stub bar ─────────────────────────────────────────────────────────
 
-function child({ width, rank, pin = 'auto', item = true, more = false }) {
+function child({ width, rank, pin = 'auto', item = true, more = false, id = '' }) {
     return {
         offsetWidth: width,
-        dataset: item ? { tmToolbarItem: '', rank: String(rank), pin } : {},
+        dataset: item ? { tmToolbarItem: id, rank: String(rank), pin } : {},
         classList: { contains: name => (more && name === 'tm-toolbar-more') },
     };
 }
@@ -218,6 +218,7 @@ function installToolbar(controls, { width = 400, overflow = true, rtl = false, i
     const bar = {
         clientWidth: width,
         dataset: {},
+        querySelectorAll: () => [],
         children: (itemWidths ?? controls.map(() => 40)).map((w, index) => ({
             offsetWidth: w,
             dataset: { tmToolbarItem: '', rank: String(index % 2 === 0 ? 2 : 1), pin: 'auto' },
@@ -226,7 +227,7 @@ function installToolbar(controls, { width = 400, overflow = true, rtl = false, i
     };
     const root = {
         isConnected: true,
-        querySelector: selector => (selector === '[data-tm-toolbar-row]' ? bar : null),
+        querySelector: selector => (selector === '[data-tm-toolbar-row]' ? bar : (/tm-toolbar-more/.test(selector) ? (root.moreTrigger ?? null) : null)),
         querySelectorAll: () => controls,
         addEventListener(type, fn) { listeners.set(type, fn); },
         removeEventListener(type) { listeners.delete(type); },
@@ -239,12 +240,12 @@ function installToolbar(controls, { width = 400, overflow = true, rtl = false, i
         },
         listeners,
     };
-    const dotNet = { invokeMethodAsync: (name, value) => { calls.push([name, value]); return Promise.resolve(); } };
+    const dotNet = { invokeMethodAsync: (name, ...args) => { calls.push([name, ...args]); return Promise.resolve(); } };
     globalThis.getComputedStyle = el => (el === root ? { direction: rtl ? 'rtl' : 'ltr' } : { columnGap: '8px', gap: '8px' });
     globalThis.requestAnimationFrame = fn => frames.push(fn);
     globalThis.cancelAnimationFrame = () => { frames.length = 0; };
     globalThis.ResizeObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } };
-    globalThis.MutationObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } };
+    globalThis.MutationObserver = class { constructor(cb) { this.cb = cb; observers.push(this); } observe(_, options) { env.mutationOptions = options; } disconnect() { this.disconnected = true; } };
     env = { root, bar, calls, frames, observers, active: null,
         flush() { while (frames.length) frames.shift()(); },
         dotNet, overflow };
@@ -255,7 +256,7 @@ function installToolbar(controls, { width = 400, overflow = true, rtl = false, i
 test('attach measures once per frame and reports the fit to .NET', () => {
     const e = installToolbar([tbControl('a'), tbControl('b')], { width: 400 });
     e.flush();
-    assert.deepEqual(e.calls, [['OnFitChanged', 2]]);
+    assert.deepEqual(e.calls, [['OnFitChanged', 2, ['', '']]], 'the count AND the DOM order of the items cross the boundary');
 });
 
 test('attach coalesces a burst of resize/mutation callbacks into one measurement', () => {
@@ -439,4 +440,201 @@ test('computeFit measures a pinned (data-pin=never) button as fixed width, not a
         child({ width: 60, rank: 3, pin: 'never' }),
     ], 230);
     assert.equal(computeFit(tight).maxVisible, 1, 'the pinned button reserves its width before the buttons are counted');
+});
+// ── H2: items are collected at any depth; a wrapper (group) is flattened ────────────────────
+
+function wrapper(children, { role = null, group = false, width = 0, padding = 0, className = null } = {}) {
+    return {
+        offsetWidth: width,
+        dataset: group ? { tmToolbarGroup: '' } : {},
+        children,
+        querySelector: () => (children.length ? children[0] : null),
+        computed: { paddingLeft: `${padding}px`, paddingRight: `${padding}px`, columnGap: '8px', gap: '8px' },
+        getAttribute: name => (name === 'role' ? role : null),
+        classList: { contains: name => name === className },
+    };
+}
+
+test('H2 computeFit measures buttons wrapped in a group (role=group) - a wide bar keeps them all', () => {
+    const bar = stubBar([
+        wrapper([child({ width: 60, rank: 2, id: 'a' }), child({ width: 60, rank: 2, id: 'b' }), child({ width: 60, rank: 2, id: 'c' })],
+            { role: 'group', width: 200 }),
+    ], 1200);
+    const fit = computeFit(bar);
+    assert.equal(fit.maxVisible, 3, 'three wrapped buttons on a 1200px bar all fit');
+    assert.deepEqual(fit.ids, ['a', 'b', 'c']);
+});
+
+test('H2 a data-tm-toolbar-group wrapper is flattened like start/actions and collapses correctly when narrow', () => {
+    const wide = stubBar([wrapper([child({ width: 60, rank: 2, id: 'a' }), child({ width: 60, rank: 1, id: 'b' })], { group: true, width: 128 })], 400);
+    assert.equal(computeFit(wide).maxVisible, 2);
+    // 128 > 100; one + trigger = 60 + 8 + 44 = 112 > 100 -> none.
+    const narrow = stubBar([wrapper([child({ width: 60, rank: 2, id: 'a' }), child({ width: 60, rank: 1, id: 'b' })], { group: true, width: 128 })], 100);
+    assert.equal(computeFit(narrow).maxVisible, 0);
+});
+
+test('H2 an unmarked wrapper with items is flattened and its own padding counts as fixed width', () => {
+    const bar = stubBar([
+        wrapper([child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], { width: 150, padding: 20 }),
+    ], 150);
+    // buttons 50 + 8 + 50 = 108; wrapper padding 40 + one gap 8 = 48 fixed -> 108 > 150 - 48 = 102 -> one leaves: 50 + 8 + 44 = 102 <= 102.
+    assert.equal(computeFit(bar).maxVisible, 1);
+});
+
+test('H2 a bar whose items cannot be measured (not rendered: clientWidth 0) reports nothing instead of a fit', () => {
+    const fit = computeFit(stubBar([child({ width: 60, rank: 2, id: 'a' })], 0));
+    assert.equal(fit.unmeasured, true);
+    assert.equal(fit.signature, null);
+});
+
+test('H2 a bar with no items at all reports nothing (never "0 fit")', () => {
+    const fit = computeFit(stubBar([child({ width: 30, item: false })], 400));
+    assert.equal(fit.unmeasured, true);
+});
+
+// ── H3: the DOM order of the items is part of the report ─────────────────────────────────────
+
+test('H3 computeFit lists the item ids in DOM order (pinned ones included) and the signature follows a reorder', () => {
+    const one = computeFit(stubBar([child({ width: 40, rank: 2, id: 'a' }), child({ width: 40, rank: 2, id: 'b' }), child({ width: 40, rank: 3, pin: 'never', id: 'p' })], 400));
+    assert.deepEqual(one.ids, ['a', 'b', 'p']);
+    const reordered = computeFit(stubBar([child({ width: 40, rank: 2, id: 'b' }), child({ width: 40, rank: 2, id: 'a' }), child({ width: 40, rank: 3, pin: 'never', id: 'p' })], 400));
+    assert.deepEqual(reordered.ids, ['b', 'a', 'p']);
+    assert.equal(one.maxVisible, reordered.maxVisible);
+    assert.notEqual(one.signature, reordered.signature, 'a reorder alone is a change .NET must hear about');
+});
+
+test('H3 attach reports a reorder to .NET even though the count did not change', () => {
+    const e = installToolbar([tbControl('a'), tbControl('b')], { width: 400 });
+    e.flush();
+    e.calls.length = 0;
+    e.bar.children.reverse().forEach(() => {});
+    e.bar.children[0].dataset.tmToolbarItem = 'z';
+    e.observers[0].cb();
+    e.flush();
+    assert.equal(e.calls.length, 1);
+    assert.deepEqual(e.calls[0].slice(0, 2), ['OnFitChanged', 2]);
+    assert.deepEqual(e.calls[0][2][0], 'z');
+});
+
+// ── H4: redundant dividers ───────────────────────────────────────────────────────────────────
+
+function leaf(kind, collapsed = false) {
+    const attrs = new Map();
+    const el = {
+        kind,
+        collapsed,
+        attrs,
+        offsetWidth: 10,
+        dataset: kind === 'btn' ? { tmToolbarItem: 'x', rank: '2', pin: 'auto' } : {},
+        classList: { contains: name => (name === 'tm-toolbar-divider' && kind === 'divider') || (name === 'tm-toolbar-item--collapsed' && el.collapsed) },
+        setAttribute: (name, value) => attrs.set(name, String(value)),
+        removeAttribute: name => attrs.delete(name),
+        hasAttribute: name => attrs.has(name),
+    };
+    return el;
+}
+
+function row(kinds) {
+    globalThis.getComputedStyle = () => ({ columnGap: '8px', gap: '8px' });
+    const els = kinds.map(k => (typeof k === 'string' ? leaf(k) : leaf(k.kind, k.collapsed)));
+    return { els, bar: { children: els, clientWidth: 400 } };
+}
+
+const collapsed = { kind: 'btn', collapsed: true };
+test('H4 two dividers with only collapsed buttons between them: the first is redundant (Pan | | Find at 390)', () => {
+    const { els, bar } = row(['btn', 'btn', 'divider', collapsed, collapsed, 'divider', collapsed, 'btn']);
+    markRedundantDividers(bar);
+    assert.equal(els[2].hasAttribute('data-tm-divider-redundant'), true);
+    assert.equal(els[5].hasAttribute('data-tm-divider-redundant'), false, 'the second still separates Pan from Find');
+});
+
+test('H4 a leading or trailing divider (no visible button on one side) is redundant', () => {
+    const lead = row([collapsed, 'divider', 'btn', 'btn']);
+    markRedundantDividers(lead.bar);
+    assert.equal(lead.els[1].hasAttribute('data-tm-divider-redundant'), true, 'nothing visible before it');
+    const tail = row(['btn', 'divider', collapsed, collapsed]);
+    markRedundantDividers(tail.bar);
+    assert.equal(tail.els[1].hasAttribute('data-tm-divider-redundant'), true, 'nothing visible after it');
+});
+
+test('H4 a divider between visible buttons stays, and the mark is cleared when the room comes back', () => {
+    const { els, bar } = row(['btn', 'divider', collapsed, 'btn']);
+    markRedundantDividers(bar);
+    assert.equal(els[1].hasAttribute('data-tm-divider-redundant'), false, 'a visible button on both sides');
+
+    const r = row(['btn', 'divider', { kind: 'btn', collapsed: true }, { kind: 'btn', collapsed: true }]);
+    markRedundantDividers(r.bar);
+    assert.equal(r.els[1].hasAttribute('data-tm-divider-redundant'), true, 'nothing visible after it');
+    r.els[2].collapsed = false; // the toolbar widened: the button is back
+    markRedundantDividers(r.bar);
+    assert.equal(r.els[1].hasAttribute('data-tm-divider-redundant'), false, 'the mark follows the room');
+});
+test('H4 the attribute is not observed (no mutation loop)', () => {
+    const e = installToolbar([tbControl('a')], { width: 400 });
+    assert.ok(e.mutationOptions, 'the MutationObserver options are recorded');
+    assert.equal(e.mutationOptions.attributeFilter.includes('data-tm-divider-redundant'), false);
+});
+
+// ── H12 / H15 ────────────────────────────────────────────────────────────────────────────────
+
+test('H12 the MutationObserver watches character data (a label text change re-measures)', () => {
+    const e = installToolbar([tbControl('a')], { width: 400 });
+    assert.equal(e.mutationOptions.characterData, true);
+});
+
+test('H15 a measurement pass on a disconnected root detaches itself', () => {
+    const e = installToolbar([tbControl('a'), tbControl('b')], { width: 400 });
+    e.observers[0].cb();
+    e.root.isConnected = false;
+    e.flush();
+    assert.equal(e.observers.every(o => o.disconnected), true, 'observers disconnected');
+    assert.equal(e.root.listeners.size, 0, 'listeners removed');
+});
+// ── H16: focus never falls to <body> when the focused control leaves the bar ───────────────────
+
+function focusEnv(controls, { trigger = true } = {}) {
+    const e = installToolbar(controls, { width: 400 });
+    const body = { tagName: 'BODY' };
+    globalThis.document = { body, documentElement: { tagName: 'HTML' }, activeElement: body };
+    const more = { tagName: 'BUTTON', disabled: false, isConnected: true, focusCalls: 0, focus() { more.focusCalls++; globalThis.document.activeElement = more; }, getAttribute: () => null, closest: () => null };
+    if (trigger) e.root.moreTrigger = more;
+    e.flush();
+    return { e, more, body };
+}
+
+test('H16 a focused bar button that collapses hands focus to the More trigger', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const { e, more, body } = focusEnv(controls);
+    e.root.fire('focusin', { target: controls[1] });
+    controls[1].collapsed = true;       // Blazor collapsed it: inert, the browser drops focus to <body>
+    globalThis.document.activeElement = body;
+    e.observers[1].cb();
+    e.flush();
+    assert.equal(more.focusCalls, 1);
+});
+
+test('H16 without a More trigger focus goes to the roving stop (the trigger unmounted after a widen)', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const { e, body } = focusEnv(controls, { trigger: false });
+    e.root.fire('focusin', { target: controls[1] });
+    controls[1].collapsed = true;
+    globalThis.document.activeElement = body;
+    e.observers[1].cb();
+    e.flush();
+    assert.equal(controls[0].focusCalls, 1, 'the remaining on-bar control receives focus');
+});
+
+test('H16 focus that is not lost, or never was in the toolbar, is left alone', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const { e, more } = focusEnv(controls);
+    e.observers[1].cb();
+    e.flush();
+    assert.equal(more.focusCalls, 0, 'focus was never inside the toolbar');
+
+    e.root.fire('focusin', { target: controls[0] });
+    globalThis.document.activeElement = { tagName: 'INPUT' }; // the user moved on to another control
+    e.root.fire('focusout', { target: controls[0], relatedTarget: globalThis.document.activeElement });
+    e.observers[1].cb();
+    e.flush();
+    assert.equal(more.focusCalls, 0, 'an intentional move elsewhere is never pulled back');
 });

@@ -154,7 +154,7 @@
     /// </summary>
     /// <param name="maxVisible">How many collapsible buttons stay on the bar.</param>
     [JSInvokable]
-    public Task OnFitChanged(int maxVisible)
+    public Task OnFitChanged(int maxVisible, string[]? orderedIds = null)
     {
         if (_maxVisible == maxVisible) return Task.CompletedTask;
         _maxVisible = maxVisible;

@@ -192,6 +192,17 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
 
         css.Should().MatchRegex(@"\.tm-toolbar-btn\s*\{[^}]*flex-shrink:\s*0");
     }
+
+    [Fact]
+    public void DividerMarkedRedundantByTheMeasurement_IsHiddenByVisibility_NeverDisplay()
+    {
+        // H4 (UX M1): tm-toolbar.js marks a divider that separates nothing (next sibling is another divider, or no
+        // visible button on one side). visibility keeps the box, so the measured fixed width cannot oscillate.
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(@"\[data-tm-divider-redundant\]\s*\{[^}]*visibility:\s*hidden");
+        css.Should().NotMatchRegex(@"\[data-tm-divider-redundant\][^{]*\{[^}]*display:\s*none");
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

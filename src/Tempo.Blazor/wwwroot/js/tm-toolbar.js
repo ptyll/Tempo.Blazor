@@ -150,6 +150,9 @@ function outerWidth(element) {
     const style = globalThis.getComputedStyle?.(element);
     return element.offsetWidth + px(style?.marginLeft) + px(style?.marginRight);
 }
+/** Stub (RED): marks dividers that separate nothing. */
+export function markRedundantDividers(bar) {}
+
 const attached = new WeakMap();
 
 function refreshTabStops(state) {
