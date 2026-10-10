@@ -12,12 +12,16 @@
 //     Tab leaves the menu instead of walking every entry.
 // Disabled (`disabled` / `aria-disabled="true"`) and hidden items are skipped everywhere. A key
 // pressed inside a text-entry element (a filter input in the menu) is never intercepted. Nothing
-// here activates an item - Enter/Space stay with the native <button> (one activation per press,// docs/keyboard-activation-convention.md) - and Escape stays with overlay.js / the sheet trap.
+// here activates an item - Enter/Space stay with the native <button> (one activation per press,
+// docs/keyboard-activation-convention.md) - and Escape stays with overlay.js / the sheet trap.
 
 const ITEM_SELECTOR = '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
 const TYPEAHEAD_RESET_MS = 700;
 
 let attached = new WeakMap();
+// trigger element -> teardown of the Tab-out listeners currently on it. A menu that unmounts is never detached,
+// so a re-open on the same trigger must replace the previous registration instead of stacking another one.
+let anchored = new WeakMap();
 
 /**
  * The index ArrowDown/ArrowUp/Home/End move to.
@@ -164,7 +168,19 @@ export function attach(menu, dotNetRef = null, anchor = null) {
         };
         const owns = element => Boolean(element) && (menu.contains?.(element) === true || element === menu
             || (anchor && (anchor === element || anchor.contains?.(element) === true)));
+        const teardown = () => {
+            clearTimeout(timer);
+            menu.removeEventListener('keydown', armTab, true);
+            menu.removeEventListener('focusout', onFocusOut);
+            if (anchor?.removeEventListener) {
+                anchor.removeEventListener('keydown', armTab, true);
+                anchor.removeEventListener('focusout', onFocusOut);
+                if (anchored.get(anchor) === teardown) anchored.delete(anchor);
+            }
+        };
         const onFocusOut = event => {
+            // The menu this registration belongs to is gone (the popover closed): never dismiss a later open.
+            if (menu.isConnected === false) { teardown(); return; }
             const wasTab = tabbing;
             tabbing = false;
             if (!wasTab || !event.relatedTarget || owns(event.relatedTarget)) return;
@@ -174,9 +190,13 @@ export function attach(menu, dotNetRef = null, anchor = null) {
         menu.addEventListener('focusout', onFocusOut);
         registration.armTab = armTab;
         registration.onFocusOut = onFocusOut;
+        registration.teardown = teardown;
         if (anchor?.addEventListener) {
+            // One registration per trigger: drop the previous open's listeners before adding this open's.
+            anchored.get(anchor)?.();
             anchor.addEventListener('keydown', armTab, true);
             anchor.addEventListener('focusout', onFocusOut);
+            anchored.set(anchor, teardown);
             registration.anchor = anchor;
         }
     }
@@ -192,12 +212,7 @@ export function detach(menu) {
     if (!registration) return;
     menu.removeEventListener('keydown', registration.onKeyDown);
     menu.removeEventListener('focusin', registration.onFocusIn);
-    if (registration.onFocusOut) {
-        menu.removeEventListener('keydown', registration.armTab, true);
-        menu.removeEventListener('focusout', registration.onFocusOut);
-        registration.anchor?.removeEventListener?.('keydown', registration.armTab, true);
-        registration.anchor?.removeEventListener?.('focusout', registration.onFocusOut);
-    }
+    registration.teardown?.();
     attached.delete(menu);
 }
 
@@ -226,4 +241,5 @@ export function focusFirst(root) {
 /** Test seam: forgets every registration. */
 export function __resetForTests() {
     attached = new WeakMap();
+    anchored = new WeakMap();
 }
