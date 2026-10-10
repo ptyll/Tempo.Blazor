@@ -52,15 +52,7 @@ else
 
 @code {
     private readonly OverlayLayout _layout = new();
-    private readonly string _morePanelId = $"tm-mab-more-{Guid.NewGuid():N}";
-    private readonly string _moreButtonId = $"tm-mab-more-btn-{Guid.NewGuid():N}";
-    private TmOverlayPanel? _morePanel;
-    private ElementReference _moreButton;
-    private ElementReference _firstMenuItem;
-    private bool _focusMoreItemPending;
-    private bool _focusMoreAfterClose;
-    private bool _moreOpen;
-    private bool _moreTriggerRendered;
+    private ActionOverflowMenu? _moreMenu;
 
     /// <summary>
     /// The actions. The bar and the "More" menu render in Items order — <see cref="TmActionItem.Priority"/>
@@ -178,26 +170,15 @@ else
 
         if (!showBar)
         {
-            // Z1 (round 3): the bar does not render a More trigger here — above the mobile
-            // breakpoint or with no items. The controlled panel (and the trigger) left the DOM
-            // with no IsOpenChanged, so the open state is reset right here: otherwise the sheet
-            // REOPENS by itself when the bar comes back (phone rotation portrait → landscape →
-            // portrait, or the host emptying the Items while the sheet is open).
-            ResetMoreState();
+            // Z1: the bar does not render the More menu here (above the mobile breakpoint, or with
+            // no items). The ActionOverflowMenu component leaves the tree and its open state with it,
+            // so the sheet cannot REOPEN by itself when the bar comes back (phone rotation).
+            _moreMenu = null;
             builder.CloseRegion();
             return;
         }
 
         var (visible, overflow) = ActionOverflowLayout.Partition(items, EffectiveMaxVisible);
-        var moreDisabled = overflow.Count > 0 && overflow.All(static item => item.Disabled);
-        _moreTriggerRendered = overflow.Count > 0;
-        if (!_moreTriggerRendered)
-        {
-            // Z1: the same reset through the other path — the bar renders but nothing overflows,
-            // so the trigger and the panel do not exist and a stale _moreOpen would reopen the
-            // sheet once the overflow refills.
-            ResetMoreState();
-        }
 
         builder.OpenElement(3, "div");
         builder.AddAttribute(4, "class", $"tm-mobile-action-bar__bar {BarModifierClass}");
@@ -243,111 +224,53 @@ else
 
         if (overflow.Count > 0)
         {
-            // The More trigger is a raw button (the dashboard's own pattern): the panel gets its
-            // element as an explicit Anchor, so the popover positions against it and the sheet's
-            // focus restore resolves the trigger by element reference — never a stale node.
+            // The "More" menu is the ONE shared overflow menu (ActionOverflowMenu — also the F4
+            // toolbar's): trigger, controlled TmOverlayPanel, menu items and the whole host contract
+            // (close-before-invoke, KeepMenuOpen, first-enabled focus, aria-expanded on every close
+            // path, aria-controls only while rendered, focus back to the trigger). It is opened from
+            // C# because a Razor tag binds only to public components. When the bar hides or the
+            // overflow empties the component leaves the tree and its open state with it (Z1).
             builder.OpenRegion(2);
-            builder.OpenElement(0, "button");
-            builder.AddAttribute(1, "type", "button");
-            // The trigger needs an id: TmOverlayPanel's sheet restores focus through
-            // Anchor.Id — without it a programmatic CloseMoreAsync leaves focus on <body>.
-            builder.AddAttribute(2, "id", _moreButtonId);
-            // Y6: the trigger is a tile like every other action (icon over the label) — the CSS
-            // shares the tile rules through the class list, not by doubling __action (that class
-            // is the test hook that counts the bar's items).
-            builder.AddAttribute(3, "class", "tm-mobile-action-bar__more tm-touch-target");
-            builder.AddAttribute(4, "onclick", EventCallback.Factory.Create(this, OpenMoreAsync));
-            builder.AddAttribute(5, "aria-haspopup", "menu");
-            builder.AddAttribute(6, "aria-expanded", _moreOpen ? "true" : "false");
-            // aria-controls only while the controlled panel exists (it is rendered only while open).
-            if (_moreOpen) builder.AddAttribute(7, "aria-controls", _morePanelId);
-            // X11: an overflow of nothing but disabled items has nothing to invoke.
-            builder.AddAttribute(8, "disabled", moreDisabled);
-            builder.OpenElement(9, "span");
-            builder.AddAttribute(10, "class", "tm-mobile-action-bar__icon");
-            builder.OpenComponent<TmIcon>(11);
-            builder.AddAttribute(12, "Name", IconNames.MoreHorizontal);
-            builder.AddAttribute(13, "Size", IconSize.Sm);
-            builder.CloseComponent();
-            builder.CloseElement();
-            builder.OpenElement(14, "span");
-            builder.AddAttribute(15, "class", "tm-mobile-action-bar__label-text");
-            builder.AddContent(16, EffectiveMoreLabel);
-            builder.CloseElement();
-            // After the attributes and content: an element-reference capture may not sit between
-            // an element frame and its attributes (RenderTreeBuilder assertion).
-            builder.AddElementReferenceCapture(17, reference => _moreButton = reference);
-            builder.CloseElement();
-
-            builder.OpenComponent<TmOverlayPanel>(18);
-            builder.AddComponentParameter(19, "Id", _morePanelId);
-            builder.AddComponentParameter(20, "Anchor", _moreButton);
+            builder.OpenComponent<ActionOverflowMenu>(0);
+            builder.AddComponentParameter(1, nameof(ActionOverflowMenu.Items), overflow);
+            builder.AddComponentParameter(2, nameof(ActionOverflowMenu.TriggerClass), "tm-mobile-action-bar__more tm-touch-target");
+            builder.AddComponentParameter(3, nameof(ActionOverflowMenu.TriggerContent), (RenderFragment)BuildMoreTrigger);
+            builder.AddComponentParameter(4, nameof(ActionOverflowMenu.Title), EffectiveMoreLabel);
             // X4: the panel carries the bar's own surface class — without it the zero-specificity
             // reset leaves the popover transparent (container-mobile on a desktop viewport).
-            builder.AddComponentParameter(21, "Class", "tm-mobile-action-bar__menu-panel");
-            builder.AddComponentParameter(22, "Role", "menu");
-            builder.AddComponentParameter(23, "Title", EffectiveMoreLabel);
-            builder.AddComponentParameter(24, "MobilePresentation", PanelPresentation.Auto);
-            builder.AddComponentParameter(25, "InitialMode", context.Resolved);
-            // Y1 (R2-M1): the bar is the single owner of the open state. The panel runs CONTROLLED:
-            // every close path — item select, CloseMoreAsync, sheet Done, backdrop, swipe, Escape,
-            // outside pointer — funnels through IsOpenChanged, so aria-expanded can never go stale
-            // (the round-2 probe caught it stuck "true" after sheet closes, which raise neither
-            // OnDismissed nor a visible close event in uncontrolled mode).
-            builder.AddComponentParameter(26, "IsOpen", _moreOpen);
-            builder.AddComponentParameter(27, "IsOpenChanged",
-                EventCallback.Factory.Create<bool>(this, HandleMoreOpenChanged));
-            // OnOpened stays only for the post-open focus move (the m3 contract).
-            builder.AddComponentParameter(28, "OnOpened", EventCallback.Factory.Create(this, HandleMoreOpened));
-            builder.AddAttribute(29, "ChildContent", (RenderFragment)(b => BuildMenu(b, overflow)));
-            builder.AddComponentReferenceCapture(30, value => _morePanel = (TmOverlayPanel)value);
+            builder.AddComponentParameter(5, nameof(ActionOverflowMenu.PanelClass), "tm-mobile-action-bar__menu-panel");
+            builder.AddComponentParameter(6, nameof(ActionOverflowMenu.MenuClass), "tm-mobile-action-bar__menu");
+            builder.AddComponentParameter(7, nameof(ActionOverflowMenu.ItemClass), "tm-mobile-action-bar__menu-item");
+            builder.AddComponentParameter(8, nameof(ActionOverflowMenu.LabelClass), "tm-mobile-action-bar__menu-label");
+            builder.AddComponentParameter(9, nameof(ActionOverflowMenu.InitialMode), context.Resolved);
+            builder.AddComponentReferenceCapture(10, value => _moreMenu = (ActionOverflowMenu)value);
             builder.CloseComponent();
             builder.CloseRegion();
         }
-
+        else
+        {
+            _moreMenu = null;
+        }
         builder.CloseElement();
         builder.CloseRegion();
     };
 
-    private void BuildMenu(RenderTreeBuilder builder, IReadOnlyList<TmActionItem> overflow)
+    /// <summary>The More trigger's content: the icon over the label, like every other tile.</summary>
+    private void BuildMoreTrigger(RenderTreeBuilder builder)
     {
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "tm-mobile-action-bar__menu");
-        var capturedFirstEnabled = false;
-        for (var i = 0; i < overflow.Count; i++)
-        {
-            var item = overflow[i];
-            var seq = i * 16;
-            builder.OpenElement(seq, "button");
-            builder.AddAttribute(seq + 1, "type", "button");
-            builder.AddAttribute(seq + 2, "role", "menuitem");
-            builder.AddAttribute(seq + 3, "class", "tm-mobile-action-bar__menu-item");
-            builder.AddAttribute(seq + 4, "disabled", item.Disabled);
-            builder.AddAttribute(seq + 5, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
-            builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
-            builder.AddAttribute(seq + 6, "onclick", EventCallback.Factory.Create(this, () => InvokeMenuItemAsync(item)));
-            if (!string.IsNullOrEmpty(item.Icon))
-            {
-                builder.OpenComponent<TmIcon>(seq + 7);
-                builder.AddAttribute(seq + 8, "Name", item.Icon);
-                builder.AddAttribute(seq + 9, "Size", IconSize.Sm);
-                builder.CloseComponent();
-            }
-            builder.OpenElement(seq + 10, "span");
-            builder.AddAttribute(seq + 11, "class", "tm-mobile-action-bar__menu-label");
-            builder.AddContent(seq + 12, item.Label);
-            builder.CloseElement();
-            if (!capturedFirstEnabled && !item.Disabled)
-            {
-                // X11: the initial focus skips disabled items — focus() on a disabled button is a
-                // no-op and would leave focus on <body>.
-                capturedFirstEnabled = true;
-                // After the attributes and content: an element-reference capture may not sit
-                // between an element frame and its attributes (RenderTreeBuilder assertion).
-                builder.AddElementReferenceCapture(seq + 13, reference => _firstMenuItem = reference);
-            }
-            builder.CloseElement();
-        }
+        // Y6: the trigger is a tile like every other action (icon over the label) — the CSS shares
+        // the tile rules through the class list, not by doubling __action (that class is the test
+        // hook that counts the bar's items).
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "tm-mobile-action-bar__icon");
+        builder.OpenComponent<TmIcon>(2);
+        builder.AddAttribute(3, "Name", IconNames.MoreHorizontal);
+        builder.AddAttribute(4, "Size", IconSize.Sm);
+        builder.CloseComponent();
+        builder.CloseElement();
+        builder.OpenElement(5, "span");
+        builder.AddAttribute(6, "class", "tm-mobile-action-bar__label-text");
+        builder.AddContent(7, EffectiveMoreLabel);
         builder.CloseElement();
     }
 
@@ -361,41 +284,6 @@ else
         await item.OnClick.InvokeAsync();
     }
 
-    private async Task InvokeMenuItemAsync(TmActionItem item)
-    {
-        // Default (KeepMenuOpen=false): close first — the sheet pops down and focus returns to
-        // the "More" trigger before the action runs, so the action runs with no menu
-        // bookkeeping behind it. KeepMenuOpen=true is for actions that open another surface:
-        // the sheet stays, the surface promotes AFTER it and always paints above it
-        // (top-layer order = open order, docs/overlays.md rule 8), and closing the surface
-        // returns focus to this menuitem.
-        if (!item.KeepMenuOpen && _morePanel is not null)
-        {
-            // X5: the light popover close does not restore focus (overlay.js close() leaves it
-            // wherever the destroyed menu had it — often <body>), so the bar restores it
-            // itself: flag consumed in OnAfterRenderAsync, the TmDropdown.SelectItemAsync pattern.
-            _focusMoreAfterClose = true;
-            await _morePanel.CloseAsync();
-            // Y8 (TmDropdown.SelectItemAsync pattern): force the close re-render NOW and let it
-            // complete before the action runs — the focus restore to the trigger lands inside
-            // OnAfterRenderAsync, so an action that moves focus elsewhere wins deterministically
-            // instead of racing a late restore.
-            StateHasChanged();
-            await Task.Yield();
-        }
-
-        if (!item.Disabled)
-        {
-            await item.OnClick.InvokeAsync();
-        }
-    }
-
-    private void OpenMoreAsync()
-    {
-        // Y1: the bar owns the open state — flipping the flag re-renders the controlled panel open.
-        _moreOpen = true;
-    }
-
     /// <summary>
     /// Closes the "More" menu when it is open (a no-op otherwise). Use after a confirmed
     /// <see cref="TmActionItem.KeepMenuOpen"/> action — e.g. the host's delete flow closes the
@@ -403,107 +291,13 @@ else
     /// in OnAfterRenderAsync, so the restore survives a sibling surface that also disposes in
     /// the same render batch and would otherwise land focus on &lt;body&gt;).
     /// </summary>
-    public Task CloseMoreAsync()
-    {
-        // Y2: a closed menu is a strict no-op — arming the focus restore unconditionally stole
-        // focus from wherever the user was (review round 2, R2-M1 companion finding).
-        if (!_moreOpen || _morePanel is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        _focusMoreAfterClose = true;
-        return _morePanel.SetOpenAsync(false);
-    }
-
-    /// <summary>
-    /// Z1 (round 3): resets everything the rendered More trigger/panel owned. Called from the
-    /// render itself whenever the bar does NOT render a trigger — the controlled panel is
-    /// disposed on that render without an <c>IsOpenChanged</c>, so the state cannot be reset by
-    /// the callback; doing it here (plain field writes, no <c>StateHasChanged</c>) cannot loop
-    /// the render and always runs BEFORE the trigger/panel come back.
-    /// </summary>
-    private void ResetMoreState()
-    {
-        _moreOpen = false;
-        _focusMoreItemPending = false;
-        _focusMoreAfterClose = false;
-        _moreTriggerRendered = false;
-    }
-
-    /// <summary>Fires once per open, after the panel is actually displayed (the m3 contract).</summary>
-    private void HandleMoreOpened()
-    {
-        // Sheet mode and popover mode both move focus to the first ENABLED menuitem, gated on
-        // OnOpened so the focus cannot land on a still-hidden panel.
-        _focusMoreItemPending = true;
-    }
-
-    /// <summary>
-    /// The controlled panel's open-state callback (Y1): the single place that mirrors the panel's
-    /// real state into <c>aria-expanded</c> — it fires for programmatic closes AND every user
-    /// gesture (sheet Done, backdrop, swipe, Escape, outside pointer), which the uncontrolled
-    /// <c>OnDismissed</c> path could not see.
-    /// </summary>
-    private void HandleMoreOpenChanged(bool open)
-    {
-        _moreOpen = open;
-        if (!open)
-        {
-            _focusMoreItemPending = false;
-        }
-    }
-
+    public Task CloseMoreAsync() => _moreMenu?.CloseAsync() ?? Task.CompletedTask;
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
         if (Placement == ActionBarPlacement.FixedViewport)
         {
             await ReportResolved();
-        }
-    }
-
-    /// <inheritdoc />
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_focusMoreItemPending)
-        {
-            _focusMoreItemPending = false;
-            try
-            {
-                await _firstMenuItem.FocusAsync();
-            }
-            catch (Exception ex) when (ex is InvalidOperationException or JSException)
-            {
-                // Z1: the menu closed before the focus move (fast Escape) or the element left the
-                // DOM — focus() then throws JSException "Unable to focus an invalid element"
-                // (a real browser; bUnit throws InvalidOperationException with no JSRuntime).
-                // Best-effort only (the TmDropdown pattern): an unhandled one would surface as
-                // #blazor-error-ui and kill a Server circuit.
-            }
-        }
-
-        if (_focusMoreAfterClose)
-        {
-            _focusMoreAfterClose = false;
-            if (!_moreTriggerRendered)
-            {
-                // Y2: the trigger left the DOM (the bar hid or the overflow emptied) before the
-                // restore could run — drop the flag instead of stealing focus later, whenever the
-                // trigger happens to come back.
-                return;
-            }
-
-            try
-            {
-                await _moreButton.FocusAsync(preventScroll: true);
-            }
-            catch (Exception ex) when (ex is InvalidOperationException or JSException)
-            {
-                // Z1: the trigger left the DOM before the focus move (the bar hid or the overflow
-                // emptied): nothing to focus. JSException — a detached element in a real browser —
-                // is swallowed alongside InvalidOperationException (the bUnit no-JSRuntime case).
-            }
         }
     }
 

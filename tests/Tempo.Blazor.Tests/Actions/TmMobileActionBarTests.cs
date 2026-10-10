@@ -847,12 +847,12 @@ public class TmMobileActionBarTests : LocalizationTestBase
         // element". bUnit cannot drive this (ElementReference.FocusAsync has no JSRuntime
         // attached in bUnit and throws InvalidOperationException instead — the live-browser
         // proof is the round-3 flip E2E), so this is a source guard: every FocusAsync site in
-        // the bar must catch JSException alongside InvalidOperationException (the TmDropdown
-        // pattern). Pre-fix the catch was InvalidOperationException-only, so ~half the
+        // the shared overflow menu (ActionOverflowMenu, which owns the bar's More menu since F4)
+        // must catch JSException alongside InvalidOperationException (the TmDropdown pattern). Pre-fix the catch was InvalidOperationException-only, so ~half the
         // 390→1100→390 flips ended in an unhandled exception and #blazor-error-ui (which kills
         // a Server circuit).
         var razor = File.ReadAllText(RepoPath(
-            "src", "Tempo.Blazor", "Components", "Actions", "TmMobileActionBar.razor"));
+            "src", "Tempo.Blazor", "Components", "Actions", "ActionOverflowMenu.cs"));
 
         var focusSites = System.Text.RegularExpressions.Regex.Matches(razor, @"FocusAsync\(");
         focusSites.Count.Should().BeGreaterThanOrEqualTo(2,

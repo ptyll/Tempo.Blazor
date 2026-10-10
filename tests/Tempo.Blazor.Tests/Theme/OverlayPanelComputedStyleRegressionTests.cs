@@ -81,8 +81,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         new("TmQueryInput.razor", null, null, null, null, null),
         // F5: TmMobileActionBar's "More" menu passes its own surface class — the popover-mode
         // panel (container-mobile on a desktop viewport) must paint background/border/padding
-        // like every other menu consumer.
-        new("TmMobileActionBar.razor", "tm-mobile-action-bar__menu-panel",
+        // like every other menu consumer. Since F4 the panel is opened by the shared
+        // ActionOverflowMenu (C#, so the population scan below also reads *.cs): the bar's class is
+        // the row, the toolbar's class is its sibling.
+        new("ActionOverflowMenu.cs", "tm-mobile-action-bar__menu-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
         new("TmContextMenu.razor", "tm-context-menu",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "0.25rem", null),
@@ -146,6 +148,11 @@ public sealed class OverlayPanelComputedStyleRegressionTests
                 Path.GetFileName(file), "TmOverlayPanel.razor", StringComparison.Ordinal))
             .Where(file => File.ReadAllText(file).Contains("<TmOverlayPanel", StringComparison.Ordinal))
             .Select(Path.GetFileName)
+            // F4: the shared overflow menu opens the panel from C# (OpenComponent<TmOverlayPanel>) —
+            // a Razor tag would compile to a literal element for an internal owner.
+            .Concat(Directory.GetFiles(componentsDir, "*.cs", SearchOption.AllDirectories)
+                .Where(file => File.ReadAllText(file).Contains("OpenComponent<TmOverlayPanel>", StringComparison.Ordinal))
+                .Select(Path.GetFileName))
             .ToList();
 
         found.Should().NotBeEmpty(
