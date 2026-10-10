@@ -541,4 +541,178 @@ public class ToolbarOverflowE2ETests : WasmTestBase
             await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
         }
     }
+
+    // ── F4 review round 1 ────────────────────────────────────────────────────────────────────────
+
+    private static async Task<bool> ErrorUiVisibleAsync(IPage page)
+        => await page.EvaluateAsync<bool>("() => { const e = document.getElementById('blazor-error-ui'); return !!e && getComputedStyle(e).display !== 'none'; }");
+
+    private static async Task<string[]> VisibleBarButtonsAsync(ILocator bar)
+        => await OnBarTextsAsync(bar);
+
+    /// <summary>Document-order children of the measured row that matter to the eye: visible dividers and visible buttons.</summary>
+    private static async Task<string[]> VisibleRowSequenceAsync(ILocator bar)
+        => await bar.EvaluateAsync<string[]>(
+            """
+            el => [...el.querySelectorAll('.tm-toolbar-divider, button.tm-toolbar-btn')]
+                .filter(n => !n.classList.contains('tm-toolbar-item--collapsed') && getComputedStyle(n).visibility !== 'hidden')
+                .map(n => n.classList.contains('tm-toolbar-divider') ? '|' : 'b')
+            """);
+
+    [TestMethod]
+    public async Task H1_OpenMoreMenu_SurvivesTheToolbarGainingAnItem_WhenResizedNarrower_NoRendererCrash()
+    {
+        // UX B1: the open menu gained an item IN FRONT of its first enabled item -> "Unexpected frame type during
+        // RemoveOldFrame: ElementReferenceCapture", #blazor-error-ui, a dead page.
+        var page = await OpenAsync(560, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+        await bar.Locator("button.tm-toolbar-more").ClickAsync();
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        var before = await MenuTextsAsync(page);
+
+        await page.SetViewportSizeAsync(400, 900);
+        await page.WaitForTimeoutAsync(2500);
+
+        Assert.IsFalse(await ErrorUiVisibleAsync(page), "the renderer must survive a reorder of the open menu");
+        var after = await MenuTextsAsync(page);
+        Assert.IsTrue(after.Length >= before.Length, $"a narrower toolbar lists at least as many entries ({before.Length} -> {after.Length})");
+        foreach (var name in new[] { "Copy", "Paste", "Layout", "Export" }) CollectionAssert.Contains(after, name);
+
+        // and the page is still alive: a bar button still logs its click.
+        await page.Keyboard.PressAsync("Escape");
+        await bar.Locator("button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)").First.ClickAsync();
+        await Assertions.Expect(page.Locator("[data-testid='toolbar-overflow-log']")).ToBeVisibleAsync();
+    }
+
+    [TestMethod]
+    public async Task H1_Rotation_LandscapeToPortrait_WithTheMenuOpen_KeepsThePageAlive()
+    {
+        var page = await OpenAsync(844, 390, touch: true);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+        await bar.Locator("button.tm-toolbar-more").TapAsync();
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+
+        await page.SetViewportSizeAsync(390, 844);
+        await page.WaitForTimeoutAsync(2500);
+
+        Assert.IsFalse(await ErrorUiVisibleAsync(page), "rotating with the More menu open must not crash the renderer");
+        await SettleAsync(page, "toolbar-ribbon");
+        Assert.IsTrue(await bar.Locator("button.tm-toolbar-more").CountAsync() == 1, "the narrow ribbon still offers More");
+    }
+
+    [TestMethod]
+    public async Task H2_ButtonsInsideAGroupWrapper_AreAllVisibleOnAWideBar_AndCollapseAndRecoverWhenNarrowed()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        var host = page.Locator("[data-testid='toolbar-group-host']");
+        await SettleAsync(page, "toolbar-group");
+        var bar = Bar(page, "toolbar-group");
+
+        Assert.AreEqual("group", await bar.Locator("[data-tm-toolbar-group]").First.GetAttributeAsync("role"));
+        Assert.AreEqual(0, await bar.Locator(".tm-toolbar-item--collapsed").CountAsync(), "a wrapped group of buttons on a 1100px bar must not collapse");
+        Assert.AreEqual(0, await bar.Locator("button.tm-toolbar-more").CountAsync(), "nothing overflows: no More trigger");
+        var wide = await VisibleBarButtonsAsync(bar);
+        Assert.IsTrue(wide.Length >= 5, $"all buttons visible at 1100px (got {wide.Length})");
+
+        await host.EvaluateAsync("el => { el.style.width = '300px'; }");
+        await SettleAsync(page, "toolbar-group");
+        Assert.IsTrue(await bar.Locator(".tm-toolbar-item--collapsed").CountAsync() > 0, "300px cannot hold the group - Secondary buttons collapse");
+        Assert.IsTrue(await bar.EvaluateAsync<bool>("el => el.scrollWidth <= el.clientWidth + 1"), "the narrowed bar does not overflow");
+        CollectionAssert.Contains(await VisibleBarButtonsAsync(bar), "Save", "the Pinned Save never collapses");
+
+        await host.EvaluateAsync("el => { el.style.width = '1100px'; }");
+        await SettleAsync(page, "toolbar-group");
+        Assert.AreEqual(0, await bar.Locator(".tm-toolbar-item--collapsed").CountAsync(), "widening brings every button back (the fit recovers)");
+    }
+
+    [TestMethod]
+    public async Task H3_AConditionalButtonInsertedMidBar_AtATightWidth_NeverLeavesAHole_OrOverflowsTheBar()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-conditional");
+        var bar = Bar(page, "toolbar-conditional");
+        await page.Locator("[data-testid='toolbar-conditional-toggle']").ClickAsync();
+        await SettleAsync(page, "toolbar-conditional");
+
+        var domOrder = await bar.Locator("button.tm-toolbar-btn").EvaluateAllAsync<string[]>("els => els.map(e => e.textContent.trim())");
+        CollectionAssert.Contains(domOrder, "Open");
+        Assert.IsTrue(domOrder.ToList().IndexOf("Open") < domOrder.Length - 1, "the inserted button sits MID-bar");
+
+        Assert.IsTrue(await bar.EvaluateAsync<bool>("el => el.scrollWidth <= el.clientWidth + 1"), "the bar must not overflow after the insertion (the old registration order never recovered)");
+        var collapsed = await CollapsedTextsAsync(bar);
+        var expectedTail = domOrder.Skip(domOrder.Length - collapsed.Length).ToArray();
+        CollectionAssert.AreEqual(expectedTail, collapsed, "equal-rank buttons: the collapsed ones are the LAST ones in DOM order - no hole in the middle");
+
+        if (collapsed.Length > 0)
+        {
+            await bar.Locator("button.tm-toolbar-more").ClickAsync();
+            CollectionAssert.AreEqual(collapsed, (await MenuTextsAsync(page)).ToArray(), "menu order follows the DOM order");
+        }
+    }
+
+    [TestMethod]
+    public async Task H4_Ribbon_At390_NeverShowsTwoDividersWithoutAVisibleButtonBetween()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-ribbon");
+        var seq = await VisibleRowSequenceAsync(Bar(page, "toolbar-ribbon"));
+        var joined = string.Concat(seq);
+
+        Assert.IsFalse(joined.Contains("||"), $"two visible dividers in a row (\"Pan | | Find\"): {joined}");
+        Assert.IsFalse(joined.StartsWith('|') || joined.EndsWith('|'), $"a leading/trailing divider separates nothing: {joined}");
+        await ShootAsync(page, Bar(page, "toolbar-ribbon"), "toolbar-390-ribbon-dividers");
+    }
+
+    [TestMethod]
+    [DataRow(1440)]
+    [DataRow(390)]
+    [DataRow(320)]
+    public async Task Q1_PinnedSave_NeverMovesIntoMore_AtAnyWidth(int width)
+    {
+        var page = await OpenAsync(width, 844, touch: width < 640);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+
+        CollectionAssert.Contains(await OnBarTextsAsync(bar), "Save", $"the Pinned Save stays on the bar at {width}px");
+        if (await bar.Locator("button.tm-toolbar-more").CountAsync() == 1)
+        {
+            await bar.Locator("button.tm-toolbar-more").ClickAsync();
+            CollectionAssert.DoesNotContain(await MenuTextsAsync(page), "Save", "a Pinned button is never offered in the menu");
+        }
+    }
+
+    [TestMethod]
+    public async Task H5_StandaloneToolbarButtons_AreNotForcedTo44pxOrNonShrinking()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        var probe = await page.EvaluateAsync<string>(
+            """
+            () => {
+                const host = document.createElement('div');
+                host.style.cssText = 'display:flex;width:60px';
+                host.innerHTML = '<button class="tm-toolbar-btn" type="button">Standalone</button>';
+                document.body.appendChild(host);
+                const s = getComputedStyle(host.firstChild);
+                const r = JSON.stringify({ minHeight: s.minHeight, flexShrink: s.flexShrink });
+                host.remove();
+                return r;
+            }
+            """);
+        StringAssert.Contains(probe, "\"flexShrink\":\"1\"", "outside a toolbar the button keeps the pre-F4 flex-shrink");
+        Assert.IsFalse(probe.Contains("\"minHeight\":\"44px\"", StringComparison.Ordinal), $"outside a toolbar no 44px minimum ({probe})");
+    }
+
+    [TestMethod]
+    public async Task H6_ToolbarInASpaceBetweenFlexRow_HasWidthOnlyWithTheDocumentedHostFix()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-shrink-fixed");
+        var fixedWidth = await Bar(page, "toolbar-shrink-fixed").EvaluateAsync<double>("el => el.getBoundingClientRect().width");
+        var plainWidth = await Bar(page, "toolbar-shrink-plain").EvaluateAsync<double>("el => el.getBoundingClientRect().width");
+
+        Assert.IsTrue(fixedWidth > 200, $"with the host fix (flex: 1 1 auto; min-width: 0) the toolbar has room ({fixedWidth}px)");
+        Assert.IsTrue(plainWidth < fixedWidth, $"without it the size container collapses toward zero intrinsic width ({plainWidth}px < {fixedWidth}px) - the documented breaking change");
+    }
 }
