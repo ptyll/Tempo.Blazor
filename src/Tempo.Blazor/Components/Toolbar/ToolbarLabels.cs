@@ -4,8 +4,9 @@ namespace Tempo.Blazor.Components.Toolbar;
 public enum ToolbarLabels
 {
     /// <summary>
-    /// The default: labels show, except on a narrow toolbar (below the tablet breakpoint, measured on
-    /// the toolbar itself) where icon buttons fall back to icon only. Text-only buttons keep their text.
+    /// The default: labels show, except on a toolbar narrower than <c>TmBreakpoints.Sm</c> (640px), measured on the
+    /// toolbar itself (not the viewport and not the shell's threshold), where icon buttons fall back to icon only.
+    /// Text-only buttons keep their text.
     /// </summary>
     Auto,
 

@@ -200,3 +200,10 @@ editor) keeps focus.
    surface is up they can paint under it — migrate them onto `TmModal`/`TmDialog` (which promote
    themselves) one surface at a time, and never cover them from package CSS with a z-index arms
    race. Any NEW modal surface must promote through `TopLayerInterop`.
+
+10. **A menu that migrates onto `TmOverlayPanel Role="menu"` deletes its own arrow handlers.** The panel attaches
+    `tm-menu-nav.js` (ArrowUp/ArrowDown/Home/End, typeahead, roving tabindex, Tab-out dismissal of a popover
+    menu); a second `@onkeydown` arrow handler on the host moves focus twice per press. A host also owns the initial
+    focus (first enabled item through `OnOpened` -> `focusFirst`, as `TmDropdown`, `TmSplitButton` and
+    `TmContextMenu` do through `MenuNavInterop`) and the focus return to its trigger on an item activation
+    (rule 4).

@@ -24766,7 +24766,7 @@
           "name": "Labels",
           "type": "ToolbarLabels",
           "isRequired": true,
-          "description": "Whether icon buttons show their text. Auto shows it except on a narrow toolbar; a button's own LabelPosition of Hidden always wins.",
+          "description": "Whether icon buttons show their text. Auto shows it except on a toolbar narrower than TmBreakpoints.Sm (640px), measured on the toolbar itself; a button's own LabelPosition of Hidden always wins.",
           "default": "Auto"
         },
         {

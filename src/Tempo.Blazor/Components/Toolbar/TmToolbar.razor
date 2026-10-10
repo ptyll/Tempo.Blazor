@@ -79,7 +79,7 @@
 
     /// <summary>
     /// Whether icon buttons show their text. <see cref="ToolbarLabels.Auto"/> (default) shows it
-    /// except on a narrow toolbar (below the mobile breakpoint); a button's own
+    /// except on a toolbar narrower than <c>TmBreakpoints.Sm</c> (640px), measured on the toolbar itself; a button's own
     /// <see cref="TmToolbarButton.LabelPosition"/> of <see cref="ToolbarLabelPosition.Hidden"/> always wins.
     /// </summary>
     [Parameter] public ToolbarLabels Labels { get; set; }

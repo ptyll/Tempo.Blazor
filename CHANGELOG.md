@@ -36,7 +36,16 @@
   you opt in with `Overflow="ToolbarOverflow.Menu"`. A host that styled `.tm-toolbar` with its
   own `position` / `container-type` or relied on every button being in the tab order must adjust.
   A `TmToolbarButton` used **outside** a `TmToolbar` (`TmDiagramEditor`,
-  `TmModelingDiagramPreview`) is unchanged.
+  `TmModelingDiagramPreview`) is unchanged: the toolbar-scoped rules below (`flex-shrink: 0`, the 44px
+  coarse-pointer target) apply to `.tm-toolbar .tm-toolbar-btn` only.
+
+  **Zero intrinsic width.** Because the root is now a size container (`container-type: inline-size`) it has no
+  intrinsic inline size: in a shrink-to-fit context (a flex item without basis/grow in a `space-between` row, an
+  `inline-block`, a float, an absolutely positioned box, an `auto` grid column, `fit-content`) it collapses to zero
+  width. *Before:* the toolbar sized itself to its buttons. *After:* give the host room —
+  `.page-header > .tm-toolbar { flex: 1 1 auto; min-width: 0; }` (or `width: 100%`). Inside a toolbar
+  `.tm-toolbar-btn` is `flex-shrink: 0` (a button keeps its natural width and leaves the bar into More). See
+  [docs/toolbar.md](docs/toolbar.md#layout-contract-breaking-since-f4).
 
   ```razor
   @* before: every button was a tab stop, text always visible *@
@@ -433,7 +442,12 @@
 - **Overflow toolbar (F4).** `TmToolbar.Overflow` (`None|Menu`), `Labels`
   (`Auto|Icons|IconsWithText`), `OverflowLabel`, `AriaLabel` and `OverflowPresentation`;
   `TmToolbarButton.Priority` (`Primary|Secondary|OverflowOnly`) and `LabelPosition`
-  (`Inline|Below|Hidden`). The buttons that do not fit move into a More menu — the same shared
+  (`Inline|Below|Hidden`). **`ToolbarButtonPriority.Pinned`** (appended as the last member, so existing values keep
+  their numbers) never moves into More — it maps to `ActionOverflow.Never` and is measured as fixed width (the
+  trailing Save / primary call to action; the demo ribbon pins Save). A layout wrapper marked
+  `data-tm-toolbar-group` (or `role="group"`) keeps its buttons individually collapsible; the order of record is the
+  DOM order `tm-toolbar.js` reports (`OnFitChanged(maxVisible, orderedIds)`); a divider that separates nothing is
+  hidden (`data-tm-divider-redundant`). The buttons that do not fit move into a More menu — the same shared
   menu host as the F5 action bar, a bottom sheet on a phone — lowest priority first, `OverflowOnly`
   always there; render order stays the written order. `tm-toolbar.js` measures how many buttons
   fit (rAF-coalesced, signature dedup) and generalises the DocumentEditor's `toolbar-overflow.mjs`
@@ -444,8 +458,10 @@
 - **Menu keyboard for every `role=menu` surface.** `tm-menu-nav.js`, attached by
   `TmOverlayPanel` to each `Role="menu"` panel (popover or sheet): ArrowUp/ArrowDown/Home/End
   roving over the enabled items, typeahead (diacritic- and case-insensitive) and a roving tabindex —
-  `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both overflow menus get it with no
-  per-component code.
+  `TmDropdown`, `TmSplitButton`, `TmContextMenu` and both overflow menus get the keys from the panel. A menu
+  opened from the keyboard also needs its first item focused: `TmDropdown`, `TmSplitButton` and `TmContextMenu`
+  each wire `OnOpened` → `focusFirst` through the shared `MenuNavInterop`, and a `TmContextMenu` item activation
+  returns focus to its trigger. Tab out of an open popover menu closes it (`aria-expanded` follows).
 - `TmToolbarButton` with `LabelPosition="Below"` stacks the label under the icon; `Hidden`
   omits the text span and keeps the text as the accessible name.
 - `PanelPresentation` enum and `MobilePresentation` on `TmOverlayPanel`, `TmDropdown` and
@@ -545,6 +561,11 @@
   **Changed**).
 ### Changed
 
+- **`TmDropdown`, `TmSplitButton` and `TmContextMenu` now move focus to their first enabled item when the menu
+  opens** (`tm-menu-nav.js` `focusFirst`, once per open, best-effort without JS). *Before:* focus stayed on the
+  trigger and the roving keys — which listen on the menu — were unreachable from the keyboard until a Tab. *After:*
+  Enter/Space on the trigger lands on the first item; Escape/selection return focus to the trigger. Tests that
+  asserted the trigger keeps focus after opening must adjust.
 - **`TmDrawer` and `TmModal` bodies that overflow gain a tab stop.** Both now run the shared
   `syncScrollRegion` (`tm-focus-trap.js`), exactly like `TmDialog` already did: while the body
   overflows it becomes `role="region"` with `tabindex="0"` (named by the title when there is one) so
