@@ -303,7 +303,7 @@ public class TmToolbarOverflowTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Module_IsAttachedOncePerToolbar_WithTheOverflowFlag_AndDetachedOnDispose()
+    public async Task Module_IsAttachedOncePerToolbar_WithTheOverflowFlag_AndDetachedOnDispose()
     {
         var module = SetupModule();
         var cut = RenderToolbar(Buttons(new Spec("Alpha")));
@@ -315,7 +315,7 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         System.Text.Json.JsonSerializer.Serialize(module.Invocations["attach"].Single().Arguments[2])
             .Should().Contain("\"overflow\":true", "Overflow=Menu measures");
 
-        Dispose();
+        await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
 
         module.Invocations["detach"].Should().ContainSingle();
     }

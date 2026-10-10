@@ -41,6 +41,9 @@ internal sealed class ActionOverflowMenu : ComponentBase
     /// <summary>Accessible name of the trigger when its content carries no text.</summary>
     [Parameter] public string? TriggerAriaLabel { get; set; }
 
+    /// <summary>Native tooltip (title) of the trigger. Null renders none.</summary>
+    [Parameter] public string? TriggerTitle { get; set; }
+
     /// <summary>The menu title (names the popover and titles the sheet).</summary>
     [Parameter] public string? Title { get; set; }
 
@@ -116,6 +119,7 @@ internal sealed class ActionOverflowMenu : ComponentBase
         if (!string.IsNullOrEmpty(TriggerAriaLabel)) builder.AddAttribute(8, "aria-label", TriggerAriaLabel);
         // An overflow of nothing but disabled items has nothing to invoke.
         builder.AddAttribute(9, "disabled", allDisabled);
+        if (!string.IsNullOrEmpty(TriggerTitle)) builder.AddAttribute(27, "title", TriggerTitle);
         builder.AddContent(10, TriggerContent);
         // After the attributes and content: an element-reference capture may not sit between an
         // element frame and its attributes (RenderTreeBuilder assertion).

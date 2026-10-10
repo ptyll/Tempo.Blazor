@@ -92,12 +92,14 @@ function px(value) {
 }
 
 /**
- * Measures a bar (the element whose direct children are the toolbar items).
- * Items (data-tm-toolbar-item) are measured even when collapsed - a collapsed button stays in the
- * DOM out of flow and invisible precisely so its width is known. Non-item children (title, divider,
- * custom content) are fixed width; out-of-flow ones (a popover panel) take no room. The More trigger
- * is not an item: its real width is used once it is rendered.
- * @param {HTMLElement} bar the .tm-toolbar-start element
+ * Measures a bar (the .tm-toolbar element: its children are the start/actions containers and the
+ * More trigger, and the containers' children are the buttons). The containers are flattened: only
+ * their children take room. Items (data-tm-toolbar-item) are measured even when collapsed - a
+ * collapsed button stays in the DOM out of flow and invisible precisely so its width is known.
+ * Non-item children (title, divider, custom content) are fixed width including their margins;
+ * out-of-flow ones (a popover panel) take no room. The More trigger is not an item: its real
+ * width is used once it is rendered.
+ * @param {HTMLElement} bar the toolbar row
  * @returns {{maxVisible:number, hasPinned:boolean, signature:string}}
  */
 export function computeFit(bar) {
@@ -107,30 +109,45 @@ export function computeFit(bar) {
     let fixed = 0;
     let triggerWidth = DEFAULT_TRIGGER_WIDTH;
     let hasPinned = bar.dataset?.tmToolbarPinned === 'true';
-    for (const child of Array.from(bar.children)) {
-        const classes = child.classList;
-        if (classes?.contains('tm-toolbar-more')) {
-            if (child.offsetWidth > 0) triggerWidth = child.offsetWidth;
-            continue;
+
+    const visit = children => {
+        for (const child of Array.from(children)) {
+            const classes = child.classList;
+            if (classes?.contains('tm-toolbar-start') || classes?.contains('tm-toolbar-actions')) {
+                visit(child.children ?? []);
+                continue;
+            }
+
+            if (classes?.contains('tm-toolbar-more')) {
+                if (child.offsetWidth > 0) triggerWidth = child.offsetWidth;
+                continue;
+            }
+
+            const data = child.dataset ?? {};
+            if ('tmToolbarItem' in data) {
+                if (data.pin === 'always') { hasPinned = true; continue; }
+                items.push({ width: outerWidth(child), rank: Number(data.rank) || 0 });
+                continue;
+            }
+
+            const childStyle = globalThis.getComputedStyle?.(child);
+            const position = childStyle?.position;
+            if (position === 'fixed' || position === 'absolute') continue;
+            if (child.offsetWidth > 0) fixed += outerWidth(child) + gap;
         }
+    };
+    visit(bar.children);
 
-        const data = child.dataset ?? {};
-        if ('tmToolbarItem' in data) {
-            if (data.pin === 'always') { hasPinned = true; continue; }
-            items.push({ width: child.offsetWidth, rank: Number(data.rank) || 0 });
-            continue;
-        }
-
-        const position = globalThis.getComputedStyle?.(child)?.position;
-        if (position === 'fixed' || position === 'absolute') continue;
-        if (child.offsetWidth > 0) fixed += child.offsetWidth + gap;
-    }
-
-    const available = bar.clientWidth - fixed;
+    const padding = px(style?.paddingLeft) + px(style?.paddingRight);
+    const available = bar.clientWidth - padding - fixed;
     const maxVisible = chooseVisibleCount(items, available, gap, triggerWidth, hasPinned);
     return { maxVisible, hasPinned, signature: `${maxVisible}|${items.length}|${hasPinned}` };
 }
 
+function outerWidth(element) {
+    const style = globalThis.getComputedStyle?.(element);
+    return element.offsetWidth + px(style?.marginLeft) + px(style?.marginRight);
+}
 const attached = new WeakMap();
 
 function refreshTabStops(state) {
@@ -148,8 +165,8 @@ function isTextEntry(target) {
 function measure(state) {
     state.frame = 0;
     if (state.disposed || !state.options.overflow) return;
-    const bar = state.root.querySelector('.tm-toolbar-start');
-    if (!bar) return;
+    // The root IS the measured row; the selector exists so a host can point at an inner row.
+    const bar = state.root.querySelector('[data-tm-toolbar-row]') ?? state.root;
     const fit = computeFit(bar);
     if (fit.signature === state.lastSignature) return;
     state.lastSignature = fit.signature;

@@ -1,25 +1,44 @@
 @namespace Tempo.Blazor.Components.Toolbar
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
+@implements IDisposable
 
-<button type="button"
-        class="tm-toolbar-btn tm-toolbar-btn--@Variant.ToString().ToLowerInvariant() @Class"
-        title="@Tooltip"
-        aria-label="@Tooltip"
-        disabled="@Disabled"
-        @attributes="AdditionalAttributes"
-        @onclick="async () => await OnClick.InvokeAsync()">
-    @if (!string.IsNullOrEmpty(Icon))
-    {
-        <TmIcon Name="@Icon" Size="IconSize.Sm" />
-    }
-    @if (!string.IsNullOrEmpty(Text))
-    {
-        <span class="tm-toolbar-btn-text">@Text</span>
-    }
-</button>
+@* Inside a TmToolbar the button registers with it: Overflow=Menu moves it into the More menu by
+   Priority (rendered collapsed - out of flow, invisible, inert - so its width stays measurable),
+   OverflowOnly buttons render only in the menu, and Labels decides the visible text. Standalone it
+   behaves exactly like the pre-F4 button. *@
+@if (!OmittedFromBar)
+{
+    <button type="button"
+            class="tm-toolbar-btn tm-toolbar-btn--@Variant.ToString().ToLowerInvariant() @ModifierClasses"
+            title="@EffectiveTitle"
+            aria-label="@EffectiveAriaLabel"
+            disabled="@Disabled"
+            inert="@Collapsed"
+            aria-hidden="@(Collapsed ? "true" : null)"
+            data-tm-toolbar-item="@(Registered ? "" : null)"
+            data-rank="@(Registered ? Rank.ToString() : null)"
+            data-pin="@(Registered ? "auto" : null)"
+            @attributes="AdditionalAttributes"
+            @onclick="ClickAsync">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <TmIcon Name="@Icon" Size="IconSize.Sm" />
+        }
+        @if (ShowText)
+        {
+            <span class="tm-toolbar-btn-text">@Text</span>
+        }
+    </button>
+}
 
 @code {
+    private TmToolbar? _registeredWith;
+    private (string?, string?, string?, ToolbarButtonPriority, bool, ButtonVariant, ToolbarLabelPosition)? _snapshot;
+
+    /// <summary>The toolbar this button sits in; null when used on its own.</summary>
+    [CascadingParameter] private TmToolbar? Toolbar { get; set; }
+
     /// <summary>Button label text. Omit for icon-only buttons.</summary>
     [Parameter] public string? Text { get; set; }
 
@@ -55,4 +74,85 @@
 
     /// <summary>Additional HTML attributes for the button element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>Stable id of the button's entry in the More menu.</summary>
+    internal string MenuId { get; } = $"tm-tb-{Guid.NewGuid():N}";
+
+    /// <summary>The More menu entry's label.</summary>
+    internal string MenuLabel => !string.IsNullOrEmpty(Text) ? Text : Tooltip ?? string.Empty;
+
+    /// <summary>Registered with a toolbar that collapses (Overflow=Menu).</summary>
+    private bool Registered => Toolbar is { CollapsesButtons: true } && _registeredWith is not null;
+
+    private bool Collapsed => Registered && Toolbar!.IsCollapsed(this) && Priority != ToolbarButtonPriority.OverflowOnly;
+
+    private bool OmittedFromBar => Registered && Priority == ToolbarButtonPriority.OverflowOnly;
+
+    private int Rank => Helpers.ToolbarOverflowLayout.Rank(Priority);
+
+    private bool HasIcon => !string.IsNullOrEmpty(Icon);
+
+    private bool HasText => !string.IsNullOrEmpty(Text);
+
+    private ToolbarLabels EffectiveLabels => Toolbar?.EffectiveLabels ?? ToolbarLabels.IconsWithText;
+
+    /// <summary>The label span renders for text-only buttons always; for icon buttons unless hidden by the button or the toolbar.</summary>
+    private bool ShowText => HasText && (!HasIcon || (LabelPosition != ToolbarLabelPosition.Hidden && EffectiveLabels != ToolbarLabels.Icons));
+
+    private string ModifierClasses => string.Join(' ', new[]
+    {
+        ShowText && HasIcon && LabelPosition == ToolbarLabelPosition.Below ? "tm-toolbar-btn--label-below" : null,
+        HasIcon && !ShowText ? "tm-toolbar-btn--icon-only" : null,
+        ShowText && HasIcon && EffectiveLabels == ToolbarLabels.Auto ? "tm-toolbar-btn--labels-auto" : null,
+        Collapsed ? "tm-toolbar-item--collapsed" : null,
+        Class,
+    }.Where(static c => !string.IsNullOrWhiteSpace(c)));
+    /// <summary>A button whose text is not visible keeps it as its name and tooltip.</summary>
+    private string? EffectiveAriaLabel => HasIcon ? Tooltip ?? Text : Tooltip;
+
+    private string? EffectiveTitle => !string.IsNullOrEmpty(Tooltip) ? Tooltip : HasIcon && !ShowText ? Text : null;
+
+    protected override void OnParametersSet()
+    {
+        // Register once, with the toolbar the cascade handed us; tell it about a change only when
+        // something it partitions or renders in the menu changed. OnClick is deliberately NOT part of
+        // the snapshot (a fresh lambda per parent render would loop) - the menu reads it live.
+        if (Toolbar is not null && !ReferenceEquals(_registeredWith, Toolbar))
+        {
+            _registeredWith?.Unregister(this);
+            _registeredWith = Toolbar;
+            _snapshot = Snapshot();
+            Toolbar.Register(this);
+            return;
+        }
+
+        var snapshot = Snapshot();
+        if (_registeredWith is not null && _snapshot != snapshot)
+        {
+            _snapshot = snapshot;
+            _registeredWith.ButtonChanged(this);
+        }
+    }
+
+    private (string?, string?, string?, ToolbarButtonPriority, bool, ButtonVariant, ToolbarLabelPosition) Snapshot()
+        => (Text, Icon, Tooltip, Priority, Disabled, Variant, LabelPosition);
+
+    /// <summary>Re-render after the toolbar's partition or labels changed.</summary>
+    internal void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>The click handler, shared by the bar button and the More menu entry.</summary>
+    internal async Task ClickAsync()
+    {
+        if (!Disabled)
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _registeredWith?.Unregister(this);
+        _registeredWith = null;
+    }
 }

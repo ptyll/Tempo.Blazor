@@ -1,23 +1,60 @@
 @namespace Tempo.Blazor.Components.Toolbar
+@using Microsoft.AspNetCore.Components.Rendering
 @using Microsoft.JSInterop
-@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Helpers
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
-<div class="tm-toolbar @(Sticky ? "tm-toolbar--sticky" : string.Empty) @Class">
-    <div class="tm-toolbar-start">
-        @if (!string.IsNullOrEmpty(Title))
+@* F4 toolbar. role=toolbar is honest here: tm-toolbar.js ships the roving tabindex (ArrowLeft/Right,
+   Home/End; one tab stop) it promises (ToolbarRoleGuardTests allow-lists this file for that reason).
+   Overflow=Menu: the buttons register with the toolbar (cascade), tm-toolbar.js measures how many
+   FIT, and ToolbarOverflowLayout - the shared ActionOverflowLayout partition - decides WHICH leave.
+   A button that left stays in the DOM, collapsed (out of flow, invisible, inert) so its width stays
+   measurable, and is offered in the "More" menu (ActionOverflowMenu, the same menu host as the F5
+   action bar). *@
+<div @ref="_root"
+     class="tm-toolbar @(Sticky ? "tm-toolbar--sticky" : string.Empty) @Class"
+     role="toolbar"
+     aria-label="@EffectiveAriaLabel"
+     data-tm-toolbar-pinned="@(_pinned ? "true" : null)"
+     @attributes="AdditionalAttributes">
+    <CascadingValue Value="this" IsFixed="true">
+        <div class="tm-toolbar-start">
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <span class="tm-toolbar-title">@Title</span>
+            }
+            @ChildContent
+        </div>
+        @if (Actions is not null)
         {
-            <span class="tm-toolbar-title">@Title</span>
+            <div class="tm-toolbar-actions">@Actions</div>
         }
-        @ChildContent
-    </div>
-    @if (Actions is not null)
+    </CascadingValue>
+    @if (_menu.Count > 0)
     {
-        <div class="tm-toolbar-actions">@Actions</div>
+        @MoreMenu
     }
 </div>
 
 @code {
+    private readonly List<TmToolbarButton> _buttons = [];
+    private IReadOnlyList<TmToolbarButton> _menu = [];
+    private HashSet<TmToolbarButton> _collapsed = [];
+    private ElementReference _root;
+    private ToolbarInterop? _interop;
+    private DotNetObjectReference<TmToolbar>? _dotNetRef;
+    private int? _maxVisible;
+    private bool _pinned;
+    private bool _attached;
+    private ToolbarOverflow _attachedOverflow;
+    private ToolbarOverflow _lastOverflow;
+    private ToolbarLabels _lastLabels;
+    private bool _disposed;
+
     /// <summary>Optional title displayed at the start of the toolbar.</summary>
     [Parameter] public string? Title { get; set; }
 
@@ -42,8 +79,8 @@
 
     /// <summary>
     /// Whether icon buttons show their text. <see cref="ToolbarLabels.Auto"/> (default) shows it
-    /// except on a mobile-width toolbar; a button's own <see cref="TmToolbarButton.LabelPosition"/>
-    /// of <see cref="ToolbarLabelPosition.Hidden"/> always wins.
+    /// except on a narrow toolbar (below the mobile breakpoint); a button's own
+    /// <see cref="TmToolbarButton.LabelPosition"/> of <see cref="ToolbarLabelPosition.Hidden"/> always wins.
     /// </summary>
     [Parameter] public ToolbarLabels Labels { get; set; }
 
@@ -63,8 +100,162 @@
     /// <summary>Additional HTML attributes applied to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    /// <summary>Called by tm-toolbar.js when the number of buttons that fit changes.</summary>
+    private string EffectiveAriaLabel => !string.IsNullOrWhiteSpace(AriaLabel) ? AriaLabel
+        : !string.IsNullOrWhiteSpace(Title) ? Title
+        : Loc["TmToolbar_AriaLabel"];
+
+    private string EffectiveOverflowLabel => OverflowLabel ?? Loc["Tm_More"];
+
+    internal ToolbarLabels EffectiveLabels => Labels;
+
+    internal bool CollapsesButtons => Overflow == ToolbarOverflow.Menu;
+
+    /// <summary>Whether the toolbar's button is on the bar but out of room (collapsed) or only in the menu.</summary>
+    internal bool IsCollapsed(TmToolbarButton button) => _collapsed.Contains(button);
+
+    internal void Register(TmToolbarButton button)
+    {
+        if (_disposed || _buttons.Contains(button)) return;
+        // Registration order is the written order of the initial render; a button added later joins
+        // at the end (the menu mirrors that order).
+        _buttons.Add(button);
+        Recompute();
+    }
+
+    internal void Unregister(TmToolbarButton button)
+    {
+        if (_disposed || !_buttons.Remove(button)) return;
+        _collapsed.Remove(button);
+        Recompute();
+    }
+
+    /// <summary>A registered button's priority, text or state changed.</summary>
+    internal void ButtonChanged(TmToolbarButton button)
+    {
+        if (_disposed || !_buttons.Contains(button)) return;
+        Recompute();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Overflow != _lastOverflow || Labels != _lastLabels)
+        {
+            _lastOverflow = Overflow;
+            _lastLabels = Labels;
+            // A button that is not re-rendered by its parent (equal primitive parameters) must be told
+            // that the toolbar-wide state it renders from changed.
+            Recompute(refreshAll: true);
+        }
+    }
+
+    /// <summary>
+    /// Called by tm-toolbar.js when the number of collapsible buttons that fit changes. Only the count
+    /// crosses the interop boundary; which buttons leave is decided here (ToolbarOverflowLayout).
+    /// </summary>
     /// <param name="maxVisible">How many collapsible buttons stay on the bar.</param>
     [JSInvokable]
-    public Task OnFitChanged(int maxVisible) => Task.CompletedTask;
+    public Task OnFitChanged(int maxVisible)
+    {
+        if (_maxVisible == maxVisible) return Task.CompletedTask;
+        _maxVisible = maxVisible;
+        return InvokeAsync(() => Recompute());
+    }
+
+    private void Recompute(bool refreshAll = false)
+    {
+        if (_disposed) return;
+
+        var overflowMode = Overflow == ToolbarOverflow.Menu;
+        var previous = _collapsed;
+        var next = new HashSet<TmToolbarButton>();
+        IReadOnlyList<TmToolbarButton> menu = [];
+        if (overflowMode)
+        {
+            var (_, menuButtons) = ToolbarOverflowLayout.Resolve(_buttons, _maxVisible, static b => b.Priority);
+            menu = menuButtons;
+            foreach (var button in menuButtons) next.Add(button);
+        }
+
+        _pinned = overflowMode && _buttons.Any(static b => b.Priority == ToolbarButtonPriority.OverflowOnly);
+        _collapsed = next;
+        _menu = menu;
+
+        foreach (var button in _buttons)
+        {
+            if (refreshAll || previous.Contains(button) != next.Contains(button))
+            {
+                button.Refresh();
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private RenderFragment MoreMenu => builder =>
+    {
+        var items = new List<TmActionItem>(_menu.Count);
+        foreach (var button in _menu)
+        {
+            var target = button;
+            items.Add(new TmActionItem
+            {
+                Id = button.MenuId,
+                Label = button.MenuLabel,
+                Icon = button.Icon,
+                Disabled = button.Disabled,
+                Danger = button.Variant == Tempo.Blazor.Components.Buttons.ButtonVariant.Danger,
+                OnClick = EventCallback.Factory.Create(this, () => target.ClickAsync()),
+            });
+        }
+
+        builder.OpenComponent<ActionOverflowMenu>(0);
+        builder.AddComponentParameter(1, nameof(ActionOverflowMenu.Items), (IReadOnlyList<TmActionItem>)items);
+        builder.AddComponentParameter(2, nameof(ActionOverflowMenu.TriggerClass), "tm-toolbar-more");
+        builder.AddComponentParameter(3, nameof(ActionOverflowMenu.TriggerAriaLabel), EffectiveOverflowLabel);
+        builder.AddComponentParameter(4, nameof(ActionOverflowMenu.TriggerTitle), EffectiveOverflowLabel);
+        builder.AddComponentParameter(5, nameof(ActionOverflowMenu.TriggerContent), (RenderFragment)BuildMoreIcon);
+        builder.AddComponentParameter(6, nameof(ActionOverflowMenu.Title), EffectiveOverflowLabel);
+        builder.AddComponentParameter(7, nameof(ActionOverflowMenu.PanelClass), "tm-toolbar-more__panel");
+        builder.AddComponentParameter(8, nameof(ActionOverflowMenu.MenuClass), "tm-toolbar-more__menu");
+        builder.AddComponentParameter(9, nameof(ActionOverflowMenu.ItemClass), "tm-toolbar-more__item");
+        builder.AddComponentParameter(10, nameof(ActionOverflowMenu.LabelClass), "tm-toolbar-more__label");
+        // The viewport scope (cascaded from TmLayoutObserver / the app shell) decides sheet vs popover
+        // inside TmOverlayPanel - Auto presents as a bottom sheet on a phone-sized viewport.
+        builder.AddComponentParameter(11, nameof(ActionOverflowMenu.MobilePresentation), OverflowPresentation);
+        builder.CloseComponent();
+    };
+
+    private void BuildMoreIcon(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TmIcon>(0);
+        builder.AddComponentParameter(1, nameof(TmIcon.Name), IconNames.MoreHorizontal);
+        builder.AddComponentParameter(2, nameof(TmIcon.Size), IconSize.Sm);
+        builder.CloseComponent();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_disposed) return;
+        if (_attached && _attachedOverflow == Overflow) return;
+
+        // Set before the first await so a second render during the import cannot attach twice.
+        _attached = true;
+        _attachedOverflow = Overflow;
+        _interop ??= new ToolbarInterop(JS);
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        await _interop.AttachAsync(_root, _dotNetRef, Overflow == ToolbarOverflow.Menu);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync();
+        }
+    }
 }
