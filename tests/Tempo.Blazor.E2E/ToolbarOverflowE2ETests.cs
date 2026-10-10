@@ -792,4 +792,26 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
         await page.WaitForFunctionAsync("() => document.activeElement?.closest('.tm-context-menu__trigger') !== null", null, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
+
+    [TestMethod]
+    public async Task H16_WideningWithAKeyboardOpenedMenu_WhoseTriggerUnmounts_NeverDropsFocusToBody()
+    {
+        var page = await OpenAsync(560, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        var bar = Bar(page, "toolbar-ribbon");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1500);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.WaitForTimeoutAsync(2500);
+
+        Assert.IsFalse(await ErrorUiVisibleAsync(page));
+        var activeTag = await page.EvaluateAsync<string>("() => document.activeElement?.tagName ?? 'none'");
+        Assert.AreNotEqual("BODY", activeTag, "the menu closed with the trigger gone: focus lands on the toolbar's last roving control");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('.tm-toolbar')"), "and stays inside the toolbar");
+    }
 }
