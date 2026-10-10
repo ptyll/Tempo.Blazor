@@ -93,6 +93,10 @@ function px(value) {
 
 /**
  * Measures a bar (the element whose direct children are the toolbar items).
+ * Items (data-tm-toolbar-item) are measured even when collapsed - a collapsed button stays in the
+ * DOM out of flow and invisible precisely so its width is known. Non-item children (title, divider,
+ * custom content) are fixed width; out-of-flow ones (a popover panel) take no room. The More trigger
+ * is not an item: its real width is used once it is rendered.
  * @param {HTMLElement} bar the .tm-toolbar-start element
  * @returns {{maxVisible:number, hasPinned:boolean, signature:string}}
  */
@@ -101,40 +105,154 @@ export function computeFit(bar) {
     const gap = px(style?.columnGap) || px(style?.gap);
     const items = [];
     let fixed = 0;
+    let triggerWidth = DEFAULT_TRIGGER_WIDTH;
     let hasPinned = bar.dataset?.tmToolbarPinned === 'true';
     for (const child of Array.from(bar.children)) {
         const classes = child.classList;
-        if (classes?.contains('tm-toolbar-more') || classes?.contains('tm-overlay-panel')) continue;
+        if (classes?.contains('tm-toolbar-more')) {
+            if (child.offsetWidth > 0) triggerWidth = child.offsetWidth;
+            continue;
+        }
+
         const data = child.dataset ?? {};
         if ('tmToolbarItem' in data) {
             if (data.pin === 'always') { hasPinned = true; continue; }
             items.push({ width: child.offsetWidth, rank: Number(data.rank) || 0 });
-        } else if (child.offsetWidth > 0) {
-            fixed += child.offsetWidth + gap;
+            continue;
         }
+
+        const position = globalThis.getComputedStyle?.(child)?.position;
+        if (position === 'fixed' || position === 'absolute') continue;
+        if (child.offsetWidth > 0) fixed += child.offsetWidth + gap;
     }
 
     const available = bar.clientWidth - fixed;
-    const maxVisible = chooseVisibleCount(items, available, gap, DEFAULT_TRIGGER_WIDTH, hasPinned);
+    const maxVisible = chooseVisibleCount(items, available, gap, triggerWidth, hasPinned);
     return { maxVisible, hasPinned, signature: `${maxVisible}|${items.length}|${hasPinned}` };
+}
+
+const attached = new WeakMap();
+
+function refreshTabStops(state) {
+    const items = rovingItems(state.root);
+    if (items.length === 0) return;
+    const stop = items.find(item => item.getAttribute('tabindex') === '0') ?? items[0];
+    for (const item of items) item.setAttribute('tabindex', item === stop ? '0' : '-1');
+}
+
+function isTextEntry(target) {
+    const tag = String(target?.tagName ?? '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable === true;
+}
+
+function measure(state) {
+    state.frame = 0;
+    if (state.disposed || !state.options.overflow) return;
+    const bar = state.root.querySelector('.tm-toolbar-start');
+    if (!bar) return;
+    const fit = computeFit(bar);
+    if (fit.signature === state.lastSignature) return;
+    state.lastSignature = fit.signature;
+    // Only the count crosses the interop boundary; C# decides which buttons leave
+    // (ToolbarOverflowLayout), so the ordering rule exists once.
+    try {
+        state.dotNetRef?.invokeMethodAsync('OnFitChanged', fit.maxVisible)?.catch(() => {});
+    } catch { /* the circuit is gone */ }
+}
+
+function schedule(state) {
+    if (state.disposed || state.frame) return;
+    state.frame = globalThis.requestAnimationFrame(() => {
+        state.frame = 0;
+        if (state.disposed) return;
+        refreshTabStops(state);
+        measure(state);
+    });
 }
 
 /**
  * Attaches the toolbar behaviour to a .tm-toolbar element: the roving tabindex always, the fit
- * measurement when options.overflow is set.
+ * measurement when options.overflow is set. Idempotent: attaching again replaces the registration.
  * @param {HTMLElement} root the .tm-toolbar element
  * @param {{invokeMethodAsync:Function}|null} dotNetRef receives OnFitChanged(maxVisible)
- * @param {{overflow?:boolean}} options
+ * @param {{overflow?:boolean}} [options]
  */
 export function attach(root, dotNetRef, options) {
-    throw new Error('not implemented');
+    if (!root) return;
+    detach(root);
+
+    const state = {
+        root,
+        dotNetRef,
+        options: { overflow: Boolean(options?.overflow) },
+        lastSignature: null,
+        frame: 0,
+        disposed: false,
+        observers: [],
+    };
+
+    const onKeyDown = event => {
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (isTextEntry(event.target)) return;
+        const items = rovingItems(root);
+        const current = items.indexOf(event.target);
+        // Only a control of the toolbar itself roves - a stray target (the menu, a custom widget in
+        // the bar) keeps its own keys.
+        if (current < 0) return;
+        const rtl = globalThis.getComputedStyle?.(root)?.direction === 'rtl';
+        const target = nextRovingIndex(items.length, current, event.key, rtl);
+        if (target < 0) return;
+        event.preventDefault();
+        items[target].focus();
+    };
+    const onFocusIn = event => {
+        const items = rovingItems(root);
+        if (!items.includes(event.target)) return;
+        for (const item of items) item.setAttribute('tabindex', item === event.target ? '0' : '-1');
+    };
+
+    root.addEventListener('keydown', onKeyDown);
+    root.addEventListener('focusin', onFocusIn);
+    state.onKeyDown = onKeyDown;
+    state.onFocusIn = onFocusIn;
+
+    const schedulePass = () => schedule(state);
+    if (state.options.overflow && typeof globalThis.ResizeObserver === 'function') {
+        const resize = new globalThis.ResizeObserver(schedulePass);
+        resize.observe(root);
+        state.observers.push(resize);
+    }
+
+    if (typeof globalThis.MutationObserver === 'function') {
+        // Buttons come and go (a priority change, a conditional action): the roving set and the
+        // measurement follow the DOM, coalesced into one frame.
+        const mutation = new globalThis.MutationObserver(schedulePass);
+        mutation.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'disabled', 'data-rank', 'data-pin'] });
+        state.observers.push(mutation);
+    }
+
+    attached.set(root, state);
+    refreshTabStops(state);
+    schedule(state);
 }
 
-/** Detaches everything attach() set up on the element. */
+/**
+ * Detaches everything attach() set up on the element and returns the controls to the natural tab order.
+ * @param {HTMLElement|null} root the element passed to attach
+ */
 export function detach(root) {
-    throw new Error('not implemented');
+    const state = root ? attached.get(root) : null;
+    if (!state) return;
+    state.disposed = true;
+    for (const observer of state.observers) observer.disconnect();
+    if (state.frame) globalThis.cancelAnimationFrame?.(state.frame);
+    state.frame = 0;
+    root.removeEventListener('keydown', state.onKeyDown);
+    root.removeEventListener('focusin', state.onFocusIn);
+    for (const control of Array.from(root.querySelectorAll(CONTROL_SELECTOR))) control.removeAttribute('tabindex');
+    attached.delete(root);
 }
 
-/** Test seam: forgets every attached toolbar. */
+/** Test seam: kept for symmetry with the other modules (state is per element and weakly held). */
 export function __resetForTests() {
 }
