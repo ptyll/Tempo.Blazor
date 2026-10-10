@@ -144,9 +144,10 @@ to{background-position:200% 0;}
 .tm-toolbar-btn--danger{color:var(--tm-color-danger);}
 .tm-toolbar-btn--danger:hover:not(:disabled){background:var(--tm-color-danger-subtle);color:var(--tm-color-danger);}
 .tm-toolbar-btn-text{display:inline;}
-.tm-toolbar-btn--label-below{flex-direction:column;justify-content:center;gap:0;min-width:var(--tm-touch-target);font-size:var(--tm-font-size-xs);line-height:var(--tm-line-height-tight);}
+.tm-toolbar-btn--label-below{flex-direction:column;justify-content:center;gap:var(--tm-space-1);min-width:var(--tm-touch-target);padding:var(--tm-space-2) var(--tm-space-3);font-size:var(--tm-font-size-xs);line-height:var(--tm-line-height-tight);}
 .tm-toolbar-btn--label-below .tm-toolbar-btn-text{display:block;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;}
-@media (pointer:coarse){.tm-toolbar-btn,.tm-toolbar-more{min-width:var(--tm-touch-target);min-height:var(--tm-touch-target);justify-content:center;}
+\n.tm-toolbar:has(.tm-toolbar-btn--label-below) .tm-toolbar-divider{\n height:2.5rem;\n}
+\n\n @media (pointer:coarse){.tm-toolbar-btn,.tm-toolbar-more{min-width:var(--tm-touch-target);min-height:var(--tm-touch-target);justify-content:center;}
 }
 @container tm-toolbar (width < 640px){.tm-toolbar-btn--labels-auto .tm-toolbar-btn-text{display:none;}
 }

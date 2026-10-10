@@ -37,8 +37,9 @@
 .tm-toolbar-btn--label-below {
   flex-direction: column;
   justify-content: center;
-  gap: 0;
+  gap: var(--tm-space-1);
   min-width: var(--tm-touch-target);
+  padding: var(--tm-space-2) var(--tm-space-3);
   font-size: var(--tm-font-size-xs);
   line-height: var(--tm-line-height-tight);
 }
@@ -50,7 +51,7 @@
   text-overflow: ellipsis;
 }
 
-/* F4 - an icon-only button keeps a finger-sized hit area on a coarse pointer. */
+/* A ribbon (label-below tiles): the group dividers run the tile's height, like the design's\n   separators between Zpět/Znovu, the edit tools and the tool modes. */\n.tm-toolbar:has(.tm-toolbar-btn--label-below) .tm-toolbar-divider {\n  height: 2.5rem;\n}\n\n/* F4 - an icon-only button keeps a finger-sized hit area on a coarse pointer. */
 @media (pointer: coarse) {
   .tm-toolbar-btn,
   .tm-toolbar-more {
