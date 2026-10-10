@@ -16,6 +16,8 @@ internal static class ToolbarOverflowLayout
     {
         ToolbarButtonPriority.OverflowOnly => 0,
         ToolbarButtonPriority.Secondary => 1,
+        // Pinned never competes (it is the Never pin), the rank is only a stable placeholder.
+        ToolbarButtonPriority.Pinned => 2,
         _ => 2,
     };
 
@@ -30,8 +32,15 @@ internal static class ToolbarOverflowLayout
         Func<T, ToolbarButtonPriority> priority)
         => ActionOverflowLayout.Partition(
             items,
-            // null = not measured / nothing to measure: the budget is every button there is.
-            maxVisible ?? Math.Max(1, items.Count),
+            // null = not measured / nothing to measure: the budget is every button there is. The measured count is
+            // the COLLAPSIBLE buttons that fit - the shared partition spends its budget on Never pins first, so they
+            // are added back (a pinned button is fixed width in the measurement, not part of the count).
+            maxVisible is { } measured ? measured + items.Count(item => priority(item) == ToolbarButtonPriority.Pinned) : Math.Max(1, items.Count),
             item => Rank(priority(item)),
-            item => priority(item) == ToolbarButtonPriority.OverflowOnly ? ActionOverflow.Always : ActionOverflow.Auto);
+            item => priority(item) switch
+            {
+                ToolbarButtonPriority.OverflowOnly => ActionOverflow.Always,
+                ToolbarButtonPriority.Pinned => ActionOverflow.Never,
+                _ => ActionOverflow.Auto,
+            });
 }

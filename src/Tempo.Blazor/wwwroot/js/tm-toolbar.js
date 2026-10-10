@@ -126,6 +126,8 @@ export function computeFit(bar) {
             const data = child.dataset ?? {};
             if ('tmToolbarItem' in data) {
                 if (data.pin === 'always') { hasPinned = true; continue; }
+                // Pinned (data-pin=never): never collapses, so it is plain fixed width on the bar.
+                if (data.pin === 'never') { fixed += outerWidth(child) + gap; continue; }
                 items.push({ width: outerWidth(child), rank: Number(data.rank) || 0 });
                 continue;
             }

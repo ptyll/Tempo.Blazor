@@ -18,7 +18,7 @@
             aria-hidden="@(Collapsed ? "true" : null)"
             data-tm-toolbar-item="@(Registered ? "" : null)"
             data-rank="@(Registered ? Rank.ToString() : null)"
-            data-pin="@(Registered ? "auto" : null)"
+            data-pin="@(Registered ? (Priority == ToolbarButtonPriority.Pinned ? "never" : "auto") : null)"
             @attributes="AdditionalAttributes"
             @onclick="ClickAsync">
         @if (!string.IsNullOrEmpty(Icon))

@@ -110,7 +110,7 @@ public class ToolbarOverflowLayoutTests
         menu.Should().Equal("b", "d");
 
         var (scarceBar, scarceMenu) = Run(Buttons(("a", P), ("b", S), ("c", N), ("d", P)), maxVisible: 0);
-        scarceBar.Should().Equal("c", "the pinned button stays even when no collapsible one fits");
+        scarceBar.Should().Equal(new[] { "c" }, "the pinned button stays even when no collapsible one fits");
         scarceMenu.Should().Equal("a", "b", "d");
     }
 

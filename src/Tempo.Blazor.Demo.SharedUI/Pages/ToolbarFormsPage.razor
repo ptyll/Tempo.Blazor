@@ -121,7 +121,7 @@
                     </ChildContent>
                     <Actions>
                         <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
-                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
                     </Actions>
                 </TmToolbar>
             </div>
