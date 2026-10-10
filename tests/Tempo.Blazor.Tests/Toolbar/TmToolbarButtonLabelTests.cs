@@ -145,6 +145,22 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
         cut.Find("button.tm-toolbar-btn").TextContent.Trim().Should().Be("New", "without a toolbar there is no overflow to be in");
     }
 
+    [Fact]
+    public void DanglingDivider_IsHiddenByVisibility_NotByDisplay_SoTheMeasuredWidthStaysStable()
+    {
+        // A divider with no visible button after it (everything behind it collapsed into More) is a
+        // stray rule. It must keep its box - display:none would change the measured fixed width and
+        // make the fit measurement oscillate at the boundary (hide -> room -> expand -> show -> no room).
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(
+            @"\.tm-toolbar-divider:has\(~\s*\.tm-toolbar-item--collapsed\):not\(:has\(~\s*\.tm-toolbar-btn:not\(\.tm-toolbar-item--collapsed\)\)\)\s*\{[^}]*visibility:\s*hidden",
+            "a divider with collapsed buttons after it and no visible one is hidden with visibility - and ONLY then: a divider before " +
+            "non-button content (TmDiagramEditor groups) or in a toolbar that collapses nothing must stay");
+        css.Should().NotMatchRegex(
+            @"\.tm-toolbar-divider:[^{]*\{[^}]*display:\s*none",
+            "display:none would feed back into the measurement");
+    }
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

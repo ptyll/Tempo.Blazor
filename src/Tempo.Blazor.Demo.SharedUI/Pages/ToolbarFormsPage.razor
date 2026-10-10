@@ -80,6 +80,7 @@
                 <div class="p-4">
                     <div style="width: @(width)px; max-width: 100%;">
                         <TmToolbar Overflow="ToolbarOverflow.Menu"
+                                   Labels="ToolbarLabels.IconsWithText"
                                    AriaLabel="@Loc["TmToolbarDemo_AriaLabel"]"
                                    data-testid="@($"toolbar-overflow-{width}")">
                             <ChildContent>
@@ -292,7 +293,7 @@
 @code {
     private string? _log;
     private string? _overflowLog;
-    private static readonly int[] _toolbarWidths = [1100, 720, 380];
+    private static readonly int[] _toolbarWidths = [1100, 380, 300];
 
     // Form fields
     private string _firstName = string.Empty;

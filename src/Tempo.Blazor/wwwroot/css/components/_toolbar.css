@@ -69,9 +69,13 @@
 }
 
 /* F4 - Overflow=Menu. A button that left the bar stays in the DOM so its width stays measurable: out
-   of flow, invisible, inert (TmToolbarButton also sets the inert attribute and aria-hidden). */
+   of flow, invisible, inert (TmToolbarButton also sets the inert attribute and aria-hidden). It is pinned
+   to the toolbar's inline start - left at its static position inside the right-hand actions group it
+   would stretch the toolbar's scrollable overflow. */
 .tm-toolbar-item--collapsed {
   position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
   visibility: hidden;
   pointer-events: none;
 }
