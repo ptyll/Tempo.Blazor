@@ -127,6 +127,76 @@
             </div>
         </div>
 
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-group-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_GroupTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_GroupDescription"]</p>
+            </div>
+            <div class="p-4">
+                <div style="width: 1100px; max-width: 100%;" data-testid="toolbar-group-host">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_GroupTitle"]"
+                               data-testid="toolbar-group">
+                        <div role="group" aria-label="@Loc["TmToolbarDemo_GroupTitle"]" data-tm-toolbar-group>
+                            <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                            <TmToolbarButton Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                            <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                            <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                        </div>
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                        <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-conditional-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ConditionalTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_ConditionalDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="@(() => _showConditional = !_showConditional)" data-testid="toolbar-conditional-toggle">@Loc["TmToolbarDemo_ConditionalToggle"]</TmButton>
+                <div style="width: 380px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_ConditionalTitle"]"
+                               data-testid="toolbar-conditional">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                        @if (_showConditional)
+                        {
+                            <TmToolbarButton @key="@("conditional-open")" Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                        }
+                        <TmToolbarButton Icon="@IconNames.Copy" Text="@Loc["TmToolbarDemo_Copy"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Copy"])" />
+                        <TmToolbarButton Icon="@IconNames.Clipboard" Text="@Loc["TmToolbarDemo_Paste"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Paste"])" />
+                        <TmToolbarButton Icon="@IconNames.Download" Text="@Loc["TmToolbarDemo_Export"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-shrink-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ShrinkTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_ShrinkDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                <div style="display: flex; justify-content: space-between; gap: 1rem; width: 100%;">
+                    <span class="text-sm">@Loc["TmToolbarDemo_ShrinkPlain"]</span>
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_ShrinkPlain"]" data-testid="toolbar-shrink-plain">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                    </TmToolbar>
+                </div>
+                <div style="display: flex; justify-content: space-between; gap: 1rem; width: 100%;">
+                    <span class="text-sm">@Loc["TmToolbarDemo_ShrinkFixed"]</span>
+                    <TmToolbar AriaLabel="@Loc["TmToolbarDemo_ShrinkFixed"]" style="flex: 1 1 auto; min-width: 0;" data-testid="toolbar-shrink-fixed">
+                        <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" />
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
         <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-labels-card">
             <div class="p-4 border-b border-slate-200 dark:border-slate-700">
                 <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_LabelsTitle"]</h3>
@@ -293,6 +363,7 @@
 @code {
     private string? _log;
     private string? _overflowLog;
+    private bool _showConditional;
     private static readonly int[] _toolbarWidths = [1100, 380, 300];
 
     // Form fields

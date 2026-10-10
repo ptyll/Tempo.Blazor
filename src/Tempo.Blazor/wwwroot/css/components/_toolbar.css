@@ -12,6 +12,9 @@
 .tm-toolbar--sticky { position: sticky; top: 0; z-index: 100; }
 .tm-toolbar-start   { display: flex; align-items: center; gap: var(--tm-space-2); flex: 1; min-width: 0; }
 .tm-toolbar-actions { display: flex; align-items: center; gap: var(--tm-space-2); flex-shrink: 0; }
+/* H2: a layout wrapper marked data-tm-toolbar-group (role=group) lays its buttons out like the bar does; tm-toolbar.js
+   flattens it, so each button still collapses on its own. */
+.tm-toolbar [data-tm-toolbar-group] { display: flex; align-items: center; gap: var(--tm-space-2); }
 .tm-toolbar-title   { font-weight: var(--tm-font-weight-semibold); font-size: var(--tm-font-size-md); white-space: nowrap; }
 .tm-toolbar-divider {
   width: 1px; height: 1.5rem; background: var(--tm-border-color);
