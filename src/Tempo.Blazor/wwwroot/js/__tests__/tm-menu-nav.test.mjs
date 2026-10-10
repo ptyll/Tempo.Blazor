@@ -2,7 +2,7 @@
 // rules plus attach() against a stub menu, the way tm-editor-shell.test.mjs does it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextIndex, typeaheadMatch, attach, enabledItems, isAttached, __resetForTests } from '../tm-menu-nav.js';
+import { nextIndex, typeaheadMatch, attach, enabledItems, isAttached, focusFirst, __resetForTests } from '../tm-menu-nav.js';
 
 test.beforeEach(() => __resetForTests());
 
@@ -184,4 +184,23 @@ test('the roving tabindex follows focus: the focused item is tabbable, the other
     m.listeners.get('focusin')({ target: items[1] });
     assert.equal(items[1].getAttribute('tabindex'), '0');
     assert.equal(items[0].getAttribute('tabindex'), '-1');
+});
+
+// ── focusFirst: initial focus of a dropdown opened from the keyboard ───────────────────────────
+
+test('focusFirst focuses the first ENABLED item of the open menu inside the host', () => {
+    const items = [item('A', { disabled: true }), item('B'), item('C')];
+    const menuEl = { querySelectorAll: () => items };
+    const host = { querySelector: selector => (selector === '[role="menu"]' ? menuEl : null) };
+
+    assert.equal(focusFirst(host), true);
+    assert.equal(items[1].focusCalls, 1);
+    assert.equal(items[0].focusCalls, 0);
+});
+
+test('focusFirst does nothing when the menu is not open or has no enabled item', () => {
+    assert.equal(focusFirst({ querySelector: () => null }), false);
+    assert.equal(focusFirst(null), false);
+    const menuEl = { querySelectorAll: () => [item('A', { disabled: true })] };
+    assert.equal(focusFirst({ querySelector: () => menuEl }), false);
 });

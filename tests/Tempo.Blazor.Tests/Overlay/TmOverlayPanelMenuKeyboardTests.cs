@@ -30,6 +30,7 @@ public class TmOverlayPanelMenuKeyboardTests : LocalizationTestBase
         overlay.SetupVoid("close", _ => true).SetVoidResult();
         var nav = JSInterop.SetupModule(MenuNavModule);
         nav.SetupVoid("attach", _ => true).SetVoidResult();
+        nav.Setup<bool>("focusFirst", _ => true).SetResult(true);
         return nav;
     }
 
@@ -110,5 +111,27 @@ public class TmOverlayPanelMenuKeyboardTests : LocalizationTestBase
         cut.Find("button.tm-dropdown-trigger").Click();
 
         cut.WaitForAssertion(() => nav.Invocations["attach"].Should().ContainSingle());
+    }
+
+    [Fact]
+    public void TmDropdown_OpenMovesFocusIntoTheMenu_OnceAfterTheOpen()
+    {
+        // A keyboard user opens the dropdown with Enter/Space: focus has to land on the first item or
+        // the roving keys (which listen on the menu) are unreachable. The wrapper is the host element
+        // the module searches - the popover and the sheet both stay inside it.
+        var nav = SetupMenuNav();
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Options")
+            .AddChildContent<TmDropdownItem>(i => i.Add(x => x.Value, "a").AddChildContent("A")));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        cut.WaitForAssertion(() => nav.Invocations["focusFirst"].Should().ContainSingle());
+        cut.Render();
+        nav.Invocations["focusFirst"].Should().ContainSingle("a re-render of the open menu must not steal focus again");
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+        cut.Find("button.tm-dropdown-trigger").Click();
+        cut.WaitForAssertion(() => nav.Invocations["focusFirst"].Should().HaveCount(2));
     }
 }

@@ -169,6 +169,15 @@ export function isAttached(menu) {
     return Boolean(menu) && attached.has(menu);
 }
 
+/**
+ * Moves focus to the first enabled menu item inside a host element (the dropdown wrapper: the popover
+ * stays in its DOM, so does the sheet). Returns whether something was focused.
+ * @param {ParentNode|null} root the element that contains the open role=menu
+ */
+export function focusFirst(root) {
+    throw new Error('not implemented');
+}
+
 /** Test seam: forgets every registration. */
 export function __resetForTests() {
     attached = new WeakMap();
