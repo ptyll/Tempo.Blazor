@@ -806,6 +806,34 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    [DataRow(600)]
+    [DataRow(400)]
+    [DataRow(460)]
+    public async Task I6_RibbonNarrowedFrom1100_NeverOverlapsButtons_NorSpillsPastTheBar(int target)
+    {
+        var page = await OpenAsync(1100, 900, touch: false);
+        await SettleAsync(page, "toolbar-ribbon");
+        await page.SetViewportSizeAsync(target, 900);
+        await SettleAsync(page, "toolbar-ribbon");
+        await page.WaitForTimeoutAsync(500);
+
+        var boxes = await Bar(page, "toolbar-ribbon").Locator("button.tm-toolbar-btn:not(.tm-toolbar-item--collapsed)")
+            .EvaluateAllAsync<double[][]>("els => els.map(e => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }).sort((a, b) => a[0] - b[0])");
+        var bar = await Bar(page, "toolbar-ribbon").EvaluateAsync<double[]>("el => { const r = el.getBoundingClientRect(); return [r.left, r.right]; }");
+        for (var i = 1; i < boxes.Length; i++)
+        {
+            Assert.IsTrue(boxes[i][0] >= boxes[i - 1][1] - 0.5, $"{target}px: visible bar buttons {i - 1} and {i} overlap ({boxes[i - 1][1]} > {boxes[i][0]})");
+        }
+
+        foreach (var box in boxes)
+        {
+            Assert.IsTrue(box[1] <= bar[1] + 0.5 && box[0] >= bar[0] - 0.5, $"{target}px: a visible button spills past the toolbar edge");
+        }
+
+        await ShootAsync(page, Bar(page, "toolbar-ribbon"), $"toolbar-ribbon-1100-to-{target}");
+    }
+
+    [TestMethod]
     public async Task H10_SplitButtonAndContextMenu_OpenedFromTheKeyboard_FocusTheirFirstItem_AndReturnFocusOnActivation()
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions

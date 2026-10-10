@@ -651,3 +651,26 @@ test('I1 a zero-width OverflowOnly position marker (data-pin=always) keeps its i
     assert.equal(fit.hasPinned, true);
     assert.equal(fit.maxVisible, 2, '100 + 100 + 8 + trigger 52 fits in 400; the marker adds no width');
 });
+
+test('I6 a divider squeezed to offsetWidth 0 is still counted by its CSS width and margins (no over-commit)', () => {
+    const divider = {
+        offsetWidth: 0,
+        dataset: {},
+        classList: { contains: name => name === 'tm-toolbar-divider' },
+        computed: { position: 'static', display: 'inline-block', width: '1px', marginLeft: '4px', marginRight: '4px', columnGap: '8px', gap: '8px' },
+    };
+    // 100 + 8 + 100 = 208 buttons; the divider costs 1 + 4 + 4 + gap 8 = 17. 220 - 17 = 203 < 208 -> one must leave.
+    const bar = stubBar([child({ width: 100, rank: 2 }), divider, child({ width: 100, rank: 1 })], 220);
+    assert.equal(computeFit(bar).maxVisible, 1, 'ignoring the 0px-wide divider would keep both buttons and overlap the next control');
+});
+
+test('I6 a display:none divider costs nothing', () => {
+    const divider = {
+        offsetWidth: 0,
+        dataset: {},
+        classList: { contains: name => name === 'tm-toolbar-divider' },
+        computed: { position: 'static', display: 'none', width: '1px', marginLeft: '4px', marginRight: '4px', columnGap: '8px', gap: '8px' },
+    };
+    const bar = stubBar([child({ width: 100, rank: 2 }), divider, child({ width: 100, rank: 1 })], 220);
+    assert.equal(computeFit(bar).maxVisible, 2);
+});
