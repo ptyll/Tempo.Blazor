@@ -67,7 +67,8 @@
                 </button>
             </HeaderContent>
             <ChildContent>
-                <div class="tm-overlay-panel-sheet__content"
+                <div @ref="_sheetContentRef"
+                     class="tm-overlay-panel-sheet__content"
                      id="@Id"
                      role="@(Role is "dialog" ? null : Role)"
                      aria-label="@AriaLabel"
@@ -116,10 +117,17 @@
 
 @code {
     private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
+    private const string MenuNavModulePath = "./_content/Tempo.Blazor/js/tm-menu-nav.js";
 
     private readonly string _key = $"tm-overlay-{Guid.NewGuid():n}";
     private readonly string _sheetTitleId = $"tm-overlay-panel-sheet-title-{Guid.NewGuid():n}";
     private ElementReference _panelRef;
+    private ElementReference _sheetContentRef;
+    // The menu keyboard module (tm-menu-nav.js, F4): attached to a Role="menu" panel once per open.
+    // _menuNavOnSheet remembers WHICH element carries it (popover root vs sheet content wrapper), so
+    // a layout flip of an open menu re-attaches to the element that replaced it.
+    private IJSObjectReference? _menuNav;
+    private bool? _menuNavOnSheet;
     private TmFocusScope? _scope;
     private IJSObjectReference? _module;
     private DotNetObjectReference<TmOverlayPanel>? _dotNetRef;
@@ -546,6 +554,11 @@
                 await _module.InvokeVoidAsync("close", _key);
             }
 
+            if (IsVisible && Role == "menu" && _menuNavOnSheet != IsSheet && (IsSheet || _jsOpen))
+            {
+                await AttachMenuNavAsync();
+            }
+
             if (_openedPending)
             {
                 _openedPending = false;
@@ -558,11 +571,43 @@
                 // Both presentations reset here: the popover close branch above and a sheet that
                 // unmounted with the close — the next open must fire OnOpened again.
                 _openedFired = false;
+                _menuNavOnSheet = null;
             }
         }
         finally
         {
             _jsSync.Release();
+        }
+    }
+
+    /// <summary>
+    /// Attaches the shared menu keyboard (ArrowUp/Down, Home/End, typeahead, roving tabindex) to the
+    /// menu element of the current presentation. Best-effort: where JS is unavailable the menu keeps
+    /// the native Tab order.
+    /// </summary>
+    private async Task AttachMenuNavAsync()
+    {
+        var element = IsSheet ? _sheetContentRef : (TrapFocus ? _scope?.Element ?? default : _panelRef);
+        if (element.Id is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _menuNav ??= await JS.InvokeAsync<IJSObjectReference>("import", MenuNavModulePath);
+            if (_disposed || _menuNav is null)
+            {
+                return;
+            }
+
+            await _menuNav.InvokeVoidAsync("attach", element);
+            _menuNavOnSheet = IsSheet;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException
+            or ObjectDisposedException or InvalidOperationException)
+        {
+            // Best-effort: a missing module or a torn-down circuit must never fail the open.
         }
     }
 
@@ -601,6 +646,17 @@
                         await _module.DisposeAsync();
                     }
                     catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException)
+                    {
+                    }
+                }
+
+                if (_menuNav is not null)
+                {
+                    try
+                    {
+                        await _menuNav.DisposeAsync();
+                    }
+                    catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException)
                     {
                     }
                 }
