@@ -196,7 +196,7 @@ public sealed class OverlayPanelComputedStyleRegressionTests
 
     // ── N196's two halves, named for the review finding ─────────────────────
 
-    /// <summary>The reset half: a consumer's surface colour must beat the transparent reset.</summary>
+    /// <summary>\n    /// H11 (F4 review): the F4 toolbar's More panel passes its own surface class through the shared\n    /// ActionOverflowMenu - the row above covers the bar's class, this one the toolbar's. In popover mode the\n    /// panel must paint background/border/padding over the zero-specificity reset.\n    /// </summary>\n    [Fact]\n    public void ToolbarMorePanel_KeepsItsSurfaceBorderAndPadding()\n    {\n        AssertOwned(new Consumer("TmToolbar.razor", "tm-toolbar-more__panel", "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null), "background-color", "var(--tm-bg-surface)");\n        AssertOwned(new Consumer("TmToolbar.razor", "tm-toolbar-more__panel", null, null, null, null), "border-color", "var(--tm-border-color)");\n        AssertOwned(new Consumer("TmToolbar.razor", "tm-toolbar-more__panel", null, null, null, null), "padding", "var(--tm-space-1)");\n    }\n\n    /// <summary>The reset half: a consumer's surface colour must beat the transparent reset.</summary>
     [Fact]
     public void TmDropdown_Background_IsSurface_NotTransparent()
     {

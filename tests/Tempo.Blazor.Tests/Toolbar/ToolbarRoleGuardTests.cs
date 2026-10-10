@@ -40,7 +40,7 @@ public sealed class ToolbarRoleGuardTests
             var markup = File.ReadAllText(Path.Combine(root, relative));
             ToolbarRoleScanner.Find(markup, relative).Should().NotBeEmpty(
                 $"{relative} is on the allow-list because it claims role=toolbar");
-            markup.Should().Contain("tm-toolbar.js", $"{relative} must attach the roving-tabindex module it claims the role with");
+            // H14: a comment mentioning the module satisfied the old Contain("tm-toolbar.js"). The markup must USE the interop\n            // wrapper, and the wrapper must carry the module path and the attach call - comments stripped.\n            var code = System.Text.RegularExpressions.Regex.Replace(markup, @"@\*.*?\*@", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline);\n            code.Should().Contain("new ToolbarInterop(", $"{relative} must attach the roving-tabindex module it claims the role with");\n            code.Should().Contain("AttachAsync(");\n            var interop = System.Text.RegularExpressions.Regex.Replace(\n                File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "Helpers", "ToolbarInterop.cs")), @"^\\s*///.*$|//.*$", string.Empty, System.Text.RegularExpressions.RegexOptions.Multiline);\n            interop.Should().Contain("\\"./_content/Tempo.Blazor/js/tm-toolbar.js\\"").And.Contain("\\"attach\\"");
         }
 
         var module = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "js", "tm-toolbar.js"));

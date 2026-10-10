@@ -183,16 +183,60 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
         bundle.Should().NotMatchRegex(@"\\n\s*\.tm-toolbar", "the committed bundle must be rebuilt from the clean source");
         css.Should().MatchRegex(@"\.tm-toolbar-more\s*\{[^}]*min-width:\s*var\(--tm-touch-target\)");
     }
+    private static string ToolbarCss()
+        => File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+    /// <summary>The declaration block of the rule whose selector list is exactly <paramref name="selector"/> (null when absent).</summary>
+    private static string? RuleBody(string css, string selector)
+    {
+        var withoutComments = System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline);
+        var match = System.Text.RegularExpressions.Regex.Match(
+            withoutComments, @"(?:^|[}\s])" + System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*\{([^}]*)\}");
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
     [Fact]
-    public void ToolbarButtons_NeverShrink_SoTheMeasuredWidthIsTheNaturalWidth()
+    public void ToolbarButtons_NeverShrink_ScopedToTheToolbar_SoTheMeasuredWidthIsTheNaturalWidth()
     {
         // A flex item shrinks to its min-width (the 44px touch target on a coarse pointer) before the
         // row overflows; the fit measurement then sees 44px buttons whose text spills over the next one.
-        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+        // H5 (architect M3): ONLY inside a .tm-toolbar - a standalone .tm-toolbar-btn (TmDiagramEditor's ~32
+        // buttons, TmModelingDiagramPreview) keeps the pre-F4 flex behaviour the CHANGELOG promises.
+        var css = ToolbarCss();
 
-        css.Should().MatchRegex(@"\.tm-toolbar-btn\s*\{[^}]*flex-shrink:\s*0");
+        RuleBody(css, ".tm-toolbar .tm-toolbar-btn").Should().NotBeNull().And.MatchRegex(@"flex-shrink:\s*0");
+        RuleBody(css, ".tm-toolbar-btn").Should().NotBeNull().And.NotContain("flex-shrink",
+            "the unscoped base rule must not change standalone buttons");
     }
 
+    [Fact]
+    public void CoarsePointerTouchTarget_AppliesInsideTheToolbarOnly()
+    {
+        var css = System.Text.RegularExpressions.Regex.Replace(ToolbarCss(), @"/\*.*?\*/", " ", System.Text.RegularExpressions.RegexOptions.Singleline);
+        var media = System.Text.RegularExpressions.Regex.Match(css, @"@media\s*\(pointer:\s*coarse\)\s*\{(.*?)\n\}", System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        media.Success.Should().BeTrue("the coarse-pointer block exists");
+        var selectors = media.Groups[1].Value.Split('{')[0].Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+        selectors.Should().Contain(".tm-toolbar .tm-toolbar-btn").And.Contain(".tm-toolbar .tm-toolbar-more");
+        selectors.Should().NotContain(".tm-toolbar-btn", "a standalone toolbar button is not forced to 44px");
+    }
+
+    [Theory]
+    [InlineData("TmMobileActionBar.razor", "Actions")]
+    [InlineData("TmToolbar.razor", "Toolbar")]
+    public void EveryOverflowMenuHost_TintsADangerItem(string razor, string folder)
+    {
+        // H9: TmActionItem.Danger adds "<ItemClass>--danger"; each host must style it or the flag is silent.
+        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "Components", folder, razor));
+        var match = System.Text.RegularExpressions.Regex.Match(source, @"ActionOverflowMenu\.ItemClass\),\s*""([^""]+)""");
+        match.Success.Should().BeTrue($"{razor} passes an ItemClass to ActionOverflowMenu");
+        var itemClass = match.Groups[1].Value;
+
+        var css = string.Concat(Directory.GetFiles(
+            Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components"), "*.css").Select(File.ReadAllText));
+        RuleBody(css, $".{itemClass}--danger").Should().NotBeNull($"the .{itemClass}--danger modifier needs a rule")
+            .And.Contain("color: var(--tm-color-danger)");
+    }
     [Fact]
     public void DividerMarkedRedundantByTheMeasurement_IsHiddenByVisibility_NeverDisplay()
     {
