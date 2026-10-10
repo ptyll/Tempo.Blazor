@@ -15,6 +15,21 @@
   min-height: var(--tm-touch-target);
 }
 
+/* ── Pointer drag ───────────────────────────────────────────────
+   The shared pointer-drag helper (js/pointer-drag.js, docs/touch-interaction.md). A drag handle
+   that starts a drag immediately must opt out of browser panning with .tm-touch-drag-handle; a
+   long-press drag leaves scrolling alone and needs no class. While a drag runs the helper adds
+   .tm-pointer-dragging to the dragged element so text is not selected under the finger. */
+
+.tm-touch-drag-handle {
+  touch-action: none;
+}
+
+.tm-pointer-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* ── Hover-only actions ─────────────────────────────────────────
    An action that appears only on hover is unreachable on a touch screen and on keyboard focus.
    Mark it .tm-reveal-on-hover; it stays visible when the device cannot hover, and while the
