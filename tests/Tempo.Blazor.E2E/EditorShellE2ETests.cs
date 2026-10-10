@@ -935,6 +935,56 @@ public class EditorShellE2ETests : WasmTestBase
             null, new PageWaitForFunctionOptions { Timeout = 5000 });
     }
 
+    // ── F6 r2 G3: Escape closes the sheet that holds focus, whatever order the traps activated in ──
+
+    [TestMethod]
+    public async Task Demo_390_TwoInlineSheetsOnOnePage_EscapeFromInsideTheMainSheet_ClosesIt_OnEveryLoad()
+    {
+        // /editor-shell has two mobile inline sheets (main + thresholds). Which one activated last
+        // varies per load; Escape must close the one that holds focus every time. Several reloads.
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        const string thresholdsSheet = "[data-testid='editor-shell-thresholds'] .tm-editor-shell__sheet";
+
+        for (var attempt = 1; attempt <= 4; attempt++)
+        {
+            var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
+            await Assertions.Expect(sheet).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+            await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+            // Focus inside the thresholds sheet first, then inside the main sheet: Escape in the
+            // main sheet closes the main sheet and leaves the other one open.
+            await page.Locator($"{thresholdsSheet} .tm-editor-shell__tab").First.FocusAsync();
+            await sheet.Locator(".tm-editor-shell__tab").First.FocusAsync();
+            await page.Keyboard.PressAsync("Escape");
+
+            await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+            Assert.AreEqual(1, await page.Locator(thresholdsSheet).CountAsync(), $"attempt {attempt}: the sheet that did not hold focus stays open");
+
+            await page.ReloadAsync();
+            await WaitForAppReadyAsync(page);
+            await page.SetViewportSizeAsync(390, 844);
+            var close = page.Locator(".tm-side-panel-sheet .tm-drawer__close");
+            if (await close.CountAsync() > 0) await close.First.ClickAsync();
+        }
+    }
+
+    [TestMethod]
+    public async Task Demo_390_TwoInlineSheetsOnOnePage_EscapeWithFocusOnTheCanvas_ClosesNeither()
+    {
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        await Assertions.Expect(page.Locator($"{Shell} .tm-editor-shell__sheet")).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        await page.Locator("[data-testid='es-canvas-block']").FocusAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(400);
+
+        Assert.AreEqual(1, await page.Locator($"{Shell} .tm-editor-shell__sheet").CountAsync(), "Escape on the canvas belongs to the page");
+        Assert.AreEqual(1, await page.Locator("[data-testid='editor-shell-thresholds'] .tm-editor-shell__sheet").CountAsync());
+    }
     // ── F6 r2 G4: focus never drops to <body> when the shell removes/hides the focused element ──
 
     private const string ActiveIsInSheet = "() => !!document.activeElement?.closest(\"[data-testid='editor-shell'] .tm-editor-shell__sheet\")";
