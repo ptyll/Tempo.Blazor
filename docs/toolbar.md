@@ -33,7 +33,7 @@ buttons can show their text next to or under the icon.
 * **Priority is an overflow rank, not a rank number and not an order.** Buttons render in the order you
   write them, always — the menu too. `Secondary` leaves the bar before any `Primary`; of two buttons
   with the same priority the *later* one (in DOM order) leaves first. `OverflowOnly` buttons never
-  appear on the bar and never count against the room. `Pinned` is the opposite pin: the button
+  appear on the bar and never count against the room; each leaves a hidden, zero-width\n  `<span hidden data-tm-toolbar-item data-pin="always">` marker at its written place, so it reports its DOM\n  position like every other button and keeps its written slot in the menu. `Pinned` is the opposite pin: the button
   **never** moves into More at any width (the trailing Save / primary call to action); it is measured
   as fixed width, like a title, and is not counted against the room the collapsible buttons share. The
   enum values are *not* ranks — `Pinned` is the numerically last member (it was added after
@@ -62,7 +62,7 @@ buttons can show their text next to or under the icon.
   is measured wherever it sits. `.tm-toolbar-start` / `.tm-toolbar-actions` are flattened, and so is
   any wrapper that holds items: mark a layout wrapper `data-tm-toolbar-group` (and `role="group"` with
   an accessible name when it is a semantic group) and its children take room individually; the wrapper's
-  own padding/border/gap counts as fixed width. Without the flattening a wrapped group would look like
+  own horizontal padding and border count as fixed width. Its margin and its own `gap` are **not**\n  measured: the bar's `gap` is assumed for every row, so keep a group wrapper's margin at 0 and its `gap`\n  equal to the bar's (the default `--tm-space-2`). Without the flattening a wrapped group would look like
   one fixed block with no items and collapse everything into More.
 
   ```razor
@@ -78,7 +78,7 @@ buttons can show their text next to or under the icon.
 * **Dividers that separate nothing** — first or last among the visible content, or directly followed by
   another divider ("Pan | | Find" at 390px) — are marked `data-tm-divider-redundant` by the
   measurement pass and hidden with `visibility` (they keep their box, so the measured width and the fit
-  cannot oscillate). The attribute is not observed, so marking never re-triggers a pass.
+  cannot oscillate). The attribute is not observed, so marking never re-triggers a pass. A divider never flex-shrinks\n  (.tm-toolbar-divider { flex-shrink: 0 }), and a divider squeezed to 0px is still counted by its CSS width and\n  margins, so a narrowed row cannot over-commit.
 * **The More menu** is the shared overflow menu (`ActionOverflowMenu`, also the action bar's),
   so it honours the whole host contract of [overlays.md](overlays.md): close-before-invoke,
   first enabled item focused, `aria-expanded` accurate on every close path (a Tab out of an open
