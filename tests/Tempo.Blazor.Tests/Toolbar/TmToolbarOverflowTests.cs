@@ -134,7 +134,7 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         var cut = RenderToolbar(Buttons(
             new Spec("A", ToolbarButtonPriority.Secondary), new Spec("B"), new Spec("C", ToolbarButtonPriority.Secondary),
             new Spec("D", ToolbarButtonPriority.OverflowOnly)));
-        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(4, "three bar buttons + the OverflowOnly position marker"));
 
         cut.InvokeAsync(() => cut.Instance.OnFitChanged(1));
 
@@ -451,4 +451,47 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         OpenMenu(cut);
         MenuLabels(cut).Should().Equal("Two", "Three");
     }
-}
+
+    [Fact]
+    public void OverflowOnlyButton_KeepsItsWrittenPositionInTheMenu_WhenJsReportsTheDomOrder()
+    {
+        // Review round 2 (I1): [A, X(OverflowOnly), B] - X has no bar button, so JS used to never report its id and
+        // ApplyDomOrder pushed it to the end: the menu read "B, X" instead of the written "X, B".
+        SetupModule();
+        var cut = RenderToolbar(Buttons(
+            new Spec("A", ToolbarButtonPriority.Pinned), new Spec("X", ToolbarButtonPriority.OverflowOnly), new Spec("B", ToolbarButtonPriority.Secondary)));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0, ItemIdsInDomOrder(cut)));
+
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("X", "B");
+    }
+
+    [Fact]
+    public void OverflowOnlyButton_LeavesAHiddenZeroWidthPositionMarker_NotAControl()
+    {
+        SetupModule();
+        var cut = RenderToolbar(Buttons(new Spec("A"), new Spec("X", ToolbarButtonPriority.OverflowOnly)));
+
+        var marker = cut.FindAll("[data-tm-toolbar-item]").Single(e => e.TagName != "BUTTON");
+        marker.HasAttribute("hidden").Should().BeTrue("a hidden marker takes no room and is not focusable");
+        marker.GetAttribute("data-pin").Should().Be("always", "tm-toolbar.js records its id but never measures it");
+        marker.TextContent.Should().BeEmpty();
+        BarButtons(cut).Should().Equal("A");
+    }
+
+    [Fact]
+    public void OverflowOnlyButton_WrittenFirstOrLast_KeepsThatPositionInTheMenu()
+    {
+        SetupModule();
+        var cut = RenderToolbar(Buttons(
+            new Spec("F", ToolbarButtonPriority.OverflowOnly), new Spec("A", ToolbarButtonPriority.Pinned),
+            new Spec("B", ToolbarButtonPriority.Secondary), new Spec("L", ToolbarButtonPriority.OverflowOnly)));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(4));
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0, ItemIdsInDomOrder(cut)));
+
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("F", "B", "L");
+    }}

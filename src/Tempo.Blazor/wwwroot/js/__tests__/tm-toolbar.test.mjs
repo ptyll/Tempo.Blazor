@@ -639,3 +639,15 @@ test('H16 focus that is not lost, or never was in the toolbar, is left alone', (
     e.flush();
     assert.equal(more.focusCalls, 0, 'an intentional move elsewhere is never pulled back');
 });
+
+test('I1 a zero-width OverflowOnly position marker (data-pin=always) keeps its id slot in DOM order and takes no room', () => {
+    const bar = stubBar([
+        child({ width: 100, rank: 1, id: 'a' }),
+        child({ width: 0, rank: 0, pin: 'always', id: 'x' }),
+        child({ width: 100, rank: 1, id: 'b' }),
+    ], 400);
+    const fit = computeFit(bar);
+    assert.deepEqual(fit.ids, ['a', 'x', 'b'], 'the marker reports where the OverflowOnly button was written');
+    assert.equal(fit.hasPinned, true);
+    assert.equal(fit.maxVisible, 2, '100 + 100 + 8 + trigger 52 fits in 400; the marker adds no width');
+});
