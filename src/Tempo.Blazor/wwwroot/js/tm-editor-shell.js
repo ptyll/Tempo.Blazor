@@ -1,13 +1,16 @@
 // Tempo.Blazor editor shell (ES module).
 //
 // Two jobs for TmEditorShell, both optional and best-effort:
-//   1. the panel resize separator — the pointer drag lives here (pointer capture, live width, one
-//      commit on release); the keyboard path lives in Blazor and shares clampWidth's rules with
-//      EditorShellResize.Clamp (the same vectors are asserted on both sides);
+//   1. the panel resize separator — the pointer gesture is the shared pointer-drag helper; the live
+//      width and the one commit on release live here. The keyboard path lives in Blazor and shares
+//      clampWidth's rules with EditorShellResize.Clamp (the same vectors are asserted on both sides);
 //   2. width persistence under a host-chosen localStorage key. Private mode, disabled storage and SSR
 //      simply skip persistence — nothing here may throw into the render loop.
 
+import { attach as attachPointerDrag } from './pointer-drag.js';
+
 const STORAGE_PREFIX = 'tempo.tm-editor-shell.';
+const DRAGGING_CLASS = 'tm-editor-shell__resizer--dragging';
 const RESIZE_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
 const WIDTH_VAR = '--tm-editor-shell-panel-width';
 
@@ -93,8 +96,10 @@ const resizers = new Map();
 
 /**
  * Attaches the pointer-drag resize to a separator. The panel width follows the pointer live (a CSS
- * custom property on the panel); on release the clamped width is reported ONCE. Escape and
- * pointercancel restore the start width without reporting.
+ * custom property on the panel); on release the clamped width is reported ONCE. Escape,
+ * pointercancel and a lost pointer capture restore the start width without reporting. The gesture
+ * itself (pointer capture by pointerId, Escape, cancel paths, cleanup) is the shared pointer-drag
+ * helper; this function only owns the width maths.
  * @param {HTMLElement} handle the separator element
  * @param {HTMLElement} panel the aside whose width is resized
  * @param {HTMLElement} main the shell main element (its canvas region is measured)
@@ -111,9 +116,6 @@ export function attachResize(handle, panel, main, dotnet, id, options) {
     // panel's separator is on its left edge, so dragging left grows it.
     const direction = side === 'left' ? 1 : -1;
 
-    let dragging = false;
-    let pointerId = null;
-    let startX = 0;
     let startWidth = 0;
     let startCanvas = NaN;
     let width = 0;
@@ -123,77 +125,41 @@ export function attachResize(handle, panel, main, dotnet, id, options) {
         handle.setAttribute('aria-valuenow', String(value));
     };
 
-    const finish = () => {
-        const captured = pointerId;
-        dragging = false;
-        pointerId = null;
-        handle.classList?.remove('tm-editor-shell__resizer--dragging');
-        // The pointer id is required: releasePointerCapture() with no argument throws in a real DOM,
-        // and the swallowed error left the capture held until the pointer went up.
-        try { if (captured !== null) handle.releasePointerCapture?.(captured); } catch { /* already released */ }
-        if (typeof document !== 'undefined') document.removeEventListener?.('keydown', onEscape);
-    };
-
-    const onEscape = (event) => {
-        if (event.key !== 'Escape' || !dragging) return;
-        show(startWidth);
-        finish();
-    };
-
-    const onDown = (event) => {
-        if (event.button !== undefined && event.button !== 0) return;
-        event.preventDefault?.();
-        dragging = true;
-        pointerId = event.pointerId;
-        startX = event.clientX;
-        startWidth = Math.round(panel.getBoundingClientRect().width);
-        startCanvas = canvasWidth(main);
-        width = startWidth;
-        try { handle.setPointerCapture?.(event.pointerId); } catch { /* the pointer is gone */ }
-        handle.classList?.add('tm-editor-shell__resizer--dragging');
-        if (typeof document !== 'undefined') document.addEventListener?.('keydown', onEscape);
-    };
-
-    const onMove = (event) => {
-        if (!dragging || event.pointerId !== pointerId) return;
-        width = clampWidth(startWidth + direction * (event.clientX - startX), startWidth, min, max, startCanvas, minCanvas);
-        show(width);
-    };
-
-    const onUp = (event) => {
-        if (!dragging || event.pointerId !== pointerId) return;
-        const committed = width;
-        finish();
-        if (committed !== startWidth) {
-            // The circuit may already be gone: a rejected invoke must not become an unhandled rejection.
-            dotnet?.invokeMethodAsync('OnResizeCommitted', side, committed)?.catch?.(() => {});
-        }
-    };
-
-    const onCancel = (event) => {
-        if (!dragging || event.pointerId !== pointerId) return;
-        show(startWidth);
-        finish();
-    };
+    const drag = attachPointerDrag(handle, {
+        threshold: 0,
+        dragClass: DRAGGING_CLASS,
+        // The resizer owns no click, and the strip's keyboard path lives in Blazor.
+        suppressClick: false,
+        onPress() {
+            startWidth = Math.round(panel.getBoundingClientRect().width);
+            startCanvas = canvasWidth(main);
+            width = startWidth;
+        },
+        onMove({ dx }) {
+            width = clampWidth(startWidth + direction * dx, startWidth, min, max, startCanvas, minCanvas);
+            show(width);
+        },
+        onEnd() {
+            const committed = width;
+            if (committed !== startWidth) {
+                // The circuit may already be gone: a rejected invoke must not become an unhandled rejection.
+                dotnet?.invokeMethodAsync('OnResizeCommitted', side, committed)?.catch?.(() => {});
+            }
+        },
+        // Escape, pointercancel, a lost capture, or a panel that collapses / flips layout mid-drag
+        // (detach): put the live width back. Nothing is committed.
+        onCancel() {
+            show(startWidth);
+        },
+    });
 
     // The keys the separator handles must not also scroll the page; Blazor performs the resize.
     const onKey = (event) => {
         if (RESIZE_KEYS.has(event.key)) event.preventDefault?.();
     };
-
-    // A panel that collapses, hides or flips layout mid-drag: put the live width back and let go.
-    const abort = () => {
-        if (!dragging) return;
-        show(startWidth);
-        finish();
-    };
-
-    handle.addEventListener('pointerdown', onDown);
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', onUp);
-    handle.addEventListener('pointercancel', onCancel);
     handle.addEventListener('keydown', onKey);
-    resizers.set(id, { handle, onDown, onMove, onUp, onCancel, onKey, onEscape, abort });
+
+    resizers.set(id, { handle, drag, onKey });
 }
 
 /** Removes the resize registered under the id. Safe to call twice or for an unknown id. */
@@ -201,15 +167,9 @@ export function detachResize(id) {
     const entry = resizers.get(id);
     if (!entry) return;
     resizers.delete(id);
-    entry.abort?.();
-    entry.handle.removeEventListener('pointerdown', entry.onDown);
-    entry.handle.removeEventListener('pointermove', entry.onMove);
-    entry.handle.removeEventListener('pointerup', entry.onUp);
-    entry.handle.removeEventListener('pointercancel', entry.onCancel);
+    entry.drag.detach();
     entry.handle.removeEventListener('keydown', entry.onKey);
-    if (typeof document !== 'undefined') document.removeEventListener?.('keydown', entry.onEscape);
 }
-
 /** Drop every registration. Test-only: a module imported by Node is shared across tests. */
 export function __resetForTests() {
     for (const id of [...resizers.keys()]) detachResize(id);
