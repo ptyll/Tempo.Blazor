@@ -330,4 +330,23 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         attach.Should().ContainSingle();
         System.Text.Json.JsonSerializer.Serialize(attach.Single().Arguments[2]).Should().Contain("\"overflow\":false");
     }
+
+    [Fact]
+    public void PinnedButton_StaysOnTheBar_NeverCollapsesAndNeverEntersTheMenu()
+    {
+        // Q1=A: the trailing Save / primary CTA is Pinned - fixed width on the bar, not counted against the room.
+        SetupModule();
+        var cut = RenderToolbar(Buttons(
+            new Spec("Alpha"), new Spec("Beta", ToolbarButtonPriority.Secondary), new Spec("Save", ToolbarButtonPriority.Pinned)));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0));
+
+        var save = cut.FindAll("button.tm-toolbar-btn").Single(b => b.TextContent.Contains("Save"));
+        save.ClassList.Should().NotContain("tm-toolbar-item--collapsed");
+        save.HasAttribute("inert").Should().BeFalse();
+        save.GetAttribute("data-pin").Should().Be("never", "tm-toolbar.js measures a pinned button as fixed width");
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("Alpha", "Beta").And.NotContain("Save");
+    }
 }

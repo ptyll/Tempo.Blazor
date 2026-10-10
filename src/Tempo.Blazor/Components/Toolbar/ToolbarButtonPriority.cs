@@ -16,4 +16,7 @@ public enum ToolbarButtonPriority
 
     /// <summary>Always lives in the "More" menu and is never rendered on the toolbar itself.</summary>
     OverflowOnly,
+
+    /// <summary>Never moves into the "More" menu: stays on the bar at every width (the trailing Save / primary call to action).</summary>
+    Pinned,
 }

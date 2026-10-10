@@ -25,6 +25,7 @@ public class ToolbarOverflowLayoutTests
     private const ToolbarButtonPriority P = ToolbarButtonPriority.Primary;
     private const ToolbarButtonPriority S = ToolbarButtonPriority.Secondary;
     private const ToolbarButtonPriority O = ToolbarButtonPriority.OverflowOnly;
+    private const ToolbarButtonPriority N = ToolbarButtonPriority.Pinned;
 
     [Fact]
     public void Rank_PutsSecondaryBelowPrimary_AndOverflowOnlyBelowBoth()
@@ -87,5 +88,41 @@ public class ToolbarOverflowLayoutTests
 
         bar.Should().Equal("a", "b");
         menu.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Pinned_IsTheLastEnumMember_SoExistingValuesKeepTheirNumbers()
+    {
+        // Q1=A: Pinned is additive - Primary/Secondary/OverflowOnly keep 0/1/2.
+        ((int)ToolbarButtonPriority.Primary).Should().Be(0);
+        ((int)ToolbarButtonPriority.Secondary).Should().Be(1);
+        ((int)ToolbarButtonPriority.OverflowOnly).Should().Be(2);
+        ((int)ToolbarButtonPriority.Pinned).Should().Be(3);
+        Enum.GetValues<ToolbarButtonPriority>().Last().Should().Be(ToolbarButtonPriority.Pinned);
+    }
+
+    [Fact]
+    public void Pinned_NeverMovesIntoTheMenu_WhateverTheMeasuredRoom()
+    {
+        // The measured number counts only the collapsible (Auto) buttons: the pinned one is fixed width.
+        var (bar, menu) = Run(Buttons(("a", P), ("b", S), ("c", N), ("d", P)), maxVisible: 1);
+        bar.Should().Equal("a", "c");
+        menu.Should().Equal("b", "d");
+
+        var (scarceBar, scarceMenu) = Run(Buttons(("a", P), ("b", S), ("c", N), ("d", P)), maxVisible: 0);
+        scarceBar.Should().Equal("c", "the pinned button stays even when no collapsible one fits");
+        scarceMenu.Should().Equal("a", "b", "d");
+    }
+
+    [Fact]
+    public void Pinned_Unmeasured_StaysOnTheBar_AndOnlyPinnedButtonsNeverNeedAMenu()
+    {
+        var (bar, menu) = Run(Buttons(("a", N), ("b", N)), maxVisible: 0);
+        bar.Should().Equal("a", "b");
+        menu.Should().BeEmpty();
+
+        var (bar2, menu2) = Run(Buttons(("a", P), ("b", O), ("c", N)), maxVisible: null);
+        bar2.Should().Equal("a", "c");
+        menu2.Should().Equal("b");
     }
 }

@@ -422,3 +422,21 @@ test('a flattened container that is itself empty adds nothing', () => {
     ], 100);
     assert.equal(computeFit(bar).maxVisible, 1);
 });
+// ── Pinned (Q1=A): never collapsible - measured as fixed width ───────────────────────────────
+
+test('computeFit measures a pinned (data-pin=never) button as fixed width, not as a collapsible one', () => {
+    // 100 + 100 collapsible, a 60px pinned Save: available 400 - (60 + 8) = 332 -> both collapsible fit (208).
+    const roomy = stubBar([
+        child({ width: 100, rank: 2 }),
+        child({ width: 100, rank: 1 }),
+        child({ width: 60, rank: 3, pin: 'never' }),
+    ], 400);
+    assert.equal(computeFit(roomy).maxVisible, 2);
+    // 230: 332 -> 230 - 68 = 162 < 208, one + trigger (100 + 8 + 44) = 152 <= 162 -> exactly one stays.
+    const tight = stubBar([
+        child({ width: 100, rank: 2 }),
+        child({ width: 100, rank: 1 }),
+        child({ width: 60, rank: 3, pin: 'never' }),
+    ], 230);
+    assert.equal(computeFit(tight).maxVisible, 1, 'the pinned button reserves its width before the buttons are counted');
+});

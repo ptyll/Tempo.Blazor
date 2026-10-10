@@ -16,6 +16,10 @@
     {
       "name": "OverflowOnly",
       "description": "Always lives in the More menu and is never rendered on the toolbar itself."
+    },
+    {
+      "name": "Pinned",
+      "description": "Never moves into the More menu: stays on the bar at every width, measured as fixed width (the trailing Save / primary call to action). Additive - appended after OverflowOnly so existing values keep their numbers."
     }
   ]
 }
