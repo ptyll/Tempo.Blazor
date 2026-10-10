@@ -19,6 +19,8 @@
 .tm-toolbar-divider {
   width: 1px; height: 1.5rem; background: var(--tm-border-color);
   display: inline-block; margin: 0 var(--tm-space-1); align-self: center;
+  /* A flex item shrinks by default: squeezed, the 1px rule collapsed to 0 and the fit under-counted the row. */
+  flex-shrink: 0;
 }
 .tm-toolbar-btn {
   display: inline-flex; align-items: center; gap: var(--tm-space-1);

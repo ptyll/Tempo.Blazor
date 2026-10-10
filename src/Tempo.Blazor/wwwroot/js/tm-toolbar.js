@@ -173,6 +173,11 @@ export function computeFit(bar) {
         const position = childStyle?.position;
         if (position === 'fixed' || position === 'absolute') return;
         if (child.offsetWidth > 0) fixed += outerWidth(child) + gap;
+        else if (classes?.contains('tm-toolbar-divider') && childStyle?.display !== 'none') {
+            // A divider squeezed to 0px by a flex-shrinking row still takes its declared width and margins once it is
+            // laid out again; counting 0 here over-commits the bar (the next control overlaps the pinned one).
+            fixed += px(childStyle?.width) + px(childStyle?.marginLeft) + px(childStyle?.marginRight) + gap;
+        }
     });
 
     const padding = px(style?.paddingLeft) + px(style?.paddingRight);
