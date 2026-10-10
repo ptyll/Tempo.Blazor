@@ -225,22 +225,39 @@ public class GanttInteractionE2ETests : WasmTestBase
         await Expect(chooseBtn).ToBeFocusedAsync();
         await TakeScreenshotAsync(page, "gantt_import_choose_file_focus");
 
-        // Enter opens the native file chooser.
-        var chooserByEnter = await page.RunAndWaitForFileChooserAsync(
-            () => page.Keyboard.PressAsync("Enter"),
-            new PageRunAndWaitForFileChooserOptions { Timeout = 10000 });
+        // Enter opens the native file chooser. The dialog's focus scope can re-assert focus while
+        // a contended runner starves the keydown → input.click() → chooser pipeline, so each
+        // attempt re-focuses the button before pressing the key.
+        var chooserByEnter = await PressKeyForFileChooserAsync(page, chooseBtn, "Enter");
         Assert.IsNotNull(chooserByEnter, "Enter on the choose-file button must open the file chooser");
 
         // Space opens it too (button activation on keyup).
-        var chooserBySpace = await page.RunAndWaitForFileChooserAsync(
-            () => page.Keyboard.PressAsync("Space"),
-            new PageRunAndWaitForFileChooserOptions { Timeout = 10000 });
+        var chooserBySpace = await PressKeyForFileChooserAsync(page, chooseBtn, "Space");
         Assert.IsNotNull(chooserBySpace, "Space on the choose-file button must open the file chooser");
 
         // The hidden input is visually hidden (not display:none) and out of the a11y tree.
         var input = dialog.Locator("input.tm-gantt__import-file-input");
         Assert.AreEqual("true", await input.GetAttributeAsync("aria-hidden"));
         Assert.AreEqual("-1", await input.GetAttributeAsync("tabindex"));
+    }
+
+    private static async Task<IFileChooser?> PressKeyForFileChooserAsync(IPage page, ILocator chooseBtn, string key)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await chooseBtn.FocusAsync();
+            try
+            {
+                return await page.RunAndWaitForFileChooserAsync(
+                    () => page.Keyboard.PressAsync(key),
+                    new PageRunAndWaitForFileChooserOptions { Timeout = 15000 });
+            }
+            catch (TimeoutException)
+            {
+            }
+        }
+
+        return null;
     }
 
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);

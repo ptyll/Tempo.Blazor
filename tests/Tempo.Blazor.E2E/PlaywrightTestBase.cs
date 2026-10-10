@@ -15,6 +15,8 @@ public abstract class PlaywrightTestBase
 {
     private static IBrowser? _browser;
     private static IPlaywright? _playwright;
+    private static bool _headless = true;
+    private static readonly string[] BrowserArgs = { "--enable-precise-memory-info", "--js-flags=--expose-gc" };
     private static readonly SemaphoreSlim BrowserLock = new(1, 1);
     private static readonly SemaphoreSlim HostLock = new(1, 1);
     private static readonly List<DemoHostProcess> DemoHostProcesses = [];
@@ -58,9 +60,21 @@ public abstract class PlaywrightTestBase
     protected abstract string BaseUrl { get; }
 
     /// <summary>
-    /// Gets the browser instance for tests.
+    /// Gets the browser instance for tests. If the shared Chromium process died since the last
+    /// use, it is relaunched here so direct <c>Browser.NewContextAsync</c> callers are covered too.
     /// </summary>
-    protected static IBrowser Browser => _browser!;
+    protected static IBrowser Browser
+    {
+        get
+        {
+            if (_browser is { IsConnected: true })
+            {
+                return _browser;
+            }
+            EnsureBrowserAsync().GetAwaiter().GetResult();
+            return _browser!;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the test context from MSTest.
@@ -75,23 +89,42 @@ public abstract class PlaywrightTestBase
     {
         await EnsureDemoHostsAsync(context);
 
+        _headless = !context.Properties.Contains("Headless") || context.Properties["Headless"]?.ToString() != "false";
+        await EnsureBrowserAsync();
+    }
+
+    /// <summary>
+    /// Ensures the shared Chromium instance is alive. A long suite can outlive the browser
+    /// process (renderer churn, memory pressure) — a dead singleton would otherwise fail every
+    /// remaining test instantly at NewContextAsync. Relaunching limits the blast radius to the
+    /// test that was in flight when the browser died.
+    /// </summary>
+    private static async Task EnsureBrowserAsync()
+    {
+        if (_browser is { IsConnected: true })
+        {
+            return;
+        }
+
         await BrowserLock.WaitAsync();
         try
         {
-            if (_playwright == null)
+            if (_browser is { IsConnected: true })
             {
-                _playwright = await Microsoft.Playwright.Playwright.CreateAsync();
-                _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-                {
-                    Headless = !context.Properties.Contains("Headless") || context.Properties["Headless"]?.ToString() != "false",
-                    SlowMo = 100, // Add small delay between actions for stability
-                    // Enable precise performance.memory.usedJSHeapSize for the navigation memory-leak
-                    // probe; without the flag Chromium may omit the API entirely (returns 0 → NaN ratio).
-                    // --expose-gc makes window.gc() real so the probe measures retained memory after
-                    // collection — otherwise transient navigation allocations count as "growth".
-                    Args = new[] { "--enable-precise-memory-info", "--js-flags=--expose-gc" }
-                });
+                return;
             }
+
+            _playwright ??= await Microsoft.Playwright.Playwright.CreateAsync();
+            _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = _headless,
+                SlowMo = 100, // Add small delay between actions for stability
+                // Enable precise performance.memory.usedJSHeapSize for the navigation memory-leak
+                // probe; without the flag Chromium may omit the API entirely (returns 0 → NaN ratio).
+                // --expose-gc makes window.gc() real so the probe measures retained memory after
+                // collection — otherwise transient navigation allocations count as "growth".
+                Args = BrowserArgs
+            });
         }
         finally
         {

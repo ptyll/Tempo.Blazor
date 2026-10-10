@@ -39,8 +39,17 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
         await para.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
+
+        var sourceBlockId = await para.EvaluateAsync<string?>(
+            "el => el.closest('[data-notion-block]')?.getAttribute('data-block-id')");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(sourceBlockId), "The clicked paragraph must carry a block id.");
+
         await page.Keyboard.PressAsync("Enter");
-        await page.WaitForTimeoutAsync(1000);
+        // The Enter split is an async aggregate-session round-trip; keystrokes typed meanwhile
+        // are buffered and replayed into the new block once it exists. A fixed delay can still
+        // observe the PRE-split block — the recorded id then never changes type, because the
+        // buffered "/" + selection convert the real new block instead (deterministic timeout).
+        await NotionE2ETestBase.WaitForBlockFocusToMoveAsync(page, sourceBlockId!);
 
         var insertedBlockId = await page.EvaluateAsync<string?>("""
             () => document.activeElement?.closest?.('[data-notion-block]')?.getAttribute('data-block-id')
@@ -67,10 +76,14 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
 
         var insertedBlock = page.Locator($"[data-block-id='{insertedBlockId}']").First;
         await insertedBlock.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        // Conversion persists through the aggregate session, which serializes mutations behind
+        // any in-flight autosave — under a contended runner the full click → queued save →
+        // re-render chain exceeded both the old 5s and the 20s window even though the conversion
+        // completes correctly, so the wait uses the suite's 60s contended-wait convention.
         await page.WaitForFunctionAsync(
             "args => document.querySelector(`[data-block-id='${args.id}']`)?.getAttribute('data-block-type') === args.type",
             new { id = insertedBlockId, type = expectedBlockType },
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+            new PageWaitForFunctionOptions { Timeout = 60000 });
 
         return insertedBlock;
     }

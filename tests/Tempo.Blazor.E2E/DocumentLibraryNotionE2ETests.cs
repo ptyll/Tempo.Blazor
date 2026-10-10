@@ -114,6 +114,12 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
         await page.WaitForSelectorAsync(".tm-notion-wireframe-block__svg-container svg",
             new PageWaitForSelectorOptions { Timeout = 15000 });
 
+        // Wait until the block has actually joined the SignalR document group — the SVG renders
+        // before the hub join completes, so a PUT right after the selector wait can race the join
+        // and the broadcast is lost (group members only get messages sent after they joined).
+        await page.WaitForSelectorAsync($".tm-notion-wireframe-block[data-doclib-subscribed='{docId}']",
+            new PageWaitForSelectorOptions { Timeout = 15000 });
+
         // Simulate an edit from elsewhere: PUT a new preview via the API. The store publishes a
         // change → hub broadcasts → the subscribed block refreshes live.
         const string marker = "LIVEv2-marker";
@@ -158,6 +164,11 @@ public class DocumentLibraryNotionE2ETests : NotionE2ETestBase
         await page.Locator(".tm-dod-row").First.ClickAsync();
         await page.ClickAsync(".tm-dod-open");
         await page.WaitForSelectorAsync(".tm-notion-wireframe-block__svg-container svg",
+            new PageWaitForSelectorOptions { Timeout = 15000 });
+
+        // Same join barrier as DocLib4 — the MCP edit must only fire after the block is
+        // confirmed inside the SignalR document group.
+        await page.WaitForSelectorAsync($".tm-notion-wireframe-block[data-doclib-subscribed='{docId}']",
             new PageWaitForSelectorOptions { Timeout = 15000 });
         await SaveScreenshotAsync(page, "05-mcp-before.png", "phase4");
 

@@ -234,13 +234,23 @@ public sealed class ComponentAccessibilityE2ETests : WasmTestBase
         // Click the DATE picker's label → the native label/for association activates the trigger.
         var dateSection = page.Locator("section.demo-section", new PageLocatorOptions { Has = page.Locator(".tm-date-picker-trigger") }).First;
         var label = dateSection.Locator("label.tm-picker-label").First;
-        var triggerId = await dateSection.Locator(".tm-date-picker-trigger").First.GetAttributeAsync("id");
+        var trigger = dateSection.Locator(".tm-date-picker-trigger").First;
+        var triggerId = await trigger.GetAttributeAsync("id");
         Assert.IsFalse(string.IsNullOrEmpty(triggerId), "trigger must carry an id for the label to target");
+        Assert.AreEqual(triggerId, await label.GetAttributeAsync("for"),
+            "the label must target the trigger through the native for/id association");
 
         await label.ClickAsync();
 
-        var focusedId = await page.EvaluateAsync<string>("() => document.activeElement?.id ?? ''");
-        Assert.AreEqual(triggerId, focusedId, "clicking the label must move focus to the trigger");
+        // The trigger opens a TrapFocus dialog popup (TmOverlayPanel role=dialog): activation
+        // legitimately moves focus INSIDE the calendar, so activeElement is no longer the
+        // trigger itself. The label contract is activation + focus landing in the dialog.
+        var popup = dateSection.Locator(".tm-date-picker-popup").First;
+        await popup.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        var focusInside = await page.EvaluateAsync<bool>(
+            "() => !!document.activeElement?.closest?.('.tm-date-picker-popup')");
+        Assert.IsTrue(focusInside,
+            "clicking the label must activate the picker and move focus into its dialog");
     }
 
     // ── Dark-theme broadening (this phase) ──────────────────────────────────────────────────────
