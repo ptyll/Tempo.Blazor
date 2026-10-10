@@ -417,3 +417,34 @@ test('a committed resize also restores the inline geometry first; Blazor then re
     assert.equal(ref.calls.length, 1);
     assert.equal(g.event.style.height, '4.1667%', 'never left at min-height while .NET catches up');
 });
+test('the old geometry is restored BEFORE .NET is told, so a synchronous Blazor render is never overwritten (E2E: the committed size did not show)', () => {
+    const g = timegrid({ slot: 30 });
+    g.event.style.height = '4.1667%';
+    // Blazor WebAssembly renders inside invokeMethodAsync: simulate that render patching the DOM.
+    const ref = { calls: [], invokeMethodAsync(...args) { this.calls.push(args); g.event.style.height = '8.3333%'; return Promise.resolve(); } };
+    scheduler.registerInstance(g.grid, ref);
+
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    g.bottom.dispatch('pointermove', ev(g.bottom, { clientY: 220 }));
+    g.bottom.dispatch('pointerup', ev(g.bottom, { clientY: 220 }));
+
+    assert.equal(ref.calls.length, 1);
+    assert.equal(g.event.style.height, '8.3333%', 'what Blazor rendered during the call survives the cleanup');
+    assert.equal(g.event.draggable, true);
+    assert.equal(g.event.attrs.has('data-resizing'), false);
+});
+
+test('the same ordering holds for the timeline left handle', () => {
+    const t = timeline({ slot: 15 });
+    t.event.style.left = '20.8333%';
+    t.event.style.width = '8.3333%';
+    const ref = { calls: [], invokeMethodAsync(...args) { this.calls.push(args); t.event.style.left = '19%'; t.event.style.width = '10%'; return Promise.resolve(); } };
+    scheduler.registerInstance(t.root, ref);
+
+    doc.dispatch('pointerdown', ev(t.left, { clientX: 300 }));
+    t.left.dispatch('pointermove', ev(t.left, { clientX: 270 }));
+    t.left.dispatch('pointerup', ev(t.left, { clientX: 270 }));
+
+    assert.equal(t.event.style.left, '19%');
+    assert.equal(t.event.style.width, '10%');
+});
