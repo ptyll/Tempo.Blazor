@@ -8,20 +8,20 @@
              aria-label="@Loc["TmDocumentEditor_ReviewSummaryLabel"]">
         <div class="tm-document-review-summary__text">
             <strong>@Loc["TmDocumentEditor_ReviewSummaryTitle"]</strong>
-            <span>@Loc["TmDocumentEditor_ReviewSummaryText", PendingRevisionCount, OpenCommentCount]</span>
+            <span>@Loc["TmDocumentEditor_ReviewSummaryText", Loc.Plural("TmDocumentEditor_ReviewSummaryRevisions", PendingRevisionCount), Loc.Plural("TmDocumentEditor_ReviewSummaryOpenComments", OpenCommentCount)]</span>
         </div>
         <div class="tm-document-review-summary__actions">
             <button type="button"
                     data-testid="@TestId("document-review-summary-revisions")"
                     disabled="@(PendingRevisionCount == 0)"
                     @onclick="() => OpenRevisions.InvokeAsync()">
-                @Loc["TmDocumentEditor_ReviewSummaryRevisions", PendingRevisionCount]
+                @Loc.Plural("TmDocumentEditor_ReviewSummaryRevisions", PendingRevisionCount)
             </button>
             <button type="button"
                     data-testid="@TestId("document-review-summary-comments")"
                     disabled="@(OpenCommentCount == 0)"
                     @onclick="() => OpenComments.InvokeAsync()">
-                @Loc["TmDocumentEditor_ReviewSummaryComments", OpenCommentCount]
+                @Loc.Plural("TmDocumentEditor_ReviewSummaryComments", OpenCommentCount)
             </button>
         </div>
     </section>

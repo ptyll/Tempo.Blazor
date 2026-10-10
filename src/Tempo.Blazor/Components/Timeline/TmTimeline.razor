@@ -193,12 +193,11 @@
 
     private Task OnLoadMoreAsync() => _pager.LoadMoreAsync();
 
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>The shared relative-time formatter ("just now", "5 min ago", "yesterday at 4:20 PM", a date after a week).</summary>
     private string FormatTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.Now - dt;
-        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
-        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
-        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
-        return dt.ToString(Loc["TmTimeline_DateFormat"]);
-    }
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
 }

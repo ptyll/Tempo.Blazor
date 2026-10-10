@@ -237,12 +237,11 @@
 
     private Task OnLoadMoreAsync() => _pager.LoadMoreAsync();
 
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>The shared relative-time formatter (B19) - this component used to carry its own copy.</summary>
     private string FormatRelativeTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.Now - dt;
-        if (diff.TotalMinutes < 1) return Loc["TmTimeline_JustNow"];
-        if (diff.TotalHours   < 1) return Loc["TmTimeline_MinutesAgo", (int)diff.TotalMinutes];
-        if (diff.TotalDays    < 1) return Loc["TmTimeline_HoursAgo",   (int)diff.TotalHours];
-        return Loc["TmTimeline_DaysAgo", (int)diff.TotalDays];
-    }
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
 }

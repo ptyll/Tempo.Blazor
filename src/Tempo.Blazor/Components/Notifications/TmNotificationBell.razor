@@ -111,7 +111,7 @@
     private int UnreadCount => _serviceUnreadCount;
 
     private string AriaLabelText => UnreadCount > 0
-        ? Loc["TmNotificationBell_NewCount", UnreadCount]
+        ? Loc.Plural("TmNotificationBell_NewCount", UnreadCount)
         : Loc["TmNotificationBell_AriaLabel"];
 
     private IEnumerable<TmNotification> VisibleNotifications =>

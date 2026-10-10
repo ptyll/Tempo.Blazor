@@ -15,9 +15,11 @@ namespace Tempo.Blazor.Tests.Localization;
 /// </summary>
 public class RelativeTimeFormatterTests
 {
-    private static readonly TimeZoneInfo Prague = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time") is { } z ? z : TimeZoneInfo.Utc;
-    private static readonly TimeZoneInfo Tokyo = TimeZoneInfo.FindSystemTimeZoneById("Tokyo Standard Time");
-    private static readonly TimeSpan PragueOffset = TimeSpan.FromHours(2);   // CEST on the reference dates
+    // Fixed-offset zones: identical on Windows and Linux (no tz database lookup), and the reference dates
+    // sit inside Prague summer time, so a fixed +02:00 is exactly what the real zone would say.
+    private static readonly TimeSpan PragueOffset = TimeSpan.FromHours(2);
+    private static readonly TimeZoneInfo Prague = TimeZoneInfo.CreateCustomTimeZone("Prague-test", PragueOffset, "Prague", "Prague");
+    private static readonly TimeZoneInfo Tokyo = TimeZoneInfo.CreateCustomTimeZone("Tokyo-test", TimeSpan.FromHours(9), "Tokyo", "Tokyo");
 
     // 2026-10-12 is a Monday; Prague is on summer time (UTC+2) until 25 October.
     private static readonly DateTimeOffset Now = new(2026, 10, 12, 14, 0, 0, PragueOffset);   // 12:00Z

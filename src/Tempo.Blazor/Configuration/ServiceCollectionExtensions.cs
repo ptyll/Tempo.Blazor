@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
     /// Registers the core Tempo.Blazor services shared by all component groups.
     /// <list type="bullet">
     ///   <item><description><see cref="ITmLocalizer"/>: Singleton (stateless, thread-safe, backed by embedded JSON)</description></item>
+    ///   <item><description><see cref="ITmRelativeTimeFormatter"/>: Singleton relative-time formatter over the localizer and the registered <see cref="TimeProvider"/></description></item>
     ///   <item><description><see cref="ThemeService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="ToastService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="DragDropService"/>: Scoped drag/drop state shared by core components</description></item>
@@ -52,6 +53,11 @@ public static class ServiceCollectionExtensions
         services.AddLocalization();
         services.TryAddSingleton<IStringLocalizer<TmResources>, JsonStringLocalizer<TmResources>>();
         services.TryAddSingleton<ITmLocalizer, DefaultTmLocalizer>();
+
+        // Relative time ("just now", "5 min ago", "yesterday at 4:20 PM"): one shared formatter instead of a private
+        // copy per component. Uses the host's TimeProvider when one is registered (tests register a FakeTimeProvider).
+        services.TryAddSingleton<ITmRelativeTimeFormatter>(sp =>
+            new TmRelativeTimeFormatter(sp.GetRequiredService<ITmLocalizer>(), sp.GetService<TimeProvider>()));
 
         // ThemeService: scoped so each circuit/tab gets its own theme state.
         services.TryAddScoped<ThemeService>();

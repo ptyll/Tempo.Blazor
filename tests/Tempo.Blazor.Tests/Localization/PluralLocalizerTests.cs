@@ -212,9 +212,11 @@ public class PluralLocalizerTests
         // A host's own ITmLocalizer written before plurals existed: the defaults read the indexer and
         // the ambient UI culture.
         var original = CultureInfo.CurrentUICulture;
+        var originalFormat = CultureInfo.CurrentCulture;
         try
         {
             CultureInfo.CurrentUICulture = Culture("cs");
+            CultureInfo.CurrentCulture = Culture("cs");
             ITmLocalizer legacy = new LegacyLocalizer(new Dictionary<string, string>
             {
                 ["Pending_One"] = "{0} změna", ["Pending_Few"] = "{0} změny", ["Pending_Other"] = "{0} změn",
@@ -228,6 +230,7 @@ public class PluralLocalizerTests
         finally
         {
             CultureInfo.CurrentUICulture = original;
+            CultureInfo.CurrentCulture = originalFormat;
         }
     }
 

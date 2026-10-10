@@ -23,7 +23,7 @@
         <span class="tm-npcp__toggle-label">@Loc["TmNotionPageComment_Toggle"]</span>
         @if (_unresolvedCount > 0)
         {
-            <span class="tm-npcp__badge" aria-label="@string.Format(Loc["TmNotionPageComment_BadgeLabel"], _unresolvedCount)">
+            <span class="tm-npcp__badge" aria-label="@Loc.Plural("TmNotionPageComment_BadgeLabel", _unresolvedCount)">
                 @_unresolvedCount
             </span>
         }
