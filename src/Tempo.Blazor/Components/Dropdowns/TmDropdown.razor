@@ -3,8 +3,11 @@
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Overlay
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
+<div @ref="_wrapperRef" class="tm-dropdown-wrapper @(Disabled ? "tm-dropdown-disabled" : "") @Class" @attributes="AdditionalAttributes">
     <button type="button"
             @ref="_triggerRef"
             class="tm-dropdown-trigger"
@@ -27,6 +30,7 @@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
+                    OnOpened="FocusFirstItemAsync"
                     Placement="Placement"
                     Align="Align"
                     Offset="Offset"
@@ -101,6 +105,9 @@
     private bool _isOpen;
     private bool _focusTriggerAfterClose;
     private ElementReference _triggerRef;
+    private ElementReference _wrapperRef;
+    private IJSObjectReference? _menuNav;
+    private bool _disposed;
 
     private void Toggle()
     {
@@ -146,6 +153,55 @@
         catch (InvalidOperationException)
         {
             // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
+    }
+
+    /// <summary>
+    /// A menu opened from the keyboard must hand focus to its first enabled item, or the roving keys
+    /// (which listen on the menu) are unreachable. Fires once per open, after the panel is displayed;
+    /// best-effort - without JS the menu keeps the native Tab order.
+    /// </summary>
+    private async Task FocusFirstItemAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            _menuNav ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor/js/tm-menu-nav.js");
+            if (_disposed || _menuNav is null)
+            {
+                return;
+            }
+
+            await _menuNav.InvokeAsync<bool>("focusFirst", _wrapperRef);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException
+            or ObjectDisposedException or InvalidOperationException)
+        {
+            // Best-effort: a torn-down circuit or a missing module must never fail the open.
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        var module = _menuNav;
+        _menuNav = null;
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
         }
     }
 

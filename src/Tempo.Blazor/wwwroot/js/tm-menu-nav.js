@@ -175,7 +175,12 @@ export function isAttached(menu) {
  * @param {ParentNode|null} root the element that contains the open role=menu
  */
 export function focusFirst(root) {
-    throw new Error('not implemented');
+    const menu = root?.querySelector?.('[role="menu"]');
+    if (!menu) return false;
+    const first = enabledItems(menu)[0];
+    if (!first) return false;
+    first.focus();
+    return true;
 }
 
 /** Test seam: forgets every registration. */
