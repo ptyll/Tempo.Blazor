@@ -23,7 +23,10 @@ internal sealed class ActionOverflowMenu : ComponentBase
     private readonly string _triggerId = $"tm-aom-trigger-{Guid.NewGuid():N}";
     private TmOverlayPanel? _panel;
     private ElementReference _trigger;
-    private ElementReference _firstMenuItem;
+    // Every item is captured (a stable frame set), the first ENABLED one is picked at focus time - a capture
+    // frame added only to whichever item happens to be first crashed the diff when the menu was reordered
+    // while open ("Unexpected frame type during RemoveOldFrame: ElementReferenceCapture").
+    private readonly Dictionary<string, ElementReference> _itemRefs = new(StringComparer.Ordinal);
     private bool _open;
     private bool _focusFirstItemPending;
     private bool _focusTriggerAfterClose;
@@ -154,11 +157,14 @@ internal sealed class ActionOverflowMenu : ComponentBase
     {
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", MenuClass);
-        var capturedFirstEnabled = false;
+        PruneItemRefs();
         for (var i = 0; i < Items.Count; i++)
         {
             var item = Items[i];
-            var seq = 16 + (i * 16);
+            // Sequence numbers are loop-invariant: a keyed item that moves to another index keeps its frame
+            // sequences, so the diff matches its children one to one (an index-derived seq made a moved item's
+            // children look removed and re-added, which throws on a capture frame).
+            const int seq = 16;
             builder.OpenElement(seq, "button");
             builder.AddAttribute(seq + 1, "type", "button");
             builder.AddAttribute(seq + 2, "role", "menuitem");
@@ -179,18 +185,31 @@ internal sealed class ActionOverflowMenu : ComponentBase
             builder.AddAttribute(seq + 11, "class", LabelClass);
             builder.AddContent(seq + 12, item.Label);
             builder.CloseElement();
-            if (!capturedFirstEnabled && !item.Disabled)
-            {
-                // The initial focus skips disabled items — focus() on a disabled button is a no-op
-                // and would leave focus on <body> (F5 X11).
-                capturedFirstEnabled = true;
-                builder.AddElementReferenceCapture(seq + 13, reference => _firstMenuItem = reference);
-            }
-
+            var captureId = ActionId(item);
+            builder.AddElementReferenceCapture(seq + 13, reference => _itemRefs[captureId] = reference);
             builder.CloseElement();
         }
 
         builder.CloseElement();
+    }
+
+    private void PruneItemRefs()
+    {
+        if (_itemRefs.Count == 0) return;
+        var live = new HashSet<string>(Items.Select(ActionId), StringComparer.Ordinal);
+        foreach (var stale in _itemRefs.Keys.Where(key => !live.Contains(key)).ToList()) _itemRefs.Remove(stale);
+    }
+
+    private ElementReference? FirstEnabledItem()
+    {
+        // The initial focus skips disabled items - focus() on a disabled button is a no-op and would leave
+        // focus on <body> (F5 X11).
+        foreach (var item in Items)
+        {
+            if (!item.Disabled && _itemRefs.TryGetValue(ActionId(item), out var reference)) return reference;
+        }
+
+        return null;
     }
 
     internal static string ActionId(TmActionItem item) => string.IsNullOrEmpty(item.Id) ? item.Label : item.Id;
@@ -252,7 +271,7 @@ internal sealed class ActionOverflowMenu : ComponentBase
             _focusFirstItemPending = false;
             try
             {
-                await _firstMenuItem.FocusAsync();
+                if (FirstEnabledItem() is { } first) await first.FocusAsync();
             }
             catch (Exception ex) when (ex is InvalidOperationException or JSException)
             {
