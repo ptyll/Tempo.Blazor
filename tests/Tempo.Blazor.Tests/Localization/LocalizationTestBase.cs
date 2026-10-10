@@ -7056,17 +7056,33 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmMap_Loading"] = "Načítání mapy…",
         ["TmMap_Attribution"] = "&copy; přispěvatelé <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
         ["TmMap_ClusterAriaLabel"] = "Shluk – místa: {0}",
-    });
+    }, System.Globalization.CultureInfo.GetCultureInfo("cs"));
 }
 
 /// <summary>
-/// Minimal in-memory ITmLocalizer for testing. Returns [key] for unknown keys.
+/// Minimal in-memory ITmLocalizer for testing. Returns [key] for unknown keys. The optional
+/// <see cref="Culture"/> decides the plural rules and the number/date formatting; the Czech mock
+/// is bound to <c>cs</c> so <c>Loc.Plural</c> picks Czech forms without touching the ambient culture.
 /// </summary>
 public sealed class MockTmLocalizer : ITmLocalizer
 {
     private readonly Dictionary<string, string> _data;
 
-    public MockTmLocalizer(Dictionary<string, string> data) => _data = data;
+    public MockTmLocalizer(Dictionary<string, string> data, System.Globalization.CultureInfo? culture = null)
+    {
+        _data = data;
+        Culture = culture ?? System.Globalization.CultureInfo.GetCultureInfo("en");
+    }
+
+    /// <summary>The language the mock's strings are written in.</summary>
+    public System.Globalization.CultureInfo Culture { get; }
+
+    public bool TryGetString(string key, out string value)
+    {
+        var found = _data.TryGetValue(key, out var text);
+        value = text ?? string.Empty;
+        return found;
+    }
 
     public string this[string key] =>
         _data.TryGetValue(key, out var v) ? v : $"[{key}]";
@@ -7076,7 +7092,7 @@ public sealed class MockTmLocalizer : ITmLocalizer
         get
         {
             var template = _data.TryGetValue(key, out var v) ? v : $"[{key}]";
-            return arguments.Length > 0 ? string.Format(template, arguments) : template;
+            return arguments.Length > 0 ? string.Format(Culture, template, arguments) : template;
         }
     }
 }
