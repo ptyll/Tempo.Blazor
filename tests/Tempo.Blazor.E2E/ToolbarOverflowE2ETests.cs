@@ -529,9 +529,12 @@ public class ToolbarOverflowE2ETests : WasmTestBase
             Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: Home");
             await page.Keyboard.PressAsync("ArrowUp");
             Assert.AreEqual(items[2], await ActiveMenuItemAsync(page), $"{width}: ArrowUp wraps");
-            await page.Keyboard.PressAsync("x");
-            await page.WaitForTimeoutAsync(100);
-            Assert.AreEqual("Export as Excel (XLSX)", await ActiveMenuItemAsync(page), $"{width}: typeahead X");
+            // Every label starts with "Export": a repeated single character cycles through the matches
+            // (from the last item it wraps to the first).
+            await page.Keyboard.PressAsync("e");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: typeahead E cycles to the next match and wraps");
+            await page.Keyboard.PressAsync("z");
+            Assert.AreEqual(items[0], await ActiveMenuItemAsync(page), $"{width}: a character that matches nothing leaves focus alone");
             await page.Keyboard.PressAsync("Escape");
             await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
         }
