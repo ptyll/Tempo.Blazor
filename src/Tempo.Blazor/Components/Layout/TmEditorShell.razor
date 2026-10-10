@@ -1017,6 +1017,14 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender && (Left is not null || Right is not null))
+        {
+            // The rail-flip focus check asks the browser BEFORE the render that unmounts a panel, so the
+            // module has to be loaded already (a first-use import would let that render win).
+            _focus ??= new FocusIfLostInterop(JS);
+            await _focus.WarmUpAsync();
+        }
+
         await RestoreFocusAsync();
         await SyncResizersAsync();
         await SyncCanvasWidthAsync();

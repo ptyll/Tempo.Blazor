@@ -40,6 +40,24 @@ internal sealed class FocusIfLostInterop : IAsyncDisposable
         return false;
     }
 
+    /// <summary>
+    /// Imports the module ahead of time. <see cref="FocusWithinAsync"/> must reach the browser BEFORE
+    /// the render that removes the focused element; a first-use import would let that render win.
+    /// </summary>
+    public async Task WarmUpAsync()
+    {
+        if (_disposed) return;
+        try
+        {
+            _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+        }
+        catch (JSException) { }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
+    }
+
     /// <summary>Whether focus currently sits inside the element. False where JS is unavailable.</summary>
     public async Task<bool> FocusWithinAsync(ElementReference element)
     {
