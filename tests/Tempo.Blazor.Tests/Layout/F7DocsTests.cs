@@ -61,6 +61,28 @@ public class F7DocsTests
     }
 
     [Fact]
+    public void PointerDragImports_AreRelative_AndTheSplitPackageSectionExists()
+    {
+        // A bare `from '_content/...'` specifier throws without an import map. Core imports the
+        // sibling file; a split-package module walks up to the core static assets.
+        var root = ThemeCss.RepositoryRoot().FullName;
+        var doc = Read("docs", "touch-interaction.md");
+        var helper = Read("src", "Tempo.Blazor", "wwwroot", "js", "pointer-drag.js");
+
+        doc.Should().NotContain("from '_content/");
+        helper.Should().NotContain("from '_content/");
+        doc.Should().Contain("./pointer-drag.js").And.Contain("../../Tempo.Blazor/js/pointer-drag.js");
+        doc.Should().Contain("Consuming from a split package");
+        doc.Should().Contain("document.currentScript").And.Contain("MapStaticAssets").And.Contain("script-src");
+
+        foreach (var header in Directory.EnumerateFiles(Path.Combine(root, "src"), "*.js", SearchOption.AllDirectories)
+                     .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")))
+        {
+            File.ReadAllText(header).Should().NotContain("from '_content/", Path.GetFileName(header));
+        }
+    }
+
+    [Fact]
     public void AgentsGuide_ListsThePointerDragModule()
     {
         Read("AGENTS.md").Should().Contain("pointer-drag.js");
