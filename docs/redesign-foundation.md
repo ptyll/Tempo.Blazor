@@ -24,8 +24,8 @@ Recorded follow-ups that are **not** part of the foundation and are **not** done
 | --- | --- |
 | Migrate the remaining component rules from `--tm-shadow-focus` to `--tm-focus-ring`; move the calendar-view dark blocks and the NotionEditor nested-dark aliases into the token files | the component's own plan, one component at a time |
 | `--tm-cal-range-bg` stays light-blue in `tokens-dark.css`, so in-range days of a date-range picker fail contrast in the dark theme | date-picker plan |
-| `TmDashboard` is a size container with no intrinsic width; a shrink-to-fit host needs `flex: 1 1 auto; min-width: 0` or `width: 100%` | Dashboard plan (the migration note is in [responsive-conventions.md](responsive-conventions.md)) |
-| The private pointer gestures listed in [touch-interaction.md](touch-interaction.md#touch-interaction-the-shared-pointer-drag-helper) migrate onto `pointer-drag.js` | each owner's plan |
+| The dashboard grid (`.tm-dashboard-grid-container`, not the `.tm-dashboard` root) is a size container, and its observer is deliberately `IsContainer="false"` | Dashboard plan (the shrink-to-fit rule for a size container is in [responsive-conventions.md](responsive-conventions.md)) |
+| The private pointer gestures listed in [touch-interaction.md](touch-interaction.md) migrate onto `pointer-drag.js` | each owner's plan |
 | Scheduler event resize has no keyboard alternative yet; new adopters use `attachKeyboardMove` | Scheduler plan |
 | A shared `ITmUserTimeZone` (one browser read, reused by Scheduler and Gantt) | recorded, not scheduled |
 | `TmDocumentEditorToolbar` keeps its own overflow mechanism; core exposes `TmToolbar.OverflowPresentation="Popover"` for selection-keeping editor toolbars | DocumentEditor plan (DE-1.2) |
@@ -82,7 +82,8 @@ Three rules that get copied wrong if they are only in prose:
 - A surface positioned against the **viewport** (a modal, a dialog, a modal bottom
   sheet, a popover or dropdown presented as a sheet, an action bar with
   `Placement="FixedViewport"`) resolves
-  `TmLayout.Resolve(LayoutMode, [CascadingParameter(Name = TmLayoutScopes.Viewport)] Viewport, null, InitialMode)`.
+  `TmLayout.Resolve(LayoutMode, [CascadingParameter(Name = TmLayoutScopes.Viewport)] Viewport, measuredMode, InitialMode)`
+  — the third argument is a `TmLayoutMode?`, never a width.
   `TmLayoutScopes.Viewport` is `"TmViewportLayout"`. An in-container surface uses the
   nearest unnamed cascade.
 - Never name a callback `LayoutModeChanged`. The observer raises
@@ -122,11 +123,16 @@ The top-layer contract, in short, because it is the one packages keep re-impleme
 - Top-layer order equals open order. Toast containers are pinned on top and carry
   `data-tm-inert-exempt`.
 - Every promoted root resets the user-agent `[popover]` defaults with a
-  **zero-specificity `:where()` rule** — margin, border, padding, inset, background,
-  color, overflow and the max size — so themed colours inherit and the scrim shows
-  through.
+  **zero-specificity `:where(.tm-modal-overlay)`-style rule on its own class** —
+  margin, border, padding, inset, background, color, overflow and the max size — so
+  themed colours inherit and the scrim shows through. There is no global
+  `:where([popover])` rule.
 - A new modal surface must promote through `TopLayerInterop`. Covering one with a
   z-index from package CSS is the defect, not the fix.
+- A panel that `overlay.js` opens promotes itself too, and that promotion re-raises
+  pinned toasts. A date, date-time or date-range picker sets `TrapFocus`, so its
+  calendar is a dialog that reaches the top layer this way and never through
+  `TopLayerInterop`. A toast already on screen stays above it.
 
 Rules 1–10 and the recorded non-promoted exceptions are in
 [overlays.md](overlays.md#rules).

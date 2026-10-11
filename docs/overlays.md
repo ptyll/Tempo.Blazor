@@ -184,14 +184,12 @@ editor) keeps focus.
      layout-level siblings, outside `@Body` wrappers.** The walk inerts every sibling of the
      trap's ancestors; a container nested inside a `@Body` wrapper is inerted with the wrapper
      and the exemption on the container never gets to act.
-   - **Non-modal anchored popovers are intentionally NOT promoted.** A dropdown, menu or picker
-     popup (`TmOverlayPanel` with `TrapFocus` off) is a light surface and stays in the z-index
-     band by design — promoting it would hand every light popup top-layer membership and the
-     stacking contract above would no longer say anything. Consequence, stated rather than
-     discovered: a toast already pinned on top can paint OVER a dropdown opened after it (the
-     toast re-raises on every promotion; the dropdown never promotes). That trade is accepted
-     for light surfaces; a popup that must paint above a toast is a modal surface and promotes
-     like one.
+    - **A panel overlay.js opens promotes itself, and that promotion re-raises pinned toasts.**
+      showPopover() puts the panel in the top layer but does not know about the pinned-root
+      registry, so overlay.js promotes through the shared helper instead of calling it directly.
+      That covers the modal popups which never reach TopLayerInterop: a date, date-time or
+      date-range picker sets TrapFocus, so its calendar is a dialog promoted from here. A toast
+      already on screen therefore stays above a popup opened after it, modal or not.
 9. **Known non-promoted surfaces (recorded exceptions).** Dialogs living in the extension
    packages still paint in their z-index band and were NOT promoted in this pass: the rich-text
    editor link/image/table/video/find dialogs, the Notion editor package surfaces, the
