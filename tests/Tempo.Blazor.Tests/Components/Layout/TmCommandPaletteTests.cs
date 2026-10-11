@@ -221,6 +221,39 @@ public class TmCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmCommandPalette_GroupByCategory_ExposesLabelledGroups()
+    {
+        // L5: a listbox must not contain role=presentation, role=separator or an unexposed label.
+        // Each category is a role=group named by its label, holding a role=none list of options.
+        var actions = new ICommandPaletteAction[]
+        {
+            new TestAction("a1", "New File", null, Category: "File"),
+            new TestAction("a2", "Open", null, Category: "File"),
+            new TestAction("a3", "Undo", null, Category: "Edit"),
+        };
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.GroupByCategory, true)
+            .Add(c => c.Actions, actions));
+
+        cut.FindAll("[role='separator']").Should().BeEmpty();
+        cut.FindAll("[role='presentation']").Should().BeEmpty();
+
+        var groups = cut.FindAll(".tm-command-palette-list > [role='group']");
+        groups.Should().HaveCount(2);
+        foreach (var group in groups)
+        {
+            var label = group.QuerySelector(".tm-command-palette-group-label");
+            label.Should().NotBeNull();
+            group.GetAttribute("aria-labelledby").Should().Be(label!.GetAttribute("id"));
+            group.QuerySelector(":scope > [role='none']").Should().NotBeNull();
+        }
+
+        groups[0].QuerySelectorAll("[role='option']").Should().HaveCount(2);
+        groups[1].QuerySelectorAll("[role='option']").Should().HaveCount(1);
+    }
+
+    [Fact]
     public void TmCommandPalette_SplitShortcuts_RendersOneKbdPerKey()
     {
         var actions = new ICommandPaletteAction[]
