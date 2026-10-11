@@ -1,3 +1,9 @@
+// A panel's own promotion goes through the shared top-layer helper, not a raw showPopover():
+// promote() re-raises every pinned toast container afterwards, so a toast already on screen stays
+// above a popup opened later. A modal date/date-time/date-range popup (TrapFocus) reaches the top
+// layer through this module, never through TopLayerInterop, so this is the only place that can.
+import { promote as promoteToTopLayer } from './tm-top-layer.js';
+
 // Shared floating-layer engine for TmOverlayPanel.
 //
 // Panels are rendered with `popover="manual"`: while closed they are display:none, and
@@ -577,18 +583,18 @@ function normalizeOptions(options) {
     };
 }
 
+// Promotes an open panel to the top layer and re-raises pinned toasts above it. Exported so the
+// re-raise is testable without a browser: showPanel is the only caller.
+export function promoteOpenPanel(panel) {
+    promoteToTopLayer(panel);
+}
+
 function showPanel(entry) {
     const { panel } = entry;
     if (entry.usesPopover) {
-        try {
-            if (!panel.matches(':popover-open')) {
-                panel.showPopover();
-            }
-        }
-        catch {
-            // InvalidStateError — element not connected / not a popover any more; the entry is
-            // released by the next place() pass which checks isConnected.
-        }
+        // promote() guards a missing Popover API and a detached element itself, and re-raises
+        // pinned toasts — a raw showPopover() here is what let a date popup cover a toast.
+        promoteOpenPanel(panel);
     }
     panel.classList.add(OPEN_CLASS);
     // Marker for tests/diagnostics: fallback mode = position:fixed + containing-block math instead
