@@ -48,6 +48,36 @@ public class TmCopyButtonTests : LocalizationTestBase
     }
 
     [Fact]
+    public void CopyButton_Default_ShowsNoVisibleLabel()
+    {
+        // Frozen default: the button stays icon-only. The label is the accessible name.
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me"));
+
+        cut.FindAll(".tm-copy-button-label").Should().BeEmpty();
+        cut.Find(".tm-copy-button").GetAttribute("aria-label").Should().Be("Copy to clipboard");
+    }
+
+    [Fact]
+    public void CopyButton_ShowLabel_RendersTheLocalizedLabel_AndSwapsItWhenCopied()
+    {
+        JSInterop.SetupVoid("navigator.clipboard.writeText", "copy me").SetVoidResult();
+
+        var cut = Render<TmCopyButton>(p => p
+            .Add(x => x.Text, "copy me")
+            .Add(x => x.ShowLabel, true));
+
+        cut.Find(".tm-copy-button-label").TextContent.Trim().Should().Be("Copy");
+        cut.Find(".tm-copy-button").ClassList.Should().Contain("tm-copy-button--labelled");
+
+        cut.Find(".tm-copy-button").Click();
+
+        cut.Find(".tm-copy-button-label").TextContent.Trim().Should().Be("Copied");
+        // The accessible name keeps the historical long form until the action completes.
+        cut.Find(".tm-copy-button").GetAttribute("aria-label").Should().Be("Copied");
+    }
+
+    [Fact]
     public void CopyButton_Click_ShowsSuccessState()
     {
         // Use bUnit's JSInterop to mock clipboard call
