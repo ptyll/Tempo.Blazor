@@ -295,6 +295,7 @@ test('touch long-press starts the drag after the delay, then follows the finger'
     const down = ptr({ pointerType: 'touch', clientX: 20, clientY: 20 });
     el.dispatch('pointerdown', down);
     assert.equal(down.defaultPrevented, undefined, 'a long-press candidate keeps native scroll and selection decisions');
+    assert.equal(el.captured.size, 0, 'capturing on press suppresses the scroll the long-press is meant to allow');
     assert.deepEqual(r.names(), ['press']);
 
     t.mock.timers.tick(399);
