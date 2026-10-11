@@ -75,6 +75,11 @@
   list-style: none;
 }
 .tm-command-palette-empty { padding: var(--tm-space-8); text-align: center; color: var(--tm-text-secondary); font-size: var(--tm-font-size-sm); }
+.tm-command-palette-separator {
+  height: 1px;
+  margin: var(--tm-space-2) var(--tm-space-3);
+  background: var(--tm-border-color);
+}
 .tm-command-palette-group-label {
   padding: var(--tm-space-2) var(--tm-space-3);
   font-size: var(--tm-font-size-xs);
@@ -120,11 +125,20 @@
 .tm-command-palette-description { font-size: var(--tm-font-size-xs); color: var(--tm-text-secondary); margin-top: var(--tm-space-1); }
 .tm-command-palette-item-shortcut,
 .tm-command-palette-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
   margin-left: auto;
   font-size: var(--tm-font-size-xs);
   color: var(--tm-text-secondary);
+  font-family: var(--tm-font-mono);
+}
+.tm-command-palette-shortcut kbd,
+.tm-command-palette-item-shortcut kbd,
+kbd.tm-command-palette-shortcut {
   background-color: var(--tm-color-gray-100);
   padding: 0.125rem 0.375rem;
   border-radius: var(--tm-radius-sm);
-  font-family: var(--tm-font-mono);
+  font-family: inherit;
+  font-size: inherit;
 }

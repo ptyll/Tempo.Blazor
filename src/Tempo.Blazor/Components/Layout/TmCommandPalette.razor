@@ -40,6 +40,21 @@
                         var index = i;
                         var action = _filtered[index];
                         var focused = index == _highlightedIndex;
+                        var group = GroupOf(action);
+                        var startsGroup = GroupByCategory && (index == 0 || GroupOf(_filtered[index - 1]) != group);
+                        if (startsGroup)
+                        {
+                            <li class="tm-command-palette-group" role="presentation">
+                                @if (index > 0)
+                                {
+                                    <div class="tm-command-palette-separator" role="separator"></div>
+                                }
+                                @if (!string.IsNullOrEmpty(group))
+                                {
+                                    <div class="tm-command-palette-group-label">@group</div>
+                                }
+                            </li>
+                        }
                         <li class="tm-command-palette-item @(focused ? "tm-command-palette-item-focused" : "")"
                             role="option"
                             aria-selected="@(focused ? "true" : "false")"
@@ -51,7 +66,19 @@
                             }
                             @if (!string.IsNullOrEmpty(action.Shortcut))
                             {
-                                <kbd class="tm-command-palette-shortcut">@action.Shortcut</kbd>
+                                if (SplitShortcuts)
+                                {
+                                    <span class="tm-command-palette-shortcut">
+                                        @foreach (var part in action.Shortcut.Split('+'))
+                                        {
+                                            <kbd>@part.Trim()</kbd>
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    <kbd class="tm-command-palette-shortcut">@action.Shortcut</kbd>
+                                }
                             }
                         </li>
                     }
@@ -80,6 +107,18 @@
 
     /// <summary>Actions available in the palette.</summary>
     [Parameter] public IEnumerable<ICommandPaletteAction>? Actions { get; set; }
+
+    /// <summary>
+    /// Groups actions by <see cref="ICommandPaletteAction.Category"/>, with a heading per group and
+    /// a separator between groups. Defaults to false, which keeps the historical flat list.
+    /// </summary>
+    [Parameter] public bool GroupByCategory { get; set; }
+
+    /// <summary>
+    /// Renders each <c>+</c>-separated part of a shortcut as its own <c>kbd</c>. Defaults to false,
+    /// which keeps the shortcut in a single <c>kbd</c>.
+    /// </summary>
+    [Parameter] public bool SplitShortcuts { get; set; }
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -115,12 +154,16 @@
     private void RecomputeFiltered()
     {
         var source = Actions ?? Enumerable.Empty<ICommandPaletteAction>();
-        _filtered = string.IsNullOrWhiteSpace(_query)
-            ? source.ToList()
-            : source
-                .Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
-                         || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true))
-                .ToList();
+        var matched = string.IsNullOrWhiteSpace(_query)
+            ? source
+            : source.Where(a => a.Title.Contains(_query, StringComparison.OrdinalIgnoreCase)
+                             || (a.Description?.Contains(_query, StringComparison.OrdinalIgnoreCase) == true));
+
+        // Grouping keeps the caller's order and only pulls a category's items together, so a list
+        // that already arrives grouped does not get reordered.
+        _filtered = GroupByCategory
+            ? matched.GroupBy(GroupOf).SelectMany(group => group).ToList()
+            : matched.ToList();
 
         if (_highlightedIndex >= _filtered.Count)
         {
@@ -166,6 +209,8 @@
     }
 
     private Task CloseAsync() => IsOpenChanged.InvokeAsync(false);
+
+    private static string GroupOf(ICommandPaletteAction action) => action.Category ?? string.Empty;
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
