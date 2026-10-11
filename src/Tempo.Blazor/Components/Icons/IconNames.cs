@@ -439,4 +439,38 @@ public static class IconNames
     public const string ArrowUpFromLine      = "arrow-up-from-line";
     /// <summary>Icon name for: ArrowDownToLine, spacing after paragraph.</summary>
     public const string ArrowDownToLine      = "arrow-down-to-line";
+    /// <summary>Icon name for: Tablet.</summary>
+    public const string Tablet               = "tablet";
+    /// <summary>Icon name for: PanelLeft, a left side panel.</summary>
+    public const string PanelLeft            = "panel-left";
+    /// <summary>Icon name for: PanelLeftClose, collapsing the left panel.</summary>
+    public const string PanelLeftClose       = "panel-left-close";
+    /// <summary>Icon name for: PanelRight, a right side panel.</summary>
+    public const string PanelRight           = "panel-right";
+    /// <summary>Icon name for: Group, grouping selected objects.</summary>
+    public const string Group                = "group";
+    /// <summary>Icon name for: Ungroup, ungrouping selected objects.</summary>
+    public const string Ungroup              = "ungroup";
+    /// <summary>Icon name for: Magnet, snapping.</summary>
+    public const string Magnet               = "magnet";
+    /// <summary>Icon name for: Spline, a curved connector.</summary>
+    public const string Spline               = "spline";
+    /// <summary>Icon name for: BringToFront, stacking order.</summary>
+    public const string BringToFront         = "bring-to-front";
+    /// <summary>Icon name for: SendToBack, stacking order.</summary>
+    public const string SendToBack           = "send-to-back";
+    /// <summary>Icon name for: AlignHorizontalDistributeCenter.</summary>
+    public const string AlignHorizontalDistributeCenter = "align-horizontal-distribute-center";
+    /// <summary>Icon name for: AlignVerticalDistributeCenter.</summary>
+    public const string AlignVerticalDistributeCenter = "align-vertical-distribute-center";
+    /// <summary>Icon name for: AlignVerticalJustifyCenter.</summary>
+    public const string AlignVerticalJustifyCenter = "align-vertical-justify-center";
+    /// <summary>Icon name for: AlignVerticalSpaceBetween.</summary>
+    public const string AlignVerticalSpaceBetween = "align-vertical-space-between";
+    /// <summary>Icon name for: AlignVerticalSpaceAround.</summary>
+    public const string AlignVerticalSpaceAround = "align-vertical-space-around";
+    /// <summary>Icon name for: Scan, frame corners.</summary>
+    public const string Scan                 = "scan";
+    /// <summary>Icon name for: CornerUpLeft, a reply arrow.</summary>
+    public const string CornerUpLeft         = "corner-up-left";
 }
