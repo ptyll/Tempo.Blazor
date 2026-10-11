@@ -523,12 +523,28 @@
   setup). Before, scheduler.js was a classic script and needed nothing else; after, a bundler or a Content-Security-Policy that restricts `script-src` must allow pointer-drag.js the same way it allows
   `scheduler.js`. `window.TempoBlazor.Scheduler.ready` is a new promise that resolves when the helper
   is attached.
+
+- **`TmKeyboardShortcutsHelp` names its dialog.** Before, the dialog root carried `role="dialog"` and
+  no accessible name, and the title was a bare `<h2 class="tm-keyboard-shortcuts-title">` directly
+  inside `.tm-keyboard-shortcuts-header`. After, the title carries a stable `id` and the dialog's
+  `aria-labelledby` points at it. The element order is unchanged when `Description` is null: the `h2`
+  stays a direct child of the header. A description adds a `.tm-keyboard-shortcuts-heading` wrapper
+  around the title and the subtitle.
+
+- **`TmCopyButton` localizes its accessible name.** Before, the button's `aria-label` was the fixed
+  English "Copy to clipboard", and it never changed after a copy. After, it reads
+  `TmCopyButton_CopyToClipboard` ("Copy to clipboard" / "Kopírovat do schránky" / "Copier dans le
+  presse-papiers") and switches to `TmCopyButton_Copied` ("Copied") once the copy succeeds, so the
+  announced name follows the visible state.
 ### Added
 
-- **Additive core extensions (F8).** Every parameter defaults off, so existing markup is unchanged.
-  `TmKeyboardShortcutsHelp.Description` renders a subtitle under the title and the dialog is labelled
-  by the title (`aria-labelledby`); `TmKeyboardShortcut` gains an optional `KeySeparator` (default
-  `+`), so a pair like "Arrow Up / Arrow Down" stays two keys instead of being split into a chord.
+- **Additive core extensions (F8).** Every parameter defaults off. The shortcuts dialog's title gains a
+  stable `id` and the dialog an `aria-labelledby` pointing at it — an accessibility fix, documented
+  under Changed below; everything else keeps its markup.
+  `TmKeyboardShortcutsHelp.Description` renders a subtitle under the title, wrapped with the title in a
+  heading group that exists only when a description is set. `TmKeyboardShortcut` gains an optional
+  `KeySeparator` (default `+`), so a pair like "Arrow Up / Arrow Down" stays two keys instead of being
+  split into a chord; a separator other than `+` renders the localized "or" between the keys.
   `TmCopyButton.ShowLabel` renders the localized Copy/Copied text beside the icon; the accessible
   name keeps its historical wording. `TmCommandPalette.GroupByCategory` adds a heading and a
   separator per category, and `SplitShortcuts` renders one `kbd` per key. `TmSignatureCapture.ClearButtonPlacement`

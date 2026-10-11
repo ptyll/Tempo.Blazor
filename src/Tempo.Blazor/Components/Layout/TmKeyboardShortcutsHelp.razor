@@ -19,13 +19,19 @@
                       AriaLabelledBy="@TitleId"
                       @onclick:stopPropagation>
             <div class="tm-keyboard-shortcuts-header">
-                <div class="tm-keyboard-shortcuts-heading">
-                    <h2 id="@TitleId" class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
-                    @if (!string.IsNullOrEmpty(Description))
-                    {
+                @if (!string.IsNullOrEmpty(Description))
+                {
+                    <div class="tm-keyboard-shortcuts-heading">
+                        <h2 id="@TitleId" class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
                         <p class="tm-keyboard-shortcuts-subtitle">@Description</p>
-                    }
-                </div>
+                    </div>
+                }
+                else
+                {
+                    @* No subtitle, so no wrapper: the title stays a direct child of the header, the
+                       historical shape. The id is what aria-labelledby points at, so it stays. *@
+                    <h2 id="@TitleId" class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
+                }
                 <button type="button" class="tm-keyboard-shortcuts-close" @onclick="OnClose" aria-label="@Loc["Tm_Close"]">
                     <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
                 </button>
