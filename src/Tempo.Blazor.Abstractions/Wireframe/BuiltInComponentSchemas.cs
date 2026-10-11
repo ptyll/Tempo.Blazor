@@ -593,9 +593,11 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             DefaultWidth = 200, DefaultHeight = 80,
             Props =
             [
-                P("label",    "Label",    PropType.String,     "Options", cat: "Content"),
-                P("options",  "Options",  PropType.StringList, cat: "Content"),
-                P("required", "Required", PropType.Bool,       false,     cat: "Behavior"),
+                P("label",      "Label",      PropType.String,     "Options", cat: "Content"),
+                P("options",    "Options",    PropType.StringList, cat: "Content"),
+                P("appearance", "Appearance", PropType.Enum,      "Radio",   cat: "Appearance",
+                    opts: ["Radio", "Segmented"]),
+                P("required",   "Required",   PropType.Bool,       false,     cat: "Behavior"),
                 P("disabled", "Disabled", PropType.Bool,       false,     cat: "Behavior"),
             ]
         };
