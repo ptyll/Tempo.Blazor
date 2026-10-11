@@ -230,4 +230,33 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
 
         await ShootAsync(page, capture, $"signature-overlay-clear-{width}");
     }
+
+    [TestMethod]
+    [DataRow(1440, 900)]
+    [DataRow(390, 844)]
+    [DataRow(320, 700)]
+    public async Task Signature_OverlayClear_LeavesTheInputClear_InTypeAndUpload(int width, int height)
+    {
+        // L4: overlay placement covers the typed input and the upload drop zone, so those modes
+        // fall back to the actions row. The clear button must not intersect either control.
+        var page = await OpenAsync("/signing-components", width, height, touch: false);
+        var capture = page.GetByTestId("signature-overlay-clear");
+        await capture.ScrollIntoViewIfNeededAsync();
+
+        foreach (var (tab, target) in new (string Tab, string Target)[]
+        {
+            ("Type", ".tm-signature-capture__typed-input"),
+            ("Upload", ".tm-signature-capture__drop-zone"),
+        })
+        {
+            await capture.Locator(".tm-signature-capture__tab").Filter(new() { HasText = tab }).ClickAsync();
+            var clear = await capture.Locator(".tm-signature-capture__clear").BoundingBoxAsync();
+            var control = await capture.Locator(target).BoundingBoxAsync();
+            Assert.IsNotNull(clear, $"the clear button is visible in {tab} mode");
+            Assert.IsNotNull(control, $"the {tab} control is visible");
+            var overlaps = clear!.X < control!.X + control.Width && clear.X + clear.Width > control.X
+                && clear.Y < control.Y + control.Height && clear.Y + clear.Height > control.Y;
+            Assert.IsFalse(overlaps, $"the clear button covers the {tab} control at {width}px");
+        }
+    }
 }

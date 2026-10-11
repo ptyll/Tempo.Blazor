@@ -89,7 +89,9 @@ public partial class TmSignatureCapture
     /// <summary>
     /// Where the clear button renders. Defaults to <see cref="TmSignatureClearButtonPlacement.Actions"/>,
     /// the row under the surface. <see cref="TmSignatureClearButtonPlacement.Overlay"/> moves the same
-    /// button into the top-end corner of the surface; it stays one button, in the tab order.
+    /// button into the top-end corner of the surface, but only in <see cref="TmSignatureCaptureMode.Draw"/>:
+    /// over the typed-name input or the upload drop zone it would cover the control, so Type and Upload
+    /// fall back to the actions row. It stays one button, in the tab order.
     /// </summary>
     [Parameter] public TmSignatureClearButtonPlacement ClearButtonPlacement { get; set; } = TmSignatureClearButtonPlacement.Actions;
 
@@ -123,6 +125,12 @@ public partial class TmSignatureCapture
 
     private bool IsInvalid => Required && IsEmpty;
 
+    // The overlay corner covers the typed input and the upload drop zone, so it is a Draw-mode
+    // placement only. Everywhere else the button stays in the actions row.
+    private bool OverlayClear =>
+        ClearButtonPlacement == TmSignatureClearButtonPlacement.Overlay
+        && Mode == TmSignatureCaptureMode.Draw;
+
     private string RootClass
     {
         get
@@ -130,7 +138,7 @@ public partial class TmSignatureCapture
             var classes = new List<string> { "tm-signature-capture" };
             AddClass(classes, Disabled, "tm-signature-capture--disabled");
             AddClass(classes, IsInvalid, "tm-signature-capture--invalid");
-            AddClass(classes, ClearButtonPlacement == TmSignatureClearButtonPlacement.Overlay, "tm-signature-capture--overlay-clear");
+            AddClass(classes, OverlayClear, "tm-signature-capture--overlay-clear");
             if (!string.IsNullOrWhiteSpace(Class))
             {
                 classes.Add(Class);

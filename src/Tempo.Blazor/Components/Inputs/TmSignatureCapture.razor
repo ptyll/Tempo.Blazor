@@ -21,7 +21,7 @@
     </div>
 
     <div class="tm-signature-capture__surface">
-        @if (ClearButtonPlacement == TmSignatureClearButtonPlacement.Overlay)
+        @if (OverlayClear)
         {
             <button type="button"
                     class="tm-signature-capture__clear"
@@ -175,7 +175,7 @@
                 <span>@Loc["TmSignatureCapture_Confirm"]</span>
             </button>
         }
-        @if (ClearButtonPlacement == TmSignatureClearButtonPlacement.Actions)
+        @if (!OverlayClear)
         {
             <button type="button"
                     class="tm-signature-capture__clear"
