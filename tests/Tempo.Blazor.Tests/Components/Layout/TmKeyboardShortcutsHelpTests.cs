@@ -187,4 +187,43 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
         var keys = cut.FindAll("kbd").Select(k => k.TextContent.Trim()).ToArray();
         keys.Should().Equal("Arrow Up", "Arrow Down");
     }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_AlternativeSeparator_RendersALocalizedJoinerBetweenKeys()
+    {
+        // Review L1: "Arrow Up / Arrow Down" rendered two bare <kbd> chips, indistinguishable from
+        // the chord "Arrow Up"+"Arrow Down". A separator other than '+' must put a screen-reader-read,
+        // localized joiner between the keys.
+        var categories = new[]
+        {
+            new TmShortcutCategory("Navigation",
+            [
+                new TmKeyboardShortcut("Arrow Up / Arrow Down", "Move", " / "),
+            ]),
+        };
+
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, categories)
+            .Add(c => c.IsVisible, true));
+
+        var joiner = cut.Find(".tm-keyboard-shortcuts-or");
+        joiner.TextContent.Trim().Should().Be("or");
+
+        var key = cut.Find(".tm-keyboard-shortcuts-key");
+        var children = key.ChildNodes.Where(n => n.NodeType == AngleSharp.Dom.NodeType.Element).ToList();
+        children.Select(n => n.NodeName.ToLowerInvariant()).Should().Equal("kbd", "span", "kbd");
+        children[1].ClassName.Should().Contain("tm-keyboard-shortcuts-or");
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_DefaultSeparator_RendersNoJoiner()
+    {
+        // The '+' default must keep the frozen chord markup exactly: bare <kbd> chips, no joiner.
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true));
+
+        cut.FindAll(".tm-keyboard-shortcuts-or").Should().BeEmpty();
+        cut.FindAll(".tm-keyboard-shortcuts-item")[0].QuerySelectorAll("kbd").Count.Should().Be(2);
+    }
 }
