@@ -24,6 +24,14 @@ function listenerBag() {
             for (const entry of [...(map.get(type) ?? [])]) entry.fn(event);
             return event;
         },
+        // Capture listeners fire before bubble listeners, the way a real target does.
+        dispatchPhased(type, event = {}) {
+            const list = [...(map.get(type) ?? [])];
+            for (const entry of list.filter(item => item.capture)) entry.fn(event);
+            for (const entry of list.filter(item => !item.capture)) entry.fn(event);
+            return event;
+        },
+        captures(type) { return (map.get(type) ?? []).some(entry => entry.capture); },
         count(type) { return (map.get(type) ?? []).length; },
         total() { let n = 0; for (const list of map.values()) n += list.length; return n; },
         options(type) { return (map.get(type) ?? []).map(entry => entry.passive); },
@@ -171,6 +179,36 @@ test('the pointer is captured on press by its id and released with the same id',
     assert.equal(el.captured.size, 0);
 });
 
+test('a second non-primary finger neither moves nor cancels the active drag', () => {
+    // m1: the superseded check used to run before the isPrimary/button guards, so a second
+    // non-primary finger cancelled the gesture that was already running.
+    const el = fakeElement();
+    const r = recorder();
+    attach(el, { threshold: 0, ...r.options });
+
+    el.dispatch('pointerdown', ptr({ pointerId: 1 }));
+    el.dispatch('pointermove', ptr({ pointerId: 1, clientX: 20 }));
+    el.dispatch('pointerdown', ptr({ pointerId: 2, isPrimary: false, button: 0 }));
+
+    assert.equal(r.names().filter(n => n === 'cancel').length, 0, 'a non-primary finger must not cancel the drag');
+    assert.deepEqual([...el.captured], [1], 'the first pointer still owns the gesture');
+    el.dispatch('pointermove', ptr({ pointerId: 1, clientX: 30 }));
+    assert.equal(r.last('move').pointerId, 1);
+});
+
+test('a second non-primary mouse button does not cancel the active drag', () => {
+    const el = fakeElement();
+    const r = recorder();
+    attach(el, { threshold: 0, ...r.options });
+
+    el.dispatch('pointerdown', ptr({ pointerId: 1 }));
+    el.dispatch('pointermove', ptr({ pointerId: 1, clientX: 20 }));
+    el.dispatch('pointerdown', ptr({ pointerId: 3, button: 2, isPrimary: true }));
+
+    assert.equal(r.names().filter(n => n === 'cancel').length, 0);
+    assert.deepEqual([...el.captured], [1]);
+});
+
 test('a new primary pointerdown cancels the stale session before starting its own', () => {
     // J7: a pointer that vanished without pointerup/pointercancel leaves a session nothing can end.
     // A new primary pointer must cancel it first (onCancel, never onEnd), then start cleanly.
@@ -199,6 +237,26 @@ test('Escape that cancels a drag stops propagation so a dialog does not also clo
 
     assert.equal(r.last('cancel').reason, 'escape');
     assert.equal(escape.stopped, true, 'the surrounding dialog/sheet must not see this Escape');
+});
+
+test('the Escape listener is registered in the capture phase, ahead of a dialog bubble listener', () => {
+    // m3: a bubble-phase listener on document runs after the dialog's own element listener and after
+    // any document listener registered earlier, so the dialog closes first. Capture runs first.
+    const el = fakeElement();
+    const r = recorder();
+    attach(el, { threshold: 0, ...r.options });
+    el.dispatch('pointerdown', ptr());
+    el.dispatch('pointermove', ptr({ clientX: 9 }));
+
+    assert.equal(doc.captures('keydown'), true, 'the helper must listen in the capture phase');
+
+    const seen = [];
+    doc.addEventListener('keydown', () => seen.push('dialog-bubble'));
+    const escape = { key: 'Escape', stopPropagation() { this.stopped = true; } };
+    doc.dispatchPhased('keydown', escape);
+
+    assert.deepEqual(seen, [], 'stopPropagation in the capture phase keeps the dialog listener from running');
+    assert.equal(r.last('cancel').reason, 'escape');
 });
 
 test('secondary buttons and non-primary pointers do not start a gesture', () => {

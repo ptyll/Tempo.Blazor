@@ -141,6 +141,79 @@ public class RelativeTimeRegistrationTests
         pragueText.Should().NotBe(newYorkText);
     }
 
+    /// <summary>Stand-in for a singleton host service (Kestrel pool, cookie auth) that consumes TimeProvider.</summary>
+    private sealed class SingletonClockConsumer(TimeProvider clock)
+    {
+        public TimeProvider Clock { get; } = clock;
+    }
+
+    [Fact]
+    public void DocumentedRegistrationSnippet_Compiles()
+    {
+        // The snippet in docs/localization-plurals.md is compiled as part of this project
+        // (DocumentedUserZoneRegistration). A snippet that does not compile fails the build.
+        var doc = File.ReadAllText(Path.Combine(Theme.ThemeCss.RepositoryRoot().FullName, "docs", "localization-plurals.md"));
+        var sample = File.ReadAllText(Path.Combine(
+            Theme.ThemeCss.RepositoryRoot().FullName,
+            "tests", "Tempo.Blazor.Tests", "Localization", "DocumentedUserZoneRegistration.cs"));
+        var marker = doc.IndexOf("doc-sample:user-zone", StringComparison.Ordinal);
+        marker.Should().BeGreaterThan(0);
+        var snippet = doc[(marker + "doc-sample:user-zone".Length)..(doc.IndexOf("});", marker, StringComparison.Ordinal) + 3)];
+        var body = sample.IndexOf("public static void Register", StringComparison.Ordinal);
+        var compiledStart = sample.IndexOf("doc-sample:user-zone", body, StringComparison.Ordinal);
+        var compiled = sample[(compiledStart + "doc-sample:user-zone".Length)..(sample.IndexOf("});", compiledStart, StringComparison.Ordinal) + 3)];
+        Normalize(snippet).Should().Be(Normalize(compiled),
+            "the compiled sample is the documented snippet, not a paraphrase of it");
+    }
+
+    private static string Normalize(string text)
+        => string.Join('\n', text.Replace("\r", "", StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal)));
+
+    [Fact]
+    public void DocumentedRegistration_ResolvesBesideASingletonTimeProviderConsumer_AndHonoursALateZone()
+    {
+        // K1: AddScoped<TimeProvider> replaces the app-wide clock, so a singleton consumer throws
+        // under ValidateScopes. And a clock that captures the zone at first resolution stays UTC,
+        // because JS fills the cache only after the first render.
+        using var provider = BuildValidated(services =>
+        {
+            services.AddSingleton<ITmLocalizer>(new ScopedCultureLocalizer
+            {
+                Stamp = "now",
+                Culture = CultureInfo.GetCultureInfo("en-US"),
+            });
+            services.AddSingleton<TimeProvider>(TimeProvider.System);
+            services.AddSingleton<SingletonClockConsumer>();
+            // Registered before the snippet so the RED snippet, which expects the host to own the cache,
+            // can resolve it. The fixed snippet registers its own; the last registration wins for both.
+            services.AddScoped<DocumentedUserZoneRegistration.CircuitZoneCache>();
+            DocumentedUserZoneRegistration.Register(services);
+        });
+
+        var resolveHost = () => provider.GetRequiredService<SingletonClockConsumer>();
+        resolveHost.Should().NotThrow(
+            "the documented registration must not replace the app-wide TimeProvider: a singleton host service consumes it");
+        resolveHost().Clock.Should().BeSameAs(TimeProvider.System);
+
+        using var scope = provider.CreateScope();
+        var cache = scope.ServiceProvider.GetRequiredService<DocumentedUserZoneRegistration.CircuitZoneCache>();
+        var formatter = scope.ServiceProvider.GetRequiredService<ITmRelativeTimeFormatter>();
+
+        // 22:30 and 20:00 UTC are the same UTC day, but Prague (UTC+2) has already crossed midnight.
+        var instant = new DateTimeOffset(2026, 6, 14, 22, 30, 0, TimeSpan.Zero);
+        var earlier = new DateTimeOffset(2026, 6, 14, 20, 0, 0, TimeSpan.Zero);
+
+        formatter.Format(earlier, instant).Should().Contain("h ago",
+            "before JS supplies the zone the clock reads UTC, so both instants are still 14 June");
+
+        cache.Zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague");
+        formatter.Format(earlier, instant).Should().StartWith("yesterday at",
+            "the zone set after the first resolution is read lazily, so the same formatter instance honours it");
+    }
+
     [Fact]
     public void TmTimeline_RendersTheLanguageOfTheScopeTheFormatterWasResolvedIn()
     {

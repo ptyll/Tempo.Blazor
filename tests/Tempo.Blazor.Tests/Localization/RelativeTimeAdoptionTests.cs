@@ -1,9 +1,14 @@
+using System.Globalization;
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Components.Activity;
+using Tempo.Blazor.Components.Notifications;
 using Tempo.Blazor.Components.Timeline;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Localization;
+using Tempo.Blazor.Services;
 
 namespace Tempo.Blazor.Tests.Localization;
 
@@ -73,6 +78,75 @@ public class RelativeTimeAdoptionTests : LocalizationTestBase
 
         var old = Render<TmTimeline>(p => p.Add(c => c.Entries, new[] { At(DateTimeOffset.UtcNow.AddDays(-30)) }));
         old.Find(".tm-timeline-timestamp").TextContent.Should().MatchRegex(@"^\d{1,2}\. \d{1,2}\. \d{4}$");
+    }
+
+    [Theory]
+    [InlineData("fi-FI")]
+    [InlineData("fa-IR")]
+    public void TimeStamp_datetime_is_invariant_iso_under_a_culture_that_rewrites_numbers(string cultureName)
+    {
+        // m2: DateTime.ToString without a culture uses the ambient one. fi-FI writes 14.20.00 and
+        // fa-IR a non-Gregorian year, both invalid in <time datetime>.
+        var previous = CultureInfo.CurrentCulture;
+        var previousUi = CultureInfo.CurrentUICulture;
+        try
+        {
+            var culture = CultureInfo.GetCultureInfo(cultureName);
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+
+            var created = new DateTimeOffset(2026, 6, 14, 14, 20, 0, TimeSpan.Zero);
+            const string expected = "2026-06-14T14:20:00Z";
+
+            Render<TmTimeline>(p => p.Add(c => c.Entries, new[] { At(created) }))
+                .Find("time.tm-timeline-timestamp").GetAttribute("datetime").Should().Be(expected);
+
+            Render<TmActivityTimeline>(p => p.Add(c => c.Entries, new ITimelineEntry[]
+            {
+                new ActivityEntry("e1", "comment", "Alice", null, created, null, "Text"),
+            })).Find("time.tm-timeline-time").GetAttribute("datetime").Should().Be(expected);
+
+            Render<TmActivityComments>(p => p.Add(c => c.Comments, new[]
+            {
+                new TmCommentEntry
+                {
+                    Id = "c1", ThreadId = "c1", Author = new TmUserRef { DisplayName = "Alice" },
+                    CreatedAt = created, Body = "<p>Text</p>", BodyFormat = TmCommentBodyFormat.Html,
+                },
+            })).Find("time.tm-comment-time").GetAttribute("datetime").Should().Be(expected);
+
+            var store = new InMemoryNotificationStore();
+            Services.AddSingleton<ITmNotificationService>(store);
+            Services.AddSingleton<Microsoft.AspNetCore.Components.NavigationManager>(new TestNav());
+            store.PublishAsync(new TmNotification
+            {
+                Type = TmNotificationTypes.Mention,
+                RecipientUserId = "demo",
+                Actor = new TmUserRef { Id = "alice", DisplayName = "Alice" },
+                Title = "Test",
+                CreatedAt = created,
+            }).Wait();
+            var bell = Render<TmNotificationBell>();
+            bell.Find("button").Click();
+            bell.Find("time.tm-notification-bell__time").GetAttribute("datetime").Should().Be(expected);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+            CultureInfo.CurrentUICulture = previousUi;
+        }
+    }
+
+    private sealed record ActivityEntry(
+        string Id, string EntryType, string AuthorName, string? AuthorAvatarUrl, DateTimeOffset CreatedAt,
+        string? HtmlContent, string? PlainContent, bool IsInternal = false,
+        IReadOnlyDictionary<string, string>? Metadata = null) : ITimelineEntry;
+
+    private sealed class TestNav : Microsoft.AspNetCore.Components.NavigationManager
+    {
+        public TestNav() => Initialize("https://localhost/", "https://localhost/");
+
+        protected override void NavigateToCore(string uri, bool forceLoad) { }
     }
 
     [Fact]

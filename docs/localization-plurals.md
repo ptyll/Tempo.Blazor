@@ -151,6 +151,7 @@ public interface ITmRelativeTimeFormatter
   Gantt) is a recorded follow-up, not part of this registration.
 
   ```csharp
+  // doc-sample:user-zone
   builder.Services.AddTempoBlazor();
   builder.Services.AddScoped<TimeProvider>(sp =>
   {
