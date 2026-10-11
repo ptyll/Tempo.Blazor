@@ -231,6 +231,40 @@ public class PluralLocalizerTests
     }
 
     [Fact]
+    public void An_int_overload_keeps_the_count_an_integer_so_a_D2_format_works()
+    {
+        // Passing an int to the double overload boxes it as double, and "{0:D2}" then throws.
+        var loc = new MockTmLocalizer(new Dictionary<string, string>
+        {
+            ["Code_One"] = "{0:D2}",
+            ["Code_Other"] = "{0:D2}",
+        }, Culture("en"));
+
+        var act = () => loc.Plural("Code", 7);
+
+        act.Should().NotThrow().Which.Should().Be("07");
+    }
+
+    [Fact]
+    public void French_many_strings_group_a_whole_million_with_N0()
+    {
+        var fr = Table("TmResources.fr.json");
+        foreach (var key in fr.Keys.Where(k => k.EndsWith("_Many", StringComparison.Ordinal)))
+        {
+            fr[key].Should().Contain("{0:N0}", $"{key} is a whole number in French; N0 groups it");
+        }
+    }
+
+    [Fact]
+    public void Reserved_suffixes_and_the_arrowhead_keys_are_excluded_from_the_parity_guard()
+    {
+        var doc = File.ReadAllText(Path.Combine(ThemeCss.RepositoryRoot().FullName, "docs", "localization-plurals.md"));
+        doc.Should().Contain("reserved").And.Contain("_One/_Few/_Many/_Other");
+        doc.Should().Contain("TmDiagramProperties_Arrowhead").And.Contain("TmDiagramProperties_Cardinality");
+        doc.Should().Contain("deprecated").And.Contain("TmTimeline_MinutesAgo");
+    }
+
+    [Fact]
     public void A_null_localizer_or_key_is_rejected()
     {
         ITmLocalizer? none = null;
