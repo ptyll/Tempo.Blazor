@@ -642,6 +642,8 @@ to{transform:translateX(0);}
 .tm-copy-button--copied{color:var(--tm-color-success-text);}
 .tm-copy-button--copied:hover{color:var(--tm-color-success-text);}
 .tm-copy-button--labelled{gap:var(--tm-space-1);padding:var(--tm-space-1) var(--tm-space-3);}
+.tm-copy-button-labels{display:grid;}
+.tm-copy-button-labels>.tm-copy-button-label{grid-area:1 / 1;}
 .tm-copy-button-label{font-size:var(--tm-font-size-sm);line-height:1;}
 @media (pointer:coarse){.tm-copy-button--labelled{min-height:var(--tm-touch-target);}
 }

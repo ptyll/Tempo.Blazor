@@ -67,12 +67,12 @@ public class TmCopyButtonTests : LocalizationTestBase
             .Add(x => x.Text, "copy me")
             .Add(x => x.ShowLabel, true));
 
-        cut.Find(".tm-copy-button-label").TextContent.Trim().Should().Be("Copy");
+        VisibleLabel(cut).Should().Be("Copy");
         cut.Find(".tm-copy-button").ClassList.Should().Contain("tm-copy-button--labelled");
 
         cut.Find(".tm-copy-button").Click();
 
-        cut.Find(".tm-copy-button-label").TextContent.Trim().Should().Be("Copied");
+        VisibleLabel(cut).Should().Be("Copied");
         // The accessible name keeps the historical long form until the action completes.
         cut.Find(".tm-copy-button").GetAttribute("aria-label").Should().Be("Copied");
 
@@ -97,4 +97,11 @@ public class TmCopyButtonTests : LocalizationTestBase
         // After click, should show success state
         cut.Find(".tm-copy-button").ClassList.Should().Contain("tm-copy-button--copied");
     }
+
+    // The labelled button renders both states so the wider one reserves the width; the visible label
+    // is the one that is not hidden.
+    private static string VisibleLabel(IRenderedComponent<TmCopyButton> cut) =>
+        cut.FindAll(".tm-copy-button-label")
+            .Single(label => !label.ClassList.Contains("tm-sr-only"))
+            .TextContent.Trim();
 }

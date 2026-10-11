@@ -167,7 +167,9 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         // clipboard access in a secure context. Stub the write so the assertion is about the label.
         await page.EvaluateAsync("() => { navigator.clipboard.writeText = () => Promise.resolve(); }");
         await button.ClickAsync();
-        await Assertions.Expect(button.Locator(".tm-copy-button-label")).ToHaveTextAsync("Copied");
+        // Both states are rendered so the swap reserves its width; the visible one is the announcement.
+        await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-sr-only)")).ToHaveTextAsync("Copied");
+        await Assertions.Expect(button.Locator("[role='status']")).ToHaveTextAsync("Copied");
         await ShootAsync(page, button, $"copy-button-labelled-{width}");
     }
 
