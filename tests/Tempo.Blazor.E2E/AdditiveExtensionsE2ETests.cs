@@ -153,7 +153,8 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
 
         var segments = group.Locator(".tm-radio-segment");
         Assert.AreEqual(3, await segments.CountAsync());
-        var pressed = group.Locator(".tm-radio-segment[aria-checked='true']");
+        // L2: the pressed segment is a native radio, so the group exposes one checked input.
+        var pressed = group.Locator(".tm-radio-segment:has(input:checked)");
         await Assertions.Expect(pressed).ToHaveCountAsync(1);
 
         var box = await segments.First.BoundingBoxAsync();
@@ -164,6 +165,42 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         }
 
         await ShootAsync(page, group, $"radio-segmented-{width}");
+    }
+
+    [TestMethod]
+    public async Task RadioGroup_Segmented_KeyboardSelectsWithArrowsAndHomeEnd()
+    {
+        // L2: Tab lands once, ArrowRight selects the next segment, Home/End jump to the ends.
+        var page = await OpenAsync("/forms", 1280, 720, touch: false);
+        var group = page.GetByTestId("radio-segmented-demo").Locator(".tm-radio-group--segmented");
+        await group.ScrollIntoViewIfNeededAsync();
+
+        var radios = group.Locator("input[type='radio']");
+        Assert.AreEqual(3, await radios.CountAsync(), "each segment is a native radio");
+        var names = await radios.EvaluateAllAsync<string[]>("els => els.map(e => e.getAttribute('name'))");
+        Assert.IsTrue(names.All(n => n == names[0] && !string.IsNullOrEmpty(n)),
+            "the segments share one form name");
+
+        // One tab stop: Tab into the group lands on the checked radio, and the next Tab leaves it.
+        await radios.First.FocusAsync();
+        await page.Keyboard.PressAsync("Shift+Tab");
+        await page.Keyboard.PressAsync("Tab");
+        Assert.AreEqual(true, await radios.First.EvaluateAsync<bool>("e => e === document.activeElement"),
+            "Tab enters the group once, on the checked radio");
+        await page.Keyboard.PressAsync("Tab");
+        Assert.AreEqual(false, await group.EvaluateAsync<bool>("e => e.contains(document.activeElement)"),
+            "the next Tab leaves the group");
+
+        await radios.First.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await Assertions.Expect(radios.Nth(1)).ToBeCheckedAsync();
+        Assert.AreEqual(true, await radios.Nth(1).EvaluateAsync<bool>("e => e === document.activeElement"),
+            "ArrowRight moves the selection and the focus together");
+
+        await page.Keyboard.PressAsync("End");
+        await Assertions.Expect(radios.Nth(2)).ToBeCheckedAsync();
+        await page.Keyboard.PressAsync("Home");
+        await Assertions.Expect(radios.First).ToBeCheckedAsync();
     }
 
     [TestMethod]

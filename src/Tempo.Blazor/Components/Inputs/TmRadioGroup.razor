@@ -14,17 +14,26 @@
     <div class="tm-radio-group-options">
         @if (Appearance == RadioAppearance.Segmented)
         {
+            @* Native radios: the browser owns arrows, the single tab stop and the single activation.
+               Home/End are not native, so the input handles only those. *@
+            EnsureSegmentRefs(Options.Count);
+            var segmentIndex = 0;
             @foreach (var option in Options)
             {
+                var index = segmentIndex++;
                 var selected = IsSelected(option.Value);
-                <button type="button"
-                        class="tm-radio-segment @(selected ? "tm-radio-segment--checked" : "")"
-                        role="radio"
-                        aria-checked="@(selected ? "true" : "false")"
-                        disabled="@(Disabled || option.IsDisabled)"
-                        @onclick="() => SelectOptionAsync(option.Value)">
-                    @option.Label
-                </button>
+                var disabled = Disabled || option.IsDisabled;
+                <label class="tm-radio-segment @(selected ? "tm-radio-segment--checked" : "") @(disabled ? "tm-radio-segment--disabled" : "")">
+                    <input type="radio"
+                           @ref="_segmentRefs[index]"
+                           class="tm-sr-only"
+                           name="@Name"
+                           checked="@selected"
+                           disabled="@disabled"
+                           @onchange="() => SelectOptionAsync(option.Value)"
+                           @onkeydown="OnSegmentedKeyDown" />
+                    <span>@option.Label</span>
+                </label>
             }
         }
         else
@@ -108,6 +117,45 @@
         {
             Value = optionValue;
             await ValueChanged.InvokeAsync(optionValue);
+        }
+    }
+
+    // One slot per option, filled by @ref during render. Grown, never shrunk, so a render that sees
+    // fewer options does not index past the end.
+    private readonly List<ElementReference> _segmentRefs = new();
+
+    private void EnsureSegmentRefs(int count)
+    {
+        while (_segmentRefs.Count < count)
+        {
+            _segmentRefs.Add(default);
+        }
+    }
+
+    /// <summary>
+    /// Home/End are the only keys this handles. Arrow keys, Space and Enter belong to the native
+    /// radio, and a static <c>preventDefault</c> would also swallow Tab, so the page scroll that
+    /// Home/End produce is accepted — the same trade-off <c>TmTabs</c> documents.
+    /// </summary>
+    private async Task OnSegmentedKeyDown(KeyboardEventArgs e)
+    {
+        if (Disabled || e.Key is not ("Home" or "End")) return;
+
+        var enabled = Options
+            .Select((option, index) => (option, index))
+            .Where(pair => !pair.option.IsDisabled)
+            .ToList();
+        if (enabled.Count == 0) return;
+
+        var target = e.Key == "Home" ? enabled[0] : enabled[^1];
+        if (!IsSelected(target.option.Value))
+        {
+            await SelectOptionAsync(target.option.Value);
+        }
+
+        if (target.index < _segmentRefs.Count)
+        {
+            await _segmentRefs[target.index].FocusAsync();
         }
     }
 }

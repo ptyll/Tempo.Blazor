@@ -51,8 +51,9 @@
 .tm-radio-text { font-size: var(--tm-font-size-sm); color: var(--tm-text-primary); line-height: 1.375; }
 
 /* ── Segmented (opt-in, Appearance=Segmented) ────────────
-   A single-choice value control. The tray is the radiogroup; each segment is a native button
-   with role=radio, so Enter/Space activate exactly once. */
+   A single-choice value control. Each segment is a label wrapping a visually hidden native
+   radio, so the browser owns the arrows, the single tab stop and the single activation.
+   The focus ring follows the input through :has(:focus-visible). */
 .tm-radio-group--segmented .tm-radio-group-options {
     flex-direction: row;
     flex-wrap: wrap;
@@ -63,6 +64,10 @@
 }
 
 .tm-radio-segment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex: 1 1 auto;
     min-height: var(--tm-touch-target);
     padding: var(--tm-space-1) var(--tm-space-3);
@@ -81,12 +86,14 @@
     border-color: var(--tm-color-border);
 }
 
-.tm-radio-segment:focus-visible {
-    outline: none;
+/* The input is the tab stop; the ring paints on the segment that contains it. The transparent
+   outline survives forced colors, where the box-shadow ring is dropped. */
+.tm-radio-segment:has(:focus-visible) {
+    outline: 2px solid transparent;
     box-shadow: var(--tm-focus-ring);
 }
 
-.tm-radio-segment:disabled {
+.tm-radio-segment--disabled {
     color: var(--tm-text-disabled);
     cursor: not-allowed;
 }

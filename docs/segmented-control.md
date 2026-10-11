@@ -7,7 +7,7 @@ changes:
 | The segments change… | Use | Why |
 | --- | --- | --- |
 | **which content is shown** (a view, a panel, a page region) | `TmTabs Variant="TabVariant.Pill"` | The selection owns panels, so it needs the tab semantics (`tablist` / `tab` / `tabpanel`) and the roving tabindex `TmTabs` already implements. |
-| **a value** (Desktop/Tablet/Mobile, MJML/JSON, an alignment) | `TmRadioGroup Appearance="RadioAppearance.Segmented"` | The selection is one value out of a set, so it stays a `radiogroup`. Each segment is a native `<button role="radio">`, which keeps the one-activation rule: Enter and Space fire exactly once. |
+| **a value** (Desktop/Tablet/Mobile, MJML/JSON, an alignment) | `TmRadioGroup Appearance="RadioAppearance.Segmented"` | The selection is one value out of a set, so it stays a `radiogroup`. Each segment is a `<label>` wrapping a visually hidden native `<input type="radio">` sharing the group's `Name`: the browser gives the arrow keys, the single tab stop and the single activation, and the value submits with the form. Home and End jump to the first and last enabled option (they scroll the page, the same accepted trade-off as `TmTabs`, because a static `preventDefault` would also swallow Tab). The focus ring paints on the segment through `:has(:focus-visible)`. |
 
 ```razor
 @* content *@

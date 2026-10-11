@@ -97,14 +97,13 @@ public class TmRadioGroupTests : LocalizationTestBase
             .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
 
         var group = cut.Find(".tm-radio-group--segmented");
-        // A value, not content: radiogroup of buttons, one pressed.
+        // A value, not content: a radiogroup whose pressed option is the checked native radio.
         group.GetAttribute("role").Should().Be("radiogroup");
         var segments = cut.FindAll(".tm-radio-segment");
         segments.Count.Should().Be(3);
-        segments.Should().OnlyContain(s => s.TagName == "BUTTON");
-        segments.Single(s => s.GetAttribute("aria-checked") == "true").TextContent.Should().Contain("Banana");
+        segments.Single(s => s.ClassList.Contains("tm-radio-segment--checked")).TextContent.Should().Contain("Banana");
 
-        segments[0].Click();
+        cut.FindAll(".tm-radio-segment input[type='radio']")[0].Change(true);
         captured.Should().Be("apple");
     }
 
@@ -202,10 +201,12 @@ public class TmRadioGroupTests : LocalizationTestBase
             .Add(c => c.Appearance, RadioAppearance.Segmented)
             .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
 
-        cut.Find(".tm-radio-segment").KeyDown("End");
+        // The key lands on the focused radio, which is where the handler lives.
+        var radios = cut.FindAll(".tm-radio-segment input[type='radio']");
+        radios[1].KeyDown("End");
         captured.Should().Be("cherry");
 
-        cut.Find(".tm-radio-segment").KeyDown("Home");
+        radios[0].KeyDown("Home");
         captured.Should().Be("apple");
     }
 }
