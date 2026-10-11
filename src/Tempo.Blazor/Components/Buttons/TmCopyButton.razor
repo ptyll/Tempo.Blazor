@@ -26,8 +26,8 @@
         @* Both labels occupy the same grid cell, so Copy and Copied reserve each other's width and
            the button does not jump. The hidden one stays out of the accessibility tree. *@
         <span class="tm-copy-button-labels">
-            <span class="tm-copy-button-label @(_copied ? "tm-sr-only" : "")" aria-hidden="@(_copied ? "true" : null)">@Loc["TmCopyButton_Copy"]</span>
-            <span class="tm-copy-button-label @(_copied ? "" : "tm-sr-only")" aria-hidden="@(_copied ? null : "true")">@Loc["TmCopyButton_Copied"]</span>
+            <span class="tm-copy-button-label @(_copied ? "tm-copy-button-label--hidden" : "")" aria-hidden="@(_copied ? "true" : null)">@Loc["TmCopyButton_Copy"]</span>
+            <span class="tm-copy-button-label @(_copied ? "" : "tm-copy-button-label--hidden")" aria-hidden="@(_copied ? null : "true")">@Loc["TmCopyButton_Copied"]</span>
         </span>
         <span class="tm-sr-only" role="status">@(_copied ? Loc["TmCopyButton_Copied"] : "")</span>
     }
@@ -51,11 +51,9 @@
     /// </summary>
     [Parameter] public bool ShowLabel { get; set; }
 
-    // The accessible name keeps its historical wording ("Copy to clipboard") whether or not the
-    // short label is shown, so a screen reader announces exactly what the button did before.
+    // The accessible name is the localized "Copy to clipboard" (or "Copied" after a copy) whether or
+    // not the short visible label is shown.
     private string AccessibleName => _copied ? Loc["TmCopyButton_Copied"] : Loc["TmCopyButton_CopyToClipboard"];
-
-    private string VisibleLabel => _copied ? Loc["TmCopyButton_Copied"] : Loc["TmCopyButton_Copy"];
 
     /// <summary>Additional HTML attributes to apply to the button element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }

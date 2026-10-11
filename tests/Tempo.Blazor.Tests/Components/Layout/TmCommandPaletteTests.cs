@@ -200,6 +200,19 @@ public class TmCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmCommandPalette_Default_ListboxIsNamed()
+    {
+        // Documented default-markup change (CHANGELOG Changed): the result listbox carries the
+        // localized TmCommandPalette_Aria name.
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Actions, new ICommandPaletteAction[] { new TestAction("a1", "New File", null) }));
+
+        cut.Find("ul.tm-command-palette-list[role=listbox]")
+            .GetAttribute("aria-label").Should().Be(Services.GetRequiredService<ITmLocalizer>()["TmCommandPalette_Aria"]);
+    }
+
+    [Fact]
     public void TmCommandPalette_GroupByCategory_InsertsASeparatorBetweenGroups()
     {
         var actions = new ICommandPaletteAction[]

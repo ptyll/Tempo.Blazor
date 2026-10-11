@@ -536,18 +536,26 @@
   `TmCopyButton_CopyToClipboard` ("Copy to clipboard" / "Kopírovat do schránky" / "Copier dans le
   presse-papiers") and switches to `TmCopyButton_Copied` ("Copied") once the copy succeeds, so the
   announced name follows the visible state.
+
+- **`TmCommandPalette` names its result list.** Before, `<ul class="tm-command-palette-list" role="listbox">`
+  had no accessible name (axe `aria-input-field-name`). After, it carries
+  `aria-label="@Loc["TmCommandPalette_Aria"]"` ("Command palette" / "Paleta příkazů" / "Palette de
+  commandes"). No other default markup of the palette changes.
+
 ### Added
 
 - **Additive core extensions (F8).** Every parameter defaults off. The shortcuts dialog's title gains a
-  stable `id` and the dialog an `aria-labelledby` pointing at it — an accessibility fix, documented
-  under Changed below; everything else keeps its markup.
+  stable `id` and the dialog an `aria-labelledby` pointing at it, the palette's result list gains an
+  `aria-label`, and the copy button's accessible name is localized — accessibility fixes, documented
+  under Changed above; everything else keeps its markup.
   `TmKeyboardShortcutsHelp.Description` renders a subtitle under the title, wrapped with the title in a
   heading group that exists only when a description is set. `TmKeyboardShortcut` gains an optional
   `KeySeparator` (default `+`), so a pair like "Arrow Up / Arrow Down" stays two keys instead of being
   split into a chord; a separator other than `+` renders the localized "or" between the keys.
-  `TmCopyButton.ShowLabel` renders the localized Copy/Copied text beside the icon; the accessible
-  name keeps its historical wording. `TmCommandPalette.GroupByCategory` adds a heading and a
-  separator per category, and `SplitShortcuts` renders one `kbd` per key. `TmSignatureCapture.ClearButtonPlacement`
+  `TmCopyButton.ShowLabel` renders the localized Copy/Copied text beside the icon (both labels share
+  one grid cell, so the button keeps its width; a polite status announces "Copied"); the accessible
+  name stays "Copy to clipboard". `TmCommandPalette.GroupByCategory` renders each category as a
+  labelled `role="group"` (the divider is a CSS border), and `SplitShortcuts` renders one `kbd` per key. `TmSignatureCapture.ClearButtonPlacement`
   (`Actions|Overlay`, default `Actions`) moves the same clear button into the top-end corner of the
   surface. A segmented control is a convention, not a component
   ([docs/segmented-control.md](docs/segmented-control.md)): content switching uses `TmTabs Variant=Pill`,
