@@ -10,6 +10,13 @@
   and relative time) instead of restating them, and lists the follow-ups that are
   deliberately not in this release.
 
+### Fixed
+
+- **A toast stays above a popup opened after it.** A date, date-time or date-range
+  picker promotes its calendar through `overlay.js`, which called `showPopover()`
+  directly and so never re-raised a toast already on screen. It now promotes through
+  the shared top-layer helper, like every other modal surface.
+
 ### Breaking / Migration
 
 - **Anchored panels present as a bottom sheet on mobile only where a component opts in.**
