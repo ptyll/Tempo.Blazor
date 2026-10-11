@@ -36,6 +36,23 @@ public class TmSignatureCaptureTests : LocalizationTestBase
         cut.Find(".tm-signature-capture").ClassList.Should().Contain("tm-signature-capture--overlay-clear");
     }
 
+    [Theory]
+    [InlineData(TmSignatureCaptureMode.Typed)]
+    [InlineData(TmSignatureCaptureMode.Upload)]
+    public void Render_OverlayClear_FallsBackToTheActionsRow_OutsideDrawMode(TmSignatureCaptureMode mode)
+    {
+        // L4: the overlay clear covers the typed-name input and the upload drop zone. It belongs
+        // over the pad only; Type and Upload keep the button in the actions row.
+        var cut = Render<TmSignatureCapture>(parameters =>
+            parameters.Add(p => p.ClearButtonPlacement, TmSignatureClearButtonPlacement.Overlay)
+                      .Add(p => p.Mode, mode));
+
+        cut.FindAll(".tm-signature-capture__clear").Should().ContainSingle();
+        cut.Find(".tm-signature-capture__surface").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture__actions").InnerHtml.Should().Contain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture").ClassList.Should().NotContain("tm-signature-capture--overlay-clear");
+    }
+
     [Fact]
     public void Render_ClassAndAdditionalAttributes_AreApplied()
     {
