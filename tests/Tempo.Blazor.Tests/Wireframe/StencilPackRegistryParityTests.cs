@@ -160,6 +160,36 @@ public class StencilPackRegistryParityTests
     }
 
     [Fact]
+    public void RadioGroupSchema_ExposesSegmentedAppearance()
+    {
+        // L12 (rule 13): the segmented appearance is a real rendering, so the wireframe schema must
+        // offer it. The built-in pack takes its props from this schema, so the two cannot drift.
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmRadioGroup");
+
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "appearance" &&
+            prop.Type == PropType.Enum &&
+            Equals(prop.Default, "Radio") &&
+            prop.Options!.SequenceEqual(new[] { "Radio", "Segmented" }) &&
+            prop.Category == "Appearance");
+    }
+
+    [Fact]
+    public void RadioGroupPack_RendersTheSegmentedAppearanceAsATray()
+    {
+        // The pack takes its props from the schema, so the parity that matters is the render: it must
+        // branch on the same appearance prop the schema declares, drawing the tray only when segmented.
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmRadioGroup\""));
+
+        entry.Should().Contain("appearance == \\\"Segmented\\\"");
+        entry.Should().Contain("appearance != \\\"Segmented\\\"");
+    }
+
+    [Fact]
     public void BuiltInPack_MarksKnownLayoutContainers()
     {
         var pack = StencilPackSerializer.Deserialize(BuiltInStencilPackProvider.ReadPackJson());
