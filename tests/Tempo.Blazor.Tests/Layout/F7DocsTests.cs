@@ -74,6 +74,7 @@ public class F7DocsTests
         doc.Should().Contain("./pointer-drag.js").And.Contain("../../Tempo.Blazor/js/pointer-drag.js");
         doc.Should().Contain("Consuming from a split package");
         doc.Should().Contain("document.currentScript").And.Contain("MapStaticAssets").And.Contain("script-src");
+        doc.Should().Contain("pointerdown").And.Contain("compatibility mouse");
 
         foreach (var header in Directory.EnumerateFiles(Path.Combine(root, "src"), "*.js", SearchOption.AllDirectories)
                      .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}")))

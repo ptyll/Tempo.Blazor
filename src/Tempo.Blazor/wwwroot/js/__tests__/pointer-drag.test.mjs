@@ -171,19 +171,34 @@ test('the pointer is captured on press by its id and released with the same id',
     assert.equal(el.captured.size, 0);
 });
 
-test('a second pointer cannot move, end or cancel the first one\'s drag', () => {
+test('a new primary pointerdown cancels the stale session before starting its own', () => {
+    // J7: a pointer that vanished without pointerup/pointercancel leaves a session nothing can end.
+    // A new primary pointer must cancel it first (onCancel, never onEnd), then start cleanly.
     const el = fakeElement();
     const r = recorder();
     attach(el, { threshold: 0, ...r.options });
 
     el.dispatch('pointerdown', ptr({ pointerId: 1 }));
+    el.dispatch('pointermove', ptr({ pointerId: 1, clientX: 20 }));
     el.dispatch('pointerdown', ptr({ pointerId: 2 }));
-    el.dispatch('pointermove', ptr({ pointerId: 2, clientX: 50 }));
-    el.dispatch('pointerup', ptr({ pointerId: 2, clientX: 50 }));
-    el.dispatch('pointercancel', ptr({ pointerId: 2 }));
 
-    assert.deepEqual(r.names(), ['press'], 'only the first pointer was ever tracked');
-    assert.deepEqual([...el.captured], [1]);
+    assert.equal(r.last('cancel').reason, 'superseded', 'the stale session is cancelled, not committed');
+    assert.equal(r.names().filter(n => n === 'end').length, 0);
+    assert.deepEqual([...el.captured], [2], 'the new pointer owns the gesture');
+});
+
+test('Escape that cancels a drag stops propagation so a dialog does not also close', () => {
+    const el = fakeElement();
+    const r = recorder();
+    attach(el, { threshold: 0, ...r.options });
+    el.dispatch('pointerdown', ptr());
+    el.dispatch('pointermove', ptr({ clientX: 9 }));
+
+    const escape = { key: 'Escape', stopPropagation() { this.stopped = true; } };
+    doc.dispatch('keydown', escape);
+
+    assert.equal(r.last('cancel').reason, 'escape');
+    assert.equal(escape.stopped, true, 'the surrounding dialog/sheet must not see this Escape');
 });
 
 test('secondary buttons and non-primary pointers do not start a gesture', () => {
