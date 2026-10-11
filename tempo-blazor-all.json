@@ -6929,7 +6929,7 @@
               "name": "AddTempoBlazor",
               "kind": "Method",
               "type": "IServiceCollection",
-              "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Scoped relative-time formatter. It resolves ITmLocalizer and TimeProvider from the current scope, so a scoped localizer (language, tenant) and a scoped clock (the browser's time zone) are not captured once for every circuit. The default clock is System, whose LocalTimeZone is the server's zone — wrong for a Blazor Server circuit. Register a scoped TimeProvider whose LocalTimeZone is the user's zone (read the IANA id from the browser once per circuit, TimeZoneInfo.FindSystemTimeZoneById with a fallback to UTC). No component takes a time-zone parameter for this. ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
+              "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Scoped relative-time formatter. It resolves ITmLocalizer and TimeProvider from the current scope, so a scoped localizer (language, tenant) is not captured once for every circuit. The default clock is System, whose LocalTimeZone is the server's zone — wrong for a Blazor Server circuit. Give the formatter its own user clock by replacing this registration with a scoped ITmRelativeTimeFormatter over a TimeProvider that reads the circuit's zone lazily (IANA id from the browser once per circuit, TimeZoneInfo.FindSystemTimeZoneById with a fallback to UTC, re-render once it arrives). Never replace the app-wide TimeProvider: Kestrel and cookie authentication are singletons that consume it, so a scoped replacement fails the host under ValidateScopes. No component takes a time-zone parameter for this. ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
               "parameters": [
                 {
                   "name": "services",
@@ -19327,6 +19327,22 @@
           "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTimeFormatter.cs",
           "documentationStatus": "merged",
           "members": [
+            {
+              "name": "Absolute",
+              "kind": "Method",
+              "type": "string",
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": "DateTimeOffset"
+                },
+                {
+                  "name": "timeZone",
+                  "type": "TimeZoneInfo?",
+                  "default": "null"
+                }
+              ]
+            },
             {
               "name": "Format",
               "kind": "Method",

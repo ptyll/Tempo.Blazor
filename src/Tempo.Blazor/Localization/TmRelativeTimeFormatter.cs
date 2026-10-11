@@ -4,7 +4,7 @@ namespace Tempo.Blazor.Localization;
 
 /// <summary>
 /// The default <see cref="ITmRelativeTimeFormatter"/>: strings from <see cref="ITmLocalizer"/>
-/// (<c>Tm_Time_*</c>), plural forms from <see cref="TmLocalizerPluralExtensions.Plural"/>, the current
+/// (<c>Tm_Time_*</c>), plural forms from <see cref="TmLocalizerPluralExtensions.Plural(ITmLocalizer, string, int, object[])"/>, the current
 /// moment from a <see cref="TimeProvider"/>.
 /// <list type="bullet">
 ///   <item><description>under a minute either way → "just now" (so clock skew never says "in 0 min");</description></item>
