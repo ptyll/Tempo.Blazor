@@ -120,6 +120,12 @@
     gap: var(--tm-space-1, 0.25rem);
 }
 
+/* The readable joiner between alternative keys (KeySeparator other than '+'). */
+.tm-keyboard-shortcuts-or {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
 .tm-keyboard-shortcuts-key kbd {
     display: inline-flex;
     align-items: center;

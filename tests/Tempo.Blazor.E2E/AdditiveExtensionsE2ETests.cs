@@ -83,6 +83,11 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         CollectionAssert.AreEqual(new[] { "Arrow Up", "Arrow Down", "Esc" }, keys,
             "the alternative separator must not split the pair into a chord, and a lone key stays one kbd");
 
+        // L1: the alternative pair reads as "Arrow Up or Arrow Down", not as a chord of two keys.
+        var joiner = dialog.Locator(".tm-keyboard-shortcuts-or");
+        await Assertions.Expect(joiner).ToHaveCountAsync(1);
+        await Assertions.Expect(joiner).ToHaveTextAsync("or");
+
         await ShootAsync(page, dialog, "shortcuts-described-1280");
     }
 

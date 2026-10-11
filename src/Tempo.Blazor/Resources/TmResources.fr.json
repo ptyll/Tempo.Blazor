@@ -2775,6 +2775,7 @@
   "TmKanbanBoard_Empty": "Aucun élément",
   "TmKanban_NoSwimlane": "Aucune valeur",
   "TmKanban_ToggleSwimlane": "Basculer le couloir",
+  "TmKeyboardShortcutsHelp_Or": "ou",
   "TmKeyboardShortcutsHelp_Title": "Raccourcis clavier",
   "TmKycWizard_AddAddress": "Ajouter une adresse",
   "TmKycWizard_AddChildOwner": "Ajouter un propriétaire de ce propriétaire",

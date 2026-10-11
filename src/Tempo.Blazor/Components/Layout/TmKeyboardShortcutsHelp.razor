@@ -42,9 +42,16 @@
                                 {
                                     <div class="tm-keyboard-shortcuts-item">
                                         <span class="tm-keyboard-shortcuts-key">
-                                            @foreach (var part in SplitKeys(shortcut))
+                                            @{ var parts = SplitKeys(shortcut); }
+                                            @for (var i = 0; i < parts.Count; i++)
                                             {
-                                                <kbd>@part</kbd>
+                                                if (i > 0 && !IsChord(shortcut))
+                                                {
+                                                    @* A separator other than '+' joins alternatives, not a chord.
+                                                       The joiner must be read by screen readers, unlike a bare gap. *@
+                                                    <span class="tm-keyboard-shortcuts-or">@Loc["TmKeyboardShortcutsHelp_Or"]</span>
+                                                }
+                                                <kbd>@parts[i]</kbd>
                                             }
                                         </span>
                                         <span class="tm-keyboard-shortcuts-description">@shortcut.Description</span>
@@ -86,11 +93,16 @@
     // Stable for the instance so aria-labelledby keeps pointing at the title across renders.
     private readonly string TitleId = $"tm-shortcuts-title-{Guid.NewGuid():N}";
 
-    private static IEnumerable<string> SplitKeys(TmKeyboardShortcut shortcut)
+    private static List<string> SplitKeys(TmKeyboardShortcut shortcut)
     {
         var separator = string.IsNullOrEmpty(shortcut.KeySeparator) ? "+" : shortcut.KeySeparator;
-        return shortcut.Keys.Split(separator).Select(part => part.Trim()).Where(part => part.Length > 0);
+        return shortcut.Keys.Split(separator).Select(part => part.Trim()).Where(part => part.Length > 0).ToList();
     }
+
+    // '+' (the default) is a chord and keeps the historical bare-<kbd> markup. Anything else joins
+    // alternatives, so the keys need a readable joiner between them.
+    private static bool IsChord(TmKeyboardShortcut shortcut) =>
+        string.IsNullOrEmpty(shortcut.KeySeparator) || shortcut.KeySeparator == "+";
 
     private ElementReference _root;
     private TopLayerInterop? _topLayer;

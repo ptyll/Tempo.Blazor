@@ -210,7 +210,9 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
         joiner.TextContent.Trim().Should().Be("or");
 
         var key = cut.Find(".tm-keyboard-shortcuts-key");
-        var children = key.ChildNodes.Where(n => n.NodeType == AngleSharp.Dom.NodeType.Element).ToList();
+        var children = key.ChildNodes
+            .OfType<AngleSharp.Dom.IElement>()
+            .ToList();
         children.Select(n => n.NodeName.ToLowerInvariant()).Should().Equal("kbd", "span", "kbd");
         children[1].ClassName.Should().Contain("tm-keyboard-shortcuts-or");
     }

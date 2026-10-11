@@ -311,6 +311,7 @@ public abstract class LocalizationTestBase : BunitContext
         // Shared
         ["Tm_Loading"]          = "Loading...",
         ["Tm_Close"]            = "Close",
+        ["TmKeyboardShortcutsHelp_Or"] = "or",
         ["TmCopyButton_Copy"]   = "Copy",
         ["TmCopyButton_CopyToClipboard"] = "Copy to clipboard",
         ["TmCopyButton_Copied"] = "Copied",
@@ -4043,6 +4044,7 @@ public abstract class LocalizationTestBase : BunitContext
         // Shared
         ["Tm_Loading"]     = "Načítání...",
         ["Tm_Close"]       = "Zavřít",
+        ["TmKeyboardShortcutsHelp_Or"] = "nebo",
         ["TmCopyButton_Copy"]   = "Kopírovat",
         ["TmCopyButton_CopyToClipboard"] = "Kopírovat do schránky",
         ["TmCopyButton_Copied"] = "Zkopírováno",
