@@ -40,9 +40,29 @@ The count is always template argument `{0}`; further arguments follow it:
 4. otherwise whatever the indexer returns for a missing key.
 
 So a language only has to provide the forms its grammar needs — English ships `_One` and `_Other`,
-French `_One`, `_Many`, `_Other`, Czech all four — and a host that overrides only the plain `Key`
-keeps working. A family must show the count (`{0}`) in every form; a unit test enforces that and
-that all three languages provide every family.
+French `_One`, `_Many`, `_Other`, Czech all four. The plain `Key` is used only when no family exists
+anywhere. A host that overrides only the plain key does **not** keep working when it
+delegates to the built-in localizer (the documented `PartialOverrideLocalizer` /
+`MyPartialLocalizer` pattern): the default `TryGetString` reads `Key_One` through the indexer, the
+inner localizer returns the shipped family, and the plain-key override is bypassed. A delegating
+localizer must override the family keys — `_One` / `_Other`, plus `_Few` / `_Many` where its
+language needs them. A family must show the count (`{0}`) in every form; a unit test enforces that
+and that all three languages provide every family.
+
+```csharp
+// before — bypassed. Plural asks for Key_One, the indexer forwards it, the shipped family wins.
+public string this[string key] => key == "TmModelingIssuePanel_Count" ? "Nálezy: {0}" : inner[key];
+
+// after — override the family the lookup actually reads.
+public string this[string key] => key switch
+{
+    "TmModelingIssuePanel_Count_One" => "{0} nález",
+    "TmModelingIssuePanel_Count_Few" => "{0} nálezy",
+    "TmModelingIssuePanel_Count_Many" => "{0} nálezu",
+    "TmModelingIssuePanel_Count_Other" => "{0} nálezů",
+    _ => inner[key],
+};
+```
 
 ### Which culture
 
@@ -53,7 +73,10 @@ A localizer bound to one fixed language — a test double, a per-tenant localize
 
 `ITmLocalizer.TryGetString(key, out value)` is a default interface member that tells "translated"
 from "missing" without relying on the key text; `DefaultTmLocalizer` overrides it precisely. A host
-localizer written before plurals existed needs no change.
+localizer written before plurals existed still compiles. Two caveats: a class that already declares a
+public `Culture` or `TryGetString` now implicitly implements the new members (a signature mismatch
+will not compile), and a mocking proxy returns null for the unimplemented `Culture` — `Plural` and
+the relative-time formatter treat that null as `CurrentUICulture` instead of throwing.
 
 ### Adding a counted text
 

@@ -447,18 +447,37 @@
   `TmNotificationBell_NewCount`, `TmNotionPageComment_BadgeLabel`,
   `TmNotionPageHeader_UnresolvedComments`, `TmScreeningResultPanel_PendingCount` — and
   `TmDocumentEditor_ReviewSummaryText` is now a two-slot joiner `"{0}, {1}"` over the new
-  `TmDocumentEditor_ReviewSummaryOpenComments_*` family. **Migration:** a host that overrides these
-  keys in its own `ITmLocalizer` keeps working (`Plural` falls back to the plain key), but it should
-  provide the families to get correct grammar:
+  `TmDocumentEditor_ReviewSummaryOpenComments_*` family. **Migration:** a host that *replaces*
+  `ITmLocalizer` and overrides these keys must override the family keys (`_One` / `_Other`, plus
+  `_Few` / `_Many` where its language needs them). Overriding only the plain key is **not** enough
+  for the documented delegating pattern (`PartialOverrideLocalizer` / `MyPartialLocalizer`): the
+  default `TryGetString` reads `Key_One` through the indexer, the inner localizer returns the shipped
+  family, and the plain-key override is never consulted. The plain key is used only when no family
+  exists anywhere. A host class that already has its own public `Culture` or `TryGetString` now
+  implicitly implements the new interface members — a name match, not a behaviour change, but it will
+  not compile if the signature differs.
 
   ```csharp
-  // before - one plain key per language, wrong for 1 / 2-4 in Czech
-  ["TmModelingIssuePanel_Count"] = "Nálezy: {0}"
-  // after - one key per plural form the language needs
-  ["TmModelingIssuePanel_Count_One"]   = "{0} nález",
-  ["TmModelingIssuePanel_Count_Few"]   = "{0} nálezy",
-  ["TmModelingIssuePanel_Count_Many"]  = "{0} nálezu",
-  ["TmModelingIssuePanel_Count_Other"] = "{0} nálezů"
+  // before - a delegating localizer overriding only the plain key. Plural never sees it:
+  // TryGetString("TmModelingIssuePanel_Count_One") reads the shipped family through the indexer.
+  public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
+  {
+      public string this[string key] => key == "TmModelingIssuePanel_Count" ? "Nálezy: {0}" : inner[key];
+      public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
+  }
+  // after - override the family. _Few/_Many too, where the language needs them (Czech does).
+  public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
+  {
+      private static readonly Dictionary<string, string> Mine = new()
+      {
+          ["TmModelingIssuePanel_Count_One"]   = "{0} nález",
+          ["TmModelingIssuePanel_Count_Few"]   = "{0} nálezy",
+          ["TmModelingIssuePanel_Count_Many"]  = "{0} nálezu",
+          ["TmModelingIssuePanel_Count_Other"] = "{0} nálezů",
+      };
+      public string this[string key] => Mine.TryGetValue(key, out var mine) ? mine : inner[key];
+      public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
+  }
   ```
 
   See [docs/localization-plurals.md](docs/localization-plurals.md).
@@ -506,9 +525,16 @@
   B13: touch and pen now work, handles grow on coarse pointers) run on it. Every adopter must ship a
   non-drag alternative (WCAG 2.5.7, `Alt`+arrows): see [docs/touch-interaction.md](docs/touch-interaction.md).
 - **`Loc.Plural("Key", n)`** — grammatical plurals from CLDR rules (`TmPluralRules`: cs/sk
-  one-few-many-other, pl, fr one-many-other, en one-other) over `Key_One/_Few/_Many/_Other`, falling
-  back to the plain key. New `ITmLocalizer.Culture` and `ITmLocalizer.TryGetString` are default
-  interface members, so existing `ITmLocalizer` implementations compile and work unchanged.
+  one-few-many-other, pl, fr one-many-other, en one-other) over `Key_One/_Few/_Many/_Other`, then
+  `Key_Other`, then the plain key — and the plain key is used only when no family exists anywhere.
+  `ITmLocalizer.Culture` and `ITmLocalizer.TryGetString` are default interface members, so an existing
+  implementation still *compiles*. It does not keep working unchanged when it delegates: a class that
+  forwards the indexer to the built-in localizer and overrides only the plain key is bypassed, because
+  `TryGetString("Key_One")` reads the shipped family through that indexer. Such a localizer must
+  override the family keys `_One/_Other`, plus `_Few`/`_Many` where its language needs them. A
+  null `Culture` (what a mocking proxy returns for the unimplemented member) falls back to
+  `CurrentUICulture` instead of throwing. A host class that already declares a public `Culture` or
+  `TryGetString` now implicitly implements the new members.
 - **`ITmRelativeTimeFormatter`** (Abstractions) with the default `TmRelativeTimeFormatter`
   (`Tm_Time_*` in en/cs/fr, injectable `TimeProvider`, explicit time zone): "právě teď", "před 5 min",
   "včera v 16:20", "zítra v 9:00", "za 5 dní", an absolute date from a week on (B19).

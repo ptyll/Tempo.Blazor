@@ -28,7 +28,10 @@ public static class TmLocalizerPluralExtensions
         arguments[0] = count;
         extraArguments?.CopyTo(arguments, 1);
 
-        var category = TmPluralRules.Select(localizer.Culture, count);
+        // A mocking proxy (NSubstitute, Moq) returns null for an unimplemented default interface
+        // member. Treat that the same as the member's own default: the ambient UI culture.
+        var culture = localizer.Culture ?? System.Globalization.CultureInfo.CurrentUICulture;
+        var category = TmPluralRules.Select(culture, count);
         var resolved = category != TmPluralCategory.Other && localizer.TryGetString(key + Suffix(category), out _)
             ? key + Suffix(category)
             : localizer.TryGetString(key + "_Other", out _)

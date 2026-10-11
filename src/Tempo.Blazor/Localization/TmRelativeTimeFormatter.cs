@@ -77,8 +77,10 @@ public sealed class TmRelativeTimeFormatter : ITmRelativeTimeFormatter
     }
 
     private string FormatClock(DateTimeOffset value)
-        => value.ToString(_localizer.TryGetString("Tm_Time_TimeFormat", out var pattern) ? pattern : "t", _localizer.Culture);
+        => value.ToString(_localizer.TryGetString("Tm_Time_TimeFormat", out var pattern) ? pattern : "t",
+            _localizer.Culture ?? CultureInfo.CurrentUICulture);
 
     private string FormatDate(DateTimeOffset value)
-        => value.ToString(_localizer.TryGetString("Tm_Time_DateFormat", out var pattern) ? pattern : "d", _localizer.Culture);
+        => value.ToString(_localizer.TryGetString("Tm_Time_DateFormat", out var pattern) ? pattern : "d",
+            _localizer.Culture ?? CultureInfo.CurrentUICulture);
 }
