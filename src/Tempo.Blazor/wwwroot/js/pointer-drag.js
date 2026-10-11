@@ -106,6 +106,7 @@ export function attach(element, options = {}) {
     let session = null;
     let suppressor = null;
     let detached = false;
+    let touchMoveBound = false;
 
     const info = (event, extra = {}) => ({
         event,
@@ -137,6 +138,12 @@ export function attach(element, options = {}) {
      * Ends the active gesture. State and DOM are cleaned up BEFORE any host callback runs, so a
      * throwing callback can never leave the helper holding a capture or a document listener.
      */
+    function releaseTouchMove() {
+        if (!touchMoveBound || longPressMs === 0) return;
+        element.removeEventListener('touchmove', onTouchMove);
+        touchMoveBound = false;
+    }
+
     function finish(outcome, event, reason) {
         const s = session;
         if (!s) return;
@@ -150,6 +157,7 @@ export function attach(element, options = {}) {
             try { s.target.releasePointerCapture?.(s.pointerId); } catch { /* already released */ }
         }
         if (s.started && dragClass) s.target.classList?.remove(dragClass);
+        releaseTouchMove();
         if (outcome === 'end' && s.started && suppressClick) armClickSuppression();
 
         try {
@@ -188,6 +196,13 @@ export function attach(element, options = {}) {
         s.origin = origin;
         if (captureOnStart && !s.captured) capture(s);
         if (dragClass) s.target.classList?.add(dragClass);
+        // A permanent non-passive touchmove on a delegated element (document, for the scheduler) makes
+        // Chrome wait for the listener on every scroll frame. Bind it only once a long-press drag has
+        // started; an immediate drag keeps it for the whole attachment, below.
+        if (longPressMs > 0 && !touchMoveBound) {
+            element.addEventListener('touchmove', onTouchMove, { passive: false });
+            touchMoveBound = true;
+        }
         if (call('start', info(event)) === false) {
             // Vetoed: undo the start without reporting a drag that never was.
             finish('aborted', event, 'vetoed');
@@ -319,7 +334,12 @@ export function attach(element, options = {}) {
     element.addEventListener('pointercancel', onPointerCancel);
     element.addEventListener('lostpointercapture', onLostCapture);
     element.addEventListener('contextmenu', onContextMenu);
-    element.addEventListener('touchmove', onTouchMove, { passive: false });
+    // Only an immediate drag needs the listener for the whole attachment. A long-press drag binds it
+    // in begin() and releases it on every exit, so an idle document never blocks scrolling.
+    if (longPressMs === 0) {
+        element.addEventListener('touchmove', onTouchMove, { passive: false });
+        touchMoveBound = true;
+    }
 
     return {
         get dragging() { return session?.started === true; },
