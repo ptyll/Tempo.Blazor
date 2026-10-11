@@ -16,9 +16,16 @@
                       Class="tm-keyboard-shortcuts-modal"
                       CloseOnEscape="true"
                       OnEscape="OnClose"
+                      AriaLabelledBy="@TitleId"
                       @onclick:stopPropagation>
             <div class="tm-keyboard-shortcuts-header">
-                <h2 class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
+                <div class="tm-keyboard-shortcuts-heading">
+                    <h2 id="@TitleId" class="tm-keyboard-shortcuts-title">@DisplayTitle</h2>
+                    @if (!string.IsNullOrEmpty(Description))
+                    {
+                        <p class="tm-keyboard-shortcuts-subtitle">@Description</p>
+                    }
+                </div>
                 <button type="button" class="tm-keyboard-shortcuts-close" @onclick="OnClose" aria-label="@Loc["Tm_Close"]">
                     <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
                 </button>
@@ -35,9 +42,9 @@
                                 {
                                     <div class="tm-keyboard-shortcuts-item">
                                         <span class="tm-keyboard-shortcuts-key">
-                                            @foreach (var part in shortcut.Keys.Split('+'))
+                                            @foreach (var part in SplitKeys(shortcut))
                                             {
-                                                <kbd>@part.Trim()</kbd>
+                                                <kbd>@part</kbd>
                                             }
                                         </span>
                                         <span class="tm-keyboard-shortcuts-description">@shortcut.Description</span>
@@ -65,10 +72,25 @@
     /// <summary>Optional title. Falls back to localized default.</summary>
     [Parameter] public string? Title { get; set; }
 
+    /// <summary>
+    /// Optional subtitle under the title, for a note such as "shortcuts work with an external
+    /// keyboard". Null renders nothing, which is the historical markup.
+    /// </summary>
+    [Parameter] public string? Description { get; set; }
+
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
 
     private string DisplayTitle => Title ?? Loc["TmKeyboardShortcutsHelp_Title"];
+
+    // Stable for the instance so aria-labelledby keeps pointing at the title across renders.
+    private readonly string TitleId = $"tm-shortcuts-title-{Guid.NewGuid():N}";
+
+    private static IEnumerable<string> SplitKeys(TmKeyboardShortcut shortcut)
+    {
+        var separator = string.IsNullOrEmpty(shortcut.KeySeparator) ? "+" : shortcut.KeySeparator;
+        return shortcut.Keys.Split(separator).Select(part => part.Trim()).Where(part => part.Length > 0);
+    }
 
     private ElementReference _root;
     private TopLayerInterop? _topLayer;

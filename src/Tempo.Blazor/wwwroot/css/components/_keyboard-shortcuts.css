@@ -45,11 +45,24 @@
     border-bottom: 1px solid var(--tm-border-color, #e2e8f0);
 }
 
+.tm-keyboard-shortcuts-heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1, 0.25rem);
+    min-width: 0;
+}
+
 .tm-keyboard-shortcuts-title {
     margin: 0;
     font-size: var(--tm-font-size-lg, 1.125rem);
     font-weight: var(--tm-font-weight-semibold, 600);
     color: var(--tm-text-primary, #0f172a);
+}
+
+.tm-keyboard-shortcuts-subtitle {
+    margin: 0;
+    font-size: var(--tm-font-size-sm, 0.875rem);
+    color: var(--tm-text-secondary, #475569);
 }
 
 .tm-keyboard-shortcuts-close {

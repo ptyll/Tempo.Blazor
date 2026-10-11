@@ -18518,7 +18518,7 @@
           "kind": "Component",
           "category": "Layout",
           "namespace": "Tempo.Blazor.Components.Layout",
-          "description": "Modal overlay displaying categorized keyboard shortcuts with key combinations rendered as <kbd> elements. Closes on Escape or overlay click.",
+          "description": "Modal overlay displaying categorized keyboard shortcuts with key combinations rendered as <kbd> elements. A '+' joins a chord; a shortcut can name its own separator so alternatives (Arrow Up / Arrow Down) are not rendered as one chord. Closes on Escape or overlay click. The dialog is labelled by its title.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Layout/TmKeyboardShortcutsHelp.razor",
           "documentationStatus": "merged",
@@ -18538,6 +18538,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class(es)."
+            },
+            {
+              "name": "Description",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional subtitle under the title. Null renders nothing."
             },
             {
               "name": "IsVisible",
@@ -18562,7 +18568,9 @@
             "tm-keyboard-shortcuts-overlay",
             "tm-keyboard-shortcuts-modal",
             "tm-keyboard-shortcuts-header",
+            "tm-keyboard-shortcuts-heading",
             "tm-keyboard-shortcuts-title",
+            "tm-keyboard-shortcuts-subtitle",
             "tm-keyboard-shortcuts-close",
             "tm-keyboard-shortcuts-content",
             "tm-keyboard-shortcuts-category",
@@ -80333,7 +80341,7 @@
           "kind": "Record",
           "category": "Models",
           "namespace": "Tempo.Blazor.Models",
-          "description": "Represents a keyboard shortcut with key combination and description.",
+          "description": "A keyboard shortcut. Keys is split on KeySeparator (default '+', a chord) into one kbd per part; pass ' / ' so alternatives are not rendered as a chord.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/TmShortcutCategory.cs",
           "documentationStatus": "merged"
