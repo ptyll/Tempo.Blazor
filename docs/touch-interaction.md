@@ -118,6 +118,13 @@ must ship a non-drag alternative in the same change.** The convention:
 | Resize a panel (splitter) | arrows / `Home` / `End` on the `role="separator"` (`TmEditorShell`) | `aria-valuenow` |
 | Cancel | `Escape` while a mouse/touch gesture is active (handled by the helper) | none needed |
 
+`Alt`+arrow is the browser's Back/Forward shortcut, so the chord is cancelled in JavaScript, not with
+a Blazor `@onkeydown:preventDefault` (that would swallow Tab too). `attachKeyboardMove(el, { onStep })`
+listens on the focused item and calls `preventDefault` only for `Alt`+an arrow, then reports
+`{ key, x, y }` (`ArrowLeft` is `{ x: -1, y: 0 }`). A plain arrow, and every other key, is left to the
+browser. A canvas editor that already nudges with plain arrows may keep them and not call this. The
+scheduler's event resize has no non-drag alternative yet; that belongs to the Scheduler plan, not here.
+
 The alternative reuses the commit path: `Alt`+arrow calls the same .NET method the drag's `onEnd`
 does, so there is one code path to test and one place a read-only guard lives. Pointer-only
 affordances (a visible `+`/`−` button, a menu command "Move to…") satisfy "single pointer" for
@@ -128,7 +135,7 @@ touch users who cannot drag precisely.
 | Module | What it does with the helper |
 |--------|------------------------------|
 | `tm-editor-shell.js` | Panel resizer: `attach(handle, { threshold: 0 })`; `onMove` clamps the width and writes the CSS variable, `onEnd` commits once, `onCancel` restores the start width. The keyboard path stays in Blazor and shares the clamp vectors. |
-| `scheduler.js` | Event resize (time grid and timeline) with a mouse, finger or pen: `attach(document, { selector: '.tm-scheduler-event-resize-handle', threshold: 2, longPressMs: 400 })`. The long-press applies to touch only, so a quick swipe scrolls (the coarse handle is `touch-action: pan-y` on the time grid and `pan-x` on the timeline, capped at `min(var(--tm-space-4), 25%)`, with a visible grip under `hover: none`); mouse and pen keep the 2px threshold. Hold, then drag, to resize. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the `NotifyResizeComplete` callback are unchanged. The mouse keeps HTML5 drag-and-drop for moving the event body. |
+| `scheduler.js` | Event resize (time grid and timeline) with a mouse, finger or pen: `attach(document, { selector: '.tm-scheduler-event-resize-handle', threshold: 2, longPressMs: 400 })`. The long-press applies to touch only, so a quick swipe scrolls (the coarse handle is `touch-action: pan-y` on the time grid and `pan-x` on the timeline, capped at `min(var(--tm-space-4), 25%)`, with a visible grip under `hover: none`); mouse and pen keep the 2px threshold. Hold, then drag, to resize. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the `NotifyResizeComplete` callback are unchanged. The mouse keeps HTML5 drag-and-drop for moving the event body. Its resize has no keyboard alternative yet — deferred to the Scheduler plan; new adopters use `attachKeyboardMove`. |
 
 Gantt, Dashboard, DiagramEditor, Wireframe and the Signing designer adopt it in their own plans; none
 of them may add a second implementation.

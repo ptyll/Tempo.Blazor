@@ -40,6 +40,51 @@ export function prefersReducedMotion() {
     }
 }
 
+const ARROW_STEP = Object.freeze({
+    ArrowLeft: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 },
+    ArrowUp: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 },
+});
+
+/**
+ * The keyboard alternative to a drag (WCAG 2.5.7). Cancels ONLY the Alt+Arrow chord on the focused
+ * item and reports the step; a plain arrow and every other key (Tab included) keep their browser
+ * behaviour. Alt+ArrowLeft/Right is the browser Back/Forward shortcut, so the cancel has to happen
+ * here, in the keydown listener — a Blazor `@onkeydown:preventDefault` would swallow Tab as well.
+ * A canvas editor that already nudges with plain arrows may keep doing so and not call this.
+ *
+ * @param {Element|null} element the focused item (or its container, with `selector`)
+ * @param {{ onStep?: (step: { key: string, x: number, y: number, event: Event }) => void, selector?: string }} [options]
+ * @returns {{ detach: () => void }}
+ */
+export function attachKeyboardMove(element, options = {}) {
+    if (!element || typeof element.addEventListener !== 'function') return { detach() {} };
+
+    const selector = typeof options.selector === 'string' && options.selector ? options.selector : null;
+    const onKeyDown = (event) => {
+        if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        const step = ARROW_STEP[event.key];
+        if (!step) return;
+        if (selector) {
+            const target = event.target?.closest?.(selector) ?? null;
+            if (!target || !element.contains(target)) return;
+        }
+        event.preventDefault?.();
+        options.onStep?.({ key: event.key, x: step.x, y: step.y, event });
+    };
+
+    element.addEventListener('keydown', onKeyDown);
+    let detached = false;
+    return {
+        detach() {
+            if (detached) return;
+            detached = true;
+            element.removeEventListener('keydown', onKeyDown);
+        },
+    };
+}
+
 const INERT = Object.freeze({
     detach() {},
     cancel() {},

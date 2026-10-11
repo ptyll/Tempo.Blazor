@@ -747,7 +747,9 @@ test('attachKeyboardMove preventDefaults only the Alt+Arrow chord and reports th
     const chord = { key: 'ArrowLeft', altKey: true, preventDefault() { this.prevented = true; } };
     el.dispatch('keydown', chord);
     assert.equal(chord.prevented, true, 'Alt+ArrowLeft must be cancelled or the browser navigates Back');
-    assert.deepEqual(steps, [{ key: 'ArrowLeft', x: -1, y: 0 }]);
+    assert.equal(steps.length, 1);
+    assert.equal(steps[0].key, 'ArrowLeft');
+    assert.deepEqual({ x: steps[0].x, y: steps[0].y }, { x: -1, y: 0 });
 
     const plain = { key: 'ArrowLeft', altKey: false, preventDefault() { this.prevented = true; } };
     el.dispatch('keydown', plain);
