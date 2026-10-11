@@ -240,17 +240,23 @@ public class PointerDragE2ETests : WasmTestBase
 
         foreach (var id in new[] { "i4", "i5" })
         {
+            // The previous swipe can leave the window at its maximum, so the next one has nowhere to go.
+            await page.EvaluateAsync("() => { window.scrollTo(0, 0); for (const el of document.querySelectorAll('*')) el.scrollTop = 0; }");
+            await page.Locator($"[data-event-id='{id}']").EvaluateAsync("el => el.scrollIntoView({ block: 'start' })");
             var before = await page.EvaluateAsync<double>($"() => document.querySelector(\"[data-event-id='{id}']\").getBoundingClientRect().height");
             var box = (await page.Locator($"[data-event-id='{id}']").BoundingBoxAsync())!;
-            var scrollBefore = await page.EvaluateAsync<double>("() => window.scrollY");
-            await TouchAsync(session, "touchStart", box.X + box.Width / 2, box.Y + box.Height / 2);
-            for (var i = 1; i <= 8; i++)
+            // The day grid may scroll the window or an ancestor. Record every one.
+            var scrollBefore = await ScrollOffsetsAsync(page);
+            var x = box.X + box.Width / 2;
+            var y = box.Y + box.Height / 2;
+            await TouchAsync(session, "touchStart", x, y);
+            for (var i = 1; i <= 6; i++)
             {
-                await TouchAsync(session, "touchMove", box.X + box.Width / 2, box.Y + box.Height / 2 - 40.0 * i);
+                await TouchAsync(session, "touchMove", x, y + 40.0 * i);
             }
-            await TouchAsync(session, "touchEnd", box.X + box.Width / 2, box.Y + box.Height / 2 - 320);
-            var scrollAfter = await page.EvaluateAsync<double>("() => window.scrollY");
-            Assert.AreNotEqual(scrollBefore, scrollAfter, $"{width}px: a centre swipe on {id} must scroll");
+            await TouchAsync(session, "touchEnd", x, y + 240);
+            var scrollAfter = await ScrollOffsetsAsync(page);
+            Assert.AreNotEqual(scrollBefore, scrollAfter, $"{width}px: a centre swipe on {id} must scroll ({scrollBefore} -> {scrollAfter})");
             var after = await page.EvaluateAsync<double>($"() => document.querySelector(\"[data-event-id='{id}']\").getBoundingClientRect().height");
             Assert.AreEqual(before, after, 1.0, $"{width}px: {id} was resized by a swipe");
         }
@@ -389,6 +395,15 @@ public class PointerDragE2ETests : WasmTestBase
     }
 
     // ── touch plumbing ──────────────────────────────────────────────────────────────────────
+
+    private static Task<double> ScrollOffsetsAsync(IPage page)
+        => page.EvaluateAsync<double>(@"() => {
+            let total = window.scrollY;
+            for (const el of document.querySelectorAll('*')) {
+                if (el.scrollTop) total += el.scrollTop;
+            }
+            return total;
+        }");
 
     private static Task TouchAsync(ICDPSession session, string type, double x, double y)
         => session.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
