@@ -2,21 +2,6 @@
 
 ## 2.9.1 (unreleased)
 
-### Added
-
-- **`docs/redesign-foundation.md` maps the redesign foundation.** One page links the
-  contracts this release introduced (tokens, layout, sheet, focus scope, overlays,
-  toolbar overflow, the mobile action bar, the editor shell, pointer drag, plurals
-  and relative time) instead of restating them, and lists the follow-ups that are
-  deliberately not in this release.
-
-### Fixed
-
-- **A toast stays above a popup opened after it.** A date, date-time or date-range
-  picker promotes its calendar through `overlay.js`, which called `showPopover()`
-  directly and so never re-raised a toast already on screen. It now promotes through
-  the shared top-layer helper, like every other modal surface.
-
 ### Breaking / Migration
 
 - **Anchored panels present as a bottom sheet on mobile only where a component opts in.**
@@ -559,6 +544,12 @@
 
 ### Added
 
+- **`docs/redesign-foundation.md` maps the redesign foundation.** One page links the
+  contracts this release introduced (tokens, layout, sheet, focus scope, overlays,
+  toolbar overflow, the mobile action bar, the editor shell, pointer drag, plurals
+  and relative time) instead of restating them, and lists the follow-ups that are
+  deliberately not in this release.
+
 - **Additive core extensions (F8).** Every parameter defaults off. The shortcuts dialog's title gains a
   stable `id` and the dialog an `aria-labelledby` pointing at it, the palette's result list gains an
   `aria-label`, and the copy button's accessible name is localized — accessibility fixes, documented
@@ -751,6 +742,12 @@
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 
 ### Fixed
+
+- **A toast stays above any popup opened after it.** `overlay.js` promoted every
+  `TmOverlayPanel` popover (date pickers, dropdowns, menus, the notification bell) by
+  calling `showPopover()` directly, so a toast already on screen slipped behind it. It
+  now promotes through the shared top-layer helper, which re-raises pinned toasts; the
+  set of promoted surfaces is unchanged.
 
 - **F6 review round 2.** `TmEditorShell`: the tablet rail the shell imposes itself can be expanded
   even when the host binds no `CollapsedPanels`; with `Breakpoints` the internal `TmMobileActionBar`

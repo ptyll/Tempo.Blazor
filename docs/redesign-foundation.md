@@ -4,9 +4,9 @@ The redesign of the heavy components (data table, scheduler, gantt, dashboard, t
 editors) stands on one shared foundation: semantic tokens and an opt-in theme, one
 responsive contract, one sheet, one focus scope, one overlay engine, one overflow
 toolbar, one mobile action bar, one editor shell, one pointer gesture, and one
-plural/relative-time implementation. Everything here is **additive** — a parameter's
-default is today's behaviour — and lives in `Tempo.Blazor` or
-`Tempo.Blazor.Abstractions`. No logic specific to one component belongs in core.
+plural/relative-time implementation. New parameters are opt-in — a parameter's default
+is today's behaviour — except for the breaking and migration entries listed in the
+CHANGELOG; everything lives in `Tempo.Blazor` or `Tempo.Blazor.Abstractions`. No logic specific to one component belongs in core.
 
 This page is the map. Each contract has its own document; read that one before
 building on the primitive. The `CHANGELOG.md` heading `2.9.1 (unreleased)` lists the
@@ -30,9 +30,9 @@ Recorded follow-ups that are **not** part of the foundation and are **not** done
 | A shared `ITmUserTimeZone` (one browser read, reused by Scheduler and Gantt) | recorded, not scheduled |
 | `TmDocumentEditorToolbar` keeps its own overflow mechanism; core exposes `TmToolbar.OverflowPresentation="Popover"` for selection-keeping editor toolbars | DocumentEditor plan (DE-1.2) |
 | `TmDiagramEditor` renders its toolbar buttons outside `TmToolbar` | DiagramEditor plan |
+| Toolbar core prerequisites for DE-1.2 and DiagramEditor adoption: a collapsible non-button item contract, `Pressed` → checked menu entries (`menuitemcheckbox`), and group headers in the More menu ([toolbar.md](toolbar.md)) | core follow-up, not scheduled |
 | Extension-package dialogs still paint in their z-index band (rule 9 of [overlays.md](overlays.md#rules)) | each package's plan |
-| The gallery demo has no images, so `TmLightbox` cannot be opened there | demo follow-up |
-| 14 unit tests fail on `main` for environment reasons (packaging workflow clones, release-evidence paths, one frozen tabs snapshot) and are excluded from the gate | not a foundation defect |
+| 10 unit tests fail on `main` for environment reasons (packaging workflow clones, release-evidence paths, one frozen tabs snapshot) and are excluded from the gate | not a foundation defect |
 
 ## Where to read what
 
@@ -163,7 +163,7 @@ tabindex, the divider rules, the migration from the DocumentEditor toolbar — i
 
 ## F5 — Mobile action bar
 
-`TmMobileActionBar` takes `TmActionItem` children. `Placement` defaults to
+`TmMobileActionBar` takes an `Items` list of `TmActionItem` models. `Placement` defaults to
 `ActionBarPlacement.StickyContainer` (in flow, `position: sticky`); `FixedViewport` is
 the deliberate opt-in and resolves against the viewport scope; `Inline` never sticks.
 `TmActionItem.Overflow` is `Auto` (default), `Never` or `Always`, independent of
@@ -223,8 +223,8 @@ adopter does not get the same exemption.
 
 `Loc.Plural("Key", n)` picks the CLDR category from the UI culture and formats the
 number itself. The resource family is `Key_One`, `Key_Few`, `Key_Many`, `Key_Other`
-(and `Key_Two`, `Key_Zero` where the culture has them); a missing category falls back
-to the base key. [localization-plurals.md](localization-plurals.md).
+(`TmPluralCategory` has exactly these four); the lookup order is the category form,
+then `Key_Other`, then the plain `Key`. [localization-plurals.md](localization-plurals.md).
 
 `ITmRelativeTimeFormatter` (`Format`, plus a default `Absolute` that prints the
 absolute stamp) is registered **scoped** by `AddTempoBlazor()`. No
@@ -275,8 +275,8 @@ Each primitive has a reference page in `src/Tempo.Blazor.Demo.SharedUI/Pages/`:
 (`FeedbackPage`), `/overlay` and `/overlay-no-scope` (`OverlayPage`,
 `OverlayNoScopePage`), `/editor-shell` (`EditorShellPage`), `/toolbar-forms`
 (`ToolbarFormsPage`), `/mobile-action-bar` (`MobileActionBarPage`). The additive
-extensions have no page of their own — the demo shows them on `/layout`, `/forms`
-and `/signing-components`. The theme switch (light/dark, default/indigo) is the
+extensions have no page of their own — the demo shows them on `/layout`, `/forms`,
+`/feedback` and `/signing-components`. The theme switch (light/dark, default/indigo) is the
 demo's own chrome, not a page.
 
 ## What this unblocks
@@ -290,7 +290,7 @@ From the dependency matrix
 | F1 layout | every plan's desktop/visual phase; Dashboard container layout; DocumentEditor workspace |
 | F2 sheet, dialog, focus | the mobile dialogs — the most common dependency (17 groups) |
 | F3 overlays | anchored menus and pickers on mobile |
-| F4 toolbar | Scheduler, Gantt, DocumentEditor and DiagramEditor toolbars |
+| F4 toolbar | Scheduler and Gantt toolbars; DocumentEditor (DE-1.2) and DiagramEditor only after the core prerequisites in [toolbar.md](toolbar.md) |
 | F5 action bar | mobile primary actions |
 | F6 editor shell | DocumentEditor, DiagramEditor, Notion, Spreadsheet, Signing and Wireframe panel frames |
 | F7 pointer drag | Scheduler (pilot), then Gantt, Dashboard, DiagramEditor, Wireframe, Signing |
