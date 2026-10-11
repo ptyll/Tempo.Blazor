@@ -149,6 +149,12 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
 
         cut.FindAll(".tm-keyboard-shortcuts-subtitle").Should().BeEmpty();
         cut.FindAll(".tm-keyboard-shortcuts-item")[0].QuerySelectorAll("kbd").Count.Should().Be(2);
+
+        // L8: the heading wrapper exists only to hold a subtitle. With no description the title is a
+        // direct child of the header, which is the historical shape.
+        var header = cut.Find(".tm-keyboard-shortcuts-header");
+        header.QuerySelector(":scope > .tm-keyboard-shortcuts-heading").Should().BeNull();
+        header.QuerySelector(":scope > .tm-keyboard-shortcuts-title").Should().NotBeNull();
     }
 
     [Fact]
