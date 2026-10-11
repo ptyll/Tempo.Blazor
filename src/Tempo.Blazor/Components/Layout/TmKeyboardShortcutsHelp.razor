@@ -94,7 +94,8 @@
     /// <summary>Additional CSS class(es).</summary>
     [Parameter] public string? Class { get; set; }
 
-    private string DisplayTitle => Title ?? Loc["TmKeyboardShortcutsHelp_Title"];
+    // An empty title is not a name: aria-labelledby would point at a blank heading, so fall back.
+    private string DisplayTitle => string.IsNullOrEmpty(Title) ? Loc["TmKeyboardShortcutsHelp_Title"] : Title;
 
     // Stable for the instance so aria-labelledby keeps pointing at the title across renders.
     private readonly string TitleId = $"tm-shortcuts-title-{Guid.NewGuid():N}";
