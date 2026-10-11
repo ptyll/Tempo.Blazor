@@ -49,3 +49,44 @@
 }
 .tm-radio-input:focus-visible ~ .tm-radio-custom { box-shadow: var(--tm-focus-ring); }
 .tm-radio-text { font-size: var(--tm-font-size-sm); color: var(--tm-text-primary); line-height: 1.375; }
+
+/* ── Segmented (opt-in, Appearance=Segmented) ────────────
+   A single-choice value control. The tray is the radiogroup; each segment is a native button
+   with role=radio, so Enter/Space activate exactly once. */
+.tm-radio-group--segmented .tm-radio-group-options {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-bg-muted);
+    border-radius: var(--tm-radius-control);
+}
+
+.tm-radio-segment {
+    flex: 1 1 auto;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-radio-segment--checked {
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-color-border);
+}
+
+.tm-radio-segment:focus-visible {
+    outline: none;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-radio-segment:disabled {
+    color: var(--tm-text-disabled);
+    cursor: not-allowed;
+}

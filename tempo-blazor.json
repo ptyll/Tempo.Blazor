@@ -6000,6 +6000,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "RadioAppearance",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Inputs",
+      "description": "How TmRadioGroup presents its options: Radio (the default) or Segmented, a single-choice value control. Switching content belongs to TmTabs Variant=Pill.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Inputs/RadioAppearance.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "RadioLayout",
       "kind": "Enum",
       "category": "Components",
@@ -16138,7 +16148,7 @@
       "kind": "Component",
       "category": "Inputs",
       "namespace": "Tempo.Blazor.Components.Inputs",
-      "description": "Generic radio button group that renders a set of RadioOption items with label, help text, error message, and horizontal or vertical layout.",
+      "description": "Generic radio button group that renders a set of RadioOption items with label, help text, error message, and horizontal or vertical layout. Appearance=Segmented renders a single-choice segmented control for a value; switching content belongs to TmTabs Variant=Pill.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmRadioGroup.razor",
       "documentationStatus": "merged",
@@ -16152,6 +16162,13 @@
         }
       ],
       "parameters": [
+        {
+          "name": "Appearance",
+          "type": "RadioAppearance",
+          "isRequired": false,
+          "default": "RadioAppearance.Radio",
+          "description": "Radio (default) renders radio buttons. Segmented renders a single-choice segmented control for picking a value."
+        },
         {
           "name": "Class",
           "type": "string?",
@@ -26522,11 +26539,11 @@
     }
   ],
   "summary": {
-    "itemCount": 368,
-    "manualItemCount": 368,
-    "generatedItemCount": 360,
+    "itemCount": 369,
+    "manualItemCount": 369,
+    "generatedItemCount": 361,
     "generatedOnlyItemCount": 0,
     "componentCount": 201,
-    "publicApiTypeCount": 159
+    "publicApiTypeCount": 160
   }
 }
