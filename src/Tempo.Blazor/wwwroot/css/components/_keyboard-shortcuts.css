@@ -61,8 +61,8 @@
 
 .tm-keyboard-shortcuts-subtitle {
     margin: 0;
-    font-size: var(--tm-font-size-sm, 0.875rem);
-    color: var(--tm-text-secondary, #475569);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
 }
 
 .tm-keyboard-shortcuts-close {

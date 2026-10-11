@@ -75,6 +75,7 @@
   list-style: none;
 }
 .tm-command-palette-empty { padding: var(--tm-space-8); text-align: center; color: var(--tm-text-secondary); font-size: var(--tm-font-size-sm); }
+.tm-command-palette-group { list-style: none; }
 .tm-command-palette-separator {
   height: 1px;
   margin: var(--tm-space-2) var(--tm-space-3);

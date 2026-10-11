@@ -303,7 +303,7 @@ to{transform:translateX(0);}
 .tm-keyboard-shortcuts-header{display:flex;align-items:center;justify-content:space-between;padding:var(--tm-space-5,1.25rem) var(--tm-space-6,1.5rem);border-bottom:1px solid var(--tm-border-color,#e2e8f0);}
 .tm-keyboard-shortcuts-heading{display:flex;flex-direction:column;gap:var(--tm-space-1,0.25rem);min-width:0;}
 .tm-keyboard-shortcuts-title{margin:0;font-size:var(--tm-font-size-lg,1.125rem);font-weight:var(--tm-font-weight-semibold,600);color:var(--tm-text-primary,#0f172a);}
-.tm-keyboard-shortcuts-subtitle{margin:0;font-size:var(--tm-font-size-sm,0.875rem);color:var(--tm-text-secondary,#475569);}
+.tm-keyboard-shortcuts-subtitle{margin:0;font-size:var(--tm-font-size-sm);color:var(--tm-text-secondary);}
 .tm-keyboard-shortcuts-close{display:flex;align-items:center;justify-content:center;width:2rem;height:2rem;border:none;background:none;border-radius:var(--tm-radius-sm,0.25rem);cursor:pointer;color:var(--tm-text-tertiary,#94a3b8);transition:background-color 0.15s ease,color 0.15s ease;}
 .tm-keyboard-shortcuts-close:hover{background:var(--tm-color-surface-hover,#f1f5f9);color:var(--tm-text-primary,#0f172a);}
 .tm-keyboard-shortcuts-content{padding:var(--tm-space-5,1.25rem) var(--tm-space-6,1.5rem);overflow-y:auto;display:flex;flex-direction:column;gap:var(--tm-space-5,1.25rem);}
@@ -1735,6 +1735,7 @@ to{transform:translateY(0);opacity:1;}
 .tm-command-palette-input::placeholder{color:var(--tm-text-secondary);}
 .tm-command-palette-results,.tm-command-palette-list{max-height:24rem;overflow-y:auto;padding:var(--tm-space-2);margin:0;list-style:none;}
 .tm-command-palette-empty{padding:var(--tm-space-8);text-align:center;color:var(--tm-text-secondary);font-size:var(--tm-font-size-sm);}
+.tm-command-palette-group{list-style:none;}
 .tm-command-palette-separator{height:1px;margin:var(--tm-space-2) var(--tm-space-3);background:var(--tm-border-color);}
 .tm-command-palette-group-label{padding:var(--tm-space-2) var(--tm-space-3);font-size:var(--tm-font-size-xs);font-weight:var(--tm-font-weight-semibold);color:var(--tm-text-secondary);text-transform:uppercase;letter-spacing:0.05em;}
 .tm-command-palette-item{display:flex;align-items:center;gap:var(--tm-space-3);width:100%;padding:var(--tm-space-3);border-radius:var(--tm-radius-md);border:none;background:none;text-align:left;cursor:pointer;transition:background-color var(--tm-transition-fast);}

@@ -5035,6 +5035,12 @@
               "description": "Icon name for: AlignCenter."
             },
             {
+              "name": "AlignHorizontalDistributeCenter",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: AlignHorizontalDistributeCenter."
+            },
+            {
               "name": "AlignJustify",
               "kind": "Field",
               "type": "string",
@@ -5051,6 +5057,30 @@
               "kind": "Field",
               "type": "string",
               "description": "Icon name for: AlignRight."
+            },
+            {
+              "name": "AlignVerticalDistributeCenter",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: AlignVerticalDistributeCenter."
+            },
+            {
+              "name": "AlignVerticalJustifyCenter",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: AlignVerticalJustifyCenter."
+            },
+            {
+              "name": "AlignVerticalSpaceAround",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: AlignVerticalSpaceAround."
+            },
+            {
+              "name": "AlignVerticalSpaceBetween",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: AlignVerticalSpaceBetween."
             },
             {
               "name": "ArrowDown",
@@ -5171,6 +5201,12 @@
               "kind": "Field",
               "type": "string",
               "description": "Icon name for: Box."
+            },
+            {
+              "name": "BringToFront",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: BringToFront, stacking order."
             },
             {
               "name": "Brush",
@@ -5323,6 +5359,12 @@
               "description": "Icon name for: Copy."
             },
             {
+              "name": "CornerUpLeft",
+              "kind": "Field",
+              "type": "string",
+              "description": "Icon name for: CornerUpLeft, a reply arrow."
+            },
+            {
               "name": "Cpu",
               "kind": "Field",
               "type": "string",
@@ -5441,48 +5483,6 @@
               "kind": "Field",
               "type": "string",
               "description": "Icon name for: Filter."
-            },
-            {
-              "name": "Fire",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: Fire, Trending."
-            },
-            {
-              "name": "Folder",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: Folder."
-            },
-            {
-              "name": "FolderOpen",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: FolderOpen."
-            },
-            {
-              "name": "FolderPlus",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: FolderPlus, AddFolder."
-            },
-            {
-              "name": "GalleryHorizontalEnd",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: GalleryHorizontalEnd, style gallery."
-            },
-            {
-              "name": "Gem",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: Gem, Diamond."
-            },
-            {
-              "name": "GitCompare",
-              "kind": "Field",
-              "type": "string",
-              "description": "Icon name for: GitCompare, compare."
             }
           ]
         },
