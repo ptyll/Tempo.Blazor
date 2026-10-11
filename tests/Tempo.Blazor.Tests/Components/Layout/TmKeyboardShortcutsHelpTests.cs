@@ -129,6 +129,21 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmKeyboardShortcutsHelp_EmptyTitle_FallsBackToTheLocalizedDefault()
+    {
+        // L13: an empty title is not a name. aria-labelledby must point at the localized default,
+        // not at a heading that renders nothing.
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.Title, ""));
+
+        var dialog = cut.Find(".tm-keyboard-shortcuts-modal");
+        var heading = cut.Find("#" + dialog.GetAttribute("aria-labelledby"));
+        heading.TextContent.Trim().Should().Be("Keyboard Shortcuts");
+    }
+
+    [Fact]
     public void TmKeyboardShortcutsHelp_Has_Dialog_Role()
     {
         var cut = Render<TmKeyboardShortcutsHelp>(p => p
