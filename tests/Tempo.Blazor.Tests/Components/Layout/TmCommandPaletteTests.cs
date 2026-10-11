@@ -181,6 +181,64 @@ public class TmCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmCommandPalette_Default_RendersAFlatList_AndOneShortcutKbd()
+    {
+        // Frozen default: categories do not insert separators, and a shortcut stays one kbd.
+        var actions = new ICommandPaletteAction[]
+        {
+            new TestAction("a1", "New File", null, Shortcut: "Ctrl+N", Category: "File"),
+            new TestAction("a2", "Open", null, Shortcut: "Ctrl+O", Category: "File"),
+        };
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.Actions, actions));
+
+        cut.FindAll(".tm-command-palette-separator").Should().BeEmpty();
+        cut.FindAll(".tm-command-palette-group").Should().BeEmpty();
+        cut.FindAll("kbd").Count.Should().Be(2);
+        cut.Find("kbd").TextContent.Trim().Should().Be("Ctrl+N");
+    }
+
+    [Fact]
+    public void TmCommandPalette_GroupByCategory_InsertsASeparatorBetweenGroups()
+    {
+        var actions = new ICommandPaletteAction[]
+        {
+            new TestAction("a1", "New File", null, Category: "File"),
+            new TestAction("a2", "Open", null, Category: "File"),
+            new TestAction("a3", "Undo", null, Category: "Edit"),
+        };
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.GroupByCategory, true)
+            .Add(c => c.Actions, actions));
+
+        cut.FindAll(".tm-command-palette-separator").Count.Should().Be(1);
+        cut.FindAll(".tm-command-palette-group-label").Select(l => l.TextContent.Trim())
+            .Should().Equal("File", "Edit");
+        // The separator is not an option, so arrow navigation still walks the actions only.
+        cut.FindAll("[role='option']").Count.Should().Be(3);
+    }
+
+    [Fact]
+    public void TmCommandPalette_SplitShortcuts_RendersOneKbdPerKey()
+    {
+        var actions = new ICommandPaletteAction[]
+        {
+            new TestAction("a1", "New File", null, Shortcut: "Ctrl+N"),
+            new TestAction("a2", "Help", null, Shortcut: "?"),
+        };
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.SplitShortcuts, true)
+            .Add(c => c.Actions, actions));
+
+        var groups = cut.FindAll(".tm-command-palette-shortcut");
+        groups[0].QuerySelectorAll("kbd").Select(k => k.TextContent.Trim()).Should().Equal("Ctrl", "N");
+        groups[1].QuerySelectorAll("kbd").Select(k => k.TextContent.Trim()).Should().Equal("?");
+    }
+
+    [Fact]
     public void TmCommandPalette_Enter_On_Close_Button_Closes_Without_Executing()
     {
         // The close control is a native <button>: Enter produces a click on
