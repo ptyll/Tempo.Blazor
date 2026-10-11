@@ -3442,7 +3442,9 @@ to{transform:translateY(0);}
 .tm-scheduler-timegrid-slot--drop-target{background:color-mix(in srgb,var(--tm-color-primary) 10%,transparent);}
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle{position:absolute;touch-action:none;left:0;right:0;height:6px;cursor:ns-resize;background:transparent;transition:background-color 0.1s ease;z-index:3;}
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle:hover{background:rgba(255,255,255,0.3);}
-@media (pointer:coarse){.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle{height:var(--tm-space-4);}
+@media (pointer:coarse){.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle{height:min(var(--tm-space-4),25%);touch-action:pan-y;}
+}
+@media (hover:none){.tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle::after{content:"";position:absolute;left:50%;top:50%;width:24px;height:4px;transform:translate(-50%,-50%);border-radius:var(--tm-radius-full,999px);background:var(--tm-border-color-strong);}
 }
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle--top{top:0;border-top:2px solid transparent;border-radius:2px 2px 0 0;}
 .tm-scheduler-timegrid-event:hover .tm-scheduler-event-resize-handle--top{border-top-color:color-mix(in srgb,var(--tm-bg-surface) 60%,transparent);}
@@ -3466,7 +3468,9 @@ to{transform:translateY(0);}
 .tm-scheduler-timeline-event-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle{position:absolute;touch-action:none;top:0;bottom:0;width:8px;background:transparent;transition:background-color 0.15s ease;z-index:3;}
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle:hover{background:rgba(255,255,255,0.35);}
-@media (pointer:coarse){.tm-scheduler-timeline-event .tm-scheduler-event-resize-handle{width:var(--tm-space-4);}
+@media (pointer:coarse){.tm-scheduler-timeline-event .tm-scheduler-event-resize-handle{width:min(var(--tm-space-4),25%);touch-action:pan-x;}
+}
+@media (hover:none){.tm-scheduler-timeline-event .tm-scheduler-event-resize-handle::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:24px;transform:translate(-50%,-50%);border-radius:var(--tm-radius-full,999px);background:var(--tm-border-color-strong);}
 }
 .tm-scheduler-timeline-event .tm-scheduler-event-resize-handle--left{left:0;cursor:w-resize;border-left:2px solid transparent;border-radius:2px 0 0 2px;}
 .tm-scheduler-timeline-event:hover .tm-scheduler-event-resize-handle--left{border-left-color:color-mix(in srgb,var(--tm-bg-surface) 60%,transparent);}
