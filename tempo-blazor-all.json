@@ -6582,6 +6582,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TmSignatureClearButtonPlacement",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Inputs",
+          "description": "Where TmSignatureCapture renders its clear button: Actions (the row under the surface, the default) or Overlay (the top-end corner of the surface).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmSignatureClearButtonPlacement.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TmTextLineDiff",
           "kind": "Class",
           "category": "Components",
@@ -16761,6 +16771,13 @@
               "description": "Additional CSS classes for the root element."
             },
             {
+              "name": "ClearButtonPlacement",
+              "type": "TmSignatureClearButtonPlacement",
+              "isRequired": false,
+              "default": "TmSignatureClearButtonPlacement.Actions",
+              "description": "Where the clear button renders. Actions (default) keeps it in the row under the surface; Overlay moves the same button into the top-end corner of the surface."
+            },
+            {
               "name": "Confirmed",
               "type": "EventCallback<TmSignatureCaptureChangedEventArgs>",
               "isRequired": false,
@@ -26507,12 +26524,12 @@
         }
       ],
       "summary": {
-        "itemCount": 367,
-        "manualItemCount": 367,
-        "generatedItemCount": 359,
+        "itemCount": 368,
+        "manualItemCount": 368,
+        "generatedItemCount": 360,
         "generatedOnlyItemCount": 0,
         "componentCount": 201,
-        "publicApiTypeCount": 158
+        "publicApiTypeCount": 159
       }
     },
     {
@@ -112270,10 +112287,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3197,
-    "manualItemCount": 3197,
+    "itemCount": 3198,
+    "manualItemCount": 3198,
     "generatedOnlyItemCount": 0,
     "componentCount": 472,
-    "publicApiTypeCount": 2672
+    "publicApiTypeCount": 2673
   }
 }

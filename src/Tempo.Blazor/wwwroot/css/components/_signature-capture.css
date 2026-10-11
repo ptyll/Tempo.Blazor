@@ -70,6 +70,19 @@
     color: var(--tm-text-disabled);
 }
 
+.tm-signature-capture--overlay-clear .tm-signature-capture__surface {
+    position: relative;
+}
+
+.tm-signature-capture--overlay-clear .tm-signature-capture__clear {
+    position: absolute;
+    top: var(--tm-space-2);
+    inset-inline-end: var(--tm-space-2);
+    z-index: 1;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+}
+
 .tm-signature-capture__surface {
     min-height: var(--tm-space-16);
     border: 1px solid var(--tm-border-color);

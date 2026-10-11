@@ -117,6 +117,12 @@
       "description": "Whether a reason input should be shown."
     },
     {
+      "name": "ClearButtonPlacement",
+      "type": "TmSignatureClearButtonPlacement",
+      "isRequired": false,
+      "description": "Where the clear button renders. Actions (default) keeps it in the row under the surface; Overlay moves the same button into the top-end corner of the surface."
+    },
+    {
       "name": "ShowConfirmButton",
       "type": "bool",
       "isRequired": false,

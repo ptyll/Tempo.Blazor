@@ -21,6 +21,15 @@
     </div>
 
     <div class="tm-signature-capture__surface">
+        @if (ClearButtonPlacement == TmSignatureClearButtonPlacement.Overlay)
+        {
+            <button type="button"
+                    class="tm-signature-capture__clear"
+                    disabled="@Disabled"
+                    @onclick="ClearAsync">
+                @Loc["TmSigning_Clear"]
+            </button>
+        }
         @if (Mode == TmSignatureCaptureMode.Draw)
         {
             <svg @ref="_canvasRef"
@@ -166,12 +175,15 @@
                 <span>@Loc["TmSignatureCapture_Confirm"]</span>
             </button>
         }
-        <button type="button"
-                class="tm-signature-capture__clear"
-                disabled="@Disabled"
-                @onclick="ClearAsync">
-            @Loc["TmSigning_Clear"]
-        </button>
+        @if (ClearButtonPlacement == TmSignatureClearButtonPlacement.Actions)
+        {
+            <button type="button"
+                    class="tm-signature-capture__clear"
+                    disabled="@Disabled"
+                    @onclick="ClearAsync">
+                @Loc["TmSigning_Clear"]
+            </button>
+        }
     </div>
 
     @if (IsInvalid)

@@ -86,6 +86,13 @@ public partial class TmSignatureCapture
     /// <summary>Whether to show an explicit confirmation button for the current signature.</summary>
     [Parameter] public bool ShowConfirmButton { get; set; }
 
+    /// <summary>
+    /// Where the clear button renders. Defaults to <see cref="TmSignatureClearButtonPlacement.Actions"/>,
+    /// the row under the surface. <see cref="TmSignatureClearButtonPlacement.Overlay"/> moves the same
+    /// button into the top-end corner of the surface; it stays one button, in the tab order.
+    /// </summary>
+    [Parameter] public TmSignatureClearButtonPlacement ClearButtonPlacement { get; set; } = TmSignatureClearButtonPlacement.Actions;
+
     /// <summary>Callback invoked when the current signature is explicitly confirmed.</summary>
     [Parameter] public EventCallback<TmSignatureCaptureChangedEventArgs> Confirmed { get; set; }
 
@@ -123,6 +130,7 @@ public partial class TmSignatureCapture
             var classes = new List<string> { "tm-signature-capture" };
             AddClass(classes, Disabled, "tm-signature-capture--disabled");
             AddClass(classes, IsInvalid, "tm-signature-capture--invalid");
+            AddClass(classes, ClearButtonPlacement == TmSignatureClearButtonPlacement.Overlay, "tm-signature-capture--overlay-clear");
             if (!string.IsNullOrWhiteSpace(Class))
             {
                 classes.Add(Class);
