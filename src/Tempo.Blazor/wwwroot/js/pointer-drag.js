@@ -264,7 +264,11 @@ export function attach(element, options = {}) {
     }
 
     function onKeyDown(event) {
-        if (event.key === 'Escape' && session) cancelGesture('escape', event);
+        if (event.key === 'Escape' && session) {
+            cancelGesture('escape', event);
+            // This Escape cancelled a drag. It must not also close the dialog or sheet around it.
+            event.stopPropagation?.();
+        }
     }
 
     function onLostCapture(event) {
@@ -278,7 +282,13 @@ export function attach(element, options = {}) {
     }
 
     function onPointerDown(event) {
-        if (detached || session) return;
+        if (detached) return;
+        if (session) {
+            // A pointer that vanished without pointerup/pointercancel left a session nothing can end.
+            // A new primary pointer cancels it (never commits) and then starts its own gesture.
+            if (event.pointerId === session.pointerId) return;
+            cancelGesture('superseded', event);
+        }
         if (event.button !== undefined && event.button !== 0) return;
         if (event.isPrimary === false) return;
         if (pointerTypes && !pointerTypes.includes(event.pointerType)) return;

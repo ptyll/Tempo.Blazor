@@ -58,11 +58,11 @@ the top of the file, not inside a later callback. Two caveats:
 
 | Concern | Behaviour |
 |---------|-----------|
-| **Pointer capture** | `setPointerCapture(pointerId)` on press and `releasePointerCapture(pointerId)` on every exit. The id is required: the argument-less call throws in a real DOM and leaks the capture. |
+| **Pointer capture** | `setPointerCapture(pointerId)` on press and `releasePointerCapture(pointerId)` on every exit. The id is required: the argument-less call throws in a real DOM and leaks the capture. A new primary `pointerdown` with a different `pointerId` cancels a stale session first (`reason: 'superseded'`, never `onEnd`) — a pointer that vanished without `pointerup` would otherwise leave a gesture nothing can finish. |
 | **One pointer** | Only the first (primary) pointer drives a gesture. A second finger can neither move nor end it. Secondary mouse buttons never start one. |
 | **Threshold** | `threshold` px (default 4) of movement before `onStart`. Below it the press is a tap: `onPress` and `onRelease({ outcome: 'tap' })` only, and its `click` is untouched. |
 | **Long-press** | `longPressMs > 0` (touch only): the drag starts after the finger rests that long (`origin: 'long-press'`). Moving more than `longPressTolerance` (8 px) first is a scroll — the long-press is abandoned and the page scrolls normally. A mouse ignores `longPressMs`. |
-| **Cancel** | `Escape` (while a gesture is active), `pointercancel`, `lostpointercapture`, a mouse move with no button held (a missed mouse-up), and `detach()` all call `onCancel({ reason })` — **never** `onEnd` — and restore nothing the host did not ask for. |
+| **Cancel** | `Escape` (while a gesture is active), `pointercancel`, `lostpointercapture`, a mouse move with no button held (a missed mouse-up), and `detach()` all call `onCancel({ reason })` — **never** `onEnd` — and restore nothing the host did not ask for. The `Escape` that cancels a drag calls `stopPropagation`, so it does not also close a surrounding dialog or sheet. |
 | **Click suppression** | The `click` that follows a real drag is swallowed once (it expires on the next task, so an unrelated later click is never eaten). `suppressClick: false` opts out. |
 | **touch-action** | See below. |
 | **Reduced motion** | Every callback receives `reducedMotion` (`prefers-reduced-motion: reduce`). Skip animation, snap instead of easing. |
@@ -85,7 +85,10 @@ the top of the file, not inside a later callback. Two caveats:
 | `touchAction` | see below | Explicit `touch-action` for the element; `null` leaves it alone. |
 
 `onPress` and `onStart` may return `false` to veto the gesture (the capture is released and nothing
-else runs). Each callback receives `{ event, pointerId, pointerType, target, startX, startY, x, y,
+else runs). The helper calls `preventDefault` on the `pointerdown` of an immediate drag, and that
+suppresses the browser's compatibility mouse events (`mousedown`/`mouseup`) in the matched subtree. An adopter with a
+child that listens for `@onmousedown` must convert it to `@onpointerdown`, or veto the gesture in
+`onPress` and handle the press itself. Each callback receives `{ event, pointerId, pointerType, target, startX, startY, x, y,
 dx, dy, origin, reducedMotion }`; `onCancel` adds `reason`, `onRelease` adds `outcome`
 (`'tap' | 'end' | 'cancel' | 'aborted'`) and `started`.
 
