@@ -496,12 +496,18 @@
   services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "TmTimeline_MinutesAgo"
   // after
   services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "Tm_Time_MinutesAgo"
-  services.AddSingleton<ITmRelativeTimeFormatter, MyFormatter>();   // or replace the whole formatter
+  services.AddScoped<ITmRelativeTimeFormatter, MyFormatter>();   // scoped, like the built-in one
   ```
 
   Timestamps older than a week now show the absolute date in the culture format (`Tm_Time_DateFormat`)
   instead of `TmTimeline_DateFormat`; a timestamp between one and six days old reads "2 days ago"
-  (it used to be a date after 24 hours).
+  (it used to be a date after 24 hours). `TmActivityTimeline` and `TmActivityComments` now show that
+absolute date after 7 days; before, both kept saying "N days ago" forever.
+
+The formatter is registered **scoped** (it reads the scope's `ITmLocalizer` and `TimeProvider`).
+Calendar days are judged in `TimeProvider.LocalTimeZone`. On Server and prerender that zone is the
+server's, so the host registers a scoped TimeProvider whose `LocalTimeZone` is the user's zone
+(user decision Q1=A). A shared `ITmUserTimeZone` is a recorded follow-up, not a component parameter.
 
 - **`scheduler.js` resizes with Pointer Events and loads `pointer-drag.js`.** The document-level
   `mousedown`/`mousemove`/`mouseup` listeners are replaced by the shared helper, so a finger or pen can
@@ -510,7 +516,7 @@
   `NotifyResizeComplete` callback are unchanged. **Migration:** the script now `import()`s
   `pointer-drag.js` from the folder `scheduler.js` itself was served from, so both files must be
   reachable from the same `_content/Tempo.Blazor/js/` path (no change for the standard static-asset
-  setup); a Content-Security-Policy that restricts `script-src` must allow that module like it allows
+  setup). Before, scheduler.js was a classic script and needed nothing else; after, a bundler or a Content-Security-Policy that restricts `script-src` must allow pointer-drag.js the same way it allows
   `scheduler.js`. `window.TempoBlazor.Scheduler.ready` is a new promise that resolves when the helper
   is attached.
 ### Added

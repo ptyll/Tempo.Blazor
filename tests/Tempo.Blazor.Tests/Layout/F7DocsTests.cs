@@ -94,8 +94,8 @@ public class F7DocsTests
         unreleased.Should().Contain("script-src");
 
         var overlay = Read("JsonDocumentation", "Abstractions", "ITmLocalizer.json");
-        overlay.Should().Contain("TryGetString").And.Contain("Culture");
-        overlay.Should().NotContain("GetString").And.NotContain("CurrentCulture");
+        overlay.Should().Contain("TryGetString").And.Contain("\"Culture\"");
+        overlay.Should().NotContain("\"GetString\"").And.NotContain("CurrentCulture");
     }
 
     [Fact]
