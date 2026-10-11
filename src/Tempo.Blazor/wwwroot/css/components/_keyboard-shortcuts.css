@@ -133,6 +133,7 @@
     min-width: 1.75rem;
     height: 1.5rem;
     padding: 0 var(--tm-space-2, 0.5rem);
+    white-space: nowrap;
     font-size: var(--tm-font-size-xs, 0.75rem);
     font-family: inherit;
     font-weight: var(--tm-font-weight-medium, 500);
