@@ -99,6 +99,25 @@ public class F7DocsTests
     }
 
     [Fact]
+    public void TouchDoc_SaysNewDragsUseTheHelper_AndListsThePrivateGestures()
+    {
+        var doc = Read("docs", "touch-interaction.md");
+        doc.Should().Contain("new drags must use pointer-drag.js");
+        doc.Should().Contain("existing private gestures migrate in their owners' plans");
+        doc.Should().NotContain("No component ships its own gesture");
+        foreach (var owner in new[]
+        {
+            "TmSplitterPane", "slider.js", "TmDataTable", "dashboard.js", "workflow-designer.js",
+            "tm-sheet.js", "TmColorGradient", "TmGantt", "TmSigningFieldOverlay",
+        })
+        {
+            doc.Should().Contain(owner);
+        }
+
+        doc.Should().Contain("pinch").And.Contain("out of scope");
+    }
+
+    [Fact]
     public void AgentsGuide_ListsThePointerDragModule()
     {
         Read("AGENTS.md").Should().Contain("pointer-drag.js");
