@@ -74,6 +74,41 @@ public class TmRadioGroupTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmRadioGroup_DefaultAppearance_RendersRadios_WithoutSegmentClass()
+    {
+        // Frozen default: a radio group stays radios. Segmented is opt-in.
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit"));
+
+        cut.Find(".tm-radio-group").ClassList.Should().NotContain("tm-radio-group--segmented");
+        cut.FindAll("input[type='radio']").Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void TmRadioGroup_SegmentedAppearance_RendersButtonsInAGroup()
+    {
+        string? captured = null;
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit")
+            .Add(c => c.Value, "banana")
+            .Add(c => c.Appearance, RadioAppearance.Segmented)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
+
+        var group = cut.Find(".tm-radio-group--segmented");
+        // A value, not content: radiogroup of buttons, one pressed.
+        group.GetAttribute("role").Should().Be("radiogroup");
+        var segments = cut.FindAll(".tm-radio-segment");
+        segments.Count.Should().Be(3);
+        segments.Should().OnlyContain(s => s.TagName == "BUTTON");
+        segments.Single(s => s.GetAttribute("aria-checked") == "true").TextContent.Should().Contain("Banana");
+
+        segments[0].Click();
+        captured.Should().Be("apple");
+    }
+
+    [Fact]
     public void TmRadioGroup_Default_Layout_Is_Vertical()
     {
         var cut = Render<TmRadioGroup<string>>(p => p
