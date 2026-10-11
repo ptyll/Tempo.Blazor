@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Components.Inputs;
 
@@ -232,5 +233,21 @@ public class TmRadioGroupTests : LocalizationTestBase
             .Add(c => c.Options, SampleOptions));
 
         cut.Find("[role='radiogroup']").HasAttribute("aria-labelledby").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Segmented_ReservesTheTouchTarget_OnlyForACoarsePointer()
+    {
+        // L11: 44px is a touch requirement. A mouse keeps the control height the other inputs use,
+        // and the touch target appears only inside the coarse-pointer query.
+        ThemeCss.Property("_radio-group.css", ".tm-radio-segment", "min-height")
+            .Should().Be("var(--tm-input-height-md)");
+
+        var css = ThemeCss.ComponentCss("_radio-group.css");
+        var coarse = System.Text.RegularExpressions.Regex.Match(
+            css, @"@media\s*\(pointer:\s*coarse\)\s*\{(?<body>.*)\}",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        coarse.Success.Should().BeTrue("the touch target must be gated on a coarse pointer");
+        coarse.Groups["body"].Value.Should().Contain("min-height: var(--tm-touch-target)");
     }
 }
