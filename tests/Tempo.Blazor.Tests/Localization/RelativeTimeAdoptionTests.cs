@@ -32,6 +32,17 @@ public class RelativeTimeAdoptionTests : LocalizationTestBase
         new("e1", "comment", "Alice", null, when, null, "Text", false);
 
     [Fact]
+    public void TmTimeline_renders_the_stamp_in_a_time_element_with_the_iso_instant()
+    {
+        var created = new DateTimeOffset(2026, 10, 11, 14, 20, 0, TimeSpan.Zero);
+        var cut = Render<TmTimeline>(p => p.Add(c => c.Entries, new[] { At(created) }));
+
+        var time = cut.Find("time.tm-timeline-timestamp");
+        time.GetAttribute("datetime").Should().Be(created.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        time.GetAttribute("title").Should().NotBeNullOrEmpty("the title is the absolute time in the formatter's zone");
+    }
+
+    [Fact]
     public void TmTimeline_renders_the_timestamp_through_the_registered_formatter()
     {
         var stub = new StubFormatter();

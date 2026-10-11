@@ -63,6 +63,15 @@ public class RelativeTimeFormatterTests
     // ── minutes and hours ───────────────────────────────────────────────────────────────────
 
     [Fact]
+    public void Future_minutes_and_hours_round_up_so_4m59s_is_in_5_min()
+    {
+        // Truncation said "in 4 min" for 4m59s, which reads as already elapsed. A future distance rounds up.
+        En(Now.AddMinutes(4).AddSeconds(59)).Should().Be("in 5 min");
+        En(Now.AddHours(2).AddMinutes(1)).Should().Be("in 3 h");
+        En(Now.AddMinutes(-4).AddSeconds(-59)).Should().Be("4 min ago", "the past keeps truncating");
+    }
+
+    [Fact]
     public void Minutes_ago()
     {
         Cs(Now.AddMinutes(-5)).Should().Be("před 5 min");

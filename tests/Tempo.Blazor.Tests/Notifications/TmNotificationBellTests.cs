@@ -20,6 +20,22 @@ public class TmNotificationBellTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Bell_FormatsTheStampThroughTheSharedFormatter_NotAPrivateEnglishCopy()
+    {
+        // J9: the bell carried its own "5m ago". Czech must come from ITmRelativeTimeFormatter.
+        UseCzechLocalization();
+        var notification = MakeNotification("alice", "Test");
+        notification.CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        _store.PublishAsync(notification).Wait();
+
+        var cut = Render<TmNotificationBell>();
+        cut.Find("button").Click();
+
+        cut.Markup.Should().Contain("před 5 min");
+        cut.Markup.Should().NotContain("5m ago");
+    }
+
+    [Fact]
     public void Bell_ShowsBadge_WhenUnreadNotifications()
     {
         _store.PublishAsync(MakeNotification("alice", "Test")).Wait();
