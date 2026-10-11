@@ -154,8 +154,9 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         var button = page.GetByTestId("copy-button-labelled");
         await button.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(button).ToBeVisibleAsync();
-        // Both states are rendered so the swap reserves its width; assert the visible one.
-        await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-sr-only)")).ToHaveTextAsync("Copy");
+        // Both states are rendered so the swap reserves its width; the inactive one is
+        // visibility:hidden, not sr-only, so the visible state is the one without --hidden.
+        await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-copy-button-label--hidden)")).ToHaveTextAsync("Copy");
 
         var box = await button.BoundingBoxAsync();
         Assert.IsNotNull(box, "the labelled button must paint");
@@ -168,8 +169,7 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         // clipboard access in a secure context. Stub the write so the assertion is about the label.
         await page.EvaluateAsync("() => { navigator.clipboard.writeText = () => Promise.resolve(); }");
         await button.ClickAsync();
-        // Both states are rendered so the swap reserves its width; the visible one is the announcement.
-        await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-sr-only)")).ToHaveTextAsync("Copied");
+        await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-copy-button-label--hidden)")).ToHaveTextAsync("Copied");
         await Assertions.Expect(button.Locator("[role='status']")).ToHaveTextAsync("Copied");
         await ShootAsync(page, button, $"copy-button-labelled-{width}");
     }
