@@ -75,6 +75,12 @@ public class TmCopyButtonTests : LocalizationTestBase
         cut.Find(".tm-copy-button-label").TextContent.Trim().Should().Be("Copied");
         // The accessible name keeps the historical long form until the action completes.
         cut.Find(".tm-copy-button").GetAttribute("aria-label").Should().Be("Copied");
+
+        // L10: the swap is visible, but a screen reader needs it announced. A polite live region
+        // carries "Copied" and is visually hidden so it never changes the layout.
+        var status = cut.Find("[role='status']");
+        status.TextContent.Trim().Should().Be("Copied");
+        status.ClassList.Should().Contain("tm-sr-only");
     }
 
     [Fact]
