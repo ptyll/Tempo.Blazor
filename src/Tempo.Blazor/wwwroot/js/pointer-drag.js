@@ -1,7 +1,8 @@
 // Tempo.Blazor pointer-drag helper (ES module) — the ONE shared pointer gesture for core and the
 // feature packages. Components must not write their own mouse/touch drag; they attach this.
 //
-//   import { attach } from '_content/Tempo.Blazor/js/pointer-drag.js';
+//   import { attach } from './pointer-drag.js';          // from another file in this folder
+//   // a split-package module: import { attach } from '../../Tempo.Blazor/js/pointer-drag.js';
 //   const drag = attach(handle, { threshold: 4, onStart, onMove, onEnd, onCancel });
 //   drag.detach();            // on dispose — safe to call twice, cancels a drag in progress
 //

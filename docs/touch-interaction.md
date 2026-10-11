@@ -7,7 +7,7 @@ Gantt, dashboard and designers will adopt next — runs on **one** helper:
 with no dependencies and knows nothing about the DOM shape of its host.
 
 ```js
-import { attach } from '_content/Tempo.Blazor/js/pointer-drag.js';
+import { attach } from './pointer-drag.js';            // from another file in wwwroot/js/
 
 const drag = attach(handle, {
     threshold: 4,                       // px before a press becomes a drag (a tap stays a tap)
@@ -22,7 +22,37 @@ drag.detach();                          // on dispose; cancels a drag in progres
 ```
 
 A classic script (`scheduler.js`) loads it with a dynamic `import()` resolved from its own
-`document.currentScript.src`; a module (`tm-editor-shell.js`) imports it statically.
+`document.currentScript.src`; a module (`tm-editor-shell.js`) imports it statically. The specifier is
+always **relative**. A bare `'_content/Tempo.Blazor/js/pointer-drag.js'` is not a module specifier: the
+browser throws `TypeError` unless the host added an import map, which this library does not.
+
+## Consuming from a split package
+
+A module that ships in another package (`Tempo.Blazor.DiagramEditor`, `Tempo.Blazor.Signing`, …) cannot
+use `./pointer-drag.js` — that resolves inside its own `_content/<Package>/js/` folder. Static web assets
+of referenced packages are served as siblings, so the module walks up to the core package:
+
+```js
+import { attach } from '../../Tempo.Blazor/js/pointer-drag.js';
+```
+
+A classic script has no import path of its own. Resolve the helper from the URL the browser actually
+loaded the script from, which keeps a `<base href>` and a fingerprinted `MapStaticAssets` name intact:
+
+```js
+const helperUrl = new URL('pointer-drag.js', document.currentScript.src).href;
+const { attach } = await import(helperUrl);
+```
+
+`document.currentScript` is only set while the classic script evaluates synchronously, so capture it at
+the top of the file, not inside a later callback. Two caveats:
+
+- **`<base href>` and `MapStaticAssets`.** A root-absolute `'/_content/…'` URL ignores `<base href>` and
+  misses the fingerprint `MapStaticAssets` appends to the file name, so the import 404s. Resolving
+  against `document.currentScript.src` (or a relative specifier, for a module) follows both.
+- **CSP.** A `script-src` policy that allows `scheduler.js` must also allow the module it imports. The
+  helper is served from the same `_content/Tempo.Blazor/js/` origin, so a host-wide nonce or hash for
+  that origin covers it; a per-file hash must list `pointer-drag.js` too.
 
 ## What the helper owns
 
