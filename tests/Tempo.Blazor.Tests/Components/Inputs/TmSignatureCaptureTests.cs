@@ -18,6 +18,22 @@ public class TmSignatureCaptureTests : LocalizationTestBase
         root.GetAttribute("data-mode").Should().Be("Draw");
         cut.Find("svg.tm-signature-capture__canvas").Should().NotBeNull();
         cut.Find(".tm-signature-capture__clear").TextContent.Should().Contain("Clear");
+        // Frozen default: the clear button lives in the actions row, not over the surface.
+        cut.Find(".tm-signature-capture__actions").InnerHtml.Should().Contain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture__surface").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+    }
+
+    [Fact]
+    public void Render_ClearButtonPlacementOverlay_MovesTheSameButtonOverTheSurface()
+    {
+        var cut = Render<TmSignatureCapture>(parameters =>
+            parameters.Add(p => p.ClearButtonPlacement, TmSignatureClearButtonPlacement.Overlay));
+
+        // One button, moved — not a second copy. It stays a native button so Enter/Space activate once.
+        cut.FindAll(".tm-signature-capture__clear").Count.Should().Be(1);
+        cut.Find(".tm-signature-capture__surface").InnerHtml.Should().Contain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture__actions").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+        cut.Find(".tm-signature-capture").ClassList.Should().Contain("tm-signature-capture--overlay-clear");
     }
 
     [Fact]
