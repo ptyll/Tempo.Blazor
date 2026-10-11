@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using FluentAssertions;
+using NSubstitute;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Resources;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Localization;
 
@@ -194,6 +196,38 @@ public class PluralLocalizerTests
         loc.Plural("Pending", 0).Should().Be("0 modification en attente");
         loc.Plural("Pending", 1).Should().Be("1 modification en attente");
         loc.Plural("Pending", 2).Should().Be("2 modifications en attente");
+    }
+
+    [Fact]
+    public void A_substitute_whose_Culture_is_null_does_not_throw_and_returns_the_indexer_value()
+    {
+        // NSubstitute/Moq proxies return null for an unimplemented default interface member.
+        // Plural must treat that as CurrentUICulture, not throw ArgumentNullException.
+        var localizer = Substitute.For<ITmLocalizer>();
+        localizer[Arg.Any<string>()].Returns(ci => ci.Arg<string>());
+        localizer[Arg.Any<string>(), Arg.Any<object[]>()].Returns("proxied");
+        _ = localizer.Culture; // the proxy's default is null; the call must not depend on it
+
+        var act = () => localizer.Plural("Pending", 2);
+
+        act.Should().NotThrow().Which.Should().Be("proxied");
+    }
+
+    [Fact]
+    public void Changelog_and_docs_do_not_claim_a_delegating_plain_key_override_keeps_working()
+    {
+        // The documented delegating pattern reads Key_One through the indexer, and the built-in
+        // fallback then returns the shipped family — so overriding only the plain key is bypassed.
+        var root = ThemeCss.RepositoryRoot().FullName;
+        var changelog = File.ReadAllText(Path.Combine(root, "CHANGELOG.md"));
+        var unreleased = changelog[..changelog.IndexOf("## 2.9.0 - ", StringComparison.Ordinal)];
+        var doc = File.ReadAllText(Path.Combine(root, "docs", "localization-plurals.md"));
+
+        unreleased.Should().NotContain("keeps working (`Plural` falls back to the plain key)");
+        unreleased.Should().NotContain("implementations compile and work unchanged");
+        unreleased.Should().Contain("_One/_Other").And.Contain("delegating");
+        doc.Should().Contain("delegating").And.Contain("_Few/_Many");
+        doc.Should().Contain("only when no family exists");
     }
 
     [Fact]
