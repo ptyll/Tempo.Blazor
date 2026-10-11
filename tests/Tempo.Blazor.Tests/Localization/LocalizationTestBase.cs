@@ -806,7 +806,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["Tm_Time_InHours"]        = "in {0} h",
         ["Tm_Time_YesterdayAt"]    = "yesterday at {0}",
         ["Tm_Time_TomorrowAt"]     = "tomorrow at {0}",
-        ["Tm_Time_TimeFormat"]     = "h:mm tt",
+
         ["Tm_Time_DateFormat"]     = "MMM d, yyyy",
         ["Tm_Time_DaysAgo_One"]    = "{0} day ago",
         ["Tm_Time_DaysAgo_Other"]  = "{0} days ago",

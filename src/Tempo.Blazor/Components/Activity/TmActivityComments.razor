@@ -32,9 +32,9 @@
                     <div class="tm-comment-body">
                         <div class="tm-comment-meta">
                             <span class="tm-comment-author">@authorName</span>
-                            <span class="tm-comment-time" title="@c.CreatedAt.ToString("g")">
+                            <time class="tm-comment-time" datetime="@c.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(c.CreatedAt)">
                                 @FormatRelativeTime(c.CreatedAt)
-                            </span>
+                            </time>
                             @if (c.EditedAt.HasValue)
                             {
                                 <span class="tm-comment-edited">(@Loc["TmActivityComments_Edited"])</span>
@@ -201,6 +201,9 @@
     /// <summary>The shared relative-time formatter (B19) - this component used to carry its own copy.</summary>
     private string FormatRelativeTime(DateTimeOffset dt)
         => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
+
+    private string AbsoluteTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(dt);
 
     private static string GetAuthorName(TmCommentEntry comment)
         => !string.IsNullOrWhiteSpace(comment.Author.DisplayName)

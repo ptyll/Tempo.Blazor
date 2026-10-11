@@ -49,7 +49,9 @@ public sealed class TmRelativeTimeFormatter : ITmRelativeTimeFormatter
 
         if (distance < TimeSpan.FromHours(1))
         {
-            var minutes = (int)distance.TotalMinutes;
+            // A future "in 4 min" for 4m59s reads as already elapsed, so the future rounds up. The past
+            // keeps truncating: "4 min ago" is still true for 4m59s.
+            var minutes = isPast ? (int)distance.TotalMinutes : (int)Math.Ceiling(distance.TotalMinutes);
             return _localizer[isPast ? "Tm_Time_MinutesAgo" : "Tm_Time_InMinutes", minutes];
         }
 
@@ -59,7 +61,7 @@ public sealed class TmRelativeTimeFormatter : ITmRelativeTimeFormatter
 
         if (days == 0)
         {
-            var hours = (int)distance.TotalHours;
+            var hours = isPast ? (int)distance.TotalHours : (int)Math.Ceiling(distance.TotalHours);
             return _localizer[isPast ? "Tm_Time_HoursAgo" : "Tm_Time_InHours", hours];
         }
 

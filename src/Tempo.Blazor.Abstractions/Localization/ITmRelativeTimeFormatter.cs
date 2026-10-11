@@ -15,4 +15,11 @@ public interface ITmRelativeTimeFormatter
     /// defaults to the clock's local zone.
     /// </param>
     string Format(DateTimeOffset value, DateTimeOffset? now = null, TimeZoneInfo? timeZone = null);
+
+    /// <summary>
+    /// The absolute time of <paramref name="value"/> in the zone the relative stamp was judged in,
+    /// for a <c>title</c> tooltip. Defaults to the same conversion <see cref="Format"/> uses.
+    /// </summary>
+    string Absolute(DateTimeOffset value, TimeZoneInfo? timeZone = null) =>
+        TimeZoneInfo.ConvertTime(value, timeZone ?? TimeZoneInfo.Local).ToString("g");
 }

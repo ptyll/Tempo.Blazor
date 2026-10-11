@@ -126,7 +126,12 @@ public interface ITmRelativeTimeFormatter
 | a week or more | 5. 10. 2026 | Oct 5, 2026 | 5 oct. 2026 |
 
 - **Future times** are handled (`za 3 h`, `zítra v 9:00`); the sub-minute window is symmetric so a
-  clock that is a few seconds ahead never prints "in 0 min".
+  clock that is a few seconds ahead never prints "in 0 min". A future minute or hour **rounds up**
+  (4m59s is "in 5 min", not "in 4 min", which would read as already elapsed); the past keeps
+  truncating.
+- **Capitalisation.** "Just now" / "Právě teď" / "À l'instant" stay sentence case: they open the
+  stamp, the way "Yesterday at 4:20 PM" does. The in-sentence forms ("5 min ago", "před 5 min") stay
+  lower case. Do not lowercase the opening stamps to match them.
 - **Time zone.** "Yesterday" is a calendar-day judgement made in the zone you pass (default: the
   clock's local zone), from the *instant* — the offset a `DateTimeOffset` happens to carry is
   irrelevant. A component that knows the user's zone (the Scheduler's `ResolveTimeZone()`) passes it.
@@ -168,6 +173,9 @@ public interface ITmRelativeTimeFormatter
   time inside "yesterday at …") and `Tm_Time_DateFormat` (the absolute date). The formats are
   resources because locale conventions differ from the .NET culture default (`H:mm`, not `HH:mm`,
   in Czech).
+- **No live refresh.** The stamp is computed when the component renders. Nothing ticks it forward from
+  "5 min ago" to "6 min ago"; the host re-renders (a new item, a circuit refresh) and the formatter
+  reads the clock again.
 - **Replacing it.** Register your own `ITmRelativeTimeFormatter` after `AddTempoBlazor()`.
 
 A component resolves it through `TmRelativeTime.Resolve(Services, Loc)`, which falls back to the

@@ -7,7 +7,7 @@
   "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmRelativeTimeFormatter.cs",
   "documentationStatus": "authored",
   "itemName": "ITmRelativeTimeFormatter",
-  "usedInComponents": [ "TmTimeline", "TmActivityTimeline", "TmActivityComments" ],
+  "usedInComponents": [ "TmTimeline", "TmActivityTimeline", "TmActivityComments", "TmNotificationBell" ],
   "examples": [
     {
       "title": "Deterministic formatting in a test",

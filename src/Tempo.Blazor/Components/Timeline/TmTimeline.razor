@@ -46,7 +46,7 @@
                         <TmAvatar Src="@entry.AuthorAvatarUrl" Size="AvatarSize.Sm" />
                     }
                     <span class="tm-timeline-author">@entry.AuthorName</span>
-                    <span class="tm-timeline-timestamp">@FormatTime(entry.CreatedAt)</span>
+                    <time class="tm-timeline-timestamp" datetime="@entry.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(entry.CreatedAt)">@FormatTime(entry.CreatedAt)</time>
                     @if (entry.IsInternal)
                     {
                         <span class="tm-timeline-internal-badge">@Loc["TmTimeline_Internal"]</span>
@@ -200,4 +200,7 @@
     /// <summary>The shared relative-time formatter ("just now", "5 min ago", "yesterday at 4:20 PM", a date after a week).</summary>
     private string FormatTime(DateTimeOffset dt)
         => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
+
+    private string AbsoluteTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(dt);
 }

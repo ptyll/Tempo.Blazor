@@ -71,7 +71,7 @@
                             </div>
                             <div class="tm-notification-bell__content">
                                 <span class="tm-notification-bell__message">@n.Title</span>
-                                <span class="tm-notification-bell__time">@FormatTime(n.CreatedAt)</span>
+                                <time class="tm-notification-bell__time" datetime="@n.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
                             </div>
                             @if (!n.IsRead)
                             {
@@ -203,15 +203,16 @@
         await LoadNotificationsAsync();
     }
 
-    private static string FormatTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt.ToUniversalTime();
-        if (diff.TotalMinutes < 1) return "just now";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
-        return dt.ToLocalTime().ToString("MMM d");
-    }
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>The shared formatter (B19). The bell used to carry a private English copy ("5m ago").</summary>
+    private string FormatTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Format(dt);
+
+    private string AbsoluteTime(DateTimeOffset dt)
+        => (_relativeTime ??= TmRelativeTime.Resolve(Services, Loc)).Absolute(dt);
 
     private static string TypeIcon(string type) => type switch
     {

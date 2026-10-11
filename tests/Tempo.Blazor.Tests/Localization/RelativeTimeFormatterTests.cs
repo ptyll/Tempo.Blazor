@@ -96,7 +96,9 @@ public class RelativeTimeFormatterTests
     public void Yesterday_names_the_clock_time()
     {
         Cs(Local(11, 16, 20)).Should().Be("včera v 16:20");
-        En(Local(11, 16, 20)).Should().Be("yesterday at 4:20 PM");
+        // en has no Tm_Time_TimeFormat: the clock falls back to the culture's "t", so en-GB is not forced to 12h.
+        var clock = Local(11, 16, 20).ToString("t", CultureInfo.GetCultureInfo("en"));
+        En(Local(11, 16, 20)).Should().Be($"yesterday at {clock}");
         Fr(Local(11, 16, 20)).Should().Be("hier à 16:20");
     }
 
@@ -148,7 +150,7 @@ public class RelativeTimeFormatterTests
     public void Tomorrow_names_the_clock_time()
     {
         Cs(Local(13, 9, 0)).Should().Be("zítra v 9:00");
-        En(Local(13, 9, 0)).Should().Be("tomorrow at 9:00 AM");
+        En(Local(13, 9, 0)).Should().Be($"tomorrow at {Local(13, 9, 0).ToString("t", CultureInfo.GetCultureInfo("en"))}");
         Fr(Local(13, 9, 0)).Should().Be("demain à 09:00");
     }
 
