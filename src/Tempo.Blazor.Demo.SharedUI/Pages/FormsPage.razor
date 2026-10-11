@@ -222,6 +222,13 @@
                               Label="Subscription Plan"
                               Options="@_planOptions"
                               @bind-Value="_selectedPlan" />
+                <div class="mt-6" data-testid="radio-segmented-demo">
+                    <TmRadioGroup T="string"
+                                  Label="Device"
+                                  Appearance="RadioAppearance.Segmented"
+                                  Options="@_deviceOptions"
+                                  @bind-Value="_selectedDevice" />
+                </div>
             </div>
             <div class="flex items-center">
                 @if (!string.IsNullOrEmpty(_selectedPlan))
@@ -1023,6 +1030,15 @@
         new("admin", "Admin"),
         new("editor", "Editor"),
         new("viewer", "Viewer"),
+    };
+
+    private string? _selectedDevice = "desktop";
+
+    private List<RadioOption<string>> _deviceOptions = new()
+    {
+        new("Desktop", "desktop"),
+        new("Tablet", "tablet"),
+        new("Mobile", "mobile"),
     };
 
     private List<RadioOption<string>> _planOptions = new()

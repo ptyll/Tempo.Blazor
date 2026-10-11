@@ -525,6 +525,20 @@
   is attached.
 ### Added
 
+- **Additive core extensions (F8).** Every parameter defaults off, so existing markup is unchanged.
+  `TmKeyboardShortcutsHelp.Description` renders a subtitle under the title and the dialog is labelled
+  by the title (`aria-labelledby`); `TmKeyboardShortcut` gains an optional `KeySeparator` (default
+  `+`), so a pair like "Arrow Up / Arrow Down" stays two keys instead of being split into a chord.
+  `TmCopyButton.ShowLabel` renders the localized Copy/Copied text beside the icon; the accessible
+  name keeps its historical wording. `TmCommandPalette.GroupByCategory` adds a heading and a
+  separator per category, and `SplitShortcuts` renders one `kbd` per key. `TmSignatureCapture.ClearButtonPlacement`
+  (`Actions|Overlay`, default `Actions`) moves the same clear button into the top-end corner of the
+  surface. A segmented control is a convention, not a component
+  ([docs/segmented-control.md](docs/segmented-control.md)): content switching uses `TmTabs Variant=Pill`,
+  a value uses `TmRadioGroup.Appearance` (`Radio|Segmented`, default `Radio`). Seventeen lucide names
+  the redesign plans share (`tablet`, `panel-left`, `group`, `magnet`, `scan`, `corner-up-left`, …)
+  now render as built-in icons.
+
 - **`pointer-drag.js` — the one shared pointer-drag helper** (`_content/Tempo.Blazor/js/pointer-drag.js`,
   F7): `attach(el, { threshold, longPressMs, selector, onStart, onMove, onEnd, onCancel, onRelease })`
   with pointer capture by `pointerId`, a movement threshold, touch long-press that keeps scrolling
