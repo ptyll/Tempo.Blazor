@@ -38,6 +38,13 @@ dotnet add package Tempo.Reporting.Engine          # Processing, layout, PDF/PNG
 dotnet add package Tempo.Blazor.Reporting          # Blazor report viewer/designer/explorer components
 ```
 
+## Redesign foundation
+
+The responsive primitives the component redesign builds on — layout modes, the bottom
+sheet, the overlay top layer, the editor shell, toolbar overflow, the shared pointer
+drag — are mapped in [docs/redesign-foundation.md](docs/redesign-foundation.md). Each
+contract has its own document; that page links them.
+
 ## Document Editor Cutover
 
 `TmDocumentEditor` defaults to the canvas engine after the phase 25 cutover. Rollback and migration notes are in [docs/document-editor-canvas-cutover.md](docs/document-editor-canvas-cutover.md).

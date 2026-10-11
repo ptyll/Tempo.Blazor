@@ -2,6 +2,8 @@
 
 Kompletní přehled všech komponent knihovny Tempo.Blazor, jejich parametrů, příkladů použití a validace formulářů.
 
+Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, editor shell, přetečení toolbaru, pointer drag, plurály a relativní čas) mapuje [docs/redesign-foundation.md](docs/redesign-foundation.md); každá smlouva má vlastní dokument, tato stránka je jen odkazuje.
+
 ---
 
 ## Obsah

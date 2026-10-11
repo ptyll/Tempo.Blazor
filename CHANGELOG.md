@@ -2,6 +2,14 @@
 
 ## 2.9.1 (unreleased)
 
+### Added
+
+- **`docs/redesign-foundation.md` maps the redesign foundation.** One page links the
+  contracts this release introduced (tokens, layout, sheet, focus scope, overlays,
+  toolbar overflow, the mobile action bar, the editor shell, pointer drag, plurals
+  and relative time) instead of restating them, and lists the follow-ups that are
+  deliberately not in this release.
+
 ### Breaking / Migration
 
 - **Anchored panels present as a bottom sheet on mobile only where a component opts in.**
