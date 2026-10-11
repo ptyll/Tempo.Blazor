@@ -165,3 +165,9 @@ of them may add a second implementation.
 DOM stubs (`npm run test:overlay`). A node test with fake pointer events cannot prove a gesture in a
 browser: drive every JS-owned gesture with a real Playwright mouse/touch drag and assert the result
 (width, persisted value, notified delta).
+
+The F7 E2E lanes write diagnostic shots under `tests/Tempo.Blazor.E2E/TestResults/` (`pointer-drag/`,
+`relative-time/`). That folder is gitignored (`[Tt]est[Rr]esult*/`), so those shots are not committed
+evidence and a fresh clone does not contain them. They are not a baseline. A
+baseline that must survive a clone belongs under `__screenshots__/`, which these lanes deliberately
+do not use.

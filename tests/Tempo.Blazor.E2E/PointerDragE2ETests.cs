@@ -9,7 +9,8 @@ namespace Tempo.Blazor.E2E;
 /// events - the B13 bug was that none of this worked) and a pen-typed pointer; Escape and a
 /// pointercancel roll the resize back without calling .NET. The editor-shell panel resizer (migrated
 /// onto the same helper) is driven with a real mouse drag and a SECOND shell on the page proves
-/// two instances do not share a gesture. Screenshots are viewport-only at the real viewport height.
+/// two instances do not share a gesture. Diagnostic shots go to gitignored TestResults, not a
+/// committed baseline.
 /// </summary>
 [TestClass]
 public class PointerDragE2ETests : WasmTestBase
