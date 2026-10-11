@@ -137,7 +137,7 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
                 });
                 return result.violations
                     .filter(v => v.impact === 'critical' || v.impact === 'serious')
-                    .map(v => `${v.impact}: ${v.id} - ${v.help}`);
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} [${v.nodes.map(n => n.target.join(' ')).join('; ')}]`);
             }
             """);
         Assert.AreEqual(0, violations.Length,
@@ -154,7 +154,8 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         var button = page.GetByTestId("copy-button-labelled");
         await button.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(button).ToBeVisibleAsync();
-        await Assertions.Expect(button.Locator(".tm-copy-button-label")).ToHaveTextAsync("Copy");
+        // Both states are rendered so the swap reserves its width; assert the visible one.
+        await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-sr-only)")).ToHaveTextAsync("Copy");
 
         var box = await button.BoundingBoxAsync();
         Assert.IsNotNull(box, "the labelled button must paint");
