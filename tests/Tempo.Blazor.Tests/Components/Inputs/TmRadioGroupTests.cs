@@ -209,4 +209,28 @@ public class TmRadioGroupTests : LocalizationTestBase
         radios[0].KeyDown("Home");
         captured.Should().Be("apple");
     }
+
+    [Fact]
+    public void TmRadioGroup_Label_NamesTheRadiogroup()
+    {
+        // L3: the visible label is not associated with the group, so the radiogroup has no
+        // accessible name. aria-labelledby must point at the label.
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Label, "Pick a fruit")
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Appearance, RadioAppearance.Segmented));
+
+        var labelId = cut.Find(".tm-radio-group-label").GetAttribute("id");
+        labelId.Should().NotBeNullOrEmpty();
+        cut.Find("[role='radiogroup']").GetAttribute("aria-labelledby").Should().Be(labelId);
+    }
+
+    [Fact]
+    public void TmRadioGroup_WithoutLabel_HasNoAriaLabelledBy()
+    {
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions));
+
+        cut.Find("[role='radiogroup']").HasAttribute("aria-labelledby").Should().BeFalse();
+    }
 }

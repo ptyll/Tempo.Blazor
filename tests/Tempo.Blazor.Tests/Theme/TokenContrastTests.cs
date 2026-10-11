@@ -73,6 +73,40 @@ public sealed class TokenContrastTests
     /// <c>_button.css</c> and then measures it — a revert to the decorative token fails on the
     /// value, a token re-tune fails on the ratio.
     /// </summary>
+    /// <summary>
+    /// F8 review L3: the checked segment's fill measured 1.10:1 against the tray and its border
+    /// 1.13:1 (dark 1.41 / 1.0), so the selected state had no WCAG 1.4.11 boundary. The border must
+    /// be the strong token and hold 3:1 against the tray in light, dark and the indigo theme.
+    /// </summary>
+    [Fact]
+    public void SegmentedCheckedBorder_KeepsThreeToOne_AgainstTheTray()
+    {
+        var declared = ThemeCss.Property("_radio-group.css", ".tm-radio-segment--checked", "border-color");
+        declared.Should().Be("var(--tm-border-color-strong)");
+
+        foreach (var dark in new[] { false, true })
+        {
+            var graph = ThemeCss.TokenGraph(dark);
+            foreach (var (name, value) in ThemeCss.Declarations(ThemeCss.CssPath("theme-indigo.css")))
+            {
+                graph[name] = value;
+            }
+
+            var ratio = ThemeCss.Contrast(
+                ThemeCss.ResolveColour(declared, graph),
+                ThemeCss.ResolveColour("var(--tm-bg-muted)", graph));
+            ratio.Should().BeGreaterThanOrEqualTo(3.0,
+                "hranice vybraného segmentu proti liště ({0}, indigo) musí držet 3:1 — změřeno {1:0.00}:1",
+                dark ? "dark" : "light", ratio);
+        }
+
+        var css = ThemeCss.ComponentCss("_radio-group.css");
+        css.Should().Contain("forced-colors: active");
+        css.Should().Contain("background: Highlight");
+        css.Should().Contain("color: HighlightText");
+        css.Should().Contain("forced-color-adjust: none");
+    }
+
     [Fact]
     public void DefaultButtonBorder_IsAControlToken_AndKeepsThreeToOne()
     {
