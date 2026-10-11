@@ -170,4 +170,42 @@ public class TmRadioGroupTests : LocalizationTestBase
         cut.Find("[role='radiogroup']").HasAttribute("aria-required").Should().BeFalse();
         cut.Find(".tm-radio-group-label").ClassList.Should().NotContain("tm-input-label-required");
     }
+
+    [Fact]
+    public void TmRadioGroup_Segmented_UsesNativeRadiosSharingTheGroupName()
+    {
+        // L2: a segment is a label wrapping a visually hidden native radio, not a button. Native
+        // radios give arrow keys, one tab stop and one activation, and they submit under Name.
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit")
+            .Add(c => c.Value, "banana")
+            .Add(c => c.Appearance, RadioAppearance.Segmented));
+
+        cut.FindAll("button.tm-radio-segment").Should().BeEmpty();
+        cut.FindAll(".tm-radio-segment").Should().OnlyContain(s => s.TagName == "LABEL");
+        var inputs = cut.FindAll(".tm-radio-segment input[type='radio']");
+        inputs.Should().HaveCount(3);
+        inputs.Should().OnlyContain(i => i.GetAttribute("name") == "fruit");
+        inputs.Count(i => i.HasAttribute("checked")).Should().Be(1);
+    }
+
+    [Fact]
+    public void TmRadioGroup_Segmented_HomeAndEndJumpToTheEnds()
+    {
+        // Arrows are the browser's; Home/End are not, so the group handles them itself.
+        string? captured = "banana";
+        var cut = Render<TmRadioGroup<string>>(p => p
+            .Add(c => c.Options, SampleOptions)
+            .Add(c => c.Name, "fruit")
+            .Add(c => c.Value, "banana")
+            .Add(c => c.Appearance, RadioAppearance.Segmented)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
+
+        cut.Find(".tm-radio-segment").KeyDown("End");
+        captured.Should().Be("cherry");
+
+        cut.Find(".tm-radio-segment").KeyDown("Home");
+        captured.Should().Be("apple");
+    }
 }
