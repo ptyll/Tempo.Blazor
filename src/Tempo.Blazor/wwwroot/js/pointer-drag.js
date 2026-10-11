@@ -240,7 +240,7 @@ export function attach(element, options = {}) {
         if (!s || s.started) return;
         s.started = true;
         s.origin = origin;
-        if (captureOnStart && !s.captured) capture(s);
+        if ((captureOnStart || s.longPress) && !s.captured) capture(s);
         if (dragClass) s.target.classList?.add(dragClass);
         // A permanent non-passive touchmove on a delegated element (document, for the scheduler) makes
         // Chrome wait for the listener on every scroll frame. Bind it only once a long-press drag has
@@ -314,7 +314,9 @@ export function attach(element, options = {}) {
         // The callback may have detached or cancelled; re-check before touching the DOM.
         if (!session) return;
 
-        if (!captureOnStart) capture(session);
+        // A pending long-press must not capture: setPointerCapture suppresses the scroll the delay
+        // exists to allow. Capture happens in begin(), once the hold completes.
+        if (!captureOnStart && !longPress) capture(session);
         // A long-press candidate keeps native scroll/selection decisions; everything else is a drag
         // candidate and must not start a text selection.
         if (!longPress) event.preventDefault?.();
