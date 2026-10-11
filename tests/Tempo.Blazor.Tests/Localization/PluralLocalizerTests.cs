@@ -249,9 +249,9 @@ public class PluralLocalizerTests
     public void French_many_strings_group_a_whole_million_with_N0()
     {
         var fr = Table("TmResources.fr.json");
-        foreach (var key in fr.Keys.Where(k => k.EndsWith("_Many", StringComparison.Ordinal)))
+        foreach (var family in Families(fr))
         {
-            fr[key].Should().Contain("{0:N0}", $"{key} is a whole number in French; N0 groups it");
+            fr[family + "_Many"].Should().Contain("{0:N0}", $"{family}_Many is a whole number in French; N0 groups it");
         }
     }
 
@@ -354,12 +354,23 @@ public class PluralLocalizerTests
         return doc.RootElement.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString() ?? "");
     }
 
+    /// <summary>
+    /// Keys that end in a reserved plural suffix but are not counted families: a property label
+    /// ("Arrowhead: Many") happens to share the suffix. They stay out of the parity guard.
+    /// </summary>
+    private static readonly string[] ReservedSuffixExclusions =
+    [
+        "TmDiagramProperties_Arrowhead",
+        "TmDiagramProperties_Cardinality",
+    ];
+
     /// <summary>The base keys of every plural family in a table (a key with a _One/_Few/_Many suffix and an _Other sibling).</summary>
     private static HashSet<string> Families(Dictionary<string, string> table)
         => table.Keys
             .Where(k => k.EndsWith("_Other", StringComparison.Ordinal))
             .Select(k => k[..^"_Other".Length])
             .Where(b => table.ContainsKey(b + "_One"))
+            .Where(b => !ReservedSuffixExclusions.Contains(b, StringComparer.Ordinal))
             .ToHashSet(StringComparer.Ordinal);
 
     [Fact]
@@ -395,7 +406,7 @@ public class PluralLocalizerTests
             {
                 foreach (var suffix in Suffixes.Where(s => table.ContainsKey(family + s)))
                 {
-                    table[family + suffix].Should().Contain("{0}", $"{family}{suffix} must show the count");
+                    table[family + suffix].Should().Contain("{0", $"{family}{suffix} must show the count");
                 }
             }
         }

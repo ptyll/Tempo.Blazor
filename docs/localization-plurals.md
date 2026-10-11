@@ -66,8 +66,10 @@ public string this[string key] => key switch
 
 ### Which culture
 
-`ITmLocalizer.Culture` (default `CultureInfo.CurrentUICulture`, the culture the built-in JSON
-localizer resolves strings with) selects the rules, and also formats the count (`1,5` in Czech).
+`ITmLocalizer.Culture` (default `CultureInfo.CurrentUICulture`) is the UI culture: it picks the plural
+rules and the resource pattern. It does not format the number. The implementation formats `{0}` with
+its own culture — `CurrentCulture` in the default localizer — so a host that separates the two keeps
+its number format. A null `Culture` (what a mocking proxy returns) falls back to `CurrentUICulture`.
 A localizer bound to one fixed language — a test double, a per-tenant localizer — overrides
 `Culture`. `MockTmLocalizer` in the test base is bound to `en` or `cs`.
 
@@ -77,6 +79,18 @@ localizer written before plurals existed still compiles. Two caveats: a class th
 public `Culture` or `TryGetString` now implicitly implements the new members (a signature mismatch
 will not compile), and a mocking proxy returns null for the unimplemented `Culture` — `Plural` and
 the relative-time formatter treat that null as `CurrentUICulture` instead of throwing.
+
+### Reserved suffixes
+
+`_One`, `_Few`, `_Many` and `_Other` are reserved. A key that ends in one of them is read as a plural
+form, so a new resource must not use them for anything else. Two existing keys predate the
+reservation and are excluded from the parity guard: `TmDiagramProperties_Arrowhead_*` and
+`TmDiagramProperties_Cardinality_*` (labels such as "Many", not counts). Do not add to that list.
+
+`TmTimeline_JustNow`, `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`, `TmTimeline_DaysAgo` and
+`TmTimeline_DateFormat` are deprecated. The library no longer reads them — relative time goes through
+`ITmRelativeTimeFormatter` and `Tm_Time_*`. The resources remain so a host that reads them is not
+broken; new code must not.
 
 ### Adding a counted text
 
