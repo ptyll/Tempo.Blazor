@@ -541,22 +541,27 @@ test('the touchmove default is prevented only while a drag is active (non-passiv
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const el = fakeElement();
     attach(el, { longPressMs: 400 });
-    assert.deepEqual(el.options('touchmove'), [false], 'must be registered non-passive or preventDefault is ignored');
+    // J4: a permanent non-passive touchmove on document forces Chrome to wait for the listener on
+    // every scroll frame. It must not exist until a long-press drag has actually started.
+    assert.deepEqual(el.options('touchmove'), [], 'no touchmove listener while idle');
 
     const idle = el.dispatch('touchmove', { cancelable: true, preventDefault() { this.prevented = true; } });
     assert.equal(idle.prevented, undefined);
 
     el.dispatch('pointerdown', ptr({ pointerType: 'touch' }));
-    const pending = el.dispatch('touchmove', { cancelable: true, preventDefault() { this.prevented = true; } });
-    assert.equal(pending.prevented, undefined, 'a pending long-press must still allow scrolling');
+    assert.deepEqual(el.options('touchmove'), [], 'a pending long-press still has no touchmove listener');
 
     t.mock.timers.tick(400);
+    assert.deepEqual(el.options('touchmove'), [false], 'the listener is added, non-passive, only once the drag starts');
     const dragging = el.dispatch('touchmove', { cancelable: true, preventDefault() { this.prevented = true; } });
     assert.equal(dragging.prevented, true);
 
     el.dispatch('pointerup', ptr({ pointerType: 'touch' }));
-    const after = el.dispatch('touchmove', { cancelable: true, preventDefault() { this.prevented = true; } });
-    assert.equal(after.prevented, undefined);
+    assert.deepEqual(el.options('touchmove'), [], 'removed again when the gesture ends');
+
+    const immediate = fakeElement();
+    attach(immediate, { threshold: 0 });
+    assert.deepEqual(immediate.options('touchmove'), [false], 'an immediate drag keeps the listener for the attachment');
 });
 
 // ── drag class, reduced motion ──────────────────────────────────────────────────────────────
