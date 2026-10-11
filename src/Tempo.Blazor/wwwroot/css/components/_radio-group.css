@@ -80,10 +80,23 @@
     cursor: pointer;
 }
 
+/* The fill alone is ~1.1:1 against the tray, under the 3:1 a control boundary needs (1.4.11).
+   The strong border is the boundary; the weight and shadow carry the selection where the
+   border is suppressed. */
 .tm-radio-segment--checked {
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
-    border-color: var(--tm-color-border);
+    border-color: var(--tm-border-color-strong);
+    font-weight: var(--tm-font-weight-semibold);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+@media (forced-colors: active) {
+    .tm-radio-segment--checked {
+        background: Highlight;
+        color: HighlightText;
+        forced-color-adjust: none;
+    }
 }
 
 /* The input is the tab stop; the ring paints on the segment that contains it. The transparent

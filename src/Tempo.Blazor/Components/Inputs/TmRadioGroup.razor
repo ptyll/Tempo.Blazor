@@ -2,10 +2,12 @@
 @typeparam T
 
 <div class="tm-radio-group @LayoutCssClass @AppearanceCssClass @Class" role="radiogroup"
-     aria-required="@(Required ? "true" : null)" @attributes="AdditionalAttributes">
+     aria-required="@(Required ? "true" : null)"
+     aria-labelledby="@(!string.IsNullOrEmpty(Label) ? LabelId : null)"
+     @attributes="AdditionalAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
-        <label class="tm-radio-group-label @(Required ? "tm-input-label-required" : "")">@Label</label>
+        <label id="@LabelId" class="tm-radio-group-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
     @if (!string.IsNullOrEmpty(HelpText))
     {
@@ -92,6 +94,9 @@
     /// control for picking a value; switching content belongs to <c>TmTabs Variant=Pill</c>.
     /// </summary>
     [Parameter] public RadioAppearance Appearance { get; set; } = RadioAppearance.Radio;
+
+    // Stable for the instance so aria-labelledby keeps pointing at the label across renders.
+    private readonly string LabelId = $"tm-radio-label-{Guid.NewGuid():N}";
 
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
