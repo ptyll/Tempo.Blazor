@@ -37,3 +37,20 @@
 .tm-copy-button--copied:hover {
     color: var(--tm-color-success-text);
 }
+
+/* ── Visible label (opt-in, ShowLabel) ─────────────────── */
+.tm-copy-button--labelled {
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3);
+}
+
+.tm-copy-button-label {
+    font-size: var(--tm-font-size-sm);
+    line-height: 1;
+}
+
+@media (pointer: coarse) {
+    .tm-copy-button--labelled {
+        min-height: var(--tm-touch-target);
+    }
+}

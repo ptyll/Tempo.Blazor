@@ -2793,7 +2793,7 @@
           "kind": "Component",
           "category": "Buttons",
           "namespace": "Tempo.Blazor.Components.Buttons",
-          "description": "Icon button that copies specified text to the clipboard. Shows a checkmark icon for 2 seconds after successful copy. Uses the browser Clipboard API via JS interop.",
+          "description": "Button that copies specified text to the clipboard. Icon-only by default; ShowLabel adds the localized Copy/Copied text. Shows a checkmark for 2 seconds after a successful copy. Uses the browser Clipboard API via JS interop.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Buttons/TmCopyButton.razor",
           "documentationStatus": "merged",
@@ -2814,6 +2814,12 @@
               "description": "Disables the button."
             },
             {
+              "name": "ShowLabel",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the localized Copy/Copied label next to the icon. Defaults to false (icon only)."
+            },
+            {
               "name": "Text",
               "type": "string",
               "isRequired": true,
@@ -2823,7 +2829,9 @@
           ],
           "cssClasses": [
             "tm-copy-button",
-            "tm-copy-button--copied"
+            "tm-copy-button--copied",
+            "tm-copy-button--labelled",
+            "tm-copy-button-label"
           ],
           "examples": [
             {

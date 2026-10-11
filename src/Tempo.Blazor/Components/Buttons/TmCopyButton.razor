@@ -3,9 +3,9 @@
 @inject IJSRuntime JS
 
 <button type="button"
-        class="tm-copy-button @(_copied ? "tm-copy-button--copied" : "") @Class"
+        class="tm-copy-button @(_copied ? "tm-copy-button--copied" : "") @(ShowLabel ? "tm-copy-button--labelled" : "") @Class"
         disabled="@Disabled"
-        aria-label="@(_copied ? "Copied" : "Copy to clipboard")"
+        aria-label="@AccessibleName"
         @onclick="HandleCopy"
         @attributes="AdditionalAttributes">
     @if (_copied)
@@ -21,6 +21,10 @@
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
     }
+    @if (ShowLabel)
+    {
+        <span class="tm-copy-button-label">@VisibleLabel</span>
+    }
 </button>
 
 @code {
@@ -34,6 +38,18 @@
 
     /// <summary>Disables the button.</summary>
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>
+    /// Renders the localized copy/copied label next to the icon. Defaults to false, which keeps the
+    /// historical icon-only button; the same text stays the accessible name either way.
+    /// </summary>
+    [Parameter] public bool ShowLabel { get; set; }
+
+    // The accessible name keeps its historical wording ("Copy to clipboard") whether or not the
+    // short label is shown, so a screen reader announces exactly what the button did before.
+    private string AccessibleName => _copied ? Loc["TmCopyButton_Copied"] : Loc["TmCopyButton_CopyToClipboard"];
+
+    private string VisibleLabel => _copied ? Loc["TmCopyButton_Copied"] : Loc["TmCopyButton_Copy"];
 
     /// <summary>Additional HTML attributes to apply to the button element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
