@@ -118,6 +118,15 @@ public class F7DocsTests
     }
 
     [Fact]
+    public void TouchDoc_DoesNotClaimTheGitignoredShotsAreCommitted()
+    {
+        // J12: TestResults is gitignored. A doc that points at those shots must say they are not committed.
+        var doc = Read("docs", "touch-interaction.md");
+        doc.Should().Contain("TestResults").And.Contain("gitignored");
+        doc.Should().NotContain("committed screenshots");
+    }
+
+    [Fact]
     public void AgentsGuide_ListsThePointerDragModule()
     {
         Read("AGENTS.md").Should().Contain("pointer-drag.js");
