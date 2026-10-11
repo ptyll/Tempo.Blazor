@@ -462,6 +462,7 @@
   // TryGetString("TmModelingIssuePanel_Count_One") reads the shipped family through the indexer.
   public sealed class PartialOverrideLocalizer(ITmLocalizer inner) : ITmLocalizer
   {
+      public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.GetCultureInfo("cs");
       public string this[string key] => key == "TmModelingIssuePanel_Count" ? "Nálezy: {0}" : inner[key];
       public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
   }
@@ -475,6 +476,7 @@
           ["TmModelingIssuePanel_Count_Many"]  = "{0} nálezu",
           ["TmModelingIssuePanel_Count_Other"] = "{0} nálezů",
       };
+      public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.GetCultureInfo("cs");
       public string this[string key] => Mine.TryGetValue(key, out var mine) ? mine : inner[key];
       public string this[string key, params object[] arguments] => string.Format(Culture, this[key], arguments);
   }
@@ -502,12 +504,14 @@
   Timestamps older than a week now show the absolute date in the culture format (`Tm_Time_DateFormat`)
   instead of `TmTimeline_DateFormat`; a timestamp between one and six days old reads "2 days ago"
   (it used to be a date after 24 hours). `TmActivityTimeline` and `TmActivityComments` now show that
-absolute date after 7 days; before, both kept saying "N days ago" forever.
+  absolute date after 7 days; before, both kept saying "N days ago" forever.
 
-The formatter is registered **scoped** (it reads the scope's `ITmLocalizer` and `TimeProvider`).
-Calendar days are judged in `TimeProvider.LocalTimeZone`. On Server and prerender that zone is the
-server's, so the host registers a scoped TimeProvider whose `LocalTimeZone` is the user's zone
-(user decision Q1=A). A shared `ITmUserTimeZone` is a recorded follow-up, not a component parameter.
+  The formatter is registered **scoped** (it reads the scope's `ITmLocalizer` and `TimeProvider`).
+  Calendar days are judged in `TimeProvider.LocalTimeZone`. On Server and prerender that zone is the
+  server's, so the host registers a scoped `ITmRelativeTimeFormatter` over a user `TimeProvider` that
+  reads the zone lazily (user decision Q1=A). Never replace the app-wide `TimeProvider`: the host's
+  singletons consume it, and a scoped replacement fails startup under `ValidateScopes`. A shared
+  `ITmUserTimeZone` is a recorded follow-up, not a component parameter.
 
 - **`scheduler.js` resizes with Pointer Events and loads `pointer-drag.js`.** The document-level
   `mousedown`/`mousemove`/`mouseup` listeners are replaced by the shared helper, so a finger or pen can

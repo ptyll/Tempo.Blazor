@@ -70,7 +70,7 @@
                     <div class="tm-timeline-body">
                         <div class="tm-timeline-meta">
                             <span class="tm-timeline-author">@entry.AuthorName</span>
-                            <time class="tm-timeline-time" datetime="@entry.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(entry.CreatedAt)">
+                            <time class="tm-timeline-time" datetime="@entry.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(entry.CreatedAt)">
                                 @FormatRelativeTime(entry.CreatedAt)
                             </time>
                         </div>

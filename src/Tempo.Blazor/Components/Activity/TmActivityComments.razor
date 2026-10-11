@@ -32,7 +32,7 @@
                     <div class="tm-comment-body">
                         <div class="tm-comment-meta">
                             <span class="tm-comment-author">@authorName</span>
-                            <time class="tm-comment-time" datetime="@c.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(c.CreatedAt)">
+                            <time class="tm-comment-time" datetime="@c.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(c.CreatedAt)">
                                 @FormatRelativeTime(c.CreatedAt)
                             </time>
                             @if (c.EditedAt.HasValue)

@@ -220,29 +220,31 @@ public class RelativeTimeFormatterTests
     {
         // K2: the default interface member formats the title with TimeZoneInfo.Local and the ambient
         // culture. A Tokyo circuit on a CEST server then says "yesterday at 23:20" while the tooltip
-        // shows 16:20 in the server's culture.
+        // shows 16:20. The zones and cultures are fixed here, so the assertion does not depend on the
+        // machine's own zone.
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 6, 15, 14, 20, 0, TimeSpan.Zero));
         clock.SetLocalTimeZone(Tokyo);
-        var server = CultureInfo.GetCultureInfo("cs-CZ");
-        CultureInfo.CurrentCulture = server;
-        CultureInfo.CurrentUICulture = server;
+        var ambient = CultureInfo.GetCultureInfo("en-US");
+        CultureInfo.CurrentCulture = ambient;
+        CultureInfo.CurrentUICulture = ambient;
+        var circuit = CultureInfo.GetCultureInfo("cs-CZ");
 
         var localizer = new MockTmLocalizer(new Dictionary<string, string>
         {
             ["Tm_Time_YesterdayAt"] = "yesterday at {0}",
             ["Tm_Time_TimeFormat"] = "HH:mm",
-        }, CultureInfo.GetCultureInfo("en-US"));
+        }, circuit);
         var formatter = new TmRelativeTimeFormatter(localizer, clock);
-        var value = new DateTimeOffset(2026, 6, 14, 14, 20, 0, TimeSpan.Zero); // Tokyo: 14 June 23:20
+        var value = new DateTimeOffset(2026, 6, 14, 14, 20, 0, TimeSpan.Zero); // Tokyo 23:20, CEST 16:20
+        var serverZone = TimeZoneInfo.CreateCustomTimeZone("Server-cest", TimeSpan.FromHours(2), "Server", "Server");
 
         formatter.Format(value).Should().Be("yesterday at 23:20");
-        // Through the interface: the class does not override Absolute, so this is the default member.
+        // Through the interface: without the override this is the default member.
         var title = ((ITmRelativeTimeFormatter)formatter).Absolute(value);
 
-        title.Should().Contain("23:20", "the tooltip is judged in the clock's zone, not TimeZoneInfo.Local");
-        title.Should().NotContain("16:20", "16:20 is the same instant in the server's CEST zone");
-        title.Should().Be(TimeZoneInfo.ConvertTime(value, Tokyo).ToString("g", CultureInfo.GetCultureInfo("en-US")),
-            "the title uses the localizer's culture, not the ambient cs-CZ culture");
+        title.Should().Be("14.06.2026 23:20", "the tooltip uses the clock's zone and the localizer's culture");
+        title.Should().NotBe(TimeZoneInfo.ConvertTime(value, serverZone).ToString("g", ambient),
+            "16:20 in the ambient en-US culture is what the server's zone would have printed");
     }
 
     [Fact]

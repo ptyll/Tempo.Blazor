@@ -177,7 +177,7 @@ export function attach(element, options = {}) {
 
     const removeDocumentListeners = () => {
         if (typeof document === 'undefined') return;
-        document.removeEventListener?.('keydown', onKeyDown);
+        document.removeEventListener?.('keydown', onKeyDown, true);
     };
 
     /**
@@ -283,14 +283,16 @@ export function attach(element, options = {}) {
 
     function onPointerDown(event) {
         if (detached) return;
+        // A second finger or a non-primary button can neither move nor end the gesture, so these
+        // guards come before the superseded check: only a new primary pointer may cancel a stale one.
+        if (event.button !== undefined && event.button !== 0) return;
+        if (event.isPrimary === false) return;
         if (session) {
             // A pointer that vanished without pointerup/pointercancel left a session nothing can end.
             // A new primary pointer cancels it (never commits) and then starts its own gesture.
             if (event.pointerId === session.pointerId) return;
             cancelGesture('superseded', event);
         }
-        if (event.button !== undefined && event.button !== 0) return;
-        if (event.isPrimary === false) return;
         if (pointerTypes && !pointerTypes.includes(event.pointerType)) return;
 
         let target = element;
@@ -322,7 +324,9 @@ export function attach(element, options = {}) {
         if (!longPress) event.preventDefault?.();
 
         if (typeof document !== 'undefined') {
-            if (cancelOnEscape) document.addEventListener?.('keydown', onKeyDown);
+            // Capture phase: a dialog listening on its own element, or a document listener registered
+            // earlier, would otherwise see the Escape first and close before the drag rolls back.
+            if (cancelOnEscape) document.addEventListener?.('keydown', onKeyDown, true);
         }
         if (longPress) {
             const s = session;

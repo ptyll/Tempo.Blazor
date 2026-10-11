@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
     /// Registers the core Tempo.Blazor services shared by all component groups.
     /// <list type="bullet">
     ///   <item><description><see cref="ITmLocalizer"/>: Singleton (stateless, thread-safe, backed by embedded JSON)</description></item>
-    ///   <item><description><see cref="ITmRelativeTimeFormatter"/>: Scoped relative-time formatter. It resolves <see cref="ITmLocalizer"/> and <see cref="TimeProvider"/> from the current scope, so a scoped localizer (language, tenant) and a scoped clock (the browser's time zone) are not captured once for every circuit. The default clock is <see cref="TimeProvider.System"/>, whose <see cref="TimeProvider.LocalTimeZone"/> is the server's zone — wrong for a Blazor Server circuit. Register a scoped <see cref="TimeProvider"/> whose <see cref="TimeProvider.LocalTimeZone"/> is the user's zone (read the IANA id from the browser once per circuit, <c>TimeZoneInfo.FindSystemTimeZoneById</c> with a fallback to UTC). No component takes a time-zone parameter for this.</description></item>
+    ///   <item><description><see cref="ITmRelativeTimeFormatter"/>: Scoped relative-time formatter. It resolves <see cref="ITmLocalizer"/> and <see cref="TimeProvider"/> from the current scope, so a scoped localizer (language, tenant) is not captured once for every circuit. The default clock is <see cref="TimeProvider.System"/>, whose <see cref="TimeProvider.LocalTimeZone"/> is the server's zone — wrong for a Blazor Server circuit. Give the formatter its own user clock by replacing this registration with a scoped <see cref="ITmRelativeTimeFormatter"/> over a <see cref="TimeProvider"/> that reads the circuit's zone lazily (IANA id from the browser once per circuit, <c>TimeZoneInfo.FindSystemTimeZoneById</c> with a fallback to UTC, re-render once it arrives). Never replace the app-wide <see cref="TimeProvider"/>: Kestrel and cookie authentication are singletons that consume it, so a scoped replacement fails the host under <c>ValidateScopes</c>. No component takes a time-zone parameter for this.</description></item>
     ///   <item><description><see cref="ThemeService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="ToastService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="DragDropService"/>: Scoped drag/drop state shared by core components</description></item>
@@ -58,7 +58,10 @@ public static class ServiceCollectionExtensions
         // copy per component, resolved per scope. A singleton would capture the first ITmLocalizer (wrong
         // language/tenant, and a crash under ValidateScopes when that localizer is scoped) and the first
         // TimeProvider. The host's TimeProvider, when one is registered, supplies the clock and the zone
-        // "yesterday" is judged in; tests register a FakeTimeProvider, a Blazor Server host a scoped one.
+        // "yesterday" is judged in; tests register a FakeTimeProvider. A Blazor Server host that wants the
+        // browser's zone replaces THIS registration with a scoped formatter over its own user TimeProvider
+        // (see docs/localization-plurals.md). It must not register a scoped TimeProvider: that replaces the
+        // app-wide clock the host's singletons consume.
         services.TryAddScoped<ITmRelativeTimeFormatter>(sp =>
             new TmRelativeTimeFormatter(sp.GetRequiredService<ITmLocalizer>(), sp.GetService<TimeProvider>()));
 

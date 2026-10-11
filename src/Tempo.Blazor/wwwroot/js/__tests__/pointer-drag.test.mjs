@@ -27,7 +27,11 @@ function listenerBag() {
         // Capture listeners fire before bubble listeners, the way a real target does.
         dispatchPhased(type, event = {}) {
             const list = [...(map.get(type) ?? [])];
+            let stopped = false;
+            const stop = event.stopPropagation?.bind(event);
+            event.stopPropagation = () => { stopped = true; stop?.(); };
             for (const entry of list.filter(item => item.capture)) entry.fn(event);
+            if (stopped) return event;
             for (const entry of list.filter(item => !item.capture)) entry.fn(event);
             return event;
         },

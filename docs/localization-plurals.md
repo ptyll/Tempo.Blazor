@@ -130,8 +130,9 @@ public interface ITmRelativeTimeFormatter
   (4m59s is "in 5 min", not "in 4 min", which would read as already elapsed); the past keeps
   truncating.
 - **Capitalisation.** "Just now" / "Právě teď" / "À l'instant" stay sentence case: they open the
-  stamp, the way "Yesterday at 4:20 PM" does. The in-sentence forms ("5 min ago", "před 5 min") stay
-  lower case. Do not lowercase the opening stamps to match them.
+  stamp. Everything else is lower case, including the day words — the resource is "yesterday at {0}",
+  not "Yesterday at {0}" ("yesterday at 4:20 PM", "5 min ago", "před 5 min"). Do not capitalise the
+  in-sentence forms to match the opening stamps, and do not lowercase the opening stamps either.
 - **Time zone.** "Yesterday" is a calendar-day judgement made in the zone you pass (default: the
   clock's local zone), from the *instant* — the offset a `DateTimeOffset` happens to carry is
   irrelevant. A component that knows the user's zone (the Scheduler's `ResolveTimeZone()`) passes it.
@@ -144,28 +145,32 @@ public interface ITmRelativeTimeFormatter
   `DateTime.Now`.
 - **Blazor Server / prerender: the user's zone.** `TimeProvider.System.LocalTimeZone` is the
   *server's* zone, so "yesterday at 16:20" is wrong for a circuit whose browser is elsewhere. The host
-  registers a scoped `TimeProvider` whose `LocalTimeZone` is the browser's zone. Read the IANA id once
-  per circuit (`Intl.DateTimeFormat().resolvedOptions().timeZone`), resolve it with
-  `TimeZoneInfo.FindSystemTimeZoneById`, and fall back to UTC when the id is unknown. There is no
-  component parameter for this; a shared `ITmUserTimeZone` (one browser read, reused by Scheduler and
-  Gantt) is a recorded follow-up, not part of this registration.
+  registers a scoped `ITmRelativeTimeFormatter` over its own user `TimeProvider`; it never replaces the
+  app-wide `TimeProvider`. Kestrel (`PinnedBlockMemoryPoolFactory`) and cookie authentication
+  (`PostConfigureAuthenticationSchemeOptions`) are singletons that consume `TimeProvider`, so
+  `AddScoped<TimeProvider>` fails the host at startup under `ValidateScopes` ("Cannot consume scoped
+  service 'System.TimeProvider' from singleton") and, without validation, makes the user's zone drive
+  the server clocks too. Read the IANA id once per circuit
+  (`Intl.DateTimeFormat().resolvedOptions().timeZone`), resolve it with
+  `TimeZoneInfo.FindSystemTimeZoneById`, and fall back to UTC when the id is unknown. The zone arrives
+  from JS after the first render, so `UserTimeProvider` reads `CircuitZoneCache.Zone` lazily — capturing
+  it when the clock is first resolved leaves the circuit on UTC. Re-render once the zone arrives (the
+  stamp is computed at render time; nothing ticks it). There is no component parameter for this; a
+  shared `ITmUserTimeZone` (one browser read, reused by Scheduler and Gantt) is a recorded follow-up,
+  not part of this registration.
 
   ```csharp
   // doc-sample:user-zone
   builder.Services.AddTempoBlazor();
-  builder.Services.AddScoped<TimeProvider>(sp =>
-  {
-      var zoneId = sp.GetRequiredService<CircuitZoneCache>().ZoneId; // set once from JS, per circuit
-      TimeZoneInfo zone;
-      try { zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId); }
-      catch (TimeZoneNotFoundException) { zone = TimeZoneInfo.Utc; }
-      catch (InvalidTimeZoneException) { zone = TimeZoneInfo.Utc; }
-      return new UserTimeProvider(zone);
-  });
+  builder.Services.AddScoped<CircuitZoneCache>();
+  builder.Services.AddScoped<ITmRelativeTimeFormatter>(sp => new TmRelativeTimeFormatter(
+      sp.GetRequiredService<ITmLocalizer>(),
+      new UserTimeProvider(sp.GetRequiredService<CircuitZoneCache>())));
 
-  sealed class UserTimeProvider(TimeZoneInfo zone) : TimeProvider
+  sealed class UserTimeProvider(CircuitZoneCache cache) : TimeProvider
   {
-      public override TimeZoneInfo LocalTimeZone => zone;
+      // Read lazily: the zone arrives from JS after the first render.
+      public override TimeZoneInfo LocalTimeZone => cache.Zone ?? TimeZoneInfo.Utc;
   }
   ```
 - **Strings.** `Tm_Time_JustNow`, `Tm_Time_MinutesAgo`, `Tm_Time_HoursAgo`, `Tm_Time_InMinutes`,

@@ -46,7 +46,7 @@
                         <TmAvatar Src="@entry.AuthorAvatarUrl" Size="AvatarSize.Sm" />
                     }
                     <span class="tm-timeline-author">@entry.AuthorName</span>
-                    <time class="tm-timeline-timestamp" datetime="@entry.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(entry.CreatedAt)">@FormatTime(entry.CreatedAt)</time>
+                    <time class="tm-timeline-timestamp" datetime="@entry.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(entry.CreatedAt)">@FormatTime(entry.CreatedAt)</time>
                     @if (entry.IsInternal)
                     {
                         <span class="tm-timeline-internal-badge">@Loc["TmTimeline_Internal"]</span>

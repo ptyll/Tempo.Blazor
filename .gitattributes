@@ -5,3 +5,7 @@ src/Tempo.Blazor.DocumentFormats/HeadlessLayout/*.bundle.mjs text eol=lf
 # Generated CSS bundle (BundleCss): the build rewrites it and CI diffs it against the commit —
 # CRLF churn on Windows checkouts would false-positive that freshness gate.
 src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css text eol=lf
+
+# Generated component-documentation bundles: the generator runs on Windows, and CRLF here is a
+# several-hundred-thousand-line diff against any branch that touches them.
+tempo-blazor*.json text eol=lf

@@ -78,6 +78,15 @@ public sealed class TmRelativeTimeFormatter : ITmRelativeTimeFormatter
         return FormatDate(localValue);
     }
 
+    /// <inheritdoc />
+    public string Absolute(DateTimeOffset value, TimeZoneInfo? timeZone = null)
+    {
+        // The interface default uses TimeZoneInfo.Local and the ambient culture, which on a Blazor Server
+        // circuit is the server's zone and culture — the tooltip would disagree with the relative stamp.
+        var zone = timeZone ?? _clock.LocalTimeZone;
+        return TimeZoneInfo.ConvertTime(value, zone).ToString("g", _localizer.Culture ?? CultureInfo.CurrentUICulture);
+    }
+
     private string FormatClock(DateTimeOffset value)
         => value.ToString(_localizer.TryGetString("Tm_Time_TimeFormat", out var pattern) ? pattern : "t",
             _localizer.Culture ?? CultureInfo.CurrentUICulture);

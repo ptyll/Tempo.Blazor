@@ -89,13 +89,27 @@ public class F7DocsTests
         var unreleased = Read("CHANGELOG.md");
         unreleased = unreleased[..unreleased.IndexOf("## 2.9.0 - ", StringComparison.Ordinal)];
 
-        unreleased.Should().Contain("Q1=A").And.Contain("scoped TimeProvider");
+        unreleased.Should().Contain("Q1=A").And.Contain("scoped `ITmRelativeTimeFormatter`");
+        unreleased.Should().Contain("Never replace the app-wide `TimeProvider`");
+        unreleased.Should().NotContain("registers a scoped TimeProvider whose");
         unreleased.Should().Contain("TmActivityTimeline").And.Contain("absolute date");
         unreleased.Should().Contain("script-src");
 
         var overlay = Read("JsonDocumentation", "Abstractions", "ITmLocalizer.json");
         overlay.Should().Contain("TryGetString").And.Contain("\"Culture\"");
         overlay.Should().NotContain("\"GetString\"").And.NotContain("CurrentCulture");
+    }
+
+    [Fact]
+    public void Changelog_DelegatingSnippetsDeclareCultureSoTheyCompile()
+    {
+        // m4: string.Format(Culture, …) does not compile in a class that only inherits the default
+        // interface member. The compiled sample is ChangelogDelegatingLocalizerSample; the changelog
+        // must show the same declaration.
+        var unreleased = Read("CHANGELOG.md");
+        unreleased = unreleased[..unreleased.IndexOf("## 2.9.0 - ", StringComparison.Ordinal)];
+        var occurrences = unreleased.Split("public System.Globalization.CultureInfo Culture { get; }").Length - 1;
+        occurrences.Should().BeGreaterThanOrEqualTo(2, "both delegating snippets declare Culture");
     }
 
     [Fact]

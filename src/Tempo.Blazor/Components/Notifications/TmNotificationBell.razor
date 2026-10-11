@@ -71,7 +71,7 @@
                             </div>
                             <div class="tm-notification-bell__content">
                                 <span class="tm-notification-bell__message">@n.Title</span>
-                                <time class="tm-notification-bell__time" datetime="@n.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ")" title="@AbsoluteTime(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
+                                <time class="tm-notification-bell__time" datetime="@n.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
                             </div>
                             @if (!n.IsRead)
                             {

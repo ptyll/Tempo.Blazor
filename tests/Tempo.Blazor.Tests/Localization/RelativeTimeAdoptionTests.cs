@@ -115,26 +115,39 @@ public class RelativeTimeAdoptionTests : LocalizationTestBase
                 },
             })).Find("time.tm-comment-time").GetAttribute("datetime").Should().Be(expected);
 
-            var store = new InMemoryNotificationStore();
-            Services.AddSingleton<ITmNotificationService>(store);
-            Services.AddSingleton<Microsoft.AspNetCore.Components.NavigationManager>(new TestNav());
-            store.PublishAsync(new TmNotification
-            {
-                Type = TmNotificationTypes.Mention,
-                RecipientUserId = "demo",
-                Actor = new TmUserRef { Id = "alice", DisplayName = "Alice" },
-                Title = "Test",
-                CreatedAt = created,
-            }).Wait();
-            var bell = Render<TmNotificationBell>();
-            bell.Find("button").Click();
-            bell.Find("time.tm-notification-bell__time").GetAttribute("datetime").Should().Be(expected);
+            BellDatetime(created).Should().Be(expected);
         }
         finally
         {
             CultureInfo.CurrentCulture = previous;
             CultureInfo.CurrentUICulture = previousUi;
         }
+    }
+
+    private static string? BellDatetime(DateTimeOffset created)
+    {
+        // Its own context: bUnit rejects registrations after the first render.
+        using var ctx = new BunitContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ctx.Services.AddSingleton<ITmLocalizer>(new MockTmLocalizer(new Dictionary<string, string>
+        {
+            ["Tm_Time_JustNow"] = "Just now",
+        }));
+        var store = new InMemoryNotificationStore();
+        ctx.Services.AddSingleton<ITmNotificationService>(store);
+        ctx.Services.AddSingleton<Microsoft.AspNetCore.Components.NavigationManager>(new TestNav());
+        store.PublishAsync(new TmNotification
+        {
+            Type = TmNotificationTypes.Mention,
+            RecipientUserId = "demo",
+            Actor = new TmUserRef { Id = "alice", DisplayName = "Alice" },
+            Title = "Test",
+            CreatedAt = created,
+        }).Wait();
+
+        var bell = ctx.Render<TmNotificationBell>();
+        bell.Find("button").Click();
+        return bell.Find("time.tm-notification-bell__time").GetAttribute("datetime");
     }
 
     private sealed record ActivityEntry(

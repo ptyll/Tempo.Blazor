@@ -1,8 +1,7 @@
 # Touch interaction: the shared pointer-drag helper
 
-Rule: new drags must use pointer-drag.js.
-(`_content/Tempo.Blazor/js/pointer-drag.js`): existing private gestures migrate in their owners' plans.
-they are not rewritten here. The helper is an ES module with no dependencies and knows nothing about
+Rule: new drags must use pointer-drag.js (`_content/Tempo.Blazor/js/pointer-drag.js`): existing private gestures migrate in their owners' plans,
+and they are not rewritten here. The helper is an ES module with no dependencies and knows nothing about
 the DOM shape of its host.
 
 The private gestures still to migrate:
@@ -75,10 +74,10 @@ the top of the file, not inside a later callback. Two caveats:
 | Concern | Behaviour |
 |---------|-----------|
 | **Pointer capture** | `setPointerCapture(pointerId)` on press and `releasePointerCapture(pointerId)` on every exit. The id is required: the argument-less call throws in a real DOM and leaks the capture. A new primary `pointerdown` with a different `pointerId` cancels a stale session first (`reason: 'superseded'`, never `onEnd`) — a pointer that vanished without `pointerup` would otherwise leave a gesture nothing can finish. |
-| **One pointer** | Only the first (primary) pointer drives a gesture. A second finger can neither move nor end it. Secondary mouse buttons never start one. |
+| **One pointer** | Only the first (primary) pointer drives a gesture. A second finger can neither move nor end it, and neither can a non-primary button: the `isPrimary` and `button` guards run before the superseded check, so a second contact never cancels the active drag. |
 | **Threshold** | `threshold` px (default 4) of movement before `onStart`. Below it the press is a tap: `onPress` and `onRelease({ outcome: 'tap' })` only, and its `click` is untouched. |
 | **Long-press** | `longPressMs > 0` (touch only): the drag starts after the finger rests that long (`origin: 'long-press'`). Moving more than `longPressTolerance` (8 px) first is a scroll — the long-press is abandoned and the page scrolls normally. A mouse ignores `longPressMs`. |
-| **Cancel** | `Escape` (while a gesture is active), `pointercancel`, `lostpointercapture`, a mouse move with no button held (a missed mouse-up), and `detach()` all call `onCancel({ reason })` — **never** `onEnd` — and restore nothing the host did not ask for. The `Escape` that cancels a drag calls `stopPropagation`, so it does not also close a surrounding dialog or sheet. |
+| **Cancel** | `Escape` (while a gesture is active), `pointercancel`, `lostpointercapture`, a mouse move with no button held (a missed mouse-up), and `detach()` all call `onCancel({ reason })` — **never** `onEnd` — and restore nothing the host did not ask for. The `Escape` listener is registered on `document` in the **capture** phase and calls `stopPropagation`, so it runs before a dialog's own listener (or an earlier document listener) and does not also close the surrounding dialog or sheet. |
 | **Click suppression** | The `click` that follows a real drag is swallowed once (it expires on the next task, so an unrelated later click is never eaten). `suppressClick: false` opts out. |
 | **touch-action** | See below. |
 | **Reduced motion** | Every callback receives `reducedMotion` (`prefers-reduced-motion: reduce`). Skip animation, snap instead of easing. |

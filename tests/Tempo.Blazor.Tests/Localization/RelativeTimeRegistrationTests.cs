@@ -158,10 +158,10 @@ public class RelativeTimeRegistrationTests
             "tests", "Tempo.Blazor.Tests", "Localization", "DocumentedUserZoneRegistration.cs"));
         var marker = doc.IndexOf("doc-sample:user-zone", StringComparison.Ordinal);
         marker.Should().BeGreaterThan(0);
-        var snippet = doc[(marker + "doc-sample:user-zone".Length)..(doc.IndexOf("});", marker, StringComparison.Ordinal) + 3)];
+        var snippet = doc[(marker + "doc-sample:user-zone".Length)..(doc.IndexOf(")));", marker, StringComparison.Ordinal) + 4)];
         var body = sample.IndexOf("public static void Register", StringComparison.Ordinal);
         var compiledStart = sample.IndexOf("doc-sample:user-zone", body, StringComparison.Ordinal);
-        var compiled = sample[(compiledStart + "doc-sample:user-zone".Length)..(sample.IndexOf("});", compiledStart, StringComparison.Ordinal) + 3)];
+        var compiled = sample[(compiledStart + "doc-sample:user-zone".Length)..(sample.IndexOf(")));", compiledStart, StringComparison.Ordinal) + 4)];
         Normalize(snippet).Should().Be(Normalize(compiled),
             "the compiled sample is the documented snippet, not a paraphrase of it");
     }
