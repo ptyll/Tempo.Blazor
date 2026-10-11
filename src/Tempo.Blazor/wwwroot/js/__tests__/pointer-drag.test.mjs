@@ -3,7 +3,7 @@
 // reduced motion and multi-instance safety.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attach, prefersReducedMotion } from '../pointer-drag.js';
+import { attach, attachKeyboardMove, prefersReducedMotion } from '../pointer-drag.js';
 
 // ── fakes ───────────────────────────────────────────────────────────────────────────────────
 
@@ -735,4 +735,30 @@ test('a throwing onEnd still leaves the helper idle with everything released', (
     assert.equal(el.captured.size, 0);
     assert.equal(doc.total(), 0);
     assert.equal(el.classes.size, 0);
+});
+
+// ── keyboard alternative (WCAG 2.5.7) ────────────────────────────────────────────────────────
+
+test('attachKeyboardMove preventDefaults only the Alt+Arrow chord and reports the step', () => {
+    const el = fakeElement();
+    const steps = [];
+    const handle = attachKeyboardMove(el, { onStep: (step) => steps.push(step) });
+
+    const chord = { key: 'ArrowLeft', altKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', chord);
+    assert.equal(chord.prevented, true, 'Alt+ArrowLeft must be cancelled or the browser navigates Back');
+    assert.deepEqual(steps, [{ key: 'ArrowLeft', x: -1, y: 0 }]);
+
+    const plain = { key: 'ArrowLeft', altKey: false, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', plain);
+    assert.equal(plain.prevented, undefined, 'a plain arrow is the browser\'s, not the helper\'s');
+
+    const tab = { key: 'Tab', altKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', tab);
+    assert.equal(tab.prevented, undefined, 'only the arrow chord is cancelled; Tab must still move focus');
+
+    handle.detach();
+    const after = { key: 'ArrowRight', altKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', after);
+    assert.equal(after.prevented, undefined, 'detach removes the listener');
 });
