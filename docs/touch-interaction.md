@@ -1,10 +1,26 @@
 # Touch interaction: the shared pointer-drag helper
 
-Every drag in Tempo.Blazor — resizing an editor panel, resizing a scheduler event, and what the
-Gantt, dashboard and designers will adopt next — runs on **one** helper:
-`_content/Tempo.Blazor/js/pointer-drag.js`. A component or package must not write its own
-`mousedown`/`mousemove`/`mouseup` or `touchstart` drag: it attaches this module. It is an ES module
-with no dependencies and knows nothing about the DOM shape of its host.
+Rule: new drags must use pointer-drag.js.
+(`_content/Tempo.Blazor/js/pointer-drag.js`): existing private gestures migrate in their owners' plans.
+they are not rewritten here. The helper is an ES module with no dependencies and knows nothing about
+the DOM shape of its host.
+
+The private gestures still to migrate:
+
+| Owner | Gesture |
+| --- | --- |
+| `TmSplitterPane` | the eval drag |
+| `slider.js` | the slider thumb drag |
+| `TmDataTable` | column resize |
+| `dashboard.js` | widget drag and resize |
+| `workflow-designer.js` | node drag |
+| `tm-sheet.js` | the sheet drag |
+| `TmColorGradient` | the gradient stop drag |
+| `TmGantt` | bar drag and resize |
+| `TmSigningFieldOverlay` | field drag |
+
+Multi-pointer gestures (pinch and pan) are out of scope. They need a core sibling module, never an
+implementation inside a package.
 
 ```js
 import { attach } from './pointer-drag.js';            // from another file in wwwroot/js/
