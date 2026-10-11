@@ -69,7 +69,7 @@
     align-items: center;
     justify-content: center;
     flex: 1 1 auto;
-    min-height: var(--tm-touch-target);
+    min-height: var(--tm-input-height-md);
     padding: var(--tm-space-1) var(--tm-space-3);
     border: 1px solid transparent;
     border-radius: var(--tm-radius-control);
@@ -109,4 +109,11 @@
 .tm-radio-segment--disabled {
     color: var(--tm-text-disabled);
     cursor: not-allowed;
+}
+
+/* The 44px target is a touch requirement. A mouse keeps the control height of the other inputs. */
+@media (pointer: coarse) {
+    .tm-radio-segment {
+        min-height: var(--tm-touch-target);
+    }
 }
