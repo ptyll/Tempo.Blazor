@@ -124,6 +124,30 @@ test('no mouse listener is registered any more - the gesture is Pointer Events o
     assert.equal(doc.count('pointerdown'), 1);
 });
 
+test('touch resize is gated behind a 400ms long-press; a quick swipe is not a resize', async (t) => {
+    // F7 review J3: threshold 2 with no long-press turns a scroll swipe that lands on a handle
+    // (Chromium snaps the finger onto it) into a committed resize. The helper applies longPressMs
+    // to touch only, so mouse and pen keep the 2px threshold.
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const g = timegrid({ slot: 30 });
+    const ref = dotnet();
+    scheduler.registerInstance(g.grid, ref);
+
+    doc.dispatch('pointerdown', ev(g.bottom, { pointerType: 'touch', clientY: 160 }));
+    doc.dispatch('pointermove', ev(g.bottom, { pointerType: 'touch', clientY: 160 + 40 }));
+    assert.equal(g.event.style.height, undefined, 'a swipe that moves before the hold is a scroll, not a resize');
+    assert.equal(ref.calls.length, 0);
+
+    doc.dispatch('pointerdown', ev(g.bottom, { pointerType: 'touch', clientY: 160 }));
+    t.mock.timers.tick(400);
+    doc.dispatch('pointermove', ev(g.bottom, { pointerType: 'touch', clientY: 160 + 40 }));
+    assert.equal(g.event.style.height, '100px', 'holding 400ms, then dragging, resizes');
+
+    doc.dispatch('pointerdown', ev(g.bottom, { clientY: 160 }));
+    doc.dispatch('pointermove', ev(g.bottom, { clientY: 160 + 40 }));
+    assert.equal(g.event.style.height, '100px', 'a mouse keeps the immediate 2px threshold');
+});
+
 // ── timegrid resize ─────────────────────────────────────────────────────────────────────────
 
 test('a mouse drag on the bottom handle resizes live and notifies .NET once with the slot-snapped delta', () => {
