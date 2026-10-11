@@ -6929,7 +6929,7 @@
               "name": "AddTempoBlazor",
               "kind": "Method",
               "type": "IServiceCollection",
-              "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Singleton relative-time formatter over the localizer and the registered TimeProvider ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
+              "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Scoped relative-time formatter. It resolves ITmLocalizer and TimeProvider from the current scope, so a scoped localizer (language, tenant) and a scoped clock (the browser's time zone) are not captured once for every circuit. The default clock is System, whose LocalTimeZone is the server's zone — wrong for a Blazor Server circuit. Register a scoped TimeProvider whose LocalTimeZone is the user's zone (read the IANA id from the browser once per circuit, TimeZoneInfo.FindSystemTimeZoneById with a fallback to UTC). No component takes a time-zone parameter for this. ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
               "parameters": [
                 {
                   "name": "services",
@@ -19322,7 +19322,7 @@
           "kind": "Class",
           "category": "Localization",
           "namespace": "Tempo.Blazor.Localization",
-          "description": "The default ITmRelativeTimeFormatter: Tm_Time_* strings from ITmLocalizer, plural day forms from Loc.Plural, the current moment from a TimeProvider (system clock when none is registered) and calendar days judged in the time zone passed to Format. Registered as a singleton by AddTempoBlazor().",
+          "description": "The default ITmRelativeTimeFormatter: Tm_Time_* strings from ITmLocalizer, plural day forms from Loc.Plural, the current moment from a TimeProvider (system clock when none is registered) and calendar days judged in the time zone passed to Format. Registered scoped by AddTempoBlazor(), so each scope gets its own localizer and clock.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTimeFormatter.cs",
           "documentationStatus": "merged",
@@ -73842,13 +73842,13 @@
           "kind": "Interface",
           "category": "Localization",
           "namespace": "Tempo.Blazor.Localization",
-          "description": "Localization service interface for Tempo.Blazor components. Provides translated strings based on resource keys. The library ships English, Czech and French. Counted texts use Loc.Plural (Key_One/_Few/_Many/_Other, see TmLocalizerPluralExtensions); Culture and TryGetString are default interface members, so existing implementations keep compiling.",
+          "description": "Localization service interface for Tempo.Blazor components. Provides translated strings by indexer. The library ships English, Czech and French. Counted texts use Loc.Plural (Key_One/_Few/_Many/_Other, see TmLocalizerPluralExtensions). Culture is the UI culture that picks plural rules and resource patterns; a null Culture falls back to CurrentUICulture. TryGetString looks a key up without falling back to the key text. Both are default interface members.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmLocalizer.cs",
           "documentationStatus": "merged",
           "methods": [
             {
-              "name": "GetString",
+              "name": "this[string]",
               "returnType": "string",
               "description": "Gets the localized string for the specified key.",
               "parameters": [
@@ -73860,9 +73860,9 @@
               ]
             },
             {
-              "name": "GetString",
+              "name": "this[string, object[]]",
               "returnType": "string",
-              "description": "Gets the localized string with format arguments.",
+              "description": "Gets the formatted localized string with arguments.",
               "parameters": [
                 {
                   "name": "key",
@@ -73870,17 +73870,34 @@
                   "description": "Resource key to look up."
                 },
                 {
-                  "name": "args",
-                  "type": "params object?[]",
+                  "name": "arguments",
+                  "type": "params object[]",
                   "description": "Format arguments."
                 }
               ]
             },
             {
-              "name": "CurrentCulture",
+              "name": "Culture",
               "returnType": "CultureInfo",
-              "description": "Gets the current culture.",
+              "description": "The UI culture whose string table this localizer serves, and whose plural rules apply. Defaults to CurrentUICulture.",
               "isProperty": true
+            },
+            {
+              "name": "TryGetString",
+              "returnType": "bool",
+              "description": "Looks a key up without falling back to the key text.",
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": "string",
+                  "description": "Resource key to look up."
+                },
+                {
+                  "name": "value",
+                  "type": "out string",
+                  "description": "The unformatted resource text when found."
+                }
+              ]
             }
           ],
           "usedInComponents": [
@@ -73889,7 +73906,7 @@
           "examples": [
             {
               "title": "Custom localizer implementation",
-              "code": "public class CustomLocalizer : ITmLocalizer\n{\n    private readonly IStringLocalizer<Resources> _localizer;\n\n    public CustomLocalizer(IStringLocalizer<Resources> localizer)\n    {\n        _localizer = localizer;\n    }\n\n    public string GetString(string key) => _localizer[key];\n\n    public string GetString(string key, params object?[] args) => \n        string.Format(_localizer[key], args);\n\n    public CultureInfo CurrentCulture => CultureInfo.CurrentUICulture;\n}"
+              "code": "public sealed class CustomLocalizer(IStringLocalizer<Resources> localizer) : ITmLocalizer\n{\n    public CultureInfo Culture => CultureInfo.CurrentUICulture;\n\n    public string this[string key] => localizer[key];\n\n    public string this[string key, params object[] arguments]\n        => string.Format(Culture, this[key], arguments);\n\n    public bool TryGetString(string key, out string value)\n    {\n        var found = localizer[key];\n        value = found.ResourceNotFound ? string.Empty : found.Value;\n        return !found.ResourceNotFound;\n    }\n}"
             },
             {
               "title": "Registration",
@@ -73913,7 +73930,8 @@
           "usedInComponents": [
             "TmTimeline",
             "TmActivityTimeline",
-            "TmActivityComments"
+            "TmActivityComments",
+            "TmNotificationBell"
           ],
           "examples": [
             {
@@ -73936,7 +73954,7 @@
               "name": "Plural",
               "kind": "Method",
               "type": "string",
-              "description": "Resolves the plural form of key for count and formats it.",
+              "description": "Resolves the plural form of key for an integer count.",
               "parameters": [
                 {
                   "name": "localizer",
@@ -73948,7 +73966,7 @@
                 },
                 {
                   "name": "count",
-                  "type": "double"
+                  "type": "int"
                 },
                 {
                   "name": "extraArguments",
