@@ -137,4 +137,54 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
 
         cut.Find(".tm-keyboard-shortcuts-modal").GetAttribute("role").Should().Be("dialog");
     }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_Default_HasNoSubtitle_AndSplitsOnPlus()
+    {
+        // Frozen default: no Description parameter means no subtitle, and "Ctrl+N" stays a chord
+        // of two keys. A later opt-in must not change this markup.
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true));
+
+        cut.FindAll(".tm-keyboard-shortcuts-subtitle").Should().BeEmpty();
+        cut.FindAll(".tm-keyboard-shortcuts-item")[0].QuerySelectorAll("kbd").Count.Should().Be(2);
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_Description_RendersSubtitle_AndLabelsTheDialog()
+    {
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.Description, "Shortcuts work with an external keyboard"));
+
+        cut.Find(".tm-keyboard-shortcuts-subtitle").TextContent
+            .Should().Contain("Shortcuts work with an external keyboard");
+
+        var titleId = cut.Find(".tm-keyboard-shortcuts-title").GetAttribute("id");
+        titleId.Should().NotBeNullOrEmpty();
+        cut.Find(".tm-keyboard-shortcuts-modal").GetAttribute("aria-labelledby").Should().Be(titleId);
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_AlternativeSeparator_DoesNotRenderAChord()
+    {
+        // "Arrow Up / Arrow Down" is two alternative keys, not a chord. A separator other than '+'
+        // must keep each alternative as its own key and must not split the words on the spaces.
+        var categories = new[]
+        {
+            new TmShortcutCategory("Navigation",
+            [
+                new TmKeyboardShortcut("Arrow Up / Arrow Down", "Move", " / "),
+            ]),
+        };
+
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, categories)
+            .Add(c => c.IsVisible, true));
+
+        var keys = cut.FindAll("kbd").Select(k => k.TextContent.Trim()).ToArray();
+        keys.Should().Equal("Arrow Up", "Arrow Down");
+    }
 }
