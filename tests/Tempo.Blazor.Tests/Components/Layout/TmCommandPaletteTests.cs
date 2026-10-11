@@ -273,6 +273,24 @@ public class TmCommandPaletteTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmCommandPalette_SplitShortcuts_KeepsATrailingPlus()
+    {
+        // L9: "Ctrl++" is Ctrl and the + key. Splitting on '+' and discarding empty parts drops the
+        // key itself, so a trailing separator must survive as its own chip.
+        var actions = new ICommandPaletteAction[]
+        {
+            new TestAction("a1", "Zoom in", null, Shortcut: "Ctrl++"),
+        };
+        var cut = Render<TmCommandPalette>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.SplitShortcuts, true)
+            .Add(c => c.Actions, actions));
+
+        cut.FindAll(".tm-command-palette-shortcut kbd").Select(k => k.TextContent.Trim())
+            .Should().Equal("Ctrl", "+");
+    }
+
+    [Fact]
     public void TmCommandPalette_Enter_On_Close_Button_Closes_Without_Executing()
     {
         // The close control is a native <button>: Enter produces a click on
