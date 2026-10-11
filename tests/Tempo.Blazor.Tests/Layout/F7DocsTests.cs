@@ -84,6 +84,21 @@ public class F7DocsTests
     }
 
     [Fact]
+    public void Changelog_RecordsTheTimeZoneNote_AndTheSchedulerMigrationSnippet()
+    {
+        var unreleased = Read("CHANGELOG.md");
+        unreleased = unreleased[..unreleased.IndexOf("## 2.9.0 - ", StringComparison.Ordinal)];
+
+        unreleased.Should().Contain("Q1=A").And.Contain("scoped TimeProvider");
+        unreleased.Should().Contain("TmActivityTimeline").And.Contain("absolute date");
+        unreleased.Should().Contain("script-src");
+
+        var overlay = Read("JsonDocumentation", "Abstractions", "ITmLocalizer.json");
+        overlay.Should().Contain("TryGetString").And.Contain("Culture");
+        overlay.Should().NotContain("GetString").And.NotContain("CurrentCulture");
+    }
+
+    [Fact]
     public void AgentsGuide_ListsThePointerDragModule()
     {
         Read("AGENTS.md").Should().Contain("pointer-drag.js");
