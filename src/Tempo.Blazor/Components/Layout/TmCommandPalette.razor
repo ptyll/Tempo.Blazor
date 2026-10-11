@@ -35,52 +35,36 @@
             else
             {
                 <ul class="tm-command-palette-list" role="listbox">
-                    @for (var i = 0; i < _filtered.Count; i++)
+                    @if (GroupByCategory)
                     {
-                        var index = i;
-                        var action = _filtered[index];
-                        var focused = index == _highlightedIndex;
-                        var group = GroupOf(action);
-                        var startsGroup = GroupByCategory && (index == 0 || GroupOf(_filtered[index - 1]) != group);
-                        if (startsGroup)
+                        @* A listbox's children must be options or groups. Each category is a named
+                           group holding a role=none list of options; the divider is a border, not a
+                           role=separator, which a listbox may not contain. *@
+                        var groupNumber = 0;
+                        @foreach (var group in GroupedActions())
                         {
-                            <li class="tm-command-palette-group" role="presentation">
-                                @if (index > 0)
+                            var labelId = $"{_groupLabelPrefix}-{groupNumber++}";
+                            <li class="tm-command-palette-group" role="group"
+                                aria-labelledby="@(!string.IsNullOrEmpty(group.Label) ? labelId : null)">
+                                @if (!string.IsNullOrEmpty(group.Label))
                                 {
-                                    <div class="tm-command-palette-separator" role="separator"></div>
+                                    <span id="@labelId" class="tm-command-palette-group-label">@group.Label</span>
                                 }
-                                @if (!string.IsNullOrEmpty(group))
-                                {
-                                    <div class="tm-command-palette-group-label">@group</div>
-                                }
+                                <ul role="none">
+                                    @foreach (var index in group.Indexes)
+                                    {
+                                        @RenderItem(index)
+                                    }
+                                </ul>
                             </li>
                         }
-                        <li class="tm-command-palette-item @(focused ? "tm-command-palette-item-focused" : "")"
-                            role="option"
-                            aria-selected="@(focused ? "true" : "false")"
-                            @onclick="() => ExecuteAsync(action)">
-                            <span class="tm-command-palette-title">@action.Title</span>
-                            @if (!string.IsNullOrEmpty(action.Description))
-                            {
-                                <span class="tm-command-palette-description">@action.Description</span>
-                            }
-                            @if (!string.IsNullOrEmpty(action.Shortcut))
-                            {
-                                if (SplitShortcuts)
-                                {
-                                    <span class="tm-command-palette-shortcut">
-                                        @foreach (var part in action.Shortcut.Split('+'))
-                                        {
-                                            <kbd>@part.Trim()</kbd>
-                                        }
-                                    </span>
-                                }
-                                else
-                                {
-                                    <kbd class="tm-command-palette-shortcut">@action.Shortcut</kbd>
-                                }
-                            }
-                        </li>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < _filtered.Count; i++)
+                        {
+                            @RenderItem(i)
+                        }
                     }
                 </ul>
             }
@@ -92,6 +76,54 @@
     private string _query = string.Empty;
     private List<ICommandPaletteAction> _filtered = new();
     private int _highlightedIndex;
+
+    // Stable per instance so a group's aria-labelledby survives re-renders and two palettes on one
+    // page never share label ids.
+    private readonly string _groupLabelPrefix = $"tm-palette-group-{Guid.NewGuid():N}";
+
+    private RenderFragment RenderItem(int index) => @<li class="tm-command-palette-item @(index == _highlightedIndex ? "tm-command-palette-item-focused" : "")"
+                                                        role="option"
+                                                        aria-selected="@(index == _highlightedIndex ? "true" : "false")"
+                                                        @onclick="() => ExecuteAsync(_filtered[index])">
+        <span class="tm-command-palette-title">@_filtered[index].Title</span>
+        @if (!string.IsNullOrEmpty(_filtered[index].Description))
+        {
+            <span class="tm-command-palette-description">@_filtered[index].Description</span>
+        }
+        @if (!string.IsNullOrEmpty(_filtered[index].Shortcut))
+        {
+            if (SplitShortcuts)
+            {
+                <span class="tm-command-palette-shortcut">
+                    @foreach (var part in _filtered[index].Shortcut!.Split('+'))
+                    {
+                        <kbd>@part.Trim()</kbd>
+                    }
+                </span>
+            }
+            else
+            {
+                <kbd class="tm-command-palette-shortcut">@_filtered[index].Shortcut</kbd>
+            }
+        }
+    </li>;
+
+    private IEnumerable<(string Label, List<int> Indexes)> GroupedActions()
+    {
+        var groups = new List<(string Label, List<int> Indexes)>();
+        for (var i = 0; i < _filtered.Count; i++)
+        {
+            var label = GroupOf(_filtered[i]);
+            if (groups.Count == 0 || groups[^1].Label != label)
+            {
+                groups.Add((label, new List<int>()));
+            }
+
+            groups[^1].Indexes.Add(i);
+        }
+
+        return groups;
+    }
 
     private TmFocusScope? _scope;
     private ElementReference _backdrop;

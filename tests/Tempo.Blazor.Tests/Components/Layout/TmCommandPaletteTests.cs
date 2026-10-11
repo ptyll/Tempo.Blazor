@@ -213,7 +213,8 @@ public class TmCommandPaletteTests : LocalizationTestBase
             .Add(c => c.GroupByCategory, true)
             .Add(c => c.Actions, actions));
 
-        cut.FindAll(".tm-command-palette-separator").Count.Should().Be(1);
+        // The divider is a border between groups, not a separator element a listbox may not own.
+        cut.FindAll(".tm-command-palette-separator").Should().BeEmpty();
         cut.FindAll(".tm-command-palette-group-label").Select(l => l.TextContent.Trim())
             .Should().Equal("File", "Edit");
         // The separator is not an option, so arrow navigation still walks the actions only.

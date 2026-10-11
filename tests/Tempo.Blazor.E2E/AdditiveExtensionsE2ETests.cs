@@ -99,8 +99,11 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         var palette = page.Locator(".tm-command-palette");
         await Assertions.Expect(palette).ToBeVisibleAsync();
 
-        Assert.AreEqual(1, await palette.Locator(".tm-command-palette-separator").CountAsync(),
-            "two categories produce exactly one separator");
+        // L5: groups are named role=group rows; the divider is a border, not a separator element.
+        var groups = palette.Locator(".tm-command-palette-list > [role='group']");
+        Assert.AreEqual(2, await groups.CountAsync(), "two categories produce two groups");
+        Assert.AreEqual(0, await palette.Locator("[role='separator'], [role='presentation']").CountAsync(),
+            "a listbox may not contain a separator or a presentation row");
         var labels = await palette.Locator(".tm-command-palette-group-label")
             .EvaluateAllAsync<string[]>("els => els.map(e => e.textContent.trim())");
         CollectionAssert.AreEqual(new[] { "File", "Edit" }, labels);
@@ -110,6 +113,35 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         CollectionAssert.AreEqual(new[] { "Ctrl", "N" }, first, "a shortcut splits into one kbd per key");
 
         await ShootAsync(page, palette, "palette-grouped-1280");
+    }
+
+    [TestMethod]
+    public async Task Palette_Grouped_HasNoCriticalOrSeriousAxeViolations()
+    {
+        // L5: the grouped listbox (role=group labelled by its category) must be axe-clean.
+        var page = await OpenAsync("/layout", 1280, 720, touch: false);
+        await page.GetByTestId("command-palette-grouped-open").ClickAsync();
+        await Assertions.Expect(page.Locator(".tm-command-palette")).ToBeVisibleAsync();
+
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions
+        {
+            Url = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js",
+        });
+        var violations = await page.EvaluateAsync<string[]>(
+            """
+            async () => {
+                const host = document.querySelector('.tm-command-palette');
+                const result = await axe.run(host, {
+                    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                    resultTypes: ['violations']
+                });
+                return result.violations
+                    .filter(v => v.impact === 'critical' || v.impact === 'serious')
+                    .map(v => `${v.impact}: ${v.id} - ${v.help}`);
+            }
+            """);
+        Assert.AreEqual(0, violations.Length,
+            $"the grouped palette must have no critical/serious violations: {string.Join(" | ", violations)}");
     }
 
     [TestMethod]

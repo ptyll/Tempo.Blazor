@@ -76,6 +76,13 @@
 }
 .tm-command-palette-empty { padding: var(--tm-space-8); text-align: center; color: var(--tm-text-secondary); font-size: var(--tm-font-size-sm); }
 .tm-command-palette-group { list-style: none; }
+/* The divider between categories. A listbox may not contain a role=separator, so it is a border. */
+.tm-command-palette-group + .tm-command-palette-group {
+    border-top: 1px solid var(--tm-border-color);
+    margin-top: var(--tm-space-2);
+    padding-top: var(--tm-space-2);
+}
+.tm-command-palette-group > ul { margin: 0; padding: 0; list-style: none; }
 .tm-command-palette-separator {
   height: 1px;
   margin: var(--tm-space-2) var(--tm-space-3);
