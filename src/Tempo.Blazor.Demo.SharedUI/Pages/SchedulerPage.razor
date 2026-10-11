@@ -376,7 +376,9 @@
         new() { Id = "i2", Title = "Draggable Event", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#10b981" },
         new() { Id = "i3", Title = "Another Event", Start = DateTime.Today.AddDays(2).AddHours(14), End = DateTime.Today.AddDays(2).AddHours(15), Color = "#f59e0b" },
         // Event specifically for today to ensure Day view has content for testing
-        new() { Id = "i4", Title = "Resize Test Event", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" }
+        new() { Id = "i4", Title = "Resize Test Event", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
+        // 30 minutes: both coarse handles would cover it, so a centre swipe must still scroll (F7 J3).
+        new() { Id = "i5", Title = "Short Event", Start = DateTime.Today.AddHours(16), End = DateTime.Today.AddHours(16).AddMinutes(30), Color = "#0ea5e9" }
     };
 
     private void HandleEventClick(TmScheduleEvent evt)

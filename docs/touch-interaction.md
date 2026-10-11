@@ -98,7 +98,7 @@ touch users who cannot drag precisely.
 | Module | What it does with the helper |
 |--------|------------------------------|
 | `tm-editor-shell.js` | Panel resizer: `attach(handle, { threshold: 0 })`; `onMove` clamps the width and writes the CSS variable, `onEnd` commits once, `onCancel` restores the start width. The keyboard path stays in Blazor and shares the clamp vectors. |
-| `scheduler.js` | Event resize (time grid and timeline) with a mouse, finger or pen: `attach(document, { selector: '.tm-scheduler-event-resize-handle' })`. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the `NotifyResizeComplete` callback are unchanged. The mouse keeps HTML5 drag-and-drop for moving the event body. |
+| `scheduler.js` | Event resize (time grid and timeline) with a mouse, finger or pen: `attach(document, { selector: '.tm-scheduler-event-resize-handle', threshold: 2, longPressMs: 400 })`. The long-press applies to touch only, so a quick swipe scrolls (the coarse handle is `touch-action: pan-y` on the time grid and `pan-x` on the timeline, capped at `min(var(--tm-space-4), 25%)`, with a visible grip under `hover: none`); mouse and pen keep the 2px threshold. Hold, then drag, to resize. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the `NotifyResizeComplete` callback are unchanged. The mouse keeps HTML5 drag-and-drop for moving the event body. |
 
 Gantt, Dashboard, DiagramEditor, Wireframe and the Signing designer adopt it in their own plans; none
 of them may add a second implementation.

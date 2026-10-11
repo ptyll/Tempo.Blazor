@@ -25,7 +25,8 @@
 
     var HANDLE_SELECTOR = '.tm-scheduler-event-resize-handle';
     var MIN_SIZE = 10;       // px: an event is never dragged smaller than this
-    var THRESHOLD = 2;       // px of movement before a press becomes a resize
+    var THRESHOLD = 2;       // px of movement before a mouse/pen press becomes a resize
+    var LONG_PRESS_MS = 400; // touch only: a quick swipe scrolls; hold, then drag, resizes
 
     // Namespace
     window.TempoBlazor = window.TempoBlazor || {};
@@ -53,6 +54,10 @@
                 self._drag = helper.attach(document, {
                     selector: HANDLE_SELECTOR,
                     threshold: THRESHOLD,
+                    // Touch only (the helper ignores it for mouse and pen). A finger that moves before
+                    // the hold is a scroll, not a resize — Chromium's touch adjustment snaps a swipe
+                    // that starts on the event body onto this handle, and threshold 2 used to commit it.
+                    longPressMs: LONG_PRESS_MS,
                     // The handle keeps its click inert after a resize; HTML5 drag-and-drop of the
                     // event body is untouched because only the handle selector starts a gesture.
                     onPress: function (info) { return self._press(info); },

@@ -145,14 +145,15 @@ public class PointerDragE2ETests : WasmTestBase
         var before = await EventHeightAsync(page);
         var slot = await SlotPixelsAsync(page);
         var handleBox = (await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").BoundingBoxAsync())!;
-        Assert.IsTrue(handleBox.Height >= 14, $"the handle grows on a coarse pointer ({handleBox.Height}px)");
-        Assert.AreEqual("none", await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").EvaluateAsync<string>("e => getComputedStyle(e).touchAction"),
-            "the handle opts out of panning so a finger can resize");
+        Assert.IsTrue(handleBox.Height >= 10, $"the handle grows on a coarse pointer ({handleBox.Height}px)");
+        Assert.AreEqual("pan-y", await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").EvaluateAsync<string>("e => getComputedStyle(e).touchAction"),
+            "a coarse handle pans vertically; the long-press, not touch-action, starts the resize");
 
         var session = await page.Context.NewCDPSessionAsync(page);
         var x = handleBox.X + handleBox.Width / 2;
         var y = handleBox.Y + handleBox.Height / 2;
         await TouchAsync(session, "touchStart", x, y);
+        await page.WaitForTimeoutAsync(450); // touch resize waits out the 400ms long-press
         for (var i = 1; i <= 8; i++)
         {
             await TouchAsync(session, "touchMove", x, y + slot * 2 * i / 8.0);
@@ -180,6 +181,7 @@ public class PointerDragE2ETests : WasmTestBase
         var y = box.Y + box.Height / 2;
 
         await TouchAsync(session, "touchStart", x, y);
+        await page.WaitForTimeoutAsync(450); // the long-press must fire before the drag, or the swipe is a scroll
         for (var i = 1; i <= 6; i++)
         {
             await TouchAsync(session, "touchMove", x, y + slot * 2 * i / 6.0);
@@ -206,6 +208,7 @@ public class PointerDragE2ETests : WasmTestBase
         var y = box.Y + box.Height / 2;
 
         await TouchAsync(session, "touchStart", x, y);
+        await page.WaitForTimeoutAsync(450);
         for (var i = 1; i <= 6; i++)
         {
             await TouchAsync(session, "touchMove", x, y + slot * 2 * i / 6.0);
@@ -219,6 +222,65 @@ public class PointerDragE2ETests : WasmTestBase
         var bodyAction = await Event(page).EvaluateAsync<string>("e => getComputedStyle(e).touchAction");
         Assert.AreNotEqual("none", bodyAction, "the event body keeps native scrolling");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"));
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [DataRow(390)]
+    [DataRow(768)]
+    public async Task Scheduler_Touch_SwipeFromEventCentre_Scrolls_AndDoesNotResize(int width)
+    {
+        // J3: a swipe that starts in the middle of a 1h event, and of a 30-min event, must scroll.
+        // Chromium snaps that finger onto a handle; the long-press is what keeps it a scroll.
+        var page = await OpenSchedulerDayAsync(touch: true, width, 800);
+        await page.Locator("[data-event-id='i5']").WaitForAsync();
+        var action = await LastActionAsync(page);
+        var session = await page.Context.NewCDPSessionAsync(page);
+
+        foreach (var id in new[] { "i4", "i5" })
+        {
+            var before = await page.EvaluateAsync<double>($"() => document.querySelector(\"[data-event-id='{id}']\").getBoundingClientRect().height");
+            var box = (await page.Locator($"[data-event-id='{id}']").BoundingBoxAsync())!;
+            var scrollBefore = await page.EvaluateAsync<double>("() => window.scrollY");
+            await TouchAsync(session, "touchStart", box.X + box.Width / 2, box.Y + box.Height / 2);
+            for (var i = 1; i <= 8; i++)
+            {
+                await TouchAsync(session, "touchMove", box.X + box.Width / 2, box.Y + box.Height / 2 - 40.0 * i);
+            }
+            await TouchAsync(session, "touchEnd", box.X + box.Width / 2, box.Y + box.Height / 2 - 320);
+            var scrollAfter = await page.EvaluateAsync<double>("() => window.scrollY");
+            Assert.AreNotEqual(scrollBefore, scrollAfter, $"{width}px: a centre swipe on {id} must scroll");
+            var after = await page.EvaluateAsync<double>($"() => document.querySelector(\"[data-event-id='{id}']\").getBoundingClientRect().height");
+            Assert.AreEqual(before, after, 1.0, $"{width}px: {id} was resized by a swipe");
+        }
+
+        Assert.AreEqual(action, await LastActionAsync(page), "scheduler-last-action is unchanged");
+    }
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    [DataRow(390)]
+    [DataRow(768)]
+    public async Task Scheduler_Touch_HoldThenDrag_ResizesAndCommits(int width)
+    {
+        var page = await OpenSchedulerDayAsync(touch: true, width, 800);
+        var before = await EventHeightAsync(page);
+        var slot = await SlotPixelsAsync(page);
+        var box = (await Event(page).Locator(".tm-scheduler-event-resize-handle--bottom").BoundingBoxAsync())!;
+        var session = await page.Context.NewCDPSessionAsync(page);
+        var x = box.X + box.Width / 2;
+        var y = box.Y + box.Height / 2;
+
+        await TouchAsync(session, "touchStart", x, y);
+        await page.WaitForTimeoutAsync(450);
+        for (var i = 1; i <= 6; i++)
+        {
+            await TouchAsync(session, "touchMove", x, y + slot * 2 * i / 6.0);
+        }
+        await TouchAsync(session, "touchEnd", x, y + slot * 2);
+
+        await Assertions.Expect(page.Locator("[data-testid='scheduler-last-action']")).ToContainTextAsync("Resize Test Event");
+        Assert.IsTrue(await EventHeightAsync(page) > before + slot, $"hold-then-drag resizes at {width}");
     }
 
     // ── pen ─────────────────────────────────────────────────────────────────────────────────

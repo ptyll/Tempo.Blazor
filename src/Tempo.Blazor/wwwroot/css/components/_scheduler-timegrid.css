@@ -264,7 +264,7 @@
 /* ── Resize handles ── */
 .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle {
     position: absolute;
-    /* The shared pointer-drag helper starts the resize from this handle: a finger must resize, not pan. */
+    /* A mouse or pen resizes immediately, so the handle must not start a pan. */
     touch-action: none;
     left: 0;
     right: 0;
@@ -279,10 +279,28 @@
     background: rgba(255, 255, 255, 0.3);
 }
 
-/* A finger needs a larger target than a mouse (B13): the handle grows on coarse pointers. */
+/* A finger needs a larger target than a mouse (B13), but never so large that the two handles cover
+   a 30-minute event. A quick swipe must pan the page; the 400ms long-press in scheduler.js is what
+   starts the resize, and once it has started the helper cancels the pan. */
 @media (pointer: coarse) {
     .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle {
-        height: var(--tm-space-4);
+        height: min(var(--tm-space-4), 25%);
+        touch-action: pan-y;
+    }
+}
+
+/* No hover on a touch screen: the grip has to be visible without it. */
+@media (hover: none) {
+    .tm-scheduler-timegrid-event .tm-scheduler-event-resize-handle::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 24px;
+        height: 4px;
+        transform: translate(-50%, -50%);
+        border-radius: var(--tm-radius-full, 999px);
+        background: var(--tm-border-color-strong);
     }
 }
 

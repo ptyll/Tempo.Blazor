@@ -135,7 +135,7 @@ test('touch resize is gated behind a 400ms long-press; a quick swipe is not a re
 
     doc.dispatch('pointerdown', ev(g.bottom, { pointerType: 'touch', clientY: 160 }));
     doc.dispatch('pointermove', ev(g.bottom, { pointerType: 'touch', clientY: 160 + 40 }));
-    assert.equal(g.event.style.height, undefined, 'a swipe that moves before the hold is a scroll, not a resize');
+    assert.equal(g.event.style.height ?? '', '', 'a swipe that moves before the hold is a scroll, not a resize');
     assert.equal(ref.calls.length, 0);
 
     doc.dispatch('pointerdown', ev(g.bottom, { pointerType: 'touch', clientY: 160 }));
@@ -191,12 +191,14 @@ test('the top handle moves the start: negative delta, top and height follow', ()
     assert.equal(g.event.style.height, '');
 });
 
-test('a FINGER resizes the same way (the B13 bug: touch did nothing)', () => {
+test('a FINGER resizes the same way (the B13 bug: touch did nothing)', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     const g = timegrid({ slot: 30 });
     const ref = dotnet();
     scheduler.registerInstance(g.grid, ref);
 
     doc.dispatch('pointerdown', ev(g.bottom, { pointerType: 'touch', pointerId: 4, clientY: 160 }));
+    t.mock.timers.tick(400); // touch resize waits out the long-press; a swipe before it scrolls
     g.bottom.dispatch('pointermove', ev(g.bottom, { pointerType: 'touch', pointerId: 4, clientY: 220 }));
     g.bottom.dispatch('pointerup', ev(g.bottom, { pointerType: 'touch', pointerId: 4, clientY: 220 }));
 
