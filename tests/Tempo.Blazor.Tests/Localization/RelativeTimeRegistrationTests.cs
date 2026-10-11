@@ -27,9 +27,25 @@ public class RelativeTimeRegistrationTests
 
         public CultureInfo Culture { get; set; } = CultureInfo.GetCultureInfo("en");
 
-        public string this[string key] => key == "Tm_Time_JustNow" ? Stamp : key;
+        public string this[string key] => key switch
+        {
+            "Tm_Time_JustNow" => Stamp,
+            "Tm_Time_YesterdayAt" => "yesterday at {0}",
+            "Tm_Time_TomorrowAt" => "tomorrow at {0}",
+            "Tm_Time_HoursAgo" => "{0} h ago",
+            "Tm_Time_InHours" => "in {0} h",
+            "Tm_Time_TimeFormat" => "h:mm tt",
+            _ => key,
+        };
 
-        public string this[string key, params object[] arguments] => this[key];
+        public string this[string key, params object[] arguments]
+        {
+            get
+            {
+                var template = this[key];
+                return arguments is { Length: > 0 } ? string.Format(Culture, template, arguments) : template;
+            }
+        }
     }
 
     private sealed class ZoneClock : TimeProvider

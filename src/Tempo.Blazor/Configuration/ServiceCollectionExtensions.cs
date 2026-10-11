@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
     /// Registers the core Tempo.Blazor services shared by all component groups.
     /// <list type="bullet">
     ///   <item><description><see cref="ITmLocalizer"/>: Singleton (stateless, thread-safe, backed by embedded JSON)</description></item>
-    ///   <item><description><see cref="ITmRelativeTimeFormatter"/>: Singleton relative-time formatter over the localizer and the registered <see cref="TimeProvider"/></description></item>
+    ///   <item><description><see cref="ITmRelativeTimeFormatter"/>: Scoped relative-time formatter. It resolves <see cref="ITmLocalizer"/> and <see cref="TimeProvider"/> from the current scope, so a scoped localizer (language, tenant) and a scoped clock (the browser's time zone) are not captured once for every circuit. The default clock is <see cref="TimeProvider.System"/>, whose <see cref="TimeProvider.LocalTimeZone"/> is the server's zone — wrong for a Blazor Server circuit. Register a scoped <see cref="TimeProvider"/> whose <see cref="TimeProvider.LocalTimeZone"/> is the user's zone (read the IANA id from the browser once per circuit, <c>TimeZoneInfo.FindSystemTimeZoneById</c> with a fallback to UTC). No component takes a time-zone parameter for this.</description></item>
     ///   <item><description><see cref="ThemeService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="ToastService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="DragDropService"/>: Scoped drag/drop state shared by core components</description></item>
@@ -54,9 +54,12 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IStringLocalizer<TmResources>, JsonStringLocalizer<TmResources>>();
         services.TryAddSingleton<ITmLocalizer, DefaultTmLocalizer>();
 
-        // Relative time ("just now", "5 min ago", "yesterday at 4:20 PM"): one shared formatter instead of a private
-        // copy per component. Uses the host's TimeProvider when one is registered (tests register a FakeTimeProvider).
-        services.TryAddSingleton<ITmRelativeTimeFormatter>(sp =>
+        // Relative time ("just now", "5 min ago", "yesterday at 4:20 PM"): one formatter instead of a private
+        // copy per component, resolved per scope. A singleton would capture the first ITmLocalizer (wrong
+        // language/tenant, and a crash under ValidateScopes when that localizer is scoped) and the first
+        // TimeProvider. The host's TimeProvider, when one is registered, supplies the clock and the zone
+        // "yesterday" is judged in; tests register a FakeTimeProvider, a Blazor Server host a scoped one.
+        services.TryAddScoped<ITmRelativeTimeFormatter>(sp =>
             new TmRelativeTimeFormatter(sp.GetRequiredService<ITmLocalizer>(), sp.GetService<TimeProvider>()));
 
         // ThemeService: scoped so each circuit/tab gets its own theme state.

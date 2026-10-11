@@ -93,9 +93,38 @@ public interface ITmRelativeTimeFormatter
 - **Time zone.** "Yesterday" is a calendar-day judgement made in the zone you pass (default: the
   clock's local zone), from the *instant* — the offset a `DateTimeOffset` happens to carry is
   irrelevant. A component that knows the user's zone (the Scheduler's `ResolveTimeZone()`) passes it.
-- **Clock.** `AddTempoBlazor()` registers the default `TmRelativeTimeFormatter` over the registered
-  `TimeProvider` (the system clock when none is). Tests register a `FakeTimeProvider`
-  (`Microsoft.Extensions.Time.Testing`) or pass `now` explicitly — never `DateTime.Now`.
+  No component takes a time-zone parameter for this: the zone comes from the clock.
+- **Clock and lifetime.** `AddTempoBlazor()` registers `ITmRelativeTimeFormatter` as **scoped**, over
+  the `ITmLocalizer` and `TimeProvider` of the current scope (the system clock when no `TimeProvider`
+  is registered). Scoped, not singleton: a singleton would capture the first localizer, so a scoped
+  localizer either throws under `ValidateScopes` or every circuit shares the first language. Tests
+  register a `FakeTimeProvider` (`Microsoft.Extensions.Time.Testing`) or pass `now` explicitly — never
+  `DateTime.Now`.
+- **Blazor Server / prerender: the user's zone.** `TimeProvider.System.LocalTimeZone` is the
+  *server's* zone, so "yesterday at 16:20" is wrong for a circuit whose browser is elsewhere. The host
+  registers a scoped `TimeProvider` whose `LocalTimeZone` is the browser's zone. Read the IANA id once
+  per circuit (`Intl.DateTimeFormat().resolvedOptions().timeZone`), resolve it with
+  `TimeZoneInfo.FindSystemTimeZoneById`, and fall back to UTC when the id is unknown. There is no
+  component parameter for this; a shared `ITmUserTimeZone` (one browser read, reused by Scheduler and
+  Gantt) is a recorded follow-up, not part of this registration.
+
+  ```csharp
+  builder.Services.AddTempoBlazor();
+  builder.Services.AddScoped<TimeProvider>(sp =>
+  {
+      var zoneId = sp.GetRequiredService<CircuitZoneCache>().ZoneId; // set once from JS, per circuit
+      TimeZoneInfo zone;
+      try { zone = TimeZoneInfo.FindSystemTimeZoneById(zoneId); }
+      catch (TimeZoneNotFoundException) { zone = TimeZoneInfo.Utc; }
+      catch (InvalidTimeZoneException) { zone = TimeZoneInfo.Utc; }
+      return new UserTimeProvider(zone);
+  });
+
+  sealed class UserTimeProvider(TimeZoneInfo zone) : TimeProvider
+  {
+      public override TimeZoneInfo LocalTimeZone => zone;
+  }
+  ```
 - **Strings.** `Tm_Time_JustNow`, `Tm_Time_MinutesAgo`, `Tm_Time_HoursAgo`, `Tm_Time_InMinutes`,
   `Tm_Time_InHours`, `Tm_Time_YesterdayAt`, `Tm_Time_TomorrowAt`, the plural families
   `Tm_Time_DaysAgo_*` / `Tm_Time_InDays_*`, and two format strings `Tm_Time_TimeFormat` (the clock
