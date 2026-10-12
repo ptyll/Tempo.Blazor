@@ -325,6 +325,61 @@ public sealed class TokenContrastTests
     }
 
     /// <summary>
+    /// f4057a47: the command palette's focused row painted <c>--tm-color-gray-50</c>, which in dark
+    /// IS <c>--tm-bg-surface</c> (1:1 — the highlight vanished exactly where keyboard users need it)
+    /// and about 1.04:1 on white in light. The row now paints the muted fill with a
+    /// <c>--tm-color-primary</c> outline, the <c>_multiselect.css</c> focused-option precedent. The
+    /// declarations are pinned (a revert to gray-50 fails on the string, a missing outline fails on
+    /// the null) and the outline colour is measured against the surface the palette paints on AND
+    /// against the muted fill the row itself paints — the boundary a user actually sees the outline
+    /// drawn over — each ≥3:1 (WCAG 1.4.11 non-text) in light, dark and the indigo theme, both
+    /// brightness modes.
+    /// </summary>
+    [Fact]
+    public void CommandPaletteHighlight_IsPaintedFromTokens_AndHoldsThreeToOne()
+    {
+        var fill = ThemeCss.TryProperty("_command-palette.css", ".tm-command-palette-item-focused", "background-color");
+        fill.Should().Be("var(--tm-bg-muted)",
+            "f4057a47: --tm-color-gray-50 IS the dark surface (1:1) and 1.04:1 on white — the focused row must paint the muted fill");
+
+        var hover = ThemeCss.TryProperty("_command-palette.css", ".tm-command-palette-item:hover", "background-color");
+        hover.Should().Be("var(--tm-bg-muted)",
+            "hover and focus share the muted fill; only the outline marks the active row");
+
+        var outline = ThemeCss.TryProperty("_command-palette.css", ".tm-command-palette-item-focused", "outline");
+        outline.Should().NotBeNull(
+            "the muted fill alone is ~1.1:1 against the surface, so the ≥3:1 cue is the outline");
+        var outlineToken = Regex.Match(outline!, @"var\((--tm-[\w-]+)", RegexOptions.None, TimeSpan.FromSeconds(5));
+        outlineToken.Success.Should().BeTrue("the outline must be painted from a token, not a hex");
+        outlineToken.Groups[1].Value.Should().Be("--tm-color-primary",
+            "primary is the accent the focused-option precedent outlines with");
+
+        foreach (var indigo in new[] { false, true })
+        {
+            foreach (var dark in new[] { false, true })
+            {
+                var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+                var boundary = ThemeCss.ResolveColour($"var({outlineToken.Groups[1].Value})", tokens);
+                var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
+                ThemeCss.Contrast(boundary, surface).Should().BeGreaterThanOrEqualTo(
+                    3.0,
+                    "the focused row's outline is a non-text indicator and must hold 3:1 against " +
+                    "the palette surface ({0}, {1}) — measured {2:0.00}:1",
+                    indigo ? "indigo" : "default", dark ? "dark" : "light",
+                    ThemeCss.Contrast(boundary, surface));
+
+                var rowFill = ThemeCss.ResolveColour("var(--tm-bg-muted)", tokens);
+                ThemeCss.Contrast(boundary, rowFill).Should().BeGreaterThanOrEqualTo(
+                    3.0,
+                    "the outline must also hold 3:1 against the muted fill the focused row paints " +
+                    "({0}, {1}) — that is the boundary it is drawn over — measured {2:0.00}:1",
+                    indigo ? "indigo" : "default", dark ? "dark" : "light",
+                    ThemeCss.Contrast(boundary, rowFill));
+            }
+        }
+    }
+
+    /// <summary>
     /// F0 semantic tokens (00-cross-cutting §1 and §7.3). Each one must exist in BOTH themes:
     /// a token declared only on <c>:root</c> substitutes its <c>var()</c> where it is declared, so a
     /// dark theme switched on a parent element would inherit the light value. Status and priority

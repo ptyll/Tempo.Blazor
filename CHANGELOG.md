@@ -774,6 +774,41 @@
   a hand-written member description. Declarations whose signature wraps across lines, and
   tuple-typed expression-bodied properties, are not yet extracted.
 
+- **`TmCommandPalette` is a real combobox, its options carry stable ids, and a click on the
+  backdrop closes it.** The search input is now the `role="combobox"` owning the result listbox:
+  it gained `aria-controls` (pointing at the listbox id — which also takes the scrolling list out
+  of axe's `scrollable-region-focusable` matcher), `aria-expanded`, `aria-autocomplete="list"` and
+  `aria-activedescendant`, which follows the ArrowUp/ArrowDown highlight so a screen reader
+  announces the row the arrows moved to. Every `role="option"` row now renders a stable `id`.
+  Grouped markup changed: `group` is not an allowed role for `li` (axe `aria-allowed-role`), so
+  each category is now a presentational row hosting a named group div — selectors keyed on
+  `li.tm-command-palette-group` must move to `div.tm-command-palette-group` (the divider between
+  categories stays a CSS border, now on `.tm-command-palette-group-item +
+  .tm-command-palette-group-item`):
+
+  ```html
+  <!-- before -->
+  <ul role="listbox" class="tm-command-palette-list">
+    <li class="tm-command-palette-group" role="group" aria-labelledby="…">…</li>
+  </ul>
+
+  <!-- after -->
+  <ul role="listbox" class="tm-command-palette-list" id="…">
+    <li role="none" class="tm-command-palette-group-item">
+      <div class="tm-command-palette-group" role="group" aria-labelledby="…">…</div>
+    </li>
+  </ul>
+  ```
+
+  The backdrop also became a click-to-dismiss surface — a click outside the panel closes the
+  palette (no opt-out parameter, matching `TmModal` and `TmKeyboardShortcutsHelp`); the dismissal
+  requires the press to START on the backdrop, so a drag-select that begins on the input and ends
+  over the backdrop (only the click lands there) keeps the palette open; clicks inside the panel
+  are fenced off and never reach the backdrop's handler. Grouped lists no longer render a group
+  for a null/empty category — a `role=group` must be named, so those options render without the
+  wrapper — and the combobox drops `aria-controls` when the listbox is gone (no results).
+  Consumers that asserted "the palette stays open after any click" must adjust.
+
 ### Fixed
 
 - **Overlay focus traps activate only after their root is promoted to the top layer.**
@@ -1233,6 +1268,13 @@
   Enter on keydown, Space on keyup per
   [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md)),
   carry an accessible name, and receive focus back when the lightbox closes.
+
+- **The command palette's keyboard highlight is visible in every theme.** The focused row painted
+  `--tm-color-gray-50`, which in dark mode IS `--tm-bg-surface` (1:1 — the highlight vanished
+  exactly where keyboard users need it) and about 1.04:1 on white in light. The row now paints
+  `--tm-bg-muted` plus a 2px `--tm-color-primary` outline, the `TmMultiSelect` focused-option
+  precedent; a `TokenContrastTests` entry holds the outline at ≥3:1 (WCAG 1.4.11 non-text) against
+  the palette surface in light, dark, indigo and indigo-dark.
 
 ### Erratum 2.9.0
 

@@ -105,7 +105,8 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         await Assertions.Expect(palette).ToBeVisibleAsync();
 
         // L5: groups are named role=group rows; the divider is a border, not a separator element.
-        var groups = palette.Locator(".tm-command-palette-list > [role='group']");
+        // `group` is not an allowed role for li, so the group div sits in a role=none row.
+        var groups = palette.Locator(".tm-command-palette-list > li > [role='group']");
         Assert.AreEqual(2, await groups.CountAsync(), "two categories produce two groups");
         Assert.AreEqual(0, await palette.Locator("[role='separator'], [role='presentation']").CountAsync(),
             "a listbox may not contain a separator or a presentation row");
@@ -147,6 +148,155 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
             """);
         Assert.AreEqual(0, violations.Length,
             $"the grouped palette must have no critical/serious violations: {string.Join(" | ", violations)}");
+    }
+
+    [TestMethod]
+    public async Task Palette_BackdropClick_Closes_AndPanelClickDoesNot()
+    {
+        // cluster-B §4: the backdrop is a click-to-dismiss surface (no opt-out parameter, matching
+        // TmModal and TmKeyboardShortcutsHelp); a click inside the panel must not dismiss it. The
+        // dismissal requires the PRESS to start on the backdrop: a drag-select that begins on the
+        // input and ends over the backdrop fires only the click there, so the palette stays open.
+        var page = await OpenAsync("/layout", 1280, 720, touch: false);
+        await page.GetByTestId("open-command-palette").ClickAsync();
+        var backdrop = page.Locator(".tm-command-palette-backdrop");
+        await Assertions.Expect(backdrop).ToBeVisibleAsync();
+
+        await page.Locator(".tm-command-palette-input").ClickAsync();
+        await Assertions.Expect(backdrop).ToBeVisibleAsync(
+            new LocatorAssertionsToBeVisibleOptions { Timeout = 2000 });
+
+        // Drag-select: pointerdown on the input, pointerup over the backdrop. Only the click lands
+        // on the backdrop, so the palette must still be there afterwards.
+        var input = page.Locator(".tm-command-palette-input");
+        var box = await input.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the palette input must be on screen for the drag");
+        await page.Mouse.MoveAsync(box.X + box.Width / 2, box.Y + box.Height / 2);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(10, 700, new MouseMoveOptions { Steps = 4 });
+        await page.Mouse.UpAsync();
+        await Assertions.Expect(backdrop).ToBeVisibleAsync(
+            new LocatorAssertionsToBeVisibleOptions { Timeout = 2000 });
+
+        // A press that starts ON the backdrop still dismisses, and focus returns to the trigger
+        // that opened the palette (the trap's restore target).
+        await page.Mouse.ClickAsync(10, 700);
+        await Assertions.Expect(backdrop).ToHaveCountAsync(0);
+        await Assertions.Expect(page.GetByTestId("open-command-palette")).ToBeFocusedAsync();
+    }
+
+    [TestMethod]
+    public async Task Palette_Default_IsAxeClean_ForScrollableRegionAndAria()
+    {
+        // ec0299b9 #2: the default palette's listbox scrolls (430 > 384px on /layout), is not
+        // focusable and contains no focusables — axe calls that scrollable-region-focusable (serious)
+        // unless a role=combobox names it through aria-controls. f4057a47 adds the combobox wiring;
+        // ec0299b9 #1 moves the groups into allowed roles. All five rules must come back empty.
+        var page = await OpenAsync("/layout", 1280, 720, touch: false);
+        await page.GetByTestId("open-command-palette").ClickAsync();
+        await Assertions.Expect(page.Locator(".tm-command-palette")).ToBeVisibleAsync();
+
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions
+        {
+            Url = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js",
+        });
+        var violations = await page.EvaluateAsync<string[]>(
+            """
+            async () => {
+                const host = document.querySelector('.tm-command-palette-backdrop');
+                const result = await axe.run(host, {
+                    runOnly: {
+                        type: 'rule',
+                        values: ['scrollable-region-focusable', 'aria-allowed-role',
+                                 'aria-required-children', 'aria-required-parent', 'aria-valid-attr-value']
+                    },
+                    resultTypes: ['violations']
+                });
+                return result.violations
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} [${v.nodes.map(n => n.target.join(' ')).join('; ')}]`);
+            }
+            """);
+        Assert.AreEqual(0, violations.Length,
+            $"the default palette must be clean for the combobox/listbox rules: {string.Join(" | ", violations)}");
+    }
+
+    [TestMethod]
+    [DataRow(1440, 900, false)]
+    [DataRow(390, 844, true)]
+    public async Task Palette_DarkHighlight_IsVisible(int width, int height, bool touch)
+    {
+        // f4057a47: in dark mode the focused row's old gray-50 fill WAS the surface (1:1). The
+        // highlight is now the muted fill plus a primary outline, and the ≥3:1 cue (WCAG 1.4.11)
+        // is measured on the real computed colors, not on the token values.
+        var page = await OpenAsync("/layout", width, height, touch);
+        await page.EvaluateAsync(
+            """
+            () => {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', 'dark'));
+            }
+            """);
+        await page.GetByTestId("open-command-palette").ClickAsync();
+        var palette = page.Locator(".tm-command-palette");
+        await Assertions.Expect(palette).ToBeVisibleAsync();
+
+        // Guard the theme itself: the surface must be the dark paint (#1e293b), otherwise the
+        // 3:1 assertion below could quietly pass on the light pair.
+        var surface = await palette.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        Assert.AreEqual("rgb(30, 41, 59)", surface,
+            "the palette must render the dark surface for this check to mean anything");
+
+        await Assertions.Expect(palette.Locator(".tm-command-palette-item-focused")).ToHaveCountAsync(1);
+
+        var contrast = await page.EvaluateAsync<double[]>(
+            """
+            () => {
+                const parse = css => {
+                    const m = css.match(/rgba?\(([^)]+)\)/);
+                    if (!m) return null;
+                    const p = m[1].split(',').map(s => parseFloat(s));
+                    return { r: p[0] / 255, g: p[1] / 255, b: p[2] / 255, a: p.length > 3 ? p[3] : 1 };
+                };
+                const lum = c => {
+                    const f = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+                    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+                };
+                const ratio = (a, b) => {
+                    const la = lum(a), lb = lum(b);
+                    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+                };
+                const row = document.querySelector('.tm-command-palette-item-focused');
+                const panel = document.querySelector('.tm-command-palette');
+                const outline = parse(getComputedStyle(row).outlineColor);
+                return [
+                    // The row is painted on the panel, so the outline must also hold against the
+                    // panel surface — and against the row's OWN muted fill, which is what the eye
+                    // actually sees the outline drawn over.
+                    ratio(outline, parse(getComputedStyle(panel).backgroundColor)),
+                    ratio(outline, parse(getComputedStyle(row).backgroundColor)),
+                ];
+            }
+            """);
+        Assert.IsTrue(contrast[0] >= 3.0,
+            $"the focused row's outline must hold 3:1 against the dark surface, got {contrast[0]:0.00}:1");
+        Assert.IsTrue(contrast[1] >= 3.0,
+            $"the focused row's outline must hold 3:1 against the row's own dark fill, got {contrast[1]:0.00}:1");
+
+        // The combobox tracks the highlight: ArrowDown moves aria-activedescendant onto the row
+        // that carries the focused class.
+        await page.Keyboard.PressAsync("ArrowDown");
+        var ids = await page.EvaluateAsync<string[]>(
+            """
+            () => {
+                const input = document.querySelector('.tm-command-palette-input');
+                const focused = document.querySelector('.tm-command-palette-item-focused');
+                return [input.getAttribute('aria-activedescendant'), focused ? focused.id : ''];
+            }
+            """);
+        Assert.IsFalse(string.IsNullOrEmpty(ids[1]), "the focused row must carry a stable id");
+        Assert.AreEqual(ids[1], ids[0], "aria-activedescendant must name the highlighted option");
+
+        await ShootAsync(page, palette, $"palette-dark-highlight-{width}");
     }
 
     [TestMethod]
