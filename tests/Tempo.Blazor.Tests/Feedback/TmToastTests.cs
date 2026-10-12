@@ -288,4 +288,94 @@ public class TmToastTests : LocalizationTestBase
         module.Invocations.Where(i => i.Identifier == "unpinRoot").Should().HaveCount(1,
             "a demoted container leaves the pinned-on-top registry so promote() stops re-raising it");
     }
+
+    // ── F6 follow-up (c51ddf81 #4): a dismissed toast must not strand focus on <body> ──────
+    // The container is inert-exempt status UI, so its dismiss button can hold focus while a
+    // modal sheet/dialog is open. Removing the toast removes that button, so the container asks
+    // the shared focus trap to recover the lost focus — once per render in which an id leaves
+    // the visible set, and never on a push.
+
+    [Fact]
+    public void Container_PushingAToast_DoesNotAskTheTrapToRecoverFocus()
+    {
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        trap.Setup<bool>("restoreTrapFocusIfLost", _ => true).SetResult(true);
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().HaveCount(1));
+
+        trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().BeEmpty(
+            "a push never moves focus and must not ask the trap for anything");
+    }
+
+    [Fact]
+    public void Container_RemovingAToast_AsksTheTrapToRecoverLostFocus()
+    {
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        trap.Setup<bool>("restoreTrapFocusIfLost", _ => true).SetResult(true);
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().HaveCount(1));
+
+        svc.Remove(svc.Toasts.Single().Id);
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().BeEmpty());
+
+        trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().HaveCount(1,
+            "the removed toast took its focused dismiss button along — the trap gets one chance to recover");
+    }
+
+    [Fact]
+    public void Container_MaxVisible1_ReplacingTheVisibleToast_AsksTheTrapToRecoverLostFocus()
+    {
+        // Review fix: the ask keyed on the visible COUNT misses replacements — at MaxVisible=1 the
+        // second push replaces the rendered card and the count stays 1, yet the toast that could
+        // hold focus left the DOM. The visible id set drops an entry: exactly one ask.
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        trap.Setup<bool>("restoreTrapFocusIfLost", _ => true).SetResult(true);
+
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.MaxVisible, 1));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().HaveCount(1));
+        trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().BeEmpty();
+
+        svc.ShowInfo("Two");
+        cut.WaitForAssertion(() => cut.Find(".tm-toast-message").TextContent.Trim().Should().Be("Two"));
+
+        trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().HaveCount(1,
+            "the replaced card left the DOM — a count comparison never sees this, the id set does");
+    }
+
+    [Fact]
+    public void Container_MaxVisible1_PushTwoAndRemoveTheVisibleToast_AsksTheTrapToRecoverExactlyOnce()
+    {
+        // Review fix: "push 2, remove visible → exactly one invocation". The second push and the
+        // removal of the rendered card coalesce into one render: the visible id set moves
+        // {first} -> {second} in a single pass — one ask for the whole exchange, never two, and
+        // a count comparison would ask ZERO times (1 -> 1 -> 1, never "dropped").
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        trap.Setup<bool>("restoreTrapFocusIfLost", _ => true).SetResult(true);
+
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.MaxVisible, 1));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowSuccess("One");
+        cut.WaitForAssertion(() => cut.FindAll(".tm-toast").Should().HaveCount(1));
+        trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().BeEmpty();
+
+        var renderedId = svc.Toasts.Single(t => t.Message == "One").Id;
+        svc.ShowInfo("Two");
+        svc.Remove(renderedId);
+        cut.WaitForAssertion(() => cut.Find(".tm-toast-message").TextContent.Trim().Should().Be("Two"));
+
+        trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().HaveCount(1,
+            "one coalesced id-set change ({first} -> {second}) asks the trap exactly once");
+    }
 }

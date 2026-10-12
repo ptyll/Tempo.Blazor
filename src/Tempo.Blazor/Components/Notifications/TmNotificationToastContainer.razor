@@ -27,6 +27,7 @@
             </div>
             <button type="button"
                     class="tm-notification-toast__close"
+                    aria-label="@Loc["TmToast_Close"]"
                     @onclick:stopPropagation="true"
                     @onclick="() => RemoveToast(toast.Id)">
                 <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
@@ -46,8 +47,10 @@
     private readonly List<ToastModel> _toasts = new();
     private readonly Queue<ToastModel> _queue = new();
     private int _lastUnreadCount;
+    private HashSet<string> _lastIds = new();
     private ElementReference _root;
     private TopLayerInterop? _topLayer;
+    private FocusIfLostInterop? _focusIfLost;
     private string? _lastNewestId;
     private bool _promoted;
     private bool _pinned;
@@ -151,6 +154,19 @@
                 }
             }
         }
+
+        // F6 follow-up (c51ddf81 #4), review round: keyed on the VISIBLE ID SET, not the count —
+        // the cap-3 queue refill closes one toast and dequeues the next in one render, so the
+        // count never drops while the closed card (possibly holding focus) leaves the DOM. The
+        // id set drops it, so the container asks the trap to recover; restoreTrapFocusIfLost acts
+        // only when an inert-exempt surface actually held focus. Mirrors TmToastContainer.
+        var ids = new HashSet<string>(_toasts.Select(t => t.Id));
+        if (_lastIds.Any(id => !ids.Contains(id)))
+        {
+            _focusIfLost ??= new FocusIfLostInterop(JS);
+            await _focusIfLost.RestoreTrapFocusIfLostAsync();
+        }
+        _lastIds = ids;
     }
 
     private async Task OnToastClickAsync(ToastModel toast)
@@ -175,6 +191,11 @@
         if (_disposed) return;
         _disposed = true;
         NotificationService.OnChanged -= OnNotificationsChanged;
+        if (_focusIfLost is not null)
+        {
+            await _focusIfLost.DisposeAsync();
+            _focusIfLost = null;
+        }
         if (_topLayer is not null)
         {
             if (_pinned)

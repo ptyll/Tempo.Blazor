@@ -3,7 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    activate, deactivate, isInnermost, isTopmost, syncScrollRegion, stopScrollRegion, focusIfLost, focusWithin, __resetForTests,
+    activate, deactivate, isInnermost, isTopmost, modalOwnsEscape, restoreTrapFocusIfLost,
+    syncScrollRegion, stopScrollRegion, focusIfLost, focusWithin, __resetForTests,
 } from '../tm-focus-trap.js';
 
 test.beforeEach(() => __resetForTests());
@@ -18,6 +19,7 @@ function element(parent = null) {
         attributes: new Set(),
         offsetParent: {},
         focusCalls: 0,
+        isConnected: true,
         addEventListener(type, fn) { listeners.set(type, fn); },
         removeEventListener(type) { listeners.delete(type); },
         contains(other) {
@@ -25,6 +27,15 @@ function element(parent = null) {
             return false;
         },
         querySelectorAll() { return []; },
+        // Attribute-presence selectors only — the module asks closest('[data-tm-inert-exempt]').
+        closest(selector) {
+            const attr = /^\[\s*([^\s~|^$*=]+)\s*\]$/.exec(selector)?.[1];
+            if (!attr) return null;
+            for (let node = el; node; node = node.parent) {
+                if (node.hasAttribute(attr)) return node;
+            }
+            return null;
+        },
         hasAttribute(name) { return el.attributes.has(name); },
         toggleAttribute(name, force) {
             const on = force === undefined ? !el.attributes.has(name) : force;
@@ -39,6 +50,14 @@ function element(parent = null) {
     };
     if (parent) parent.children.push(el);
     return el;
+}
+
+/** An inert-exempt toast card in the DOM: the container plus a dismiss button inside it. */
+function toastCard(parent) {
+    const container = element(parent);
+    container.toggleAttribute('data-tm-inert-exempt', true);
+    const dismiss = element(container);
+    return { container, dismiss };
 }
 
 function classList(initial = []) {
@@ -866,4 +885,544 @@ test('focusWithin is true only while the active element is inside the container'
     document.activeElement = body;
     assert.equal(focusWithin(panel), false, 'focus on the body is lost, not inside');
     assert.equal(focusWithin(null), false);
+});
+
+// ── F6 follow-up f4c27b20 #1: Tab cycles over TAB STOPS only ──────────────────
+// A roving menu/toolbar item carries tabindex="-1": it is reachable by the arrows, never by Tab.
+// The trap's cycle list counted every focusable, so the last entry was a -1 item: Tab on the real
+// last tab stop was "not last", the browser's native Tab skipped the -1 items, found nothing
+// tabbable left (the page is inert) and focus dropped to <body> — out of the sheet.
+
+function menuSheet() {
+    // A bottom-sheet menu shape: the header Done button plus three roving menu items.
+    const body = element();
+    const sheet = element(body);
+    const done = element(sheet);
+    const item0 = element(sheet);
+    const item1 = element(sheet);
+    const item2 = element(sheet);
+    // done is a plain button (no tabindex attribute); the roving items carry 0 / -1 / -1.
+    item0.getAttribute = n => (n === 'tabindex' ? '0' : null);
+    item1.getAttribute = n => (n === 'tabindex' ? '-1' : null);
+    item2.getAttribute = n => (n === 'tabindex' ? '-1' : null);
+    sheet.querySelectorAll = () => [done, item0, item1, item2];
+    return { body, sheet, done, item0, item1, item2 };
+}
+
+test('Tab from the last TAB STOP wraps to the first: tabindex=-1 roving items are not tab stops', () => {
+    const { body, sheet, done, item0 } = menuSheet();
+    installDom(body);
+    activate(sheet, 'menu-sheet', null, false, null, true);
+
+    // Initial focus moved to the first focusable (Done); reset so the assertions below see only
+    // what the Tab handling does. Focus sits on the roving group's only tab stop.
+    done.focusCalls = 0;
+    document.activeElement = item0;
+
+    const tab = { key: 'Tab', shiftKey: false, preventDefault() { tab.prevented = true; } };
+    sheet.dispatch('keydown', tab);
+
+    assert.equal(tab.prevented, true, 'Tab on the last TAB STOP must cycle inside the sheet');
+    assert.equal(done.focusCalls, 1, 'the cycle wraps to the first TAB STOP, not into a -1 item');
+});
+
+test('Shift+Tab from the first tab stop wraps to the last TAB STOP, not to a -1 item', () => {
+    const { body, sheet, done, item0, item1, item2 } = menuSheet();
+    installDom(body);
+    activate(sheet, 'menu-sheet', null, false, null, true);
+
+    done.focusCalls = 0;
+    item1.focusCalls = 0;
+    item2.focusCalls = 0;
+    document.activeElement = done;
+
+    const shiftTab = { key: 'Tab', shiftKey: true, preventDefault() { shiftTab.prevented = true; } };
+    sheet.dispatch('keydown', shiftTab);
+
+    assert.equal(shiftTab.prevented, true);
+    assert.equal(item0.focusCalls, 1, 'the wrap lands on the roving tab stop (the last TAB STOP)');
+    assert.equal(item1.focusCalls, 0, 'a -1 item is never the wrap target');
+    assert.equal(item2.focusCalls, 0, 'a -1 item is never the wrap target');
+});
+
+test('Tab from a focused -1 item moves to the next tab stop in DOM order', () => {
+    // Hardening: focus can sit on a -1 item before the menu's focusin re-roved the tab stop
+    // (focus moved by the arrows while the keydown races the re-render). Tab must preventDefault
+    // (the browser would jump to <body>) and walk the next TAB STOP after the focused item.
+    const body = element();
+    const sheet = element(body);
+    const first = element(sheet);
+    const neg = element(sheet);
+    const second = element(sheet);
+    first.getAttribute = n => (n === 'tabindex' ? '0' : null);
+    neg.getAttribute = n => (n === 'tabindex' ? '-1' : null);
+    second.getAttribute = n => (n === 'tabindex' ? '0' : null);
+    sheet.querySelectorAll = () => [first, neg, second];
+    // Node.DOCUMENT_POSITION_PRECEDING = 2, FOLLOWING = 4: neg sits between first and second.
+    neg.compareDocumentPosition = (other) => (other === second ? 4 : 2);
+    installDom(body);
+    activate(sheet, 'menu-sheet', null, false, null, true);
+
+    first.focusCalls = 0;
+    second.focusCalls = 0;
+    document.activeElement = neg;
+
+    const tab = { key: 'Tab', shiftKey: false, preventDefault() { tab.prevented = true; } };
+    sheet.dispatch('keydown', tab);
+
+    assert.equal(tab.prevented, true, 'Tab from a -1 item must be handled, or focus escapes to <body>');
+    assert.equal(second.focusCalls, 1, 'the next tab stop AFTER the focused item takes focus');
+    assert.equal(first.focusCalls, 0);
+});
+
+test('an invalid tabindex value is still a tab stop', () => {
+    // Review fix: `Number(ti) >= 0` excluded a NON-NUMERIC tabindex ("auto", garbage) from the
+    // cycle — Number('auto') is NaN and NaN >= 0 is false. HTML falls back to 0 for an invalid
+    // value: it is a tab stop. Only a parsed NEGATIVE integer is excluded.
+    const body = element();
+    const sheet = element(body);
+    const done = element(sheet);
+    const weird = element(sheet);
+    weird.getAttribute = n => (n === 'tabindex' ? 'auto' : null);
+    sheet.querySelectorAll = () => [done, weird];
+    installDom(body);
+    activate(sheet, 'invalid-ti', null, false, null, true);
+
+    done.focusCalls = 0;
+    document.activeElement = done;
+    const shiftTab = { key: 'Tab', shiftKey: true, preventDefault() { shiftTab.prevented = true; } };
+    sheet.dispatch('keydown', shiftTab);
+
+    assert.equal(shiftTab.prevented, true);
+    assert.equal(weird.focusCalls, 1, 'Shift+Tab wraps to the LAST tab stop — the invalid value is one');
+});
+
+test('Tab skips unchecked radios of a same-name group that has a checked member', () => {
+    // Review (non-blocking): a radio group with a checked member is ONE tab stop — the checked
+    // radio — and the arrows move within it (APG). The cycle must not land on the unchecked ones.
+    const body = element();
+    const form = element(body);
+    const done = element(form);
+    const checked = element(form);
+    const uncheckedA = element(form);
+    const uncheckedB = element(form);
+    const after = element(form);
+    const radio = (el) => {
+        el.getAttribute = n => (n === 'type' ? 'radio' : n === 'name' ? 'color' : null);
+    };
+    radio(checked);
+    radio(uncheckedA);
+    radio(uncheckedB);
+    checked.checked = true;
+    // DOCUMENT_POSITION_PRECEDING = 2 / FOLLOWING = 4: uncheckedA sits between the checked radio
+    // and uncheckedB.
+    uncheckedA.compareDocumentPosition = (other) => (other === done || other === checked ? 2 : 4);
+    form.querySelectorAll = () => [done, checked, uncheckedA, uncheckedB, after];
+    installDom(body);
+    activate(form, 'radio-form', null, false, null, true);
+
+    done.focusCalls = 0;
+    checked.focusCalls = 0;
+    after.focusCalls = 0;
+
+    // The user clicked onto an UNCHECKED radio (a click places focus there). It is not a tab stop
+    // of the group, so Shift+Tab walks the previous TAB STOP in DOM order — the checked member —
+    // never another unchecked one.
+    document.activeElement = uncheckedA;
+    const shiftTab = { key: 'Tab', shiftKey: true, preventDefault() { shiftTab.prevented = true; } };
+    form.dispatch('keydown', shiftTab);
+    assert.equal(shiftTab.prevented, true);
+    assert.equal(checked.focusCalls, 1, "the checked member is the group's only tab stop");
+    assert.equal(uncheckedA.focusCalls, 0, 'an unchecked radio of a checked group is skipped');
+    assert.equal(uncheckedB.focusCalls, 0, 'an unchecked radio of a checked group is skipped');
+
+    // Tab from the control after the group wraps to the first stop — the cycle list excluded the
+    // unchecked radios, so nothing can land on them.
+    document.activeElement = after;
+    const tab = { key: 'Tab', shiftKey: false, preventDefault() { tab.prevented = true; } };
+    form.dispatch('keydown', tab);
+    assert.equal(tab.prevented, true);
+    assert.equal(done.focusCalls, 1, 'the cycle wraps to the first tab stop');
+    assert.equal(uncheckedA.focusCalls, 0);
+    assert.equal(uncheckedB.focusCalls, 0);
+});
+
+test('Tab from a focused unchecked radio walks to the next tab stop after it', () => {
+    // Focus CAN sit on an unchecked radio (a click places it there). It is not in the cycle
+    // list, so Tab walks the next TAB STOP in DOM order — the control after the group.
+    const body = element();
+    const form = element(body);
+    const done = element(form);
+    const checked = element(form);
+    const unchecked = element(form);
+    const after = element(form);
+    const radio = (el) => {
+        el.getAttribute = n => (n === 'type' ? 'radio' : n === 'name' ? 'color' : null);
+    };
+    radio(checked);
+    radio(unchecked);
+    checked.checked = true;
+    unchecked.compareDocumentPosition = (other) => (other === after ? 4 : 2);
+    form.querySelectorAll = () => [done, checked, unchecked, after];
+    installDom(body);
+    activate(form, 'radio-form-2', null, false, null, true);
+
+    done.focusCalls = 0;
+    after.focusCalls = 0;
+    document.activeElement = unchecked;
+
+    const tab = { key: 'Tab', shiftKey: false, preventDefault() { tab.prevented = true; } };
+    form.dispatch('keydown', tab);
+
+    assert.equal(tab.prevented, true, 'Tab must be handled, or the browser lands on <body>');
+    assert.equal(after.focusCalls, 1, 'the next tab stop after the unchecked radio takes focus');
+    assert.equal(done.focusCalls, 0);
+});
+
+test('Tab lands on the radio that IS checked now, not the one with a stale checked attribute', () => {
+    // Review fix: the checked ATTRIBUTE only records the input's INITIAL state — after the user
+    // picks another radio the attribute on the first input lies, and only the live el.checked
+    // property tells which member is the group's one tab stop.
+    const body = element();
+    const form = element(body);
+    const done = element(form);
+    const stale = element(form);
+    const fresh = element(form);
+    const radio = (el) => {
+        el.getAttribute = n => (n === 'type' ? 'radio' : n === 'name' ? 'color' : null);
+    };
+    radio(stale);
+    radio(fresh);
+    // The first input still carries the initial checked ATTRIBUTE, but the user has since
+    // selected the second one: the live property is the truth.
+    stale.toggleAttribute('checked', true);
+    stale.checked = false;
+    fresh.checked = true;
+    form.querySelectorAll = () => [done, stale, fresh];
+    installDom(body);
+    activate(form, 'radio-live', null, false, null, true);
+
+    // Shift+Tab from the first control wraps to the group's ONE tab stop — the radio that is
+    // checked NOW.
+    done.focusCalls = 0;
+    stale.focusCalls = 0;
+    document.activeElement = done;
+    const shiftTab = { key: 'Tab', shiftKey: true, preventDefault() { shiftTab.prevented = true; } };
+    form.dispatch('keydown', shiftTab);
+
+    assert.equal(shiftTab.prevented, true);
+    assert.equal(fresh.focusCalls, 1, "the radio that is checked NOW is the group's only tab stop");
+    assert.equal(stale.focusCalls, 0, 'a stale checked attribute must not make the first input the stop');
+});
+
+// ── F6 follow-up 08a22db5 #2: a modal trap's Escape gate skips non-modal traps ─
+// isTopmost counts every trap: a non-modal inline sheet activated AFTER a dialog made the dialog
+// not-topmost, so Escape closed NOTHING — the dialog was stuck until the sheet closed.
+
+test('a non-modal trap activated AFTER an open modal does not block the modal\'s Escape', () => {
+    const body = element();
+    const dialog = element(body);
+    const insideDialog = element(dialog);
+    const sheet = element(body);
+    installDom(body);
+    const dialogEscape = handler();
+    const sheetEscape = handler();
+
+    activate(dialog, 'dialog', dialogEscape, true, null, true);
+    activate(sheet, 'sheet', sheetEscape, true, null, false);
+    document.activeElement = insideDialog;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(dialogEscape.calls, ['HandleFocusTrapEscapeAsync'],
+        'the modal owns Escape even though a non-modal trap registered later');
+    assert.deepEqual(sheetEscape.calls, [], 'the later non-modal sheet must not close on the same key');
+    assert.equal(modalOwnsEscape('dialog'), true, 'modalOwnsEscape reports the modal ownership directly');
+});
+
+test('an inline sheet nested in a modal dialog that holds focus closes alone', () => {
+    const body = element();
+    const dialog = element(body);
+    const sheet = element(dialog);
+    const insideSheet = element(sheet);
+    installDom(body);
+    const dialogEscape = handler();
+    const sheetEscape = handler();
+
+    activate(dialog, 'dialog', dialogEscape, true, null, true);
+    activate(sheet, 'sheet', sheetEscape, true, null, false);
+    document.activeElement = insideSheet;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(sheetEscape.calls, ['HandleFocusTrapEscapeAsync'], 'the nested sheet holding focus closes first');
+    assert.deepEqual(dialogEscape.calls, [], 'the dialog must not close on the same Escape');
+    assert.equal(modalOwnsEscape('dialog'), false, 'the dialog does not own Escape while its nested sheet holds focus');
+});
+
+test('two modals plus a later non-modal: only the second modal closes', () => {
+    const body = element();
+    const dialog1 = element(body);
+    const dialog2 = element(body);
+    const insideDialog2 = element(dialog2);
+    const sheet = element(body);
+    installDom(body);
+    const firstEscape = handler();
+    const secondEscape = handler();
+    const sheetEscape = handler();
+
+    activate(dialog1, 'd1', firstEscape, true, null, true);
+    activate(dialog2, 'd2', secondEscape, true, null, true);
+    activate(sheet, 'sheet', sheetEscape, true, null, false);
+    document.activeElement = insideDialog2;
+
+    document.dispatch('keydown', escapeEvent());
+
+    assert.deepEqual(secondEscape.calls, ['HandleFocusTrapEscapeAsync'], 'the topmost MODAL closes');
+    assert.deepEqual(firstEscape.calls, [], 'the modal below it stays open');
+    assert.deepEqual(sheetEscape.calls, [], 'the non-modal sheet that does not hold focus stays open');
+});
+
+test('modalOwnsEscape is false for an unknown id', () => {
+    const body = element();
+    const dialog = element(body);
+    installDom(body);
+    activate(dialog, 'dialog', null, false, null, true);
+
+    assert.equal(modalOwnsEscape('nope'), false);
+});
+
+test('a later non-modal trap that CANNOT close on Escape does not block the modal\'s', () => {
+    // Review fix: the modal gate asked ownsEscape() of every later non-modal trap — one that
+    // holds focus but registered WITHOUT an Escape handler (closeOnEscape=false) would still
+    // deadlock the dialog forever, because nothing can ever close it. Only a later trap that
+    // CAN close (it has an escHandler) and currently holds focus blocks the modal.
+    const body = element();
+    const dialog = element(body);
+    const insideDialog = element(dialog);
+    const sheet = element(body);
+    const insideSheet = element(sheet);
+    installDom(body);
+    const dialogEscape = handler();
+
+    activate(dialog, 'dialog', dialogEscape, true, null, true);
+    activate(sheet, 'sheet', null, false, null, false);
+    document.activeElement = insideSheet;
+
+    assert.equal(modalOwnsEscape('dialog'), true,
+        'a focus-holding sheet with no escHandler must not deadlock the dialog');
+    document.dispatch('keydown', escapeEvent());
+    assert.deepEqual(dialogEscape.calls, ['HandleFocusTrapEscapeAsync']);
+});
+
+// ── F6 follow-up c51ddf81 #4 + review: a toast dismissed under a modal trap recovers lost focus ──
+// The toast container is inert-exempt status UI on the top layer: its dismiss button can take
+// focus while a sheet/dialog is open, and dismissing removes the button — focus fell to <body>
+// and the next Tab landed on the sheet's drag handle. The trap remembers the last element
+// focused INSIDE it and can hand focus back when the toast asks. REVIEW: a timer expiry must
+// move focus only when a toast actually HELD it — a capture-phase document focusin listener
+// records the last focus inside a [data-tm-inert-exempt] element, and the recovery acts only
+// while that element is GONE (screen-reader browse mode and mouse clicks leave focus where it
+// was; moving focus on a timed event violates WCAG 3.2.1 / APG).
+
+test('restoreTrapFocusIfLost returns focus to the element last focused inside the topmost modal trap', () => {
+    const body = element();
+    const dialog = element(body);
+    // The first focusable is deliberately NOT the element the user was on: the fallback must not
+    // mask a broken lastFocused record.
+    const other = element(dialog);
+    const input = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [other, input];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    // The initial move landed on `other`; the user then moved to the input (a real browser fires
+    // focusin for both moves).
+    dialog.dispatch('focusin', { target: input });
+
+    // The user then Tabbed to a toast's dismiss button (the container is inert-exempt) and the
+    // toast was dismissed: the button left the DOM and focus fell to the body.
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    dismiss.isConnected = false;
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), true);
+    assert.equal(input.focusCalls, 1, 'focus returns to the element last focused inside the trap');
+    assert.equal(other.focusCalls, 1, 'the fallback (first focusable) ran only as the initial move');
+});
+
+test('restoreTrapFocusIfLost does not move focus on a timed removal when no toast held focus', () => {
+    // (a) Body focused, lastFocused set, NO exempt focus: the expiry ask is a no-op. Focus that
+    // never entered a toast (screen-reader browse mode, a mouse click, plain Tab order) must not
+    // be yanked anywhere by a timed event.
+    const body = element();
+    const dialog = element(body);
+    const other = element(dialog);
+    const input = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [other, input];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    dialog.dispatch('focusin', { target: input });
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), false, 'no inert-exempt focus was recorded — nothing to recover');
+    assert.equal(other.focusCalls, 1, 'the initial move only — the timed removal must not move focus');
+    assert.equal(input.focusCalls, 0, 'no recovery, nothing else moves');
+});
+
+test('restoreTrapFocusIfLost recovers when the toast that held focus was removed', () => {
+    // (b) Focus WAS in a toast which got removed: the recorded exempt element is gone and the
+    // focus fell to the body — the trap hands focus back inside.
+    const body = element();
+    const dialog = element(body);
+    const input = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [input];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    dialog.dispatch('focusin', { target: input });
+
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    dismiss.isConnected = false;
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), true);
+    assert.equal(input.focusCalls, 2, 'focus returns inside the trap after the toast took it away');
+});
+
+test('restoreTrapFocusIfLost never steals focus from a live element', () => {
+    const body = element();
+    const dialog = element(body);
+    const input = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [input];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    dialog.dispatch('focusin', { target: input });
+
+    const live = element(body);
+    document.activeElement = live;
+
+    assert.equal(restoreTrapFocusIfLost(), false);
+    assert.equal(input.focusCalls, 1, 'no extra focus move — the live focus is not stolen');
+});
+
+test('restoreTrapFocusIfLost skips the recovery while the exempt element is still connected', () => {
+    // The toast card is still in the DOM (a different card expired): the recorded exempt focus
+    // is live, so nothing is lost and nothing may move.
+    const body = element();
+    const dialog = element(body);
+    const input = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [input];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    dialog.dispatch('focusin', { target: input });
+
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), false);
+    assert.equal(input.focusCalls, 1);
+});
+
+test('restoreTrapFocusIfLost falls back to the first focusable when the last-focused element left the DOM', () => {
+    const body = element();
+    const dialog = element(body);
+    const gone = element(dialog);
+    const live = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [gone, live];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    dialog.dispatch('focusin', { target: gone });
+    // The user reached a toast's dismiss button; dismissing the toast removed it (the recorded
+    // exempt focus), and the element the trap last focused was already gone too.
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    gone.isConnected = false;
+    dismiss.isConnected = false;
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), true);
+    assert.equal(live.focusCalls, 1, 'focus lands on the first focusable that accepts it');
+});
+
+test('restoreTrapFocusIfLost prefers TAB STOPS in the fallback and only then any focusable', () => {
+    // Review fix: the fallback used to iterate visibleFocusable, whose FIRST entry can be a
+    // roving tabindex="-1" item — focus belongs on the first TAB STOP when one accepts it.
+    const body = element();
+    const dialog = element(body);
+    const rejecting = element(dialog);
+    const roving = element(dialog);
+    rejecting.getAttribute = () => null;
+    roving.getAttribute = n => (n === 'tabindex' ? '-1' : null);
+    installDom(body);
+    dialog.querySelectorAll = () => [rejecting, roving];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    assert.equal(rejecting.focusCalls, 1, 'the initial move landed on the first tab stop');
+    // From now on the first tab stop refuses focus (a real browser drops a focus() on a hidden
+    // control instead of throwing — modelled as a throwing focus()).
+    rejecting.focus = () => { rejecting.focusCalls++; throw new Error('unfocusable'); };
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    dismiss.isConnected = false;
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), true);
+    assert.equal(rejecting.focusCalls, 2, 'the first tab stop is tried first and refuses focus');
+    assert.equal(roving.focusCalls, 1, 'the -1 item only takes over when no tab stop accepts focus');
+});
+
+test('restoreTrapFocusIfLost is a no-op without a modal trap', () => {
+    const body = element();
+    const sheet = element(body);
+    const inside = element(sheet);
+    installDom(body);
+    sheet.querySelectorAll = () => [inside];
+
+    activate(sheet, 'sheet', null, false, null, false);
+    sheet.dispatch('focusin', { target: inside });
+    // Even with a removed toast that held focus there is no MODAL trap to recover for.
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    dismiss.isConnected = false;
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), false, 'a non-modal trap alone never reclaims focus');
+    assert.equal(inside.focusCalls, 0);
+});
+
+test('a pointerdown outside the exempt surfaces clears the recorded exempt focus', () => {
+    // The user focused a toast's dismiss button, then clicked a NON-focusable area of the sheet:
+    // focus fell to <body> and NO focusin followed (the body is not a focus target the focusin
+    // record sees). The stale record would later sell that plain click as "a toast removed while
+    // it held focus" and yank focus on the toast's timer — the pointerdown that landed OUTSIDE
+    // the exempt surfaces must invalidate the record first.
+    const body = element();
+    const dialog = element(body);
+    const input = element(dialog);
+    installDom(body);
+    dialog.querySelectorAll = () => [input];
+
+    activate(dialog, 'dialog', null, false, null, true);
+    dialog.dispatch('focusin', { target: input });
+
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    // The click on the sheet body: only the pointerdown is delivered — focus dropped to <body>
+    // without a focusin.
+    document.dispatch('pointerdown', { target: dialog });
+    document.activeElement = body;
+    // Only afterwards the toast is removed (its own timer, not the click, dismissed it).
+    dismiss.isConnected = false;
+
+    assert.equal(restoreTrapFocusIfLost(), false,
+        'the click already explained the lost focus — the timed removal must not move it');
+    assert.equal(input.focusCalls, 1, 'the initial move only — the stale record must not recover');
 });

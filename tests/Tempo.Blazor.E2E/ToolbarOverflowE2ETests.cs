@@ -359,6 +359,67 @@ public class ToolbarOverflowE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task Phone_390_MoreSheet_TabAndShiftTab_StayInsideTheSheet()
+    {
+        // F6 follow-up (f4c27b20 #1): the sheet menu is a roving group (item tabindex=-1). The
+        // trap's Tab cycle used to count those items, so Tab on the real last tab stop fell
+        // through to the browser, which skipped the -1 items and dropped focus to <body> — out
+        // of the sheet. Tab and Shift+Tab must cycle inside the sheet forever, every press must
+        // MOVE focus onto a real tab stop, and the first Tab from the menu item must land on the
+        // sheet's expected next stop (the header Done button).
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-overflow-300");
+        var trigger = Bar(page, "toolbar-overflow-300").Locator("button.tm-toolbar-more");
+        await trigger.FocusAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.classList?.contains('tm-toolbar-more') ?? false",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.Keyboard.PressAsync("Enter");
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await PressTabAndAssertCycleStepAsync(page, shift: false, step: 1);
+        var afterFirstTab = await page.EvaluateAsync<string>("() => document.activeElement?.className ?? ''");
+        Assert.IsTrue(afterFirstTab.Contains("tm-overlay-panel-sheet__done"),
+            $"the first Tab from the roving menu item lands on the sheet Done button, was on {afterFirstTab}");
+        for (var i = 1; i < 5; i++)
+        {
+            await PressTabAndAssertCycleStepAsync(page, shift: false, step: i + 1);
+        }
+        for (var i = 0; i < 5; i++)
+        {
+            await PressTabAndAssertCycleStepAsync(page, shift: true, step: i + 1);
+        }
+    }
+
+    private static async Task<string> ActiveKeyAsync(IPage page)
+        => await page.EvaluateAsync<string>(
+            "() => { const el = document.activeElement; return el ? el.tagName + '|' + (el.className ?? '') + '|' + (el.textContent ?? '').trim().slice(0, 30) : 'none'; }");
+
+    /// <summary>
+    /// One Tab/Shift+Tab press with its invariants asserted as they hold, not after a fixed sleep:
+    /// focus CHANGED, it stayed inside the sheet, and it sits on a real tab stop (tabindex !== -1).
+    /// </summary>
+    private static async Task PressTabAndAssertCycleStepAsync(IPage page, bool shift, int step)
+    {
+        var label = $"{(shift ? "Shift+Tab" : "Tab")} {step}";
+        var before = await ActiveKeyAsync(page);
+        await page.Keyboard.PressAsync(shift ? "Shift+Tab" : "Tab");
+        await page.WaitForFunctionAsync(
+            "before => { const el = document.activeElement; return !!el && (el.tagName + '|' + (el.className ?? '') + '|' + (el.textContent ?? '').trim().slice(0, 30)) !== before; }",
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        var now = await ActiveKeyAsync(page);
+        Assert.AreNotEqual(before, now, $"{label}: focus must move to another element");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('.tm-overlay-panel-sheet')"),
+            $"{label}: focus must stay inside the sheet, was on {now}");
+        var tabindex = await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute?.('tabindex') ?? ''");
+        Assert.AreNotEqual("-1", tabindex, $"{label}: focus must sit on a real tab stop, was on {now}");
+    }
+
+    [TestMethod]
     public async Task Phone_320_Touch_Czech_AllToolbars_StayInsideTheViewport()
     {
         var page = await OpenAsync(320, 640, touch: true, locale: "cs-CZ");

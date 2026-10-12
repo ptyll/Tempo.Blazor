@@ -776,6 +776,33 @@
 
 ### Fixed
 
+- **F6 focus-trap follow-up: phone sheet Tab cycle, modal Escape ownership, toast focus recovery.**
+  Three focus-trap defects fixed in `tm-focus-trap.js` and its consumers. (1) The bottom-sheet More
+  menu is a roving group (item `tabindex="-1"`), and the trap's Tab cycle counted those items — Tab
+  on the real last tab stop was "not last", the browser's native Tab skipped the `-1` items, found
+  nothing tabbable left (the page is inert) and focus dropped to `<body>`, out of the sheet. The
+  cycle now runs over **tab stops only** (a negative tabindex is not one), and Tab from a focused
+  `-1` item walks the next/previous tab stop in DOM order; this covers every modal trap with a
+  roving group (menus in sheets, a `TmToolbar` roving group inside `TmModal`/`TmDrawer`). (2) A
+  modal dialog's Escape was gated on registration order alone (`isTopmost`): a non-modal inline
+  sheet activated after the dialog blocked the dialog's Escape entirely — nothing closed. The
+  modal gate is now `modalOwnsEscape`, which ignores later **non-modal** traps that do not hold
+  focus or cannot close at all (no Escape handler); an inline sheet nested in the dialog that holds
+  focus still closes first, and a dialog over a dialog still closes only the top one. (3) A toast
+  dismissed under an open sheet or dialog — by click, by keyboard or by expiry while focused —
+  removed the focused dismiss button and stranded focus on `<body>` (the next Tab landed on the
+  sheet's drag handle). The trap now remembers the element last focused inside it (`focusin`) and
+  both `TmToastContainer` and `TmNotificationToastContainer` ask it to recover the focus whenever
+  the set of visible toasts drops an id — not only when the count shrinks, so a replacement at the
+  `MaxVisible` cap, a notification queue refill and an expire+push in one render are covered too.
+  `restoreTrapFocusIfLost` moves focus only when a toast actually held it (a capture-phase
+  `focusin` records the last focus inside an inert-exempt container and the recovery requires that
+  element to be gone): **timer expiry moves focus only when the toast held it** — a toast expiring
+  while focus sat in the sheet (screen-reader browse mode, a mouse click) changes nothing, per
+  WCAG 3.2.1/APG. The recovery never steals from a live element, prefers tab stops over roving
+  `-1` items, and the modal Tab cycle now skips unchecked radios of a same-name group that has a
+  checked member (one tab stop per radio group, APG).
+
 - **A toast stays above any popup opened after it.** `overlay.js` promoted every
   `TmOverlayPanel` popover (date pickers, dropdowns, menus, the notification bell) by
   calling `showPopover()` directly, so a toast already on screen slipped behind it. It

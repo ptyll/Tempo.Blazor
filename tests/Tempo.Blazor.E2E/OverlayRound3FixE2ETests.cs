@@ -234,4 +234,89 @@ public sealed class OverlayRound3FixE2ETests : WasmTestBase
         await ShootAsync(page, $"v3-{width}-toast-dismiss-sheet-survives");
         if (touch) await AssertCoarsePointerStillMatchesAsync(page);
     }
+
+    // ── F6 follow-up (c51ddf81 #4): dismissing a toast must not strand focus on <body> ──
+    // The toast container is inert-exempt, so its dismiss button takes focus while the sheet is
+    // open. Removing the toast removed that button and focus fell to <body> — the next Tab landed
+    // on the sheet's drag handle. The sheet trap remembers its last-focused element and hands
+    // focus back when the container asks (restoreTrapFocusIfLost on the visible-count decrease).
+
+    [TestMethod]
+    [DataRow(390, 844, true)]
+    [DataRow(1440, 900, false)]
+    public async Task ToastDismiss_ByKeyboard_UnderOpenSheet_ReturnsFocusToTheSheet(int width, int height, bool touch)
+    {
+        var page = await OpenPageAsync("/feedback", width, height, touch);
+
+        if (touch)
+        {
+            await page.Locator("[data-testid='open-bottom-sheet']").TapAsync();
+        }
+        else
+        {
+            await page.Locator("[data-testid='open-bottom-sheet']").ClickAsync();
+        }
+        await Assertions.Expect(page.Locator(".tm-drawer--bottom"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        // Focus inside the sheet and push the toast by keyboard: the sheet trap records the
+        // button as its last-focused element through focusin.
+        var push = page.Locator("[data-testid='sheet-push-toast']");
+        await push.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        var toastContainer = page.Locator(".tm-toast-container:popover-open");
+        await Assertions.Expect(toastContainer.Locator(".tm-toast")).ToHaveCountAsync(1,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+
+        // Dismiss the toast by keyboard: its focused dismiss button leaves the DOM.
+        var dismiss = toastContainer.Locator(".tm-toast-dismiss").Last;
+        await dismiss.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(toastContainer.Locator(".tm-toast")).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await page.WaitForFunctionAsync(
+            "() => !!document.activeElement && !!document.activeElement.closest('.tm-drawer--bottom')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        Assert.AreEqual(1, await page.Locator(".tm-drawer--bottom").CountAsync(), "the sheet stays open");
+        Assert.AreEqual("sheet-push-toast", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''"),
+            "focus returns to the element last focused inside the sheet, not <body>");
+    }
+
+    [TestMethod]
+    public async Task ToastDismiss_ByMouse_UnderOpenSheet_ReturnsFocusToTheSheet()
+    {
+        var page = await OpenPageAsync("/feedback", 1440, 900);
+
+        await page.Locator("[data-testid='open-bottom-sheet']").ClickAsync();
+        await Assertions.Expect(page.Locator(".tm-drawer--bottom"))
+            .ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+        // Keyboard push first: the sheet's last-focused element must be INSIDE the sheet.
+        var push = page.Locator("[data-testid='sheet-push-toast']");
+        await push.FocusAsync();
+        await push.ClickAsync();
+        var toastContainer = page.Locator(".tm-toast-container:popover-open");
+        await Assertions.Expect(toastContainer.Locator(".tm-toast")).ToHaveCountAsync(1,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+
+        // A real mouse click on the dismiss button (the browser focuses it on mousedown); the
+        // button then leaves the DOM with the toast. The locator click waits out the toast's
+        // 0.3s slide-in (actionability: stable) — a blind click at a pre-measured point fired
+        // mid-animation, missed the button, and the toast left on its 5s timer with no focus
+        // ever inside it.
+        var dismiss = toastContainer.Locator(".tm-toast-dismiss").Last;
+        await dismiss.ClickAsync(new LocatorClickOptions { Timeout = 10000 });
+        await Assertions.Expect(toastContainer.Locator(".tm-toast")).ToHaveCountAsync(0,
+            new LocatorAssertionsToHaveCountOptions { Timeout = 10000 });
+        await page.WaitForFunctionAsync(
+            "() => !!document.activeElement && !!document.activeElement.closest('.tm-drawer--bottom')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        Assert.AreEqual(1, await page.Locator(".tm-drawer--bottom").CountAsync(), "the sheet stays open");
+        Assert.AreEqual("sheet-push-toast", await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('data-testid') ?? ''"),
+            "focus returns to the element last focused inside the sheet, not <body>");
+    }
 }

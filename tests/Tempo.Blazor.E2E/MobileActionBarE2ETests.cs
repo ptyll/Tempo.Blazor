@@ -241,6 +241,77 @@ public class MobileActionBarE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task Demo_390_MoreSheet_TabStaysInsideTheSheet()
+    {
+        // F6 follow-up (f4c27b20 #1): the More sheet menu is a roving group (item tabindex=-1).
+        // The focus trap's Tab cycle counted those items, so Tab past the real last tab stop fell
+        // through to the browser and focus dropped to <body>, out of the sheet. Tab and Shift+Tab
+        // must cycle inside the sheet forever, every press must MOVE focus onto a real tab stop,
+        // and the first Tab from the menu item must land on the sheet's expected next stop (the
+        // header Done button).
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var moreButton = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__more");
+        await moreButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        // Focus the trigger first: a touch tap does not move focus, and the focus scope restores
+        // to whatever was focused when the sheet opened (the pattern the X2 tests use).
+        await moreButton.FocusAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.classList?.contains('tm-mobile-action-bar__more') ?? false",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await moreButton.ClickAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await page.WaitForFunctionAsync(
+            "() => !!document.activeElement?.closest('[role=menuitem]')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await PressTabAndAssertCycleStepAsync(page, shift: false, step: 1);
+        var afterFirstTab = await page.EvaluateAsync<string>("() => document.activeElement?.className ?? ''");
+        Assert.IsTrue(afterFirstTab.Contains("tm-overlay-panel-sheet__done"),
+            $"the first Tab from the roving menu item lands on the sheet Done button, was on {afterFirstTab}");
+        for (var i = 1; i < 5; i++)
+        {
+            await PressTabAndAssertCycleStepAsync(page, shift: false, step: i + 1);
+        }
+        for (var i = 0; i < 5; i++)
+        {
+            await PressTabAndAssertCycleStepAsync(page, shift: true, step: i + 1);
+        }
+    }
+
+    private static async Task<string> ActiveKeyAsync(IPage page)
+        => await page.EvaluateAsync<string>(
+            "() => { const el = document.activeElement; return el ? el.tagName + '|' + (el.className ?? '') + '|' + (el.textContent ?? '').trim().slice(0, 30) : 'none'; }");
+
+    /// <summary>
+    /// One Tab/Shift+Tab press with its invariants asserted as they hold, not after a fixed sleep:
+    /// focus CHANGED, it stayed inside the sheet, and it sits on a real tab stop (tabindex !== -1).
+    /// </summary>
+    private static async Task PressTabAndAssertCycleStepAsync(IPage page, bool shift, int step)
+    {
+        var label = $"{(shift ? "Shift+Tab" : "Tab")} {step}";
+        var before = await ActiveKeyAsync(page);
+        await page.Keyboard.PressAsync(shift ? "Shift+Tab" : "Tab");
+        await page.WaitForFunctionAsync(
+            "before => { const el = document.activeElement; return !!el && (el.tagName + '|' + (el.className ?? '') + '|' + (el.textContent ?? '').trim().slice(0, 30)) !== before; }",
+            before,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        var now = await ActiveKeyAsync(page);
+        Assert.AreNotEqual(before, now, $"{label}: focus must move to another element");
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('.tm-overlay-panel-sheet')"),
+            $"{label}: focus must stay inside the sheet, was on {now}");
+        var tabindex = await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute?.('tabindex') ?? ''");
+        Assert.AreNotEqual("-1", tabindex, $"{label}: focus must sit on a real tab stop, was on {now}");
+    }
+
+    [TestMethod]
     public async Task Demo_320_CzechLabels_NoOverflow_NoHorizontalScroll()
     {
         var context = await CreateTouchContextAsync(320, 740);

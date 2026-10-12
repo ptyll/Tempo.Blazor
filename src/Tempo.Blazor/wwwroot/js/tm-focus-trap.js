@@ -20,6 +20,35 @@ const FOCUSABLE = [
 // id -> { element, tabHandler, escHandler, returnTarget }
 const traps = new Map();
 
+// The element of an inert-exempt surface (a toast card) that last took focus, or null. Two
+// capture-phase document listeners keep it current: a focusin records focus entering an exempt
+// surface, and a pointerdown OUTSIDE the exempt surfaces drops the record (a click on a
+// non-focusable area sends focus to <body> without a focusin the record would see). The toast
+// containers are EXEMPT from the trap's inert background, so their buttons take focus while a
+// sheet/dialog is open — and a dismissed or expired toast takes the focused button out of the
+// DOM. Screen-reader browse mode and mouse clicks leave focus wherever it was, so
+// restoreTrapFocusIfLost moves focus on a timed removal ONLY while this element is recorded AND
+// gone (WCAG 3.2.1 / APG: no focus moves on timed events). Installed lazily on the first
+// activate; reset with the traps in the tests.
+let exemptFocus = null;
+let exemptFocusListenerInstalled = false;
+
+function installExemptFocusListener() {
+    if (exemptFocusListenerInstalled) return;
+    if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+    exemptFocusListenerInstalled = true;
+    document.addEventListener('focusin', (e) => {
+        const target = e.target;
+        exemptFocus = !!target && typeof target.closest === 'function'
+            && target.closest('[data-tm-inert-exempt]') ? target : null;
+    }, true);
+    // A pointerdown always precedes the click that can lose focus silently: a press outside the
+    // exempt surfaces means the user — not a removed toast — decided where focus went, so the
+    // record is dropped. A press ON an exempt surface keeps it (the gesture may genuinely move
+    // focus into the toast).
+    document.addEventListener('pointerdown', (e) => { const t = e.target; if (!(t && typeof t.closest === 'function' && t.closest('[data-tm-inert-exempt]'))) exemptFocus = null; }, true);
+}
+
 // CSS.escape is missing in the stub DOM the node tests run against. Attribute values only need
 // the quote and the backslash escaped to stay inside the selector.
 function escapeAttr(value) {
@@ -32,8 +61,51 @@ function visibleFocusable(element) {
         .filter(el => el.offsetParent !== null && !el.hasAttribute('disabled'));
 }
 
+/** Tab stops only: a focusable with a negative tabindex (a roving menu/toolbar item) is not one.
+ * Cycling over -1 items made the trap's "last" a non-tab-stop, so Tab on the real last tab stop
+ * fell through to the browser, which skipped the -1 items and dropped focus to <body> (the page
+ * is inert) — out of the sheet (F6 follow-up f4c27b20 #1). An UNPARSEABLE tabindex value falls
+ * back to a tab stop (HTML: invalid → 0), so the value is parsed as an integer, not coerced. */
+function tabbable(element) {
+    return visibleFocusable(element).filter(el => {
+        const ti = typeof el.getAttribute === 'function' ? el.getAttribute('tabindex') : null;
+        if (ti === null || ti === undefined) return true;
+        const n = Number.parseInt(ti, 10);
+        return Number.isNaN(n) || n >= 0;
+    });
+}
+
+/** Within a same-name radio group that HAS a checked member, the unchecked radios are not Tab
+ * stops: the group is one stop (the checked radio) and the arrows move within it (APG). A group
+ * with no checked member keeps every radio (nothing is preselected), and unnamed radios are
+ * independent stops. Checkedness is read LIVE: the checked attribute only records the input's
+ * initial state, so after the user picks another radio the attribute on the first input lies —
+ * the el.checked property decides; the attribute is only the fallback for a stub without it.
+ * Only the modal Tab cycle applies this — arrow navigation stays native. */
+function radioGroupTabStops(list) {
+    const checkedByGroup = new Map();
+    for (const el of list) {
+        if (el.getAttribute?.('type') !== 'radio') continue;
+        const name = el.getAttribute?.('name');
+        if (!name || checkedByGroup.has(name)) continue;
+        const isChecked = typeof el.checked === 'boolean' ? el.checked : el.hasAttribute?.('checked');
+        if (isChecked) checkedByGroup.set(name, el);
+    }
+    if (checkedByGroup.size === 0) return list;
+    return list.filter(el => {
+        if (el.getAttribute?.('type') !== 'radio') return true;
+        const name = el.getAttribute?.('name');
+        if (!name) return true;
+        const groupChecked = checkedByGroup.get(name);
+        return !groupChecked || el === groupChecked;
+    });
+}
+
 export function activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal = true, initialTarget = null) {
     if (!element) return;
+
+    // The exempt-focus record must exist before any surface can ask for a recovery.
+    installExemptFocusListener();
 
     // Deactivate any stale trap reusing this id before re-registering.
     if (traps.has(id)) {
@@ -49,11 +121,23 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         // Only the innermost active trap cycles Tab. An outer one that also handled it would pull
         // focus out of the dialog the user is actually in.
         if (!isInnermost(id)) return;
-        const list = visibleFocusable(element);
+        const list = radioGroupTabStops(tabbable(element));
         if (list.length === 0) { e.preventDefault(); element.focus(); return; }
         const first = list[0];
         const last = list[list.length - 1];
         const active = document.activeElement;
+        // Focus can sit on a -1 item the cycle list excludes (a roving item focused by the arrows
+        // before the menu re-roved its tab stop). The browser's native Tab would skip the -1 items
+        // and, the page being inert, drop focus to <body> — so walk the next/previous TAB STOP in
+        // DOM order instead (F6 follow-up f4c27b20 #1).
+        if (!list.includes(active) && element.contains(active) && active !== element
+            && typeof active.compareDocumentPosition === 'function') {
+            e.preventDefault();
+            const following = list.filter(el => active.compareDocumentPosition(el) & 4);
+            const preceding = list.filter(el => active.compareDocumentPosition(el) & 2);
+            (e.shiftKey ? (preceding[preceding.length - 1] || last) : (following[0] || first)).focus();
+            return;
+        }
         if (e.shiftKey && (active === first || !element.contains(active))) {
             e.preventDefault();
             last.focus();
@@ -64,6 +148,16 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     };
     element.addEventListener('keydown', tabHandler);
 
+    // The element last focused INSIDE this trap. A surface outside the trap (an inert-exempt toast
+    // container) can take focus and then remove it (a dismissed toast), stranding focus on <body>;
+    // restoreTrapFocusIfLost hands focus back here (F6 follow-up c51ddf81 #4). The handler writes
+    // through to the traps entry, so restoreTrapFocusIfLost always reads the live value.
+    const focusInHandler = function (e) {
+        const trap = traps.get(id);
+        if (trap && e.target !== element) trap.lastFocused = e.target;
+    };
+    element.addEventListener('focusin', focusInHandler);
+
     let escHandler = null;
     if (closeOnEscape && escapeHandler) {
         escHandler = function (e) {
@@ -72,8 +166,11 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
             // one gesture still means one layer if ordering ever lets this listener run anyway.
             if (e.key !== 'Escape' || e.defaultPrevented) return;
             if (modal) {
-                // Only the topmost modal closes. A dialog over a dialog must not close both.
-                if (!isTopmost(id)) return;
+                // The modal owns Escape unless a LATER modal registered, or a later non-modal trap
+                // currently holds focus. isTopmost counted every trap, so a non-modal inline sheet
+                // activated after the dialog blocked the dialog's Escape entirely (F6 follow-up
+                // 08a22db5 #2). A dialog over a dialog still closes only the top one.
+                if (!modalOwnsEscape(id)) return;
             }
             else if (!ownsEscape(id, element)) {
                 // A non-modal surface (an inline sheet) closes by FOCUS OWNERSHIP, not registration
@@ -86,7 +183,7 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
         document.addEventListener('keydown', escHandler);
     }
 
-    traps.set(id, { element, tabHandler, escHandler, returnTarget, restoreTarget, modal });
+    traps.set(id, { element, tabHandler, focusInHandler, lastFocused: null, escHandler, returnTarget, restoreTarget, modal });
 
     // A modal trap makes the rest of the page unreachable, not only invisible. `inert` is a DOM
     // attribute Blazor cannot keep in sync with the page around the overlay, so the module owns it.
@@ -196,10 +293,31 @@ function ownsEscape(id, element) {
     return true;
 }
 
-/** True when this trap was activated last. Escape closes the most recently opened layer. */
+/** Registration-order query (tests/diagnostics): whether this trap was activated last. Modal
+ * Escape ownership is decided by modalOwnsEscape — this no longer gates any key. */
 export function isTopmost(id) {
     const ids = Array.from(traps.keys());
     return ids.length > 0 && ids[ids.length - 1] === id;
+}
+
+/**
+ * Whether a MODAL trap owns Escape: no modal trap registered after it, and no later NON-modal trap
+ * that CAN close (it has an escHandler) currently holds focus (an inline sheet nested in the dialog
+ * closes first, one layer per key). A later non-modal trap that does not hold focus, or that holds
+ * focus but registered WITHOUT an Escape handler (it could never close, so it must not deadlock the
+ * dialog — review round), is skipped (F6 follow-up 08a22db5 #2) — registration order alone must not
+ * deadlock the dialog's Escape.
+ */
+export function modalOwnsEscape(id) {
+    const ids = Array.from(traps.keys());
+    const at = ids.indexOf(id);
+    if (at < 0) return false;
+    for (let i = at + 1; i < ids.length; i++) {
+        const other = traps.get(ids[i]);
+        if (other.modal) return false;
+        if (other.escHandler && ownsEscape(ids[i], other.element)) return false;
+    }
+    return true;
 }
 
 // id -> Set of elements THAT trap marked inert. A trap never clears an element another trap (or the
@@ -269,6 +387,8 @@ export function __resetForTests() {
     inertedByTrap.clear();
     scrollLockCount = 0;
     scrollLockWasPresent = false;
+    exemptFocus = null;
+    exemptFocusListenerInstalled = false;
 }
 
 export function deactivate(id) {
@@ -278,6 +398,9 @@ export function deactivate(id) {
 
     if (trap.element && trap.tabHandler) {
         trap.element.removeEventListener('keydown', trap.tabHandler);
+    }
+    if (trap.element && trap.focusInHandler) {
+        trap.element.removeEventListener('focusin', trap.focusInHandler);
     }
     if (trap.escHandler) {
         document.removeEventListener('keydown', trap.escHandler);
@@ -361,6 +484,41 @@ export function focusWithin(container) {
         : container;
     const active = document.activeElement;
     return !!region && !!active && typeof region.contains === 'function' && region.contains(active);
+}
+
+/**
+ * Recovers focus for the topmost MODAL trap after a surface outside it (a toast) removed the
+ * focused element. Acts ONLY when an inert-exempt surface actually held focus — the capture
+ * listener recorded its element and that element has since left the DOM. A toast removed while
+ * nothing inside it was focused (screen-reader browse mode, a mouse click elsewhere, plain Tab
+ * order) must not move focus on its timer: moving focus on a timed event violates WCAG 3.2.1 /
+ * APG. Within that gate, focus goes to the element last focused inside the trap, else to the
+ * first TAB STOP that accepts focus (then any focusable — a roving -1 item is the last resort),
+ * else the trap element itself. A focus the user placed on another live element is never stolen,
+ * and a page with no modal trap keeps its lost focus — there is no reliable return target.
+ * @returns {boolean} whether focus moved
+ */
+export function restoreTrapFocusIfLost() {
+    // No recorded exempt focus, or the recorded card is still connected: nothing was lost to a
+    // removed toast, so the recovery is a no-op (a timer expiry must not move focus).
+    if (!exemptFocus || exemptFocus.isConnected) return false;
+    exemptFocus = null;
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected !== false) return false;
+    const modal = Array.from(traps.values()).filter(t => t.modal);
+    if (modal.length === 0) return false;
+    const top = modal[modal.length - 1];
+    if (top.lastFocused && top.lastFocused.isConnected !== false
+        && top.element.contains(top.lastFocused) && focusOf(top.lastFocused)) return true;
+    // Tab stops first; a focusable the Tab cycle excludes (a roving -1 item) only takes over
+    // when no tab stop accepts focus. The Set skips the tab stops re-tried in the fallback.
+    const tried = new Set();
+    for (const el of [...tabbable(top.element), ...visibleFocusable(top.element)]) {
+        if (tried.has(el)) continue;
+        tried.add(el);
+        if (focusOf(el)) return true;
+    }
+    return focusOf(top.element);
 }
 
 function restoreFocus(trap) {
