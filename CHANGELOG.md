@@ -956,6 +956,7 @@ than a code change name the evidence instead of a hash.
 | 18.3 | CF19a–h — eight fail-closed gate holes closed | `2eede79c` |
 | 18.4 | N327 — retroactive 2.9.0 erratum | `1dcf2c5f` |
 | 18.5 | N328 — same-commit JSON documentation guard | `c4471191` |
+| 19-fix | card-mode `TmDataTable` cell wrap (consuming-app gate finding `r6r7-final`) | `f5703a01` |
 
 ## 2.9.0 - 2026-09-27
 
