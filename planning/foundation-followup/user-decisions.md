@@ -1,0 +1,15 @@
+# User decisions for the follow-up plan (2026-10-11)
+- SCOPE: core only + fix stale texts in component plans. Component adoption (DocumentEditor/DiagramEditor toolbar migration, Scheduler move/keyboard, Dashboard/Gantt/Signing/Diagram/Wireframe gestures, package dialogs other than RTE, Notion relative-time copies) stays in their own plans.
+- OTHER PLANS: fix the stale/incorrect texts NOW in MCP (moderator), using the exact replacement texts from cluster analyses (Scheduler 09c5afa6, DocumentEditor 146c7e1b, DiagramEditor 94d441f2, Wireframe ce19aa8c, Dashboard d254e3dd, Gantt cfc9ae8a, Signing 1fba4858, Notion c8d4bcd2, e-mail da0a2531, PdfViewer 132bf066 if relevant, DataTable 6288f7e0 if relevant).
+- EOL: tests normalise EOL + .gitattributes `* text=auto eol=lf` (+ `eng/release-evidence/** -text`).
+- CORS: Development = any loopback origin; otherwise Cors:AllowedOrigins config list.
+- CONTEXT MENU / SPLIT BUTTON / NOTIFICATION BELL: opt-in MobilePresentation (default Popover) + SheetTitle. Update decision F3-PANEL-PRESENTATION.
+- RTE DIALOGS (5): convert to TmModal/TmDialog in core.
+- TOOLBAR API: as proposed by cluster C — TmToolbarItem (one entry or a group in More, no free-form template; selects keep their own Tab stop), TmToolbarGroup (group headers + separators in More), TmToolbarButton.Pressed (bool?) + PressedMixed → TmActionItem.Checked/CheckedMixed → menuitemcheckbox; checking an entry closes the menu; radio modes later; PreserveFocus; TmDropdown/TmSplitButton trigger inside a toolbar auto-joins roving; DocumentEditor More-menu search dropped; DocumentEditor adopts core in its Fáze 4.
+- EDITOR SHELL: MobileSheetSnapPoints + body floor; tablet expanded panel shrinks to keep MinCanvasWidth (not persisted, not reported).
+- CORE GESTURES: all 6 (TmSplitterPane, TmRangeSlider via CSS dual native thumbs, TmDataTable column resize, workflow designer, TmColorGradient, tm-sheet.js full migration) + attachKeyboardMove shift option.
+- PINCH/AUTO-SCROLL: build pointer-gesture.js now in core (attachPinch + createAutoScroller), first consumer = workflow designer.
+- ITmUserTimeZone: build now in core (scoped, browser zone via JS Intl, TimeProvider adapter; F7 manual registration keeps working).
+- COSMETICS + LazyJsModule refactor: include as last optional phases.
+- Remaining cluster-A/B/C/E sub-questions not asked: take the analysts' recommendations (recorded per item in the cluster files).
+- Cluster D questions (not asked, user away): take the analyst's recommendation for each and record it in the plan as "moderator decision (per analysis recommendation)".
