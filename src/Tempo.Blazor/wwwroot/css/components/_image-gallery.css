@@ -10,17 +10,38 @@
   gap: var(--tm-space-3);
 }
 
+/* The item is a native <button type="button"> (Fáze 8): the reset below turns the UA button
+   back into the card the div used to be. The focus indicator is the two-layer ring; the
+   transparent outline is what forced-colors mode paints (it forces box-shadow:none). */
 .tm-gallery-item {
   position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  background: var(--tm-bg-surface);
   cursor: pointer;
   border-radius: var(--tm-radius-md);
   overflow: hidden;
   border: 1px solid var(--tm-border-color);
   transition: box-shadow var(--tm-transition-fast), transform var(--tm-transition-fast);
 }
-.tm-gallery-item:hover {
-  box-shadow: var(--tm-shadow-md);
-  transform: translateY(-2px);
+/* The hover lift is pointer-only decoration: gate it on (hover: hover) so touch devices never
+   get the sticky lift after a tap. Focus-visible below stays ungated — keyboards matter there. */
+@media (hover: hover) {
+  .tm-gallery-item:hover {
+    box-shadow: var(--tm-shadow-md);
+    transform: translateY(-2px);
+  }
+}
+/* After :hover: both are (0,2,0), so source order decides focus+hover — the focus ring must
+   win over the hover lift's shadow, or a focused AND hovered item loses its indicator. */
+.tm-gallery-item:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-gallery-item-img {
@@ -31,6 +52,7 @@
 }
 
 .tm-gallery-item-title {
+  display: block;
   padding: var(--tm-space-1) var(--tm-space-2);
   font-size: var(--tm-font-size-xs);
   color: var(--tm-text-secondary);

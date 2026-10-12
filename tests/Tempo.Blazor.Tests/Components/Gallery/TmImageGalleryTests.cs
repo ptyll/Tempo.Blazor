@@ -121,4 +121,97 @@ public class TmImageGalleryTests : LocalizationTestBase
         clicked.Should().NotBeNull();
         clicked!.Id.Should().Be("img1");
     }
+
+    // ── Native <button> items (keyboard-activation-convention.md) ──────────────
+
+    [Fact]
+    public void TmImageGallery_Item_IsANativeButton()
+    {
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(2)));
+
+        var item = cut.Find(".tm-gallery-item");
+        item.TagName.Should().Be("BUTTON",
+            "a native button gives keyboard users activation for free and gives the lightbox's focus" +
+            " restore something focusable to return to");
+        item.GetAttribute("type").Should().Be("button",
+            "a gallery item must never submit an enclosing form");
+    }
+
+    [Fact]
+    public void TmImageGallery_Item_CarriesNoEmulationResidue()
+    {
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(1)));
+
+        var item = cut.Find(".tm-gallery-item");
+        item.GetAttribute("role").Should().BeNull("role=button on a <button> is emulation residue");
+        item.GetAttribute("tabindex").Should().BeNull("a native button is already in the tab order");
+    }
+
+    [Fact]
+    public void TmImageGallery_Item_HasNoEmulatedKeyHandler()
+    {
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(1)));
+
+        var item = cut.Find(".tm-gallery-item");
+        // Enter AND the full native Space split (keydown, then the keyup the click rides on):
+        // a native button activates itself; an @onkeydown/@onkeyup handler on any of them would
+        // double-fire the activation (docs/keyboard-activation-convention.md).
+        var enterDown = () => item.KeyDown("Enter");
+        enterDown.Should().Throw<MissingEventHandlerException>();
+        var spaceDown = () => item.KeyDown(" ");
+        spaceDown.Should().Throw<MissingEventHandlerException>();
+        var spaceUp = () => item.KeyUp(" ");
+        spaceUp.Should().Throw<MissingEventHandlerException>();
+    }
+
+    [Fact]
+    public void TmImageGallery_Items_CarryPerInstanceIds()
+    {
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(3)));
+
+        var ids = cut.FindAll(".tm-gallery-item")
+            .Select(item => item.GetAttribute("id"))
+            .ToList();
+        ids.Should().OnlyHaveUniqueItems(
+            "the lightbox restore target points at one specific thumbnail");
+        ids[0].Should().StartWith("tm-gallery-").And.EndWith("-item-0");
+        ids[1].Should().EndWith("-item-1");
+        ids[2].Should().EndWith("-item-2");
+    }
+
+    [Fact]
+    public void TmImageGallery_TwoGalleries_HaveDistinctItemIds()
+    {
+        var first = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(1)));
+        var second = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(1)));
+
+        var firstId = first.Find(".tm-gallery-item").GetAttribute("id");
+        var secondId = second.Find(".tm-gallery-item").GetAttribute("id");
+
+        firstId.Should().NotBeNullOrWhiteSpace();
+        firstId.Should().NotBe(secondId,
+            "focus restore must land in the gallery that opened the lightbox");
+    }
+
+    [Fact]
+    public void TmImageGallery_Item_Title_IsASpanInsideTheButton()
+    {
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, MakeImages(1)));
+
+        cut.Find(".tm-gallery-item .tm-gallery-item-title").TagName.Should().Be("SPAN");
+    }
+
+    [Fact]
+    public void TmImageGallery_Item_WithoutTitle_IsNamedByPosition()
+    {
+        var img = new TestGalleryImage("img1", "http://example.com/img.jpg", null, null);
+        var cut = Render<TmImageGallery>(p => p
+            .Add(c => c.Images, new List<IGalleryImage> { img, img }));
+
+        var item = cut.Find(".tm-gallery-item");
+        item.GetAttribute("aria-label").Should().Be("Open image 1 of 2",
+            "a thumbnail without a Title still needs an accessible name (WCAG 4.1.2)");
+        cut.Find(".tm-gallery-item img").GetAttribute("alt").Should().BeEmpty(
+            "the button carries the name; the image would only double it");
+    }
 }

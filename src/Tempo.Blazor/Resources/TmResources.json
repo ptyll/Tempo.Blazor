@@ -2755,6 +2755,7 @@
   "TmImageGallery_NextImage": "Next image",
   "TmImageGallery_NoImages": "No images available",
   "TmImageGallery_OpenImage": "Open image {0} of {1}",
+  "TmImageGallery_ImageAlt": "Image {0} of {1}",
   "TmImageGallery_PreviousImage": "Previous image",
   "TmImageGallery_UploadImages": "Upload images",
   "TmImageGallery_ZoomIn": "Zoom in",

@@ -2758,6 +2758,7 @@
   "TmImageGallery_NextImage": "Image suivante",
   "TmImageGallery_NoImages": "Aucune image disponible",
   "TmImageGallery_OpenImage": "Ouvrir l'image {0} sur {1}",
+  "TmImageGallery_ImageAlt": "Image {0} sur {1}",
   "TmImageGallery_PreviousImage": "Image précédente",
   "TmImageGallery_UploadImages": "Importer des images",
   "TmImageGallery_ZoomIn": "Zoom avant",

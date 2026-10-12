@@ -542,6 +542,29 @@
   `aria-label="@Loc["TmCommandPalette_Aria"]"` ("Command palette" / "Paleta příkazů" / "Palette de
   commandes"). No other default markup of the palette changes.
 
+- **`TmImageGallery` items are `<button type="button" class="tm-gallery-item">` (was a `div`
+  with `role="button"`/`tabindex="0"`).** A native button activates itself — Enter and Space
+  work in every browser through the browser's own click, no emulated key handlers — and gives
+  the lightbox's focus restore something focusable to return to. Items carry per-instance ids
+  (`tm-gallery-{uid}-item-{index}`), the accessible name is the image `Title` or a localized
+  "Open image {0} of {1}", the `<img>` is `alt=""`, and the visible title is
+  `<span class="tm-gallery-item-title">` (was a `div`).
+
+  ```razor
+  @* before *@
+  <div class="tm-gallery-item" tabindex="0" role="button">…</div>
+  @* after *@
+  <button type="button" class="tm-gallery-item" id="tm-gallery-…-item-0">…</button>
+  ```
+
+  **Migration:** host CSS that styled `div.tm-gallery-item` or relied on block children must
+  target the class (the library's own reset turns the UA button face back into the card);
+  selectors or tests keyed on `div.tm-gallery-item` / `[role=button]` must target
+  `button.tm-gallery-item`. Closing the lightbox now returns focus to the thumbnail of the
+  image on screen (after browsing, that is the image being shown, not the original opener) —
+  see `TmLightbox.RestoreFocusTargetId` under Added. The wireframe gallery stencil is
+  unchanged (same visual).
+
 ### Added
 
 - **`docs/redesign-foundation.md` maps the redesign foundation.** One page links the
@@ -713,6 +736,12 @@
   exports re-export them, so every existing caller keeps working), and the `TmDrawer` and
   `TmModal` bodies now become a keyboard-reachable scroll region while they overflow (see
   **Changed**).
+- `TmLightbox.RestoreFocusTargetId` (`string?`, default `null`): the id of the element focus
+  returns to when the lightbox closes; null restores the element that held focus when it opened.
+  `TmImageGallery` passes the thumbnail of the image on screen, so Escape after browsing lands on
+  the image the user is looking at — in every browser, including the ones that never focus a
+  clicked button.
+
 ### Changed
 
 - **The demo API allows any loopback origin in Development.** The CORS default policy no longer
@@ -808,6 +837,14 @@
   for a null/empty category — a `role=group` must be named, so those options render without the
   wrapper — and the combobox drops `aria-controls` when the listbox is gone (no results).
   Consumers that asserted "the palette stays open after any click" must adjust.
+
+- **The lightbox stylesheet lost its never-rendered legacy section.** `_lightbox.css` carried a
+  first block for `.tm-lightbox-overlay`, `-container`, `-nav`, `-image-wrapper`, `-image` and
+  `-error` — classes no component has ever rendered — plus a 768px media block and legacy rules
+  that leaked onto the live `-close`/`-prev`/`-next`/`-counter` classes through the shared names
+  (the counter pill's ≤768px `bottom: 0.5rem` offset included). The pill was re-homed into the
+  live section with its styling tokenized. Only a host that rendered its OWN markup with those
+  legacy classes loses the styles.
 
 ### Fixed
 
@@ -1264,10 +1301,10 @@
   the whole NotionEditor tree so the next inline band value cannot hide in
   markup again.
 
-- `TmImageGallery` thumbnails are keyboard-operable (tabindex=0, role=button,
-  Enter on keydown, Space on keyup per
-  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md)),
-  carry an accessible name, and receive focus back when the lightbox closes.
+- `TmImageGallery` thumbnails are keyboard-operable native `<button type="button">` items (per
+  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md): the browser
+  delivers the activation, no emulated key handlers), carry an accessible name, and the lightbox
+  returns focus to the thumbnail of the image on screen when it closes.
 
 - **The command palette's keyboard highlight is visible in every theme.** The focused row painted
   `--tm-color-gray-50`, which in dark mode IS `--tm-bg-surface` (1:1 — the highlight vanished

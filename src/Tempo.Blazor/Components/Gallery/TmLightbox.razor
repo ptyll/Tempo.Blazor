@@ -19,7 +19,8 @@
                   Active="@(_gate?.ScopeActive == true)"
                   AriaLabel="@Loc["TmLightbox_Aria"]"
                   CloseOnEscape="true"
-                  OnEscape="OnClose">
+                  OnEscape="OnClose"
+                  RestoreFocusTargetId="@RestoreFocusTargetId">
         <div class="tm-lightbox-backdrop" aria-hidden="true" @onclick="async () => await OnClose.InvokeAsync()"></div>
 
         <div class="tm-lightbox-content" @onkeydown="HandleKeyAsync" @onkeydown:stopPropagation="true">
@@ -99,6 +100,13 @@
 
     /// <summary>When true, shows a delete button.</summary>
     [Parameter] public bool CanDelete { get; set; }
+
+    /// <summary>
+    /// Id of the element that receives focus when the lightbox closes. Null restores the element
+    /// that held focus when it opened. TmImageGallery passes the thumbnail of the image on screen,
+    /// so closing after browsing returns to where the user visually is.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>Fires when the lightbox should be closed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }

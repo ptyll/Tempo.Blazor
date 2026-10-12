@@ -2,9 +2,8 @@
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.DataDisplay
-@using Microsoft.AspNetCore.Components.Web
 
-<div class="tm-image-gallery">
+<div class="tm-image-gallery" tabindex="-1" @ref="_rootRef">
     @if (IsLoading)
     {
         <TmSpinner />
@@ -20,32 +19,35 @@
             {
                 var image = img;
                 var i     = idx;
-                <div class="tm-gallery-item"
-                     tabindex="0"
-                     role="button"
-                     aria-label="@(image.Title ?? string.Format(Loc["TmImageGallery_OpenImage"], i + 1, _imageList.Count))"
-                     @onclick="async () => await OpenLightboxAsync(image, i)"
-                     @onkeydown="e => ActivateOnEnter(e, image, i)"
-                     @onkeyup="e => ActivateOnSpaceKeyUp(e, image, i)">
+                @* A native <button> activates itself (keyboard-activation-convention.md): no
+                   role/tabindex residue and no emulated key handlers — a keydown emulation would
+                   double-fire on top of the browser's own click. *@
+                <button type="button"
+                        id="@ItemId(i)"
+                        class="tm-gallery-item"
+                        aria-label="@(string.IsNullOrWhiteSpace(image.Title) ? string.Format(Loc["TmImageGallery_OpenImage"], i + 1, _imageList.Count) : image.Title)"
+                        @onclick="async () => await OpenLightboxAsync(image, i)"
+                        @ref="_itemRefs[i]">
                     <img src="@(image.ThumbnailUrl ?? image.Url)"
                          alt=""
                          class="tm-gallery-item-img" />
-                    @if (!string.IsNullOrEmpty(image.Title))
+                    @if (!string.IsNullOrWhiteSpace(image.Title))
                     {
-                        <div class="tm-gallery-item-title" aria-hidden="true">@image.Title</div>
+                        <span class="tm-gallery-item-title" aria-hidden="true">@image.Title</span>
                     }
-                </div>
+                </button>
             }
         </div>
 
         <TmLightbox IsOpen="@_lightboxIndex.HasValue"
                     ImageUrl="@_lightboxUrl"
-                    ImageAlt="@(_currentImage?.Title)"
+                    ImageAlt="@LightboxAlt"
                     IsFirst="@(_lightboxIndex == 0)"
                     IsLast="@(_lightboxIndex == _imageList.Count - 1)"
                     CurrentIndex="@(_lightboxIndex ?? 0)"
                     TotalCount="@_imageList.Count"
                     CanDelete="@CanDelete"
+                    RestoreFocusTargetId="@(_lightboxIndex is int shown ? ItemId(shown) : null)"
                     OnClose="CloseLightbox"
                     OnPrev="PrevImage"
                     OnNext="NextImage"
@@ -80,13 +82,69 @@
     private int?                             _lightboxIndex;
     private string?                          _lightboxUrl;
     private IGalleryImage?                   _currentImage;
+    private readonly string                  _idPrefix = $"tm-gallery-{Guid.NewGuid():N}";
+    private ElementReference[]               _itemRefs = [];
+    private ElementReference                 _rootRef;
+    private int?                             _focusAfterDeleteIndex;
+    private bool                             _focusRootAfterDelete;
 
     private bool HasImages => _imageList.Count > 0;
+
+    /// <summary>
+    /// Alt text of the lightbox image: the image title, or a localized "Image {0} of {1}" when it
+    /// has none — an untitled image still needs a name in the lightbox (WCAG 1.1.1).
+    /// </summary>
+    private string LightboxAlt =>
+        !string.IsNullOrWhiteSpace(_currentImage?.Title)
+            ? _currentImage!.Title
+            : string.Format(Loc["TmImageGallery_ImageAlt"], (_lightboxIndex ?? 0) + 1, _imageList.Count);
+
+    /// <summary>
+    /// Per-instance id of a thumbnail. The lightbox restore target points at it, so closing the
+    /// lightbox can focus the exact thumbnail of the image on screen — in every browser, including
+    /// the ones that never focus a clicked button (Safari).
+    /// </summary>
+    private string ItemId(int index) => $"{_idPrefix}-item-{index}";
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Delete (cluster-D §3(3)): after removing the displayed image, the restore id of the
+        // deleted position either names the NEXT image (trap restores to it) or, when the last
+        // image was deleted, names nothing — and the opener fallback fails too, because the
+        // opener was the deleted thumbnail (detached) or <body> (Safari). Focus the new last
+        // thumbnail explicitly, after the DOM settled; with no thumbnail left, focus the
+        // gallery root so it does not drop to <body>.
+        if (_focusAfterDeleteIndex is int idx)
+        {
+            _focusAfterDeleteIndex = null;
+            if (idx < _itemRefs.Length && !string.IsNullOrEmpty(_itemRefs[idx].Id))
+            {
+                await _itemRefs[idx].FocusAsync();
+            }
+        }
+        else if (_focusRootAfterDelete)
+        {
+            _focusRootAfterDelete = false;
+            if (!string.IsNullOrEmpty(_rootRef.Id))
+            {
+                await _rootRef.FocusAsync();
+            }
+        }
+    }
 
     protected override void OnParametersSet()
     {
         _imageList     = Images?.ToList() ?? [];
         _indexedImages = _imageList.Select((img, i) => (img, i)).ToList();
+        // @ref writes by index, so the capture targets must exist before the render runs. Grow
+        // the array ONLY: re-creating it would wipe the references captured on earlier inserts
+        // (Blazor captures a @ref when the element is inserted, never on a later re-render), and
+        // the post-delete focus restore would die after any parent re-render.
+        if (_itemRefs.Length < _imageList.Count)
+        {
+            Array.Resize(ref _itemRefs, _imageList.Count);
+        }
     }
 
     private async Task OpenLightboxAsync(IGalleryImage image, int index)
@@ -100,15 +158,6 @@
 
         await OnImageClick.InvokeAsync(image);
     }
-
-    // The thumbnail is a div[role="button"]: a tabindex="0" element that answers only to the mouse
-    // is not keyboard-operable, so it emulates the native <button> split — Enter on keydown
-    // (guarded against auto-repeat), Space on keyup (keyboard-activation-convention.md).
-    private Task ActivateOnEnter(KeyboardEventArgs e, IGalleryImage image, int index)
-        => e.Key == "Enter" && !e.Repeat ? OpenLightboxAsync(image, index) : Task.CompletedTask;
-
-    private Task ActivateOnSpaceKeyUp(KeyboardEventArgs e, IGalleryImage image, int index)
-        => e.Key == " " ? OpenLightboxAsync(image, index) : Task.CompletedTask;
 
     private void CloseLightbox()
     {
@@ -133,9 +182,26 @@
     {
         if (_currentImage is not null && DataProvider is not null)
         {
+            var deletedIndex = _lightboxIndex;
             await DataProvider.DeleteImageAsync(_currentImage.Id);
             _imageList.Remove(_currentImage);
             _indexedImages = _imageList.Select((img, i) => (img, i)).ToList();
+            // Always focus the thumbnail now at the deleted position (the next image, or the new
+            // last one); OnAfterRenderAsync moves focus there once the DOM settled. The restore
+            // id of the deleted position names the NEXT image for the trap; only the
+            // delete-the-last case loses it (detached opener / body). An empty gallery has no
+            // thumbnail left, so focus moves to the gallery root instead.
+            if (deletedIndex.HasValue)
+            {
+                if (_imageList.Count > 0)
+                {
+                    _focusAfterDeleteIndex = Math.Min(deletedIndex.Value, _imageList.Count - 1);
+                }
+                else
+                {
+                    _focusRootAfterDelete = true;
+                }
+            }
             CloseLightbox();
         }
     }
