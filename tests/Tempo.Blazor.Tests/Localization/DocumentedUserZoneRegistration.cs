@@ -21,12 +21,6 @@ internal static class DocumentedUserZoneRegistration
         builder.Services.AddScoped<ITmRelativeTimeFormatter>(sp => new TmRelativeTimeFormatter(
             sp.GetRequiredService<ITmLocalizer>(),
             new UserTimeProvider(sp.GetRequiredService<CircuitZoneCache>())));
-
-        // sealed class UserTimeProvider(CircuitZoneCache cache) : TimeProvider
-        // {
-        //     // Read lazily: the zone arrives from JS after the first render.
-        //     public override TimeZoneInfo LocalTimeZone => cache.Zone ?? TimeZoneInfo.Utc;
-        // }
     }
 
     private sealed class HostBuilder(IServiceCollection services)
@@ -42,7 +36,8 @@ internal static class DocumentedUserZoneRegistration
         public TimeZoneInfo? Zone { get; set; }
     }
 
-    private sealed class UserTimeProvider(CircuitZoneCache cache) : TimeProvider
+    // Nested types are private by default, so the declaration text is byte-for-byte the documented one.
+    sealed class UserTimeProvider(CircuitZoneCache cache) : TimeProvider
     {
         // Read lazily: the zone arrives from JS after the first render.
         public override TimeZoneInfo LocalTimeZone => cache.Zone ?? TimeZoneInfo.Utc;

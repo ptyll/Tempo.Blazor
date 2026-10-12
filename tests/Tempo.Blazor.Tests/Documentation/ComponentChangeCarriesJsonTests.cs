@@ -134,15 +134,17 @@ public sealed class ComponentChangeCarriesJsonTests
     }
 
     /// <summary>
-    /// Builds the evaluator's view of one real commit from the object store. The diff is read
-    /// with <c>--ignore-cr-at-eol</c>: a CRLF↔LF normalization rewrites every line of a file
-    /// without changing a single byte of content, and git would show each line as removed+added;
-    /// the flag hides exactly that carry-return-at-EOL class of churn, so a pure line-ending
-    /// commit produces no diff at all. This is the ONLY churn handling — the evaluator itself
-    /// compares no line texts, so a standalone <c>[Parameter]</c> attribute line moved between
-    /// two properties (identical text on both sides) still flags.
+    /// Builds the evaluator's view of one real commit from the object store. The diff is read by
+    /// default with <c>--ignore-cr-at-eol</c> (<paramref name="ignoreCrAtEol"/>): a CRLF↔LF
+    /// normalization rewrites every line of a file without changing a single byte of content, and
+    /// git would show each line as removed+added; the flag hides exactly that carry-return-at-EOL
+    /// class of churn, so a pure line-ending commit produces no diff at all. This is the ONLY churn
+    /// handling — the evaluator itself compares no line texts, so a standalone <c>[Parameter]</c>
+    /// attribute line moved between two properties (identical text on both sides) still flags. The
+    /// teeth arm passes <c>false</c> to prove an EOL rewrite really does read as parameter churn in
+    /// the raw diff.
     /// </summary>
-    private static CommitChange ChangeForCommit(string sha)
+    private static CommitChange ChangeForCommit(string sha, bool ignoreCrAtEol = true)
     {
         string root = ReleaseScriptInputReadTests.FindRepoRoot();
         var (namesExit, namesOut, namesErr) = FullCloneFactAttribute.RunGit(
@@ -155,9 +157,14 @@ public sealed class ComponentChangeCarriesJsonTests
         var files = new List<ChangedFile>();
         foreach (string componentPath in paths.Where(IsComponentApiFile))
         {
-            var (diffExit, diffOut, diffErr) = FullCloneFactAttribute.RunGit(
-                root, "show", "--format=", "--unified=0", "--ignore-cr-at-eol",
-                "--first-parent", sha, "--", componentPath);
+            List<string> diffArguments = ["show", "--format=", "--unified=0"];
+            if (ignoreCrAtEol)
+            {
+                diffArguments.Add("--ignore-cr-at-eol");
+            }
+
+            diffArguments.AddRange(["--first-parent", sha, "--", componentPath]);
+            var (diffExit, diffOut, diffErr) = FullCloneFactAttribute.RunGit(root, [.. diffArguments]);
             diffExit.Should().Be(0, $"git show --unified=0 must succeed for {sha} ({diffErr})");
             var added = new List<string>();
             var removed = new List<string>();
@@ -287,10 +294,13 @@ public sealed class ComponentChangeCarriesJsonTests
     }
 
     /// <summary>
-    /// The git layer's half of the W1 contract: commits whose whole content change is a CRLF/LF
-    /// normalization produce NO diff under <c>--ignore-cr-at-eol</c>, so the evaluator has nothing
-    /// to flag. <c>3f5d7f5f</c> restored LF in the round-3-touched promoted component files and
-    /// <c>975a75be</c> stored CRLF in them — both touched component files with zero content delta.
+    /// The git layer's half of the W1 contract, over two real commits that rewrote every line of
+    /// component files: <c>98cc1c99</c> (round-3 V2) changed content AND stored CRLF in TmLightbox,
+    /// TmCommandPalette, TmKeyboardShortcutsHelp, TmNotificationToastContainer and
+    /// TmGanttImportDialog (its raw diff carries 56 <c>[Parameter]</c> lines and no
+    /// <c>JsonDocumentation/**</c> path), and <c>3f5d7f5f</c> restored LF in the same files. Under
+    /// <c>--ignore-cr-at-eol</c> neither reads as a parameter change. The raw-diff arms prove the
+    /// commits are not vacuous: without the flag both WOULD be findings.
     /// </summary>
     [FullCloneFact]
     public void EndOfLineNormalizationCommits_AreClean()
@@ -298,7 +308,7 @@ public sealed class ComponentChangeCarriesJsonTests
         CommitChange lfRestore = ChangeForCommit(
             "3f5d7f5f3a98e16168544927b1157021004cd555");
         CommitChange crlfStore = ChangeForCommit(
-            "975a75be9481d59dfeb945d554a27f558bdd71c6");
+            "98cc1c9946ed9f640e4a164fce8dcaebaa9beee9");
 
         using (new AssertionScope())
         {
@@ -306,7 +316,15 @@ public sealed class ComponentChangeCarriesJsonTests
                 "3f5d7f5f only restored LF line endings — --ignore-cr-at-eol leaves no diff, so "
                 + "no parameter-affecting line can be read out of it");
             Evaluate([crlfStore]).Should().BeEmpty(
-                "975a75be only stored CRLF line endings — the same flag hides the churn");
+                "98cc1c99 stored CRLF in five component files while changing their content — the "
+                + "flag hides the churn and leaves only the real (non-parameter) edits");
+            Evaluate([ChangeForCommit("98cc1c9946ed9f640e4a164fce8dcaebaa9beee9", ignoreCrAtEol: false)])
+                .Should().ContainSingle(
+                    "without --ignore-cr-at-eol the CRLF rewrite reads as 56 [Parameter] edits — "
+                    + "the arm is not vacuous");
+            Evaluate([ChangeForCommit("3f5d7f5f3a98e16168544927b1157021004cd555", ignoreCrAtEol: false)])
+                .Should().ContainSingle(
+                    "the LF restore likewise rewrote every [Parameter] line");
         }
     }
 
@@ -417,7 +435,10 @@ public sealed class ComponentChangeCarriesJsonTests
         shas.Should().NotBeEmpty(
             "unmeasurable:no-commits — the sweep must measure commits, not an empty window");
 
-        var findings = Evaluate(shas.Select(ChangeForCommit)).ToList();
+        // A lambda, not the ChangeForCommit method group: with the ignoreCrAtEol optional parameter
+        // the method group no longer infers as Func<string, CommitChange> and Select falls through
+        // to bUnit's IElement extension, which fails to compile.
+        var findings = Evaluate(shas.Select(sha => ChangeForCommit(sha))).ToList();
         findings.Should().BeEmpty(
             "every commit that opened, closed or renamed a component [Parameter] since the last "
             + "tag must carry JsonDocumentation/** in the same commit — findings: {0}",

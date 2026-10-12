@@ -494,4 +494,5 @@ public class TmToolbarOverflowTests : LocalizationTestBase
 
         OpenMenu(cut);
         MenuLabels(cut).Should().Equal("F", "B", "L");
-    }}
+    }
+}

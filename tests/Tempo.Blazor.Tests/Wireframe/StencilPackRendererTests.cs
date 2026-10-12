@@ -8,9 +8,11 @@ using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Wireframe;
 using Tempo.Blazor.Components.Wireframe.Models;
 using Tempo.Blazor.Components.Wireframe.Stencil;
+using Tempo.Blazor.Tests.Icons;
 
 namespace Tempo.Blazor.Tests.Wireframe;
 
+[Collection(IconRegistryCollection.Name)]
 public class StencilPackRendererTests : IDisposable
 {
     public void Dispose()

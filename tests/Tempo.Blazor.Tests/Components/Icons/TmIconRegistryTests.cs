@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Interfaces;
+using Tempo.Blazor.Tests.Icons;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.Icons;
@@ -10,6 +11,7 @@ namespace Tempo.Blazor.Tests.Components.Icons;
 /// TDD tests for IconRegistry and IIconProvider.
 /// RED phase: written BEFORE implementation — must FAIL until IconRegistry is implemented.
 /// </summary>
+[Collection(IconRegistryCollection.Name)]
 public class TmIconRegistryTests : LocalizationTestBase, IDisposable
 {
     // Reset registry state between tests (important for static state)

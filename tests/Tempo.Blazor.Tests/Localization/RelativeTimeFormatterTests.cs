@@ -24,21 +24,27 @@ public class RelativeTimeFormatterTests
     // 2026-10-12 is a Monday; Prague is on summer time (UTC+2) until 25 October.
     private static readonly DateTimeOffset Now = new(2026, 10, 12, 14, 0, 0, PragueOffset);   // 12:00Z
 
-    private static ITmRelativeTimeFormatter Formatter(string culture, TimeProvider? clock = null)
+    // The culture is never touched here without a CultureScope: the localizer reads the ambient UI
+    // culture at format time, so a helper that switched it and left it behind would leak into every
+    // later test on the thread (A6).
+    private static ITmRelativeTimeFormatter Formatter(TimeProvider? clock = null)
+        => new TmRelativeTimeFormatter(new DefaultTmLocalizer(new JsonStringLocalizer<TmResources>()), clock);
+
+    private static string FormatIn(string culture, DateTimeOffset value, DateTimeOffset? now, TimeZoneInfo? zone)
     {
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
-        return new TmRelativeTimeFormatter(new DefaultTmLocalizer(new JsonStringLocalizer<TmResources>()), clock);
+        // The scope must wrap Format itself, because the localizer reads the UI culture at format time.
+        using var _ = CultureScope.Use(culture);
+        return Formatter().Format(value, now ?? Now, zone ?? Prague);
     }
 
     private static string Cs(DateTimeOffset value, DateTimeOffset? now = null, TimeZoneInfo? zone = null)
-        => Formatter("cs").Format(value, now ?? Now, zone ?? Prague);
+        => FormatIn("cs", value, now, zone);
 
     private static string En(DateTimeOffset value, DateTimeOffset? now = null, TimeZoneInfo? zone = null)
-        => Formatter("en").Format(value, now ?? Now, zone ?? Prague);
+        => FormatIn("en", value, now, zone);
 
     private static string Fr(DateTimeOffset value, DateTimeOffset? now = null, TimeZoneInfo? zone = null)
-        => Formatter("fr").Format(value, now ?? Now, zone ?? Prague);
+        => FormatIn("fr", value, now, zone);
 
     private static DateTimeOffset Local(int day, int hour, int minute = 0, int month = 10)
         => new(2026, month, day, hour, minute, 0, PragueOffset);
@@ -199,7 +205,8 @@ public class RelativeTimeFormatterTests
     {
         var clock = new FakeTimeProvider(Now);
         clock.SetLocalTimeZone(Prague);
-        var formatter = Formatter("cs", clock);
+        using var _ = CultureScope.Use("cs");
+        var formatter = Formatter(clock);
 
         formatter.Format(Now.AddMinutes(-7)).Should().Be("před 7 min");
         formatter.Format(Local(11, 16, 20)).Should().Be("včera v 16:20");
@@ -211,7 +218,8 @@ public class RelativeTimeFormatterTests
     [Fact]
     public void Without_a_TimeProvider_the_system_clock_is_used()
     {
-        var formatter = Formatter("en");
+        using var _ = CultureScope.Use("en");
+        var formatter = Formatter();
         formatter.Format(DateTimeOffset.UtcNow.AddSeconds(-5)).Should().Be("Just now");
     }
 
@@ -225,8 +233,7 @@ public class RelativeTimeFormatterTests
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 6, 15, 14, 20, 0, TimeSpan.Zero));
         clock.SetLocalTimeZone(Tokyo);
         var ambient = CultureInfo.GetCultureInfo("en-US");
-        CultureInfo.CurrentCulture = ambient;
-        CultureInfo.CurrentUICulture = ambient;
+        using var _ = CultureScope.Use(ambient);
         var circuit = CultureInfo.GetCultureInfo("cs-CZ");
 
         var localizer = new MockTmLocalizer(new Dictionary<string, string>
@@ -251,7 +258,7 @@ public class RelativeTimeFormatterTests
     public void The_localizer_culture_not_the_ambient_one_formats_the_clock_time()
     {
         // A Czech localizer served while the thread culture is English: still a 24-hour clock time.
-        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en");
+        using var _ = CultureScope.Use(CultureInfo.CurrentCulture, CultureInfo.GetCultureInfo("en"));
         var loc = new MockTmLocalizer(new Dictionary<string, string>
         {
             ["Tm_Time_YesterdayAt"] = "včera v {0}",
@@ -269,5 +276,20 @@ public class RelativeTimeFormatterTests
 
         var act = () => formatter.Format(Now.AddMinutes(-5), Now, Prague);
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Formatting_leaves_the_ambient_culture_as_it_found_it()
+    {
+        // The formatter reads the ambient culture at format time, so every helper that selects a
+        // language must put it back: a helper that leaves "fr" behind leaks into every unrelated
+        // test that runs afterwards on the same thread.
+        using var _ = CultureScope.Use("de-DE");
+        Cs(Now);
+        En(Now);
+        Fr(Now);
+
+        CultureInfo.CurrentCulture.Name.Should().Be("de-DE");
+        CultureInfo.CurrentUICulture.Name.Should().Be("de-DE");
     }
 }

@@ -164,6 +164,13 @@ public class RelativeTimeRegistrationTests
         var compiled = sample[(compiledStart + "doc-sample:user-zone".Length)..(sample.IndexOf(")));", compiledStart, StringComparison.Ordinal) + 4)];
         Normalize(snippet).Should().Be(Normalize(compiled),
             "the compiled sample is the documented snippet, not a paraphrase of it");
+
+        // The registration lines are only half the documented snippet: the lazy zone read lives in the
+        // UserTimeProvider class body, so that body is compared too. "must appear once" is what keeps a
+        // commented paraphrase of the class out of the compiled sample.
+        const string classAnchor = "sealed class UserTimeProvider";
+        Normalize(ClassBlock(doc, classAnchor)).Should().Be(Normalize(ClassBlock(sample, classAnchor)),
+            "the documented UserTimeProvider (the lazy zone read the K1 fix depends on) is the compiled one");
     }
 
     private static string Normalize(string text)
@@ -171,6 +178,30 @@ public class RelativeTimeRegistrationTests
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
             .Where(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal)));
+
+    /// <summary>From the anchor to the line that closes the class's brace (depth back to 0).</summary>
+    private static string ClassBlock(string text, string anchor)
+    {
+        var start = text.IndexOf(anchor, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, $"'{anchor}' must exist exactly where the doc shows it");
+        text.IndexOf(anchor, start + anchor.Length, StringComparison.Ordinal).Should().Be(-1, $"'{anchor}' must appear once");
+        var depth = 0;
+        var seenBrace = false;
+        for (var i = start; i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                depth++;
+                seenBrace = true;
+            }
+            else if (text[i] == '}' && --depth == 0 && seenBrace)
+            {
+                return text[start..(i + 1)];
+            }
+        }
+
+        throw new InvalidOperationException($"unterminated class block after '{anchor}'");
+    }
 
     [Fact]
     public void DocumentedRegistration_ResolvesBesideASingletonTimeProviderConsumer_AndHonoursALateZone()
