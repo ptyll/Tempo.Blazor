@@ -337,6 +337,64 @@ public abstract class PlaywrightTestBase
     }
 
     /// <summary>
+    /// Waits until fonts are loaded, no CSS transition runs, no smooth scroll is in flight and the boxes of
+    /// <paramref name="selector"/> are identical across 3 consecutive frames (15 s budget).
+    /// </summary>
+    /// <remarks>
+    /// The page is still MOVING when the app reports ready: the demo's Tailwind Play CDN generates CSS for
+    /// freshly rendered classes after the interactive render, and <c>html { scroll-behavior: smooth }</c> turns
+    /// every programmatic/focus scroll into an animation (docs/e2e-test-lanes.md "Timing-masked races").
+    /// Geometry assertions must wait for this settled state, not for a fixed delay. <paramref name="selector"/>
+    /// should list every element whose box the following assertions read; the window scroll position is part of
+    /// the signature, so an in-flight smooth scroll counts as "moving" even when the elements' boxes are stable.
+    /// A selector that matches no element never settles — the wait times out instead of passing on an empty page.
+    /// </remarks>
+    protected static async Task WaitForLayoutToSettleAsync(IPage page, string selector)
+    {
+        var settled = await page.EvaluateAsync<bool>(
+            """
+            async (selector) => {
+                const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
+                const transitionRunning = () => document.getAnimations()
+                    .some(animation => animation instanceof CSSTransition && animation.playState === 'running');
+                const deadline = performance.now() + 15000;
+                let previous = null;
+                let stableFrames = 0;
+                while (performance.now() < deadline) {
+                    await document.fonts.ready;
+                    await frame();
+                    const nodes = document.querySelectorAll(selector);
+                    if (nodes.length === 0) {
+                        // A selector that matches nothing must NOT settle on the empty signature:
+                        // reset and keep polling so the wait times out instead of passing.
+                        previous = null;
+                        stableFrames = 0;
+                        continue;
+                    }
+                    const current = [...nodes]
+                        .map(node => {
+                            const r = node.getBoundingClientRect();
+                            return `${r.left},${r.top + window.scrollY},${r.width},${r.height}`;
+                        })
+                        .concat([`${window.scrollX},${window.scrollY}`])
+                        .join('|');
+                    const quiet = document.fonts.status === 'loaded' && !transitionRunning();
+                    stableFrames = quiet && current === previous ? stableFrames + 1 : 0;
+                    if (stableFrames >= 3) {
+                        return true;
+                    }
+
+                    previous = current;
+                }
+
+                return false;
+            }
+            """, selector);
+        Assert.IsTrue(settled,
+            $"the layout never settled within 15s (fonts loading, a CSS transition running, the '{selector}' boxes/scroll still moving, or the selector matched no element) — geometry read now would be mid-reflow");
+    }
+
+    /// <summary>
     /// Takes a screenshot and attaches it to the test result.
     /// </summary>
     protected async Task TakeScreenshotAsync(IPage page, string name)

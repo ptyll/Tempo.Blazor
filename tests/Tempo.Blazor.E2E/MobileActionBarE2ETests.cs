@@ -566,11 +566,12 @@ public class MobileActionBarE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    public async Task Demo_1440_ForcedVariant_MorePopover_PaintsSurface_AndReturnsFocus()
+    public async Task Demo_1280_ForcedVariant_MorePopover_PaintsSurface_AndReturnsFocus()
     {
         // X4/X5/X10: the bar resolves Mobile inside its container on a desktop viewport, so the
         // More menu opens as the ANCHORED POPOVER — it must paint a real surface and return
-        // focus to the More trigger after an item runs.
+        // focus to the More trigger after an item runs. (CreateContextAsync gives 1280x720; the
+        // test carried a stale "1440" name until the A8 flake fix.)
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
         await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
@@ -579,13 +580,22 @@ public class MobileActionBarE2ETests : WasmTestBase
         var more = page.Locator("[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__more");
         await more.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
+        // The trigger sits below the fold. Its FocusAsync used to fire a SMOOTH focus scroll
+        // (html { scroll-behavior: smooth }) and the Enter raced the still-scrolling page: the
+        // menu opened while the overlay hid its panel (anchor out of the viewport), the first
+        // item's focus() silently no-op'd inside the visibility:hidden panel, and the wait for
+        // the focused menuitem timed out. Scroll instantly, settle the layout, then focus
+        // WITHOUT scrolling.
+        await more.EvaluateAsync("el => el.scrollIntoView({ block: 'center', behavior: 'instant' })");
+        await WaitForLayoutToSettleAsync(page, "[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__more");
+
         // X10: the trigger advertises the menu like every other popup trigger.
         Assert.AreEqual("menu", await more.GetAttributeAsync("aria-haspopup"));
         Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"));
         Assert.IsNull(await more.GetAttributeAsync("aria-controls"), "F6 r2 G15: no aria-controls while the menu panel is not rendered");
 
         // Keyboard: Enter opens the popover (native button activation — Enter fires on keydown).
-        await more.FocusAsync();
+        await more.EvaluateAsync("el => el.focus({ preventScroll: true })");
         await page.Keyboard.PressAsync("Enter");
         var panel = page.Locator(".tm-mobile-action-bar__menu-panel");
         await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
@@ -606,11 +616,23 @@ public class MobileActionBarE2ETests : WasmTestBase
         // X5: choosing an item (KeepMenuOpen=false) closes the popover and restores focus to
         // the More trigger — never <body>. Wait for the initial-focus move to land first: a
         // premature Enter would re-activate the still-focused More trigger instead of the
-        // menuitem and the popover would stay open.
-        await page.WaitForFunctionAsync(
-            "() => document.activeElement?.getAttribute('role') === 'menuitem'",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 5000 });
+        // menuitem and the popover would stay open. ToBeFocused (not a bare activeElement poll)
+        // with diagnostics: when it fails, what actually holds focus and whether the panel is
+        // still visibility:hidden is exactly what the failure report must say.
+        var firstItem = panel.Locator("[role='menuitem']:not([disabled])").First;
+        try
+        {
+            await Assertions.Expect(firstItem).ToBeFocusedAsync(new() { Timeout = 15000 });
+        }
+        catch (PlaywrightException ex)
+        {
+            var activeElement = await page.EvaluateAsync<string>(
+                "() => document.activeElement ? `${document.activeElement.tagName}.${document.activeElement.className}` : 'none'");
+            var visibility = await panel.EvaluateAsync<string>("el => getComputedStyle(el).visibility");
+            throw new AssertFailedException(
+                $"the menu's initial focus never landed on a menuitem (activeElement: {activeElement}, panel visibility: {visibility}): {ex.Message.Split('\n')[0]}");
+        }
+
         await page.Keyboard.PressAsync("Enter"); // activates the first menuitem (Duplicate)
         await Assertions.Expect(panel).ToBeHiddenAsync();
         Assert.AreEqual("false", await more.GetAttributeAsync("aria-expanded"),
@@ -654,23 +676,25 @@ public class MobileActionBarE2ETests : WasmTestBase
             "the bare dashboard root is the sticky box");
 
         // Mid-scroll: the container spans the viewport, so the bar is pinned to its bottom.
+        // html { scroll-behavior: smooth } animates a bare scrollTo — scroll instantly and settle
+        // fonts/transitions/scroll before reading the pin, exactly like the auto-card test below.
         await page.EvaluateAsync(
             """
             () => {
                 const dash = document.querySelector('.tm-dashboard');
                 const top = dash.getBoundingClientRect().top + window.scrollY;
-                window.scrollTo(0, top + dash.offsetHeight / 2 - window.innerHeight / 2);
+                window.scrollTo({ top: top + dash.offsetHeight / 2 - window.innerHeight / 2, behavior: 'instant' });
             }
             """);
-        await page.WaitForTimeoutAsync(200);
+        await WaitForLayoutToSettleAsync(page, ".tm-dashboard .tm-mobile-action-bar__bar");
         await AssertBarPinnedToViewportBottomAsync(page, bar);
 
         await CaptureViewportOnlyAsync(page, "390-dashboard-edit-mid-sticky");
 
         // Scroll to the very end: the bar settles at the container's bottom edge with no
         // double-reserved empty band below the content.
-        await page.EvaluateAsync("() => window.scrollTo(0, document.documentElement.scrollHeight)");
-        await page.WaitForTimeoutAsync(200);
+        await page.EvaluateAsync("() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })");
+        await WaitForLayoutToSettleAsync(page, ".tm-dashboard .tm-mobile-action-bar__bar");
         var settled = await page.EvaluateAsync<(double BarBottom, double DashBottom)>(
             """
             () => {
@@ -699,30 +723,32 @@ public class MobileActionBarE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
         await WaitForAppReadyAsync(page);
         await page.SetViewportSizeAsync(390, 700);
-        // The tiles inherit the host webfont (font: inherit) — a late font swap shifts the card
-        // layout between the scroll and the pin measurement. Settle the fonts first so the
-        // sticky assertion measures a stable box.
-        await page.WaitForFunctionAsync(
-            "() => document.fonts.status === 'loaded'",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 15000 });
+        // The tiles inherit the host webfont (font: inherit) — a late font swap or a Tailwind
+        // Play CDN transition shifts the card layout between the scroll and the pin measurement.
+        // Settle fonts, transitions and the viewport-resize reflow first so every measurement
+        // below reads a stable box.
+        await WaitForLayoutToSettleAsync(page, "[data-testid='mab-auto-bar'], [data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
 
         var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         // Scroll so the fold cuts 40px into the card (card bottom 40px below the viewport
         // bottom — solidly inside the sticky range): the bar is pinned to the viewport bottom.
-        var pinCut = await page.EvaluateAsync<double>(
+        // html { scroll-behavior: smooth } animates the former bare scrollTo — the pin was then
+        // measured mid-animation. Scroll instantly, and read pinCut in a SECOND evaluation so it
+        // describes the post-scroll geometry, never the pre-scroll one.
+        await page.EvaluateAsync(
             """
             () => {
                 const card = document.querySelector("[data-testid='mab-auto-bar']");
                 const top = card.getBoundingClientRect().top + window.scrollY;
-                window.scrollTo(0, Math.max(0, top + card.offsetHeight - window.innerHeight - 40));
-                return card.getBoundingClientRect().bottom - window.innerHeight;
+                window.scrollTo({ top: Math.max(0, top + card.offsetHeight - window.innerHeight - 40), behavior: 'instant' });
             }
             """);
+        var pinCut = await page.EvaluateAsync<double>(
+            "() => document.querySelector(\"[data-testid='mab-auto-bar']\").getBoundingClientRect().bottom - window.innerHeight");
         Assert.IsTrue(pinCut > 5, $"the fold must cut the card (bottom offset {pinCut}px) for the pin to engage");
-        await page.WaitForTimeoutAsync(200); // settle the pin before measuring
+        await WaitForLayoutToSettleAsync(page, "[data-testid='mab-auto-bar'], [data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await AssertBarPinnedToViewportBottomAsync(page, bar);
 
         await CaptureViewportOnlyAsync(page, "390-auto-card-mid-sticky");
@@ -734,10 +760,10 @@ public class MobileActionBarE2ETests : WasmTestBase
             () => {
                 const card = document.querySelector("[data-testid='mab-auto-bar']");
                 const top = card.getBoundingClientRect().top + window.scrollY;
-                window.scrollTo(0, top - 60);
+                window.scrollTo({ top: top - 60, behavior: 'instant' });
             }
             """);
-        await page.WaitForTimeoutAsync(200);
+        await WaitForLayoutToSettleAsync(page, "[data-testid='mab-auto-bar'], [data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         var settled = await page.EvaluateAsync<(double BarBottom, double CardBottom)>(
             """
             () => {
@@ -753,8 +779,8 @@ public class MobileActionBarE2ETests : WasmTestBase
             $"with the card fully in view the bar sits at the card's bottom edge (bar {settled.BarBottom}, card {settled.CardBottom})");
 
         // Back into the pin range: the pin engages again.
-        await page.EvaluateAsync("() => window.scrollTo(0, 0)");
-        await page.WaitForTimeoutAsync(200);
+        await page.EvaluateAsync("() => window.scrollTo({ top: 0, behavior: 'instant' })");
+        await WaitForLayoutToSettleAsync(page, "[data-testid='mab-auto-bar'], [data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
         await AssertBarPinnedToViewportBottomAsync(page, bar);
     }
 

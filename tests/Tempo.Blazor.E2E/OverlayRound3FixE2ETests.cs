@@ -50,29 +50,8 @@ public sealed class OverlayRound3FixE2ETests : WasmTestBase
         return path;
     }
 
-    /// <summary>
-    /// The probe4 paint assertion: what PAINTS at the hit element's point is the top surface. Inert
-    /// is stripped synchronously around the hit-test and restored after (the focus trap inerts
-    /// everything behind the top overlay, and elementFromPoint would skip it).
-    /// </summary>
-    private static async Task<bool> PaintsAtAsync(IPage page, string hitSelector, string topSelector)
-    {
-        return await page.EvaluateAsync<bool>(
-            """
-            ({ hit, top }) => {
-                const hitEl = document.querySelector(hit);
-                const topEl = document.querySelector(top);
-                if (!hitEl || !topEl) return false;
-                const wasInert = [...document.querySelectorAll('[inert]')];
-                wasInert.forEach(e => e.removeAttribute('inert'));
-                const r = hitEl.getBoundingClientRect();
-                const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-                wasInert.forEach(e => e.setAttribute('inert', ''));
-                return !!el && topEl.contains(el);
-            }
-            """,
-            new { hit = hitSelector, top = topSelector });
-    }
+    // The probe4 paint assertion (what PAINTS at the hit element's point is the top surface) is
+    // OverlayTopLayerScenarios.PaintsAtAsync — shared with the render-mode lanes, no local copy.
 
     private static async Task AssertCoarsePointerStillMatchesAsync(IPage page)
     {
@@ -110,7 +89,7 @@ public sealed class OverlayRound3FixE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(700);
 
         // The drawer's promotion must have re-raised the pinned toast container above itself.
-        Assert.IsTrue(await PaintsAtAsync(page, ".tm-toast-container:popover-open .tm-toast", ".tm-toast-container:popover-open"),
+        Assert.IsTrue(await OverlayTopLayerScenarios.PaintsAtAsync(page, ".tm-toast-container:popover-open .tm-toast", ".tm-toast-container:popover-open"),
             "a toast already on screen must paint above the drawer/sheet opened after it (R3-M1)");
 
         await ShootAsync(page, $"v1-{width}-toast-then-{(touch ? "sheet" : "drawer")}");
@@ -144,7 +123,7 @@ public sealed class OverlayRound3FixE2ETests : WasmTestBase
         await newest.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForTimeoutAsync(600);
 
-        Assert.IsTrue(await PaintsAtAsync(page, ".tm-toast-container:popover-open .tm-toast-message", ".tm-toast-container:popover-open"),
+        Assert.IsTrue(await OverlayTopLayerScenarios.PaintsAtAsync(page, ".tm-toast-container:popover-open .tm-toast-message", ".tm-toast-container:popover-open"),
             "a toast pushed at the MaxVisible cap must paint above the open sheet");
 
         await ShootAsync(page, "v1-1440-toast-at-cap-above-sheet");
@@ -191,7 +170,7 @@ public sealed class OverlayRound3FixE2ETests : WasmTestBase
 
         Assert.IsTrue(await palette.EvaluateAsync<bool>("el => el.matches(':popover-open')"),
             "the palette backdrop must be a live top-layer popover (V2)");
-        Assert.IsTrue(await PaintsAtAsync(page, ".tm-command-palette", ".tm-command-palette-backdrop"),
+        Assert.IsTrue(await OverlayTopLayerScenarios.PaintsAtAsync(page, ".tm-command-palette", ".tm-command-palette-backdrop"),
             "the palette opened from inside the drawer must paint above it");
 
         await ShootAsync(page, "v2-1440-palette-above-drawer");

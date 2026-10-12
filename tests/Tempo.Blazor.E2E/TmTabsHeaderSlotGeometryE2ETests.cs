@@ -265,45 +265,15 @@ public sealed class TmTabsHeaderSlotGeometryE2ETests : WasmTestBase
     /// on an ease-out curve over ~250ms). Every assertion here compares boxes read by SEPARATE
     /// <see cref="ILocator.BoundingBoxAsync"/> calls, so reading them during that window mixes positions
     /// from different frames (a two-row strip then "has" four rows, and the slot is off by however far the
-    /// band moved in between). Wait for the state the assertions assume: fonts loaded, no CSS transition
-    /// running, and the measured strips' geometry unchanged across consecutive frames.
+    /// band moved in between). Wait for the state the assertions assume through the shared
+    /// <see cref="PlaywrightTestBase.WaitForLayoutToSettleAsync"/>: fonts loaded, no CSS transition running,
+    /// no smooth scroll in flight, and the measured elements' geometry unchanged across consecutive frames.
     /// </summary>
-    private static async Task WaitForLayoutToSettleAsync(IPage page)
-    {
-        var settled = await page.EvaluateAsync<bool>(
-            """
-            async () => {
-                const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve()));
-                const signature = () => [...document.querySelectorAll('.tm-tabs')]
-                    .flatMap(tabs => [tabs, ...tabs.querySelectorAll('.tm-tab, .tm-tabs__header-leading > *, .tm-tabs__header-trailing > *')])
-                    .map(node => {
-                        const r = node.getBoundingClientRect();
-                        return `${r.left},${r.top + window.scrollY},${r.width},${r.height}`;
-                    })
-                    .join('|');
-                const transitionRunning = () => document.getAnimations()
-                    .some(animation => animation instanceof CSSTransition && animation.playState === 'running');
-                const deadline = performance.now() + 15000;
-                let previous = null;
-                let stableFrames = 0;
-                while (performance.now() < deadline) {
-                    await document.fonts.ready;
-                    await frame();
-                    const current = signature();
-                    const quiet = document.fonts.status === 'loaded' && !transitionRunning();
-                    stableFrames = quiet && current === previous ? stableFrames + 1 : 0;
-                    if (stableFrames >= 3) {
-                        return true;
-                    }
+    private static readonly string SettleSelector =
+        ".tm-tabs, .tm-tabs .tm-tab, .tm-tabs .tm-tabs__header-leading > *, .tm-tabs .tm-tabs__header-trailing > *";
 
-                    previous = current;
-                }
-
-                return false;
-            }
-            """);
-        Assert.IsTrue(settled, "the feedback page never settled (fonts loading, a CSS transition running, or the tab strips still moving after 15s) — the geometry below would be read mid-reflow");
-    }
+    private static Task WaitForLayoutToSettleAsync(IPage page)
+        => PlaywrightTestBase.WaitForLayoutToSettleAsync(page, SettleSelector);
 
     private static async Task<LocatorBoundingBoxResult> BoxAsync(ILocator locator)
     {

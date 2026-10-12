@@ -615,8 +615,9 @@ public class EditorShellE2ETests : WasmTestBase
     [TestMethod]
     public async Task Demo_1280_UnboundThresholdShell_ExpandingTheImposedRail_SwapsThePanels()
     {
-        // F6 r2 G1: the thresholds demo shell binds NOTHING (no CollapsedPanels, no handlers), so the
-        // tablet rail is imposed by the shell itself; its expand button must still work.
+        // F6 r2 G1: the thresholds demo shell binds no CollapsedPanels (Open is bound since the
+        // 08a22db5 follow-up), so the tablet rail is imposed by the shell itself; its expand
+        // button must still work.
         var page = await OpenPlainPageAsync(1280, 800);
         RegisterContext(page.Context);
         await WaitForAppReadyAsync(page);
@@ -947,6 +948,16 @@ public class EditorShellE2ETests : WasmTestBase
         RegisterContext(context);
         const string thresholdsSheet = "[data-testid='editor-shell-thresholds'] .tm-editor-shell__sheet";
 
+        // Positive control: the thresholds sheet CAN close — its own close button dismisses it and
+        // its mobile panel toggle reopens it. Without this proof, the "the sheet that did not hold
+        // focus stays open" count in the loop would be vacuous (A9: the thresholds shell used to
+        // bind nothing and the sheet could never close at all).
+        await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+        await page.Locator($"{thresholdsSheet} .tm-editor-shell__sheet-close").ClickAsync();
+        await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+        await page.Locator("[data-testid='editor-shell-thresholds'] .tm-editor-shell__panel-toggle--mobile").ClickAsync();
+        await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
         for (var attempt = 1; attempt <= 4; attempt++)
         {
             var sheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
@@ -960,13 +971,51 @@ public class EditorShellE2ETests : WasmTestBase
             await page.Keyboard.PressAsync("Escape");
 
             await Assertions.Expect(sheet).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
-            Assert.AreEqual(1, await page.Locator(thresholdsSheet).CountAsync(), $"attempt {attempt}: the sheet that did not hold focus stays open");
+            await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
 
             await page.ReloadAsync();
             await WaitForAppReadyAsync(page);
             await page.SetViewportSizeAsync(390, 844);
             var close = page.Locator(".tm-side-panel-sheet .tm-drawer__close");
             if (await close.CountAsync() > 0) await close.First.ClickAsync();
+        }
+    }
+
+    [TestMethod]
+    public async Task Demo_390_TwoInlineSheetsOnOnePage_EscapeFromInsideTheThresholdsSheet_ClosesItAndLeavesTheMainSheetOpen()
+    {
+        // Mirror of the main-sheet test: since the thresholds demo shell binds LeftOpen/RightOpen
+        // (08a22db5 follow-up), Escape inside ITS sheet must close it and leave the main sheet
+        // open — the counterpart assertion that makes the sibling test's "stays open" count
+        // symmetric rather than vacuous (A9).
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await GotoEditorShellAsync(context, 390, 844);
+        RegisterContext(context);
+        const string thresholdsSheet = "[data-testid='editor-shell-thresholds'] .tm-editor-shell__sheet";
+        var thresholdsToggle = page.Locator("[data-testid='editor-shell-thresholds'] .tm-editor-shell__panel-toggle--mobile");
+
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            var mainSheet = page.Locator($"{Shell} .tm-editor-shell__sheet");
+            await Assertions.Expect(mainSheet).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+            await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 10000 });
+
+            // Focus inside the main sheet first, then inside the thresholds sheet: Escape in the
+            // thresholds sheet closes the thresholds sheet and leaves the main one open.
+            await mainSheet.Locator(".tm-editor-shell__tab").First.FocusAsync();
+            await page.Locator($"{thresholdsSheet} .tm-editor-shell__tab").First.FocusAsync();
+            await page.Keyboard.PressAsync("Escape");
+
+            await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeHiddenAsync(new LocatorAssertionsToBeHiddenOptions { Timeout = 5000 });
+            await Assertions.Expect(mainSheet).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+
+            // The sheet close path focuses the shell's mobile panel toggle (CloseAllPanelsAsync).
+            await Assertions.Expect(thresholdsToggle).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
+            await Assertions.Expect(thresholdsToggle).ToBeFocusedAsync(new LocatorAssertionsToBeFocusedOptions { Timeout = 5000 });
+
+            // Reopen the thresholds sheet for the next attempt.
+            await thresholdsToggle.ClickAsync();
+            await Assertions.Expect(page.Locator(thresholdsSheet)).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 5000 });
         }
     }
 

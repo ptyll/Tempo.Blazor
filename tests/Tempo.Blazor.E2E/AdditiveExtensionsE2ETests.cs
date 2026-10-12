@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -31,16 +32,20 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
     }
 
-    private async Task<IPage> OpenAsync(string route, int width, int height, bool touch)
+    private async Task<IPage> OpenAsync(string route, int width, int height, bool touch, string culture = "en")
     {
         var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
             ViewportSize = new ViewportSize { Width = width, Height = height },
             HasTouch = touch,
             IsMobile = touch,
-            Locale = "en-US",
+            Locale = culture == "cs" ? "cs-CZ" : "en-US",
             IgnoreHTTPSErrors = true,
         });
+        // The same culture bootstrap OverlayRound3FixE2ETests uses: the demo switcher persists
+        // tm-demo-culture, and seeding it here renders the requested culture from the first paint.
+        await context.AddInitScriptAsync(
+            $"localStorage.setItem('tm-demo-culture', '{culture}'); document.cookie = 'tm-demo-culture={culture};path=/;max-age=31536000;samesite=lax';");
         RegisterContext(context);
         var page = await context.NewPageAsync();
         await page.GotoAsync($"{BaseUrl}{route}");
@@ -172,6 +177,72 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
         await Assertions.Expect(button.Locator(".tm-copy-button-label:not(.tm-copy-button-label--hidden)")).ToHaveTextAsync("Copied");
         await Assertions.Expect(button.Locator("[role='status']")).ToHaveTextAsync("Copied");
         await ShootAsync(page, button, $"copy-button-labelled-{width}");
+    }
+
+    [TestMethod]
+    [DataRow(1280, 720, false, "en")]
+    [DataRow(390, 844, true, "en")]
+    [DataRow(320, 700, true, "cs")]
+    public async Task CopyButton_ShowLabel_KeepsItsWidth_AcrossCopyAndCopied(int width, int height, bool touch, string culture)
+    {
+        // A11: the labelled button stacks BOTH labels in one grid cell, and the inactive one is
+        // visibility:hidden — so the wider of Copy/Copied always reserves the width and the button
+        // must not jump across Copy → Copied → Copy. "Kopírovat"/"Zkopírováno" (cs) differ more
+        // than the English pair and are therefore the sharper second culture.
+        var page = await OpenAsync("/feedback", width, height, touch, culture);
+        var button = page.GetByTestId("copy-button-labelled");
+        await button.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(button).ToBeVisibleAsync();
+        await page.EvaluateAsync("() => document.fonts.ready");
+        var idle = await ButtonBoxAsync(button);
+
+        // The copy flips the label only after the clipboard write resolves; stub the write so the
+        // assertion is about the layout.
+        await page.EvaluateAsync("() => { navigator.clipboard.writeText = () => Promise.resolve(); }");
+        await button.ClickAsync();
+        await Assertions.Expect(button).ToHaveClassAsync(new Regex("tm-copy-button--copied"));
+        var copied = await ButtonBoxAsync(button);
+        Assert.AreEqual(idle.Width, copied.Width, 0.5,
+            $"Copy→Copied must not change the button width ({idle.Width} → {copied.Width})");
+        Assert.AreEqual(idle.Height, copied.Height, 0.5, "nor its height");
+
+        // The 2 s reset back to Copy keeps it too.
+        await Assertions.Expect(button).Not.ToHaveClassAsync(new Regex("tm-copy-button--copied"), new() { Timeout = 5000 });
+        Assert.AreEqual(idle.Width, (await ButtonBoxAsync(button)).Width, 0.5,
+            "Copied→Copy must not change the width either");
+    }
+
+    [TestMethod]
+    public async Task CopyButton_WidthAssertion_HasTeeth_WhenTheHiddenLabelStopsReservingSpace()
+    {
+        // The negative control for the width guard: display:none on the hidden label removes the
+        // width reservation, the button genuinely jumps, and the equality assertions of the guard
+        // above MUST be able to fail — this proves the guard still detects the regression it
+        // exists for (a pair of assertions that can never go red prove nothing).
+        var page = await OpenAsync("/feedback", 320, 700, touch: true);
+        var button = page.GetByTestId("copy-button-labelled");
+        await button.ScrollIntoViewIfNeededAsync();
+        await Assertions.Expect(button).ToBeVisibleAsync();
+        await page.EvaluateAsync("() => document.fonts.ready");
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions
+        {
+            Content = ".tm-copy-button-label--hidden{display:none!important}",
+        });
+
+        var idle = await ButtonBoxAsync(button);
+        await page.EvaluateAsync("() => { navigator.clipboard.writeText = () => Promise.resolve(); }");
+        await button.ClickAsync();
+        await Assertions.Expect(button).ToHaveClassAsync(new Regex("tm-copy-button--copied"));
+        var copied = await ButtonBoxAsync(button);
+        Assert.IsTrue(Math.Abs(idle.Width - copied.Width) > 1,
+            $"teeth check: with the hidden label display:none the width must actually change ({idle.Width} → {copied.Width})");
+    }
+
+    private static async Task<LocatorBoundingBoxResult> ButtonBoxAsync(ILocator button)
+    {
+        var box = await button.BoundingBoxAsync();
+        Assert.IsNotNull(box, "the labelled copy button must paint");
+        return box!;
     }
 
     [TestMethod]

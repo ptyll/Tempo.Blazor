@@ -22,14 +22,19 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-// HttpClient for API calls
-builder.Services.AddScoped(sp => new HttpClient
+// HttpClient for API calls. In Development the primary handler accepts the (typically untrusted)
+// ASP.NET Core developer certificate: these are SERVER-side calls where the browser-style
+// IgnoreHTTPSErrors does not apply, and a fresh machine would otherwise 500 every page whose
+// prerender touches the API. See DemoApiHttpHandler.
+var acceptDeveloperCertificate = builder.Environment.IsDevelopment();
+builder.Services.AddScoped(sp => new HttpClient(DemoApiHttpHandler.Create(acceptDeveloperCertificate))
 {
     BaseAddress = new Uri(builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100")
 });
 
 builder.Services.AddHttpClient("DemoApi", c =>
-    c.BaseAddress = new Uri(builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100"));
+    c.BaseAddress = new Uri(builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100"))
+    .ConfigurePrimaryHttpMessageHandler(() => DemoApiHttpHandler.Create(acceptDeveloperCertificate));
 
 // Register SharedUI services
 builder.Services.AddScoped<PersonHttpDataProvider>();

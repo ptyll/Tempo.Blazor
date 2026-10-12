@@ -59,6 +59,8 @@
         <p>@Loc["TmEditorShellDemo_ThresholdsIntro"]</p>
         <div class="es-shell-host es-shell-host--short" data-testid="editor-shell-thresholds-host">
             <TmEditorShell Breakpoints="_emailBreakpoints"
+                           @bind-LeftOpen="_thresholdsLeftOpen"
+                           @bind-RightOpen="_thresholdsRightOpen"
                            MobileActions="_mobileActions"
                            LeftTitle="@Loc["TmEditorShellDemo_Blocks"]"
                            RightTitle="@Loc["TmEditorShellDemo_Properties"]"
@@ -121,6 +123,12 @@
 
     private bool _leftOpen = true;
     private bool _rightOpen = true;
+
+    // Open state is bound so the thresholds shell's sheet can close (Escape/close/swipe) and the
+    // two-sheet E2E has teeth; CollapsedPanels stays UNBOUND on purpose — the G1 imposed-rail case.
+    private bool _thresholdsLeftOpen = true;
+    private bool _thresholdsRightOpen = true;
+
     private EditorShellPanel _collapsed;
     private EditorShellPanel _activePanel;
     private MobilePanelPresentation _presentation = MobilePanelPresentation.Sheet;

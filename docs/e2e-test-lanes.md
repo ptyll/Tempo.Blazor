@@ -165,6 +165,15 @@ What the three test-side ones raced, for anyone writing a similar test:
   non-Development environment answers ONLY the hard defaults plus configured
   origins, so such a deployment must set `Cors__AllowedOrigins__N` for every
   extra host port.
+- **No trusted developer certificate is needed for any lane.** Browsers load
+  every host with `IgnoreHTTPSErrors`. The Blazor Server and InteractiveAuto
+  hosts additionally make SERVER-side `HttpClient` calls to the demo API (the
+  shared-layout notification bell on `/feedback` fires during prerender, as do
+  the data providers on their pages), so both hosts register a Development-only
+  primary handler that accepts untrusted certificates on loopback API addresses
+  only (Development) (`DemoApiHttpHandler`); without it an untrusted dev cert
+  turns every such page into a prerender 500. Outside Development the default
+  validation applies.
 - Delete `tests/Tempo.Blazor.E2E/TestResults` between long runs to keep disk
   usage bounded.
 - **Host resurrections are evidence, not noise (N209):** `PlaywrightTestBase`
