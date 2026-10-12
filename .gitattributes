@@ -9,3 +9,11 @@ src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css text eol=lf
 # Generated component-documentation bundles: the generator runs on Windows, and CRLF here is a
 # several-hundred-thousand-line diff against any branch that touches them.
 tempo-blazor*.json text eol=lf
+
+# Every text file is LF in the index AND in every working copy, whatever core.autocrlf says:
+# a CRLF working copy made the workflow-reading guards and the TmTabs byte baseline red, and
+# `git add` of a CRLF copy stored CRLF in history (98cc1c99, the commit before 975a75be).
+* text=auto eol=lf
+
+# Release evidence is captured tool output and must stay byte-verbatim (13 files are i/mixed today).
+eng/release-evidence/** -text
