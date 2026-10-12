@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.DataDisplay
+@using Microsoft.AspNetCore.Components.Web
 
 <div class="tm-image-gallery">
     @if (IsLoading)
@@ -19,13 +20,19 @@
             {
                 var image = img;
                 var i     = idx;
-                <div class="tm-gallery-item" @onclick="async () => await OpenLightboxAsync(image, i)">
+                <div class="tm-gallery-item"
+                     tabindex="0"
+                     role="button"
+                     aria-label="@(image.Title ?? string.Format(Loc["TmImageGallery_OpenImage"], i + 1, _imageList.Count))"
+                     @onclick="async () => await OpenLightboxAsync(image, i)"
+                     @onkeydown="e => ActivateOnEnter(e, image, i)"
+                     @onkeyup="e => ActivateOnSpaceKeyUp(e, image, i)">
                     <img src="@(image.ThumbnailUrl ?? image.Url)"
-                         alt="@image.Title"
+                         alt=""
                          class="tm-gallery-item-img" />
                     @if (!string.IsNullOrEmpty(image.Title))
                     {
-                        <div class="tm-gallery-item-title">@image.Title</div>
+                        <div class="tm-gallery-item-title" aria-hidden="true">@image.Title</div>
                     }
                 </div>
             }
@@ -93,6 +100,15 @@
 
         await OnImageClick.InvokeAsync(image);
     }
+
+    // The thumbnail is a div[role="button"]: a tabindex="0" element that answers only to the mouse
+    // is not keyboard-operable, so it emulates the native <button> split — Enter on keydown
+    // (guarded against auto-repeat), Space on keyup (keyboard-activation-convention.md).
+    private Task ActivateOnEnter(KeyboardEventArgs e, IGalleryImage image, int index)
+        => e.Key == "Enter" && !e.Repeat ? OpenLightboxAsync(image, index) : Task.CompletedTask;
+
+    private Task ActivateOnSpaceKeyUp(KeyboardEventArgs e, IGalleryImage image, int index)
+        => e.Key == " " ? OpenLightboxAsync(image, index) : Task.CompletedTask;
 
     private void CloseLightbox()
     {

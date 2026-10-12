@@ -249,4 +249,26 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
         cut.FindAll(".tm-keyboard-shortcuts-or").Should().BeEmpty();
         cut.FindAll(".tm-keyboard-shortcuts-item")[0].QuerySelectorAll("kbd").Count.Should().Be(2);
     }
+
+    // ── Activate after promote (F3 follow-up, c51ddf81 #1) ────────────────────
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_FocusTrap_ActivatesOnlyAfterPromotion()
+    {
+        var top = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
+        var promote = top.SetupVoid("promote", _ => true); // no result: the call stays pending
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        var activate = trap.SetupVoid("activate", _ => true).SetVoidResult();
+
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true));
+
+        activate.Invocations["activate"].Should().BeEmpty(
+            "the trap must not activate while the promote interop is still pending — an unpromoted " +
+            "popover root can be display:none and the initial-focus move would land on <body>");
+
+        promote.SetVoidResult();
+        cut.WaitForAssertion(() => activate.Invocations["activate"].Should().HaveCount(1, "completing the promote is what releases the trap's activation"));
+    }
 }

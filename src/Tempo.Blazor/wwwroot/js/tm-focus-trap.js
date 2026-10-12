@@ -213,6 +213,12 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
     if (modal && !alreadyInside) {
         const focusInitial = () => {
             const list = visibleFocusable(element);
+            // First focusable that is not a marked scroll region (8.4): an overflowing scroller
+            // precedes its own content, so unmarked it would always win this fallback and a
+            // Custom dialog's real controls would never take focus. A control INSIDE the region
+            // that only scrolling would reveal is demoted to the region itself — focusing it
+            // would scroll the dialog start out of view.
+            const first = firstFocusableNotScrollRegion(list);
             const initialId = element.dataset ? element.dataset.initialFocus : null;
             const byId = initialId && document.getElementById ? document.getElementById(initialId) : null;
             // A component that renders only a data-tm-id marker (no real id) is still resolvable.
@@ -237,7 +243,7 @@ export function activate(element, id, escapeHandler, closeOnEscape, restoreTarge
             }
             // An element reference wins over the id: the id is the fallback for a target that is not an
             // element reference yet.
-            (initialTarget || byId || byData || bySelector || list[0] || element).focus();
+            (initialTarget || byId || byData || bySelector || first || element).focus();
         };
         focusInitial();
 
@@ -511,9 +517,16 @@ export function restoreTrapFocusIfLost() {
     if (top.lastFocused && top.lastFocused.isConnected !== false
         && top.element.contains(top.lastFocused) && focusOf(top.lastFocused)) return true;
     // Tab stops first; a focusable the Tab cycle excludes (a roving -1 item) only takes over
-    // when no tab stop accepts focus. The Set skips the tab stops re-tried in the fallback.
+    // when no tab stop accepts focus. The Set skips the tab stops re-tried in the fallback. A
+    // marked scroll region is demoted behind every real focusable (8.4) — it is a last resort,
+    // never the recovery target while a control can take the focus.
+    const candidates = [...tabbable(top.element), ...visibleFocusable(top.element)];
+    const ordered = [
+        ...candidates.filter(el => !(el.hasAttribute && el.hasAttribute('data-tm-scroll-region'))),
+        ...candidates.filter(el => el.hasAttribute && el.hasAttribute('data-tm-scroll-region')),
+    ];
     const tried = new Set();
-    for (const el of [...tabbable(top.element), ...visibleFocusable(top.element)]) {
+    for (const el of ordered) {
         if (tried.has(el)) continue;
         tried.add(el);
         if (focusOf(el)) return true;
@@ -572,6 +585,9 @@ export function syncScrollRegion(element, id, labelledBy = null, label = null) {
         const overflows = element.scrollHeight > element.clientHeight + 1;
         if (overflows) {
             element.setAttribute('tabindex', '0');
+            // The marker the initial-focus fallback skips (8.4): the scroller precedes its own
+            // content in DOM order, so unmarked it would always win the "first focusable".
+            element.setAttribute('data-tm-scroll-region', '');
             if (labelledBy) {
                 element.setAttribute('role', 'region');
                 element.setAttribute('aria-labelledby', labelledBy);
@@ -581,6 +597,7 @@ export function syncScrollRegion(element, id, labelledBy = null, label = null) {
             }
         } else {
             element.removeAttribute('tabindex');
+            element.removeAttribute('data-tm-scroll-region');
             element.removeAttribute('role');
             element.removeAttribute('aria-labelledby');
             element.removeAttribute('aria-label');
@@ -605,8 +622,39 @@ export function stopScrollRegion(id) {
     if (region.observer) region.observer.disconnect();
     if (region.element) {
         region.element.removeAttribute('tabindex');
+        region.element.removeAttribute('data-tm-scroll-region');
         region.element.removeAttribute('role');
         region.element.removeAttribute('aria-labelledby');
         region.element.removeAttribute('aria-label');
     }
+}
+
+/**
+ * The first focusable that is NOT a marked scroll region (8.4), falling back to the plain first
+ * focusable when every entry is one. Still "first focusable" — just never the scroller that
+ * precedes its own content in DOM order and would otherwise always win the fallback.
+ *
+ * A chosen control that lies INSIDE a marked region but is NOT visible without scrolling (its rect
+ * lies outside the region's rect — typically far below the fold) is demoted to the region itself:
+ * focusing the control would scroll the dialog start out of view, while the region (tabindex=0,
+ * role=region, named) keeps the title in view (WAI-ARIA APG). A candidate outside any marked
+ * region, or already visible inside one, keeps the focus.
+ */
+function firstFocusableNotScrollRegion(list) {
+    const chosen = list.find(el => !(el.hasAttribute && el.hasAttribute('data-tm-scroll-region'))) || list[0];
+    if (!chosen || typeof chosen.closest !== 'function') return chosen;
+    const region = chosen.closest('[data-tm-scroll-region]');
+    if (!region || region === chosen || rectVisibleWithin(chosen, region)) return chosen;
+    return region;
+}
+
+/** Whether the element's rect lies within the region's rect, i.e. focus can reach it without
+ * scrolling. Environments without geometry (the node-test stubs) keep the candidate. */
+function rectVisibleWithin(element, region) {
+    if (typeof element.getBoundingClientRect !== 'function'
+        || typeof region.getBoundingClientRect !== 'function') return true;
+    const rect = element.getBoundingClientRect();
+    const regionRect = region.getBoundingClientRect();
+    // 1px tolerance, the same sub-pixel guard the scroll region itself uses.
+    return rect.top >= regionRect.top - 1 && rect.bottom <= regionRect.bottom + 1;
 }

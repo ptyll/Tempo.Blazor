@@ -704,6 +704,122 @@ test('a null element is a no-op that still stops any previous region', () => {
     assert.doesNotThrow(() => stop());
 });
 
+// ── The region never takes initial focus (F3 follow-up, 26e1afd5 #4 / cluster-B 8.4) ──
+// The scroller precedes its own content in DOM order, so once an overflow makes it the first
+// focusable, the fallback "first focusable" would always resolve to it (a Custom TmDialog's
+// content then never takes focus). focusInitial must skip the marked region.
+
+test('an overflowing scroll region carries the data-tm-scroll-region marker', () => {
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'marked', 'title-7');
+
+    assert.equal(content.hasAttribute('data-tm-scroll-region'), true,
+        'the marker is the contract the initial-focus fallback skips');
+    stopScrollRegion('marked');
+    assert.equal(content.hasAttribute('data-tm-scroll-region'), false, 'stopping clears the marker with the region');
+});
+
+test('initial focus skips an overflowing scroll region and lands on the first control after it', () => {
+    const body = element();
+    const dialog = element(body);
+    const content = element(dialog);
+    // While it overflows, syncScrollRegion makes the scroller tabindex=0 and marks it.
+    content.toggleAttribute('tabindex', true);
+    content.toggleAttribute('data-tm-scroll-region', true);
+    const button = element(dialog);
+    dialog.querySelectorAll = () => [content, button];
+
+    installDom(body);
+    activate(dialog, 'scope', null, false, null, true);
+
+    assert.equal(button.focusCalls, 1, 'the first control after the region takes initial focus');
+    assert.equal(content.focusCalls, 0, 'the overflowing scroll region never takes initial focus');
+});
+
+test('initial focus falls back to the region itself when it is the only focusable', () => {
+    const body = element();
+    const dialog = element(body);
+    const content = element(dialog);
+    content.toggleAttribute('tabindex', true);
+    content.toggleAttribute('data-tm-scroll-region', true);
+    dialog.querySelectorAll = () => [content];
+
+    installDom(body);
+    activate(dialog, 'scope', null, false, null, true);
+
+    assert.equal(content.focusCalls, 1, 'still "first focusable" — the skip must not strand focus nowhere');
+});
+
+// A control INSIDE the marked region that only scrolling would reveal must not take initial focus
+// either: focusing it scrolls the dialog start out of view. The region itself (tabindex=0,
+// role=region, named) takes the focus instead (WAI-ARIA APG) — a control already visible inside
+// the region still wins.
+test('a first control inside a scroll region but below the fold focuses the region instead', () => {
+    const body = element();
+    const dialog = element(body);
+    const content = element(dialog);
+    content.toggleAttribute('tabindex', true);
+    content.toggleAttribute('data-tm-scroll-region', true);
+    const button = element(content);
+    // Geometry: the region shows the band 100..500, the control sits at 900 — only reachable by
+    // scrolling the region, so focusing it would pull the dialog start out of view.
+    content.getBoundingClientRect = () => ({ top: 100, bottom: 500 });
+    button.getBoundingClientRect = () => ({ top: 900, bottom: 940 });
+    dialog.querySelectorAll = () => [content, button];
+
+    installDom(body);
+    activate(dialog, 'scope', null, false, null, true);
+
+    assert.equal(content.focusCalls, 1, 'the named region keeps the dialog start in view');
+    assert.equal(button.focusCalls, 0, 'the below-fold control never takes initial focus');
+});
+
+test('a first control inside a scroll region that is already visible keeps the focus', () => {
+    const body = element();
+    const dialog = element(body);
+    const content = element(dialog);
+    content.toggleAttribute('tabindex', true);
+    content.toggleAttribute('data-tm-scroll-region', true);
+    const button = element(content);
+    content.getBoundingClientRect = () => ({ top: 100, bottom: 500 });
+    button.getBoundingClientRect = () => ({ top: 120, bottom: 160 });
+    dialog.querySelectorAll = () => [content, button];
+
+    installDom(body);
+    activate(dialog, 'scope', null, false, null, true);
+
+    assert.equal(button.focusCalls, 1, 'a visible control still wins over the region');
+    assert.equal(content.focusCalls, 0);
+});
+
+test('restoreTrapFocusIfLost skips the scroll region in its fallback too', () => {
+    const body = element();
+    const dialog = element(body);
+    const content = element(dialog);
+    content.toggleAttribute('tabindex', true);
+    content.toggleAttribute('data-tm-scroll-region', true);
+    const button = element(dialog);
+    dialog.querySelectorAll = () => [content, button];
+
+    installDom(body);
+    activate(dialog, 'dialog', null, false, null, true);
+    // The element the trap last focused left the DOM with a re-render, so the recovery resolves a
+    // fresh target from the trap's content: the marked region is skipped, the control is not.
+    const temporary = element(dialog);
+    dialog.dispatch('focusin', { target: temporary });
+    temporary.isConnected = false;
+
+    const { dismiss } = toastCard(body);
+    document.dispatch('focusin', { target: dismiss });
+    dismiss.isConnected = false;
+    document.activeElement = body;
+
+    assert.equal(restoreTrapFocusIfLost(), true);
+    assert.equal(button.focusCalls, 2, 'the fallback lands on the first control, not on the scroll region');
+    assert.equal(content.focusCalls, 0, 'the scroll region never takes focus on a recovery either');
+});
+
+
 // ── focusIfLost (F6 r1): the restore a host surface runs after ITS surface closed. It moves focus
 // only when focus was lost (body / disconnected) or was inside the closing surface — never when the
 // user or the host put focus on another live element.

@@ -12,7 +12,10 @@
        surface — its root carries popover="manual" and promotes after the opening render, like
        TmModal, so a sheet or dialog opened before it can never cover it. *@
     <div class="tm-keyboard-shortcuts-overlay @Class" popover="manual" data-tm-backdrop @ref="_root" @onclick="OnClose">
-        <TmFocusScope Active="true"
+        @* Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
+           interop completed — an unpromoted popover root can be display:none and the
+           initial-focus move would land on <body>. *@
+        <TmFocusScope Active="@(_gate?.ScopeActive == true)"
                       Class="tm-keyboard-shortcuts-modal"
                       CloseOnEscape="true"
                       OnEscape="OnClose"
@@ -112,32 +115,28 @@
         string.IsNullOrEmpty(shortcut.KeySeparator) || shortcut.KeySeparator == "+";
 
     private ElementReference _root;
-    private TopLayerInterop? _topLayer;
-    private bool _promoted;
+    private PromotedScopeGate? _gate;
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // The overlay unmounts when IsVisible goes false; a detached top-layer element is hidden
-        // by the browser automatically, so closing needs no demote — promote only.
-        if (IsVisible && !_promoted)
+        // by the browser automatically, so closing needs no demote — promote only. The gate also
+        // holds the trap back until the promote completed (c51ddf81 #1) and drops a promote that
+        // finished after the close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(IsVisible, () => IsVisible, _root))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_root);
-        }
-        else if (!IsVisible && _promoted)
-        {
-            _promoted = false;
+            StateHasChanged();
         }
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        if (_topLayer is not null)
+        if (_gate is not null)
         {
-            await _topLayer.DisposeAsync();
+            await _gate.DisposeAsync();
         }
     }
 }

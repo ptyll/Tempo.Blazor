@@ -235,4 +235,27 @@ public class TmDrawerTests : LocalizationTestBase
 
         cut.Find(".tm-drawer__footer").InnerHtml.Should().Contain("Save");
     }
+
+    // ── Activate after promote (F3 follow-up, c51ddf81 #1) ────────────────────
+
+    [Fact]
+    public void TmDrawer_FocusTrap_ActivatesOnlyAfterPromotion()
+    {
+        var top = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
+        var promote = top.SetupVoid("promote", _ => true); // no result: the call stays pending
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        var activate = trap.SetupVoid("activate", _ => true).SetVoidResult();
+
+        var cut = Render<TmDrawer>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.Modal, true)
+            .AddChildContent("Drawer content"));
+
+        activate.Invocations["activate"].Should().BeEmpty(
+            "a modal drawer's trap must not activate while the promote interop is still pending — " +
+            "an unpromoted popover root can be display:none and the initial-focus move would land on <body>");
+
+        promote.SetVoidResult();
+        cut.WaitForAssertion(() => activate.Invocations["activate"].Should().HaveCount(1, "completing the promote is what releases the trap's activation"));
+    }
 }

@@ -58,14 +58,23 @@ The scroller `div.tm-dialog-content` is deliberately NOT a hardcoded tab stop. B
 `tabindex="0"` in the markup, which made it the first tabbable element of every dialog: the trap
 focused the whole title+message block, a prompt never reached its input, and a keyboard-opened
 dialog outlined the content region. The module (`syncScrollRegion` in `tm-focus-trap.js`) adds
-`tabindex="0"` plus `role="region"`/`aria-labelledby` only while the content actually overflows
-(`scrollHeight > clientHeight`, kept current by a `ResizeObserver`), and removes them when it does
-not — a short dialog grows no extra tab stop. Even when the region exists, it never takes initial
-focus; a keyboard user reaches it with Tab and scrolls it with the arrow keys.
+`tabindex="0"` plus `role="region"`/`aria-labelledby` and a `data-tm-scroll-region` marker only
+while the content actually overflows (`scrollHeight > clientHeight`, kept current by a
+`ResizeObserver`), and removes them when it does not — a short dialog grows no extra tab stop.
+
+The marker is the contract both focus recoveries consult: the initial-focus fallback and the toast
+focus recovery skip a marked region while a real control can take the focus. When the first
+focusable sits INSIDE the region but below the fold — its rect lies outside the region's rect — the
+initial-focus fallback focuses the region itself instead: focusing the control would scroll the
+dialog start out of view, while the named region keeps the title visible (WAI-ARIA APG). A control
+already visible inside the region, or one outside any region, keeps the focus, and a region that is
+the only focusable in the overlay still takes it. A keyboard user reaches a visible control with
+Tab and scrolls the region with the arrow keys.
 
 ## Who already uses it
 
-`TmModal`, `TmDialog`, `TmDrawer`, `TmCommandPalette` and `TmGanttImportDialog` render a `TmFocusScope`.
+`TmModal`, `TmDialog`, `TmDrawer`, `TmCommandPalette`, `TmGanttImportDialog`, `TmLightbox` and
+`TmKeyboardShortcutsHelp` render a `TmFocusScope`.
 A host of those components changes nothing: Escape, the focus restore and the inert background behave
 as before. The scope root is a `div.tm-focus-scope` with `tabindex="-1"` while active, so a test that
 looked for `role="dialog"` on the old element finds it on this root.

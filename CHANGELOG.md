@@ -776,6 +776,23 @@
 
 ### Fixed
 
+- **Overlay focus traps activate only after their root is promoted to the top layer.**
+  `TmModal`, `TmDialog`, every modal `TmDrawer`, `TmLightbox`, `TmCommandPalette`,
+  `TmKeyboardShortcutsHelp` and `TmGanttImportDialog` activated their `TmFocusScope` on the same
+  render that inserted the `popover="manual"` root — before `showPopover` ran. An unpromoted
+  popover root is `display:none` by the UA rule `[popover]:not(:popover-open)`, so whenever a root
+  lost its own author `display` (a consumer class or stylesheet), the trap's initial-focus move
+  landed on `<body>` and the page behind the overlay was inert. All seven now go through a shared
+  promote gate that promotes the root first and only then activates the trap; a promote that
+  completes after its owner closed is dropped, so closing during the in-flight promotion can no
+  longer make the *next* open activate before its own promotion. `role`/`aria-modal` now appear one
+  render after the overlay's first paint (selectors on the rendered markup are unchanged once the
+  overlay is open). In the same pass the overflow scroll region of a dialog/modal/sheet body can
+  never take the initial focus: `tm-focus-trap.js` marks an overflowing scroller with
+  `data-tm-scroll-region` and both the initial-focus fallback and the toast focus recovery skip it
+  (a Custom `TmDialog`'s first control used to lose the focus to its own scroller whenever the
+  content overflowed).
+
 - **F6 focus-trap follow-up: phone sheet Tab cycle, modal Escape ownership, toast focus recovery.**
   Three focus-trap defects fixed in `tm-focus-trap.js` and its consumers. (1) The bottom-sheet More
   menu is a roving group (item `tabindex="-1"`), and the trap's Tab cycle counted those items — Tab
@@ -1211,6 +1228,11 @@
   plus `NotionEditorRazor_BackdropLayers_CarryNoInlineZIndex`, which scans
   the whole NotionEditor tree so the next inline band value cannot hide in
   markup again.
+
+- `TmImageGallery` thumbnails are keyboard-operable (tabindex=0, role=button,
+  Enter on keydown, Space on keyup per
+  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md)),
+  carry an accessible name, and receive focus back when the lightbox closes.
 
 ### Erratum 2.9.0
 

@@ -38,6 +38,66 @@ public class TmImageGalleryLightboxTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Gallery_Thumbnail_IsAKeyboardReachableButton()
+    {
+        var images = new[] { Img("1", "http://img/1.jpg", "First") };
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, images));
+
+        var item = cut.Find(".tm-gallery-item");
+        item.GetAttribute("tabindex").Should().Be("0",
+            "a mouse-only thumbnail is unreachable for keyboard users (WCAG 2.1.1) and gives the focus" +
+            " restore nothing to return to when the lightbox closes");
+        item.GetAttribute("role").Should().Be("button");
+    }
+
+    [Fact]
+    public void Gallery_Thumbnail_NullTitle_FallsBackToLocalizedOpenImageName()
+    {
+        var images = new[]
+        {
+            Img("1", "http://img/1.jpg"),
+            Img("2", "http://img/2.jpg"),
+        };
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, images));
+
+        cut.FindAll(".tm-gallery-item")[0].GetAttribute("aria-label")
+            .Should().Be("Open image 1 of 2",
+                "a thumbnail without a Title still needs an accessible name (WCAG 4.1.2)");
+    }
+
+    [Fact]
+    public void Gallery_Thumbnail_WithTitle_AriaLabelIsTheTitle()
+    {
+        var images = new[] { Img("1", "http://img/1.jpg", "Sunset over the lake") };
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, images));
+
+        var item = cut.Find(".tm-gallery-item");
+        item.GetAttribute("aria-label").Should().Be("Sunset over the lake");
+
+        // No double announcement: the button's aria-label is the one name, so the visible
+        // title inside it is hidden from the accessibility tree.
+        cut.Find(".tm-gallery-item-title").GetAttribute("aria-hidden").Should().Be("true");
+    }
+
+    [Fact]
+    public void Gallery_Thumbnail_EnterAndSpace_OpenLightbox()
+    {
+        var images = new[] { Img("1", "http://img/1.jpg", "First") };
+        var cut = Render<TmImageGallery>(p => p.Add(c => c.Images, images));
+
+        // div[role=button] emulates the native <button> split: Enter on keydown, Space on keyup
+        // (keyboard-activation-convention.md).
+        cut.Find(".tm-gallery-item").KeyDown("Enter");
+        cut.FindAll(".tm-lightbox").Should().HaveCount(1, "Enter activates the thumbnail");
+
+        cut.Find(".tm-lightbox-close").Click();
+        cut.FindAll(".tm-lightbox").Should().BeEmpty();
+
+        cut.Find(".tm-gallery-item").KeyUp(" ");
+        cut.FindAll(".tm-lightbox").Should().HaveCount(1, "Space activates the thumbnail on keyup");
+    }
+
+    [Fact]
     public void Gallery_Lightbox_ShowsFullImage()
     {
         var images = new[] { Img("1", "http://img/1.jpg", "Hero") };
@@ -163,5 +223,25 @@ public class TmImageGalleryLightboxTests : LocalizationTestBase
 
         public Task DeleteImageAsync(string imageId, CancellationToken ct = default)
             => Task.CompletedTask;
+    }
+
+    // ── Activate after promote (F3 follow-up, c51ddf81 #1) ────────────────────
+
+    [Fact]
+    public void TmLightbox_FocusTrap_ActivatesOnlyAfterPromotion()
+    {
+        var top = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-top-layer.js");
+        var promote = top.SetupVoid("promote", _ => true); // no result: the call stays pending
+        var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        var activate = trap.SetupVoid("activate", _ => true).SetVoidResult();
+
+        var cut = Render<TmLightbox>(p => p.Add(l => l.IsOpen, true));
+
+        activate.Invocations["activate"].Should().BeEmpty(
+            "the trap must not activate while the promote interop is still pending — an unpromoted " +
+            "popover root can be display:none and the initial-focus move would land on <body>");
+
+        promote.SetVoidResult();
+        cut.WaitForAssertion(() => activate.Invocations["activate"].Should().HaveCount(1, "completing the promote is what releases the trap's activation"));
     }
 }

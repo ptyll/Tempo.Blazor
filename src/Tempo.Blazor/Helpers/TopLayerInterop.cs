@@ -9,7 +9,9 @@ namespace Tempo.Blazor.Helpers;
 /// and the <c>TmToastContainer</c>. Each root carries <c>popover="manual"</c> and is promoted to
 /// the browser top layer after its opening render, so the top-layer order equals the open order
 /// and no promoted surface can cover one opened later from inside it. The DOM stays in place —
-/// the trap, inert and Escape are unchanged. Wraps the shared <c>tm-top-layer</c> module, imported
+/// the trap, inert and Escape are unchanged. Modal roots use it through
+/// <see cref="PromotedScopeGate"/>, which also gates <c>TmFocusScope.Active</c>; only the toast
+/// containers call it directly. Wraps the shared <c>tm-top-layer</c> module, imported
 /// lazily on first use (safe to construct during prerender).
 /// </summary>
 /// <remarks>

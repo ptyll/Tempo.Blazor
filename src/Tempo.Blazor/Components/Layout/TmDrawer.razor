@@ -19,8 +19,12 @@
 }
 @if (IsOpen)
 {
+    @* Activate-after-promote (c51ddf81 #1): a MODAL drawer's trap may only activate once the
+       promote interop completed — an unpromoted popover root can be display:none and the
+       initial-focus move would land on <body>. An inline drawer has no popover and stays active
+       immediately. *@
     <TmFocusScope @ref="_scope"
-                  Active="true"
+                  Active="@(!Modal || _gate?.ScopeActive == true)"
                   Modal="Modal"
                   Class="@RootClass"
                   AriaLabelledBy="@LabelledBy"
@@ -225,11 +229,10 @@
     private bool _scrollRegionAttached;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
-    private bool _promoted;
     private string? _gestureKey;
     private bool _disposed;
     private TmFocusScope? _scope;
-    private TopLayerInterop? _topLayer;
+    private PromotedScopeGate? _gate;
     private readonly OverlayLayout _layout = new();
     private int _snapIndex;
     private int _snapIndexParam = int.MinValue;
@@ -345,19 +348,13 @@
 
         // U1: promote a MODAL drawer root (every position) to the top layer right after the render
         // that inserted it. Closing unmounts the whole subtree, and a detached top-layer element
-        // is hidden by the browser automatically — no demote call is needed.
-        if (IsOpen && Modal && !_promoted)
+        // is hidden by the browser automatically — no demote call is needed. The gate also holds
+        // the modal trap back until the promote completed (c51ddf81 #1) and drops a promote that
+        // finished after the close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(IsOpen && Modal, () => IsOpen && Modal, _scope?.Element))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            if (_scope is not null)
-            {
-                await _topLayer.PromoteAsync(_scope.Element);
-            }
-        }
-        else if ((!IsOpen || !Modal) && _promoted)
-        {
-            _promoted = false;
+            StateHasChanged();
         }
 
         // A long body becomes a keyboard-reachable region only while it overflows (the TmDialog
@@ -476,7 +473,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
         if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();

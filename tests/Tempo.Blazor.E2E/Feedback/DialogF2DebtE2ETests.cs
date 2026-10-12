@@ -175,4 +175,40 @@ public sealed class DialogF2DebtE2ETests : WasmTestBase
                 $"no footer label may truncate at {width}px: {report}");
         }
     }
+
+    // ── F3 follow-up 8.4 (26e1afd5 #4): the initial-focus fallback never lands below the fold ──
+    // A Custom TmDialog has no named initial-focus target, so the trap falls back to "first
+    // focusable". The .tm-dialog-content scroller becomes a tabindex=0 region while it overflows
+    // (the attach runs while the promote interop is in flight). When the first focusable sits
+    // INSIDE that region below the fold, the trap focuses the region itself: the title and the
+    // start of the content stay in view (WAI-ARIA APG) and scrollTop stays 0 — focusing the
+    // control would scroll them out of view.
+
+    [TestMethod]
+    public async Task CustomDialog_OverflowingContent_FocusesTheScrollRegion_WhileItsFirstControlSitsBelowTheFold()
+    {
+        var page = await OpenAsync("/modal-dialog", 1440, 900);
+
+        await page.GetByTestId("open-long-custom-dialog").ClickAsync();
+        var content = page.Locator(".tm-dialog-content");
+        await content.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        // The filler makes the scroller overflow, so the module turned it into a keyboard-reachable
+        // region — the element the below-fold fallback hands the initial focus to.
+        await page.WaitForFunctionAsync(
+            "() => { const c = document.querySelector('.tm-dialog-content'); return !!c && c.hasAttribute('data-tm-scroll-region'); }",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 5000 });
+
+        await page.WaitForFunctionAsync(
+            "() => !!document.activeElement && document.activeElement.matches('.tm-dialog-content')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10_000 });
+
+        var scrollTop = await page.EvaluateAsync<double>(
+            "() => document.querySelector('.tm-dialog-content').scrollTop");
+        Assert.AreEqual(0, scrollTop,
+            "focusing the region must leave the dialog start in view, got scrollTop " +
+            $"{scrollTop} with focus on '{await ActiveElementAsync(page)}'");
+    }
 }

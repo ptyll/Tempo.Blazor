@@ -26,8 +26,11 @@
          @ref="_overlayElement">
         
         <div @ref="_panel" class="tm-modal-container @GetContainerClasses()" @onclick:stopPropagation>
+            @* Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
+               interop completed — an unpromoted popover root can be display:none and the
+               initial-focus move would land on <body>. *@
             <TmFocusScope @ref="_scope"
-                          Active="true"
+                          Active="@(_gate?.ScopeActive == true)"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
                           CloseOnEscape="CloseOnEscape"
@@ -209,10 +212,9 @@
     private string _titleId = Guid.NewGuid().ToString("N");
     private bool _wasShown;
     private bool _gestureAttached;
-    private bool _promoted;
     private bool _disposed;
     private SheetInterop? _sheet;
-    private TopLayerInterop? _topLayer;
+    private PromotedScopeGate? _gate;
     private DotNetObjectReference<TmModal>? _dotNetRef;
     private TmFocusScope? _scope;
     private ScrollRegionInterop? _scrollRegion;
@@ -290,15 +292,12 @@
         // browser top layer right after the render that inserted it. A sheet a host opened before
         // the modal then cannot cover it (top-layer order equals open order). Closing unmounts
         // the subtree; a detached top-layer element hides itself — no demote call is needed.
-        if (Show && !_promoted)
+        // The gate also holds the trap back until the promote completed (c51ddf81 #1) and drops a
+        // promote that finished after the close (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(Show, () => Show, _overlayElement))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_overlayElement);
-        }
-        else if (!Show && _promoted)
-        {
-            _promoted = false;
+            StateHasChanged();
         }
 
         // A long body becomes a keyboard-reachable region only while it actually overflows (the
@@ -352,7 +351,7 @@
         if (_disposed) return;
         _disposed = true;
         if (_sheet is not null) await _sheet.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
         if (_scrollRegion is not null) await _scrollRegion.DisposeAsync();
         _dotNetRef?.Dispose();
         if (_scope is not null) await _scope.DisposeAsync();

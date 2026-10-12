@@ -30,9 +30,7 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     private ElementReference _overlay;
     private IJSObjectReference? _filePickerModule;
     private bool _wasOpen;
-    private bool _promoted;
-    private bool _scopeActive;
-    private TopLayerInterop? _topLayer;
+    private PromotedScopeGate? _gate;
     private TmFocusScope? _scope;
     private readonly string _titleId = $"tm-gantt-import-title-{Guid.NewGuid():N}";
 
@@ -85,25 +83,18 @@ public partial class TmGanttImportDialog : IAsyncDisposable
         // Round 3 (V2): the overlay root is a modal viewport-anchored surface — promote it right
         // after the render that inserted it. Closing unmounts the subtree; a detached top-layer
         // element is hidden by the browser automatically, so no demote is needed.
-        if (IsOpen && !_promoted)
+        //
+        // UX round 4 / c51ddf81 #1: the trap may activate only once the popover root is actually
+        // visible. A popover="manual" root is display:none until showPopover runs, and the tm-sheet
+        // module import can outlast the trap's two-frame rAF retry — activating earlier drops the
+        // initial-focus move (a focus() on a display:none subtree is a no-op) and focus lands on
+        // <body>. The shared gate runs the promote and only then flips the scope active; the
+        // stillOpen + generation guards also drop a promote that completes after the dialog
+        // closed, so the NEXT open cannot ride a stale activation (c51ddf81 #2).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(IsOpen, () => IsOpen, _overlay))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_overlay);
-
-            // UX round 4: the trap may activate only once the popover root is actually visible.
-            // A popover="manual" root is display:none until showPopover runs, and the tm-sheet
-            // module import can outlast the trap's two-frame rAF retry — activating earlier drops
-            // the initial-focus move (a focus() on a display:none subtree is a no-op) and focus
-            // lands on <body>. Activating after the promote makes the close-button focus
-            // deterministic. StateHasChanged re-renders so the scope sees Active flip to true.
-            _scopeActive = true;
             StateHasChanged();
-        }
-        else if (!IsOpen && _promoted)
-        {
-            _promoted = false;
-            _scopeActive = false;
         }
     }
 
@@ -127,9 +118,9 @@ public partial class TmGanttImportDialog : IAsyncDisposable
             {
                 await _filePickerModule.DisposeAsync();
             }
-            if (_topLayer is not null)
+            if (_gate is not null)
             {
-                await _topLayer.DisposeAsync();
+                await _gate.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)

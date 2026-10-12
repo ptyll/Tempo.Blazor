@@ -118,6 +118,7 @@
         <TmButton OnClick="() => { _inlineDrawerSwipe = true; _showInlineDrawer = true; }" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer">@Loc["TmDemo_InlineSheet"]</TmButton>
         <TmButton OnClick="OpenLockedInlineDrawer" Variant="ButtonVariant.Ghost" data-testid="open-inline-drawer-locked">@Loc["TmDemo_InlineSheetNoDismiss"]</TmButton>
         <TmButton OnClick="() => _showLongDialog = true" Variant="ButtonVariant.Secondary" data-testid="open-long-dialog">@Loc["TmDemo_OpenLongDialog"]</TmButton>
+        <TmButton OnClick="() => _showLongCustomDialog = true" Variant="ButtonVariant.Secondary" data-testid="open-long-custom-dialog">@Loc["TmDemo_OpenLongCustomDialog"]</TmButton>
     </div>
     <div class="mt-3 flex flex-wrap gap-4 text-sm">
         <label><input type="checkbox" data-testid="toggle-dialog-inline" @bind="_dialogInline" /> @Loc["TmDemo_ToggleInline"]</label>
@@ -213,6 +214,23 @@
           OkButtonText="@(_confirmIsDangerous ? "Delete" : null)"
           OnResult="OnConfirmResult" />
 
+<!-- Long Custom Dialog: content far taller than the scroller's max height, so the content block
+     becomes a keyboard-reachable scroll region while it overflows. Its first control sits BELOW
+     the fold inside that region, so initial focus lands on the region itself and the dialog
+     title/start stays in view (F3 follow-up 26e1afd5 #4, review round). -->
+<TmDialog Show="_showLongCustomDialog"
+          Type="DialogType.Custom"
+          Title="@Loc["TmDemo_LongCustomDialogTitle"]"
+          OnResult="_ => _showLongCustomDialog = false">
+    <div>
+        @for (var i = 1; i <= 60; i++)
+        {
+            <p>@string.Format(Loc["TmDemo_LongCustomDialogFiller"], i)</p>
+        }
+        <button type="button" class="tm-btn tm-btn-primary" data-testid="long-custom-first-btn" @onclick="() => _showLongCustomDialog = false">@Loc["TmDemo_LongCustomDialogFirstAction"]</button>
+    </div>
+</TmDialog>
+
 <!-- Prompt Dialog -->
 <TmDialog Show="_showPrompt"
           Type="DialogType.Prompt"
@@ -277,6 +295,7 @@
     // Confirm Dialog
     private bool _showConfirm;
     private bool _showLongDialog;
+    private bool _showLongCustomDialog;
     private string LongMessage => string.Join(' ', Enumerable.Repeat("word", 400)) + " " + Loc["TmDemo_LongDialogTail"];
     private bool _confirmIsDangerous;
     private string _confirmTitle = "Confirm Action";

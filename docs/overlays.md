@@ -160,7 +160,7 @@ editor) keeps focus.
    `TmCommandPalette` backdrop, the `TmKeyboardShortcutsHelp` overlay, the `TmLightbox`
    focus-scope root, the `TmGanttImportDialog` overlay and the two toast containers
    (`TmToastContainer`, `TmNotificationToastContainer`) carry `popover="manual"` and promote
-   themselves at open through the shared promote helper (`TopLayerInterop` → `tm-top-layer.js`; `tm-sheet.js` re-exports the same functions, so there is one pinned-root registry). A
+   themselves at open through the shared promote helper (`TopLayerInterop` → `tm-top-layer.js`; `tm-sheet.js` re-exports the same functions, so there is one pinned-root registry). Modal overlay roots promoted through `TopLayerInterop` activate their focus scope through `PromotedScopeGate`: promote first, then flip `TmFocusScope.Active` — the trap's initial-focus move can never run against a still-unpromoted (UA `display:none`) popover root, and a promote that completes after its owner closed is dropped (`TmOverlayPanel`'s `TrapFocus` gates on overlay.js `open()` instead). A
    surface opened from inside one (a dialog from a sheet, a toast from a dialog) promotes *after*
    it, so it always paints above — DOM stays in place and the trap/inert/Escape order are
    untouched. A host cannot cover an open modal surface with a z-index band anymore; only another

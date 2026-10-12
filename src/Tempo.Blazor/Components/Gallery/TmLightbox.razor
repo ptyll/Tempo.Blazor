@@ -10,11 +10,13 @@
 {
     @* Round 3 (V2): the lightbox is a modal viewport-anchored surface. The TmFocusScope root is
        the promoted element (mirroring TmDrawer): popover="manual" rides the scope's root via
-       AdditionalAttributes and the scope element is promoted after the opening render. *@
+       AdditionalAttributes and the scope element is promoted after the opening render.
+       Activate-after-promote (c51ddf81 #1): the trap may only activate once the promote
+       interop completed. *@
     <TmFocusScope @ref="_scope"
                   Class="tm-lightbox"
                   popover="manual"
-                  Active="true"
+                  Active="@(_gate?.ScopeActive == true)"
                   AriaLabel="@Loc["TmLightbox_Aria"]"
                   CloseOnEscape="true"
                   OnEscape="OnClose">
@@ -111,23 +113,18 @@
     [Parameter] public EventCallback OnDelete { get; set; }
 
     private TmFocusScope? _scope;
-    private TopLayerInterop? _topLayer;
-    private bool _promoted;
+    private PromotedScopeGate? _gate;
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // The scope root is the promoted element. Closing unmounts the subtree; a detached
-        // top-layer element is hidden by the browser automatically — promote only.
-        if (IsOpen && !_promoted && _scope is not null)
+        // top-layer element is hidden by the browser automatically — promote only. The gate also
+        // holds the trap back until the promote completed (c51ddf81 #1).
+        _gate ??= new PromotedScopeGate(JS);
+        if (await _gate.AfterRenderAsync(IsOpen, () => IsOpen, _scope?.Element))
         {
-            _promoted = true;
-            _topLayer ??= new TopLayerInterop(JS);
-            await _topLayer.PromoteAsync(_scope.Element);
-        }
-        else if (!IsOpen && _promoted)
-        {
-            _promoted = false;
+            StateHasChanged();
         }
     }
 
@@ -135,7 +132,7 @@
     public async ValueTask DisposeAsync()
     {
         if (_scope is not null) await _scope.DisposeAsync();
-        if (_topLayer is not null) await _topLayer.DisposeAsync();
+        if (_gate is not null) await _gate.DisposeAsync();
     }
 
     private async Task HandleKeyAsync(KeyboardEventArgs e)
