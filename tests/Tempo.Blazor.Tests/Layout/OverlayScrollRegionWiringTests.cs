@@ -23,6 +23,7 @@ public class OverlayScrollRegionWiringTests : LocalizationTestBase
         module.SetupVoid("deactivate", _ => true).SetVoidResult();
         module.SetupVoid("syncScrollRegion", _ => true).SetVoidResult();
         module.SetupVoid("stopScrollRegion", _ => true).SetVoidResult();
+        module.SetupVoid("updateScrollRegionLabel", _ => true).SetVoidResult();
         return module;
     }
 
@@ -103,5 +104,31 @@ public class OverlayScrollRegionWiringTests : LocalizationTestBase
         cut.Render(p => p.Add(x => x.Show, false));
 
         cut.WaitForAssertion(() => module.VerifyInvoke("stopScrollRegion"));
+    }
+
+    [Fact]
+    public void Modal_TitleChangedWhileOpen_RePointsTheRegionName()
+    {
+        // cluster-B 8.3: a title that renders (or changes) after the attach must re-point the
+        // region's aria wiring — a late title never named the region at all before. The wiring
+        // keys on the title's PRESENCE: while untitled the attach forwarded no name at all.
+        var module = FocusTrap();
+        var cut = Render<TmModal>(p => p
+            .Add(x => x.Show, true)
+            .AddChildContent("Body"));
+        cut.WaitForAssertion(() => module.VerifyInvoke("syncScrollRegion"));
+        module.Invocations["syncScrollRegion"].Single().Arguments[2].Should().BeNull(
+            "an untitled modal attaches a nameless region");
+
+        cut.Render(p => p.Add(x => x.Title, "Late title"));
+
+        cut.WaitForAssertion(() => module.VerifyInvoke("updateScrollRegionLabel"));
+        var sync = module.Invocations["syncScrollRegion"].Single();
+        var update = module.Invocations["updateScrollRegionLabel"].Single();
+        update.Arguments.Should().HaveCount(3);
+        update.Arguments[0].Should().Be(sync.Arguments[1], "the update targets the same region id");
+        update.Arguments[1].Should().Be(cut.Find(".tm-modal-title").Id,
+            "the region is re-pointed at the title element that just rendered");
+        update.Arguments[2].Should().BeNull();
     }
 }

@@ -77,11 +77,10 @@
 - **`TmButton` wraps its content in `span.tm-btn-label`, and the span is geometry-neutral by
   default.** The span exists so a context that shrinks the button (a 320px sheet footer) can
   truncate the text with an ellipsis instead of overflowing the panel. It renders only when there
-  is content — an icon-only button no longer grows by one gap because of an empty flex child — and
-  ships as `display: contents`, so a button lays out exactly as if its content were a direct
-  child. Only the sheet-footer rule in `_modal.css` opts into truncation: it blockifies the span
-  (`display: block; min-width: 0`) next to the existing `overflow/ellipsis`. A host that wants the
-  same in its own shrinking container targets the span, never restyles `.tm-btn`:
+  is content and ships as `display: contents`, so a button lays out exactly as if its content were
+  a direct child. Only the sheet-footer rule in `_modal.css` opts into truncation: it blockifies
+  the span (`display: block; min-width: 0`) next to the existing `overflow/ellipsis`. A host that
+  wants the same in its own shrinking container targets the span, never restyles `.tm-btn`:
 
   ```html
   <!-- before -->
@@ -91,9 +90,10 @@
   ```
 
   Consumer markup snapshots and selectors that assume the content is a direct child of the button
-  are affected: a child selector (`button > svg` still matches, but `svg + *` now matches the
-  span, not the text) or styling that relied on bare text inside `.tm-btn` must key on
-  `.tm-btn-label` instead.
+  are affected: a child selector `button > svg` still matches the `Icon` parameter's icon (rendered
+  directly in the button, `TmButton.razor`), but no longer an icon placed in the button's content,
+  which now sits inside `.tm-btn-label`; `svg + *` now matches the span, not the text — and styling
+  that relied on bare text inside `.tm-btn` must key on `.tm-btn-label` instead.
 
 - **`ModalPosition.Bottom` anchors the panel flush with the bottom edge.** It used to sit a margin
   above the edge (`align-self: flex-end` plus the overlay padding), so a bottom modal read as a
@@ -847,6 +847,30 @@
   legacy classes loses the styles.
 
 ### Fixed
+
+- **A `TmDialog` prompt no longer submits on an IME's commit-Enter.** Typing with an input-method
+  editor (Chinese, Japanese, Korean…) commits the composed text with Enter; that press neither
+  arms the prompt submit nor fires it, so committing composed text no longer submits the dialog
+  mid-composition. The guard reads `KeyboardEventArgs.IsComposing`, which does not exist in the
+  .NET 8 framework assemblies — there the guard is a no-op and the commit-Enter submits as before
+  (accepted: the flag is not available). Safari's keyCode-229 commit-Enter (`isComposing=false`)
+  is not detectable through Blazor on any target and is likewise accepted.
+
+- **The dialog/modal/drawer scroll region stays correct for its whole open life.** Three defects
+  fixed together in `ScrollRegionInterop` and `tm-focus-trap.js syncScrollRegion`: (1) a close
+  that landed while the lazy module import was still in flight was dropped by an `!_attached`
+  early return, leaving the `ResizeObserver` attached to the removed node — attaches are now
+  generation-checked, so a detach wins over an in-flight attach and the stale attach stops itself
+  unless a newer attach owns the region (both share one region id, so a blind stop would tear the
+  newer region down; the module import is cached, so a re-attach never imports twice); (2) content
+  growing INSIDE the scroller (rows appended under a `max-height` cap) never resized the scroller
+  and was never re-evaluated — the children are now observed too and a childList MutationObserver
+  re-observes added children and re-runs the overflow decision, coalesced into one frame; (3) a
+  title that rendered or changed after the attach never named the region — `TmModal`, `TmDialog`
+  and `TmDrawer` re-point it through the new `updateScrollRegionLabel` whenever the computed
+  `aria-labelledby`/`aria-label` changes while attached — including an update that lands while the
+  attach is still in flight, reconciled once the attach completes — so the region's name always
+  tracks the title. The wrapper no longer swallows `NullReferenceException`.
 
 - **Overlay focus traps activate only after their root is promoted to the top layer.**
   `TmModal`, `TmDialog`, every modal `TmDrawer`, `TmLightbox`, `TmCommandPalette`,

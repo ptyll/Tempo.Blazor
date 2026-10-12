@@ -534,6 +534,33 @@ test('the net direction picks the flick branch, not the tail velocity sign', () 
     assert.equal(up.index, 0, 'a net-upward drag with a downward tail stays at the lowest snap');
 });
 
+// ── 3-snap sheet, SwipeToDismiss=false (cluster-B 8.6) ─────────────────────────
+// The docs used to claim that with the flag off "a fast flick settles at the lowest snap". Wrong
+// for three or more snaps: a flick steps ONE snap in its direction like any flick, and the lowest
+// snap is only reached because the step CLAMPS there — a fast downward flick from full lands on
+// the middle snap. This pins the behaviour the docs must describe; it is a documentation test.
+
+test('SwipeToDismiss=false on a 3-snap sheet: a fast downward flick from full steps ONE snap, not to the lowest', () => {
+    const three = [0.3, 0.6, 1];
+
+    // A 3 px/ms flick from full (release 0.9): one step down, to the middle snap — never a dismiss
+    // and never straight to the lowest snap.
+    const fast = settle(three, 0.9, false, 3, 1, true);
+    assert.equal(fast.dismiss, false, 'with dismissal off, even a fast flick never dismisses');
+    assert.equal(fast.index, 1, 'a fast flick steps ONE snap down from where it started');
+    assert.equal(fast.snap, 0.6);
+
+    // An ordinary 1 px/ms flick from the middle snap steps down to the lowest snap.
+    const medium = settle(three, 0.55, false, 1, 0.6, true);
+    assert.equal(medium.dismiss, false);
+    assert.equal(medium.index, 0);
+
+    // A fast flick FROM the lowest snap clamps at it — the step has nowhere further down to go.
+    const fromLowest = settle(three, 0.25, false, 3, 0.3, true);
+    assert.equal(fromLowest.dismiss, false, 'the flag off keeps even the fastest flick attached');
+    assert.equal(fromLowest.index, 0, 'the lowest snap is the clamp, not a destination of one flick');
+});
+
 // ── Pinned-on-top registry (F3 review round 3, R3-M1) ─────────────────────────
 // promote() used to leave a toast container exactly where the last push put it: any drawer,
 // sheet or dialog promoted AFTER the toast painted above it. Toast containers now register as

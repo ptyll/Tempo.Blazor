@@ -227,6 +227,9 @@
     private SheetInterop? _sheet;
     private ScrollRegionInterop? _scrollRegion;
     private bool _scrollRegionAttached;
+    // The (LabelledBy, Label) pair last forwarded to the scroll region, so a title/aria-label that
+    // renders or changes while open can re-point it (cluster-B 8.3).
+    private (string? LabelledBy, string? Label) _regionLabel;
     private DotNetObjectReference<TmDrawer>? _dotNetRef;
     private bool _gestureAttached;
     private string? _gestureKey;
@@ -251,7 +254,7 @@
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -359,17 +362,29 @@
 
         // A long body becomes a keyboard-reachable region only while it overflows (the TmDialog
         // scroller contract); a short drawer grows no extra tab stop. Named by the title when one
-        // names the drawer.
+        // names the drawer; a title or aria-label that renders or changes after the attach
+        // re-points the region's name (cluster-B 8.3).
         if (IsOpen && !_scrollRegionAttached)
         {
             _scrollRegionAttached = true;
+            _regionLabel = (LabelledBy, LabelledBy is null ? AriaLabel : null);
             _scrollRegion ??= new ScrollRegionInterop(JS);
-            await _scrollRegion.AttachAsync(_body, LabelledBy, LabelledBy is null ? AriaLabel : null);
+            await _scrollRegion.AttachAsync(_body, _regionLabel.LabelledBy, _regionLabel.Label);
         }
         else if (!IsOpen && _scrollRegionAttached)
         {
             _scrollRegionAttached = false;
+            _regionLabel = default;
             if (_scrollRegion is not null) await _scrollRegion.DetachAsync();
+        }
+        else if (_scrollRegionAttached)
+        {
+            var (labelledBy, label) = (LabelledBy, LabelledBy is null ? AriaLabel : null);
+            if (labelledBy != _regionLabel.LabelledBy || label != _regionLabel.Label)
+            {
+                _regionLabel = (labelledBy, label);
+                await _scrollRegion!.UpdateLabelAsync(labelledBy, label);
+            }
         }
     }
 

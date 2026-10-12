@@ -91,6 +91,29 @@ public class TmDialogPromptKeyboardTests : LocalizationTestBase
     }
 
     [Fact]
+    public void EnterDuringImeComposition_DoesNotSubmit()
+    {
+        var cut = RenderPrompt();
+        var input = cut.Find("input.tm-dialog-input");
+
+        // cluster-B 8.1: an IME's commit-Enter is text input, not an activation. The keydown must
+        // not arm the prompt submit (and the keyup must not fire it), or committing composed text
+        // ("Nihao") would submit the dialog mid-composition. A normal press right after still works.
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter", IsComposing = true });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter", IsComposing = true });
+
+        _results.Should().BeEmpty(
+            "Enter while an IME composition is in progress commits the composed text — it must " +
+            "neither arm nor fire the prompt submit");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        input.KeyUp(new KeyboardEventArgs { Key = "Enter" });
+
+        _results.Should().ContainSingle(
+            "the composition guard covers the composing press only; the next plain Enter submits");
+    }
+
+    [Fact]
     public void EnterPress_WhitespaceOnlyValue_DoesNotSubmit()
     {
         var cut = RenderPrompt("   ");

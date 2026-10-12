@@ -819,6 +819,215 @@ test('restoreTrapFocusIfLost skips the scroll region in its fallback too', () =>
     assert.equal(content.focusCalls, 0, 'the scroll region never takes focus on a recovery either');
 });
 
+// ── Scroll region keeps itself current (cluster-B 8.3) ─────────────────────────
+// The ResizeObserver alone only fires when the SCROLLER's box changes. Content growing inside a
+// max-height-capped scroller (rows appended, a late title rendered, text edited) never resizes the
+// scroller, so the region must also watch mutations and re-decide.
+
+test('a mutation inside the scroller re-decides the region', () => {
+    let overflows = false;
+    const attrs = new Map();
+    const content = {
+        get scrollHeight() { return 900; },
+        get clientHeight() { return overflows ? 400 : 900; },
+        children: [],
+        setAttribute(name, value) { attrs.set(name, value); },
+        removeAttribute(name) { attrs.delete(name); },
+        getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
+        hasAttribute(name) { return attrs.has(name); },
+    };
+    const mutationCallbacks = [];
+    const observeCalls = [];
+    globalThis.MutationObserver = class {
+        constructor(callback) { mutationCallbacks.push(callback); }
+        observe(target, options) { observeCalls.push({ target, options }); }
+        disconnect() {}
+    };
+
+    try {
+        syncScrollRegion(content, 'mutate', 'title-8');
+        assert.equal(mutationCallbacks.length, 1, 'a mutation observer watches the scroller');
+        assert.deepEqual(observeCalls[0].options, { childList: true },
+            'the mutation watch stays SHALLOW — childList only, never subtree/characterData');
+        assert.equal(observeCalls[0].target, content, 'the scroller itself is the observed node');
+        assert.equal(content.getAttribute('tabindex'), null, 'initially short: no tab stop');
+
+        overflows = true;               // rows appended inside the capped scroller
+        mutationCallbacks[0]();
+        assert.equal(content.getAttribute('tabindex'), '0',
+            'content growing into the overflow must re-decide the region');
+    } finally {
+        delete globalThis.MutationObserver;
+    }
+    stopScrollRegion('mutate');
+});
+
+test('a childList record re-observes the scroller and its children; other records do not', () => {
+    const attrs = new Map();
+    const child = {};
+    const content = {
+        scrollHeight: 900,
+        clientHeight: 400,
+        children: [child],
+        setAttribute(name, value) { attrs.set(name, value); },
+        removeAttribute(name) { attrs.delete(name); },
+        getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
+        hasAttribute(name) { return attrs.has(name); },
+    };
+    let mutationCallback = null;
+    globalThis.MutationObserver = class {
+        constructor(callback) { mutationCallback = callback; }
+        observe() {}
+        disconnect() {}
+    };
+    const observed = [];
+    globalThis.ResizeObserver = class {
+        constructor() {}
+        observe(target) { observed.push(target); }
+        disconnect() { observed.push('disconnect'); }
+    };
+
+    try {
+        syncScrollRegion(content, 'reobserve', 'title-12');
+        // reobserveChildren disconnects before (re)observing, so the initial call records one too.
+        assert.deepEqual(observed, ['disconnect', content, child],
+            'initially the scroller and its children are observed');
+
+        mutationCallback([{ type: 'characterData' }]);
+        assert.equal(observed.length, 3, 'a non-childList record does not re-observe');
+
+        mutationCallback([{ type: 'childList' }, { type: 'childList' }]);
+        assert.deepEqual(observed, ['disconnect', content, child, 'disconnect', content, child],
+            'a childList record re-observes the scroller with its (added) children, once per callback');
+    } finally {
+        delete globalThis.MutationObserver;
+        delete globalThis.ResizeObserver;
+    }
+    stopScrollRegion('reobserve');
+});
+
+test('mutation bursts coalesce into one overflow decision per frame', () => {
+    let overflows = false;
+    const attrs = new Map();
+    const content = {
+        get scrollHeight() { return 900; },
+        get clientHeight() { return overflows ? 400 : 900; },
+        children: [],
+        setAttribute(name, value) { attrs.set(name, value); },
+        removeAttribute(name) { attrs.delete(name); },
+        getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
+        hasAttribute(name) { return attrs.has(name); },
+    };
+    let mutationCallback = null;
+    const frames = [];
+    globalThis.MutationObserver = class {
+        constructor(callback) { mutationCallback = callback; }
+        observe() {}
+        disconnect() {}
+    };
+    globalThis.requestAnimationFrame = (fn) => { frames.push(fn); return frames.length; };
+
+    try {
+        syncScrollRegion(content, 'coalesce', 'title-11');
+        assert.equal(content.getAttribute('tabindex'), null, 'initially short: no tab stop');
+
+        overflows = true;
+        mutationCallback([]);           // a framework diff touching many nodes…
+        mutationCallback([]);           // …three bursts inside the same frame…
+        mutationCallback([]);           // …must still decide only once
+        assert.equal(frames.length, 1, 'one pending frame carries the whole burst');
+
+        frames[0]();
+        assert.equal(content.getAttribute('tabindex'), '0', 'the coalesced decision ran with the frame');
+
+        const before = frames.length;
+        mutationCallback([]);
+        assert.equal(frames.length, before + 1, 'a burst after the frame ran schedules a fresh frame');
+    } finally {
+        delete globalThis.MutationObserver;
+        delete globalThis.requestAnimationFrame;
+    }
+    stopScrollRegion('coalesce');
+});
+
+test('stopScrollRegion cancels the pending coalesced decision', () => {
+    const attrs = new Map();
+    const content = {
+        scrollHeight: 900,
+        clientHeight: 400,
+        children: [],
+        setAttribute(name, value) { attrs.set(name, value); },
+        removeAttribute(name) { attrs.delete(name); },
+        getAttribute(name) { return attrs.has(name) ? attrs.get(name) : null; },
+        hasAttribute(name) { return attrs.has(name); },
+    };
+    let mutationCallback = null;
+    const frames = [];
+    const cancelled = [];
+    globalThis.MutationObserver = class {
+        constructor(callback) { mutationCallback = callback; }
+        observe() {}
+        disconnect() {}
+    };
+    globalThis.requestAnimationFrame = (fn) => { frames.push(fn); return frames.length; };
+    globalThis.cancelAnimationFrame = (handle) => { cancelled.push(handle); };
+
+    try {
+        syncScrollRegion(content, 'cancel-apply', 'title-13');
+        assert.equal(content.getAttribute('tabindex'), '0');
+        mutationCallback([{ type: 'childList' }]);      // schedules the coalesced decision
+        assert.equal(frames.length, 1, 'the decision is pending');
+        stopScrollRegion('cancel-apply');
+        assert.deepEqual(cancelled, [1], 'the pending frame is cancelled with the region');
+        frames[0]();                                     // a runner that fires the frame anyway
+        assert.equal(content.getAttribute('tabindex'), null,
+            'the cancelled decision never re-applies the attributes');
+    } finally {
+        delete globalThis.MutationObserver;
+        delete globalThis.requestAnimationFrame;
+        delete globalThis.cancelAnimationFrame;
+    }
+});
+
+test('stopScrollRegion disconnects the mutation observer', () => {
+    const content = scroller(900, 400);
+    let disconnects = 0;
+    globalThis.MutationObserver = class {
+        constructor() {}
+        observe() {}
+        disconnect() { disconnects++; }
+    };
+
+    try {
+        syncScrollRegion(content, 'mutate-stop', 'title-10');
+        stopScrollRegion('mutate-stop');
+        assert.equal(disconnects, 1, 'stopping must disconnect the mutation observer with the resize observer');
+    } finally {
+        delete globalThis.MutationObserver;
+    }
+});
+
+test('updateScrollRegionLabel rewires the region name after attach', async () => {
+    const { updateScrollRegionLabel } = await import('../tm-focus-trap.js');
+    const content = scroller(900, 400);
+    syncScrollRegion(content, 'label-update', 'title-1');
+    assert.equal(content.getAttribute('aria-labelledby'), 'title-1');
+
+    updateScrollRegionLabel('label-update', 'title-2', null);
+    assert.equal(content.getAttribute('aria-labelledby'), 'title-2',
+        'a title that renders (or changes) after the attach re-points the region name');
+
+    updateScrollRegionLabel('label-update', null, null);
+    assert.equal(content.getAttribute('aria-labelledby'), null, 'a removed title drops the idref');
+    assert.equal(content.getAttribute('role'), null, 'an unnamed region drops role with the name');
+    assert.equal(content.getAttribute('tabindex'), '0', 'the region itself is unaffected');
+
+    stopScrollRegion('label-update');
+    updateScrollRegionLabel('label-update', 'gone', null);
+    assert.equal(content.getAttribute('tabindex'), null,
+        'an unknown id is a no-op — the stopped region stays stopped');
+});
+
 
 // ── focusIfLost (F6 r1): the restore a host surface runs after ITS surface closed. It moves focus
 // only when focus was lost (body / disconnected) or was inside the closing surface — never when the

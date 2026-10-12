@@ -42,9 +42,9 @@ export function settle(snaps, released, swipeToDismiss, velocity = 0, startFract
     // snap in its direction from the snap it started on — from a higher snap that is a step down,
     // because a 300px/300ms swipe is a "back to half" gesture, not a close. Only a very fast
     // release (> 2 px/ms, vaul's behaviour) closes the sheet from any snap. Every dismiss here
-    // honours swipeToDismiss: with the flag off, a flick from the lowest snap clamps to it and a
-    // fast flick settles at it. A one-snap sheet is not decided here: its dismiss is relative to
-    // the height it started at.
+    // honours swipeToDismiss: with the flag off, a fast flick steps one snap down like any flick
+    // and clamps at the lowest snap; it never dismisses. A one-snap sheet is not decided here: its
+    // dismiss is relative to the height it started at.
     if (snaps.length > 1 && swipeToDismiss && released < lowest - 0.15) {
         return { dismiss: true, snap: lowest, index: 0 };
     }

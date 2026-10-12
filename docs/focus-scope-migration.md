@@ -43,8 +43,9 @@ the labelled-by wiring — is markup the scope renders.
 
 ## Initial focus in TmDialog
 
-Every `TmDialog` names an explicit initial-focus target on its scope (`InitialFocusTargetId`), so the
-trap never falls back to "first focusable". The target is per dialog type, chosen as the least
+Every built-in `TmDialog` type except `Custom` names an explicit initial-focus target on its scope
+(`InitialFocusTargetId`). A `Custom` dialog falls back to the first focusable of its content — never
+to the overflowing scroll region (it is skipped). The target is per dialog type, chosen as the least
 destructive action the dialog offers:
 
 | Type | Initial focus |

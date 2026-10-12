@@ -15,7 +15,8 @@ namespace Tempo.Blazor.Tests.Theme;
 /// button sweep answers "does anything else own <c>.tm-btn*</c>" and its answer is complete. Nobody
 /// was asking the same question about every other shared class, and the 2.8.22 changelog claimed the
 /// button sweep covered it. It did not: fifteen further pairs were sitting in the same directory —
-/// all fifteen fixed in 2.8.26, so <see cref="RecordedCollisions"/> now stands empty.
+/// all fifteen fixed in 2.8.26; the pairs still listed in <see cref="RecordedCollisions"/> are the
+/// descendant-selector findings recorded since 2.9.0.
 /// </para>
 /// <para>
 /// EVERY KNOWN PAIR HAS ITS OWN ROW. A single number ("15 known collisions") would become a threshold

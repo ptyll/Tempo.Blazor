@@ -243,6 +243,7 @@
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _regionAttached;
+    private string? _regionLabel;
     private bool _disposed;
     private SheetInterop? _sheet;
     private PromotedScopeGate? _gate;
@@ -255,7 +256,7 @@
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -345,17 +346,29 @@
         }
 
         // The scroller is a keyboard-reachable region only while it overflows. The module owns the
-        // attributes; Blazor's markup carries none, so a short dialog grows no extra tab stop.
+        // attributes; Blazor's markup carries none, so a short dialog grows no extra tab stop. A
+        // title that renders or changes after the attach re-points the region's name (cluster-B 8.3).
         if (Show && !_regionAttached)
         {
             _regionAttached = true;
+            _regionLabel = ContentLabelledBy;
             _scrollRegion ??= new ScrollRegionInterop(JS);
-            await _scrollRegion.AttachAsync(_content, ContentLabelledBy);
+            await _scrollRegion.AttachAsync(_content, _regionLabel);
         }
         else if (!Show && _regionAttached)
         {
             _regionAttached = false;
+            _regionLabel = null;
             await _scrollRegion!.DetachAsync();
+        }
+        else if (_regionAttached)
+        {
+            var labelledBy = ContentLabelledBy;
+            if (labelledBy != _regionLabel)
+            {
+                _regionLabel = labelledBy;
+                await _scrollRegion!.UpdateLabelAsync(labelledBy, null);
+            }
         }
 
         // U1: the dialog overlay root is a modal viewport-anchored surface — promote it to the
@@ -513,9 +526,12 @@
     //     change: the second invocation landed on the re-focused trigger and re-opened the panel.
     // Arming on the input's own keydown keeps both out: the opener's trailing keyup arrives
     // unarmed, and a press that submits consumes itself entirely before the dialog closes.
+    // cluster-B 8.1: an IME's commit-Enter is text input, not an activation — a composing Enter
+    // neither arms the submit nor fires it (KeyboardEventArgs.IsComposing exists from .NET 9; on
+    // net8 the guard is a no-op, accepted).
     private Task HandlePromptKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !e.IsImeComposing())
         {
             _promptEnterArmed = true;
         }
@@ -525,7 +541,7 @@
 
     private async Task HandlePromptKeyUp(KeyboardEventArgs e)
     {
-        if (e.Key != "Enter" || !_promptEnterArmed)
+        if (e.Key != "Enter" || !_promptEnterArmed || e.IsImeComposing())
         {
             return;
         }

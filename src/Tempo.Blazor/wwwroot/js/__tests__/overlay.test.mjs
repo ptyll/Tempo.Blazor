@@ -218,10 +218,10 @@ function floatOpts(over = {}) {
         anchor: stubAnchor({ top: 100, left: 100, right: 220, bottom: 140, width: 120, height: 40 }),
         placement: 'bottom',
         align: 'start',
-        anchorGap: 4,
+        offset: 4,
         margin: 8,
         flip: true,
-        clamp: true,
+        shift: true,
         matchAnchorWidth: false,
         ...over,
     };
@@ -299,6 +299,17 @@ test('positionFloating: subtracts a fallback containing-block origin (no Popover
     assert.equal(panel.style.left, `${100 - 50}px`);
     assert.equal(panel.style.top, `${144 - 30}px`);
     assert.equal(result.side, 'bottom');
+});
+
+// cluster-B 9: offset/margin/flip/shift is the SINGLE vocabulary (the TmOverlayPanel parameter
+// names). The retired anchorGap/clamp aliases never shipped — positionFloating must ignore them,
+// so a stray alias cannot silently change a panel's position.
+test('positionFloating ignores the retired anchorGap/clamp aliases', () => {
+    const panel = stubPanel();
+    // offset 10 puts the panel 10px below the anchor bottom (140 → 150); the alias value 99 would
+    // place it at 239 — it must not win.
+    positionFloating(panel, floatOpts({ offset: 10, anchorGap: 99 }), stubWindow());
+    assert.equal(panel.style.top, '150px', 'the real `offset` decides, the retired `anchorGap` does not');
 });
 
 // A modal popup (a date picker sets TrapFocus, so its calendar is a dialog) reaches the top layer

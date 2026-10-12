@@ -559,7 +559,7 @@ function restoreFocus(trap) {
     focusOf(document.body);
 }
 
-// id -> { element, observer }
+// id -> { element, labelledBy, label, observer, mutations, apply, applyScheduled, applyHandle, stopped }
 const scrollRegions = new Map();
 
 /**
@@ -580,7 +580,15 @@ export function syncScrollRegion(element, id, labelledBy = null, label = null) {
     stopScrollRegion(id);
     if (!element) return () => {};
 
-    const apply = () => {
+    // The name lives in the map entry (not in closure locals) so updateScrollRegionLabel can
+    // re-point it after the title rendered or changed (cluster-B 8.3). The apply* fields carry
+    // the coalescing state: one pending overflow decision per frame, cancellable at stop.
+    const region = {
+        element, labelledBy, label, observer: null, mutations: null, apply: null,
+        applyScheduled: false, applyHandle: null, stopped: false,
+    };
+
+    region.apply = () => {
         // A 1px tolerance: sub-pixel rounding must not mint a tab stop.
         const overflows = element.scrollHeight > element.clientHeight + 1;
         if (overflows) {
@@ -588,12 +596,18 @@ export function syncScrollRegion(element, id, labelledBy = null, label = null) {
             // The marker the initial-focus fallback skips (8.4): the scroller precedes its own
             // content in DOM order, so unmarked it would always win the "first focusable".
             element.setAttribute('data-tm-scroll-region', '');
-            if (labelledBy) {
+            if (region.labelledBy) {
                 element.setAttribute('role', 'region');
-                element.setAttribute('aria-labelledby', labelledBy);
-            } else if (label) {
+                element.setAttribute('aria-labelledby', region.labelledBy);
+                element.removeAttribute('aria-label');
+            } else if (region.label) {
                 element.setAttribute('role', 'region');
-                element.setAttribute('aria-label', label);
+                element.setAttribute('aria-label', region.label);
+                element.removeAttribute('aria-labelledby');
+            } else {
+                element.removeAttribute('role');
+                element.removeAttribute('aria-labelledby');
+                element.removeAttribute('aria-label');
             }
         } else {
             element.removeAttribute('tabindex');
@@ -604,14 +618,70 @@ export function syncScrollRegion(element, id, labelledBy = null, label = null) {
         }
     };
 
-    apply();
-    let observer = null;
+    region.apply();
+
+    const reobserveChildren = () => {
+        if (!region.observer) return;
+        region.observer.disconnect();
+        region.observer.observe(element);
+        // Content that grows INSIDE the scroller does not resize the scroller itself when the
+        // scroller is height-capped — the children must be observed too (cluster-B 8.3).
+        for (const child of element.children ?? []) region.observer.observe(child);
+    };
     if (typeof ResizeObserver === 'function') {
-        observer = new ResizeObserver(apply);
-        observer.observe(element);
+        region.observer = new ResizeObserver(() => region.apply());
+        reobserveChildren();
     }
-    scrollRegions.set(id, { element, observer });
+    // One pending overflow decision at a time: a framework diff can touch dozens of nodes and
+    // fire the observer once per node — the bursts share a single requestAnimationFrame instead
+    // of re-measuring per record. Environments without rAF (the node-test stubs) apply
+    // synchronously instead of never applying.
+    const scheduleApply = () => {
+        if (region.applyScheduled) return;
+        if (typeof requestAnimationFrame !== 'function') { region.apply(); return; }
+        region.applyScheduled = true;
+        region.applyHandle = requestAnimationFrame(() => {
+            region.applyScheduled = false;
+            region.applyHandle = null;
+            if (!region.stopped) region.apply();
+        });
+    };
+    // A mutation (rows appended, a title rendered late) also re-decides the region: the
+    // ResizeObserver only fires on box size changes, which a capped scroller never produces.
+    // The watch stays SHALLOW — childList only. subtree+characterData fired for every text node
+    // the framework touches, which re-measured far too often; ADDED children are picked up by
+    // re-observing them (below) instead of walking the whole subtree.
+    if (typeof MutationObserver === 'function') {
+        region.mutations = new MutationObserver((records) => {
+            let childList = false;
+            for (const record of records ?? []) {
+                if (record && record.type === 'childList') { childList = true; break; }
+            }
+            if (childList) reobserveChildren();
+            scheduleApply();
+        });
+        region.mutations.observe(element, { childList: true });
+    }
+
+    scrollRegions.set(id, region);
     return () => stopScrollRegion(id);
+}
+
+/**
+ * Re-points the region's accessible name after the title rendered or changed (cluster-B 8.3): a
+ * `TmModal`/`TmDialog`/`TmDrawer` title that appears (or changes) after the attach rewires the
+ * region's aria wiring and re-applies it, so the region never keeps a stale or missing name.
+ * Unknown ids are a no-op.
+ * @param {string} id the caller's key used at syncScrollRegion
+ * @param {string|null} labelledBy the new naming element id, when the surface has a title
+ * @param {string|null} label the new accessible name when there is no title id
+ */
+export function updateScrollRegionLabel(id, labelledBy = null, label = null) {
+    const region = scrollRegions.get(id);
+    if (!region) return;
+    region.labelledBy = labelledBy;
+    region.label = label;
+    if (region.apply) region.apply();
 }
 
 /** Removes the scroll-region observer and the attributes it wrote. Safe to call twice. */
@@ -619,7 +689,17 @@ export function stopScrollRegion(id) {
     const region = scrollRegions.get(id);
     if (!region) return;
     scrollRegions.delete(id);
+    // Cancel the pending coalesced decision first: a frame that still fires must not re-apply
+    // the attributes the removal below just cleared (the stopped guard covers runners without
+    // a cancellable rAF).
+    region.stopped = true;
+    if (region.applyScheduled && region.applyHandle !== null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(region.applyHandle);
+    }
+    region.applyScheduled = false;
+    region.applyHandle = null;
     if (region.observer) region.observer.disconnect();
+    if (region.mutations) region.mutations.disconnect();
     if (region.element) {
         region.element.removeAttribute('tabindex');
         region.element.removeAttribute('data-tm-scroll-region');

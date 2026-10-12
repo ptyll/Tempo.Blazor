@@ -198,9 +198,9 @@ function resolveAnchor(entry) {
 }
 
 // Measure + resolve + write in one step, so the whole pipeline is exercised by the Node tests
-// through stub elements. `options` is the public placement contract — {anchor, placement, align,
-// anchorGap, margin, flip, clamp, matchAnchorWidth, originLeft, originTop} — with offset/shift
-// accepted as aliases for anchorGap/clamp (the TmOverlayPanel parameter names). The returned
+// through stub elements. `options` is the placement contract — {anchor, placement, align, offset,
+// margin, flip, shift, matchAnchorWidth, originLeft, originTop} — the same vocabulary the
+// TmOverlayPanel parameters use; there are no aliases (cluster-B 9). The returned
 // {x, y, side, anchorRect, view} lets place() run its visibility and constrainHeight passes.
 export function positionFloating(panel, options = {}, win) {
     const anchorEl = options.anchor && options.anchor.isConnected
@@ -264,10 +264,10 @@ export function positionFloating(panel, options = {}, win) {
     const result = resolvePlacement(anchor, size, {
         placement: options.placement,
         align: options.align,
-        offset: options.anchorGap ?? options.offset,
+        offset: options.offset,
         margin: options.margin,
         flip: options.flip,
-        shift: options.clamp ?? options.shift,
+        shift: options.shift,
         viewWidth: view.width,
         viewHeight: view.height,
     });
@@ -306,10 +306,10 @@ function place(entry) {
         anchor: anchorEl,
         placement: options.placement,
         align: options.align,
-        anchorGap: options.offset,
+        offset: options.offset,
         margin: options.margin,
         flip: options.flip,
-        clamp: options.shift,
+        shift: options.shift,
         matchAnchorWidth: options.matchAnchorWidth,
         originLeft: block ? block.left : 0,
         originTop: block ? block.top : 0,

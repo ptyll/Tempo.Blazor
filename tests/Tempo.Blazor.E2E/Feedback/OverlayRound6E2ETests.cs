@@ -9,8 +9,8 @@ namespace Tempo.Blazor.E2E.Feedback;
 /// The opener activates on its Enter keydown, the per-type initial focus lands on the input while
 /// the key is still down, and the trailing keyup then landed on the input — the old keyup submit
 /// fired the DefaultValue at once, so a keyboard user never saw the prompt (M-r6-1). After the
-/// fix the submit happens on the input's Enter keydown (guarded against auto-repeat), and the
-/// keyup of the opening press is spent.
+/// fix the prompt submits on the Enter KEYUP of a press whose keydown the input itself saw
+/// (armed on keydown), so the opener's trailing keyup arrives unarmed and is spent.
 /// </summary>
 [TestClass]
 [TestCategory("WASM")]

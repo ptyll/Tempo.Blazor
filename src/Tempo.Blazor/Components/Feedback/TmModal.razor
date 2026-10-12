@@ -225,7 +225,7 @@
 
     /// <summary>
     /// The internal viewport probe, opened from C# because a Razor tag binds only to public
-    /// components (an internal tag compiles to a literal element under a suppressed RZ10012).
+    /// components (an internal tag compiles to a literal element — RZ10012, an error in this repo).
     /// </summary>
     private RenderFragment Probe => builder =>
     {
@@ -301,21 +301,34 @@
         }
 
         // A long body becomes a keyboard-reachable region only while it actually overflows (the
-        // TmDialog scroller contract); a short modal grows no extra tab stop.
+        // TmDialog scroller contract); a short modal grows no extra tab stop. A title that renders
+        // or changes after the attach re-points the region's name (cluster-B 8.3).
         if (Show && !_scrollRegionAttached)
         {
             _scrollRegionAttached = true;
+            _regionLabel = string.IsNullOrEmpty(Title) ? null : _titleId;
             _scrollRegion ??= new ScrollRegionInterop(JS);
-            await _scrollRegion.AttachAsync(_body, string.IsNullOrEmpty(Title) ? null : _titleId);
+            await _scrollRegion.AttachAsync(_body, _regionLabel);
         }
         else if (!Show && _scrollRegionAttached)
         {
             _scrollRegionAttached = false;
+            _regionLabel = null;
             if (_scrollRegion is not null) await _scrollRegion.DetachAsync();
+        }
+        else if (_scrollRegionAttached)
+        {
+            var labelledBy = string.IsNullOrEmpty(Title) ? null : _titleId;
+            if (labelledBy != _regionLabel)
+            {
+                _regionLabel = labelledBy;
+                await _scrollRegion!.UpdateLabelAsync(labelledBy, null);
+            }
         }
     }
 
     private bool _scrollRegionAttached;
+    private string? _regionLabel;
 
     private async Task AttachGestureAsync()
     {
