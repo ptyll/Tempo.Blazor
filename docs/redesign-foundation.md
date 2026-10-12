@@ -32,7 +32,6 @@ Recorded follow-ups that are **not** part of the foundation and are **not** done
 | `TmDiagramEditor` renders its toolbar buttons outside `TmToolbar` | DiagramEditor plan |
 | Toolbar core prerequisites for DE-1.2 and DiagramEditor adoption: a collapsible non-button item contract, `Pressed` → checked menu entries (`menuitemcheckbox`), and group headers in the More menu ([toolbar.md](toolbar.md)) | core follow-up, not scheduled |
 | Extension-package dialogs still paint in their z-index band (rule 9 of [overlays.md](overlays.md#rules)) | each package's plan |
-| 10 unit tests fail on `main` for environment reasons (packaging workflow clones, release-evidence paths, one frozen tabs snapshot) and are excluded from the gate | not a foundation defect |
 
 ## Where to read what
 

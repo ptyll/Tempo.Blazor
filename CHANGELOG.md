@@ -715,6 +715,25 @@
   **Changed**).
 ### Changed
 
+- **The demo API allows any loopback origin in Development.** The CORS default policy no longer
+  hard-codes `localhost:5010`/`localhost:7106`: the launch-profile origins stay allowed as hard
+  defaults in `DemoCorsPolicy.DefaultOrigins`, `Cors:AllowedOrigins` (env
+  `Cors__AllowedOrigins__0=…`) is purely additive on top of them (`appsettings.json` ships an
+  empty list; configured entries are trimmed and a trailing slash is stripped), and in the
+  Development environment any http(s) origin on a loopback host (`localhost`, `127.0.0.1`,
+  `[::1]`) on ANY port is accepted — so a demo/E2E WASM host started on a nonstandard port
+  (e.g. 7116) can call the API without editing it. Production answers only the defaults plus the
+  configured list. Credentials stay enabled for the SignalR WebSocket handshake
+  (`SetIsOriginAllowed` echoes the origin; the policy lives in `DemoCorsPolicy`).
+- **The repository enforces LF.** `.gitattributes` now carries `* text=auto eol=lf` (every text
+  file is LF in the index and in every working copy, whatever `core.autocrlf` says) with
+  `eng/release-evidence/** -text` kept byte-verbatim. Before, a Windows checkout made under
+  `core.autocrlf=true` produced CRLF working copies that broke the workflow-reading packaging
+  guards and the frozen `TmTabs` markup baseline; those tests now also normalise CRLF→LF at the
+  reader, so they pass on any checkout. Existing Windows working copies keep their CRLF files
+  until refreshed: re-clone, or — on a clean tree — plain `git checkout -- .` re-checks out every
+  text file as LF (the index is already LF, so no renormalization commit is needed).
+
 - **`TmDropdown`, `TmSplitButton` and `TmContextMenu` now move focus to their first enabled item when the menu
   opens** (`tm-menu-nav.js` `focusFirst`, once per open, best-effort without JS). *Before:* focus stayed on the
   trigger and the roving keys — which listen on the menu — were unreachable from the keyboard until a Tab. *After:*

@@ -157,6 +157,14 @@ What the three test-side ones raced, for anyone writing a similar test:
   Kill stale listeners on those ports before a clean run — a stale host whose
   `bin/obj` was rebuilt serves broken static assets and every test times out on
   its first locator.
+- **A WASM host on any other port works out of the box.** The Development demo
+  API allows any http(s) origin on a loopback host (`localhost`, `127.0.0.1`,
+  `[::1]`) regardless of port — the CORS list (`DemoCorsPolicy`,
+  `Cors:AllowedOrigins`) is purely additive, it only extends the hard defaults
+  and never replaces them, and is never needed for a lane. An API run as a
+  non-Development environment answers ONLY the hard defaults plus configured
+  origins, so such a deployment must set `Cors__AllowedOrigins__N` for every
+  extra host port.
 - Delete `tests/Tempo.Blazor.E2E/TestResults` between long runs to keep disk
   usage bounded.
 - **Host resurrections are evidence, not noise (N209):** `PlaywrightTestBase`
