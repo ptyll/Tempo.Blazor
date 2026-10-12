@@ -63,7 +63,7 @@
           "name": "AddTempoBlazorAll",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers the core Tempo.Blazor services and all split feature package services.",
+          "description": "Registers the core Tempo.Blazor services and every split feature package: PDF viewer, codes, diagram editor, wireframe, modeling, spreadsheet, Gantt XLSX, document editor, Notion editor and signing.",
           "parameters": [
             {
               "name": "services",

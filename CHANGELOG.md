@@ -760,6 +760,20 @@
   dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
   instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
 
+- **Documentation — the generated JSON documentation now lists expression-bodied properties as
+  `Property` members and includes positional record parameters.** The doc generator's member
+  scanner only recognised `{ get;` properties and read every other line up to its first `=`, so
+  members like `public bool IsMobile => …;` were mis-kinded as `"kind": "Field"` (272 member
+  entries flip from `Field` to `Property` in the regenerated `tempo-blazor-all.json`) and
+  everything whose body wrapped — `=> Resolved switch …`, `{ get => …; init => …; }` — was
+  missing entirely, as were the generated properties of positional records (`TmLayoutContext`
+  listed 3 of its 6 members). The bundles are regenerated; consumers that filtered members by
+  `kind == "Field"` must match on `"Property"` instead, and types modelled as positional records
+  gained member entries. Overlay member descriptions take precedence over generated ones — the
+  overlays under `JsonDocumentation/` stay the editable source, so regeneration no longer blanks
+  a hand-written member description. Declarations whose signature wraps across lines, and
+  tuple-typed expression-bodied properties, are not yet extracted.
+
 ### Fixed
 
 - **A toast stays above any popup opened after it.** `overlay.js` promoted every

@@ -709,7 +709,19 @@
       "description": "Parameter change raised by TmReportParameterPanel.",
       "packageId": "Tempo.Blazor.Reporting",
       "sourcePath": "src/Tempo.Blazor.Reporting/Models/ReportParameterChangedEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Parameter",
+          "kind": "Property",
+          "type": "ReportParameterDefinition"
+        },
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, ReportParameterValue>"
+        }
+      ]
     },
     {
       "itemName": "ReportParameterSubmitEventArgs",
@@ -719,7 +731,14 @@
       "description": "Parameter submit event raised by TmReportParameterPanel.",
       "packageId": "Tempo.Blazor.Reporting",
       "sourcePath": "src/Tempo.Blazor.Reporting/Models/ReportParameterSubmitEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, ReportParameterValue>"
+        }
+      ]
     },
     {
       "itemName": "ReportViewerExportResult",

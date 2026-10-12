@@ -674,7 +674,7 @@
       "members": [
         {
           "name": "Assembly",
-          "kind": "Field",
+          "kind": "Property",
           "type": "System.Reflection.Assembly",
           "description": "Gets the assembly that contains the email template editor components."
         }
@@ -721,12 +721,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "CanPaste",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Gets whether a block is available to paste."
-        },
-        {
           "name": "Clear",
           "kind": "Method",
           "type": "void",
@@ -749,6 +743,12 @@
           "kind": "Method",
           "type": "EmailBlockBase?",
           "description": "Returns a fresh copy (with new ids) of the clipboard block, or null if empty."
+        },
+        {
+          "name": "CanPaste",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether a block is available to paste."
         }
       ]
     },
@@ -762,18 +762,6 @@
       "sourcePath": "src/Tempo.Blazor.EmailTemplates/Services/EditorHistoryService.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "CanRedo",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Gets whether a redo is available."
-        },
-        {
-          "name": "CanUndo",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Gets whether an undo is available."
-        },
         {
           "name": "Initialize",
           "kind": "Method",
@@ -814,6 +802,18 @@
           "kind": "Method",
           "type": "EmailTemplateDocument?",
           "description": "Moves one step back and returns an independent copy of that state, or null."
+        },
+        {
+          "name": "CanRedo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether a redo is available."
+        },
+        {
+          "name": "CanUndo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether an undo is available."
         }
       ]
     }

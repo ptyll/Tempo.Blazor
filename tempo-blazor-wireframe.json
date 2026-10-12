@@ -78,11 +78,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -91,6 +86,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -105,11 +105,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -118,6 +113,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -132,19 +132,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "AddLayerCommand",
+          "type": "AddLayerCommand(WireframeDocument doc, WireframeLayer layer)",
+          "description": "Creates the command for an already-constructed layer."
         }
       ],
       "examples": [
@@ -165,11 +173,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -178,6 +181,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -192,19 +200,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "BringToFrontCommand",
+          "type": "BringToFrontCommand(WireframeDocument doc, IEnumerable<string> ids)",
+          "description": "Creates the command for the selected element ids."
         }
       ],
       "examples": [
@@ -225,25 +241,26 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "GetDefinitions",
+          "kind": "Method",
+          "type": "IEnumerable<WireframeComponentDef>"
+        },
+        {
           "name": "Priority",
-          "kind": "Field",
-          "type": "int"
+          "kind": "Property",
+          "type": "int",
+          "description": "Always 0 — the lowest priority, so custom providers win."
         },
         {
           "name": "ProviderId",
-          "kind": "Field",
+          "kind": "Property",
           "type": "string"
         },
         {
           "name": "ValidationWarnings",
-          "kind": "Field",
+          "kind": "Property",
           "type": "IReadOnlyList<StencilPackValidationWarning>",
           "description": "Non-fatal validation warnings emitted while loading the built-in pack."
-        },
-        {
-          "name": "GetDefinitions",
-          "kind": "Method",
-          "type": "IEnumerable<WireframeComponentDef>"
         }
       ],
       "examples": [
@@ -281,11 +298,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -294,6 +306,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -308,11 +325,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -321,6 +333,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -337,7 +354,13 @@
         {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Stores the element's style props (and size when includeSize is true) in WireframeClipboard."
+        },
+        {
+          "name": "CopyStyleCommand",
+          "type": "CopyStyleCommand(WireframeElement element, bool includeSize = false)",
+          "description": "Creates the command for the element to copy from."
         }
       ],
       "examples": [
@@ -358,11 +381,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -371,6 +389,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -385,11 +408,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -398,6 +416,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -534,11 +557,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -547,6 +565,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -589,6 +612,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -603,11 +631,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -616,6 +639,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -649,7 +677,7 @@
           "name": "TempoBuiltIn",
           "kind": "Property",
           "type": "static NativeRendererRegistry",
-          "description": "Trusted native renderers backed by the built-in Tempo wireframe provider."
+          "description": "The registry of renderers shipped with Tempo.Blazor."
         }
       ],
       "examples": [
@@ -670,19 +698,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "PasteSizeCommand",
+          "type": "PasteSizeCommand(WireframeDocument doc, IEnumerable<string> ids)",
+          "description": "Creates the command for the selected element ids."
         }
       ],
       "examples": [
@@ -703,19 +739,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "PasteStyleCommand",
+          "type": "PasteStyleCommand(WireframeDocument doc, IEnumerable<string> ids, WireframeComponentRegistry registry)",
+          "description": "Creates the command for the selected element ids."
         }
       ],
       "examples": [
@@ -744,6 +788,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -766,6 +815,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -780,19 +834,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "RemoveLayerCommand",
+          "type": "RemoveLayerCommand(WireframeDocument doc, string layerId)",
+          "description": "Creates the command for the layer to remove."
         }
       ],
       "examples": [
@@ -813,19 +875,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "RenameLayerCommand",
+          "type": "RenameLayerCommand(WireframeDocument doc, string layerId, string? oldName, string newName)",
+          "description": "Creates the command; oldName may be null when the layer had no name."
         }
       ],
       "examples": [
@@ -846,19 +916,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "ReorderLayersCommand",
+          "type": "ReorderLayersCommand(WireframeDocument doc, Dictionary<string, int> newOrders)",
+          "description": "Creates the command from a layer-id to order map."
         }
       ],
       "examples": [
@@ -879,11 +957,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -892,6 +965,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -906,11 +984,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -919,6 +992,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -933,11 +1011,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -946,6 +1019,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -960,19 +1038,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "SendToBackCommand",
+          "type": "SendToBackCommand(WireframeDocument doc, IEnumerable<string> ids)",
+          "description": "Creates the command for the selected element ids."
         }
       ],
       "examples": [
@@ -1007,7 +1093,38 @@
         {
           "name": "Empty",
           "kind": "Property",
-          "type": "static StencilEvalContext"
+          "type": "static StencilEvalContext",
+          "description": "An empty context with no props, zero size and no token resolver."
+        },
+        {
+          "name": "Props",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, object?>",
+          "description": "The element's props, reachable as props.* inside an expression."
+        },
+        {
+          "name": "RepeatIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based index when the stencil part is repeated."
+        },
+        {
+          "name": "SizeH",
+          "kind": "Property",
+          "type": "double",
+          "description": "Element height, reachable as size.h."
+        },
+        {
+          "name": "SizeW",
+          "kind": "Property",
+          "type": "double",
+          "description": "Element width, reachable as size.w."
+        },
+        {
+          "name": "Tokens",
+          "kind": "Property",
+          "type": "StencilTokenResolver?",
+          "description": "Resolver used for token lookups; may be null."
         }
       ],
       "examples": [
@@ -1031,7 +1148,7 @@
           "name": "Evaluate",
           "kind": "Method",
           "type": "StencilValue",
-          "description": "Parses and evaluates expression; malformed input returns the raw string and never throws.",
+          "description": "Parses and evaluates an expression string. Returns StencilValue.Null on any failure.",
           "parameters": [
             {
               "name": "expression",
@@ -1472,16 +1589,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ProviderId",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "ValidationWarnings",
-          "kind": "Field",
-          "type": "IReadOnlyList<StencilPackValidationWarning>"
-        },
-        {
           "name": "GetDefinitions",
           "kind": "Method",
           "type": "IEnumerable<WireframeComponentDef>"
@@ -1492,9 +1599,29 @@
           "type": "int"
         },
         {
+          "name": "ProviderId",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
           "name": "ScopeAppId",
           "kind": "Property",
           "type": "string"
+        },
+        {
+          "name": "ValidationWarnings",
+          "kind": "Property",
+          "type": "IReadOnlyList<StencilPackValidationWarning>"
+        },
+        {
+          "name": "StencilPackComponentProvider",
+          "type": "StencilPackComponentProvider(StencilPack pack, string? scopeAppIdOrNamespace = null, int priority = 50)",
+          "description": "Compiles the pack and exposes its components. Priority defaults to 50, above BuiltInStencilPackProvider (0)."
+        },
+        {
+          "name": "StencilPackComponentProvider",
+          "type": "StencilPackComponentProvider(StencilPack pack, UiRoleVocabulary roleVocabulary, string? scopeAppIdOrNamespace = null, int priority = 50)",
+          "description": "Same, but resolves UI roles through the supplied vocabulary."
         }
       ],
       "examples": [
@@ -1550,32 +1677,40 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsNull",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
           "name": "AsBool",
           "kind": "Method",
           "type": "bool",
-          "description": "Coerces the value to a boolean; null-like values return false and never throw."
+          "description": "Converts the value to a bool; returns false when the value is not truthy."
         },
         {
           "name": "AsDouble",
           "kind": "Method",
           "type": "double",
-          "description": "Coerces the value to a number; invalid values return 0 and never throw."
+          "description": "Converts the value to a double; returns 0 when the value is not numeric."
         },
         {
           "name": "AsString",
           "kind": "Method",
           "type": "string",
-          "description": "Coerces the value to a string; null-like values return an empty string and never throw."
+          "description": "Converts the value to a string; returns an empty string when null."
+        },
+        {
+          "name": "IsNull",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the value is null or a JSON null/undefined element."
         },
         {
           "name": "Null",
           "kind": "Property",
-          "type": "static StencilValue"
+          "type": "static StencilValue",
+          "description": "The shared null value."
+        },
+        {
+          "name": "Raw",
+          "kind": "Property",
+          "type": "object?",
+          "description": "The wrapped value; may be a JsonElement, a primitive, or null."
         }
       ],
       "examples": [
@@ -1843,19 +1978,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "ToggleLayerLockCommand",
+          "type": "ToggleLayerLockCommand(WireframeDocument doc, string layerId)",
+          "description": "Creates the command for the layer to toggle."
         }
       ],
       "examples": [
@@ -1876,19 +2019,27 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "Human-readable label shown in undo/redo tooltips."
+        },
+        {
+          "name": "ToggleLayerVisibilityCommand",
+          "type": "ToggleLayerVisibilityCommand(WireframeDocument doc, string layerId)",
+          "description": "Creates the command for the layer to toggle."
         }
       ],
       "examples": [
@@ -1909,11 +2060,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1922,6 +2068,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1936,11 +2087,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1949,6 +2095,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1963,11 +2114,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1976,6 +2122,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1990,11 +2141,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2003,6 +2149,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2017,11 +2168,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2030,6 +2176,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2044,11 +2195,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2057,6 +2203,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2071,11 +2222,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2084,6 +2230,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2098,12 +2249,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "HasStyle",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether the clipboard contains any style properties."
-        },
-        {
           "name": "CloneProps",
           "kind": "Method",
           "type": "Dictionary<string, JsonElement>",
@@ -2114,6 +2259,12 @@
               "type": "JsonElement>"
             }
           ]
+        },
+        {
+          "name": "HasStyle",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the clipboard contains any style properties."
         },
         {
           "name": "Height",
@@ -2146,28 +2297,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "CanRedo",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
-          "name": "CanUndo",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
-          "name": "NextRedoName",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Name of the next command that would be redone, or null."
-        },
-        {
-          "name": "NextUndoName",
-          "kind": "Field",
-          "type": "string?",
-          "description": "Name of the next command that would be undone, or null."
-        },
-        {
           "name": "Clear",
           "kind": "Method",
           "type": "void",
@@ -2196,6 +2325,28 @@
           "kind": "Method",
           "type": "void",
           "description": "Reverses the most recent command. No-op if stack is empty."
+        },
+        {
+          "name": "CanRedo",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "CanUndo",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "NextRedoName",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Name of the next command that would be redone, or null."
+        },
+        {
+          "name": "NextUndoName",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Name of the next command that would be undone, or null."
         }
       ]
     },
@@ -2324,12 +2475,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of registered definitions."
-        },
-        {
           "name": "GetAll",
           "kind": "Method",
           "type": "IEnumerable<WireframeComponentDef>",
@@ -2393,6 +2538,12 @@
               "type": "IWireframeComponentProvider"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of registered definitions."
         }
       ]
     },
@@ -2677,12 +2828,58 @@
         {
           "name": "DefaultHeight",
           "kind": "Field",
-          "type": "double"
+          "type": "double",
+          "description": "Default thumbnail height in pixels."
         },
         {
           "name": "DefaultWidth",
           "kind": "Field",
-          "type": "double"
+          "type": "double",
+          "description": "Default thumbnail width in pixels."
+        },
+        {
+          "name": "Render",
+          "kind": "Method",
+          "type": "string",
+          "description": "Renders the active page of a WireframeDocument as a thumbnail SVG.",
+          "parameters": [
+            {
+              "name": "document",
+              "type": "WireframeDocument"
+            },
+            {
+              "name": "width",
+              "type": "double"
+            },
+            {
+              "name": "height",
+              "type": "double"
+            }
+          ]
+        },
+        {
+          "name": "Render",
+          "kind": "Method",
+          "type": "string",
+          "description": "Renders a single WireframePage as a thumbnail SVG with an optional title.",
+          "parameters": [
+            {
+              "name": "page",
+              "type": "WireframePage?"
+            },
+            {
+              "name": "title",
+              "type": "string?"
+            },
+            {
+              "name": "width",
+              "type": "double"
+            },
+            {
+              "name": "height",
+              "type": "double"
+            }
+          ]
         }
       ]
     },
@@ -2727,7 +2924,7 @@
           "name": "AddTempoBlazorWireframe",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the wireframe editor component group.",
+          "description": "Registers the services required by the wireframe editor component group.",
           "parameters": [
             {
               "name": "services",

@@ -87,11 +87,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -100,6 +95,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -114,24 +114,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Layer",
-          "kind": "Field",
-          "type": "DiagramLayer"
-        },
-        {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Appends the new layer to DiagramDocument.Layers."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Removes the layer that Execute() appended."
+        },
+        {
+          "name": "Layer",
+          "kind": "Property",
+          "type": "DiagramLayer"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ],
       "examples": [
@@ -152,11 +154,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -165,6 +162,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -179,11 +181,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -192,6 +189,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -206,11 +208,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -219,6 +216,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -233,11 +235,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -246,6 +243,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -259,11 +261,6 @@
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Commands/ApplyEdgeStencilCommand.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
         {
           "name": "ApplyTo",
           "kind": "Method",
@@ -327,6 +324,11 @@
           "type": "double?"
         },
         {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
           "name": "Rounded",
           "kind": "Property",
           "type": "bool"
@@ -374,11 +376,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -387,6 +384,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -401,14 +403,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetStencilSets",
           "kind": "Method",
           "type": "IEnumerable<DiagramStencilSet>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -433,14 +435,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetStencilSets",
           "kind": "Method",
           "type": "IEnumerable<DiagramStencilSet>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -455,14 +457,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetStencilSets",
           "kind": "Method",
           "type": "IEnumerable<DiagramStencilSet>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -477,14 +479,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetTemplateCategoriesAsync",
           "kind": "Method",
           "type": "Task<IEnumerable<DiagramTemplateCategory>>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -498,11 +500,6 @@
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Commands/CopyNodesCommand.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
         {
           "name": "Execute",
           "kind": "Method",
@@ -523,6 +520,11 @@
           "name": "Edges",
           "kind": "Property",
           "type": "List<DiagramEdge>"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         },
         {
           "name": "Nodes",
@@ -550,7 +552,13 @@
         {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Stores the node's style (and size when includeSize is true) in DiagramClipboard."
+        },
+        {
+          "name": "CopyStyleCommand",
+          "type": "CopyStyleCommand(DiagramNode node, bool includeSize = false)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -676,11 +684,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -694,6 +697,11 @@
           "name": "Edges",
           "kind": "Property",
           "type": "List<DiagramEdge>"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         },
         {
           "name": "Nodes",
@@ -713,11 +721,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -726,6 +729,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -740,11 +748,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -753,6 +756,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -767,11 +775,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -780,6 +783,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -794,11 +802,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -807,6 +810,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -869,16 +877,16 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "HasNodes",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether the clipboard contains any nodes."
-        },
-        {
           "name": "Edges",
           "kind": "Property",
           "type": "static List<DiagramEdge>",
           "description": "Copied edges."
+        },
+        {
+          "name": "HasNodes",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the clipboard contains any nodes."
         },
         {
           "name": "Height",
@@ -916,32 +924,6 @@
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Commands/DiagramCommandStack.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "CanRedo",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
-          "name": "CanUndo",
-          "kind": "Field",
-          "type": "bool"
-        },
-        {
-          "name": "IsInTransaction",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether a transaction is currently open."
-        },
-        {
-          "name": "NextRedoName",
-          "kind": "Field",
-          "type": "string?"
-        },
-        {
-          "name": "NextUndoName",
-          "kind": "Field",
-          "type": "string?"
-        },
         {
           "name": "BeginTransaction",
           "kind": "Method",
@@ -1008,6 +990,32 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "CanRedo",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "CanUndo",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IsInTransaction",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a transaction is currently open."
+        },
+        {
+          "name": "NextRedoName",
+          "kind": "Property",
+          "type": "string?"
+        },
+        {
+          "name": "NextUndoName",
+          "kind": "Property",
+          "type": "string?"
         }
       ]
     },
@@ -1021,12 +1029,6 @@
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Commands/DiagramCommandTransaction.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Number of commands captured in this transaction."
-        },
         {
           "name": "Add",
           "kind": "Method",
@@ -1060,6 +1062,12 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of commands captured in this transaction."
         },
         {
           "name": "Name",
@@ -1261,12 +1269,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of registered stencils."
-        },
-        {
           "name": "GetAll",
           "kind": "Method",
           "type": "IEnumerable<DiagramStencil>",
@@ -1348,6 +1350,12 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of registered stencils."
         }
       ]
     },
@@ -1389,12 +1397,6 @@
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/Templates/DiagramTemplateRegistry.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of registered templates."
-        },
         {
           "name": "GetAll",
           "kind": "Method",
@@ -1465,6 +1467,12 @@
               "default": "0"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of registered templates."
         }
       ]
     },
@@ -1479,16 +1487,16 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "IsValid",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Gets whether the template references only valid stencils."
-        },
-        {
           "name": "Errors",
           "kind": "Property",
           "type": "IReadOnlyList<string>",
           "description": "Gets machine-readable validation errors."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Gets whether the template references only valid stencils."
         }
       ]
     },
@@ -1531,11 +1539,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1544,6 +1547,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1558,11 +1566,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1571,6 +1574,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1585,11 +1593,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1598,6 +1601,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1612,14 +1620,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetStencilSets",
           "kind": "Method",
           "type": "IEnumerable<DiagramStencilSet>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -1634,14 +1642,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetTemplateCategoriesAsync",
           "kind": "Method",
           "type": "Task<IEnumerable<DiagramTemplateCategory>>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -1656,11 +1664,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1669,6 +1672,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1683,11 +1691,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1696,6 +1699,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1710,11 +1718,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1723,6 +1726,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1737,11 +1745,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1750,6 +1753,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1764,11 +1772,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1777,6 +1780,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1887,11 +1895,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1900,6 +1903,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1914,11 +1922,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1927,6 +1930,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1951,11 +1959,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1964,6 +1967,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -1998,21 +2006,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "PastedEdges",
-          "kind": "Field",
-          "type": "IReadOnlyList<DiagramEdge>"
-        },
-        {
-          "name": "PastedNodes",
-          "kind": "Field",
-          "type": "IReadOnlyList<DiagramNode>"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2034,9 +2027,24 @@
           "description": "Node IDs from the most recent paste operation."
         },
         {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
           "name": "Nodes",
           "kind": "Property",
           "type": "List<DiagramNode>"
+        },
+        {
+          "name": "PastedEdges",
+          "kind": "Property",
+          "type": "IReadOnlyList<DiagramEdge>"
+        },
+        {
+          "name": "PastedNodes",
+          "kind": "Property",
+          "type": "IReadOnlyList<DiagramNode>"
         }
       ]
     },
@@ -2051,19 +2059,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "PasteSizeCommand",
+          "type": "PasteSizeCommand(DiagramDocument doc, string[] nodeIds)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -2084,19 +2099,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "PasteStyleCommand",
+          "type": "PasteStyleCommand(DiagramDocument doc, string[] nodeIds)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -2157,6 +2179,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2171,19 +2198,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "RemoveLayerCommand",
+          "type": "RemoveLayerCommand(DiagramDocument doc, string layerId)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -2212,6 +2246,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2226,11 +2265,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2239,6 +2273,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2253,11 +2292,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2266,6 +2300,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2280,19 +2319,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "RenameLayerCommand",
+          "type": "RenameLayerCommand(DiagramLayer layer, string newName)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -2313,19 +2359,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "ReorderLayersCommand",
+          "type": "ReorderLayersCommand(DiagramDocument doc, Dictionary<string, int> newOrders)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -2346,11 +2399,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2359,6 +2407,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2373,11 +2426,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2386,6 +2434,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2410,11 +2463,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2423,6 +2471,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2437,11 +2490,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2450,6 +2498,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2464,11 +2517,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2477,6 +2525,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2491,11 +2544,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2504,6 +2552,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2518,11 +2571,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2531,6 +2579,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -2545,11 +2598,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -2558,6 +2606,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3103,11 +3156,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3116,6 +3164,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3130,19 +3183,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "ToggleLayerLockCommand",
+          "type": "ToggleLayerLockCommand(DiagramLayer layer)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -3163,19 +3223,26 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Applies the change to the document."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Restores the state captured before Execute() ran."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "ToggleLayerVisibilityCommand",
+          "type": "ToggleLayerVisibilityCommand(DiagramLayer layer)",
+          "description": "Creates the command."
         }
       ],
       "examples": [
@@ -3196,14 +3263,14 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Priority",
-          "kind": "Field",
-          "type": "int"
-        },
-        {
           "name": "GetStencilSets",
           "kind": "Method",
           "type": "IEnumerable<DiagramStencilSet>"
+        },
+        {
+          "name": "Priority",
+          "kind": "Property",
+          "type": "int"
         }
       ]
     },
@@ -3218,11 +3285,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3231,6 +3293,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3245,11 +3312,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3258,6 +3320,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3272,11 +3339,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3285,6 +3347,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3299,11 +3366,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3312,6 +3374,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3326,11 +3393,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3339,6 +3401,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3353,11 +3420,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3366,6 +3428,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3380,11 +3447,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3393,6 +3455,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3407,11 +3474,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3420,6 +3482,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3434,11 +3501,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3447,6 +3509,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3461,11 +3528,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3474,6 +3536,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3488,11 +3555,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3501,6 +3563,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3515,11 +3582,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3528,6 +3590,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3542,11 +3609,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3555,6 +3617,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3569,11 +3636,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3582,6 +3644,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3596,11 +3663,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3609,6 +3671,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3623,11 +3690,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3636,6 +3698,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3650,11 +3717,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3663,6 +3725,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3677,11 +3744,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "Name",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -3690,6 +3752,11 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -3707,7 +3774,7 @@
           "name": "AddTempoBlazorDiagramEditor",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the diagram editor component group.",
+          "description": "Registers the services required by the diagram editor component group. Also calls AddTempoBlazor().",
           "parameters": [
             {
               "name": "services",

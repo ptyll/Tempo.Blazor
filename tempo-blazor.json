@@ -4427,7 +4427,29 @@
       "description": "Lightweight descriptor used by TmColumnPicker to represent one column's visibility state. Non-generic so TmColumnPicker doesn't need a type parameter.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataTable/ColumnVisibilityItem.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsHideable",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "IsVisible",
+          "kind": "Property",
+          "type": "bool"
+        },
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string"
+        }
+      ]
     },
     {
       "itemName": "CsvDataTableExporter",
@@ -4440,21 +4462,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ContentType",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "FileExtension",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "Format",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Export",
           "kind": "Method",
           "type": "byte[]",
@@ -4464,6 +4471,21 @@
               "type": "DataTableExportData"
             }
           ]
+        },
+        {
+          "name": "ContentType",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "FileExtension",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Format",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -4481,7 +4503,7 @@
           "name": "Parse",
           "kind": "Method",
           "type": "ImportParseResult",
-          "description": "Parses raw CSV text using the given options.",
+          "description": "Static helper that parses already-loaded CSV text using the given options.",
           "parameters": [
             {
               "name": "text",
@@ -4490,6 +4512,29 @@
             {
               "name": "options",
               "type": "ImportParseOptions"
+            }
+          ]
+        },
+        {
+          "name": "ParseAsync",
+          "kind": "Method",
+          "type": "Task<ImportParseResult>",
+          "description": "Reads the stream as UTF-8 (BOM stripped) and parses its contents into detected columns and raw string rows.",
+          "parameters": [
+            {
+              "name": "stream",
+              "type": "Stream",
+              "description": "Readable stream of the uploaded file's bytes."
+            },
+            {
+              "name": "options",
+              "type": "ImportParseOptions",
+              "description": "Parsing options (header handling, delimiter)."
+            },
+            {
+              "name": "ct",
+              "type": "CancellationToken",
+              "description": "Token used to cancel the operation."
             }
           ]
         }
@@ -4503,7 +4548,45 @@
       "description": "Paging state handed to TmDataTable.PaginationInfoTemplate: CurrentPage, TotalPages, PageSize, TotalCount and the 1-based StartItem/EndItem range of the current page (both 0 when there are no items). Lets a host render its own item-count wording instead of the built-in TmDataTable_ShowingItems text.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataTable/DataTablePaginationInfo.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CurrentPage",
+          "kind": "Property",
+          "type": "int",
+          "description": "1-based index of the page currently displayed."
+        },
+        {
+          "name": "EndItem",
+          "kind": "Property",
+          "type": "int",
+          "description": "1-based index of the last item on the current page, or 0 when there are no items."
+        },
+        {
+          "name": "PageSize",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of items per page."
+        },
+        {
+          "name": "StartItem",
+          "kind": "Property",
+          "type": "int",
+          "description": "1-based index of the first item on the current page, or 0 when there are no items."
+        },
+        {
+          "name": "TotalCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of items across all pages."
+        },
+        {
+          "name": "TotalPages",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of pages."
+        }
+      ]
     },
     {
       "itemName": "DataTablePaginationInfoPlacement",
@@ -5569,16 +5652,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "ContentType",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
-          "name": "FileExtension",
-          "kind": "Field",
-          "type": "string"
-        },
-        {
           "name": "Export",
           "kind": "Method",
           "type": "string",
@@ -5604,6 +5677,16 @@
               "type": "string"
             }
           ]
+        },
+        {
+          "name": "ContentType",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "FileExtension",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -5666,7 +5749,7 @@
           "name": "GetEntriesAsync",
           "kind": "Method",
           "type": "Task<TimelinePage>",
-          "description": "Filters, orders newest-first, and returns the requested window of entries.",
+          "description": "Applies the query's text/type/internal filters, orders the matches newest-first, and returns the requested Skip/Take window together with the total matching count.",
           "parameters": [
             {
               "name": "query",
@@ -6040,6 +6123,16 @@
           "kind": "Property",
           "type": "bool",
           "description": "Disables this specific option."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string"
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "TValue"
         }
       ]
     },
@@ -6100,16 +6193,16 @@
           "description": "Stable identifier. Must match the id attribute of the corresponding in-page section."
         },
         {
-          "name": "Label",
-          "kind": "Property",
-          "type": "string",
-          "description": "Display text shown by the default item rendering."
-        },
-        {
           "name": "IsVisible",
           "kind": "Property",
           "type": "bool",
           "description": "When false, the item is excluded from the rendered list. Defaults to true."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "Display text shown by the default item rendering."
         },
         {
           "name": "Order",
@@ -6567,7 +6660,33 @@
       "description": "Value and metadata emitted by TmSignatureCapture.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmSignatureCaptureChangedEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Mode",
+          "kind": "Property",
+          "type": "TmSignatureCaptureMode",
+          "description": "Mode that produced the signature."
+        },
+        {
+          "name": "Reason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional signing reason."
+        },
+        {
+          "name": "RememberSignature",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the signer asked to remember the signature."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Captured signature value."
+        }
+      ]
     },
     {
       "itemName": "TmSignatureCaptureExportFormat",
@@ -6943,7 +7062,7 @@
           "name": "AddInMemoryNotifications",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Replaces the default NoOpNotificationService with InMemoryNotificationStore so notifications are kept in memory. Use this in demo / test applications where you want to see notifications without a real backend.",
+          "description": "Replaces the default with so notifications are kept in memory. Also replaces with the same store so the badge count is live. Use this in demo / test applications where you want to see notifications without a real backend.",
           "parameters": [
             {
               "name": "services",
@@ -6955,7 +7074,7 @@
           "name": "AddTempoBlazor",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ITmRelativeTimeFormatter: Scoped relative-time formatter. It resolves ITmLocalizer and TimeProvider from the current scope, so a scoped localizer (language, tenant) is not captured once for every circuit. The default clock is System, whose LocalTimeZone is the server's zone — wrong for a Blazor Server circuit. Give the formatter its own user clock by replacing this registration with a scoped ITmRelativeTimeFormatter over a TimeProvider that reads the circuit's zone lazily (IANA id from the browser once per circuit, TimeZoneInfo.FindSystemTimeZoneById with a fallback to UTC, re-render once it arrives). Never replace the app-wide TimeProvider: Kestrel and cookie authentication are singletons that consume it, so a scoped replacement fails the host under ValidateScopes. No component takes a time-zone parameter for this. ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
+          "description": "Registers the core Tempo.Blazor services shared by all component groups. ITmLocalizer: Singleton (stateless, thread-safe, backed by embedded JSON) ThemeService: Scoped (per-circuit in Server mode, per-tab in WASM) ToastService: Scoped (per-circuit in Server mode, per-tab in WASM) DragDropService: Scoped drag/drop state shared by core components Add this call to your Blazor Program.cs: builder.Services.AddTempoBlazor(); To override the built-in localization with your own strings, register a custom ITmLocalizer AFTER this call: builder.Services.AddTempoBlazor(); builder.Services.AddSingleton<ITmLocalizer, MyCustomTmLocalizer>(); To support Czech localization, configure culture in Program.cs: var culture = new System.Globalization.CultureInfo(\"cs\"); System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture; System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;",
           "parameters": [
             {
               "name": "services",
@@ -23654,12 +23773,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "UnreadCount",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total unread notification count across recipients."
-        },
-        {
           "name": "ClearAll",
           "kind": "Method",
           "type": "void",
@@ -23764,6 +23877,38 @@
           "kind": "Method",
           "type": "void",
           "description": "Clears all stored notifications."
+        },
+        {
+          "name": "UnreadCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total unread notification count across recipients."
+        },
+        {
+          "name": "Capabilities",
+          "kind": "Property",
+          "type": "TmNotificationServiceCapabilities"
+        },
+        {
+          "name": "OnChanged",
+          "kind": "Event",
+          "type": "Action?"
+        },
+        {
+          "name": "GetNotificationsAsync",
+          "kind": "Method",
+          "type": "Task<IReadOnlyList<TmNotification>>",
+          "parameters": [
+            {
+              "name": "query",
+              "type": "TmNotificationQuery"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken",
+              "default": "default"
+            }
+          ]
         }
       ]
     },
@@ -23777,12 +23922,6 @@
       "sourcePath": "src/Tempo.Blazor/Services/InMemoryPushSubscriptionStore.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Count",
-          "kind": "Field",
-          "type": "int",
-          "description": "Total number of stored subscriptions (test/diagnostic helper)."
-        },
         {
           "name": "Clear",
           "kind": "Method",
@@ -23836,6 +23975,12 @@
               "default": "default"
             }
           ]
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "Total number of stored subscriptions (test/diagnostic helper)."
         }
       ]
     },
@@ -23909,11 +24054,6 @@
       "sourcePath": "src/Tempo.Blazor/Services/NoOpNotificationService.cs",
       "documentationStatus": "merged",
       "members": [
-        {
-          "name": "Capabilities",
-          "kind": "Field",
-          "type": "TmNotificationServiceCapabilities"
-        },
         {
           "name": "GetNotificationsAsync",
           "kind": "Method",
@@ -23997,6 +24137,16 @@
               "default": "default"
             }
           ]
+        },
+        {
+          "name": "Capabilities",
+          "kind": "Property",
+          "type": "TmNotificationServiceCapabilities"
+        },
+        {
+          "name": "OnChanged",
+          "kind": "Event",
+          "type": "Action?"
         }
       ]
     },
@@ -24064,22 +24214,22 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "Toggle",
+          "kind": "Method",
+          "type": "void",
+          "description": "Toggles between light and dark theme."
+        },
+        {
           "name": "IsDark",
-          "kind": "Field",
+          "kind": "Property",
           "type": "bool",
           "description": "Gets whether the dark theme is currently active."
         },
         {
           "name": "ThemeName",
-          "kind": "Field",
+          "kind": "Property",
           "type": "string",
           "description": "Gets the current theme name (\"dark\" or \"light\")."
-        },
-        {
-          "name": "Toggle",
-          "kind": "Method",
-          "type": "void",
-          "description": "Toggles between light and dark theme."
         }
       ]
     },

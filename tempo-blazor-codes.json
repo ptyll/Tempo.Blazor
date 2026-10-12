@@ -175,7 +175,7 @@
           "name": "AddTempoBlazorCodes",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the QR code and barcode component group.",
+          "description": "Registers the services required by the QR code and barcode component group. Also calls AddTempoBlazor().",
           "parameters": [
             {
               "name": "services",

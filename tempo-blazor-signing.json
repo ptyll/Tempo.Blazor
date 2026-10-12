@@ -73,7 +73,21 @@
       "description": "Payload emitted by the document comment composer when text is submitted.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/DocumentCommentComposerSubmitEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Body",
+          "kind": "Property",
+          "type": "string",
+          "description": "Plain text body."
+        },
+        {
+          "name": "Mentions",
+          "kind": "Property",
+          "type": "IReadOnlyList<DocumentCommentMention>",
+          "description": "Mentions detected in the body."
+        }
+      ]
     },
     {
       "itemName": "DocumentCommentThreadNavigateRequest",
@@ -133,7 +147,21 @@
       "description": "Pointer event data for a document page viewer interaction.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmDocumentPageViewerPointerEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "MouseEventArgs",
+          "kind": "Property",
+          "type": "MouseEventArgs",
+          "description": "Original Blazor mouse event arguments."
+        },
+        {
+          "name": "Page",
+          "kind": "Property",
+          "type": "SigningDocumentPage",
+          "description": "Document page associated with the event."
+        }
+      ]
     },
     {
       "itemName": "TmRecipientRoleEditorMode",
@@ -177,7 +205,27 @@
       "description": "Pointer event data for a signing field overlay interaction.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFieldOverlayPointerEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Area",
+          "kind": "Property",
+          "type": "SigningFieldArea?",
+          "description": "Optional document area associated with the event."
+        },
+        {
+          "name": "Field",
+          "kind": "Property",
+          "type": "SigningField",
+          "description": "Signing field associated with the event."
+        },
+        {
+          "name": "MouseEventArgs",
+          "kind": "Property",
+          "type": "MouseEventArgs",
+          "description": "Original Blazor mouse event arguments."
+        }
+      ]
     },
     {
       "itemName": "TmSigningFieldOverlayResizeEventArgs",
@@ -187,7 +235,33 @@
       "description": "Pointer event data for starting a signing field resize operation.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFieldOverlayResizeEventArgs.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Area",
+          "kind": "Property",
+          "type": "SigningFieldArea?",
+          "description": "Optional document area associated with the resize operation."
+        },
+        {
+          "name": "Field",
+          "kind": "Property",
+          "type": "SigningField",
+          "description": "Signing field associated with the resize operation."
+        },
+        {
+          "name": "Handle",
+          "kind": "Property",
+          "type": "SigningResizeHandle",
+          "description": "Resize handle that started the operation."
+        },
+        {
+          "name": "MouseEventArgs",
+          "kind": "Property",
+          "type": "MouseEventArgs",
+          "description": "Original Blazor mouse event arguments."
+        }
+      ]
     },
     {
       "itemName": "TmSigningFormRunnerMobilePanelMode",

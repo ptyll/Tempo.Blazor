@@ -172,17 +172,20 @@
               "name": "command",
               "type": "ISpreadsheetCommand"
             }
-          ]
+          ],
+          "description": "Appends a command to the batch."
         },
         {
           "name": "Execute",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Runs every command in insertion order."
         },
         {
           "name": "Undo",
           "kind": "Method",
-          "type": "void"
+          "type": "void",
+          "description": "Undoes every command in reverse order."
         }
       ],
       "examples": [
@@ -575,12 +578,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "AffectedCellRefs",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "Cell references changed by the latest paste execution."
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -589,6 +586,12 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "AffectedCellRefs",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Cell references changed by the latest paste execution."
         }
       ]
     },
@@ -603,12 +606,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "AffectedCellRefs",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "The cell references changed by the latest paste (for renderer invalidation)."
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -617,6 +614,12 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "AffectedCellRefs",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The cell references changed by the latest paste (for renderer invalidation)."
         }
       ]
     },
@@ -631,18 +634,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "AffectedCellRefs",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "The cell references touched by the last Execute (for renderer invalidation)."
-        },
-        {
-          "name": "HasMergeConflict",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when the range intersects a merged cell and therefore cannot be deduplicated."
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -651,6 +642,18 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "AffectedCellRefs",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The cell references touched by the last Execute (for renderer invalidation)."
+        },
+        {
+          "name": "HasMergeConflict",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the range intersects a merged cell and therefore cannot be deduplicated."
         },
         {
           "name": "RemainingCount",
@@ -903,18 +906,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "AffectedCellRefs",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "The cell references touched by the last Execute (for renderer invalidation)."
-        },
-        {
-          "name": "HasMergeConflict",
-          "kind": "Field",
-          "type": "bool",
-          "description": "True when the range intersects a merged cell and therefore cannot be sorted."
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -923,6 +914,18 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "AffectedCellRefs",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The cell references touched by the last Execute (for renderer invalidation)."
+        },
+        {
+          "name": "HasMergeConflict",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the range intersects a merged cell and therefore cannot be sorted."
         }
       ]
     },
@@ -1005,18 +1008,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "CanRedo",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether a redo operation is available."
-        },
-        {
-          "name": "CanUndo",
-          "kind": "Field",
-          "type": "bool",
-          "description": "Whether an undo operation is available."
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void",
@@ -1039,6 +1030,18 @@
           "kind": "Method",
           "type": "void",
           "description": "Undoes the last command."
+        },
+        {
+          "name": "CanRedo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a redo operation is available."
+        },
+        {
+          "name": "CanUndo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether an undo operation is available."
         }
       ]
     },
@@ -1344,12 +1347,6 @@
       "documentationStatus": "merged",
       "members": [
         {
-          "name": "AffectedCellRefs",
-          "kind": "Field",
-          "type": "IReadOnlyList<string>",
-          "description": "The cell references touched by the last Execute (for renderer invalidation)."
-        },
-        {
           "name": "Execute",
           "kind": "Method",
           "type": "void"
@@ -1358,6 +1355,12 @@
           "name": "Undo",
           "kind": "Method",
           "type": "void"
+        },
+        {
+          "name": "AffectedCellRefs",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The cell references touched by the last Execute (for renderer invalidation)."
         },
         {
           "name": "ColumnsProduced",
@@ -1513,7 +1516,7 @@
           "name": "AddTempoBlazorSpreadsheet",
           "kind": "Method",
           "type": "IServiceCollection",
-          "description": "Registers services required by the spreadsheet component group.",
+          "description": "Registers the services required by the spreadsheet component group. Also calls AddTempoBlazor().",
           "parameters": [
             {
               "name": "services",

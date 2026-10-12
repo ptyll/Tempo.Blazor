@@ -1179,7 +1179,7 @@ internal sealed record PublicTypeDocumentation(string Name, string Kind, string?
 
 internal sealed record PublicTypeScope(string Name, int BodyDepth);
 
-internal static class SourceDocParser
+internal static partial class SourceDocParser
 {
     private static readonly Regex NamespaceRegex = new(@"(?m)^\s*namespace\s+([A-Za-z0-9_.]+)", RegexOptions.Compiled);
 
@@ -1189,7 +1189,10 @@ internal static class SourceDocParser
         RegexOptions.Compiled,
         GeneratorRegex.MatchTimeout);
     private static readonly Regex PropertyLineRegex = new(
-        @"public\s+(?<type>.+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;",
+        // `(?:get|init|set)\b` instead of `get;` also admits accessor-bodied properties whose
+        // accessors have bodies (`{ get => _value; init => … }`) and init-only properties — the
+        // member kind is still Property either way.
+        @"public\s+(?<type>.+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*(?:get|init|set)\b",
         RegexOptions.Compiled,
         GeneratorRegex.MatchTimeout);
     private static readonly Regex FieldLineRegex = new(
@@ -1369,10 +1372,14 @@ internal static class SourceDocParser
         {
             var line = lines[i].Trim();
             var declarationPart = line.Split('=', 2)[0];
+            // IsExpressionBody: the first '=' of an expression-bodied member is its '=>', not an
+            // initializer — without this guard the field loop below would mis-kind every
+            // `public bool IsMobile => …;` property as a Field.
             if (!line.StartsWith("public ", StringComparison.Ordinal)
                 || !line.Contains(';')
                 || declarationPart.Contains('(')
                 || declarationPart.Contains('{')
+                || IsExpressionBody(line)
                 || line.StartsWith("public event ", StringComparison.Ordinal))
             {
                 continue;
@@ -1426,9 +1433,20 @@ internal static class SourceDocParser
                 ParseMethodParameters(match.Groups["params"].Value)));
         }
 
+        // Expression-bodied properties and positional record parameters are public members the
+        // line loops above cannot see (their declarations carry neither `{` nor `;`-terminated
+        // field shape). They are appended after every explicit declaration, so the dedupe below
+        // keeps the explicit one first.
+        members.AddRange(ExtractExpressionBodiedProperties(lines, typeName));
+        members.AddRange(ExtractPositionalRecordParameters(source, lines, typeName));
+
         return members
             .GroupBy(m => $"{m.Kind}:{m.Name}", StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
+            // An explicit body declaration and a same-named positional record parameter (both
+            // members of the generated property) collapse to one entry; prefer whichever carries
+            // a description so `<param>` docs are not lost behind a doc-less property, and an
+            // explicit property's richer body doc wins over the positional <param>.
+            .Select(g => g.FirstOrDefault(m => !string.IsNullOrWhiteSpace(m.Description)) ?? g.First())
             .OrderBy(m => m.Kind, StringComparer.OrdinalIgnoreCase)
             .ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
             .Take(80)
@@ -1639,6 +1657,9 @@ internal static class DocumentJsonMerger
                 case "parameters" when kvp.Value is JsonArray manualParams && merged["parameters"] is JsonArray generatedParams:
                     merged["parameters"] = MergeParameters(generatedParams, manualParams);
                     break;
+                case "members" when kvp.Value is JsonArray manualMembers && merged["members"] is JsonArray generatedMembers:
+                    merged["members"] = MergeMembers(generatedMembers, manualMembers);
+                    break;
                 case "requiredImports" when kvp.Value is JsonArray manualImports && merged["requiredImports"] is JsonArray generatedImports:
                     merged["requiredImports"] = MergeStringArrays(generatedImports, manualImports);
                     break;
@@ -1708,6 +1729,105 @@ internal static class DocumentJsonMerger
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Merges the overlay's curated <c>members</c> entries into the generated array. Mirrors
+    /// <see cref="MergeParameters"/>: generated entries keep their order, kind and type (the
+    /// source of truth for the API shape); an overlay entry matched by name (case-insensitive)
+    /// contributes its prose — description, examples and remarks — whenever the overlay carries a
+    /// non-empty description, while any other key is copied only when the generated entry lacks
+    /// it. Overlay entries for names the generator did not produce are appended at the end. For
+    /// overloaded names (the same name repeated in the generated array) the overlay entry is
+    /// applied only when its <c>type</c> matches, so a method overload never inherits another
+    /// overload's prose.
+    /// </summary>
+    private static JsonArray MergeMembers(JsonArray generated, JsonArray manual)
+    {
+        var manualByName = manual.OfType<JsonObject>()
+            .Where(m => !string.IsNullOrWhiteSpace(m.GetString("name")))
+            .GroupBy(m => m.GetString("name")!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+        var generatedNameCounts = generated.OfType<JsonObject>()
+            .Where(m => !string.IsNullOrWhiteSpace(m.GetString("name")))
+            .GroupBy(m => m.GetString("name")!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        var result = new JsonArray();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var generatedMember in generated.OfType<JsonObject>())
+        {
+            var name = generatedMember.GetString("name") ?? "";
+            var merged = generatedMember.DeepClone().AsObject();
+            if (manualByName.TryGetValue(name, out var candidates))
+            {
+                // For an overloaded name (the same name repeated in the generated array) the
+                // overlay entry is applied only when its type matches, so it never decorates a
+                // sibling overload.
+                var manualMember = generatedNameCounts[name] > 1
+                    ? candidates.FirstOrDefault(c => MemberTypeMatches(c, generatedMember))
+                    : candidates[0];
+                if (manualMember is not null)
+                {
+                    // The overlay is the editable source, so its prose wins — but only when it
+                    // actually says something; an empty overlay description must not blank out a
+                    // generated one.
+                    var overlayDescribes = !string.IsNullOrWhiteSpace(manualMember.GetString("description"));
+                    foreach (var kvp in manualMember)
+                    {
+                        if (kvp.Key is "kind" or "type")
+                        {
+                            continue;
+                        }
+
+                        if (kvp.Key is "description" or "examples" or "remarks")
+                        {
+                            if (overlayDescribes)
+                            {
+                                merged[kvp.Key] = kvp.Value?.DeepClone();
+                            }
+
+                            continue;
+                        }
+
+                        if (!merged.ContainsKey(kvp.Key))
+                        {
+                            merged[kvp.Key] = kvp.Value?.DeepClone();
+                        }
+                    }
+                }
+            }
+
+            seen.Add(name);
+            result.Add(merged);
+        }
+
+        foreach (var manualMember in manual.OfType<JsonObject>())
+        {
+            var name = manualMember.GetString("name") ?? "";
+            if (!seen.Contains(name))
+            {
+                result.Add(manualMember.DeepClone());
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>True when both entries state the same member type (whitespace-normalised).</summary>
+    private static bool MemberTypeMatches(JsonObject overlayMember, JsonObject generatedMember)
+    {
+        var overlayType = overlayMember.GetString("type");
+        var generatedType = generatedMember.GetString("type");
+        if (string.IsNullOrWhiteSpace(overlayType) || string.IsNullOrWhiteSpace(generatedType))
+        {
+            return false;
+        }
+
+        return string.Equals(
+            Regex.Replace(overlayType, @"\s+", " ").Trim(),
+            Regex.Replace(generatedType, @"\s+", " ").Trim(),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static JsonArray MergeStringArrays(JsonArray first, JsonArray second)
