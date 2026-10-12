@@ -88,8 +88,18 @@ jobs:
             echo "Using CI version: $BASE_VERSION-ci-$TIMESTAMP"
           fi
 
+      - name: Force the CSS bundler to run
+        # Same as publish-nuget.yml: BundleCssFiles is incremental, a fresh checkout gives every file
+        # one mtime, so without the touch the freshness diff below compares the bundle with itself.
+        run: touch src/Tempo.Blazor/wwwroot/css/tempo-blazor.css
+
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Verify the committed CSS bundle is fresh
+        # A stale committed bundle would ship last cycle's CSS; eol=lf in .gitattributes keeps the
+        # diff stable. ReleaseGateFilterTests guards the presence AND the order of both steps.
+        run: git diff --exit-code -- src/Tempo.Blazor/wwwroot/css/tempo-blazor.bundled.css
 
       # Named exceptions of the release gate (DEC-TEMPO-RELEASE-GATE):
       #   Tempo.Blazor.E2E — Playwright over the demo hosts; excluded from this lane because

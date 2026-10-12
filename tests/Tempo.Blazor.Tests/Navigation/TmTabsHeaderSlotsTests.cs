@@ -48,7 +48,8 @@ public class TmTabsHeaderSlotsTests : LocalizationTestBase
     /// Measured delta when the markers are left in: 1458 bytes vs the frozen 1269, i.e. exactly
     /// 3 x 63 characters for the three tab buttons and NOTHING else. That is the whole reason the
     /// removal count is asserted below: a normaliser that quietly swallowed a second change would
-    /// hand back a green hash for markup that really had moved.
+    /// hand back a green hash for markup that really had moved. CRLF→LF is the only other
+    /// normalisation (see <see cref="NormalizeForBaselineHash"/>).
     /// </para>
     /// </summary>
     private static readonly Regex ElementReferenceMarker =
@@ -60,7 +61,6 @@ public class TmTabsHeaderSlotsTests : LocalizationTestBase
     public void NoSlotMarkupIsByteIdenticalToTheFrozenPreSlotBaseline()
     {
         var rendered = RenderNoSlots().Markup;
-        var markup = ElementReferenceMarker.Replace(rendered, string.Empty);
 
         ElementReferenceMarker.Matches(rendered).Count.Should().Be(
             3,
@@ -69,6 +69,7 @@ public class TmTabsHeaderSlotsTests : LocalizationTestBase
             + "markup and the normaliser is no longer removing only what it documents; rendered:\n{0}",
             rendered);
 
+        var markup = NormalizeForBaselineHash(rendered);
         var bytes = Encoding.UTF8.GetBytes(markup);
         var sha = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
@@ -78,6 +79,38 @@ public class TmTabsHeaderSlotsTests : LocalizationTestBase
             + "(measured {0} bytes, expected 1269); rendered markup was:\n{1}",
             bytes.Length,
             markup);
+    }
+
+    /// <summary>
+    /// Line endings are a property of the CHECKOUT, not of the DOM contract the frozen hash locks:
+    /// the Razor compiler copies the source file's literal line endings into the render tree, so a
+    /// CRLF working copy (<c>core.autocrlf=true</c>) renders <c>\r\n</c> where the LF tree the
+    /// baseline was measured on renders <c>\n</c> — two bytes on this fixture, but enough to break
+    /// the byte identity above for a checkout that is otherwise perfect. The hash over the LF form
+    /// and over its CRLF twin must therefore be the same, and the LF form must be the frozen
+    /// baseline itself (the denominator: two wrong hashes would otherwise compare equal).
+    /// </summary>
+    [Fact]
+    public void TheBaselineHash_DoesNotDependOnTheCheckoutLineEndings()
+    {
+        var rendered = RenderNoSlots().Markup;
+
+        // Normalise FIRST, then re-synthesise the CRLF twin from the LF form: the raw render's
+        // endings follow the checkout, so converting the raw text could double every CR on a CRLF
+        // machine — and \r\r\n is a genuinely different string no CR-removing normaliser maps back.
+        var lf = NormalizeForBaselineHash(rendered);
+        var crlf = lf.Replace("\n", "\r\n", StringComparison.Ordinal);
+
+        PreSlotHash(lf).Should().Be(
+            PreSlotMarkupSha256,
+            "the denominator: the normalised form must be the frozen pre-slot markup itself, or the "
+            + "CRLF comparison below could pass over two equally wrong hashes");
+
+        PreSlotHash(crlf).Should().Be(
+            PreSlotHash(lf),
+            "the same markup with CRLF line endings must hash exactly like its LF twin — a Windows "
+            + "checkout under core.autocrlf=true renders \r\n where an LF checkout renders \n, and "
+            + "the frozen baseline measures the DOM contract, not the checkout");
     }
 
     [Fact]
@@ -265,6 +298,28 @@ public class TmTabsHeaderSlotsTests : LocalizationTestBase
     }
 
     // ── Helpers ────────────────────────────────────────────
+
+    /// <summary>
+    /// The normalisations EVERY baseline comparison applies before hashing, in documented order:
+    /// the element-reference capture marker (<see cref="ElementReferenceMarker"/>, asserted to be
+    /// exactly three before it is removed) and CRLF→LF. The second normalisation exists because the
+    /// Razor compiler copies the source file's literal line endings into the markup — a CRLF
+    /// working copy renders <c>\r\n</c> where the LF tree the frozen baseline was measured on
+    /// renders <c>\n</c>. Line endings are a property of the checkout, not of the DOM contract this
+    /// hash freezes; 2 bytes on this fixture (three tab-strip rows carrying one <c>\r</c> each).
+    /// </summary>
+    private static string NormalizeForBaselineHash(string markup) =>
+        ElementReferenceMarker.Replace(markup, string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+
+    /// <summary>The sha256 of <paramref name="markup"/> after <see cref="NormalizeForBaselineHash"/>.</summary>
+    private static string PreSlotHash(string markup)
+    {
+        var normalized = NormalizeForBaselineHash(markup);
+        var bytes = Encoding.UTF8.GetBytes(normalized);
+        return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    }
 
     /// <summary>
     /// Renders the exact fixture the frozen <see cref="PreSlotMarkupSha256"/> was measured from —
