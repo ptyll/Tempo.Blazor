@@ -1154,6 +1154,15 @@
     gap: var(--tm-space-3, 0.75rem);
     border: none;
     text-align: right;
+    /* Cell content must wrap within the card: an unbroken token (id, hash,
+       long name) otherwise overflows the card edge. overflow-wrap inherits
+       into the anonymous flex item holding bare text; min-width: 0 lets
+       element children shrink below their min-content width. */
+    overflow-wrap: anywhere;
+  }
+
+  .tm-data-table-wrapper--card .tm-data-table tbody td > * {
+    min-width: 0;
   }
 
   .tm-data-table-wrapper--card .tm-data-table tbody td[data-label]::before {

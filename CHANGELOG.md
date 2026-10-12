@@ -870,6 +870,18 @@
   the whole NotionEditor tree so the next inline band value cannot hide in
   markup again.
 
+- **Card-mode `TmDataTable` cells wrap their content.** A card-mode cell is a
+  flex row of `label ::before + content`, but the content side had no line
+  breaking, so a single unbroken token (an id, a hash, a long name without
+  spaces) overflowed the card edge — measured on a consuming app's
+  delegation list at 5–24px past the card border on a 390px viewport. The
+  cell now declares `overflow-wrap: anywhere` (which inherits into the
+  anonymous flex item holding bare text) and direct element children get
+  `min-width: 0` so they may shrink below their min-content width. The rule
+  lives inside the card-mode media query only; desktop/table rendering is
+  unchanged. Verified end-to-end in the consuming app's full-run gate
+  (`r6r7-final`) via its `delegation-list` UX audit.
+
 ### Erratum 2.9.0
 
 Two changes shipped in 2.9.0 under routine fix/feature sections but are
