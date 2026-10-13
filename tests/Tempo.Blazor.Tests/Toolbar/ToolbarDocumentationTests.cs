@@ -37,6 +37,24 @@ public class ToolbarDocumentationTests
         // F13/C3: the group prerequisites are done and the component documented.
         doc.Should().Contain("`TmToolbarGroup`").And.Contain("Groups survive into More");
         doc.Should().Contain("done (F13/C3)");
+        // F14/C1: the non-button item contract is done and the component documented.
+        doc.Should().Contain("`TmToolbarItem`").And.Contain("Non-button items").And.Contain("MenuItems");
+        doc.Should().Contain("done (F14/C1)");
+        // F14/C4-a: PreserveFocus is documented.
+        doc.Should().Contain("PreserveFocus").And.Contain("pointerdown");
+    }
+
+    [Fact]
+    public void ToolbarDoc_DocumentsTheItemTabStopContract()
+    {
+        var doc = Read("docs", "toolbar.md");
+
+        // A text-entry control inside a TmToolbarItem stays its own Tab stop (Q-C2 = A).
+        doc.Should().Contain("own Tab stop");
+        // C6: a TmDropdown/TmSplitButton joins the roving set automatically.
+        doc.Should().Contain("joins the roving set").And.Contain("automatically");
+        // C5: the wrapper margin / wider-gap measurement is conservative.
+        doc.Should().Contain("never over-commits").And.Contain("over-reserved");
     }
 
     [Fact]

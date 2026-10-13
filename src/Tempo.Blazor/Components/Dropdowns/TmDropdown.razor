@@ -14,6 +14,7 @@
             class="tm-dropdown-trigger"
             aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
             aria-haspopup="true"
+            data-tm-toolbar-control="@(Toolbar is not null ? string.Empty : null)"
             @onclick="Toggle">
         @if (!string.IsNullOrEmpty(Icon))
         {
@@ -102,6 +103,10 @@
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The toolbar the dropdown sits in, if any: its trigger then joins the toolbar's roving
+    /// tab stop (C6) instead of being its own Tab stop.</summary>
+    [CascadingParameter] private Tempo.Blazor.Components.Toolbar.TmToolbar? Toolbar { get; set; }
 
     private bool _isOpen;
     private bool _focusTriggerAfterClose;

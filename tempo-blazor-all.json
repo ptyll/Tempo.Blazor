@@ -25104,7 +25104,7 @@
           "kind": "Component",
           "category": "Toolbar",
           "namespace": "Tempo.Blazor.Components.Toolbar",
-          "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons into a More menu (a dropdown that is a bottom sheet on phones); buttons grouped in TmToolbarGroup keep a labelled section in that menu. Labels controls the visible button text. Supports sticky positioning.",
+          "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons and TmToolbarItems into a More menu (a dropdown that is a bottom sheet on phones); buttons grouped in TmToolbarGroup keep a labelled section in that menu. Labels controls the visible button text. Supports sticky positioning.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmToolbar.razor",
           "documentationStatus": "merged",
@@ -25254,6 +25254,14 @@
               "description": "Fires when the button is clicked."
             },
             {
+              "name": "PreserveFocus",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it (the pointerdown and mousedown defaults are prevented), so an editor's text selection survives a formatting command. Keyboard activation and the \"More\" entry are unchanged.",
+              "default": "false",
+              "example": "PreserveFocus=\"true\" OnClick=\"@ToggleBold\""
+            },
+            {
               "name": "Pressed",
               "type": "bool?",
               "isRequired": false,
@@ -25385,6 +25393,92 @@
             {
               "title": "Layout-only group (no accessible name, no role)",
               "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\">\n    <TmToolbarGroup Class=\"my-cluster\">\n        <TmToolbarButton Icon=\"@IconNames.Bold\" Tooltip=\"Bold\" />\n        <TmToolbarButton Icon=\"@IconNames.Italic\" Tooltip=\"Italic\" />\n    </TmToolbarGroup>\n</TmToolbar>"
+            }
+          ]
+        },
+        {
+          "itemName": "TmToolbarItem",
+          "kind": "Component",
+          "category": "Toolbar",
+          "namespace": "Tempo.Blazor.Components.Toolbar",
+          "description": "A NON-button control (a select, colour picker, grid picker, toggle or dropdown) that can leave a TmToolbar Overflow=Menu bar like a TmToolbarButton. The wrapper is the measured item: it collapses whole (out of flow, invisible, inert) and its width stays measurable. In the More menu the item is offered as plain menu entries — one entry (MenuLabel + OnMenuInvoke) or a labelled group (MenuItems); a free template inside role=menu is invalid ARIA, so a host action typically opens the full control in a dialog or sheet (MenuKeepOpen). A TmDropdown or TmSplitButton inside a TmToolbar joins the roving tab stop automatically; other custom focusables can be wrapped in a TmToolbarItem.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmToolbarItem.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Toolbar"
+          ],
+          "parameters": [
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The control rendered on the bar (a TmSelect, TmColorPicker, TmToggle, TmDropdown, …)."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class for the wrapper element."
+            },
+            {
+              "name": "Disabled",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Disables the More entry (or every MenuItems entry). The bar control's own disabled state stays the host's: set both.",
+              "default": "false"
+            },
+            {
+              "name": "MenuIcon",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional icon of the single More entry (an IconNames value). Ignored with MenuItems."
+            },
+            {
+              "name": "MenuItems",
+              "type": "IReadOnlyList<TmActionItem>?",
+              "isRequired": false,
+              "description": "Instead of one entry, offer these entries in More, rendered as one labelled group (MenuLabel) in the given order — e.g. the sizes of a font-size select as checkable entries (TmActionItem.Checked). Each entry's Group and GroupLabel are overwritten by this item; every entry needs a unique Id (or a unique Label — the label is the fallback key the menu dedupes and focuses by). The list is compared structurally when the toolbar decides whether to recompute: a fresh-but-equal list per render is not a change, so a host may rebuild it whenever the rendered state changes."
+            },
+            {
+              "name": "MenuKeepOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Maps to TmActionItem.KeepMenuOpen for the single entry: the menu stays open while the surface the action opens is shown (it paints above the menu).",
+              "default": "false"
+            },
+            {
+              "name": "MenuLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The label of the item's More entry (or, with MenuItems, the header and accessible name of its group). With an OnMenuInvoke handler it makes the item collapsible; without one (and without MenuItems) the item never leaves the bar."
+            },
+            {
+              "name": "OnMenuInvoke",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Runs when the user picks the item's single More entry. Typically opens the full control in a dialog or sheet (then set MenuKeepOpen). Invoked exactly once per activation. Together with a non-empty MenuLabel it makes the item collapsible; a label without a handler (and without MenuItems) never leaves the bar. Ignored with MenuItems."
+            },
+            {
+              "name": "Priority",
+              "type": "ToolbarButtonPriority",
+              "isRequired": true,
+              "description": "How important the item is when its TmToolbar runs out of room (ToolbarOverflow.Menu). An overflow rank only — items render in written order. An item collapses only when it offers something in More: MenuItems with entries, or a non-empty MenuLabel bound to an OnMenuInvoke handler; without either it has no menu representation and never leaves the bar (it behaves as ToolbarButtonPriority.Pinned whatever this value is).",
+              "default": "Primary"
+            }
+          ],
+          "cssClasses": [
+            "tm-toolbar-item",
+            "tm-toolbar-item--collapsed"
+          ],
+          "examples": [
+            {
+              "title": "Font-size select collapsing into More as a labelled group",
+              "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\" AriaLabel=\"Text tools\">\n    <TmToolbarItem MenuLabel=\"Font size\" Priority=\"ToolbarButtonPriority.Secondary\" MenuItems=\"@_fontSizes\">\n        <TmSelect TValue=\"int\" Value=\"@_fontSize\" ValueChanged=\"@OnFontSize\" Options=\"@_fontSizeOptions\" />\n    </TmToolbarItem>\n    <TmToolbarButton Icon=\"save\" Text=\"Save\" />\n</TmToolbar>\n\n@code {\n    private readonly IReadOnlyList<TmActionItem> _fontSizes = new[] { 8, 10, 12, 14, 18 }\n        .Select(s => new TmActionItem { Label = s.ToString(), Checked = _fontSize == s ? true : null,\n            OnClick = EventCallback.Factory.Create(this, () => _fontSize = s) })\n        .ToList();\n}"
+            },
+            {
+              "title": "Colour picker offered as one entry that opens a dialog (menu stays open)",
+              "code": "<TmToolbarItem MenuLabel=\"Text colour\" Priority=\"ToolbarButtonPriority.Secondary\"\n             OnMenuInvoke=\"@OpenColourDialog\" MenuKeepOpen=\"true\">\n    <TmColorPicker @bind-Value=\"_textColour\" Placeholder=\"Text colour\" />\n</TmToolbarItem>"
             }
           ]
         },
@@ -26866,11 +26960,11 @@
         }
       ],
       "summary": {
-        "itemCount": 370,
-        "manualItemCount": 370,
-        "generatedItemCount": 362,
+        "itemCount": 371,
+        "manualItemCount": 371,
+        "generatedItemCount": 363,
         "generatedOnlyItemCount": 0,
-        "componentCount": 202,
+        "componentCount": 203,
         "publicApiTypeCount": 160
       }
     },
@@ -114436,10 +114530,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3200,
-    "manualItemCount": 3200,
+    "itemCount": 3201,
+    "manualItemCount": 3201,
     "generatedOnlyItemCount": 0,
-    "componentCount": 473,
+    "componentCount": 474,
     "publicApiTypeCount": 2674
   }
 }

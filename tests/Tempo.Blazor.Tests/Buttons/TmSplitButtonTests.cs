@@ -192,4 +192,40 @@ public class TmSplitButtonTests : LocalizationTestBase
     }
 
     private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+
+    // ── C6: inside a TmToolbar both parts join the roving set ────────────────────────────────────
+
+    [Fact]
+    public void Parts_InsideTmToolbar_BothCarryDataTmToolbarControl()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toolbar.js");
+        module.SetupVoid("attach", _ => true).SetVoidResult();
+        module.SetupVoid("detach", _ => true).SetVoidResult();
+
+        var cut = Render<Tempo.Blazor.Components.Toolbar.TmToolbar>(p => p
+            .Add(c => c.Overflow, Tempo.Blazor.Components.Toolbar.ToolbarOverflow.None)
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmSplitButton>(0);
+                b.AddComponentParameter(1, nameof(TmSplitButton.Text), "Save");
+                b.AddComponentParameter(2, nameof(TmSplitButton.ChildContent),
+                    (RenderFragment)(inner => inner.AddMarkupContent(0, "<button role='menuitem'>Draft</button>")));
+                b.CloseComponent();
+            })));
+
+        cut.Find(".tm-split-button__toggle").HasAttribute("data-tm-toolbar-control").Should().BeTrue();
+        cut.Find(".tm-split-button__primary").HasAttribute("data-tm-toolbar-control").Should().BeTrue(
+            "both parts are arrow stops of the toolbar's one roving tab stop");
+    }
+
+    [Fact]
+    public void Parts_Standalone_HaveNoToolbarControlAttribute()
+    {
+        var cut = Render<TmSplitButton>(p => p
+            .Add(x => x.Text, "Save")
+            .AddChildContent("<button role='menuitem'>Draft</button>"));
+
+        cut.Find(".tm-split-button__toggle").HasAttribute("data-tm-toolbar-control").Should().BeFalse();
+        cut.Find(".tm-split-button__primary").HasAttribute("data-tm-toolbar-control").Should().BeFalse();
+    }
 }

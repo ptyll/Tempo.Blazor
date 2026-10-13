@@ -1,6 +1,6 @@
 # Toolbar: priorities, overflow and labels
 
-`TmToolbar` holds `TmToolbarButton`s, `TmToolbarDivider`s, `TmToolbarGroup`s and any custom content. Since F4 it can
+`TmToolbar` holds `TmToolbarButton`s, `TmToolbarItem`s, `TmToolbarDivider`s, `TmToolbarGroup`s and any custom content. Since F4 it can
 move the buttons that do not fit into a **More** menu instead of overflowing or scrolling, and
 buttons can show their text next to or under the icon.
 
@@ -29,6 +29,11 @@ buttons can show their text next to or under the icon.
 | `TmToolbarButton` | `LabelPosition` | `Inline` · `Below` · `Hidden` | `Inline` |
 | `TmToolbarButton` | `Pressed` | `bool?` — `null` = plain button, `true`/`false` = toggle | `null` |
 | `TmToolbarButton` | `PressedMixed` | renders a `false` toggle as `aria-pressed="mixed"` | `false` |
+| `TmToolbarButton` | `PreserveFocus` | a pointer press does not move focus to the button (an editor selection survives) | `false` |
+| `TmToolbarItem` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` | `Primary` |
+| `TmToolbarItem` | `MenuLabel` / `MenuIcon` / `OnMenuInvoke` / `MenuKeepOpen` | the single "More" entry | — |
+| `TmToolbarItem` | `MenuItems` | a labelled group of checkable/plain entries instead of one entry | `null` |
+| `TmToolbarItem` | `Disabled` | disables the "More" entry/entries (the bar control stays the host's) | `false` |
 | `TmToolbarGroup` | `Label` | accessible name on the bar and header of the group's section in More | unlabeled (no role) |
 
 ## Overflow = Menu
@@ -63,15 +68,18 @@ buttons can show their text next to or under the icon.
   measurable; that is why widening the toolbar brings it back without a second pass. A bar that cannot
   be measured (no item in the DOM, not laid out) reports nothing rather than "0 fit". The module
   detaches itself when its root leaves the document.
-* **Items at any depth, and groups.** Every `TmToolbarButton` below the toolbar registers (cascade) and
+* **Items at any depth, and groups.** Every `TmToolbarButton` and `TmToolbarItem` below the toolbar registers (cascade) and
   is measured wherever it sits. `.tm-toolbar-start` / `.tm-toolbar-actions` are flattened, and so is
   any wrapper that holds items: a semantic group is `<TmToolbarGroup Label="Edit">`, which renders the
   `role="group"` + accessible name + `data-tm-toolbar-group` wrapper (a plain wrapper marked
   `data-tm-toolbar-group` works as a layout-only group); the children take room individually, the
-  wrapper's own horizontal padding and border count as fixed width. Its margin and its own `gap` are
-  **not** measured: the bar's `gap` is assumed for every row, so keep a group wrapper's margin at 0 and
-  its `gap` equal to the bar's (the default `--tm-space-2`). Without the flattening a wrapped group
-  would look like one fixed block with no items and collapse everything into More.
+  wrapper's own horizontal padding and border count as fixed width. Since F14 its **margin and a
+  column gap wider than the bar's are measured too** — conservatively: the wider gap is reserved per
+  adjacency between the wrapper's direct items as if all of them stayed (never over-commits, the I6
+  invariant), a narrower gap is already over-reserved by the bar gap, and the start/actions
+  containers share the bar gap (their margins are not double-counted). Keep a group wrapper's gap
+  equal to the bar's (the default `--tm-space-2`) unless it must be wider. Without the flattening a
+  wrapped group would look like one fixed block with no items and collapse everything into More.
 
   ```razor
   <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Diagram tools">
@@ -113,6 +121,57 @@ buttons can show their text next to or under the icon.
   arrow keys, Home/End and typeahead cross the sections and never stop on a header or a divider
   (`tm-menu-nav.js` roves menu items only), and the initial focus is still the first **enabled**
   menu item.
+
+## Non-button items (`TmToolbarItem`)
+
+Since F14 a toolbar can hold **controls that are not buttons** — a `TmSelect`, `TmColorPicker`,
+`TmToggle`, a custom dropdown — and they leave the bar exactly like a `TmToolbarButton`:
+
+```razor
+<TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Text tools">
+    <TmToolbarItem MenuLabel="Font size" Priority="ToolbarButtonPriority.Secondary" MenuItems="@_sizes">
+        <TmSelect TValue="int" @bind-Value="_fontSize" Options="@_sizeOptions" />
+    </TmToolbarItem>
+    <TmToolbarItem MenuLabel="Text colour" OnMenuInvoke="@OpenColourDialog" MenuKeepOpen="true">
+        <TmColorPicker @bind-Value="_colour" />
+    </TmToolbarItem>
+    <TmToolbarButton Icon="@IconNames.Save" Text="Save" />
+</TmToolbar>
+```
+
+* **The wrapper is the measured item.** `TmToolbarItem` renders a `tm-toolbar-item` wrapper carrying
+  `data-tm-toolbar-item` (the item's stable id), `data-rank` and `data-pin`, exactly like a button;
+  `tm-toolbar.js` measures it as ONE item (it is never a layout group, even with nested content) and
+  it collapses whole — out of flow, invisible, `inert` — so its width stays measurable. An item
+  collapses only when it offers something in "More": `MenuItems` with entries, or a non-empty
+  `MenuLabel` bound to an `OnMenuInvoke` handler. Otherwise it has **no menu representation** and
+  never leaves the bar (it behaves as `Pinned` whatever its `Priority`).
+* **In "More" it is plain menu entries — never a free template.** A `RenderFragment` rendered inside
+  `role="menu"` would put a `<select>` in a menu, which is invalid ARIA (a menu may own only
+  menuitem*/group/separator) and could not be roved. So an item offers either **one entry**
+  (`MenuLabel` + `OnMenuInvoke` + optional `MenuIcon`/`MenuKeepOpen` — typically opening the full
+  control in a dialog or sheet while the menu stays open under it) or **a labelled group**
+  (`MenuItems`: the entries render as one `role="group"` section named by `MenuLabel`, checkable
+  entries included, in the given order). `Disabled` disables the entry/entries; the bar control's own
+  disabled state stays the host's.
+* **A `TmToolbarButton` nested in an item never registers twice** — it is part of the item.
+* **Text-entry controls stay their own Tab stop.** A native `select`/`input` inside an item is not in
+  the roving set (the arrows never reach it); the item's first **non-text-entry** focusable (or its
+  host-marked `data-tm-toolbar-control`) is the one arrow stop — a leading text-entry focusable does
+  not hide a later button. `MenuItems` is compared **structurally** when the toolbar decides whether
+  to recompute: a fresh-but-equal list per render is not a change, so a host may rebuild it whenever
+  the state it renders from changes (a reference comparison would loop the recompute). The entries
+  need unique `Id`s (or unique labels — the label is the fallback key the menu focuses by).
+* **OverflowOnly / Pinned** mean exactly what they mean for a button: `OverflowOnly` renders only the
+  hidden zero-width position marker and lives only in "More"; `Pinned` never leaves the bar.
+
+## PreserveFocus: buttons that do not steal the editor's focus
+
+A formatting toolbar button normally takes focus on a pointer press, collapsing the editor's text
+selection. `TmToolbarButton.PreserveFocus="true"` prevents the `pointerdown`/`mousedown` defaults,
+so the selection (and the caret) survives the command; keyboard activation and the "More" entry are
+unchanged. The DocumentEditor and DiagramEditor toolbars build on this for their formatting commands.
+
 * **Focus survives a re-layout.** When the focused bar button collapses into More, focus moves to the
   More trigger (else to the roving stop) instead of dropping to `<body>`; a focus that is still valid or
   that the user moved elsewhere is left alone.
@@ -172,10 +231,13 @@ this component (and asserts that `TmToolbar.razor` uses `ToolbarInterop`, whose 
 path and the `attach` call); any other claim of the role without a roving mechanism still fails the guard.
 
 **Hooks for custom content.** The roving set is `button.tm-toolbar-btn`, `button.tm-toolbar-more` and any
-element marked `data-tm-toolbar-control`: put the attribute on a custom focusable (a `TmDropdown` trigger,
-a select, a toggle) to make it one stop of the roving set instead of a stray Tab stop. A host that renders
-the toolbar row inside its own wrapper marks the measured row `data-tm-toolbar-row` (default: the
-`.tm-toolbar` root itself).
+element marked `data-tm-toolbar-control`: put the attribute on a custom focusable to make it one stop
+of the roving set instead of a stray Tab stop. A `TmDropdown` inside a
+`TmToolbar` joins the roving set **automatically** (its trigger carries the attribute through the
+cascade); a `TmSplitButton` marks **both** its buttons (the primary action and the menu toggle) — two
+arrow stops, one Tab stop. Mark other custom focusables yourself or wrap them in a
+`TmToolbarItem`. A host that renders the toolbar row inside its own wrapper marks the measured row
+`data-tm-toolbar-row` (default: the `.tm-toolbar` root itself).
 
 ## Migrating from the DocumentEditor toolbar (DE-1.2)
 
@@ -196,9 +258,10 @@ DocumentEditor changed here.
 
 The following are **not** in the core yet and gate the adoption (recorded as core follow-ups):
 
-1. **A collapsible non-button item contract** — `Select`, `ColorPicker`, `GridPicker`, `Toggle` and similar
-   custom controls need a `Priority` and a menu-entry template, so they can leave the bar like a button
-   (today only `TmToolbarButton` registers).
+1. **A collapsible non-button item contract** — done (F14/C1): `TmToolbarItem` wraps a `Select`,
+   `ColorPicker`, `GridPicker`, `Toggle` or a similar custom control so it leaves the bar like a
+   button: the wrapper is the measured item, it collapses whole, and in "More" it is one entry or a
+   labelled group of entries (never a free template — a select in `role="menu"` is invalid ARIA).
 2. **Pressed / checked state** — done (F12/C2): `TmToolbarButton.Pressed` → `aria-pressed` →
    `TmActionItem.Checked` → `role="menuitemcheckbox"` in the menu (see "The More menu" above).
 3. **Group headers and separators in `ActionOverflowMenu`** — done (F13/C3): the collapsed members of a

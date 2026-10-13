@@ -51,7 +51,7 @@
         // it), so the toolbar re-computes unconditionally and the open menu re-reads the label.
         if (_labelSeen && !string.Equals(_lastLabel, Label, StringComparison.Ordinal))
         {
-            Toolbar?.ButtonChanged(null);
+            Toolbar?.ItemChanged(null);
         }
 
         _labelSeen = true;

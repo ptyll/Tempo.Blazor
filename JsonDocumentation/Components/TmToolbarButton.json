@@ -77,6 +77,14 @@
       "isRequired": false,
       "default": "false",
       "description": "Renders a toggle whose Pressed is false as partially on — aria-pressed=\"mixed\" on the bar, aria-checked=\"mixed\" in \"More\" (e.g. Bold over a partly bold selection). Ignored when Pressed is null or true."
+    },
+    {
+      "name": "PreserveFocus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, pressing the button with a mouse, pen or finger does not move focus to it (the pointerdown and mousedown defaults are prevented), so an editor's text selection survives a formatting command. Keyboard activation and the \"More\" entry are unchanged.",
+      "example": "PreserveFocus=\"true\" OnClick=\"@ToggleBold\""
     }
   ],
   "cssClasses": [

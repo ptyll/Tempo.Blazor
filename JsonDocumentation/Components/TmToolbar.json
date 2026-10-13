@@ -2,7 +2,7 @@
   "itemName": "TmToolbar",
   "kind": "Component",
   "category": "Toolbar",
-  "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons into a More menu (a dropdown that is a bottom sheet on phones); buttons grouped in TmToolbarGroup keep a labelled section in that menu. Labels controls the visible button text. Supports sticky positioning.",
+  "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons and TmToolbarItems into a More menu (a dropdown that is a bottom sheet on phones); buttons grouped in TmToolbarGroup keep a labelled section in that menu. Labels controls the visible button text. Supports sticky positioning.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Toolbar"
   ],

@@ -225,4 +225,66 @@ public class TmDropdownTests : LocalizationTestBase
         cut.Find("button.tm-dropdown-trigger").GetAttribute("aria-expanded").Should().Be("false");
         cut.FindAll(".tm-drawer").Should().BeEmpty();
     }
+
+    // ── C6: inside a TmToolbar the trigger joins the roving set (one Tab stop fewer) ─────────────
+
+    private static BunitJSModuleInterop SetupToolbarModule(BunitContext context)
+    {
+        var module = context.JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toolbar.js");
+        module.SetupVoid("attach", _ => true).SetVoidResult();
+        module.SetupVoid("detach", _ => true).SetVoidResult();
+        return module;
+    }
+
+    [Fact]
+    public void Trigger_InsideTmToolbar_CarriesDataTmToolbarControl()
+    {
+        SetupToolbarModule(this);
+        var cut = Render<Tempo.Blazor.Components.Toolbar.TmToolbar>(p => p
+            .Add(c => c.Overflow, Tempo.Blazor.Components.Toolbar.ToolbarOverflow.None)
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDropdown>(0);
+                b.AddComponentParameter(1, nameof(TmDropdown.Text), "Export");
+                b.AddComponentParameter(2, nameof(TmDropdown.ChildContent),
+                    (RenderFragment)(inner => inner.AddMarkupContent(0, "<button role='menuitem'>PDF</button>")));
+                b.CloseComponent();
+            })));
+
+        cut.Find("button.tm-dropdown-trigger").HasAttribute("data-tm-toolbar-control").Should().BeTrue(
+            "the trigger is one stop of the toolbar's roving set, not its own Tab stop");
+    }
+
+    [Fact]
+    public void Trigger_Standalone_HasNoToolbarControlAttribute()
+    {
+        var cut = Render<TmDropdown>(p => p
+            .Add(c => c.Text, "Export")
+            .AddChildContent("<div>Item</div>"));
+
+        cut.Find("button.tm-dropdown-trigger").HasAttribute("data-tm-toolbar-control").Should().BeFalse();
+    }
+
+    [Fact]
+    public void Items_InTheMenu_NeverCarryTheHook()
+    {
+        // The menu renders OUTSIDE the toolbar's cascade: its items must not carry the hook, and the
+        // trigger keeps exactly one.
+        SetupToolbarModule(this);
+        var cut = Render<Tempo.Blazor.Components.Toolbar.TmToolbar>(p => p
+            .Add(c => c.Overflow, Tempo.Blazor.Components.Toolbar.ToolbarOverflow.None)
+            .Add(c => c.ChildContent, (RenderFragment)(b =>
+            {
+                b.OpenComponent<TmDropdown>(0);
+                b.AddComponentParameter(1, nameof(TmDropdown.Text), "Export");
+                b.AddComponentParameter(2, nameof(TmDropdown.ChildContent),
+                    (RenderFragment)(inner => inner.AddMarkupContent(0, "<button role='menuitem'>CSV</button>")));
+                b.CloseComponent();
+            })));
+
+        cut.Find("button.tm-dropdown-trigger").Click();
+
+        cut.FindAll("[data-tm-toolbar-control]").Should().HaveCount(1, "only the bar trigger carries the hook");
+        cut.Find("[role='menuitem']").HasAttribute("data-tm-toolbar-control").Should().BeFalse();
+    }
 }

@@ -69,6 +69,9 @@ export function nextRovingIndex(count, current, key, rtl) {
 }
 
 const CONTROL_SELECTOR = 'button.tm-toolbar-btn, button.tm-toolbar-more, [data-tm-toolbar-control]';
+// C1: a TmToolbarItem wrapper contributes ONE control (its first non-text-entry focusable, or the
+// host-marked [data-tm-toolbar-control]) to the roving set.
+const ITEM_WRAPPER = '.tm-toolbar-item';
 // Controls that are not reachable: a collapsed bar copy (visibility:hidden) or anything inside the
 // open More menu / its panel (the menu has its own keyboard, tm-menu-nav.js).
 const COLLAPSED_SELECTOR = '.tm-toolbar-item--collapsed';
@@ -79,12 +82,37 @@ function isDisabled(control) {
 }
 
 /**
- * The controls the arrow keys visit: enabled, on the bar, not inside the More menu.
+ * The control a TmToolbarItem wrapper contributes to the roving set: the host-marked
+ * [data-tm-toolbar-control] or the module-roved [data-tm-toolbar-roved] when there is one, else the
+ * first non-text-entry focusable (a button, a [tabindex] widget, a link). A text-entry control
+ * (select/input/textarea/contenteditable) stays its own Tab stop and contributes nothing — but it
+ * must not hide a LATER focusable either, so the plain selector is filtered, not first-match.
+ * @param {ParentNode} wrapper the .tm-toolbar-item element
+ * @returns {Element|null} the control to rove, or null
+ */
+function itemControl(wrapper) {
+    const marked = wrapper.querySelector?.('[data-tm-toolbar-control], [data-tm-toolbar-roved]');
+    if (marked) return marked;
+    const focusables = wrapper.querySelectorAll?.('button:not([disabled]), [tabindex]:not([tabindex="-1"]), a[href]') ?? [];
+    return Array.from(focusables).find(el => !isTextEntry(el)) ?? null;
+}
+
+/**
+ * The controls the arrow keys visit: enabled, on the bar, not inside the More menu. Plain controls
+ * come from CONTROL_SELECTOR; a TmToolbarItem wrapper contributes itemControl(wrapper). A control is
+ * returned exactly once even when it matches both (a host-marked control inside a wrapper).
  * @param {ParentNode} root the toolbar body
  */
 export function rovingItems(root) {
-    return Array.from(root.querySelectorAll(CONTROL_SELECTOR))
-        .filter(control => !isDisabled(control) && !control.closest(EXCLUDED_SELECTOR));
+    const seen = new Set();
+    const out = [];
+    for (const el of Array.from(root.querySelectorAll(`${CONTROL_SELECTOR}, ${ITEM_WRAPPER}`))) {
+        const control = el.classList?.contains('tm-toolbar-item') ? itemControl(el) : el;
+        if (!control || seen.has(control) || isDisabled(control) || control.closest(EXCLUDED_SELECTOR)) continue;
+        seen.add(control);
+        out.push(control);
+    }
+    return out;
 }
 
 function px(value) {
@@ -99,6 +127,9 @@ const REDUNDANT = 'data-tm-divider-redundant';
 function isFlattened(child) {
     const classes = child.classList;
     if (classes?.contains('tm-toolbar-start') || classes?.contains('tm-toolbar-actions')) return true;
+    // C1: a TmToolbarItem wrapper is a measured ITEM, never a layout group - even when a host nests
+    // another [data-tm-toolbar-item] inside it (the wrapper is measured as ONE item, whole).
+    if ('tmToolbarItem' in (child.dataset ?? {})) return false;
     // A group wrapper (data-tm-toolbar-group, role="group" or ANY wrapper that holds items) is a layout box
     // only: its children take the room. Registration is by the cascade at any depth, so measurement must
     // see items at any depth too - otherwise a wrapped group looks like one fixed block with no items and
@@ -151,6 +182,20 @@ export function computeFit(bar) {
             const wrapperStyle = child.computed ?? globalThis.getComputedStyle?.(child);
             fixed += px(wrapperStyle?.paddingLeft) + px(wrapperStyle?.paddingRight)
                 + px(wrapperStyle?.borderLeftWidth) + px(wrapperStyle?.borderRightWidth);
+            // C5: a wrapper's own margins are fixed width; its own column gap, when WIDER than the bar
+            // gap, is reserved for every adjacency between its direct in-flow children — items AND
+            // fixed content like dividers — as if all of them stayed (conservative: never
+            // over-commits - the I6 invariant; a narrower gap is already over-reserved by the bar
+            // gap). OverflowOnly markers (data-pin=always) and hidden children take no room and
+            // cost no adjacency. The start/actions containers share the bar gap and are skipped
+            // (their margins must not be double-counted).
+            if (!classes?.contains('tm-toolbar-start') && !classes?.contains('tm-toolbar-actions')) {
+                fixed += px(wrapperStyle?.marginLeft) + px(wrapperStyle?.marginRight);
+                const innerGap = px(wrapperStyle?.columnGap) || px(wrapperStyle?.gap);
+                const innerItems = Array.from(child.children ?? [])
+                    .filter(c => c.dataset?.pin !== 'always' && c.hidden !== true).length;
+                if (innerGap > gap && innerItems > 1) fixed += (innerGap - gap) * (innerItems - 1);
+            }
             return;
         }
 
@@ -231,11 +276,30 @@ export function markRedundantDividers(bar) {
 }
 const attached = new WeakMap();
 
+/**
+ * Writes the roving tabindex for one control: the ORIGINAL host value is recorded before the first
+ * write (detach restores it) and a control the plain selectors would lose — a non-native item
+ * control such as a TmColorPicker trigger div[role=button], reachable only through [tabindex]
+ * while that is not -1 — is marked data-tm-toolbar-roved so itemControl keeps finding it.
+ * @param {{managed:Map<Element,string|null>}} state the toolbar state
+ * @param {Element} item the control
+ * @param {string} value "0" (the tab stop) or "-1"
+ */
+function writeTabStop(state, item, value) {
+    if (!state.managed.has(item)) state.managed.set(item, item.getAttribute?.('tabindex') ?? null);
+    item.setAttribute('tabindex', value);
+    if (typeof item.matches !== 'function' || !item.matches(CONTROL_SELECTOR)) {
+        item.setAttribute?.('data-tm-toolbar-roved', '');
+    }
+}
+
 function refreshTabStops(state) {
     const items = rovingItems(state.root);
     if (items.length === 0) return;
     const stop = items.find(item => item.getAttribute('tabindex') === '0') ?? items[0];
-    for (const item of items) item.setAttribute('tabindex', item === stop ? '0' : '-1');
+    for (const item of items) {
+        writeTabStop(state, item, item === stop ? '0' : '-1');
+    }
 }
 
 function isTextEntry(target) {
@@ -319,6 +383,9 @@ export function attach(root, dotNetRef, options) {
         frame: 0,
         disposed: false,
         observers: [],
+        // C1: every control that received a tabindex from this module — detach returns each to the
+        // tabindex it had before the first write (null = none) and never touches a host-owned value.
+        managed: new Map(),
     };
 
     const onKeyDown = event => {
@@ -340,7 +407,9 @@ export function attach(root, dotNetRef, options) {
         const items = rovingItems(root);
         if (!items.includes(event.target)) return;
         state.lastRoving = event.target;
-        for (const item of items) item.setAttribute('tabindex', item === event.target ? '0' : '-1');
+        for (const item of items) {
+            writeTabStop(state, item, item === event.target ? '0' : '-1');
+        }
     };
     const onFocusOut = event => {
         // Focus moved to another element on purpose: never pull it back. (A null relatedTarget is a window blur
@@ -377,7 +446,9 @@ export function attach(root, dotNetRef, options) {
 }
 
 /**
- * Detaches everything attach() set up on the element and returns the controls to the natural tab order.
+ * Detaches everything attach() set up on the element and returns the controls to their original
+ * tab order: a control that had a tabindex before the first write gets that value back, one that
+ * had none loses the module's, and the roved marker leaves with the module.
  * @param {HTMLElement|null} root the element passed to attach
  */
 export function detach(root) {
@@ -390,7 +461,12 @@ export function detach(root) {
     root.removeEventListener('keydown', state.onKeyDown);
     root.removeEventListener('focusin', state.onFocusIn);
     root.removeEventListener('focusout', state.onFocusOut);
-    for (const control of Array.from(root.querySelectorAll(CONTROL_SELECTOR))) control.removeAttribute('tabindex');
+    for (const [control, original] of state.managed) {
+        if (original === null) control.removeAttribute('tabindex');
+        else control.setAttribute('tabindex', original);
+        control.removeAttribute?.('data-tm-toolbar-roved');
+    }
+    state.managed.clear();
     attached.delete(root);
 }
 

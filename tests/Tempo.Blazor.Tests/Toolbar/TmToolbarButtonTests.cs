@@ -70,6 +70,33 @@ public class TmToolbarButtonTests : LocalizationTestBase
 
     // ── C2: the pressed (toggle) state ───────────────────────────────────────────────────────────
 
+    // ── C4-a: PreserveFocus — the editor selection survives a pointer press ──────────────────────
+
+    [Fact]
+    public void PreserveFocus_PreventsPointerAndMouseDownDefaults()
+    {
+        // A formatting toolbar button must not steal the editor's focus/selection on a mouse press:
+        // the pointerdown/mousedown defaults are prevented. bUnit exposes the directive as the
+        // "blazor:on*:preventDefault" attribute in the rendered markup.
+        var cut = Render<TmToolbarButton>(p => p
+            .Add(c => c.Text, "Bold")
+            .Add(c => c.PreserveFocus, true));
+
+        var button = cut.Find("button");
+        button.HasAttribute("blazor:onpointerdown:preventDefault").Should().BeTrue();
+        button.HasAttribute("blazor:onmousedown:preventDefault").Should().BeTrue();
+    }
+
+    [Fact]
+    public void PreserveFocus_False_RendersNoPreventDefaultHooks()
+    {
+        var cut = Render<TmToolbarButton>(p => p.Add(c => c.Text, "Bold"));
+
+        var button = cut.Find("button");
+        button.HasAttribute("blazor:onpointerdown:preventDefault").Should().BeFalse();
+        button.HasAttribute("blazor:onmousedown:preventDefault").Should().BeFalse();
+    }
+
     [Fact]
     public void Pressed_Null_RendersNoAriaPressed()
     {

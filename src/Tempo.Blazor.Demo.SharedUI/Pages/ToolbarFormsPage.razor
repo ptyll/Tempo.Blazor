@@ -1,6 +1,8 @@
 @page "/toolbar-forms"
+@using Tempo.Blazor.Components.Actions
 @using Tempo.Blazor.Components.Toolbar
 @inject ITmLocalizer Loc
+@inject IJSRuntime JS
 <PageTitle>Toolbar & Forms – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -201,6 +203,100 @@
                         <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Variant="ButtonVariant.Primary" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
                     </TmToolbar>
                 </div>
+            </div>
+        </div>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-items-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_ItemsTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_ItemsIntro"]</p>
+            </div>
+            <div class="p-4">
+                @* F14/C1: non-button controls leave the bar like buttons — the wrapper is one measured
+                   item, collapses whole, and in More is a plain entry or a labelled group. The
+                   TmDropdown trigger joins the roving tab stop automatically (C6). *@
+                <div style="width: 760px; max-width: 100%;">
+                    <TmToolbar Overflow="ToolbarOverflow.Menu"
+                               Labels="ToolbarLabels.IconsWithText"
+                               AriaLabel="@Loc["TmToolbarDemo_ItemsTitle"]"
+                               data-testid="toolbar-items">
+                        <ChildContent>
+                            <TmToolbarItem MenuLabel="@Loc["TmToolbarDemo_FontSize"]"
+                                           Priority="ToolbarButtonPriority.Secondary"
+                                           MenuItems="@_fontSizeMenuItems"
+                                           data-testid="toolbar-items-fontsize">
+                                <TmSelect TValue="string"
+                                          Value="@_fontSize"
+                                          ValueChanged="OnFontSizeChanged"
+                                          Options="@_fontSizeOptions"
+                                          Placeholder="@Loc["TmToolbarDemo_FontSize"]"
+                                          data-testid="toolbar-items-fontsize-select" />
+                            </TmToolbarItem>
+                            <TmToolbarItem MenuLabel="@Loc["TmToolbarDemo_TextColor"]"
+                                           Priority="ToolbarButtonPriority.Secondary"
+                                           OnMenuInvoke="@(() => _colorDialogOpen = true)"
+                                           MenuKeepOpen="true"
+                                           data-testid="toolbar-items-color">
+                                <TmColorPicker @bind-Value="_textColor"
+                                               Placeholder="@Loc["TmToolbarDemo_TextColor"]"
+                                               data-testid="toolbar-items-color-picker" />
+                            </TmToolbarItem>
+                            <TmToolbarItem MenuLabel="@Loc["TmToolbarDemo_ShowGrid"]"
+                                           Priority="ToolbarButtonPriority.Secondary"
+                                           MenuItems="@_showGridMenuItems"
+                                           data-testid="toolbar-items-grid">
+                                <TmToggle Value="@_showGrid" ValueChanged="OnShowGridChanged"
+                                          Label="@Loc["TmToolbarDemo_ShowGrid"]"
+                                          data-testid="toolbar-items-grid-toggle" />
+                            </TmToolbarItem>
+                            <TmToolbarDivider />
+                            <TmToolbarButton Icon="@IconNames.Plus" Text="@Loc["TmToolbarDemo_New"]" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_New"])" />
+                            <TmToolbarButton Icon="@IconNames.FolderOpen" Text="@Loc["TmToolbarDemo_Open"]" Priority="ToolbarButtonPriority.Secondary" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Open"])" />
+                            <TmToolbarButton Icon="@IconNames.Check" Text="@Loc["TmToolbarDemo_Save"]" Priority="ToolbarButtonPriority.Pinned" OnClick="@(() => _overflowLog = Loc["TmToolbarDemo_Save"])" />
+                            <TmDropdown Text="@Loc["TmToolbarDemo_Export"]" OnSelect="@(() => _overflowLog = Loc["TmToolbarDemo_Export"])" data-testid="toolbar-items-export">
+                                <TmDropdownItem Value="pdf">PDF</TmDropdownItem>
+                                <TmDropdownItem Value="csv">CSV</TmDropdownItem>
+                            </TmDropdown>
+                        </ChildContent>
+                    </TmToolbar>
+                </div>
+            </div>
+        </div>
+
+        <TmModal Show="@_colorDialogOpen"
+                 OnClose="@(() => _colorDialogOpen = false)"
+                 Title="@Loc["TmToolbarDemo_ItemsColorDialogTitle"]"
+                 ShowFooter="false"
+                 data-testid="toolbar-items-color-dialog">
+            <div class="space-y-3">
+                <p class="text-sm text-slate-600 dark:text-slate-400">@Loc["TmToolbarDemo_ItemsColorDialogBody"]</p>
+                @* The full colour picker lives in the dialog (the menu entry opens it with the menu
+                   kept open under it); the bar only shows the compact trigger. *@
+                <TmColorPicker @bind-Value="_textColor"
+                               Placeholder="@Loc["TmToolbarDemo_TextColor"]"
+                               data-testid="toolbar-items-color-dialog-picker" />
+            </div>
+        </TmModal>
+
+        <div class="showcase-card p-0 overflow-hidden" data-testid="toolbar-preservefocus-card">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">@Loc["TmToolbarDemo_PreserveFocusTitle"]</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">@Loc["TmToolbarDemo_PreserveFocusDescription"]</p>
+            </div>
+            <div class="p-4 space-y-3">
+                @* F14/C4-a: PreserveFocus keeps the text selection while a formatting command runs. *@
+                <TmTextInput Value="@_preserveText" ValueChanged="v => _preserveText = v"
+                             data-testid="toolbar-preservefocus-input" />
+                <TmToolbar AriaLabel="@Loc["TmToolbarDemo_PreserveFocusTitle"]" data-testid="toolbar-preservefocus">
+                    <TmToolbarButton Icon="@IconNames.Bold" Text="@Loc["TmToolbarDemo_Bold"]" PreserveFocus="true"
+                                     OnClick="@(() => OnPreserveFocusActionAsync(Loc["TmToolbarDemo_Bold"]))" />
+                    <TmToolbarButton Icon="@IconNames.Italic" Text="@Loc["TmToolbarDemo_Italic"]" PreserveFocus="true"
+                                     OnClick="@(() => OnPreserveFocusActionAsync(Loc["TmToolbarDemo_Italic"]))" />
+                </TmToolbar>
+                <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="toolbar-preservefocus-log">
+                    @Loc["TmToolbarDemo_LastAction"]: <span class="font-medium text-primary-600 dark:text-primary-400">@_preserveFocusLog</span>
+                    · @Loc["TmToolbarDemo_Selection"]: <span class="font-medium text-primary-600 dark:text-primary-400">@_preserveFocusSelection</span>
+                </p>
             </div>
         </div>
 
@@ -439,7 +535,91 @@
     private bool _showConditional;
     private bool _selectPressed;
     private bool _panPressed = true;
+    private bool _colorDialogOpen;
+    private bool _showGrid;
+    private string _fontSize = "12";
+    private string _textColor = "#1f2933";
+    private string _preserveText = string.Empty;
+    private string? _preserveFocusLog;
+    private string _preserveFocusSelection = "–";
     private static readonly int[] _toolbarWidths = [1100, 380, 300];
+
+    // F14/C1: the MenuItems lists are compared STRUCTURALLY by the item's change snapshot — rebuild
+    // them only when the selection actually changes, never per render.
+    private IReadOnlyList<TmActionItem> _fontSizeMenuItems = [];
+    private IReadOnlyList<TmActionItem> _showGridMenuItems = [];
+
+    private readonly IReadOnlyList<SelectOption<string>> _fontSizeOptions = new[]
+    {
+        new SelectOption<string>("8", "8"),
+        new SelectOption<string>("10", "10"),
+        new SelectOption<string>("12", "12"),
+        new SelectOption<string>("14", "14"),
+        new SelectOption<string>("18", "18"),
+        new SelectOption<string>("24", "24"),
+        new SelectOption<string>("36", "36"),
+    };
+
+    protected override void OnInitialized()
+    {
+        _preserveText = Loc["TmToolbarDemo_PreserveFocusSample"];
+        RebuildFontSizeMenuItems();
+        RebuildShowGridMenuItems();
+    }
+
+    private void OnFontSizeChanged(string? value)
+    {
+        _fontSize = value ?? "12";
+        RebuildFontSizeMenuItems();
+    }
+
+    private void OnShowGridChanged(bool value)
+    {
+        _showGrid = value;
+        RebuildShowGridMenuItems();
+    }
+
+    private void RebuildFontSizeMenuItems()
+    {
+        _fontSizeMenuItems = _fontSizeOptions
+            .Select(o => new TmActionItem
+            {
+                Label = o.Label,
+                Checked = _fontSize == o.Value,
+                OnClick = EventCallback.Factory.Create(this, () => OnFontSizeChanged(o.Value)),
+            })
+            .ToList();
+    }
+
+    private void RebuildShowGridMenuItems()
+    {
+        // One checkable entry that mirrors the toggle — rebuilt only when the state flips.
+        _showGridMenuItems =
+        [
+            new TmActionItem
+            {
+                Label = Loc["TmToolbarDemo_ShowGrid"],
+                Checked = _showGrid,
+                OnClick = EventCallback.Factory.Create(this, () => OnShowGridChanged(!_showGrid)),
+            },
+        ];
+    }
+
+    // F14/C4-a: PreserveFocus keeps the focus (and the selection) in the input, so the range the
+    // command applied to is read back live for the log line under the toolbar.
+    private async Task OnPreserveFocusActionAsync(string action)
+    {
+        _preserveFocusLog = action;
+        try
+        {
+            _preserveFocusSelection = await JS.InvokeAsync<string>("eval",
+                "() => { const a = document.activeElement; return a && a.selectionStart != null ? a.selectionStart + ' – ' + a.selectionEnd : '–'; }");
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop unavailable (prerendering): the log shows the action alone.
+        }
+    }
 
     // Form fields
     private string _firstName = string.Empty;

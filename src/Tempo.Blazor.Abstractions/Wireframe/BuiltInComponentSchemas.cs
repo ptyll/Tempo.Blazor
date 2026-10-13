@@ -180,6 +180,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmToolbarButton"] = ["toolbar", "button"],
             ["TmToolbarDivider"] = ["toolbar"],
             ["TmToolbarGroup"] = ["toolbar"],
+            ["TmToolbarItem"] = ["toolbar"],
             ["TmFormActionBar"] = ["toolbar"],
             ["TmAlert"] = ["alert"],
             ["TmModal"] = ["modal"],
@@ -1684,6 +1685,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("label", "Label", PropType.String, "Group", cat: "Content"),
+            ]
+        };
+
+        // F14/C1: a non-button control (a select, colour picker, toggle) on the bar; in the More
+        // menu it is a plain entry or a labelled group — the wireframe draws the bordered control
+        // box with its label and a small chevron.
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmToolbarItem", Category = "Toolbar", DisplayName = "Toolbar Item",
+            DefaultWidth = 140, DefaultHeight = 32,
+            Props =
+            [
+                P("label", "Label", PropType.String, "Item", cat: "Content"),
             ]
         };
 

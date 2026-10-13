@@ -444,13 +444,22 @@ test('computeFit measures a pinned (data-pin=never) button as fixed width, not a
 });
 // ── H2: items are collected at any depth; a wrapper (group) is flattened ────────────────────
 
-function wrapper(children, { role = null, group = false, width = 0, padding = 0, className = null } = {}) {
+function wrapper(children, { role = null, group = false, width = 0, padding = 0, className = null, margin = 0, innerGap = 8 } = {}) {
     return {
         offsetWidth: width,
         dataset: group ? { tmToolbarGroup: '' } : {},
         children,
         querySelector: () => (children.length ? children[0] : null),
-        computed: { paddingLeft: `${padding}px`, paddingRight: `${padding}px`, columnGap: '8px', gap: '8px' },
+        // C5: the pre-fix module counted only DIRECT item children (':scope > [data-tm-toolbar-item]').
+        // The stub answers that selector faithfully; the fixed module counts child.children instead.
+        querySelectorAll: selector => (String(selector).includes('data-tm-toolbar-item')
+            ? children.filter(c => 'tmToolbarItem' in (c.dataset ?? {}) && c.dataset?.pin !== 'always')
+            : children.filter(c => c.dataset?.pin !== 'always')),
+        computed: {
+            paddingLeft: `${padding}px`, paddingRight: `${padding}px`,
+            marginLeft: `${margin}px`, marginRight: `${margin}px`,
+            columnGap: `${innerGap}px`, gap: `${innerGap}px`,
+        },
         getAttribute: name => (name === 'role' ? role : null),
         classList: { contains: name => name === className },
     };
@@ -685,4 +694,178 @@ test('I6 a display:none divider costs nothing', () => {
     };
     const bar = stubBar([child({ width: 100, rank: 2 }), divider, child({ width: 100, rank: 1 })], 220);
     assert.equal(computeFit(bar).maxVisible, 2);
+});
+
+// ── C1: TmToolbarItem — a non-button wrapper is ONE measured item and roves its first control ──
+
+test('C1 a .tm-toolbar-item wrapper carrying data-tm-toolbar-item is measured as ONE item even if it contains another [data-tm-toolbar-item]', () => {
+    // The wrapper is the measured item: its inner content (however marked) takes no separate room
+    // and reports no separate id. A 60px bar keeps nothing of a 90px item, even though the inner
+    // marker alone (40px) would fit — flattening the wrapper would over-commit the bar (I6).
+    const inner = child({ width: 40, rank: 2, id: 'inner' });
+    const outer = child({ width: 90, rank: 1, id: 'outer' });
+    outer.classList = { contains: name => name === 'tm-toolbar-item' };
+    outer.querySelector = () => inner;
+    const fit = computeFit(stubBar([outer], 60));
+    assert.deepEqual(fit.ids, ['outer'], 'only the wrapper id is reported');
+    assert.equal(fit.maxVisible, 0, 'the wrapper is measured whole (90px), never its inner parts');
+});
+
+function itemChild(label, { disabled = false, marked = false, tagName = 'BUTTON', tabindex = null, blocked = false } = {}) {
+    return {
+        label,
+        disabled,
+        marked,
+        tagName,
+        isContentEditable: false,
+        getAttribute: name => (name === 'tabindex' ? tabindex : null),
+        closest: selector => {
+            assert.match(selector, /tm-toolbar-item--collapsed/);
+            assert.match(selector, /role="menu"/);
+            return blocked ? {} : null;
+        },
+    };
+}
+
+function itemWrapper(children, { collapsed = false } = {}) {
+    return {
+        tagName: 'DIV',
+        isContentEditable: false,
+        disabled: false,
+        classList: {
+            contains: name => name === 'tm-toolbar-item' || (collapsed && name === 'tm-toolbar-item--collapsed'),
+        },
+        querySelector: selector => {
+            // itemControl first asks for the host-marked or module-roved control, then the plain
+            // focusable selector — the stubs answer both.
+            if (selector.includes('data-tm-toolbar-control')) {
+                return children.find(c => c.marked || c.getAttribute('data-tm-toolbar-roved') !== null) ?? null;
+            }
+            return children.find(c => !c.disabled && c.getAttribute('tabindex') !== '-1') ?? null;
+        },
+        querySelectorAll: () => children.filter(c => !c.disabled && c.getAttribute('tabindex') !== '-1'),
+    };
+}
+
+test('C1 rovingItems adds the first non-text-entry focusable of each .tm-toolbar-item, in DOM order, exactly once', () => {
+    // The host-marked control wins over an earlier plain one; a control that matches BOTH the plain
+    // selector and sits inside a wrapper is returned exactly once.
+    const marked = itemChild('markedCtl', { marked: true });
+    const inner = itemChild('innerCtl');
+    const wrapperEl = itemWrapper([inner, marked]);
+    const plain = itemChild('plain');
+    const root = { querySelectorAll: () => [plain, wrapperEl, marked] };
+    assert.deepEqual(rovingItems(root).map(c => c.label), ['plain', 'markedCtl']);
+});
+
+test('C1 rovingItems skips a collapsed item, a disabled control and an item whose only focusable is a <select>', () => {
+    const collapsedItem = itemWrapper([itemChild('hiddenCtl', { blocked: true })], { collapsed: true });
+    const disabledItem = itemWrapper([itemChild('disabledCtl', { disabled: true })]);
+    const selectItem = itemWrapper([itemChild('selectCtl', { tagName: 'SELECT' })]);
+    const goodItem = itemWrapper([itemChild('goodCtl')]);
+    const root = { querySelectorAll: () => [collapsedItem, disabledItem, selectItem, goodItem] };
+    assert.deepEqual(rovingItems(root).map(c => c.label), ['goodCtl'],
+        'text-entry controls (select/input) stay their own Tab stop — never in the roving set');
+});
+
+test('C1 detach removes only the tabindex values the module set', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    const e = installToolbar(controls);
+    // A host-owned tabindex on an element the roving set never managed must survive the detach.
+    const foreign = tbControl('foreign');
+    foreign.setAttribute('tabindex', '5');
+    detach(e.root);
+    assert.equal(controls[0].getAttribute('tabindex'), null, 'managed tab stops return to the natural order');
+    assert.equal(controls[1].getAttribute('tabindex'), null);
+    assert.equal(foreign.getAttribute('tabindex'), '5', 'a tabindex the module never set is left alone');
+});
+
+test('C1 a host-owned tabindex the module overrode returns on detach (0 stays 0)', () => {
+    const controls = [tbControl('a'), tbControl('b')];
+    controls[1].setAttribute('tabindex', '0'); // the host pinned this control into the tab order
+    const e = installToolbar(controls);
+    assert.equal(controls[1].getAttribute('tabindex'), '0', 'the roving stop');
+    assert.equal(controls[0].getAttribute('tabindex'), '-1');
+    detach(e.root);
+    assert.equal(controls[1].getAttribute('tabindex'), '0', 'detach restores the recorded original, it does not drop it');
+    assert.equal(controls[0].getAttribute('tabindex'), null, 'a module-added tabindex is removed');
+    assert.equal(controls[1].getAttribute('data-tm-toolbar-roved'), null, 'the roved marker leaves with the module');
+});
+
+test('C1-fix a roved non-native item control stays in the roving set after the module set its tabindex to -1', () => {
+    // A TmColorPicker trigger (div[role=button]) matches [tabindex] only while its tabindex is not
+    // -1: once the module roves the tab stop elsewhere, the plain selector drops it. The module
+    // marks every item control it tabbed data-tm-toolbar-roved so itemControl keeps finding it.
+    const trigger = tbControl('colorTrigger', { classes: [] });
+    trigger.tagName = 'DIV';
+    const wrapperEl = itemWrapper([trigger]);
+    const plain = tbControl('plain');
+    const e = installToolbar([plain, wrapperEl]);
+
+    e.root.fire('focusin', { target: plain });
+    assert.equal(trigger.getAttribute('tabindex'), '-1', 'focus moved elsewhere: the trigger is not the tab stop');
+    assert.notEqual(trigger.getAttribute('data-tm-toolbar-roved'), null, 'the module marked the control it tabbed');
+
+    const items = rovingItems(e.root);
+    assert.ok(items.includes(trigger), 'the roved control is still one arrow stop');
+    assert.equal(items.length, 2);
+});
+
+test('C1-fix a leading text-entry with tabindex does not hide a later button in the same item', () => {
+    // A wrapper whose first focusable is a text-entry control still contributes its first
+    // NON-text-entry focusable (querySelector took the first match and bailed on isTextEntry).
+    const input = itemChild('entry', { tagName: 'INPUT', tabindex: '0' });
+    const button = itemChild('btn');
+    const wrapperEl = itemWrapper([input, button]);
+    const root = { querySelectorAll: () => [wrapperEl] };
+    assert.deepEqual(rovingItems(root).map(c => c.label), ['btn'],
+        'the text-entry stays its own Tab stop; the button roves');
+});
+
+// ── C5: a wrapper's own margins and (wider) gap count as fixed width ──────────────────────────
+
+test('C5 a wrapper\'s margin-inline counts as fixed width (never over-commits)', () => {
+    // bar gap 8, two 50px buttons in a wrapper with 10px inline margins: the margin is fixed width,
+    // so a 120px bar no longer keeps a button AND the trigger (50 + 8 + 44 = 102 > 120 - 20 = 100).
+    const bar = stubBar([
+        wrapper([child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], { margin: 10 }),
+    ], 120);
+    assert.equal(computeFit(bar).maxVisible, 0);
+});
+
+test('C5 a wrapper gap wider than the bar gap is reserved per inner adjacency (never over-commits)', () => {
+    // bar gap 8, wrapper gap 16, two 50px buttons: the extra 8px per adjacency is reserved as if
+    // both stayed (conservative). A 110px bar keeps one (without the reservation it would keep two
+    // and overlap the trigger).
+    const bar = stubBar([
+        wrapper([child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], { innerGap: 16 }),
+    ], 110);
+    assert.equal(computeFit(bar).maxVisible, 1);
+});
+
+test('C5 a wrapper gap narrower than the bar gap changes nothing (already over-reserved)', () => {
+    const bar = stubBar([
+        wrapper([child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], { innerGap: 4 }),
+    ], 108);
+    assert.equal(computeFit(bar).maxVisible, 2, 'the bar gap over-reserves a narrower wrapper gap');
+});
+
+test('C5 a wrapper gap wider than the bar gap is reserved per adjacency of ALL direct children (divider included)', () => {
+    // bar gap 8, wrapper gap 16, divider + two 50px items: the divider is an in-flow direct child,
+    // so its adjacency reserves the wider gap too — (16 - 8) * (3 - 1) = 16px of fixed width.
+    const bar = stubBar([
+        wrapper([child({ width: 10, item: false }), child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], { innerGap: 16 }),
+    ], 140);
+    // fixed = divider 10 + bar gap 8 + reserve 16 = 34 -> available 106: both buttons 108 > 106,
+    // one + trigger = 102 <= 106 -> exactly one stays (counting only the items would keep two and overlap).
+    assert.equal(computeFit(bar).maxVisible, 1);
+});
+
+test('C5 tm-toolbar-start/actions margins are not double-counted', () => {
+    // Two 50px buttons share the start container; even with margins on it, a 112px bar keeps both
+    // (108 <= 112). Double-counting the margins as fixed width would report 0.
+    const start = container('tm-toolbar-start', [child({ width: 50, rank: 2, id: 'a' }), child({ width: 50, rank: 1, id: 'b' })], 100);
+    start.computed = { marginLeft: '10px', marginRight: '10px', columnGap: '8px', gap: '8px' };
+    const bar = stubBar([start], 112);
+    assert.equal(computeFit(bar).maxVisible, 2, 'the start/actions containers share the bar gap; their margins are not fixed width');
 });

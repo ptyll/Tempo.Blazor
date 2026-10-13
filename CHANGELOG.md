@@ -45,6 +45,14 @@
 
 ### Changed
 
+- **A `TmDropdown` or `TmSplitButton` inside a `TmToolbar` is now one stop of the toolbar's roving
+  tab stop instead of its own Tab stop (F14/C6).** The trigger (and, for a split button, the primary
+  action too) carries `data-tm-toolbar-control` automatically (through the cascade) when it sits in
+  a toolbar, so ArrowLeft/ArrowRight/Home/End reach it and Tab walks the toolbar as one stop — two
+  arrow stops for a split button, still one Tab stop. Before, a dropdown in a toolbar was a second
+  Tab stop the arrow keys never reached — a host had to discover and mark the hook by hand. A
+  text-entry control (a native `select`/`input`) keeps its own Tab stop by design.
+
 - **A `TmToolbarButton` with `aria-pressed="true"` (including one splatted by a host through
   `AdditionalAttributes`) now paints the pressed look** — subtle primary fill, primary ink and an
   inset primary ring. Previously the attribute was announced by assistive technology but painted
@@ -648,6 +656,50 @@
 
 ### Added
 
+- **Toolbar non-button items: `TmToolbarItem` (F14/C1).** A toolbar can now hold controls that are
+  not buttons — a `TmSelect`, `TmColorPicker`, `TmToggle`, a custom dropdown — and they leave the
+  bar exactly like a `TmToolbarButton`. The `TmToolbarItem` wrapper is the measured item
+  (`data-tm-toolbar-item` + `data-rank` + `data-pin`, one item in `tm-toolbar.js` even with nested
+  content): it collapses whole (out of flow, invisible, `inert`), so its width stays measurable and
+  widening brings it back. In the "More" menu an item is offered as **plain menu entries — never a
+  free template** (a select inside `role="menu"` is invalid ARIA): either one entry
+  (`MenuLabel` + `OnMenuInvoke`, with optional `MenuIcon` and `MenuKeepOpen` — typically opening the
+  full control in a dialog or sheet while the menu stays open under it), or a labelled group via
+  `MenuItems` (the entries render as one `role="group"` section named by `MenuLabel`, checkable
+  entries included, in the written order). `Priority` is the same overflow rank a button has;
+  `OverflowOnly` renders only the hidden position marker and lives only in "More"; an item collapses
+  only when it offers something in "More" — `MenuItems` with entries, or a non-empty `MenuLabel`
+  bound to an `OnMenuInvoke` handler; without either it has no menu representation and never leaves
+  the bar (it behaves as `Pinned`). `Disabled` disables the "More" entry/entries. A `TmToolbarButton` nested in
+  an item never registers twice. Note for hosts: `MenuItems` is compared **structurally** when the
+  toolbar decides whether to recompute — a fresh-but-equal list per render is not a change, so
+  rebuild it whenever the rendered state changes (a reference comparison would loop the recompute).
+  The entries need unique `Id`s (or unique labels — the label is the fallback key the menu focuses
+  by).
+
+  ```razor
+  <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Text tools">
+      <TmToolbarItem MenuLabel="Font size" Priority="ToolbarButtonPriority.Secondary" MenuItems="@_sizes">
+          <TmSelect TValue="int" @bind-Value="_fontSize" Options="@_sizeOptions" />
+      </TmToolbarItem>
+      <TmToolbarItem MenuLabel="Text colour" OnMenuInvoke="@OpenColourDialog" MenuKeepOpen="true">
+          <TmColorPicker @bind-Value="_colour" />
+      </TmToolbarItem>
+  </TmToolbar>
+  ```
+
+  A text-entry control (a native `select`/`input`) inside an item stays **its own Tab stop** — the
+  toolbar's arrow keys visit the item's first non-text-entry focusable instead. Internally the
+  toolbar now ranks any `IToolbarOverflowItem` (`TmToolbarButton` unchanged in behaviour).
+
+- **`TmToolbarButton.PreserveFocus` (F14/C4-a).** When `true`, pressing the button with a mouse, pen
+  or finger does not move focus to it — the `pointerdown`/`mousedown` defaults are prevented — so an
+  editor's text selection (and caret) survives a formatting command. Keyboard activation (Enter/
+  Space) and the "More" menu entry are unchanged. This is the core contract the DocumentEditor and
+  DiagramEditor toolbars need for their formatting commands; a host-splatted `aria-pressed` and all
+  other button parameters compose with it. Default `false` (existing buttons keep focus, nothing to
+  migrate).
+
 - **Toolbar groups: `TmToolbarGroup`, and group headings in the "More" menu.** Buttons can now be
   grouped into a `TmToolbarGroup`:
 
@@ -1020,6 +1072,14 @@
   legacy classes loses the styles.
 
 ### Fixed
+
+- **The toolbar's fit measurement no longer ignores a group wrapper's margins and its own gap
+  (F14/C5).** `tm-toolbar.js` counted only a flattened wrapper's padding and border, so a wrapper
+  with a horizontal margin — or a column gap wider than the bar's — over-committed the row and the
+  next control could overlap the pinned one (the I6 bug class). Now the margin counts as fixed width
+  and a wider gap is reserved per adjacency between the wrapper's direct items, conservatively (as
+  if all of them stayed); a narrower gap was already over-reserved by the bar gap and changes
+  nothing, and the start/actions containers share the bar gap (their margins are not double-counted).
 
 - **A `TmDialog` prompt no longer submits on an IME's commit-Enter.** Typing with an input-method
   editor (Chinese, Japanese, Korean…) commits the composed text with Enter; that press neither

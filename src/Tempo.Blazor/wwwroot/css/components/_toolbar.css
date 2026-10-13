@@ -16,6 +16,9 @@
    flattens it, so each button still collapses on its own. */
 .tm-toolbar [data-tm-toolbar-group] { display: flex; align-items: center; gap: var(--tm-space-2); }
 .tm-toolbar-title   { font-weight: var(--tm-font-weight-semibold); font-size: var(--tm-font-size-md); white-space: nowrap; }
+/* C1: a TmToolbarItem wrapper is ONE measured item — it keeps its natural width and leaves the bar into
+   More as a whole (tm-toolbar.js measures [data-tm-toolbar-item] wrappers like buttons). */
+.tm-toolbar .tm-toolbar-item { display: inline-flex; align-items: center; gap: var(--tm-space-1); flex-shrink: 0; min-width: 0; }
 .tm-toolbar-divider {
   width: 1px; height: 1.5rem; background: var(--tm-border-color);
   display: inline-block; margin: 0 var(--tm-space-1); align-self: center;

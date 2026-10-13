@@ -41,9 +41,9 @@
 </div>
 
 @code {
-    private readonly List<TmToolbarButton> _buttons = [];
-    private IReadOnlyList<TmToolbarButton> _menu = [];
-    private HashSet<TmToolbarButton> _collapsed = [];
+    private readonly List<IToolbarOverflowItem> _buttons = [];
+    private IReadOnlyList<IToolbarOverflowItem> _menu = [];
+    private HashSet<IToolbarOverflowItem> _collapsed = [];
     private ElementReference _root;
     private ToolbarInterop? _interop;
     private DotNetObjectReference<TmToolbar>? _dotNetRef;
@@ -110,10 +110,10 @@
 
     internal bool CollapsesButtons => Overflow == ToolbarOverflow.Menu;
 
-    /// <summary>Whether the toolbar's button is on the bar but out of room (collapsed) or only in the menu.</summary>
-    internal bool IsCollapsed(TmToolbarButton button) => _collapsed.Contains(button);
+    /// <summary>Whether the toolbar's item is on the bar but out of room (collapsed) or only in the menu.</summary>
+    internal bool IsCollapsed(IToolbarOverflowItem item) => _collapsed.Contains(item);
 
-    internal void Register(TmToolbarButton button)
+    internal void Register(IToolbarOverflowItem button)
     {
         if (_disposed || _buttons.Contains(button)) return;
         // Registration order is only the provisional order: a button added later joins at the end until
@@ -122,15 +122,15 @@
         Recompute();
     }
 
-    internal void Unregister(TmToolbarButton button)
+    internal void Unregister(IToolbarOverflowItem button)
     {
         if (_disposed || !_buttons.Remove(button)) return;
         _collapsed.Remove(button);
         Recompute();
     }
 
-    /// <summary>A registered button's priority, text or state changed; null re-computes unconditionally (a <see cref="TmToolbarGroup"/> label changed — its members do not know).</summary>
-    internal void ButtonChanged(TmToolbarButton? button)
+    /// <summary>A registered item's priority, text or state changed; null re-computes unconditionally (a <see cref="TmToolbarGroup"/> label changed — its members do not know).</summary>
+    internal void ItemChanged(IToolbarOverflowItem? button)
     {
         if (_disposed) return;
         if (button is not null && !_buttons.Contains(button)) return;
@@ -184,16 +184,16 @@
 
         var overflowMode = Overflow == ToolbarOverflow.Menu;
         var previous = _collapsed;
-        var next = new HashSet<TmToolbarButton>();
-        IReadOnlyList<TmToolbarButton> menu = [];
+        var next = new HashSet<IToolbarOverflowItem>();
+        IReadOnlyList<IToolbarOverflowItem> menu = [];
         if (overflowMode)
         {
-            var (_, menuButtons) = ToolbarOverflowLayout.Resolve(_buttons, _maxVisible, static b => b.Priority);
-            menu = menuButtons;
-            foreach (var button in menuButtons) next.Add(button);
+            var (_, menuItems) = ToolbarOverflowLayout.Resolve(_buttons, _maxVisible, static b => b.EffectivePriority);
+            menu = menuItems;
+            foreach (var button in menuItems) next.Add(button);
         }
 
-        _pinned = overflowMode && _buttons.Any(static b => b.Priority == ToolbarButtonPriority.OverflowOnly);
+        _pinned = overflowMode && _buttons.Any(static b => b.EffectivePriority == ToolbarButtonPriority.OverflowOnly);
         _collapsed = next;
         _menu = menu;
 
@@ -210,27 +210,12 @@
 
     private RenderFragment MoreMenu => builder =>
     {
-        var items = new List<TmActionItem>(_menu.Count);
-        foreach (var button in _menu)
+        // C1: an item offers ONE entry (MenuLabel + OnMenuInvoke) or a labelled group (MenuItems) —
+        // plain TmActionItems in written order; a free template inside role=menu is invalid ARIA.
+        var items = new List<TmActionItem>();
+        foreach (var entry in _menu)
         {
-            var target = button;
-            items.Add(new TmActionItem
-            {
-                Id = button.MenuId,
-                Label = button.MenuLabel,
-                Icon = button.Icon,
-                Disabled = button.Disabled,
-                Danger = button.Variant == Tempo.Blazor.Components.Buttons.ButtonVariant.Danger,
-                // C2: a pressed toggle keeps its state in the menu — the entry becomes a
-                // menuitemcheckbox with aria-checked (null Pressed stays a plain menuitem).
-                Checked = button.Pressed,
-                CheckedMixed = button.PressedMixed,
-                // C3: the collapsed members of a TmToolbarGroup keep the group in the menu — one
-                // labelled role=group section per contiguous run, separated by role=separator.
-                Group = button.OwnerGroup?.GroupKey,
-                GroupLabel = button.OwnerGroup?.EffectiveLabel,
-                OnClick = EventCallback.Factory.Create(this, () => target.ClickAsync()),
-            });
+            entry.AppendMenuEntries(items);
         }
 
         builder.OpenComponent<ActionOverflowMenu>(0);

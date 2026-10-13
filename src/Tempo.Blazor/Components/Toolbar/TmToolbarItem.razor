@@ -1,0 +1,216 @@
+@namespace Tempo.Blazor.Components.Toolbar
+@using System.Globalization
+@using Tempo.Blazor.Components.Actions
+@implements IDisposable
+@implements IToolbarOverflowItem
+
+@* C1/F14: a NON-button control (select, colour picker, grid picker, toggle, dropdown) that can leave
+   a TmToolbar Overflow=Menu bar like a TmToolbarButton. The wrapper is the measured item: it
+   collapses exactly like a button (out of flow, invisible, inert) and its width stays measurable.
+   In the "More" menu the item is offered as plain menu entries — one entry (MenuLabel + OnMenuInvoke)
+   or a labelled group (MenuItems); a free template inside role=menu is invalid ARIA, so the host
+   action typically opens the full control in a dialog/sheet (MenuKeepOpen). *@
+@if (OmittedFromBar)
+{
+    @* Zero-width, hidden, not a control: only its data-tm-toolbar-item id travels to tm-toolbar.js, which
+       reports it in DOM order (data-pin=always: recorded, never measured), so the menu keeps the item's
+       written slot instead of pushing it to the end. *@
+    <span hidden data-tm-toolbar-item="@MenuId" data-pin="always"></span>
+}
+else
+{
+    <div class="tm-toolbar-item @(Collapsed ? "tm-toolbar-item--collapsed" : null) @Class"
+         inert="@Collapsed"
+         aria-hidden="@(Collapsed ? "true" : null)"
+         data-tm-toolbar-item="@(Registered ? MenuId : null)"
+         data-rank="@(Registered ? Rank.ToString(CultureInfo.InvariantCulture) : null)"
+         data-pin="@(Registered ? (Effective == ToolbarButtonPriority.Pinned ? "never" : "auto") : null)"
+         @attributes="AdditionalAttributes">
+        <CascadingValue Value="this" IsFixed="true">@ChildContent</CascadingValue>
+    </div>
+}
+
+@code {
+    private TmToolbar? _registeredWith;
+    private (ToolbarButtonPriority, string?, string?, bool, bool, string?, string?)? _snapshot;
+
+    /// <summary>The control rendered on the bar (a <c>TmSelect</c>, <c>TmColorPicker</c>, <c>TmToggle</c>, <c>TmDropdown</c>, …).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// How important the item is when its <see cref="TmToolbar"/> runs out of room
+    /// (<see cref="ToolbarOverflow.Menu"/>). An overflow rank only — items render in written order.
+    /// An item with no menu representation — no <see cref="MenuItems"/> entries, or a
+    /// <see cref="MenuLabel"/> without an <see cref="OnMenuInvoke"/> handler — never leaves the bar
+    /// (it behaves as <see cref="ToolbarButtonPriority.Pinned"/> whatever this value is).
+    /// </summary>
+    [Parameter] public ToolbarButtonPriority Priority { get; set; }
+
+    /// <summary>
+    /// The label of the item's "More" entry (or, with <see cref="MenuItems"/>, the header and
+    /// accessible name of its group). With an <see cref="OnMenuInvoke"/> handler it makes the item
+    /// collapsible; without one (and without <see cref="MenuItems"/>) the item never leaves the bar.
+    /// </summary>
+    [Parameter] public string? MenuLabel { get; set; }
+
+    /// <summary>Optional icon of the single "More" entry (an <c>IconNames</c> value). Ignored with <see cref="MenuItems"/>.</summary>
+    [Parameter] public string? MenuIcon { get; set; }
+
+    /// <summary>
+    /// Runs when the user picks the item's single "More" entry. Typically opens the full control in a
+    /// dialog or sheet (then set <see cref="MenuKeepOpen"/>). Invoked exactly once per activation.
+    /// Together with a non-empty <see cref="MenuLabel"/> it makes the item collapsible; a label
+    /// without a handler (and without <see cref="MenuItems"/>) never leaves the bar. Ignored with
+    /// <see cref="MenuItems"/>.
+    /// </summary>
+    [Parameter] public EventCallback OnMenuInvoke { get; set; }
+
+    /// <summary>Maps to <see cref="TmActionItem.KeepMenuOpen"/> for the single entry: the menu stays open while the
+    /// surface the action opens is shown (it paints above the menu). Default <see langword="false"/>.</summary>
+    [Parameter] public bool MenuKeepOpen { get; set; }
+
+    /// <summary>
+    /// Instead of one entry, offer these entries in "More", rendered as one labelled group
+    /// (<see cref="MenuLabel"/>) in the given order — e.g. the sizes of a font-size select as checkable
+    /// entries (<see cref="TmActionItem.Checked"/>). Each entry's <see cref="TmActionItem.Group"/> and
+    /// <see cref="TmActionItem.GroupLabel"/> are overwritten by this item; every entry needs a unique
+    /// <see cref="TmActionItem.Id"/> (or a unique <see cref="TmActionItem.Label"/> — the label is the
+    /// fallback key the menu dedupes and focuses by). The list is compared STRUCTURALLY when the
+    /// toolbar decides whether to recompute: a fresh-but-equal list per render is not a change, so a
+    /// host may rebuild it whenever the rendered state changes.
+    /// </summary>
+    [Parameter] public IReadOnlyList<TmActionItem>? MenuItems { get; set; }
+
+    /// <summary>Disables the "More" entry (or every <see cref="MenuItems"/> entry). The bar control's own
+    /// disabled state stays the host's: set both.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Additional CSS class for the wrapper element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the wrapper element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The toolbar this item sits in; null when used on its own.</summary>
+    [CascadingParameter] private TmToolbar? Toolbar { get; set; }
+
+    /// <summary>The <see cref="TmToolbarGroup"/> this item belongs to; null on the bare bar.</summary>
+    [CascadingParameter] private TmToolbarGroup? Group { get; set; }
+
+    /// <summary>Stable id of the item's entry in the More menu; also the measured-item marker
+    /// (internal: the contract is the internal <see cref="IToolbarOverflowItem"/>, implemented
+    /// explicitly).</summary>
+    internal string MenuId { get; } = $"tm-ti-{Guid.NewGuid():N}";
+
+    /// <inheritdoc />
+    string IToolbarOverflowItem.MenuId => MenuId;
+
+    /// <summary>The EFFECTIVE priority the partition ranks: an item with no menu representation
+    /// (no <see cref="MenuItems"/> entries and no non-empty <see cref="MenuLabel"/> with an
+    /// <see cref="OnMenuInvoke"/> handler) reports <see cref="ToolbarButtonPriority.Pinned"/> so it
+    /// never leaves the bar.</summary>
+    ToolbarButtonPriority IToolbarOverflowItem.EffectivePriority => Effective;
+
+    private bool HasMenuRepresentation => MenuItems is { Count: > 0 }
+        || (!string.IsNullOrEmpty(MenuLabel) && OnMenuInvoke.HasDelegate);
+
+    private ToolbarButtonPriority Effective => HasMenuRepresentation ? Priority : ToolbarButtonPriority.Pinned;
+
+    /// <summary>Registered with a toolbar that collapses (Overflow=Menu).</summary>
+    private bool Registered => Toolbar is { CollapsesButtons: true } && _registeredWith is not null;
+
+    private bool Collapsed => Registered && Toolbar!.IsCollapsed(this) && Effective != ToolbarButtonPriority.OverflowOnly;
+
+    private bool OmittedFromBar => Registered && Effective == ToolbarButtonPriority.OverflowOnly;
+
+    private int Rank => Helpers.ToolbarOverflowLayout.Rank(Effective);
+
+    protected override void OnParametersSet()
+    {
+        // Register once, with the toolbar the cascade handed us; tell it about a change only when
+        // something it partitions or renders in the menu changed. OnMenuInvoke is deliberately NOT part
+        // of the snapshot (a fresh lambda per parent render would loop) - the menu reads it live.
+        if (Toolbar is not null && !ReferenceEquals(_registeredWith, Toolbar))
+        {
+            _registeredWith?.Unregister(this);
+            _registeredWith = Toolbar;
+            _snapshot = Snapshot();
+            Toolbar.Register(this);
+            return;
+        }
+
+        var snapshot = Snapshot();
+        if (_registeredWith is not null && _snapshot != snapshot)
+        {
+            _snapshot = snapshot;
+            _registeredWith.ItemChanged(this);
+        }
+    }
+
+    private (ToolbarButtonPriority, string?, string?, bool, bool, string?, string?) Snapshot()
+        => (Priority, MenuLabel, MenuIcon, Disabled, MenuKeepOpen, Group?.EffectiveLabel, MenuItemsKey(MenuItems));
+
+    /// <summary>
+    /// Structural key of <see cref="MenuItems"/>: the sequence of (Id, Label, Icon, Disabled, Danger,
+    /// Checked, CheckedMixed, KeepMenuOpen). Inline hosts build a fresh list per render; comparing
+    /// references would tell the toolbar something changed on every render and loop its recompute.
+    /// </summary>
+    private static string? MenuItemsKey(IReadOnlyList<TmActionItem>? items)
+        => items is null ? null : string.Join('\u001f', items.Select(static item => string.Join('\u001e',
+            item.Id, item.Label, item.Icon, item.Disabled, item.Danger, item.Checked, item.CheckedMixed, item.KeepMenuOpen)));
+
+    /// <summary>Appends the item's More entries: a labelled group (MenuItems) or the single entry.</summary>
+    void IToolbarOverflowItem.AppendMenuEntries(List<TmActionItem> target)
+    {
+        if (MenuItems is { Count: > 0 } list)
+        {
+            // The copies never mutate the host's list; the ids are namespaced by the item so two
+            // items offering the same source list stay distinct keys.
+            var key = Group?.GroupKey is { } outer ? $"{outer}/{MenuId}" : MenuId;
+            foreach (var source in list)
+            {
+                target.Add(new TmActionItem
+                {
+                    Id = $"{MenuId}:{ActionOverflowMenu.ActionId(source)}",
+                    Label = source.Label,
+                    Icon = source.Icon,
+                    Disabled = Disabled || source.Disabled,
+                    Danger = source.Danger,
+                    Checked = source.Checked,
+                    CheckedMixed = source.CheckedMixed,
+                    KeepMenuOpen = source.KeepMenuOpen,
+                    OnClick = source.OnClick,
+                    Group = key,
+                    GroupLabel = MenuLabel,
+                });
+            }
+
+            return;
+        }
+
+        target.Add(new TmActionItem
+        {
+            Id = MenuId,
+            Label = MenuLabel ?? string.Empty,
+            Icon = MenuIcon,
+            Disabled = Disabled,
+            KeepMenuOpen = MenuKeepOpen,
+            OnClick = OnMenuInvoke,
+            Group = Group?.GroupKey,
+            GroupLabel = Group?.EffectiveLabel,
+        });
+    }
+
+    /// <summary>Re-render after the toolbar's partition changed (collapse/expand, menu content).</summary>
+    internal void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    /// <inheritdoc />
+    void IToolbarOverflowItem.Refresh() => Refresh();
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _registeredWith?.Unregister(this);
+        _registeredWith = null;
+    }
+}
