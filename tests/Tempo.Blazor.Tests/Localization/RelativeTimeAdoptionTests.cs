@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -172,5 +173,29 @@ public class RelativeTimeAdoptionTests : LocalizationTestBase
         var cut = Render<TmTimeline>(p => p.Add(c => c.Entries, new[] { At(fake.GetUtcNow().AddMinutes(-42)) }));
 
         cut.Find(".tm-timeline-timestamp").TextContent.Should().Be("42 min ago");
+    }
+
+    [Fact]
+    public void DeprecatedTimelineKeys_AreNotReadBySource()
+    {
+        // 37682aee: the TmTimeline_*Ago/DateFormat keys are deprecated in 2.9.1 (kept so a host
+        // that reads them is not broken) and removed in the next release. The library must not
+        // start reading them again — sweep every library source for the literal keys.
+        var root = Tempo.Blazor.Tests.Theme.ThemeCss.RepositoryRoot().FullName;
+        var pattern = new Regex("TmTimeline_(JustNow|MinutesAgo|HoursAgo|DaysAgo|DateFormat)", RegexOptions.Compiled);
+
+        var offenders = Directory.EnumerateFiles(Path.Combine(root, "src"), "*", SearchOption.AllDirectories)
+            .Where(f => (f.EndsWith(".cs", StringComparison.Ordinal) || f.EndsWith(".razor", StringComparison.Ordinal))
+                && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .SelectMany(f => File.ReadLines(f)
+                .Select((text, index) => (File: Path.GetRelativePath(root, f), Line: index + 1, Text: text))
+                .Where(t => pattern.IsMatch(t.Text)))
+            .Select(t => $"{t.File}:{t.Line}: {t.Text.Trim()}")
+            .ToList();
+
+        offenders.Should().BeEmpty(
+            "the deprecated TmTimeline_* keys must not be read by the library (they are removed in the next release): " +
+            string.Join(" | ", offenders));
     }
 }

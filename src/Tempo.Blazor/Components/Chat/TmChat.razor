@@ -71,7 +71,7 @@
             <div class="tm-chat__thread-messages">
                 @RenderMessage(threadRoot, inThread: true)
                 <div class="tm-chat__thread-divider">
-                    <span>@string.Format(Loc["TmChat_ReplyCount"], ReplyCountOf(threadRoot))</span>
+                    <span>@Loc.Plural("TmChat_ReplyCount", ReplyCountOf(threadRoot))</span>
                 </div>
                 @foreach (var reply in RepliesOf(threadRoot.Id))
                 {
@@ -232,7 +232,7 @@
                             data-testid="@TestId($"chat-thread-open-{message.Id}")"
                             @onclick="() => OpenThreadAsync(message)">
                         <TmIcon Name="message-circle" Size="IconSize.Sm" />
-                        <span>@string.Format(Loc["TmChat_ReplyCount"], ReplyCountOf(message))</span>
+                        <span>@Loc.Plural("TmChat_ReplyCount", ReplyCountOf(message))</span>
                     </button>
                 }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,6 +76,17 @@ public class RelativeTimeRegistrationTests
         services.AddTempoBlazor();
         configure(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    }
+
+    [Fact]
+    public void TmRelativeTime_Resolve_IsPublic()
+    {
+        // 9b (Q10=A): split packages (NotionEditor today) must resolve the shared fallback without
+        // InternalsVisibleTo or copying it — the one resolver every component uses is public.
+        typeof(TmRelativeTime).IsPublic.Should().BeTrue("packages cannot see an internal helper");
+        var resolve = typeof(TmRelativeTime).GetMethod("Resolve", BindingFlags.Public | BindingFlags.Static);
+        resolve.Should().NotBeNull("the shared resolver must be callable from any package");
+        resolve!.ReturnType.Should().Be(typeof(ITmRelativeTimeFormatter));
     }
 
     [Fact]

@@ -186,4 +186,6 @@ public interface ITmRelativeTimeFormatter
 
 A component resolves it through `TmRelativeTime.Resolve(Services, Loc)`, which falls back to the
 default formatter when nothing is registered (a bUnit context with only an `ITmLocalizer`), so the
-component never throws for a missing registration.
+component never throws for a missing registration. `TmRelativeTime` and its `Resolve` are public so
+every component — including split packages (NotionEditor), which call `AddTempoBlazor()` and cannot
+see internals — resolves the formatter through this one helper instead of copying the fallback.

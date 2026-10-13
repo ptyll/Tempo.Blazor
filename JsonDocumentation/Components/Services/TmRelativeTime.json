@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "Localization",
+  "namespace": "Tempo.Blazor.Localization",
+  "description": "Resolves the relative-time formatter for a component: the registered ITmRelativeTimeFormatter when AddTempoBlazor() ran (so a host can replace it), otherwise a default TmRelativeTimeFormatter over the component's ITmLocalizer and the registered TimeProvider. Never throws for a missing registration. Public so split packages use this one resolver instead of copying the fallback.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTime.cs",
+  "documentationStatus": "authored",
+  "members": [
+    {
+      "name": "Resolve",
+      "kind": "Method",
+      "type": "ITmRelativeTimeFormatter",
+      "description": "Returns the formatter to render a relative-time stamp with: the one registered in services when present, otherwise a default TmRelativeTimeFormatter over the given localizer and the registered TimeProvider (the system clock when none is). Never throws for a missing registration."
+    }
+  ],
+  "itemName": "TmRelativeTime"
+}

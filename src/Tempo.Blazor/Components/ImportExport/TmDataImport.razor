@@ -164,7 +164,7 @@
                             @if (_validationErrors.Count > MaxDisplayedErrors)
                             {
                                 <p class="tm-data-import__hint">
-                                    @string.Format(Loc["TmDataImport_MoreErrors"], _validationErrors.Count - MaxDisplayedErrors)
+                                    @Loc.Plural("TmDataImport_MoreErrors", _validationErrors.Count - MaxDisplayedErrors)
                                 </p>
                             }
                         </div>

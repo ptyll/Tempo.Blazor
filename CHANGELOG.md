@@ -584,7 +584,8 @@
   `TmDocumentEditor_ReviewSummaryRevisions`, `…ReviewSummaryComments`, `TmDocumentEditor_CommentCount`,
   `TmModelingIssuePanel_Count`, `TmModelingModelTree_Count`, `TmWireframeProps_ElementsCount`,
   `TmNotificationBell_NewCount`, `TmNotionPageComment_BadgeLabel`,
-  `TmNotionPageHeader_UnresolvedComments`, `TmScreeningResultPanel_PendingCount` — and
+  `TmNotionPageHeader_UnresolvedComments`, `TmScreeningResultPanel_PendingCount`,
+  `TmChat_ReplyCount`, `TmAuditLogViewer_EventsCount`, `TmDataImport_MoreErrors` — and
   `TmDocumentEditor_ReviewSummaryText` is now a two-slot joiner `"{0}, {1}"` over the new
   `TmDocumentEditor_ReviewSummaryOpenComments_*` family. **Migration:** a host that *replaces*
   `ITmLocalizer` and overrides these keys must override the family keys (`_One` / `_Other`, plus
@@ -899,6 +900,13 @@
 - **`ITmRelativeTimeFormatter`** (Abstractions) with the default `TmRelativeTimeFormatter`
   (`Tm_Time_*` in en/cs/fr, injectable `TimeProvider`, explicit time zone): "právě teď", "před 5 min",
   "včera v 16:20", "zítra v 9:00", "za 5 dní", an absolute date from a week on (B19).
+  `TmRelativeTime.Resolve` is public: every component — including split packages, which call
+  `AddTempoBlazor()` and cannot see internals — resolves the formatter through this one helper
+  (registered `ITmRelativeTimeFormatter`, else the default over the component's localizer and clock)
+  instead of copying the fallback.
+- **Demo: new `/localization` page** with a count stepper and presets (0/1/2/5/21/22/25/1000000) that
+  shows every shipped plural family, the culture and the CLDR category for the count, and a
+  relative-time stamp; the demo language switcher now offers FR alongside EN/CS.
 
 - **Overflow toolbar (F4).** `TmToolbar.Overflow` (`None|Menu`), `Labels`
   (`Auto|Icons|IconsWithText`), `OverflowLabel`, `AriaLabel` and `OverflowPresentation`;

@@ -131,7 +131,7 @@
 
     <div class="tm-audit-log__meta">
         <span class="tm-audit-log__count" data-testid="@TestId("audit-log-count")">
-            @(string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc["TmAuditLogViewer_EventsCount"], _totalCount))
+            @Loc.Plural("TmAuditLogViewer_EventsCount", _totalCount)
         </span>
         @if (_loading)
         {

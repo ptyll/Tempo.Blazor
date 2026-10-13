@@ -19581,6 +19581,34 @@
           ]
         },
         {
+          "itemName": "TmRelativeTime",
+          "kind": "Class",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "Resolves the relative-time formatter for a component: the registered ITmRelativeTimeFormatter when AddTempoBlazor() ran (so a host can replace it), otherwise a default TmRelativeTimeFormatter over the component's ITmLocalizer and the registered TimeProvider. Never throws for a missing registration. Public so split packages use this one resolver instead of copying the fallback.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Localization/TmRelativeTime.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Resolve",
+              "kind": "Method",
+              "type": "ITmRelativeTimeFormatter",
+              "description": "Returns the formatter to render a relative-time stamp with: the one registered in services when present, otherwise a default TmRelativeTimeFormatter over the given localizer and the registered TimeProvider (the system clock when none is). Never throws for a missing registration.",
+              "parameters": [
+                {
+                  "name": "services",
+                  "type": "IServiceProvider"
+                },
+                {
+                  "name": "localizer",
+                  "type": "ITmLocalizer"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "itemName": "TmRelativeTimeFormatter",
           "kind": "Class",
           "category": "Localization",
@@ -26966,12 +26994,12 @@
         }
       ],
       "summary": {
-        "itemCount": 371,
-        "manualItemCount": 371,
-        "generatedItemCount": 363,
+        "itemCount": 372,
+        "manualItemCount": 372,
+        "generatedItemCount": 364,
         "generatedOnlyItemCount": 0,
         "componentCount": 203,
-        "publicApiTypeCount": 160
+        "publicApiTypeCount": 161
       }
     },
     {
@@ -114536,10 +114564,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3201,
-    "manualItemCount": 3201,
+    "itemCount": 3202,
+    "manualItemCount": 3202,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2674
+    "publicApiTypeCount": 2675
   }
 }

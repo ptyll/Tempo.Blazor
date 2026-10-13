@@ -1,0 +1,95 @@
+@page "/localization"
+@using System.Globalization
+@inject ITmLocalizer Loc
+@inject IServiceProvider ServiceProvider
+
+<PageTitle>Localization – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Localization &amp; Plurals</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        Counted texts agree with their count. <code>Loc.Plural("Key", n)</code> picks the grammatical form
+        from the CLDR plural rules of the current culture and reads <code>Key_One/_Few/_Many/_Other</code> —
+        English has one/other, Czech one/few/many/other, French one/many/other. Step the count (or use a
+        preset) and switch the language in the header to compare.
+    </p>
+</div>
+
+<!-- Count stepper -->
+<section class="demo-section">
+    <div class="max-w-3xl showcase-card">
+        <div data-testid="plural-count" class="mb-4">
+            <TmNumberInput Value="_count" ValueChanged="v => _count = v ?? 0" Min="0" Max="10000000" Label="Count" />
+        </div>
+        <div class="flex flex-wrap gap-2 mb-4">
+            @foreach (var preset in Presets)
+            {
+                <TmButton data-testid="@($"plural-preset-{preset}")" Variant="ButtonVariant.Secondary"
+                          OnClick="() => _count = preset">@preset</TmButton>
+            }
+        </div>
+        <p class="text-sm text-slate-600 dark:text-slate-400" aria-live="polite">
+            Culture: <code data-testid="plural-culture">@Culture.Name</code>
+            · Category: <code data-testid="plural-category">@TmPluralRules.Select(Culture, _count)</code>
+        </p>
+    </div>
+</section>
+
+<!-- Plural families -->
+<section class="demo-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Plural families at count @_count</h2>
+
+    <div class="max-w-3xl showcase-card overflow-x-auto">
+        <table class="w-full text-sm">
+            <caption class="sr-only">Plural families at count @_count</caption>
+            <thead>
+                <tr class="text-left text-slate-500 dark:text-slate-400">
+                    <th scope="col" class="py-2 pr-4 font-medium">Resource key</th>
+                    <th scope="col" class="py-2 font-medium">Text</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var key in Keys)
+                {
+                    <tr class="border-t border-slate-200 dark:border-slate-700">
+                        <td class="py-2 pr-4"><code>@key</code></td>
+                        <td class="py-2" data-testid="@($"plural-{key}")">@Loc.Plural(key, _count)</td>
+                    </tr>
+                }
+                <tr class="border-t border-slate-200 dark:border-slate-700">
+                    <td class="py-2 pr-4"><code>ITmRelativeTimeFormatter</code></td>
+                    <td class="py-2" data-testid="plural-relative-time">@RelativeStamp(_count)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private static readonly int[] Presets = [0, 1, 2, 5, 21, 22, 25, 1_000_000];
+
+    private static readonly string[] Keys =
+    [
+        "TmModelingIssuePanel_Count",
+        "TmNotificationBell_NewCount",
+        "TmDocumentEditor_CommentCount",
+        "TmWireframeProps_ElementsCount",
+        "TmScreeningResultPanel_PendingCount",
+        "Tm_Time_DaysAgo",
+        "Tm_Time_InDays",
+    ];
+
+    private int _count = 5;
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    private CultureInfo Culture => Loc.Culture ?? CultureInfo.CurrentUICulture;
+
+    private string RelativeStamp(int daysAgo)
+    {
+        _relativeTime ??= TmRelativeTime.Resolve(ServiceProvider, Loc);
+        // Clamp: a count of a million days would fall before year 1 and throw.
+        var days = Math.Clamp(daysAgo, 0, 36_500);
+        return _relativeTime.Format(DateTimeOffset.Now.AddDays(-days));
+    }
+}

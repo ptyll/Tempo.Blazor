@@ -18,6 +18,14 @@
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
         CS
     </button>
+    <button @onclick='() => SetCultureAsync("fr")'
+            data-testid="language-switcher-fr"
+            aria-pressed="@(IsActiveCulture("fr") ? "true" : "false")"
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("fr") 
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
+        FR
+    </button>
 </div>
 
 @code {
