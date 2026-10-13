@@ -144,20 +144,37 @@ public interface ITmRelativeTimeFormatter
   register a `FakeTimeProvider` (`Microsoft.Extensions.Time.Testing`) or pass `now` explicitly — never
   `DateTime.Now`.
 - **Blazor Server / prerender: the user's zone.** `TimeProvider.System.LocalTimeZone` is the
-  *server's* zone, so "yesterday at 16:20" is wrong for a circuit whose browser is elsewhere. The host
-  registers a scoped `ITmRelativeTimeFormatter` over its own user `TimeProvider`; it never replaces the
-  app-wide `TimeProvider`. Kestrel (`PinnedBlockMemoryPoolFactory`) and cookie authentication
+  *server's* zone, so "yesterday at 16:20" is wrong for a circuit whose browser is elsewhere.
+  `AddTempoBlazor()` registers a scoped `ITmUserTimeZone` (one browser read per circuit, shared by
+  every consumer), but the formatter keeps judging days in the clock's zone until the host opts in
+  with one line:
+
+  ```csharp
+  // doc-sample:user-zone-oneliner
+  builder.Services.AddTempoBlazor();
+  builder.Services.AddTempoUserTimeZone();
+  ```
+
+  `AddTempoUserTimeZone()` replaces the formatter registration with one over a private
+  `TimeProvider` that reads `ITmUserTimeZone.Zone` lazily; it never replaces the app-wide
+  `TimeProvider`. Kestrel (`PinnedBlockMemoryPoolFactory`) and cookie authentication
   (`PostConfigureAuthenticationSchemeOptions`) are singletons that consume `TimeProvider`, so
   `AddScoped<TimeProvider>` fails the host at startup under `ValidateScopes` ("Cannot consume scoped
   service 'System.TimeProvider' from singleton") and, without validation, makes the user's zone drive
-  the server clocks too. Read the IANA id once per circuit
-  (`Intl.DateTimeFormat().resolvedOptions().timeZone`), resolve it with
-  `TimeZoneInfo.FindSystemTimeZoneById`, and fall back to UTC when the id is unknown. The zone arrives
-  from JS after the first render, so `UserTimeProvider` reads `CircuitZoneCache.Zone` lazily — capturing
-  it when the clock is first resolved leaves the circuit on UTC. Re-render once the zone arrives (the
-  stamp is computed at render time; nothing ticks it). There is no component parameter for this; a
-  shared `ITmUserTimeZone` (one browser read, reused by Scheduler and Gantt) is a recorded follow-up,
-  not part of this registration.
+  the server clocks too. On Server the library reads the IANA id once per circuit
+  (`tm-user-zone.js` `resolve()`, i.e. `Intl.DateTimeFormat().resolvedOptions().timeZone`) after the
+  first interactive render, resolves it with `TimeZoneInfo.FindSystemTimeZoneById`, and falls back
+  to UTC when the id is unknown; during prerender the zone stays UTC/unresolved. On WebAssembly the
+  runtime's zone already is the browser's zone (requires `InvariantTimezone` false, the default).
+  The relative-time components re-render once the zone arrives (the stamp is computed at render
+  time; nothing ticks it), and `ITmUserTimeZone.SetZone` lets a host profile setting win over the
+  browser value. On Server the browser probe is triggered by the relative-time components
+  (`TmTimeline`, `TmActivityTimeline`, `TmActivityComments`, `TmNotificationBell`) from their
+  first interactive render; a consumer with no such component on screen (or a non-interactive
+  page) must call `SetZone` (or render one of the four) to get a resolved zone. There is no
+  component parameter for this. A host that prefers to own the plumbing
+  (its own cache, a profile-driven zone) registers a scoped `ITmRelativeTimeFormatter` the way the
+  snippet below does — it stays valid:
 
   ```csharp
   // doc-sample:user-zone

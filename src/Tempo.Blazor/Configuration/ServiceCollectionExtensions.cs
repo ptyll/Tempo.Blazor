@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Localization;
 using Tempo.Blazor.Resources;
@@ -65,6 +66,12 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<ITmRelativeTimeFormatter>(sp =>
             new TmRelativeTimeFormatter(sp.GetRequiredService<ITmLocalizer>(), sp.GetService<TimeProvider>()));
 
+        // The end user's time zone, resolved once per circuit (WASM: the runtime zone immediately;
+        // Server: the browser's IANA id after the first interactive render). Always registered
+        // (TryAddScoped) so consumers can share it, but nothing reads it until the host calls
+        // AddTempoUserTimeZone() — the default behaviour is unchanged (opt-in).
+        services.TryAddScoped<ITmUserTimeZone>(sp => new TmUserTimeZone(sp.GetRequiredService<IJSRuntime>()));
+
         // ThemeService: scoped so each circuit/tab gets its own theme state.
         services.TryAddScoped<ThemeService>();
 
@@ -77,6 +84,35 @@ public static class ServiceCollectionExtensions
         // Notification system.
         services.TryAddSingleton<ITmNotificationService, NoOpNotificationService>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Opts the relative-time formatter into the user's browser time zone. Replaces the
+    /// <see cref="ITmRelativeTimeFormatter"/> registration with one over a private
+    /// <see cref="TimeProvider"/> whose <see cref="TimeProvider.LocalTimeZone"/> reads the scoped
+    /// <see cref="ITmUserTimeZone"/> lazily — "yesterday at 4:20 PM" is judged in the user's zone on
+    /// Blazor Server instead of the server's. The app-wide <see cref="TimeProvider"/> is untouched
+    /// (Kestrel and cookie authentication are singletons that consume it), and the zone is read once
+    /// per circuit from <c>Intl.DateTimeFormat().resolvedOptions().timeZone</c> after the first
+    /// interactive render; relative-time components re-render automatically when it arrives. Nothing
+    /// ticks the stamps — the host re-renders as before.
+    /// <code>
+    /// builder.Services.AddTempoBlazor();
+    /// builder.Services.AddTempoUserTimeZone();
+    /// </code>
+    /// </summary>
+    public static IServiceCollection AddTempoUserTimeZone(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddScoped<ITmUserTimeZone>(sp => new TmUserTimeZone(sp.GetRequiredService<IJSRuntime>()));
+        services.Replace(ServiceDescriptor.Scoped<ITmRelativeTimeFormatter>(sp =>
+            new TmRelativeTimeFormatter(
+                sp.GetRequiredService<ITmLocalizer>(),
+                new TmUserTimeProvider(
+                    sp.GetRequiredService<ITmUserTimeZone>(),
+                    sp.GetService<TimeProvider>()))));
         return services;
     }
 

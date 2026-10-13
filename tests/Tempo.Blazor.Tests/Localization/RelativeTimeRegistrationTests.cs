@@ -153,6 +153,34 @@ public class RelativeTimeRegistrationTests
         pragueText.Should().NotBe(newYorkText);
     }
 
+    [Fact]
+    public void DocumentedOneLinerSnippet_Compiles_AndMatchesTheDoc()
+    {
+        // The opt-in one-liner from docs/localization-plurals.md is compiled here too
+        // (DocumentedUserZoneRegistration.RegisterOneLiner), and the registration lines must be the
+        // documented ones, not a paraphrase.
+        var doc = File.ReadAllText(Path.Combine(Theme.ThemeCss.RepositoryRoot().FullName, "docs", "localization-plurals.md"));
+        var sample = File.ReadAllText(Path.Combine(
+            Theme.ThemeCss.RepositoryRoot().FullName,
+            "tests", "Tempo.Blazor.Tests", "Localization", "DocumentedUserZoneRegistration.cs"));
+
+        const string marker = "doc-sample:user-zone-oneliner";
+        LinesAfterMarker(doc, marker, 2).Should().Equal(LinesAfterMarker(sample, marker, 2));
+    }
+
+    private static string[] LinesAfterMarker(string text, string marker, int count)
+    {
+        var start = text.IndexOf(marker, StringComparison.Ordinal);
+        start.Should().BeGreaterThan(0, $"'{marker}' must exist in the file");
+        text.IndexOf(marker, start + marker.Length, StringComparison.Ordinal).Should().Be(-1, $"'{marker}' must appear once");
+        return text[(start + marker.Length)..]
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal))
+            .Take(count)
+            .ToArray();
+    }
+
     /// <summary>Stand-in for a singleton host service (Kestrel pool, cookie auth) that consumes TimeProvider.</summary>
     private sealed class SingletonClockConsumer(TimeProvider clock)
     {
@@ -168,12 +196,14 @@ public class RelativeTimeRegistrationTests
         var sample = File.ReadAllText(Path.Combine(
             Theme.ThemeCss.RepositoryRoot().FullName,
             "tests", "Tempo.Blazor.Tests", "Localization", "DocumentedUserZoneRegistration.cs"));
-        var marker = doc.IndexOf("doc-sample:user-zone", StringComparison.Ordinal);
-        marker.Should().BeGreaterThan(0);
-        var snippet = doc[(marker + "doc-sample:user-zone".Length)..(doc.IndexOf(")));", marker, StringComparison.Ordinal) + 4)];
+        // The line end keeps "doc-sample:user-zone" from also matching "doc-sample:user-zone-oneliner".
+        const string marker = "doc-sample:user-zone\n";
+        var markerAt = doc.IndexOf(marker, StringComparison.Ordinal);
+        markerAt.Should().BeGreaterThan(0);
+        var snippet = doc[(markerAt + marker.Length)..(doc.IndexOf(")));", markerAt, StringComparison.Ordinal) + 4)];
         var body = sample.IndexOf("public static void Register", StringComparison.Ordinal);
-        var compiledStart = sample.IndexOf("doc-sample:user-zone", body, StringComparison.Ordinal);
-        var compiled = sample[(compiledStart + "doc-sample:user-zone".Length)..(sample.IndexOf(")));", compiledStart, StringComparison.Ordinal) + 4)];
+        var compiledStart = sample.IndexOf(marker, body, StringComparison.Ordinal);
+        var compiled = sample[(compiledStart + marker.Length)..(sample.IndexOf(")));", compiledStart, StringComparison.Ordinal) + 4)];
         Normalize(snippet).Should().Be(Normalize(compiled),
             "the compiled sample is the documented snippet, not a paraphrase of it");
 

@@ -23,6 +23,14 @@ internal static class DocumentedUserZoneRegistration
             new UserTimeProvider(sp.GetRequiredService<CircuitZoneCache>())));
     }
 
+    public static void RegisterOneLiner(IServiceCollection builderServices)
+    {
+        var builder = new HostBuilder(builderServices);
+        // doc-sample:user-zone-oneliner
+        builder.Services.AddTempoBlazor();
+        builder.Services.AddTempoUserTimeZone();
+    }
+
     private sealed class HostBuilder(IServiceCollection services)
     {
         public IServiceCollection Services { get; } = services;

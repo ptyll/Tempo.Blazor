@@ -7148,6 +7148,18 @@
               "type": "this IServiceCollection"
             }
           ]
+        },
+        {
+          "name": "AddTempoUserTimeZone",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "description": "Opts the relative-time formatter into the user's browser time zone. Replaces the ITmRelativeTimeFormatter registration with one over a private TimeProvider whose LocalTimeZone reads the scoped ITmUserTimeZone lazily — \"yesterday at 4:20 PM\" is judged in the user's zone on Blazor Server instead of the server's. The app-wide TimeProvider is untouched (Kestrel and cookie authentication are singletons that consume it), and the zone is read once per circuit from Intl.DateTimeFormat().resolvedOptions().timeZone after the first interactive render; relative-time components re-render automatically when it arrives. Nothing ticks the stamps — the host re-renders as before. builder.Services.AddTempoBlazor(); builder.Services.AddTempoUserTimeZone();",
+          "parameters": [
+            {
+              "name": "services",
+              "type": "this IServiceCollection"
+            }
+          ]
         }
       ]
     },
@@ -26943,6 +26955,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-user-zone.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/workflow-designer.js",
       "kind": "JavaScript"
     },
@@ -26988,6 +27004,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toolbar.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-user-zone.test.mjs",
       "kind": "JavaScript"
     }
   ],

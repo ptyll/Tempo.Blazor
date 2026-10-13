@@ -7150,6 +7150,18 @@
                   "type": "this IServiceCollection"
                 }
               ]
+            },
+            {
+              "name": "AddTempoUserTimeZone",
+              "kind": "Method",
+              "type": "IServiceCollection",
+              "description": "Opts the relative-time formatter into the user's browser time zone. Replaces the ITmRelativeTimeFormatter registration with one over a private TimeProvider whose LocalTimeZone reads the scoped ITmUserTimeZone lazily — \"yesterday at 4:20 PM\" is judged in the user's zone on Blazor Server instead of the server's. The app-wide TimeProvider is untouched (Kestrel and cookie authentication are singletons that consume it), and the zone is read once per circuit from Intl.DateTimeFormat().resolvedOptions().timeZone after the first interactive render; relative-time components re-render automatically when it arrives. Nothing ticks the stamps — the host re-renders as before. builder.Services.AddTempoBlazor(); builder.Services.AddTempoUserTimeZone();",
+              "parameters": [
+                {
+                  "name": "services",
+                  "type": "this IServiceCollection"
+                }
+              ]
             }
           ]
         },
@@ -26945,6 +26957,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-user-zone.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/workflow-designer.js",
           "kind": "JavaScript"
         },
@@ -26990,6 +27006,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toolbar.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-user-zone.test.mjs",
           "kind": "JavaScript"
         }
       ],
@@ -75009,6 +75029,32 @@
           ]
         },
         {
+          "itemName": "ITmUserTimeZone",
+          "kind": "Interface",
+          "category": "Localization",
+          "namespace": "Tempo.Blazor.Localization",
+          "description": "The end user's time zone, resolved once per circuit. AddTempoUserTimeZone() opts the relative-time formatter into it; until then nothing changes for hosts that do not opt in. The scoped instance can be shared by other consumers (e.g. Scheduler, Gantt), so the browser is read only once per circuit. UTC on Blazor Server until the browser reports its zone after the first interactive render; on WebAssembly the runtime's local zone, which already is the browser's zone. AddTempoBlazor() always registers it (scoped); SetZone lets a host profile setting win over the browser value.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmUserTimeZone.cs",
+          "documentationStatus": "merged",
+          "usedInComponents": [
+            "TmTimeline",
+            "TmActivityTimeline",
+            "TmActivityComments",
+            "TmNotificationBell"
+          ],
+          "examples": [
+            {
+              "title": "Opt the relative-time formatter into the browser zone",
+              "code": "builder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoUserTimeZone();"
+            },
+            {
+              "title": "Host profile setting wins over the browser value",
+              "code": "@inject ITmUserTimeZone UserTimeZone\n\n@code {\n    protected override void OnInitialized()\n        => UserTimeZone.SetZone(TimeZoneInfo.FindSystemTimeZoneById(\"Europe/Prague\"));\n}"
+            }
+          ]
+        },
+        {
           "itemName": "TmLocalizerPluralExtensions",
           "kind": "Class",
           "category": "Localization",
@@ -100049,12 +100095,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1482,
-        "manualItemCount": 1482,
-        "generatedItemCount": 1465,
+        "itemCount": 1483,
+        "manualItemCount": 1483,
+        "generatedItemCount": 1466,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1465
+        "publicApiTypeCount": 1466
       }
     },
     {
@@ -114564,10 +114610,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3202,
-    "manualItemCount": 3202,
+    "itemCount": 3203,
+    "manualItemCount": 3203,
     "generatedOnlyItemCount": 0,
     "componentCount": 474,
-    "publicApiTypeCount": 2675
+    "publicApiTypeCount": 2676
   }
 }

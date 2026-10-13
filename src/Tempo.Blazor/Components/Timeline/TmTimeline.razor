@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Timeline
 @inherits Tempo.Blazor.Components.TmComponentBase
+@implements IDisposable
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Avatars
 
@@ -196,6 +197,27 @@
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
     private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>Re-renders the stamps once the user zone arrives (opt-in via AddTempoUserTimeZone()).</summary>
+    private TmUserZoneObserver? _userZoneObserver;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // After the first INTERACTIVE render: prerender has no JS interop, and the probe runs once
+        // per circuit. No-op unless the host registered ITmUserTimeZone (AddTempoBlazor does).
+        _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, () => InvokeAsync(StateHasChanged));
+        if (_userZoneObserver is not null)
+        {
+            await _userZoneObserver.ProbeAsync();
+        }
+    }
+
+    public void Dispose() => _userZoneObserver?.Dispose();
 
     /// <summary>The shared relative-time formatter ("just now", "5 min ago", "yesterday at 4:20 PM", a date after a week).</summary>
     private string FormatTime(DateTimeOffset dt)

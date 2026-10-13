@@ -153,6 +153,25 @@
         await LoadUnreadCountAsync();
     }
 
+    /// <summary>Re-renders the stamps once the user zone arrives (opt-in via AddTempoUserTimeZone()).</summary>
+    private TmUserZoneObserver? _userZoneObserver;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // After the first INTERACTIVE render: prerender has no JS interop, and the probe runs once
+        // per circuit. No-op unless the host registered ITmUserTimeZone (AddTempoBlazor does).
+        _userZoneObserver ??= TmUserZoneObserver.Subscribe(Services, () => InvokeAsync(StateHasChanged));
+        if (_userZoneObserver is not null)
+        {
+            await _userZoneObserver.ProbeAsync();
+        }
+    }
+
     private async void OnNotificationsChanged()
     {
         await InvokeAsync(async () =>
@@ -257,5 +276,6 @@
     public void Dispose()
     {
         NotificationService.OnChanged -= OnNotificationsChanged;
+        _userZoneObserver?.Dispose();
     }
 }

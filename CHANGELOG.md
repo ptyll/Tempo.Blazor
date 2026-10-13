@@ -707,6 +707,36 @@
 
 ### Added
 
+- **Opt-in user time zone: `ITmUserTimeZone` + `AddTempoUserTimeZone()` (F7 follow-up).** Relative
+  time ("yesterday at 4:20 PM") used to be judged in the clock's local zone — on Blazor Server that
+  is the *server's* zone, so a circuit whose browser sits elsewhere got the wrong day and the wrong
+  clock time. `AddTempoBlazor()` now registers a scoped `ITmUserTimeZone` (one browser read per
+  circuit, shared by every consumer), and one line opts the formatter in:
+
+  ```csharp
+  builder.Services.AddTempoBlazor();
+  builder.Services.AddTempoUserTimeZone();
+  ```
+
+  `AddTempoUserTimeZone()` replaces the `ITmRelativeTimeFormatter` registration with one over a
+  private `TimeProvider` that reads `ITmUserTimeZone.Zone` lazily. Never replace the app-wide
+  `TimeProvider`: Kestrel and cookie authentication are singletons that consume it, so a scoped
+  `TimeProvider` fails the host under `ValidateScopes`. On WebAssembly `ITmUserTimeZone.Zone` is the
+  runtime's local zone immediately (it already is the browser's zone; `InvariantTimezone` must stay
+  false, the default). On Blazor Server the library reads
+  `Intl.DateTimeFormat().resolvedOptions().timeZone` once per circuit after the first interactive
+  render (new `tm-user-zone.js` module), resolves it with `TimeZoneInfo.FindSystemTimeZoneById` and
+  falls back to UTC for an unknown id; during prerender the zone stays UTC/unresolved. The
+  relative-time components (`TmTimeline`, `TmActivityTimeline`, `TmActivityComments`,
+  `TmNotificationBell`) re-render once the zone arrives, and on Server those four trigger the
+  browser probe from their first interactive render — a page with none of them on screen must call
+  `ITmUserTimeZone.SetZone` to get a resolved zone. `SetZone` also lets a host profile setting win
+  over the browser value. Nothing ticks the stamps — the host re-renders as
+  before. Until the host calls `AddTempoUserTimeZone()`, nothing changes: the default formatter
+  keeps judging days in the clock's zone, and no `TimeProvider` registration is added. The manual
+  registration snippet in `docs/localization-plurals.md` (scoped formatter over your own lazy
+  `TimeProvider`) stays valid for hosts that prefer to own the plumbing.
+
 - **`TmEditorShell.MobileSheetSnapPoints` (C8).** The mobile panels sheet no longer hard-wires its
   half/full snap pair: a host passes the fractions of the shell's stage the sheet snaps to
   (ascending, `0–1`; `MobileSheetSnapIndex` indexes the list, 0 = the lowest). Invalid values are
