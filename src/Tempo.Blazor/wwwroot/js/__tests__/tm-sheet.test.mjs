@@ -144,15 +144,22 @@ function panel(height) {
     };
 }
 
-function handle() {
+function handle(options = {}) {
     const listeners = new Map();
-    return {
+    const captured = new Set();
+    const el = {
         listeners,
+        captured,
         addEventListener(type, fn) { listeners.set(type, fn); },
         removeEventListener(type) { listeners.delete(type); },
-        setPointerCapture() {},
+        setPointerCapture(id) { captured.add(id); },
+        releasePointerCapture(id) { captured.delete(id); },
         dispatch(type, event) { listeners.get(type)?.(event); },
     };
+    // The grabber variant carries the class tm-sheet.js looks up to choose captureOn 'press'.
+    // Without it the stub is a header, which waits for the 6px arm before capturing.
+    if (options.grabber) el.classList = { contains: (name) => name === 'tm-sheet__handle' };
+    return el;
 }
 
 function host() {
@@ -251,11 +258,11 @@ test('a header ignores pointerdown on an interactive target until the finger mov
     attachGesture(grab, sheet, [0.5, 1], true, host(), 'header');
 
     const button = { closest: () => button };
-    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientY: 100, target: button });
-    grab.dispatch('pointermove', { pointerId: 1, clientY: 102 });
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, clientX: 0, clientY: 100, target: button });
+    grab.dispatch('pointermove', { pointerId: 1, clientX: 0, clientY: 102 });
     assert.equal(sheet.inline.height ?? '', '', 'a click on the close button must not drag the sheet');
 
-    grab.dispatch('pointermove', { pointerId: 1, clientY: 112 });
+    grab.dispatch('pointermove', { pointerId: 1, clientX: 0, clientY: 112 });
     assert.equal(sheet.inline.height, '388px', 'a real drag from the header still moves the sheet');
     delete globalThis.window;
 });
@@ -742,4 +749,184 @@ test('tm-sheet.js re-exports the very same helpers as tm-top-layer.js (one regis
         assert.equal(typeof topLayer[name], 'function', `${name} lives in tm-top-layer.js`);
         assert.strictEqual(sheet[name], topLayer[name], `${name} must be the same function object, not a copy`);
     }
+});
+
+// ── F19: the gesture runs on the shared pointer-drag helper ─────────────────
+// A second finger must not hijack an active drag, Escape mid-drag rolls the sheet back to the
+// snap C# owns (without closing the dialog around it), a lost pointer capture cancels silently,
+// and a header press never captures before the drag actually starts.
+
+function docStub() {
+    const listeners = new Map();
+    return {
+        addEventListener(type, fn) { listeners.set(type, [...(listeners.get(type) ?? []), fn]); },
+        removeEventListener(type, fn) {
+            listeners.set(type, (listeners.get(type) ?? []).filter(entry => entry !== fn));
+        },
+        dispatch(type, event) {
+            for (const fn of [...(listeners.get(type) ?? [])]) fn(event);
+            return event;
+        },
+    };
+}
+
+test('a second finger cannot hijack an active sheet drag', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'hijack');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, isPrimary: true, clientY: 160, timeStamp: 100 });
+    assert.equal(sheet.inline.height, '340px', 'the first finger has the drag');
+
+    // A second finger lands mid-drag: it can neither move nor end the gesture.
+    grab.dispatch('pointerdown', { button: 0, pointerId: 2, isPrimary: false, clientY: 400, timeStamp: 120 });
+    grab.dispatch('pointermove', { pointerId: 2, isPrimary: false, clientY: 500, timeStamp: 140 });
+    assert.equal(sheet.inline.height, '340px', 'the second finger must not move the sheet');
+
+    grab.dispatch('pointerup', { pointerId: 1, isPrimary: true, clientY: 160, timeStamp: 150 });
+    assert.equal(sheet.inline.height, '', 'the first finger\'s release still settles the sheet');
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync',
+        '340 of 800 is a small drag; it settles on the nearest snap, exactly as without the second finger');
+    delete globalThis.window;
+});
+
+test('Escape during a sheet drag restores the snap and does not propagate', () => {
+    installWindow(800);
+    const documentStub = docStub();
+    globalThis.document = documentStub;
+    try {
+        const grab = handle();
+        const sheet = panel(400);
+        const sink = host();
+        attachGesture(grab, sheet, [0.5, 1], true, sink, 'escape');
+
+        grab.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientY: 100, timeStamp: 0 });
+        grab.dispatch('pointermove', { pointerId: 1, isPrimary: true, clientY: 200, timeStamp: 100 });
+        assert.equal(sheet.inline.height, '300px', 'the drag is live before Escape');
+
+        const escape = { key: 'Escape', stopPropagation() { this.propagationStopped = true; } };
+        documentStub.dispatch('keydown', escape);
+        assert.equal(sheet.inline.height, '', 'Escape rolls the sheet back to the snap C# owns');
+        assert.equal(sheet.inline.transition, '');
+        assert.equal(sink.calls.length, 0, 'a cancelled drag reports nothing');
+        assert.equal(escape.propagationStopped, true,
+            'the Escape is consumed by the drag; it must not close the dialog around the sheet');
+
+        // The sheet is still draggable afterwards.
+        grab.dispatch('pointerdown', { button: 0, pointerId: 2, isPrimary: true, clientY: 100, timeStamp: 0 });
+        grab.dispatch('pointermove', { pointerId: 2, isPrimary: true, clientY: 112, timeStamp: 100 });
+        grab.dispatch('pointerup', { pointerId: 2, isPrimary: true, clientY: 112, timeStamp: 100 });
+        assert.equal(sink.calls[0]?.[0], 'HandleSheetSnappedAsync', 'a fresh drag after the cancel still works');
+    }
+    finally {
+        delete globalThis.document;
+        delete globalThis.window;
+    }
+});
+
+test('lostpointercapture cancels without HandleSheetSnappedAsync', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'lost-capture');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientY: 100, timeStamp: 0 });
+    grab.dispatch('pointermove', { pointerId: 1, isPrimary: true, clientY: 200, timeStamp: 100 });
+    grab.dispatch('lostpointercapture', { pointerId: 1 });
+
+    assert.equal(sheet.inline.height, '', 'the drag is rolled back');
+    assert.equal(sheet.inline.transition, '');
+    assert.equal(sink.calls.length, 0, 'a lost capture reports nothing, like a pointercancel');
+    delete globalThis.window;
+});
+
+test('a header tap on the close button is not captured (captureOn start)', () => {
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'header-tap');
+
+    const button = { closest: () => button };
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientY: 100, target: button, timeStamp: 0 });
+    assert.equal(grab.captured.size, 0, 'a press on the header must not take pointer capture yet');
+    grab.dispatch('pointerup', { pointerId: 1, isPrimary: true, clientY: 100, target: button, timeStamp: 50 });
+
+    assert.equal(sheet.inline.height ?? '', '');
+    assert.equal(sheet.inline.transition ?? '', '');
+    assert.equal(sink.calls.length, 0, 'a tap never reaches the host');
+    assert.equal(grab.captured.size, 0, 'a tap never captures, so the click reaches the close button');
+    delete globalThis.window;
+});
+
+// ── F19 fixes: capture branch coverage, the flick, and the sideways drift ──────
+
+test('a press on the grabber captures at once; a header press does not capture', () => {
+    installWindow(800);
+    const grabber = handle({ grabber: true });
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grabber, sheet, [0.5, 1], true, sink, 'grabber');
+
+    grabber.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientY: 100 });
+    assert.equal(grabber.captured.has(1), true,
+        'the grabber captures on press, before any move — a fast drag may leave the 44px handle');
+
+    const header = handle();
+    const headerSheet = panel(400);
+    attachGesture(header, headerSheet, [0.5, 1], true, host(), 'header');
+
+    header.dispatch('pointerdown', { button: 0, pointerId: 2, isPrimary: true, clientY: 100 });
+    assert.equal(header.captured.has(2), false, 'a header press waits for the drag to start');
+    delete globalThis.window;
+});
+
+test('a fast flick from the half snap dismisses (the E2E FastFlick sequence)', () => {
+    // SheetRound3E2ETests.FastFlick_AtHalf_Dismisses: down, +12, +70, up in ONE JS turn. The
+    // browser stamps those events a fraction of a ms apart, so the 80ms sample window still holds
+    // the press sample and the 70px tail collapses to the 1ms floor — a ~70 px/ms flick.
+    installWindow(390);
+    const grab = handle({ grabber: true });
+    const sheet = panel(195); // the half snap of a 390px viewport
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'fast-flick');
+
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientY: 195, timeStamp: 1000 });
+    assert.equal(grab.captured.has(1), true, 'the grabber captured the press before any move');
+    grab.dispatch('pointermove', { pointerId: 1, isPrimary: true, clientY: 207, timeStamp: 1000.1 });
+    grab.dispatch('pointermove', { pointerId: 1, isPrimary: true, clientY: 265, timeStamp: 1000.2 });
+    grab.dispatch('pointerup', { pointerId: 1, isPrimary: true, clientY: 265, timeStamp: 1000.3 });
+
+    assert.equal(sink.calls[0]?.[0], 'HandleSheetDismissedAsync',
+        '125/390 is past the lowest-snap margin and the tail is a fast flick — the sheet dismisses');
+    delete globalThis.window;
+});
+
+test('a sideways drift on a header button starts no drag and leaves the click alone', () => {
+    // pointer-drag arms on Math.hypot, so a purely sideways move would start a drag from the
+    // close button and swallow its click. The old code armed on VERTICAL movement only; the
+    // gesture vetoes what a sideways drift starts on a control.
+    installWindow(800);
+    const grab = handle();
+    const sheet = panel(400);
+    const sink = host();
+    attachGesture(grab, sheet, [0.5, 1], true, sink, 'header-side');
+
+    const button = { closest: (selector) => selector.includes('button') ? button : null };
+    grab.dispatch('pointerdown', { button: 0, pointerId: 1, isPrimary: true, clientX: 10, clientY: 100, target: button });
+    grab.dispatch('pointermove', { pointerId: 1, isPrimary: true, clientX: 20, clientY: 100 }); // dx=10, dy=0
+    grab.dispatch('pointerup', { pointerId: 1, isPrimary: true, clientX: 20, clientY: 100 });
+
+    assert.equal(sheet.inline.height ?? '', '', 'a sideways drift must not drag the sheet');
+    assert.equal(sink.calls.length, 0, 'a vetoed gesture reports nothing to the host');
+    assert.equal(grab.listeners.has('click'), false, 'no click suppression may be armed');
+    const click = { preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } };
+    grab.dispatch('click', click);
+    assert.notEqual(click.prevented, true, 'the click must reach the button');
+    assert.notEqual(click.stopped, true, 'the click must not be stopped');
+    delete globalThis.window;
 });

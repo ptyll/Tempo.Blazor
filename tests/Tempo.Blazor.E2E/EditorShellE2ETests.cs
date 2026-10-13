@@ -12,7 +12,7 @@ namespace Tempo.Blazor.E2E;
 /// and computed values (bounding boxes, positions, track counts) are asserted, not only tokens.
 /// </summary>
 [TestClass]
-public class EditorShellE2ETests : WasmTestBase
+public partial class EditorShellE2ETests : WasmTestBase
 {
     private const string Route = "/editor-shell";
 

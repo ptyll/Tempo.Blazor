@@ -45,6 +45,13 @@
 
 ### Changed
 
+- **Escape during a bottom-sheet drag cancels the drag first (internal change, no API surface).**
+  The sheet gesture (`tm-sheet.js`) now runs on the shared `pointer-drag.js` helper instead of its
+  own pointer handlers: the flick/snap/`SwipeToDismiss` behaviour is unchanged, but Escape mid-drag
+  rolls the inline height back and restores the snap C# owns without closing the sheet (the Escape
+  is consumed by the drag; a second Escape closes the sheet), a second finger can no longer hijack
+  an active drag, and `lostpointercapture` / a missed mouse-up cancel silently.
+
 - **`TmCalendarView` colours come from `--tm-calendar-view-*` tokens.** The today background
   and ink, the event fill/border/ink and the highlighted-date dot read six new tokens
   declared in `tokens.css` with their dark pairs in `tokens-dark.css`; the component's two
@@ -706,6 +713,11 @@
   unchanged (same visual).
 
 ### Added
+
+- **`attachKeyboardMove` accepts `{ shift: true }` and reports `step.shift` for Alt+Shift+Arrow
+  (the keyboard resize alternative, e.g. growing a Scheduler event).** Without the option
+  Alt+Shift+Arrow stays ignored and unprevented; Ctrl/Meta chords stay ignored either way; the
+  plain Alt+Arrow step reports `shift: false`. Not breaking.
 
 - **Opt-in user time zone: `ITmUserTimeZone` + `AddTempoUserTimeZone()` (F7 follow-up).** Relative
   time ("yesterday at 4:20 PM") used to be judged in the clock's local zone — on Blazor Server that

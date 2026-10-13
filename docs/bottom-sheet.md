@@ -31,7 +31,10 @@ it started at, or on a flick. A tap never dismisses, and an upward drag never di
 
 The gesture writes only an inline `height` and `transition`, and clears both on release, cancel and
 a vetoed dismiss. `--tm-sheet-height` stays Blazor-owned. Deleting it collapses a snap whose index
-did not change, because Blazor will not rewrite a style it still considers current.
+did not change, because Blazor will not rewrite a style it still considers current. The gesture runs
+on the shared `pointer-drag.js` helper: a second finger cannot take over an active drag, and Escape
+during a drag cancels the drag first — the inline height is rolled back, the snap C# owns stays, the
+Escape is consumed and does not reach the dialog — so it takes a second Escape to close the sheet.
 
 ## Modal and inline
 

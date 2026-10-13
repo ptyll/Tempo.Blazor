@@ -208,14 +208,16 @@ A classic script has no import path. `scheduler.js` resolves the helper from
 `document.currentScript.src` at load time; capture it at the top of the file, not in a
 later callback.
 
-`attachKeyboardMove(element, { onStep, selector })` is the keyboard alternative
+`attachKeyboardMove(element, { onStep, selector, shift })` is the keyboard alternative
 (WCAG 2.5.7). It cancels **only** the `Alt`+Arrow chord — `Alt+ArrowLeft` is the
 browser Back shortcut, so the `preventDefault` has to live in the keydown listener; a
 Blazor `@onkeydown:preventDefault` would swallow Tab as well — and reports
-`{ key, x, y }` (`ArrowLeft` is `{ x: -1, y: 0 }`). A canvas editor that already
-nudges with plain arrows may keep doing so and not call it. The scheduler's event
-resize does not have its alternative yet; that is the Scheduler plan's, and a new
-adopter does not get the same exemption.
+`{ key, x, y, shift }` (`ArrowLeft` is `{ x: -1, y: 0 }`). With `shift: true` it also
+accepts `Alt`+Shift+Arrow (the resize alternative) and reports `shift: true` for that
+chord; without the option `Alt`+Shift+Arrow stays ignored and unprevented. A canvas
+editor that already nudges with plain arrows may keep doing so and not call it. The
+scheduler's event resize does not have its alternative yet; that is the Scheduler
+plan's, and a new adopter does not get the same exemption.
 
 ### Plurals and relative time
 

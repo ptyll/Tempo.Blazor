@@ -243,6 +243,21 @@ test('Escape that cancels a drag stops propagation so a dialog does not also clo
     assert.equal(escape.stopped, true, 'the surrounding dialog/sheet must not see this Escape');
 });
 
+test('Escape during a press that never became a drag does not stop propagation', () => {
+    // F19: only an ACTIVE drag consumes the Escape. A press that never crossed the threshold
+    // leaves the key for the dialog or sheet around it.
+    const el = fakeElement();
+    const r = recorder();
+    attach(el, { threshold: 10, ...r.options });
+
+    el.dispatch('pointerdown', ptr());
+    const escape = { key: 'Escape', stopPropagation() { this.stopped = true; } };
+    doc.dispatch('keydown', escape);
+
+    assert.equal(r.last('release').outcome, 'aborted', 'the pending press is rolled back');
+    assert.notEqual(escape.stopped, true, 'no drag was running, so the dialog still sees this Escape');
+});
+
 test('the Escape listener is registered in the capture phase, ahead of a dialog bubble listener', () => {
     // m3: a bubble-phase listener on document runs after the dialog's own element listener and after
     // any document listener registered earlier, so the dialog closes first. Capture runs first.
@@ -841,4 +856,54 @@ test('attachKeyboardMove preventDefaults only the Alt+Arrow chord and reports th
     const after = { key: 'ArrowRight', altKey: true, preventDefault() { this.prevented = true; } };
     el.dispatch('keydown', after);
     assert.equal(after.prevented, undefined, 'detach removes the listener');
+});
+
+test('attachKeyboardMove ignores Alt+Shift+Arrow by default (not prevented, no step)', () => {
+    const el = fakeElement();
+    const steps = [];
+    attachKeyboardMove(el, { onStep: (step) => steps.push(step) });
+
+    const chord = { key: 'ArrowDown', altKey: true, shiftKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', chord);
+    assert.equal(chord.prevented, undefined, 'without the shift option the chord is left to the browser');
+    assert.equal(steps.length, 0, 'without the shift option no step is reported');
+});
+
+test('attachKeyboardMove with shift:true reports Alt+Shift+ArrowDown as {x:0,y:1,shift:true} and prevents it', () => {
+    const el = fakeElement();
+    const steps = [];
+    attachKeyboardMove(el, { shift: true, onStep: (step) => steps.push(step) });
+
+    const chord = { key: 'ArrowDown', altKey: true, shiftKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', chord);
+    assert.equal(chord.prevented, true, 'Alt+Shift+Arrow is the resize chord and must not reach the browser');
+    assert.equal(steps.length, 1);
+    assert.equal(steps[0].key, 'ArrowDown');
+    assert.deepEqual({ x: steps[0].x, y: steps[0].y, shift: steps[0].shift }, { x: 0, y: 1, shift: true });
+});
+
+test('shift:true still ignores Ctrl/Meta chords', () => {
+    const el = fakeElement();
+    const steps = [];
+    attachKeyboardMove(el, { shift: true, onStep: (step) => steps.push(step) });
+
+    const ctrl = { key: 'ArrowDown', altKey: true, shiftKey: true, ctrlKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', ctrl);
+    assert.equal(ctrl.prevented, undefined);
+    const meta = { key: 'ArrowDown', altKey: true, shiftKey: true, metaKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', meta);
+    assert.equal(meta.prevented, undefined);
+    assert.equal(steps.length, 0);
+});
+
+test('the plain Alt+Arrow step reports shift:false', () => {
+    const el = fakeElement();
+    const steps = [];
+    attachKeyboardMove(el, { shift: true, onStep: (step) => steps.push(step) });
+
+    const plain = { key: 'ArrowRight', altKey: true, preventDefault() { this.prevented = true; } };
+    el.dispatch('keydown', plain);
+    assert.equal(plain.prevented, true);
+    assert.equal(steps.length, 1);
+    assert.deepEqual({ x: steps[0].x, y: steps[0].y, shift: steps[0].shift }, { x: 1, y: 0, shift: false });
 });

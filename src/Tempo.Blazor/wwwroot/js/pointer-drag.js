@@ -53,17 +53,23 @@ const ARROW_STEP = Object.freeze({
  * behaviour. Alt+ArrowLeft/Right is the browser Back/Forward shortcut, so the cancel has to happen
  * here, in the keydown listener — a Blazor `@onkeydown:preventDefault` would swallow Tab as well.
  * A canvas editor that already nudges with plain arrows may keep doing so and not call this.
+ * Pass `shift: true` to also accept Alt+Shift+Arrow (the resize alternative, e.g. a Scheduler
+ * event): the step then reports `shift: true`. Without the option Alt+Shift+Arrow stays ignored
+ * and unprevented, exactly like every non-arrow chord.
  *
  * @param {Element|null} element the focused item (or its container, with `selector`)
- * @param {{ onStep?: (step: { key: string, x: number, y: number, event: Event }) => void, selector?: string }} [options]
+ * @param {{ onStep?: (step: { key: string, x: number, y: number, shift: boolean, event: Event }) => void,
+ *           selector?: string, shift?: boolean }} [options]
  * @returns {{ detach: () => void }}
  */
 export function attachKeyboardMove(element, options = {}) {
     if (!element || typeof element.addEventListener !== 'function') return { detach() {} };
 
     const selector = typeof options.selector === 'string' && options.selector ? options.selector : null;
+    const allowShift = options.shift === true;
     const onKeyDown = (event) => {
-        if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (!event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.shiftKey && !allowShift) return;
         const step = ARROW_STEP[event.key];
         if (!step) return;
         if (selector) {
@@ -71,7 +77,7 @@ export function attachKeyboardMove(element, options = {}) {
             if (!target || !element.contains(target)) return;
         }
         event.preventDefault?.();
-        options.onStep?.({ key: event.key, x: step.x, y: step.y, event });
+        options.onStep?.({ key: event.key, x: step.x, y: step.y, shift: event.shiftKey === true, event });
     };
 
     element.addEventListener('keydown', onKeyDown);
@@ -265,9 +271,11 @@ export function attach(element, options = {}) {
 
     function onKeyDown(event) {
         if (event.key === 'Escape' && session) {
+            const started = session.started;
             cancelGesture('escape', event);
-            // This Escape cancelled a drag. It must not also close the dialog or sheet around it.
-            event.stopPropagation?.();
+            // Only an ACTIVE drag consumes the Escape: a press that never became a drag leaves the
+            // key for the dialog or sheet around it.
+            if (started) event.stopPropagation?.();
         }
     }
 

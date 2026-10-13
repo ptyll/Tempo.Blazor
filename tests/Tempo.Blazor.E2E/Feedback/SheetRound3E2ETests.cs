@@ -363,14 +363,17 @@ public sealed class SheetRound3E2ETests : WasmTestBase
         var y = box.Y + box.Height / 2;
 
         // Playwright's mouse moves are too far apart to be a flick. Dispatch the pointer events in
-        // one turn: their timestamps collapse, and the gesture treats a zero gap as 1ms.
+        // one turn: their timestamps collapse, and the gesture treats a zero gap as 1ms. The init
+        // dict carries what a real first finger sends — a constructed PointerEvent defaults to
+        // isPrimary=false/buttons=0, and the shared drag helper (rightly) ignores those.
         await page.EvaluateAsync(
             """
             () => {
                 const handle = document.querySelector('.tm-drawer--bottom .tm-sheet__handle');
                 const start = handle.getBoundingClientRect().top + handle.getBoundingClientRect().height / 2;
                 const fire = (type, dy) => handle.dispatchEvent(new PointerEvent(type, {
-                    bubbles: true, cancelable: true, pointerId: 1, clientY: start + dy, button: 0
+                    pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1,
+                    clientY: start + dy, bubbles: true, cancelable: true
                 }));
                 fire('pointerdown', 0);
                 fire('pointermove', 12);
