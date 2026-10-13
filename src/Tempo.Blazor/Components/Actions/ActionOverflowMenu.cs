@@ -6,6 +6,7 @@ using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Overlay;
+using Tempo.Blazor.Helpers;
 
 /// <summary>
 /// Internal. The single "More" menu of every action surface (the F5 <c>TmMobileActionBar</c>, the F4
@@ -64,6 +65,19 @@ internal sealed class ActionOverflowMenu : ComponentBase
 
     /// <summary>CSS class of the check-mark slot of a checkable item (<see cref="TmActionItem.Checked"/>).</summary>
     [Parameter] public string? CheckClass { get; set; }
+
+    /// <summary>
+    /// CSS class of a group section: consecutive items sharing a <see cref="TmActionItem.Group"/> key
+    /// render inside one <c>role="group"</c> element.
+    /// </summary>
+    [Parameter] public string? GroupClass { get; set; }
+
+    /// <summary>CSS class of a group's visible header. The header is <c>aria-hidden</c> — the section's
+    /// name is its <c>aria-label</c> — so no presentational text sits in the menu's accessibility tree.</summary>
+    [Parameter] public string? GroupLabelClass { get; set; }
+
+    /// <summary>CSS class of the divider (<c>role="separator"</c>) between two adjacent group runs.</summary>
+    [Parameter] public string? SeparatorClass { get; set; }
 
     /// <summary>The layout the panel presentation resolves from before its own measurement.</summary>
     [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
@@ -161,66 +175,132 @@ internal sealed class ActionOverflowMenu : ComponentBase
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "class", MenuClass);
         PruneItemRefs();
-        for (var i = 0; i < Items.Count; i++)
+
+        // C3: items sharing a group key render as labelled role=group sections, adjacent runs divided
+        // by role=separator. Groups and ungrouped items are SIBLINGS of the menu element (keys compare
+        // — the Y9 rule), and the order is the Items order (grouping never reorders — the F5 rule).
+        var runs = ActionMenuRuns.Split(Items);
+        for (var runIndex = 0; runIndex < runs.Count; runIndex++)
         {
-            var item = Items[i];
-            // Sequence numbers are loop-invariant: a keyed item that moves to another index keeps its frame
-            // sequences, so the diff matches its children one to one (an index-derived seq made a moved item's
-            // children look removed and re-added, which throws on a capture frame). The C2 offsets are fixed
-            // constants too — a Checked flip appears/disappears only the frames of ONE item, and the
-            // element-reference capture (seq + 20, ALWAYS present, last) keeps pointing at the same retained
-            // button, so a reorder or a state flip while open never moves a capture (the F4 H1 crash).
-            const int seq = 16;
-            builder.OpenElement(seq, "button");
-            builder.AddAttribute(seq + 1, "type", "button");
-            builder.AddAttribute(seq + 2, "role", item.Checked is null ? "menuitem" : "menuitemcheckbox");
-            if (item.Checked is not null)
+            var run = runs[runIndex];
+            if (runIndex > 0)
             {
-                builder.AddAttribute(seq + 3, "aria-checked", item.Checked == true ? "true" : item.CheckedMixed ? "mixed" : "false");
-            }
-
-            builder.AddAttribute(seq + 4, "class", item.Danger ? $"{ItemClass} {ItemClass}--danger" : ItemClass);
-            builder.AddAttribute(seq + 5, "disabled", item.Disabled);
-            builder.AddAttribute(seq + 6, "data-action-id", ActionId(item));
-            builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
-            builder.AddAttribute(seq + 7, "onclick", EventCallback.Factory.Create(this, () => InvokeAsync(item)));
-            if (item.Checked is not null)
-            {
-                // The check-mark slot: a fixed-size box that paints the state (Check when on, Minus when
-                // mixed, empty when off) and stays aria-hidden — aria-checked carries the state for AT.
-                builder.OpenElement(seq + 8, "span");
-                builder.AddAttribute(seq + 9, "class", CheckClass);
-                builder.AddAttribute(seq + 10, "aria-hidden", "true");
-                if (item.Checked == true || item.CheckedMixed)
-                {
-                    builder.OpenComponent<TmIcon>(seq + 11);
-                    builder.AddAttribute(seq + 12, "Name", item.Checked == true ? IconNames.Check : IconNames.Minus);
-                    builder.AddAttribute(seq + 13, "Size", IconSize.Sm);
-                    builder.CloseComponent();
-                }
-
+                // The divider between two runs — never leading, never trailing. The key types are
+                // distinct from an item's string id, and the boundary is keyed by the run's first item,
+                // so a reorder while open matches the retained elements instead of moving a capture.
+                const int separator = 2;
+                builder.OpenElement(separator, "div");
+                builder.SetKey(new SeparatorKey(ItemKey(run.Items[0])));
+                builder.AddAttribute(separator + 1, "role", "separator");
+                builder.AddAttribute(separator + 2, "class", SeparatorClass);
                 builder.CloseElement();
             }
 
-            if (!string.IsNullOrEmpty(item.Icon))
+            if (run.Key is null || run.Label is null)
             {
-                builder.OpenComponent<TmIcon>(seq + 14);
-                builder.AddAttribute(seq + 15, "Name", item.Icon);
-                builder.AddAttribute(seq + 16, "Size", IconSize.Sm);
-                builder.CloseComponent();
+                // Ungrouped or unnamed run: the items are keyed buttons, siblings of the menu element.
+                foreach (var item in run.Items)
+                {
+                    RenderItem(builder, item);
+                }
+
+                continue;
             }
 
-            builder.OpenElement(seq + 17, "span");
-            builder.AddAttribute(seq + 18, "class", LabelClass);
-            builder.AddContent(seq + 19, item.Label);
+            const int group = 5;
+            builder.OpenElement(group, "div");
+            builder.SetKey(new GroupKey(run.Key, ItemKey(run.Items[0])));
+            builder.AddAttribute(group + 1, "role", "group");
+            builder.AddAttribute(group + 2, "aria-label", run.Label);
+            builder.AddAttribute(group + 3, "class", GroupClass);
+            // The visible header is decoration: the group's name is its aria-label (a heading inside
+            // role=menu would be an invalid child and a stray target of the arrow navigation).
+            builder.OpenElement(group + 4, "div");
+            builder.AddAttribute(group + 5, "class", GroupLabelClass);
+            builder.AddAttribute(group + 6, "aria-hidden", "true");
+            builder.AddContent(group + 7, run.Label);
             builder.CloseElement();
-            var captureId = ActionId(item);
-            builder.AddElementReferenceCapture(seq + 20, reference => _itemRefs[captureId] = reference);
+            foreach (var item in run.Items)
+            {
+                RenderItem(builder, item);
+            }
+
             builder.CloseElement();
         }
 
         builder.CloseElement();
     }
+
+    /// <summary>One menu entry — the frame layout (loop-invariant offsets, capture last) of the flat menu.</summary>
+    private void RenderItem(RenderTreeBuilder builder, TmActionItem item)
+    {
+        // Sequence numbers are loop-invariant: a keyed item that moves to another index (or into and
+        // out of a group section) keeps its frame sequences, so the diff matches its children one to
+        // one (an index-derived seq made a moved item's children look removed and re-added, which
+        // throws on a capture frame). The offsets are fixed constants too — a Checked flip
+        // appears/disappears only the frames of ONE item, and the element-reference capture
+        // (seq + 20, ALWAYS present, last) keeps pointing at the same retained button, so a reorder
+        // or a state flip while open never moves a capture (the F4 H1 crash).
+        const int seq = 16;
+        builder.OpenElement(seq, "button");
+        builder.AddAttribute(seq + 1, "type", "button");
+        builder.AddAttribute(seq + 2, "role", item.Checked is null ? "menuitem" : "menuitemcheckbox");
+        if (item.Checked is not null)
+        {
+            builder.AddAttribute(seq + 3, "aria-checked", item.Checked == true ? "true" : item.CheckedMixed ? "mixed" : "false");
+        }
+
+        builder.AddAttribute(seq + 4, "class", item.Danger ? $"{ItemClass} {ItemClass}--danger" : ItemClass);
+        builder.AddAttribute(seq + 5, "disabled", item.Disabled);
+        builder.AddAttribute(seq + 6, "data-action-id", ActionId(item));
+        builder.SetKey(ItemKey(item));
+        builder.AddAttribute(seq + 7, "onclick", EventCallback.Factory.Create(this, () => InvokeAsync(item)));
+        if (item.Checked is not null)
+        {
+            // The check-mark slot: a fixed-size box that paints the state (Check when on, Minus when
+            // mixed, empty when off) and stays aria-hidden — aria-checked carries the state for AT.
+            builder.OpenElement(seq + 8, "span");
+            builder.AddAttribute(seq + 9, "class", CheckClass);
+            builder.AddAttribute(seq + 10, "aria-hidden", "true");
+            if (item.Checked == true || item.CheckedMixed)
+            {
+                builder.OpenComponent<TmIcon>(seq + 11);
+                builder.AddAttribute(seq + 12, "Name", item.Checked == true ? IconNames.Check : IconNames.Minus);
+                builder.AddAttribute(seq + 13, "Size", IconSize.Sm);
+                builder.CloseComponent();
+            }
+
+            builder.CloseElement();
+        }
+
+        if (!string.IsNullOrEmpty(item.Icon))
+        {
+            builder.OpenComponent<TmIcon>(seq + 14);
+            builder.AddAttribute(seq + 15, "Name", item.Icon);
+            builder.AddAttribute(seq + 16, "Size", IconSize.Sm);
+            builder.CloseComponent();
+        }
+
+        builder.OpenElement(seq + 17, "span");
+        builder.AddAttribute(seq + 18, "class", LabelClass);
+        builder.AddContent(seq + 19, item.Label);
+        builder.CloseElement();
+        var captureId = ActionId(item);
+        builder.AddElementReferenceCapture(seq + 20, reference => _itemRefs[captureId] = reference);
+        builder.CloseElement();
+    }
+
+    /// <summary>Key namespace of a group section — never equal to an item's string key (the Y9 sibling-keys rule).</summary>
+    /// <remarks>Keyed by the run's first item as well, so one group split into two non-contiguous
+    /// runs (e.g. [A(g1), B, C(g1)]) yields two distinct sibling keys.</remarks>
+    private readonly record struct GroupKey(string Group, object First);
+
+    /// <summary>Key namespace of a run divider — never equal to an item's string key or a group key.</summary>
+    /// <remarks>Keyed by the first item's identity, not its label, so two runs whose first items share a label never collide.</remarks>
+    private readonly record struct SeparatorKey(object First);
+
+    /// <summary>Stable diff identity of an item: its Id, or the item instance when it has none.</summary>
+    private static object ItemKey(TmActionItem item) => string.IsNullOrEmpty(item.Id) ? item : item.Id;
 
     private void PruneItemRefs()
     {

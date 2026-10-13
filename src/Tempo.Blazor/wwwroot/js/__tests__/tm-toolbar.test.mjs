@@ -482,6 +482,18 @@ test('H2 an unmarked wrapper with items is flattened and its own padding counts 
     assert.equal(computeFit(bar).maxVisible, 1);
 });
 
+test('C3 a TmToolbarGroup wrapper carries its key in data-tm-toolbar-group and is still flattened, items measured in order', () => {
+    // The TmToolbarGroup component renders data-tm-toolbar-group="<stable key>" — no longer the
+    // empty marker the raw wrappers used. Measurement keys on the attribute's PRESENCE, so a keyed
+    // group measures exactly like the raw wrapper: its buttons take room individually, in DOM order.
+    const bar = stubBar([
+        wrapper([child({ width: 60, rank: 2, id: 'a' }), child({ width: 60, rank: 1, id: 'b' })], { group: 'g1a2b3c', width: 128 }),
+    ], 400);
+    const fit = computeFit(bar);
+    assert.equal(fit.maxVisible, 2);
+    assert.deepEqual(fit.ids, ['a', 'b']);
+});
+
 test('H2 a bar whose items cannot be measured (not rendered: clientWidth 0) reports nothing instead of a fit', () => {
     const fit = computeFit(stubBar([child({ width: 60, rank: 2, id: 'a' })], 0));
     assert.equal(fit.unmeasured, true);

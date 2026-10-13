@@ -6432,6 +6432,18 @@
           "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
         },
         {
+          "name": "Group",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Stable key of the group the action belongs to in the \"More\" menu. Consecutive items (in Items order — grouping never reorders) with the same non-empty key render as one role=\"group\" section named by GroupLabel, and adjacent runs are divided by a role=\"separator\". Null or empty means ungrouped. No effect on the surface itself."
+        },
+        {
+          "name": "GroupLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name and visible header of the item's group in the \"More\" menu, read from the FIRST item of a run. Empty renders the run without a group wrapper (separators only)."
+        },
+        {
           "name": "Icon",
           "kind": "Property",
           "type": "string?",
@@ -6534,6 +6546,18 @@
           "isRequired": false,
           "default": "false",
           "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
+        },
+        {
+          "name": "Group",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Stable key of the group the action belongs to in the \"More\" menu. Consecutive items (in Items order — grouping never reorders) with the same non-empty key render as one role=group section named by GroupLabel, and adjacent runs are divided by a role=separator. Null or empty means ungrouped. No effect on the surface itself."
+        },
+        {
+          "name": "GroupLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name and visible header of the item's group in the \"More\" menu, read from the FIRST item of a run. Empty renders the run without a group wrapper (separators only)."
         },
         {
           "name": "OnClick",
@@ -25078,7 +25102,7 @@
       "kind": "Component",
       "category": "Toolbar",
       "namespace": "Tempo.Blazor.Components.Toolbar",
-      "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons into a More menu (a dropdown that is a bottom sheet on phones); Labels controls the visible button text. Supports sticky positioning.",
+      "description": "Horizontal toolbar with a start section (title + child content) and an actions section. role=toolbar with a roving tabindex (ArrowLeft/Right, Home/End). Overflow=Menu moves the lowest-priority buttons into a More menu (a dropdown that is a bottom sheet on phones); buttons grouped in TmToolbarGroup keep a labelled section in that menu. Labels controls the visible button text. Supports sticky positioning.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmToolbar.razor",
       "documentationStatus": "merged",
@@ -25156,12 +25180,16 @@
         "tm-toolbar-start",
         "tm-toolbar-actions",
         "tm-toolbar-title",
+        "tm-toolbar-group",
         "tm-toolbar-more",
         "tm-toolbar-more__panel",
         "tm-toolbar-more__menu",
         "tm-toolbar-more__item",
         "tm-toolbar-more__item--danger",
         "tm-toolbar-more__label",
+        "tm-toolbar-more__group",
+        "tm-toolbar-more__group-label",
+        "tm-toolbar-more__separator",
         "tm-toolbar-item--collapsed"
       ],
       "examples": [
@@ -25309,6 +25337,52 @@
         {
           "title": "Divider between toolbar groups",
           "code": "<TmToolbar>\n    <TmToolbarButton Icon=\"bold\" />\n    <TmToolbarButton Icon=\"italic\" />\n    <TmToolbarDivider />\n    <TmToolbarButton Icon=\"list\" />\n</TmToolbar>"
+        }
+      ]
+    },
+    {
+      "itemName": "TmToolbarGroup",
+      "kind": "Component",
+      "category": "Toolbar",
+      "namespace": "Tempo.Blazor.Components.Toolbar",
+      "description": "Semantic group of toolbar controls. On the bar it is the layout wrapper TmToolbar's measurement flattens (data-tm-toolbar-group): its buttons take room individually and still collapse on their own. In the More menu of a TmToolbar Overflow=Menu the collapsed members keep the group as a labelled section (role=group with a visible, aria-hidden header), and runs of the same group are separated by role=separator.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Toolbar/TmToolbarGroup.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Toolbar"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The group's buttons."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class for the group element."
+        },
+        {
+          "name": "Label",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the group on the bar and the header of its section in the More menu. Empty renders the wrapper without a role — a layout-only group."
+        }
+      ],
+      "cssClasses": [
+        "tm-toolbar-group"
+      ],
+      "examples": [
+        {
+          "title": "Labelled group whose collapsed members keep the group in More",
+          "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\" AriaLabel=\"Diagram tools\">\n    <TmToolbarGroup Label=\"Edit\">\n        <TmToolbarButton Icon=\"@IconNames.Undo\" Text=\"Undo\" />\n        <TmToolbarButton Icon=\"@IconNames.Redo\" Text=\"Redo\" Priority=\"ToolbarButtonPriority.Secondary\" />\n    </TmToolbarGroup>\n    <TmToolbarDivider />\n    <TmToolbarButton Icon=\"@IconNames.Save\" Text=\"Save\" Priority=\"ToolbarButtonPriority.Pinned\" />\n</TmToolbar>"
+        },
+        {
+          "title": "Layout-only group (no accessible name, no role)",
+          "code": "<TmToolbar Overflow=\"ToolbarOverflow.Menu\">\n    <TmToolbarGroup Class=\"my-cluster\">\n        <TmToolbarButton Icon=\"@IconNames.Bold\" Tooltip=\"Bold\" />\n        <TmToolbarButton Icon=\"@IconNames.Italic\" Tooltip=\"Italic\" />\n    </TmToolbarGroup>\n</TmToolbar>"
         }
       ]
     },
@@ -26790,11 +26864,11 @@
     }
   ],
   "summary": {
-    "itemCount": 369,
-    "manualItemCount": 369,
-    "generatedItemCount": 361,
+    "itemCount": 370,
+    "manualItemCount": 370,
+    "generatedItemCount": 362,
     "generatedOnlyItemCount": 0,
-    "componentCount": 201,
+    "componentCount": 202,
     "publicApiTypeCount": 160
   }
 }

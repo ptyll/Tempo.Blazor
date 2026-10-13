@@ -257,3 +257,27 @@
   }
 }
 
+/* C3: a labelled run of grouped entries in the More menu (the toolbar's contract, the sheet's type
+   scale): the section stacks its entries, the visible header is decoration (aria-hidden; the name is
+   the section's aria-label), and runs are divided by a hairline painted through a border so
+   forced-colors keeps it visible. */
+.tm-mobile-action-bar__menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+}
+.tm-mobile-action-bar__menu-group-label {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+}
+.tm-mobile-action-bar__menu-separator {
+  flex-shrink: 0;
+  block-size: 0;
+  border: none;
+  border-block-start: 1px solid var(--tm-border-color);
+  margin-block: var(--tm-space-1);
+}
+

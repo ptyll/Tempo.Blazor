@@ -64,6 +64,18 @@
       "description": "Disables the action. Disabled items render as disabled buttons/menuitems."
     },
     {
+      "name": "Group",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stable key of the group the action belongs to in the \"More\" menu. Consecutive items (in Items order — grouping never reorders) with the same non-empty key render as one role=group section named by GroupLabel, and adjacent runs are divided by a role=separator. Null or empty means ungrouped. No effect on the surface itself."
+    },
+    {
+      "name": "GroupLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name and visible header of the item's group in the \"More\" menu, read from the FIRST item of a run. Empty renders the run without a group wrapper (separators only)."
+    },
+    {
       "name": "OnClick",
       "type": "EventCallback",
       "isRequired": false,

@@ -179,6 +179,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmToolbar"] = ["toolbar"],
             ["TmToolbarButton"] = ["toolbar", "button"],
             ["TmToolbarDivider"] = ["toolbar"],
+            ["TmToolbarGroup"] = ["toolbar"],
             ["TmFormActionBar"] = ["toolbar"],
             ["TmAlert"] = ["alert"],
             ["TmModal"] = ["modal"],
@@ -1673,6 +1674,16 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("disabled", "Disabled", PropType.Bool,   false,    cat: "Behavior"),
                 // F12/C2: a toggle (aria-pressed) — the wireframe draws the pressed look.
                 P("pressed",  "Pressed (toggle)", PropType.Bool, false, cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmToolbarGroup", Category = "Toolbar", DisplayName = "Toolbar Group",
+            DefaultWidth = 220, DefaultHeight = 32,
+            Props =
+            [
+                P("label", "Label", PropType.String, "Group", cat: "Content"),
             ]
         };
 

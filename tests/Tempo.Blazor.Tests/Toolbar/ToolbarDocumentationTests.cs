@@ -34,6 +34,9 @@ public class ToolbarDocumentationTests
         doc.Should().Contain("Core prerequisites DE-1.2");
         doc.Should().Contain("`TmToolbarButton.Pressed`").And.Contain("`TmActionItem.Checked`").And.Contain("menuitemcheckbox");
         doc.Should().Contain("Group headers and separators");
+        // F13/C3: the group prerequisites are done and the component documented.
+        doc.Should().Contain("`TmToolbarGroup`").And.Contain("Groups survive into More");
+        doc.Should().Contain("done (F13/C3)");
     }
 
     [Fact]

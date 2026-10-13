@@ -47,6 +47,9 @@ else
     /// <summary>The toolbar this button sits in; null when used on its own.</summary>
     [CascadingParameter] private TmToolbar? Toolbar { get; set; }
 
+    /// <summary>The <see cref="TmToolbarGroup"/> this button belongs to; null on the bare bar.</summary>
+    [CascadingParameter] private TmToolbarGroup? Group { get; set; }
+
     /// <summary>Button label text. Omit for icon-only buttons.</summary>
     [Parameter] public string? Text { get; set; }
 
@@ -103,6 +106,9 @@ else
 
     /// <summary>Stable id of the button's entry in the More menu.</summary>
     internal string MenuId { get; } = $"tm-tb-{Guid.NewGuid():N}";
+
+    /// <summary>The group whose section the button's "More" entry joins (null when ungrouped).</summary>
+    internal TmToolbarGroup? OwnerGroup => Group;
 
     /// <summary>The More menu entry's label.</summary>
     internal string MenuLabel => !string.IsNullOrEmpty(Text) ? Text : Tooltip ?? string.Empty;

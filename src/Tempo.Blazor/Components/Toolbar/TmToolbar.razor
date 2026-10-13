@@ -129,10 +129,11 @@
         Recompute();
     }
 
-    /// <summary>A registered button's priority, text or state changed.</summary>
-    internal void ButtonChanged(TmToolbarButton button)
+    /// <summary>A registered button's priority, text or state changed; null re-computes unconditionally (a <see cref="TmToolbarGroup"/> label changed — its members do not know).</summary>
+    internal void ButtonChanged(TmToolbarButton? button)
     {
-        if (_disposed || !_buttons.Contains(button)) return;
+        if (_disposed) return;
+        if (button is not null && !_buttons.Contains(button)) return;
         Recompute();
     }
 
@@ -224,6 +225,10 @@
                 // menuitemcheckbox with aria-checked (null Pressed stays a plain menuitem).
                 Checked = button.Pressed,
                 CheckedMixed = button.PressedMixed,
+                // C3: the collapsed members of a TmToolbarGroup keep the group in the menu — one
+                // labelled role=group section per contiguous run, separated by role=separator.
+                Group = button.OwnerGroup?.GroupKey,
+                GroupLabel = button.OwnerGroup?.EffectiveLabel,
                 OnClick = EventCallback.Factory.Create(this, () => target.ClickAsync()),
             });
         }
@@ -240,9 +245,12 @@
         builder.AddComponentParameter(9, nameof(ActionOverflowMenu.ItemClass), "tm-toolbar-more__item");
         builder.AddComponentParameter(10, nameof(ActionOverflowMenu.LabelClass), "tm-toolbar-more__label");
         builder.AddComponentParameter(11, nameof(ActionOverflowMenu.CheckClass), "tm-toolbar-more__check");
+        builder.AddComponentParameter(12, nameof(ActionOverflowMenu.GroupClass), "tm-toolbar-more__group");
+        builder.AddComponentParameter(13, nameof(ActionOverflowMenu.GroupLabelClass), "tm-toolbar-more__group-label");
+        builder.AddComponentParameter(14, nameof(ActionOverflowMenu.SeparatorClass), "tm-toolbar-more__separator");
         // The viewport scope (cascaded from TmLayoutObserver / the app shell) decides sheet vs popover
         // inside TmOverlayPanel - Auto presents as a bottom sheet on a phone-sized viewport.
-        builder.AddComponentParameter(12, nameof(ActionOverflowMenu.MobilePresentation), OverflowPresentation);
+        builder.AddComponentParameter(15, nameof(ActionOverflowMenu.MobilePresentation), OverflowPresentation);
         builder.CloseComponent();
     };
 

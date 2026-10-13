@@ -648,6 +648,36 @@
 
 ### Added
 
+- **Toolbar groups: `TmToolbarGroup`, and group headings in the "More" menu.** Buttons can now be
+  grouped into a `TmToolbarGroup`:
+
+  ```razor
+  <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Diagram tools">
+      <TmToolbarGroup Label="Edit">
+          <TmToolbarButton Icon="@IconNames.Undo" Text="Undo" />
+          <TmToolbarButton Icon="@IconNames.Redo" Text="Redo" Priority="ToolbarButtonPriority.Secondary" />
+      </TmToolbarGroup>
+      <TmToolbarDivider />
+      <TmToolbarButton Icon="@IconNames.Save" Text="Save" Priority="ToolbarButtonPriority.Pinned" />
+  </TmToolbar>
+  ```
+
+  On the bar the group is the layout wrapper the measurement flattens (`data-tm-toolbar-group`):
+  its buttons take room individually and still collapse on their own, exactly like the raw
+  `role="group"` wrapper this replaces. With `Label` set, the wrapper is a real `role="group"` with
+  an accessible name; without one it stays a layout-only wrapper with no role. When the group's
+  buttons collapse into the "More" menu (of the toolbar or the mobile action bar), they keep the
+  group: each contiguous run of items of one group renders as a `role="group"` section named by the
+  group's label, with a visible but `aria-hidden` header, and adjacent runs are divided by a
+  `role="separator"` (never leading, never trailing). The written order is the menu order — grouping
+  never reorders, so a group interrupted by an ungrouped button renders as two runs around it.
+  The arrow keys, Home/End and typeahead cross the sections without stopping on a heading or a
+  divider, and the initial focus stays on the first enabled menu item. The shared action model grew
+  the same concept for hand-built lists: `TmActionItem.Group` (the stable run key) and
+  `TmActionItem.GroupLabel` (the section's name, read from the first item of a run). Renaming a
+  group re-labels its open menu section immediately. The wireframe editor gained a matching
+  "Toolbar Group" stencil (a dashed group frame with the label).
+
 - **Toolbar and action-surface toggle state (F12/C2): `TmToolbarButton.Pressed` and
   `TmActionItem.Checked`.** A toolbar button can now be a toggle: `Pressed` (`bool?`, default
   `null` = a plain button with no `aria-pressed`; `true`/`false` render `aria-pressed` and the

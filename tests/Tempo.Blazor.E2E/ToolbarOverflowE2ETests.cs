@@ -1045,4 +1045,138 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToHaveCountAsync(0);
     }
+
+    // ── C3: groups keep labelled sections in the More menu ───────────────────────────────────────
+
+    private const string AxeCdn = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js";
+
+    private static async Task<string[]> RunAxeAsync(IPage page, string hostSelector)
+    {
+        await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = AxeCdn });
+        return await page.EvaluateAsync<string[]>(
+            """
+            async (hostSelector) => {
+                const host = document.querySelector(hostSelector) || document.body;
+                const result = await axe.run(host, {
+                    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+                    resultTypes: ['violations']
+                });
+                return result.violations
+                    .filter(v => v.impact === 'critical' || v.impact === 'serious')
+                    .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).join('; ')})`);
+            }
+            """, hostSelector);
+    }
+
+    private static async Task<string[]> MenuStructureAsync(IPage page)
+        => await page.EvaluateAsync<string[]>(
+            """
+            () => Array.from(document.querySelector('.tm-toolbar-more__menu')?.children ?? [])
+                .map(el => el.getAttribute('role') ?? 'none')
+            """);
+
+    [TestMethod]
+    public async Task C3_GroupedToolsInPopover_TheMenuShowsLabelledGroupSections_AndArrowsSkipTheHeadings()
+    {
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-group-menu");
+        var bar = Bar(page, "toolbar-group-menu");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await Assertions.Expect(trigger).ToBeVisibleAsync();
+
+        await trigger.FocusAsync();
+        await page.WaitForTimeoutAsync(1200);
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToBeVisibleAsync();
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // The group run renders as a labelled section with a decoration header; the ungrouped
+        // Export run is a sibling after the separator.
+        var group = page.Locator(".tm-toolbar-more__menu [role='group']");
+        await Assertions.Expect(group).ToBeVisibleAsync();
+        Assert.AreEqual("Edit", await group.GetAttributeAsync("aria-label"), "the section is named by the group's label");
+        var header = group.Locator(".tm-toolbar-more__group-label");
+        Assert.AreEqual("Edit", await header.TextContentAsync());
+        Assert.AreEqual("true", await header.GetAttributeAsync("aria-hidden"), "the visible header is decoration");
+        Assert.AreEqual(-1, (await header.EvaluateAsync<string[]>("el => [el.getAttribute('tabindex')]")).ToList().IndexOf("0"), "the header is never the tab stop");
+
+        CollectionAssert.AreEqual(
+            new[] { "group", "separator", "menuitem" },
+            await MenuStructureAsync(page),
+            "one labelled group run, one divider, one ungrouped run");
+        Assert.AreEqual("tm-toolbar-more__separator", await page.Locator(".tm-toolbar-more__menu [role='separator']").GetAttributeAsync("class"));
+
+        // Arrow keys land on real entries only: Redo -> Cut (inside the group), then ACROSS the
+        // separator to Export. A header or divider would break the exact sequence.
+        await page.Keyboard.PressAsync("Home");
+        Assert.AreEqual("Redo", await ActiveMenuItemAsync(page), "initial focus is the group's first entry");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Cut", await ActiveMenuItemAsync(page));
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page), "ArrowDown crosses the separator and the group boundary");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Redo", await ActiveMenuItemAsync(page), "wraps to the first item");
+        await page.Keyboard.PressAsync("End");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page));
+        Assert.IsTrue(await page.EvaluateAsync<bool>(
+            "() => !document.activeElement?.classList?.contains('tm-toolbar-more__group-label') && !!document.activeElement?.closest('[role=menuitem]')"),
+            "the roving set never lands on a group heading");
+
+        // axe on the open popover: the role=menu children (group/separator/menuitem) are allowed.
+        var violations = await RunAxeAsync(page, ".tm-toolbar-more__panel");
+        Assert.AreEqual(0, violations.Length, $"open grouped popover must have no critical/serious a11y violations: {string.Join(" | ", violations)}");
+
+        var shot = await ShootAsync(page, bar, "toolbar-1440-grouped-menu-open");
+        Assert.IsTrue(File.Exists(shot));
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    public async Task C3_GroupedToolsInThe390Sheet_TheSectionKeepsItsHeading_ArrowsCrossIt_AndAxeIsClean()
+    {
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-group-menu");
+        var bar = Bar(page, "toolbar-group-menu");
+        var trigger = bar.Locator("button.tm-toolbar-more");
+
+        await trigger.TapAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        var group = page.Locator(".tm-overlay-panel-sheet [role='group']");
+        await Assertions.Expect(group).ToBeVisibleAsync();
+        Assert.AreEqual("Edit", await group.GetAttributeAsync("aria-label"));
+        Assert.AreEqual("true", await group.Locator(".tm-toolbar-more__group-label").GetAttributeAsync("aria-hidden"));
+        CollectionAssert.AreEqual(
+            new[] { "group", "separator", "menuitem" },
+            await MenuStructureAsync(page));
+
+        foreach (var item in await page.Locator("[role='menu'] [role='menuitem']").AllAsync())
+        {
+            var b = await item.BoundingBoxAsync();
+            Assert.IsTrue(b!.Height >= 43.5, $"grouped menu entries are 44px targets in the sheet (height {b.Height})");
+        }
+
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitem]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Redo", await ActiveMenuItemAsync(page), "the sheet's initial focus is the group's first entry");
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Cut", await ActiveMenuItemAsync(page));
+        await page.Keyboard.PressAsync("ArrowDown");
+        Assert.AreEqual("Export", await ActiveMenuItemAsync(page), "the arrows cross the section inside the sheet too");
+
+        var violations = await RunAxeAsync(page, ".tm-overlay-panel-sheet");
+        Assert.AreEqual(0, violations.Length, $"grouped sheet must have no critical/serious a11y violations: {string.Join(" | ", violations)}");
+
+        var path = Path.Combine(ShotDir, "toolbar-390-grouped-sheet-open.png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        Assert.IsTrue(File.Exists(path));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
+
+        // An entry of the group still invokes (and closes the sheet like every entry).
+        await page.Locator("[role='menu'] [role='menuitem']").First.TapAsync();
+        await Assertions.Expect(sheet).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator("[data-testid='toolbar-overflow-log']")).ToContainTextAsync("Redo");
+        await AssertNoPageOverflowAsync(page, "390 grouped");
+    }
 }

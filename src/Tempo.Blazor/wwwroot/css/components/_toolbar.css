@@ -226,3 +226,28 @@
 .tm-toolbar-more__menu:has([role="menuitemcheckbox"]) .tm-toolbar-more__item[role="menuitem"] {
   padding-inline-start: calc(var(--tm-space-3) + 1rem + var(--tm-space-2));
 }
+
+/* C3: on the bar a TmToolbarGroup is the layout wrapper tm-toolbar.js flattens (the marker rule above
+   covers [data-tm-toolbar-group]); the class carries the component's own box so the wrapper styles hold
+   wherever the marker attribute is not the styling hook. */
+.tm-toolbar-group { display: flex; align-items: center; gap: var(--tm-space-2); margin: 0; }
+
+/* C3: a labelled run of grouped entries in the More menu — the section stacks its entries, the visible
+   header is decoration (aria-hidden; the section's accessible name is its aria-label), and runs are
+   divided by a hairline. The divider paints through a border (not a background) so forced-colors keeps
+   it visible. */
+.tm-toolbar-more__group { display: flex; flex-direction: column; gap: var(--tm-space-1); }
+.tm-toolbar-more__group-label {
+  padding: var(--tm-space-1) var(--tm-space-3);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+  white-space: nowrap;
+}
+.tm-toolbar-more__separator {
+  flex-shrink: 0;
+  block-size: 0;
+  border: none;
+  border-block-start: 1px solid var(--tm-border-color);
+  margin-block: var(--tm-space-1);
+}

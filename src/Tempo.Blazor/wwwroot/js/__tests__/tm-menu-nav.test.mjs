@@ -211,6 +211,40 @@ test('C2 ArrowDown roves across menuitem and menuitemcheckbox entries', () => {
     assert.equal(m.activeElement, plain, 'wraps back to the first real item, skipping role=option');
 });
 
+// ── C3: group headings and separators are never stops of the roving set ───────────────────────
+
+test('C3 ArrowDown/ArrowUp cross group boundaries and skip the header and the separator', () => {
+    // The grouped "More" menu renders runs as role=group sections (each with an aria-hidden header
+    // div inside) divided by role=separator elements. The menu keyboard must only ever land on
+    // real entries: a heading is not focusable and a divider is not a stop.
+    const editHeader = roleAwareItem('Edit', null);
+    const undo = roleAwareItem('Undo', 'menuitem');
+    const redo = roleAwareItem('Redo', 'menuitem');
+    const divider = roleAwareItem('', 'separator');
+    const viewGroup = roleAwareItem('View', 'group');
+    const grid = roleAwareItem('Grid', 'menuitemcheckbox');
+    const all = [editHeader, undo, redo, divider, viewGroup, grid];
+    const m = stubMenu(all);
+    m.querySelectorAll = selector => {
+        const roles = [...selector.matchAll(/role="([^"]+)"/g)].map(match => match[1]);
+        return all.filter(el => el.role !== null && roles.includes(el.role));
+    };
+
+    assert.deepEqual(
+        enabledItems(m).map(el => el.textContent),
+        ['Undo', 'Redo', 'Grid'],
+        'role=separator, role=group and unroled headers are not menu items');
+
+    attach(m);
+    m.activeElement = undo;
+    m.press('ArrowDown');
+    assert.equal(m.activeElement, redo);
+    m.press('ArrowDown');
+    assert.equal(m.activeElement, grid, 'the separator and the group header are skipped');
+    m.press('ArrowUp');
+    assert.equal(m.activeElement, redo);
+});
+
 test('the roving tabindex follows focus: the focused item is tabbable, the others are not', () => {
     const items = [item('A'), item('B')];
     const m = stubMenu(items);

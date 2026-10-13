@@ -66,6 +66,20 @@ public sealed class TmActionItem
     public bool Disabled { get; set; }
 
     /// <summary>
+    /// Stable key of the group the action belongs to in the "More" menu. Consecutive items (in
+    /// <c>Items</c> order — grouping never reorders) with the same non-empty key render as one
+    /// <c>role="group"</c> section named by <see cref="GroupLabel"/>, and adjacent runs are divided by
+    /// a <c>role="separator"</c>. Null or empty means ungrouped. No effect on the surface itself.
+    /// </summary>
+    public string? Group { get; set; }
+
+    /// <summary>
+    /// Accessible name and visible header of the item's group in the "More" menu, read from the FIRST
+    /// item of a run. Empty renders the run without a group wrapper (separators only).
+    /// </summary>
+    public string? GroupLabel { get; set; }
+
+    /// <summary>
     /// The action itself. Invoked exactly once per user activation. Create the callback with
     /// <c>EventCallback.Factory.Create(this, …)</c> — the receiver is the owning component, so
     /// its markup re-renders automatically when the action mutates state (e.g. opens a sibling

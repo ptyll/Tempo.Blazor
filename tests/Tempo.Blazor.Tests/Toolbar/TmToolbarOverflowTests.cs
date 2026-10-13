@@ -549,4 +549,131 @@ public class TmToolbarOverflowTests : LocalizationTestBase
 
         cut.Find("[role='menu'] [role='menuitemcheckbox']").GetAttribute("aria-checked").Should().Be("false");
     }
+
+    // ── C3: TmToolbarGroup — the collapsed members keep the group as a labelled menu section ─────
+
+    private static RenderFragment GroupContent(string label, RenderFragment buttons) => builder =>
+    {
+        builder.OpenComponent<TmToolbarGroup>(0);
+        builder.AddComponentParameter(1, nameof(TmToolbarGroup.Label), label);
+        builder.AddComponentParameter(2, nameof(TmToolbarGroup.ChildContent), buttons);
+        builder.CloseComponent();
+    };
+
+    private static IReadOnlyList<string> MenuGroupNames(IRenderedComponent<TmToolbar> cut)
+        => cut.FindAll("[role='menu'] [role='group']").Select(g => g.GetAttribute("aria-label") ?? string.Empty).ToList();
+
+    private static IReadOnlyList<string> MenuGroupItemLabels(IRenderedComponent<TmToolbar> cut)
+        => cut.FindAll("[role='menu'] [role='group'] [role='menuitem'], [role='menu'] [role='group'] [role='menuitemcheckbox']")
+            .Select(i => i.TextContent.Trim()).ToList();
+
+    [Fact]
+    public void CollapsedMembersOfATmToolbarGroup_KeepTheGroupInMore()
+    {
+        SetupModule();
+        var cut = RenderToolbar(GroupContent("Edit", Buttons(
+            new Spec("One", ToolbarButtonPriority.Secondary),
+            new Spec("Two", ToolbarButtonPriority.Secondary),
+            new Spec("Three", ToolbarButtonPriority.OverflowOnly))));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+
+        // The clamp keeps One on the bar; Two and Three collapse — both stay inside the group section.
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0, ItemIdsInDomOrder(cut)));
+
+        OpenMenu(cut);
+        var group = cut.Find("[role='menu'] [role='group']");
+        group.GetAttribute("aria-label").Should().Be("Edit");
+        group.QuerySelector(".tm-toolbar-more__group-label")!.TextContent.Should().Be("Edit", "the header is visible");
+        group.QuerySelector(".tm-toolbar-more__group-label")!.GetAttribute("aria-hidden").Should().Be("true", "and decoration only");
+        MenuGroupItemLabels(cut).Should().Equal(new[] { "Two", "Three" }, "the collapsed members, in the written order, inside the group");
+    }
+
+    [Fact]
+    public void GroupedAndUngroupedButtons_FormSeparateRuns_InDomOrder()
+    {
+        SetupModule();
+        RenderFragment content = builder =>
+        {
+            builder.AddContent(0, GroupContent("Edit", Buttons(
+                new Spec("One", ToolbarButtonPriority.Secondary),
+                new Spec("Two", ToolbarButtonPriority.Secondary))));
+            builder.AddContent(1, Buttons(new Spec("Solo", ToolbarButtonPriority.Secondary)));
+        };
+        var cut = RenderToolbar(content);
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+
+        // The clamp keeps One on the bar: the menu runs are [Two (Edit)], [Solo (ungrouped)].
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0, ItemIdsInDomOrder(cut)));
+        OpenMenu(cut);
+
+        MenuGroupNames(cut).Should().Equal(new[] { "Edit" });
+        MenuGroupItemLabels(cut).Should().Equal(new[] { "Two" });
+        var roles = cut.Find("[role='menu'] .tm-toolbar-more__menu").Children.Select(child => child.GetAttribute("role")).ToList();
+        roles.Should().Equal(new[] { "group", "separator", "menuitem" }, "the ungrouped Solo is a separate run after the group");
+        roles.Should().NotContain(role => role == null, "every run boundary is marked");
+    }
+
+    [Fact]
+    public void RenamingAGroup_RelabelsItsMoreSection()
+    {
+        // The label change reaches the group through an inner component (its own state), so the
+        // toolbar itself does not re-render: the group must push the relabel through ButtonChanged.
+        SetupModule();
+        var label = "Edit";
+        RenderFragment content = builder => builder.AddContent(0, (RenderFragment)(inner =>
+        {
+            inner.OpenComponent<GroupSlot>(0);
+            inner.AddComponentParameter(1, nameof(GroupSlot.Label), label);
+            inner.CloseComponent();
+        }));
+        var cut = RenderToolbar(content);
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(1));
+        OpenMenu(cut);
+        cut.Find("[role='menu'] [role='group']").GetAttribute("aria-label").Should().Be("Edit");
+
+        label = "Nástroje";
+        cut.FindComponent<GroupSlot>().Find("button.group-slot-flip").Click();
+
+        cut.Find("[role='menu'] [role='group']").GetAttribute("aria-label").Should().Be("Nástroje",
+            "the open menu re-labelled without the toolbar re-rendering");
+    }
+
+    /// <summary>A component between the toolbar and the group that owns the label state: re-rendering it must not re-render the toolbar.</summary>
+    private sealed class GroupSlot : Microsoft.AspNetCore.Components.ComponentBase
+    {
+        [Parameter] public string Label { get; set; } = "Edit";
+
+        private string _label = "Edit";
+        private bool _armed;
+
+        protected override void OnParametersSet()
+        {
+            if (!_armed)
+            {
+                _label = Label;
+                _armed = true;
+            }
+        }
+
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "button");
+            builder.AddAttribute(1, "class", "group-slot-flip");
+            builder.AddAttribute(2, "onclick", Microsoft.AspNetCore.Components.EventCallback.Factory.Create(this, () =>
+            {
+                _label = "Nástroje";
+            }));
+            builder.CloseElement();
+            builder.OpenComponent<TmToolbarGroup>(3);
+            builder.AddComponentParameter(4, nameof(TmToolbarGroup.Label), _label);
+            builder.AddComponentParameter(5, nameof(TmToolbarGroup.ChildContent), (Microsoft.AspNetCore.Components.RenderFragment)(child =>
+            {
+                child.OpenComponent<TmToolbarButton>(0);
+                child.AddComponentParameter(1, nameof(TmToolbarButton.Text), "X");
+                child.AddComponentParameter(2, nameof(TmToolbarButton.Priority), ToolbarButtonPriority.OverflowOnly);
+                child.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    }
 }

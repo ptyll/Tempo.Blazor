@@ -88,7 +88,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("section", "Section", "Groups page content under a logical section.", "content section", "sekce", "TmSection"),
         R("command-palette", "Command palette", "Searches and runs commands.", "quick command", "paleta prikazu", "TmCommandPalette"),
         R("keyboard-shortcuts", "Keyboard shortcuts", "Displays available keyboard commands.", "shortcuts help", "klavesove zkratky", "TmKeyboardShortcutsHelp"),
-        R("toolbar", "Toolbar", "Groups compact command buttons.", "tool bar", "lista nastroju", "TmToolbar", "TmToolbarButton", "TmToolbarDivider", "TmFormActionBar"),
+        R("toolbar", "Toolbar", "Groups compact command buttons.", "tool bar", "lista nastroju", "TmToolbar", "TmToolbarButton", "TmToolbarDivider", "TmToolbarGroup", "TmFormActionBar"),
         R("form-section", "Form section", "Groups related form fields.", "field group", "sekce formulare", "TmFormSection", "TmFormRow"),
         R("form-field", "Form field", "Wraps a labeled input and help or validation state.", "field wrapper", "pole formulare", "TmFormField", "TmValidatedField"),
         R("inline-edit", "Inline edit", "Edits a value directly in its display position.", "editable text", "uprava na miste", "TmInlineEdit"),

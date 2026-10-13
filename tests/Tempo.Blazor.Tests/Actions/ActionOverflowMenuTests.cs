@@ -43,6 +43,9 @@ public class ActionOverflowMenuTests : LocalizationTestBase
             .Add(c => c.ItemClass, "test-item")
             .Add(c => c.LabelClass, "test-label")
             .Add(c => c.CheckClass, "test-check")
+            .Add(c => c.GroupClass, "test-group")
+            .Add(c => c.GroupLabelClass, "test-group-label")
+            .Add(c => c.SeparatorClass, "test-separator")
             .Add(c => c.MobilePresentation, presentation)
             .Add(c => c.InitialMode, mode)
             .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, mode)));
@@ -261,5 +264,166 @@ public class ActionOverflowMenuTests : LocalizationTestBase
         cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
         var drawer = cut.FindComponent<Tempo.Blazor.Components.Layout.TmDrawer>();
         drawer.Instance.InitialFocusSelector.Should().Contain("menuitemcheckbox");
+    }
+
+    // ── C3: grouped runs (role=group sections with headers, role=separator between runs) ─────────
+
+    private static TmActionItem Grouped(string id, string group, string? label = null, bool disabled = false)
+        => new() { Id = id, Label = id, Group = group, GroupLabel = label, Disabled = disabled };
+
+    private static IReadOnlyList<string> GroupedItemIds(AngleSharp.Dom.IElement group)
+        => group.QuerySelectorAll("[role='menuitem'], [role='menuitemcheckbox']")
+            .Select(i => i.GetAttribute("data-action-id")!)
+            .ToList();
+
+    [Fact]
+    public void GroupedItems_RenderRoleGroup_NamedByLabel_WithAriaHiddenHeader()
+    {
+        var cut = RenderMenu([Grouped("undo", "edit", "Edit"), Grouped("redo", "edit", "Edit"), Item("plain")]);
+        cut.Find("button.test-trigger").Click();
+
+        var list = cut.Find(".test-menu");
+        var groups = list.QuerySelectorAll("[role='group']");
+        groups.Length.Should().Be(1, "the two consecutive edit items form one run");
+        var group = groups[0];
+        group.GetAttribute("aria-label").Should().Be("Edit", "the group's accessible name is its label");
+        group.ClassList.Should().Contain("test-group");
+
+        var header = group.QuerySelector(".test-group-label");
+        header.Should().NotBeNull("the run paints a visible header");
+        header!.GetAttribute("aria-hidden").Should().Be("true", "the header is decoration: the group's aria-label carries the name");
+        header.TextContent.Should().Be("Edit");
+        header.HasAttribute("tabindex").Should().BeFalse("a heading inside a menu is never a focusable item");
+        GroupedItemIds(group).Should().Equal(new[] { "undo", "redo" }, "the run's items render inside the group, in Items order");
+
+        // The ungrouped item is a direct child of the menu list, outside the group.
+        list.Children.Where(child => child.GetAttribute("role") == "menuitem")
+            .Select(i => i.GetAttribute("data-action-id")).Should().Equal("plain");
+    }
+
+    [Fact]
+    public void NonContiguousRunsOfOneGroup_RenderTwoSections_InOrder_NoDuplicateKeyCrash()
+    {
+        var cut = RenderMenu([Grouped("a", "g1", "G1"), Item("b"), Grouped("c", "g1", "G1")]);
+        cut.Find("button.test-trigger").Click();
+
+        cut.Find(".test-menu").Children.Select(child => child.GetAttribute("role"))
+            .Should().Equal("group", "separator", "menuitem", "separator", "group");
+
+        // Re-render while open with the order swapped: two sibling sections of the same group
+        // must still get distinct keys (keyed by the run's first item, not just the group).
+        var act = () => cut.Render(p => p.Add(c => c.Items, new List<TmActionItem>
+        {
+            Grouped("c", "g1", "G1"), Item("b"), Grouped("a", "g1", "G1"),
+        }));
+        act.Should().NotThrow();
+        cut.Find(".test-menu").Children.Select(child => child.GetAttribute("role"))
+            .Should().Equal("group", "separator", "menuitem", "separator", "group");
+    }
+
+    [Fact]
+    public void RunsWhoseFirstItemsShareALabelWithoutId_DoNotCollideOnSeparatorKeys()
+    {
+        var first = new TmActionItem { Label = "Same", Group = "g1", GroupLabel = "G1" };
+        var plain = new TmActionItem { Label = "Same" };
+        var second = new TmActionItem { Label = "Same", Group = "g2", GroupLabel = "G2" };
+
+        var act = () =>
+        {
+            var cut = RenderMenu([first, plain, second]);
+            cut.Find("button.test-trigger").Click();
+        };
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Runs_AreSeparatedByRoleSeparator_NoLeadingOrTrailingSeparator()
+    {
+        var cut = RenderMenu([
+            Item("a"),
+            Grouped("undo", "edit", "Edit"), Grouped("redo", "edit", "Edit"),
+            Item("b"),
+            Grouped("grid", "view", "View"),
+        ]);
+        cut.Find("button.test-trigger").Click();
+
+        var list = cut.Find(".test-menu");
+        var separators = list.QuerySelectorAll("[role='separator']");
+        separators.Length.Should().Be(3, "one divider between each pair of the four runs, never more");
+        list.FirstElementChild!.GetAttribute("role").Should().NotBe("separator", "no leading separator");
+        list.LastElementChild!.GetAttribute("role").Should().NotBe("separator", "no trailing separator");
+        separators[0].GetAttribute("class").Should().Be("test-separator");
+        separators[0].TagName.Should().Be("DIV", "a plain divider element, not a focusable control");
+        separators[0].HasAttribute("tabindex").Should().BeFalse("a separator is never a menu item");
+
+        // The separators really sit BETWEEN the runs in DOM order.
+        var roles = list.Children.Select(child => child.GetAttribute("role")).ToList();
+        roles.Should().Equal(new[] { "menuitem", "separator", "group", "separator", "menuitem", "separator", "group" });
+    }
+
+    [Fact]
+    public void UnlabelledRun_RendersNoGroupWrapper()
+    {
+        // A run with a key but no GroupLabel (the first item carries none) has no name to show: it
+        // renders its items flat (as siblings), but it still counts as a run for the separators.
+        var cut = RenderMenu([Grouped("a", "k"), Grouped("b", "k", "Ignored"), Item("c")]);
+        cut.Find("button.test-trigger").Click();
+
+        var list = cut.Find(".test-menu");
+        list.QuerySelectorAll("[role='group']").Should().BeEmpty("an unnamed run renders no role=group");
+        list.Children.Where(child => child.GetAttribute("role") == "menuitem")
+            .Select(i => i.GetAttribute("data-action-id")).Should().Equal(new[] { "a", "b", "c" },
+                "the unnamed run renders a and b flat; c is its own ungrouped run");
+        list.QuerySelectorAll("[role='separator']").Should().ContainSingle("the unnamed run still separates it from c");
+    }
+
+    [Fact]
+    public void ReorderWhileOpen_ItemMovesAcrossGroups_DoesNotCrashTheRenderer()
+    {
+        // H1 invariant under C3: an item that moves INTO or OUT of a group while the menu is open
+        // (a resize, a rotation) changes the run structure around it. The item's own frame set and
+        // its element-reference capture are identical in both shapes, and the group/separator
+        // elements carry key types that never collide with an item id — so the diff matches.
+        var cut = RenderMenu([Grouped("A", "g1", "G1")]);
+        cut.Find("button.test-trigger").Click();
+        cut.Find(".test-menu [role='group']").Should().NotBeNull();
+
+        var act = () => cut.Render(p => p.Add(c => c.Items, new List<TmActionItem>
+        {
+            Item("B"),
+            Grouped("A", "g2", "G2"),
+            Grouped("C", "g2", "G2"),
+        }));
+
+        act.Should().NotThrow();
+        var group = cut.Find(".test-menu [role='group']");
+        group.GetAttribute("aria-label").Should().Be("G2");
+        GroupedItemIds(group).Should().Equal("A", "C");
+        cut.Find(".test-menu").Children.Where(child => child.GetAttribute("role") == "menuitem")
+            .Select(i => i.GetAttribute("data-action-id")).Should().Equal("B");
+
+        // and back to the single grouped item, plus a disabled item taking the front of the menu.
+        cut.Render(p => p.Add(c => c.Items, new List<TmActionItem> { Grouped("Off", "g0", "G0", disabled: true), Grouped("A", "g1", "G1") }));
+        cut.FindAll(".test-menu [role='group']").Should().HaveCount(2);
+        cut.Render(p => p.Add(c => c.Items, new List<TmActionItem> { Grouped("A", "g1", "G1") }));
+        cut.FindAll(".test-menu [role='group']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void GroupedDisabledItem_KeepsItsState_AndTheFirstEnabledItemIsStillTheFocusTarget()
+    {
+        var cut = RenderMenu([Grouped("off", "edit", "Edit", disabled: true), Grouped("undo", "edit", "Edit"), Item("plain")],
+            PanelPresentation.Sheet, TmLayoutMode.Mobile);
+        cut.Find("button.test-trigger").Click();
+
+        cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
+        var group = cut.Find(".test-menu [role='group']");
+        GroupedItemIds(group).Should().Equal("off", "undo");
+        group.QuerySelector("[data-action-id='off']")!.GetAttribute("disabled").Should().NotBeNull();
+
+        // The pending initial focus ran exactly once (the sheet fires OnOpened without JS in bUnit):
+        // only menu ITEMS carry capture frames, so a header or a separator could never be the target.
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == "Blazor._internal.domWrapper.focus").Should().Be(1));
     }
 }

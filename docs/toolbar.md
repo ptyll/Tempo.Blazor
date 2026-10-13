@@ -1,6 +1,6 @@
 # Toolbar: priorities, overflow and labels
 
-`TmToolbar` holds `TmToolbarButton`s, `TmToolbarDivider`s and any custom content. Since F4 it can
+`TmToolbar` holds `TmToolbarButton`s, `TmToolbarDivider`s, `TmToolbarGroup`s and any custom content. Since F4 it can
 move the buttons that do not fit into a **More** menu instead of overflowing or scrolling, and
 buttons can show their text next to or under the icon.
 
@@ -29,6 +29,7 @@ buttons can show their text next to or under the icon.
 | `TmToolbarButton` | `LabelPosition` | `Inline` · `Below` · `Hidden` | `Inline` |
 | `TmToolbarButton` | `Pressed` | `bool?` — `null` = plain button, `true`/`false` = toggle | `null` |
 | `TmToolbarButton` | `PressedMixed` | renders a `false` toggle as `aria-pressed="mixed"` | `false` |
+| `TmToolbarGroup` | `Label` | accessible name on the bar and header of the group's section in More | unlabeled (no role) |
 
 ## Overflow = Menu
 
@@ -64,19 +65,20 @@ buttons can show their text next to or under the icon.
   detaches itself when its root leaves the document.
 * **Items at any depth, and groups.** Every `TmToolbarButton` below the toolbar registers (cascade) and
   is measured wherever it sits. `.tm-toolbar-start` / `.tm-toolbar-actions` are flattened, and so is
-  any wrapper that holds items: mark a layout wrapper `data-tm-toolbar-group` (and `role="group"` with
-  an accessible name when it is a semantic group) and its children take room individually; the wrapper's
-  own horizontal padding and border count as fixed width. Its margin and its own `gap` are **not**
-  measured: the bar's `gap` is assumed for every row, so keep a group wrapper's margin at 0 and its `gap`
-  equal to the bar's (the default `--tm-space-2`). Without the flattening a wrapped group would look like
-  one fixed block with no items and collapse everything into More.
+  any wrapper that holds items: a semantic group is `<TmToolbarGroup Label="Edit">`, which renders the
+  `role="group"` + accessible name + `data-tm-toolbar-group` wrapper (a plain wrapper marked
+  `data-tm-toolbar-group` works as a layout-only group); the children take room individually, the
+  wrapper's own horizontal padding and border count as fixed width. Its margin and its own `gap` are
+  **not** measured: the bar's `gap` is assumed for every row, so keep a group wrapper's margin at 0 and
+  its `gap` equal to the bar's (the default `--tm-space-2`). Without the flattening a wrapped group
+  would look like one fixed block with no items and collapse everything into More.
 
   ```razor
   <TmToolbar Overflow="ToolbarOverflow.Menu" AriaLabel="Diagram tools">
-      <div role="group" aria-label="Edit" data-tm-toolbar-group class="my-group">
+      <TmToolbarGroup Label="Edit">
           <TmToolbarButton Icon="@IconNames.Undo" Text="Undo" />
           <TmToolbarButton Icon="@IconNames.Redo" Text="Redo" Priority="ToolbarButtonPriority.Secondary" />
-      </div>
+      </TmToolbarGroup>
       <TmToolbarDivider />
       ...
   </TmToolbar>
@@ -101,6 +103,16 @@ buttons can show their text next to or under the icon.
   sheet with 44px entries; an editor/formatting toolbar sets `OverflowPresentation="Popover"` so the
   user's selection survives (see the F4 decision in overlays.md). The menu survives a reorder while
   open (resize, rotation): its items are keyed and every item carries a stable capture.
+* **Groups survive into More** (F13/C3). The collapsed members of a `TmToolbarGroup` keep the group:
+  each contiguous run of menu items sharing the group renders as a `role="group"` section named by
+  the group's `Label` — the visible header is `aria-hidden` (the section's name is its
+  `aria-label`, so no heading ever sits in the menu's accessibility tree) — and adjacent runs are
+  divided by a `role="separator"`. The order is the written order, always: grouping never reorders
+  (the F5 rule), so a group interrupted by an ungrouped button renders as two runs separated by the
+  ungrouped entry. A run whose first item carries no label renders flat (separators only). The
+  arrow keys, Home/End and typeahead cross the sections and never stop on a header or a divider
+  (`tm-menu-nav.js` roves menu items only), and the initial focus is still the first **enabled**
+  menu item.
 * **Focus survives a re-layout.** When the focused bar button collapses into More, focus moves to the
   More trigger (else to the roving stop) instead of dropping to `<body>`; a focus that is still valid or
   that the user moved elsewhere is left alone.
@@ -189,7 +201,7 @@ The following are **not** in the core yet and gate the adoption (recorded as cor
    (today only `TmToolbarButton` registers).
 2. **Pressed / checked state** — done (F12/C2): `TmToolbarButton.Pressed` → `aria-pressed` →
    `TmActionItem.Checked` → `role="menuitemcheckbox"` in the menu (see "The More menu" above).
-3. **Group headers and separators in `ActionOverflowMenu`** — a flat list loses the "Edit / View / Insert"
-   structure the ribbon groups carry.
-4. **Toolbar groups** — done here (`data-tm-toolbar-group`, see above): grouped rows measure and collapse
-   correctly.
+3. **Group headers and separators in `ActionOverflowMenu`** — done (F13/C3): the collapsed members of a
+   `TmToolbarGroup` render as labelled `role="group"` runs with `role="separator"` dividers (see "Groups
+   survive into More" above).
+4. **Toolbar groups** — done (`TmToolbarGroup`, see above): grouped rows measure and collapse correctly.

@@ -1,0 +1,60 @@
+@namespace Tempo.Blazor.Components.Toolbar
+@* C3: a semantic group of toolbar controls. On the bar the wrapper is a layout box tm-toolbar.js
+   flattens (data-tm-toolbar-group, here carrying the group's stable key): its buttons take room
+   individually and still collapse on their own. In the "More" menu the collapsed members keep the
+   group as a labelled section (role=group + aria-label with a visible, aria-hidden header), and runs
+   of the same group are separated by role=separator. *@
+<div class="tm-toolbar-group @Class"
+     role="@Role"
+     aria-label="@AriaLabel"
+     data-tm-toolbar-group="@GroupKey"
+     @attributes="AdditionalAttributes">
+    <CascadingValue Value="this" IsFixed="true">@ChildContent</CascadingValue>
+</div>
+
+@code {
+    private string? _lastLabel;
+    private bool _labelSeen;
+
+    /// <summary>
+    /// Accessible name of the group on the bar and the header of its section in the "More" menu.
+    /// Empty renders the wrapper without a role — a layout-only group.
+    /// </summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>The group's buttons.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Additional CSS class for the group element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the group element (e.g. a host's <c>data-tm-group</c>).</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The toolbar the group sits in; a relabel re-computes through it.</summary>
+    [CascadingParameter] private TmToolbar? Toolbar { get; set; }
+
+    /// <summary>Stable key the members carry into the "More" menu (never rendered as text).</summary>
+    internal string GroupKey { get; } = $"g{Guid.NewGuid():N}";
+
+    /// <summary>The internal label the members' menu sections read.</summary>
+    internal string? EffectiveLabel => string.IsNullOrWhiteSpace(Label) ? null : Label;
+
+    private string? Role => EffectiveLabel is null ? null : "group";
+
+    private string? AriaLabel => EffectiveLabel;
+
+    protected override void OnParametersSet()
+    {
+        // A renamed group must re-label its "More" section: the members' snapshots do not see the
+        // cascade change and the toolbar itself may not re-render (the change can originate below
+        // it), so the toolbar re-computes unconditionally and the open menu re-reads the label.
+        if (_labelSeen && !string.Equals(_lastLabel, Label, StringComparison.Ordinal))
+        {
+            Toolbar?.ButtonChanged(null);
+        }
+
+        _labelSeen = true;
+        _lastLabel = Label;
+    }
+}
