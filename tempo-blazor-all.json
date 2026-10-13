@@ -26929,6 +26929,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-color-gradient.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-editor-shell.js",
           "kind": "JavaScript"
         },
@@ -26965,6 +26969,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/data-table-resize.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/layout-observer.test.mjs",
           "kind": "JavaScript"
         },
@@ -26986,6 +26994,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/scheduler-pointer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-color-gradient.test.mjs",
           "kind": "JavaScript"
         },
         {

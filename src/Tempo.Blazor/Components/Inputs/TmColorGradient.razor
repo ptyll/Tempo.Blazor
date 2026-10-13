@@ -2,16 +2,23 @@
 @using Tempo.Blazor.Abstractions.Models
 @inject ITmLocalizer Loc
 
-<div class="tm-color-gradient @Class" @attributes="AdditionalAttributes">
-    @* SV Gradient Area *@
+<div class="tm-color-gradient @Class" @ref="_rootRef" @attributes="AdditionalAttributes">
+    @* SV Gradient Area. The pointer gesture lives in tm-color-gradient.js (fractions of the real
+       element size, rAF-throttled preview, single commit, cancel restores). All three sliders are
+       keyboard-operable tab stops: arrows step 1% (Shift 10%), Home/End jump to a bound, and every
+       key commits through the same NotifyChangedAsync path the RGBA inputs use. The axis keys'
+       scroll default is cancelled in the JS module (a render-time @onkeydown:preventDefault would
+       swallow Tab too). *@
     <div class="tm-color-gradient-area"
          role="slider"
+         tabindex="0"
          aria-label="@Loc["TmColorGradient_Area"]"
-         aria-valuetext="@FormatValue()"
+         aria-valuemin="0"
+         aria-valuemax="100"
+         aria-valuenow="@((int)Math.Round(_saturation * 100))"
+         aria-valuetext="@Loc["TmColorGradient_AreaValue", (int)Math.Round(_saturation * 100), (int)Math.Round(_value * 100)]"
          style="background-color: @(_hueColor);"
-         @onpointerdown="OnGradientPointerDown"
-         @onpointermove="OnGradientPointerMove"
-         @onpointerup="OnGradientPointerUp">
+         @onkeydown="OnAreaKeyDownAsync">
         <div class="tm-color-gradient-saturation"></div>
         <div class="tm-color-gradient-value"></div>
         <div class="tm-color-gradient-thumb"
@@ -22,11 +29,11 @@
     @* Hue Slider *@
     <div class="tm-color-gradient-hue-track"
          role="slider"
+         tabindex="0"
          aria-label="@Loc["TmColorGradient_Hue"]"
-         aria-valuemin="0" aria-valuemax="360" aria-valuenow="@((int)_hue)"
-         @onpointerdown="OnHuePointerDown"
-         @onpointermove="OnHuePointerMove"
-         @onpointerup="OnHuePointerUp">
+         aria-valuemin="0" aria-valuemax="360" aria-valuenow="@((int)Math.Round(_hue))"
+         aria-valuetext="@Loc["TmColorGradient_HueValue", (int)Math.Round(_hue)]"
+         @onkeydown="OnHueKeyDownAsync">
         <div class="tm-color-gradient-hue-fill" style="width: @((_hue / 360 * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
         <div class="tm-color-gradient-hue-thumb" style="left: @((_hue / 360 * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
     </div>
@@ -36,11 +43,10 @@
     {
         <div class="tm-color-gradient-alpha-track"
              role="slider"
+             tabindex="0"
              aria-label="@Loc["TmColorGradient_Alpha"]"
-             aria-valuemin="0" aria-valuemax="100" aria-valuenow="@((int)(_alpha * 100))"
-             @onpointerdown="OnAlphaPointerDown"
-             @onpointermove="OnAlphaPointerMove"
-             @onpointerup="OnAlphaPointerUp">
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="@((int)Math.Round(_alpha * 100))"
+             @onkeydown="OnAlphaKeyDownAsync">
             <div class="tm-color-gradient-alpha-bg"></div>
             <div class="tm-color-gradient-alpha-fill" style="width: @((_alpha * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; background: linear-gradient(to right, transparent, @ColorHelper.ToRgb(_r, _g, _b));"></div>
             <div class="tm-color-gradient-alpha-thumb" style="left: @((_alpha * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></div>

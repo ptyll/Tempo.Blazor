@@ -285,18 +285,56 @@
   color: inherit;
 }
 
-/* Column resize handle */
+/* Column resize handle — a focusable role="separator": the drag lives in data-table.js over the
+   shared pointer-drag helper (a delegated drag, so touch-action is owned here, on the handle only —
+   the table around it keeps scrolling). The inline-end edge is a LOGICAL inset so the handle sits
+   on the column's trailing edge in RTL as well. */
 .tm-col-resize-handle {
   position: absolute;
   top: 0;
-  right: 0;
-  width: 6px;
+  inset-inline-end: 0;
+  width: var(--tm-space-2);
   height: 100%;
   cursor: col-resize;
   user-select: none;
   touch-action: none;
 }
 .tm-col-resize-handle:hover { background: var(--tm-color-primary, #3b82f6); opacity: 0.4; }
+/* The separator is a tab stop: the focus indicator is the shared ring (the default outline is
+   silenced so the two never paint over each other). */
+.tm-col-resize-handle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+/* A finger needs more than an 8px edge: the hit area widens into a real 24px target (the shared
+   touch-target size) and reaches a little INTO the neighbouring column, where the drag edge
+   actually is. That reach would poke past the table edge on the last column, so the last
+   child's handle stays inside; and the pin button — which sits where the widened handle now
+   paints — slides inward so the two targets never overlap. */
+@media (pointer: coarse) {
+  .tm-col-resize-handle {
+    width: var(--tm-space-6);
+    inset-inline-end: calc(-1 * var(--tm-space-3));
+  }
+
+  th:last-child .tm-col-resize-handle { inset-inline-end: 0; }
+
+  .tm-data-table th .tm-col-pin-btn { inset-inline-end: var(--tm-space-3); }
+}
+/* Forced colors: the handle must stay a visible, resizable landmark, not a hover-only whisper. */
+@media (forced-colors: active) {
+  .tm-col-resize-handle {
+    background: ButtonBorder;
+    opacity: 1;
+    forced-color-adjust: none;
+  }
+
+  .tm-col-resize-handle:focus-visible {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
 .tm-data-table th { position: relative; }
 
 @media (prefers-reduced-motion: reduce) {

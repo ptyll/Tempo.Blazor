@@ -2,6 +2,597 @@
 
 ## 2.9.1 (unreleased)
 
+### Fixed
+
+- **Cancelling a `TmDataTable` column resize no longer saves the width, and the drag runs on the
+  shared pointer-drag helper.** The resize gesture moved out of `data-table.js`'s own document
+  listeners into `attachColumnResize(root, dotNetRef)` over `pointer-drag.js`: the start width is
+  MEASURED from the `<th>` (a column without a pixel width used to jump to 160 on the first move),
+  the listeners are attached once per table on the first render (the old press-then-`startColumnResize`
+  round trip lost the first moves on Server), `pointercancel` / Escape / a lost capture / a
+  mid-drag unmount restore the start width and commit NOTHING — they used to commit like a real
+  release — and the pointer is captured by id, so a second finger can neither move nor end the drag
+  and the drag follows the pointer outside the table. `window.tmDataTable.startColumnResize` stays
+  exported (deprecated) for hosts that still call it. The gesture is delegated
+  (`.tm-col-resize-handle`), so `touch-action: none` sits on the handle only in CSS and the table
+  around it keeps scrolling; `document.body` is no longer touched (`user-select` is the helper's
+  `.tm-pointer-dragging` class). The horizontal delta inverts in RTL, read live from the computed
+  direction. The old pointer-press handler is gone from the markup.
+
+- **`TmColorGradient` drags on the shared pointer-drag helper, with pointer capture and real
+  element maths.** The six Blazor pointer handlers are replaced by the new
+  `_content/Tempo.Blazor/js/tm-color-gradient.js` ES module: the position is a fraction of the
+  element's real bounding box (the old code divided the event offset by hardcoded 200×150, so the
+  value jumped when the pointer crossed the thumb child and broke at any other size), the pointer
+  is captured (dragging off the element keeps tracking instead of stopping silently), the preview
+  streams through rAF-throttled `OnGradientDrag` calls, and the release commits exactly once
+  through `OnGradientCommit`. Escape, `pointercancel` and a mid-drag unmount report
+  `OnGradientCancel` and restore the state the press started from — nothing is committed on a
+  cancelled gesture. A tap (press + release without moving) sets the colour through the same
+  commit. The RGBA number inputs remain the non-drag alternative.
+
+  **CSP:** `data-table.js` now dynamically imports `pointer-drag.js`, and the new
+  `tm-color-gradient.js` imports it statically — a `script-src` policy that allows those scripts
+  must also allow the helper (same `_content/Tempo.Blazor/js/` origin, so the host-wide nonce or
+  hash that covers `scheduler.js` covers all of them; a per-file hash must list `pointer-drag.js`
+  too). In exchange neither component carries its own pointer gesture any more.
+
+- **A cancelled `TmColorGradient` gesture restores the exact colour it started from, and ten
+  1° hue steps no longer drift.** Two lossy conversions compounded: the cancel path re-derived
+  R/G/B from the restored HSV — `#3B82F6` came back as `#3A82F6` — so the snapshot now captures
+  R/G/B and restores them verbatim (only the gradient's hue colour is re-derived); and
+  `OnParametersSet` re-parsed the value the component itself had just committed on every bind
+  round trip, while `ColorHelper.HsvToRgb` truncated each channel a unit low — together a
+  keyboard-stepped hue crept up ~0.2° per step. The component now remembers its last emitted
+  value and skips the echo re-parse (case-insensitive), and `HsvToRgb` rounds instead of
+  truncates, so RGB → HSV → RGB returns to its input.
+
+- **A cancelled `TmDataTable` resize on a column without a width no longer leaves one behind.**
+  The cancel used to replay the press-time start measurement through the live `OnColumnResized`
+  path, which converted an auto-layout column's measured width into a user-set one — the
+  cancelled drag persisted something after all. The component now snapshots the column's state
+  before the FIRST live update of a gesture and `OnColumnResizeCancelled` (new `[JSInvokable]`)
+  restores the snapshot width or removes the width entry entirely; the commit clears the
+  snapshot, so a stray late cancel cannot roll a committed width back.
+
+- **A user-set `TmDataTable` column width now survives the auto table layout.** The table renders
+  `table-layout: auto`, where `width` is a suggestion the algorithm may shrink when columns
+  compete for space — a +48px touch drag at 768px rendered ~1px wider. A user-set pixel width is
+  now repeated as `min-width` (the column's own `MinWidth`, if any, keeps priority), and the
+  keyboard resize measures the real rendered `<th>` through the new
+  `tmDataTable.measureColumn(table, key)` instead of starting from the 160 default. Under
+  `(pointer: coarse)` the resize handle widens to a 24px target, the last column's handle stays
+  inside the table edge, and the pin button slides inward so the two targets do not overlap.
+
+- **`TmSidePanel` without a viewport scope now opens the sheet the viewport measured (C7).** With
+  no `TmLayoutScopes.Viewport` cascade the container used to decide the sheet geometry
+  (side vs bottom) entirely: a narrow container on a desktop viewport opened a bottom sheet, a
+  desktop container on a phone opened a side sheet. The panel's own sheet now reads the position
+  from its drawer's internal viewport probe (through `ResolvedLayoutChanged` + `InitialMode`; the
+  container is only the first-frame guess), so a 500px column at 1440 opens a right side sheet and
+  a phone viewport opens a bottom sheet. A host with a viewport scope, or a forced `LayoutMode`,
+  is unchanged.
+
+- **The toolbar's fit measurement no longer ignores a group wrapper's margins and its own gap
+  (F14/C5).** `tm-toolbar.js` counted only a flattened wrapper's padding and border, so a wrapper
+  with a horizontal margin — or a column gap wider than the bar's — over-committed the row and the
+  next control could overlap the pinned one (the I6 bug class). Now the margin counts as fixed width
+  and a wider gap is reserved per adjacency between the wrapper's direct items, conservatively (as
+  if all of them stayed); a narrower gap was already over-reserved by the bar gap and changes
+  nothing, and the start/actions containers share the bar gap (their margins are not double-counted).
+
+- **A `TmDialog` prompt no longer submits on an IME's commit-Enter.** Typing with an input-method
+  editor (Chinese, Japanese, Korean…) commits the composed text with Enter; that press neither
+  arms the prompt submit nor fires it, so committing composed text no longer submits the dialog
+  mid-composition. The guard reads `KeyboardEventArgs.IsComposing`, which does not exist in the
+  .NET 8 framework assemblies — there the guard is a no-op and the commit-Enter submits as before
+  (accepted: the flag is not available). Safari's keyCode-229 commit-Enter (`isComposing=false`)
+  is not detectable through Blazor on any target and is likewise accepted.
+
+- **The dialog/modal/drawer scroll region stays correct for its whole open life.** Three defects
+  fixed together in `ScrollRegionInterop` and `tm-focus-trap.js syncScrollRegion`: (1) a close
+  that landed while the lazy module import was still in flight was dropped by an `!_attached`
+  early return, leaving the `ResizeObserver` attached to the removed node — attaches are now
+  generation-checked, so a detach wins over an in-flight attach and the stale attach stops itself
+  unless a newer attach owns the region (both share one region id, so a blind stop would tear the
+  newer region down; the module import is cached, so a re-attach never imports twice); (2) content
+  growing INSIDE the scroller (rows appended under a `max-height` cap) never resized the scroller
+  and was never re-evaluated — the children are now observed too and a childList MutationObserver
+  re-observes added children and re-runs the overflow decision, coalesced into one frame; (3) a
+  title that rendered or changed after the attach never named the region — `TmModal`, `TmDialog`
+  and `TmDrawer` re-point it through the new `updateScrollRegionLabel` whenever the computed
+  `aria-labelledby`/`aria-label` changes while attached — including an update that lands while the
+  attach is still in flight, reconciled once the attach completes — so the region's name always
+  tracks the title. The wrapper no longer swallows `NullReferenceException`.
+
+- **Overlay focus traps activate only after their root is promoted to the top layer.**
+  `TmModal`, `TmDialog`, every modal `TmDrawer`, `TmLightbox`, `TmCommandPalette`,
+  `TmKeyboardShortcutsHelp` and `TmGanttImportDialog` activated their `TmFocusScope` on the same
+  render that inserted the `popover="manual"` root — before `showPopover` ran. An unpromoted
+  popover root is `display:none` by the UA rule `[popover]:not(:popover-open)`, so whenever a root
+  lost its own author `display` (a consumer class or stylesheet), the trap's initial-focus move
+  landed on `<body>` and the page behind the overlay was inert. All seven now go through a shared
+  promote gate that promotes the root first and only then activates the trap; a promote that
+  completes after its owner closed is dropped, so closing during the in-flight promotion can no
+  longer make the *next* open activate before its own promotion. `role`/`aria-modal` now appear one
+  render after the overlay's first paint (selectors on the rendered markup are unchanged once the
+  overlay is open). In the same pass the overflow scroll region of a dialog/modal/sheet body can
+  never take the initial focus: `tm-focus-trap.js` marks an overflowing scroller with
+  `data-tm-scroll-region` and both the initial-focus fallback and the toast focus recovery skip it
+  (a Custom `TmDialog`'s first control used to lose the focus to its own scroller whenever the
+  content overflowed).
+
+- **F6 focus-trap follow-up: phone sheet Tab cycle, modal Escape ownership, toast focus recovery.**
+  Three focus-trap defects fixed in `tm-focus-trap.js` and its consumers. (1) The bottom-sheet More
+  menu is a roving group (item `tabindex="-1"`), and the trap's Tab cycle counted those items — Tab
+  on the real last tab stop was "not last", the browser's native Tab skipped the `-1` items, found
+  nothing tabbable left (the page is inert) and focus dropped to `<body>`, out of the sheet. The
+  cycle now runs over **tab stops only** (a negative tabindex is not one), and Tab from a focused
+  `-1` item walks the next/previous tab stop in DOM order; this covers every modal trap with a
+  roving group (menus in sheets, a `TmToolbar` roving group inside `TmModal`/`TmDrawer`). (2) A
+  modal dialog's Escape was gated on registration order alone (`isTopmost`): a non-modal inline
+  sheet activated after the dialog blocked the dialog's Escape entirely — nothing closed. The
+  modal gate is now `modalOwnsEscape`, which ignores later **non-modal** traps that do not hold
+  focus or cannot close at all (no Escape handler); an inline sheet nested in the dialog that holds
+  focus still closes first, and a dialog over a dialog still closes only the top one. (3) A toast
+  dismissed under an open sheet or dialog — by click, by keyboard or by expiry while focused —
+  removed the focused dismiss button and stranded focus on `<body>` (the next Tab landed on the
+  sheet's drag handle). The trap now remembers the element last focused inside it (`focusin`) and
+  both `TmToastContainer` and `TmNotificationToastContainer` ask it to recover the focus whenever
+  the set of visible toasts drops an id — not only when the count shrinks, so a replacement at the
+  `MaxVisible` cap, a notification queue refill and an expire+push in one render are covered too.
+  `restoreTrapFocusIfLost` moves focus only when a toast actually held it (a capture-phase
+  `focusin` records the last focus inside an inert-exempt container and the recovery requires that
+  element to be gone): **timer expiry moves focus only when the toast held it** — a toast expiring
+  while focus sat in the sheet (screen-reader browse mode, a mouse click) changes nothing, per
+  WCAG 3.2.1/APG. The recovery never steals from a live element, prefers tab stops over roving
+  `-1` items, and the modal Tab cycle now skips unchecked radios of a same-name group that has a
+  checked member (one tab stop per radio group, APG).
+
+- **A toast stays above any popup opened after it.** `overlay.js` promoted every
+  `TmOverlayPanel` popover (date pickers, dropdowns, menus, the notification bell) by
+  calling `showPopover()` directly, so a toast already on screen slipped behind it. It
+  now promotes through the shared top-layer helper, which re-raises pinned toasts; the
+  set of promoted surfaces is unchanged.
+
+- **F6 review round 2.** `TmEditorShell`: the tablet rail the shell imposes itself can be expanded
+  even when the host binds no `CollapsedPanels`; with `Breakpoints` the internal `TmMobileActionBar`
+  follows the shell's resolved mode (the actions stay reachable on a custom-threshold mobile shell),
+  and `TmLayoutObserver` rejects `Breakpoints` on the viewport-scope observer; Escape closes the
+  inline sheet that holds focus (non-modal focus traps close by focus ownership, not registration
+  order — two inline sheets on one page); focus no longer drops to `<body>` when the shell reopens
+  the sheet from its closed bar, when a host switches the Tabs panel, or when a desktop → tablet
+  flip rails the focused panel; restored widths are reported through `LeftWidthChanged` /
+  `RightWidthChanged`, a late or changed `PersistWidthsKey` loads, resizing back to the host width
+  clears the stored override, `aria-valuemax` is the reachable width and the resizer hit area is
+  wider under a coarse pointer; the resizer releases its pointer capture by pointer id and a
+  mid-drag detach restores the live width; an overflowing inline sheet body is named by its
+  `aria-label`; closing one of two sheet panels no longer remounts the other's content and a host
+  close that moves the sheet tab raises `ActiveMobilePanelChanged`; the `TmMobileActionBar` "More"
+  trigger omits `aria-controls` while its menu panel is not rendered.
+- **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
+  content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
+  menus and listboxes opened as sheets take initial focus on the first item, not Done;
+  `TmDropdown` returns focus to the trigger after a keyboard selection; trap-focus popups
+  activate only after `showPopover()`, so a cold Enter-open no longer drops focus to `<body>`;
+  a modal sheet's root is promoted to the browser top layer (sticky app bars and transformed
+  ancestors can no longer confine or cover it); the date-range sheet stacks its months, shows a
+  single Done and keeps it disabled until both dates are picked; overlay.js translates anchor
+  rects into visible-viewport space (a panned-down visible anchor is no longer dismissed as
+  hidden); `Title` also names the popover; Escape inside a sheet raises `OnDismissed("escape")`;
+  the swipe-enabled sheet shows its grabber; `TmPopover`'s arrow no longer paints inside a sheet.
+
+- **F3 review round 2.** Every modal viewport-anchored overlay root is promoted to the browser
+  top layer — a modal `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the
+  `TmToastContainer` (re-raised on each push) — so the top-layer order equals the open order: a
+  dialog opened from inside a bottom sheet no longer paints invisible under it, and a toast
+  pushed while a sheet is open lands above it. Each promoted root resets the UA `[popover]`
+  paint (Canvas background, CanvasText color, `overflow:auto`), so the page behind a sheet stays
+  dimmed instead of turning into a flat grey wall and dark body text keeps the themed colour.
+  An invalid `TmFocusScope.InitialFocusSelector` no longer throws after the inert/scroll lock
+  landed. The restored `@media (width < 768px)` `.tm-modal` margin is asserted on the real
+  element again (the round-1 adaptation measured a margin that came from an unrelated rule).
+
+- **F3 review round 3.** A toast that is already on screen is no longer covered by a drawer,
+  sheet or dialog opened after it — the toast containers are pinned on top and re-raise after
+  every later promotion, and a push at the `MaxVisible` cap (visible count unchanged) or an
+  expire+push in one render re-raises too. `TmCommandPalette`, `TmKeyboardShortcutsHelp`,
+  `TmLightbox`, `TmGanttImportDialog` and `TmNotificationToastContainer` join the promoted roots
+  (each resets the UA popover paint), so no focused modal surface paints invisible under another
+  promoted one anymore. For `TmGanttImportDialog` that reset — and the whole Gantt dialog style
+  block — lives in `TmGantt.razor.css`, whose scope attribute the sub-component dialogs never
+  carried; review round 4 re-wrote the block as `::deep` rules so the promoted import overlay
+  paints the full-screen scrim (not the UA popover box) and the export/import dialogs are styled
+  at every width. A click on a toast's dismiss button while a sheet or modal is open
+  dismisses the toast instead of passing through to the backdrop and closing the surface (the
+  toast containers are exempt from the focus trap's inert background), and `role=alert` toasts
+  keep being announced. The demo no longer renders two `TmToastContainer`s sharing one
+  `ToastService` on the feedback page (every toast painted twice).
+
+- **Round-6 overlay fixes.** Opening a `TmDialog` Prompt with Enter no longer submits it at once.
+  The opener activates on its Enter keydown and the per-type initial focus lands on the input while
+  the key is still down, so the submit that rode on a bare Enter keyup received the opener's
+  trailing keyup and fired the `DefaultValue` before the user ever saw the dialog. The submit is
+  now armed by the input's own Enter keydown and fires on its keyup, so a full press submits
+  exactly once, a keyup the input never saw go down does nothing, auto-repeat cannot double it,
+  and the arm resets when the dialog reopens. (A bare keydown submit was probed and rejected:
+  closing between keydown and keyup lets Chromium run the keydown's default action against the
+  re-focused opener and re-open the dialog with the default value.) The prompt input's focus ring
+  is no longer clipped by the scrolling content container — the input wrapper reserves one spacing
+  step of padding for the 4px ring. Below 640px a dialog presented as a sheet now uses the modal
+  sheet's 16px inline padding instead of 24px, so 36-character FR/CS footer labels fit at 320px
+  exactly as they do in the modal.
+
+- **Round-5 overlay fixes.** A `TmDrawer` with `SwipeToDismiss="false"` no longer dismisses on any
+  fast downward flick, and a net-upward drag whose tail flicks downward no longer closes the sheet:
+  every dismiss honours the flag, and the net drag direction — not the tail velocity — picks which
+  way a flick steps. Every `TmDialog` type now names an explicit initial-focus target (prompt → the
+  input, confirm → Cancel, alert → OK), and the scroller `div.tm-dialog-content` is a
+  keyboard-reachable region only while it actually overflows, so a short dialog grows no extra tab
+  stop and the title block no longer takes focus. A sheet footer no longer cuts ordinary labels in
+  half with a forced 50/50 split: buttons that do not fit side by side wrap to their own full-width
+  rows first, and only a label wider than the whole row truncates. The footer buttons carry their
+  label as a `title` only in the sheet presentation, so desktop dialogs stopped growing an "OK"
+  tooltip.
+
+- **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
+  `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
+  `data-tm-backdrop`, and re-applies the inert set of the trap that remains when the topmost one
+  closes. A class name is not a backdrop. The scroll lock is a ref count, so two open modals no
+  longer leave `html.tm-scroll-lock` behind. A sheet gesture writes only an inline height and
+  transition, and clears those two on release, cancel and a vetoed dismiss. It does not touch
+  `--tm-sheet-height`: that variable is Blazor-owned, and deleting it collapsed a snap whose index
+  had not changed. Flick velocity is the travel over the last 80ms, so a `pointerup` that lands on
+  the last move still dismisses. The keyboard gap pads the sheet overlay, so a dialog sheet keeps
+  its own safe-area padding. `TmDialog` awaits its result callbacks, and `TmCommandPalette` lets the
+  focus scope own Escape instead of closing twice.
+
+- **`ConstrainHeight` panels can now grow back after the room returns (N318).** `overlay.js`
+  used to read `getComputedStyle(panel).maxHeight` on every placement pass — which resolves the
+  panel's own *inline* `max-height` written by the previous pass. Once the available room
+  shrank (scrolling, a mobile keyboard opening), the cap could only ever get smaller until the
+  panel was closed. The stylesheet cap is now captured once per entry in `open()`
+  (`entry.cssMaxHeight`), and `place()` clears the inline `max-height`/`overflow-y` before
+  measuring, so `offsetHeight` — and therefore the flip decision — sees the panel's natural
+  height again. Affects every `ConstrainHeight` consumer: TmFilterableDropdown, TmEntityPicker,
+  TmQueryInput, TmMultiSelect, TmTagPicker and TmMultiColumnComboBox.
+
+- **Overlay menus now close BEFORE their item handler runs (N319).** `TmDropdown.SelectItemAsync`,
+  `TmContextMenuItem.HandleClick` and the `TmEntityPicker` create-new path used to invoke the
+  item's `OnSelect`/`OnClick`/`DataProvider.CreateAsync` first and only close the menu afterwards.
+  An async handler that opened a dialog (confirmation, create-form) therefore rendered it *under*
+  the still-open top-layer popover — and the first Escape peeled the stale menu instead of the
+  dialog. All three now close synchronously (and yield a render) before the handler runs; any
+  click inside a `TmSplitButton` menu also closes it. No z-index or top-layer changes to
+  TmModal/TmDialog.
+
+- **`MatchAnchorWidth` now respects the panel's own `min-width` (N324).** `overlay.js` used to
+  run the placement math against `anchorRect.width` and only then write `style.width` — a panel
+  whose stylesheet `min-width` exceeds the anchor (TmMultiColumnComboBox's 320px dropdown under
+  a 240px trigger) was positioned as if it were anchor-wide and its min-width-clamped box
+  overhung the viewport's right edge. The width write now happens before `offsetWidth` is
+  measured, so align, shift and the viewport clamp all use the *rendered* width.
+
+- **TmNotionNotificationCenter's panel width rule now actually applies (N325).** It sat in the
+  component's scoped `.razor.css`, but the panel element is rendered by `TmOverlayPanel` and
+  carries that component's scope attribute — the scoped selector could never match, so the
+  panel silently fell back to the global `.tm-notification-bell__dropdown` (360px instead of
+  the declared `min(24rem, 100vw − 1.5rem)`). The rule moved to the NotionEditor global
+  stylesheet (`_notion-notifications.css`, the N197 pattern) as `width: 24rem;
+  max-width: calc(100vw − 1.5rem)`, and a new source sweep
+  (`OverlayPanelScopedCssTests`) fails closed on any scoped rule targeting a class passed to
+  `TmOverlayPanel` without `::deep`.
+
+- **A panel whose anchor scrolled out of the viewport no longer traps focus (N329).** `overlay.js`
+  used to park the panel `visibility:hidden` and leave it open — focus inside (e.g. the
+  TmFilterableDropdown filter input) kept accepting keystrokes on an invisible surface. Now, when
+  the hide condition coincides with focus inside, the panel is dismissed through the normal
+  accepted-dismissal path (`OnDismissed` reports the new `"anchor-hidden"` reason) and focus
+  returns to the anchor. A hidden panel that does NOT hold focus keeps the old
+  park-and-reappear behaviour unchanged.
+
+- **Every `Role="dialog"` overlay panel now exposes an accessible name (N326).** `TmOverlayPanel`
+  gained `AriaLabel`/`AriaLabelledBy`; the seven dialog-role consumers ship names — both
+  notification centers point `aria-labelledby` at their visible title, the date pickers point at
+  the field label (falling back to a localized `aria-label` when `Label` is unset), and
+  TmColorPicker/TmMultiColumnComboBox use localized `aria-label`s. A new source sweep
+  (`TmOverlayPanelDialogNamingTests`) enumerates every `<TmOverlayPanel Role="dialog">` under
+  `src/`, verifies the rendered panel carries `aria-label` or an `aria-labelledby` that resolves
+  to a present element while open, and fails closed on unnamed sites — including sites it cannot
+  render (`unmeasurable:`).
+
+- **All NotionEditor floating surfaces now ride the `--tm-z-*` token bands (CF10n).** The
+  z-band sweep in `TmNotionFloatingZBandTests` used to cover only `UI/**/*.razor.css`; widened
+  to the whole `Components/NotionEditor` tree it exposed bare band-level levels elsewhere —
+  Share/Restrictions dialogs (10030/10020), db record detail and template editor and
+  import/export overlays (1200/1210), page-tree and database context menus (1000/299-300),
+  page settings menu (9999) and the three TempoBlocks edit modals (1000). Dialogs and
+  full-screen take-overs now sit on `var(--tm-z-modal)` (backdrops `calc(... - 1)`), anchored
+  and context menus on `var(--tm-z-dropdown)`/`var(--tm-z-popover)`, and two in-flow overlays
+  that only needed local stacking dropped under 100. Any future bare `z-index: NNN` or
+  `+ 9000`-style arithmetic escape anywhere in the NotionEditor fails the sweep.
+
+- **Notion AI menu, mention menu, and comment-mention dropdown now render in the browser top
+  layer (CF18-7).** All three used to be `position:fixed` surfaces on `z-index:1030` — below
+  the `--tm-z-modal` band — so any of them opened against a `TmModal` painted under the modal
+  overlay and was unreachable. They are `TmOverlayPanel` popovers now: `TmNotionAiMenu` and
+  `TmNotionMentionMenu` anchor to a zero-size virtual element pinned at the existing
+  `Top`/`Left` coordinates, and `TmCommentMentionInput` anchors its dropdown to the textarea
+  itself. `overlay.js` supplies flip/shift viewport clamping (replacing
+  `adjustSlashMenuPosition`), outside-pointerdown dismissal (replacing the transparent
+  backdrop) and Escape handling routed through `IsOpenChanged` into the existing `OnClosed`
+  callbacks — arrow navigation, Enter selection, selection callbacks and the mention-trigger
+  cancellation are unchanged. Panel-root styles moved to the new global
+  `_notion-floating-menus.css` (the N325 scoped-CSS rule applies: the panel element carries
+  `TmOverlayPanel`'s scope attribute, so scoped selectors could never match it). The z-band
+  sweep gained a fail-closed theory asserting these surfaces declare no `z-index` of their
+  own.
+
+- **A degenerate viewport pass no longer dismisses an open overlay panel.** Chromium applies
+  a 1×1 device-metrics emulation mid-way through a full-page screenshot capture (Playwright
+  `fullPage: true`), and the resulting resize pass used to see every anchor as out-of-view —
+  for a panel holding focus that meant an instant `anchor-hidden` dismissal and unmount.
+  `place()` now early-returns when `innerWidth`/`innerHeight` is below 2: the layout math is
+  meaningless at that size, and the next real resize pass re-runs it anyway. The migration
+  E2E surfaced this inside `NotionMentionMenuE2ETests`' baseline captures.
+
+- **TmValidatedField's green frame now tracks the field, not the context (N320).** The
+  `_validationRan` flag used to be set by any `OnValidationStateChanged` — including a pass
+  triggered by editing a *different* field — so a never-touched field painted `tm-input-valid`
+  on the strength of its neighbour's validation. The state is now field-scoped: the field's own
+  `OnFieldChanged` or a whole-form `OnValidationRequested` marks a pass as covering it, and only
+  then does `OnValidationStateChanged` mark it validated (the notify event still just re-renders;
+  it never marks on its own). Editing field A therefore leaves untouched field B neutral, while
+  `EditContext.Validate()`/form submit still paints every field. An EditContext swap resets both
+  flags and moves all three subscriptions to the new context; Dispose unsubscribes all three.
+
+- **TmNavigationGuard's dialog can no longer be dismissed during an in-flight save (N321).**
+  Escape used to reach `HandleDialogResultAsync(false)` through `TmDialog`'s default
+  `CloseOnEscape="true"` — it dismissed the dialog the save still reports through and fired
+  `OnCancel`, while the save's eventual success re-issued the navigation the user had just
+  "stayed" from. Both guard variants now pass `CloseOnEscape="@(!_saving)"`
+  (`CloseOnOverlayClick` stays false), and `HandleDialogResultAsync` early-returns while
+  `_saving` as a second line of defense for any path that skips the disabled/Escape gates.
+  A successful save still re-issues the blocked navigation unchanged.
+
+- **A pending debounce can no longer reopen a dismissed dropdown (N323).** `TmQueryInput`'s
+  close path bumped `_requestVersion` but left the `System.Timers.Timer` armed — type, Escape
+  inside the debounce window, and the pending timer still fired `LoadSuggestionsAsync`, which
+  stamps its own fresh version and re-set `_isOpen`, reopening the dropdown the user just
+  closed. `CloseDropdown()` now stops and disposes the timer alongside the version bump.
+  `TmEntityPicker` had the same hole on the other side of the mechanism: `SetShowDropdown(false)`
+  (overlay.js Escape / outside pointerdown) flipped only the flag while the awaited
+  `Task.Delay(Debounce, _debounceToken.Token)` kept running into a search that re-set
+  `_showDropdown`. Closing now cancels `_debounceToken`, and the delayed blur-close cancels it
+  too.
+
+- **Track-changes toggle no longer double-pushes the canvas engine (CF09b2).**
+  `ToggleTrackChanges` sent `setTrackChangesEnabled(CanvasEngineTracksChanges)` to the engine
+  but never updated `_appliedCanvasEngineTrackChanges` — the next `OnParametersSetAsync` read
+  the SAME value as a delta and pushed it again, so every user toggle cost two interop calls
+  (and any param-pass observer saw a phantom "change"). The toggle now records the applied
+  flag alongside `_trackChangesEnabled`, whether or not the host is mounted (a host mounting
+  later boots with the same expression).
+
+- **`TmNotionBlockContextMenu` submenus no longer strand keyboard focus (CF18).** Enter/Space
+  on a submenu trigger is a native button click arriving with `MouseEventArgs.Detail == 0` —
+  it opened the panel but never set `_pendingSubFocus`, so focus stayed on the trigger while
+  ArrowRight did both (an APG asymmetry). The click path now detects `Detail == 0` and queues
+  the same first-item focus; pointer clicks (`Detail >= 1`) are untouched. Separately, each
+  `.tm-notion-ctx__sub` wrapper tracks `focusin`/`focusout`: `mouseleave` no longer unmounts a
+  submenu that still holds keyboard focus (focus fell to `<body>`), and a sibling's
+  `mouseenter` hands focus back to the focused submenu's trigger before the swap.
+
+- **The Notion menus' focus re-assert loop no longer fights a deliberate focus move (CF18-3).**
+  `tmNotionEditor.focusMenuInput` re-focuses the just-opened search input for ~10 animation
+  frames because the same keystroke queues a Blazor render that can refocus the block
+  editable afterwards. The loop never checked what the user did in between: a Tab (or any
+  focus move to a real element) inside that window was yanked back to the menu input up to
+  nine more times. `tryFocus` now stops on attempts after the first when
+  `document.activeElement` is a real non-contenteditable element that is neither the target
+  nor `body` — the initial claim is unchanged, and the block-editable refocus the loop
+  exists to outlast still loses the race. Affects `TmNotionSlashMenu`,
+  `TmNotionMentionMenu`, and `TmNotionTokenDropdown`.
+
+- **The InteractiveAuto demo now proves the WebAssembly renderer actually claims the page
+  (CF18-4).** The shared demo layout stamps `data-render-mode` from `RendererInfo.Name` —
+  `Static` under prerender, `Server` while only the SignalR renderer is attached, and
+  `WebAssembly` only when the WASM renderer owns the layout. The new E2E test models the
+  real .NET auto-mode contract instead of asserting a live swap that `blazor.web.js`
+  deliberately never performs: on the first visit the `onWebAssemblyFailedToLoadQuickly`
+  latch assigns auto components to the Server renderer and there is no migration once a
+  renderer claims a component; only after the WASM runtime finishes booting does the
+  framework persist `blazor-resource-hash:<assembly>` to `localStorage`, and on subsequent
+  navigations the matching hash skips the latch so auto descriptors stay unassigned until
+  the WASM renderer claims them. The test waits for the persisted hash (deterministic
+  proof a WASM boot fully completed — Debug payloads at the auto throttle of one download
+  at a time take tens of seconds), reloads, and asserts the marker reaches `WebAssembly`.
+  Earlier RED runs that observed `Server` for 90+ seconds were this designed latch, not a
+  hosting defect: `dotnetReady` resolves, all ~300 runtime assets fetch 200, and the
+  second navigation does hydrate on `WebAssembly`.
+
+- **`TmFilterableDropdown` wires its combobox/listbox ARIA relationships (CF18-5a).**
+  The closed trigger no longer emits `aria-controls` (it pointed at a popup that does not
+  exist); once open it names the `TmOverlayPanel`'s generated id. The filter input —
+  the element that actually holds focus — gets `aria-controls` for the popup and
+  `aria-activedescendant` tracking the ArrowUp/ArrowDown highlight through stable
+  per-option ids (`<popup-id>-opt-<index>`). Because ARIA `listbox` may own only
+  `option` children, the popup keeps the stable id and `role="listbox"` moves to an
+  inner wrapper around the options alone; the filter input and the loading/error/empty
+  messages live outside it as siblings, and the messages now announce themselves via
+  `role="status"`/`role="alert"`. The trigger and the listbox both carry accessible
+  names — the trigger falls back to its visible placeholder/value text when
+  `AriaLabel` is unset, and the listbox uses the new `TmFilterableDropdown_Options`
+  resource. Verified by two bUnit tests plus an axe-core E2E scan of the open dropdown
+  on the demo page (0 critical/serious violations).
+
+- **`TmMultiViewList` list view exposes listbox semantics (CF18-5b).** The `<ul>` is
+  now `role="listbox"` with `aria-multiselectable` bound to `AllowSelection` and an
+  accessible name from the new `TmMvl_ListOptions` resource; each `<li>` is
+  `role="option"` with `aria-selected`. Custom status-badge colors now pair the
+  background with a luminance-picked ink (`--tm-text-primary` on light fills,
+  `--tm-text-inverse` on dark) instead of the muted-secondary default that failed
+  WCAG AA on saturated colors — mid-luminance fills remain the caller's choice.
+  The demo page's palette moves to darker shades so the badges meet 4.5:1. Verified
+  by a bUnit selection-state test plus an axe-core E2E scan of the list view
+  (0 critical/serious violations).
+
+- **`TmSankeyChart` sequence literals are monotonic again (CF18-6).** `BuildLinks`
+  and `BuildNodes` emitted the `onkeyup` attribute with sequence number `100`
+  between `14`/`15` and `13`/`14`, so every later literal sat out of order and the
+  renderer's frame diff could pair unrelated attributes. The numbers now run
+  strictly ascending inside each `Build*` method, and a source-level test scans
+  every `Build*` member for the integer first arguments of `builder.*` calls and
+  fails on any non-monotonic step — including a self-check that flags the
+  `100`-between-`14`/`15` shape this fix removes.
+
+- **Notion editor no longer loses keystrokes typed during the Enter-split
+  round-trip (CF29).** Pressing Enter creates the next block asynchronously, and
+  characters typed in the gap used to land in the old editable — where they were
+  either overwritten by the `setHtml(before)` rewrite or captured by the blur
+  save and committed as stale content. `notion-editor.js` now arms a pending-split
+  buffer on Enter: a capture-phase `beforeinput` listener intercepts `insertText`
+  aimed at the source block (matched by `data-block-id` so a recreated editable
+  still resolves), `focusAtStart`/`focus`/`focusAtEnd`/`focusAtOffset` replay the
+  buffered text into the block the caret actually lands in, queued Enters replay
+  as further splits, and a bounded retry window plus a 1.5 s give-up flush cover
+  slow landings. Two component-side guards close the revert paths: re-init after
+  a `Content`-instance swap consults the JS `isEditableDirty` witness before
+  overwriting `innerHTML`, and a stale same-instance render (queued before the
+  model update) can no longer push a superseded `Html` back into the DOM —
+  `_lastPropHtml` tracks the value the current content instance carried when it
+  was consumed, so only a genuinely advanced prop may overwrite live edits.
+  Covered by `FastTypingAfterEnter_LandsEveryCharacterInTheNewBlock` (Playwright,
+  6× CPU throttling): the source block keeps `abc` and the new block receives
+  `xyz`.
+
+- **New ratchet: undocumented JSON-doc parameters can no longer grow (CF06e1).**
+  `UndescribedParametersRatchetTests` counts `parameters[].description` entries
+  that are missing or whitespace across `JsonDocumentation/**/*.json` and fails
+  above a constant frozen at the measured value (882 of 4453 parameters on
+  ratchet day); filling in descriptions must lower the constant, never raise it.
+  A mutation fact proves the same counting and ceiling logic over synthetic JSON.
+
+- **Release lane: an unreachable nuget.org feed now fails the provenance guard
+  instead of skipping it (N276).** Both publish workflows set
+  `TEMPO_REQUIRE_FEED=1` on every `dotnet test` step; with the variable set, the
+  `FeedReachableFact` probe refuses to answer, the test runs, and its own
+  `survey.Unreachable` assertion reports `unmeasured:feed-unreachable` as a
+  failure. Without the variable the behaviour is unchanged — local and ordinary
+  CI runs keep their skip-on-outage. Guarded by
+  `ReleaseGateFilterTests.EveryPublishTestStep_SetsTempoRequireFeed` (step-, job-
+  and workflow-level env reach) plus three `DecideSkip` unit cells.
+
+- **Release evidence: `total` counts distinct test names, and duplicate keys
+  refuse (CF15).** The counting convention is now written into
+  `eng/verify-release-evidence.sh`'s header and `docs/e2e-test-lanes.md`:
+  `total`/`passed`/`failed`/`skipped` count DISTINCT test names in the TRX —
+  data-row instances sharing a name count once — not the number of `testId`
+  elements the file happens to carry, so the consistency sum compares like
+  with like (CF15a). The verifier rejects a second occurrence of any required
+  flat-JSON key rather than trusting that two copies of the number agree
+  (CF15b). And the lanes doc now records that `hostRestarts: 0` is vacuous
+  under `TM_E2E_SELF_HOST=false` — the counter only measures hosts the suite
+  itself started, so external-host evidence carries the watch-log requirement
+  instead (CF15c).
+
+- **Release evidence: eight fail-closed holes in the gate are closed (CF19).**
+  `eng/verify-release-evidence.sh` now diffs with `--no-renames`, so a
+  `git mv src/X docs/X` can no longer read as a prose-only change (CF19a);
+  `artifactsPath` must live inside the committed `eng/release-evidence/` store —
+  an outside path or a `..` traversal refuses (CF19b); a workflow guard pins the
+  verifier invocation inside the publish job, not merely somewhere in the file
+  (CF19c); a new `selfHost` key declares whether `hostRestarts` was measured —
+  `selfHost: false` requires the external `host-watch.log` in the artifacts dir,
+  and a missing or non-boolean value refuses (CF19d). Supporting fixes:
+  `HostRestartLog` increments its counter before the JSONL write so a failed
+  append can no longer hide a resurrection from the gate (CF19e);
+  `SqlServerCacheFixture` detects CREATE DATABASE denied by the canonical
+  262 number instead of a broad `permission`/`denied` substring (CF19f); the
+  three byte-identical `TestAssemblyInit` copies are now ONE linked file under
+  `tests/Shared/` (CF19g); and the 1200-line source sweep enumerates TRACKED
+  files via `git ls-files`, so untracked `artifacts/`/`TestResults/` output can
+  no longer move the count (CF19h). Covered by seven new verifier/fixture arms
+  over real worktrees and evidence fixtures.
+
+- **New guard: a component API change must carry `JsonDocumentation/**` in
+  the same commit (N328).** `ComponentChangeCarriesJsonTests` evaluates every
+  commit after the most recent tag (or the last 50 when the tag is fresh):
+  a `[Parameter]` attribute line or changed public property declaration in
+  `src/**/Components/**/Tm*.razor{,.cs}` without a `JsonDocumentation/**`
+  path in the same commit is a finding — the freshness guard on HEAD cannot
+  see WHEN either side moved, only that they currently agree. Calibrated on
+  history: `ee1ec3df` is detected (SortLabel shipped with JSON regenerated
+  only at the repo root), `56fa6f04` is clean (mass backfill carried its
+  docs), and `3980af1d` is the single frozen grandfather — its JSON landed
+  one commit later in `ca00f94d`. Shallow clones fail as
+  `unmeasurable:shallow-clone` under `TEMPO_REQUIRE_FULL_CLONE`.
+
+- **The Notion aggregate session can no longer deadlock on its own
+  overlapping saves.** `NotionEditorAggregateSession.ApplyAsync` cloned the
+  current snapshot per call, so two mutations that overlapped across a
+  network await both carried the same base concurrency token — the second
+  save returned 409, parked `_pendingMutation`, and every later mutation
+  was refused with `editor_conflict_pending` until manual resolution. The
+  deterministic symptom was `/wireframe` + Enter inserting nothing: the
+  blur-save and the conversion save raced, one lost, and the menu's
+  conversion was blocked by the self-inflicted conflict
+  (`DocLib2/DocLib4/Mcp4/DocLibShot2` E2E). `LoadAsync`, `ApplyAsync` and
+  `ReapplyAsync` now run one-at-a-time through `_mutationGate`, so queued
+  mutations build on the freshly committed token; genuine cross-actor
+  conflicts still produce the pending-conflict resolve flow. Regression
+  coverage: `OverlappingApplyAsync_QueuesSecondMutationBehindInFlightSave`.
+
+- **The Notion page-settings menu is clickable again.** CF10n migrated
+  `.tm-npsm` from `z-index: 9999` to the popover band
+  (`var(--tm-z-popover, 1030)`) but left the menu's click-outside backdrop
+  as an inline `z-index: 9998` — a literal the band sweep could not see.
+  The full-screen backdrop then painted *above* the 1030 panel and ate
+  every pointer event, so no export/import/comment item could be clicked
+  (`CF28`, `PageComment_MarkAllAsRead_SettingsMenu`, `CF25`/`CF26`
+  import-export E2E). The backdrop is now the scoped
+  `.tm-npsm__backdrop` class at `calc(var(--tm-z-popover, 1030) - 1)`,
+  one step under the panel like every other anchored surface. Regression
+  coverage: `OpenMenu_ClickOutsideBackdrop_UsesScopedClassNotInlineZIndex`
+  plus `NotionEditorRazor_BackdropLayers_CarryNoInlineZIndex`, which scans
+  the whole NotionEditor tree so the next inline band value cannot hide in
+  markup again.
+
+- `TmImageGallery` thumbnails are keyboard-operable native `<button type="button">` items (per
+  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md): the browser
+  delivers the activation, no emulated key handlers), carry an accessible name, and the lightbox
+  returns focus to the thumbnail of the image on screen when it closes.
+
+- **The command palette's keyboard highlight is visible in every theme.** The focused row painted
+  `--tm-color-gray-50`, which in dark mode IS `--tm-bg-surface` (1:1 — the highlight vanished
+  exactly where keyboard users need it) and about 1.04:1 on white in light. The row now paints
+  `--tm-bg-muted` plus a 2px `--tm-color-primary` outline, the `TmMultiSelect` focused-option
+  precedent; a `TokenContrastTests` entry holds the outline at ≥3:1 (WCAG 1.4.11 non-text) against
+  the palette surface in light, dark, indigo and indigo-dark.
+### Accessibility
+
+- **The `TmDataTable` resize handle is a keyboard-operable separator.** The handle renders
+  `role="separator"` with `tabindex="0"`, `aria-orientation="vertical"`, always-emitted
+  `aria-valuenow` / `aria-valuemin` (60) / `aria-valuemax` (1200, raised to track the width when
+  a column grows past it) and a localized
+  `aria-label` (`TmDataTable_ResizeColumn` — "Resize column {0}"). Arrows resize by 8 px
+  (Shift by 32 px, inverted in RTL like the drag), `Home` jumps to the minimum, `End` to the
+  announced maximum — every key commits through `SetColumnWidthAsync`, the single persisting path
+  (WCAG 2.5.7 non-drag alternative). The keys that would scroll the table are cancelled in
+  `data-table.js`, not with a Blazor `:preventDefault`; the handle's keydown and click are fenced
+  from the header's sort handler. Under `(pointer: coarse)` the handle widens to a real target,
+  and it paints the shared focus ring with a `forced-colors` variant.
+
+- **The three `TmColorGradient` sliders are keyboard-operable.** The saturation/value area, the
+  hue track and the alpha track are `tabindex="0"` sliders with arrows (1 % / 1° per step,
+  Shift ×10; the area's arrows move saturation horizontally and brightness vertically),
+  `Home`/`End` at the bounds, and a localized `aria-valuetext` on the area
+  (`TmColorGradient_AreaValue` — "Saturation {0}%, brightness {1}%"); every key commits through
+  `ValueChanged`, the same path as the RGBA inputs, and the hue slider announces its own
+  localized `aria-valuetext` (`TmColorGradient_HueValue` — "{0}°"). The axis keys' scroll default is cancelled in
+  `tm-color-gradient.js`. The sliders paint the shared focus ring (with a `forced-colors`
+  variant) and the thumbs grow on a coarse pointer.
+
 ### Breaking / Migration
 
 - **The rich text editor dialogs (link, image, table, video, find & replace) are now `TmModal`s.**
@@ -1248,514 +1839,6 @@
   (the counter pill's ≤768px `bottom: 0.5rem` offset included). The pill was re-homed into the
   live section with its styling tokenized. Only a host that rendered its OWN markup with those
   legacy classes loses the styles.
-
-### Fixed
-
-- **`TmSidePanel` without a viewport scope now opens the sheet the viewport measured (C7).** With
-  no `TmLayoutScopes.Viewport` cascade the container used to decide the sheet geometry
-  (side vs bottom) entirely: a narrow container on a desktop viewport opened a bottom sheet, a
-  desktop container on a phone opened a side sheet. The panel's own sheet now reads the position
-  from its drawer's internal viewport probe (through `ResolvedLayoutChanged` + `InitialMode`; the
-  container is only the first-frame guess), so a 500px column at 1440 opens a right side sheet and
-  a phone viewport opens a bottom sheet. A host with a viewport scope, or a forced `LayoutMode`,
-  is unchanged.
-
-- **The toolbar's fit measurement no longer ignores a group wrapper's margins and its own gap
-  (F14/C5).** `tm-toolbar.js` counted only a flattened wrapper's padding and border, so a wrapper
-  with a horizontal margin — or a column gap wider than the bar's — over-committed the row and the
-  next control could overlap the pinned one (the I6 bug class). Now the margin counts as fixed width
-  and a wider gap is reserved per adjacency between the wrapper's direct items, conservatively (as
-  if all of them stayed); a narrower gap was already over-reserved by the bar gap and changes
-  nothing, and the start/actions containers share the bar gap (their margins are not double-counted).
-
-- **A `TmDialog` prompt no longer submits on an IME's commit-Enter.** Typing with an input-method
-  editor (Chinese, Japanese, Korean…) commits the composed text with Enter; that press neither
-  arms the prompt submit nor fires it, so committing composed text no longer submits the dialog
-  mid-composition. The guard reads `KeyboardEventArgs.IsComposing`, which does not exist in the
-  .NET 8 framework assemblies — there the guard is a no-op and the commit-Enter submits as before
-  (accepted: the flag is not available). Safari's keyCode-229 commit-Enter (`isComposing=false`)
-  is not detectable through Blazor on any target and is likewise accepted.
-
-- **The dialog/modal/drawer scroll region stays correct for its whole open life.** Three defects
-  fixed together in `ScrollRegionInterop` and `tm-focus-trap.js syncScrollRegion`: (1) a close
-  that landed while the lazy module import was still in flight was dropped by an `!_attached`
-  early return, leaving the `ResizeObserver` attached to the removed node — attaches are now
-  generation-checked, so a detach wins over an in-flight attach and the stale attach stops itself
-  unless a newer attach owns the region (both share one region id, so a blind stop would tear the
-  newer region down; the module import is cached, so a re-attach never imports twice); (2) content
-  growing INSIDE the scroller (rows appended under a `max-height` cap) never resized the scroller
-  and was never re-evaluated — the children are now observed too and a childList MutationObserver
-  re-observes added children and re-runs the overflow decision, coalesced into one frame; (3) a
-  title that rendered or changed after the attach never named the region — `TmModal`, `TmDialog`
-  and `TmDrawer` re-point it through the new `updateScrollRegionLabel` whenever the computed
-  `aria-labelledby`/`aria-label` changes while attached — including an update that lands while the
-  attach is still in flight, reconciled once the attach completes — so the region's name always
-  tracks the title. The wrapper no longer swallows `NullReferenceException`.
-
-- **Overlay focus traps activate only after their root is promoted to the top layer.**
-  `TmModal`, `TmDialog`, every modal `TmDrawer`, `TmLightbox`, `TmCommandPalette`,
-  `TmKeyboardShortcutsHelp` and `TmGanttImportDialog` activated their `TmFocusScope` on the same
-  render that inserted the `popover="manual"` root — before `showPopover` ran. An unpromoted
-  popover root is `display:none` by the UA rule `[popover]:not(:popover-open)`, so whenever a root
-  lost its own author `display` (a consumer class or stylesheet), the trap's initial-focus move
-  landed on `<body>` and the page behind the overlay was inert. All seven now go through a shared
-  promote gate that promotes the root first and only then activates the trap; a promote that
-  completes after its owner closed is dropped, so closing during the in-flight promotion can no
-  longer make the *next* open activate before its own promotion. `role`/`aria-modal` now appear one
-  render after the overlay's first paint (selectors on the rendered markup are unchanged once the
-  overlay is open). In the same pass the overflow scroll region of a dialog/modal/sheet body can
-  never take the initial focus: `tm-focus-trap.js` marks an overflowing scroller with
-  `data-tm-scroll-region` and both the initial-focus fallback and the toast focus recovery skip it
-  (a Custom `TmDialog`'s first control used to lose the focus to its own scroller whenever the
-  content overflowed).
-
-- **F6 focus-trap follow-up: phone sheet Tab cycle, modal Escape ownership, toast focus recovery.**
-  Three focus-trap defects fixed in `tm-focus-trap.js` and its consumers. (1) The bottom-sheet More
-  menu is a roving group (item `tabindex="-1"`), and the trap's Tab cycle counted those items — Tab
-  on the real last tab stop was "not last", the browser's native Tab skipped the `-1` items, found
-  nothing tabbable left (the page is inert) and focus dropped to `<body>`, out of the sheet. The
-  cycle now runs over **tab stops only** (a negative tabindex is not one), and Tab from a focused
-  `-1` item walks the next/previous tab stop in DOM order; this covers every modal trap with a
-  roving group (menus in sheets, a `TmToolbar` roving group inside `TmModal`/`TmDrawer`). (2) A
-  modal dialog's Escape was gated on registration order alone (`isTopmost`): a non-modal inline
-  sheet activated after the dialog blocked the dialog's Escape entirely — nothing closed. The
-  modal gate is now `modalOwnsEscape`, which ignores later **non-modal** traps that do not hold
-  focus or cannot close at all (no Escape handler); an inline sheet nested in the dialog that holds
-  focus still closes first, and a dialog over a dialog still closes only the top one. (3) A toast
-  dismissed under an open sheet or dialog — by click, by keyboard or by expiry while focused —
-  removed the focused dismiss button and stranded focus on `<body>` (the next Tab landed on the
-  sheet's drag handle). The trap now remembers the element last focused inside it (`focusin`) and
-  both `TmToastContainer` and `TmNotificationToastContainer` ask it to recover the focus whenever
-  the set of visible toasts drops an id — not only when the count shrinks, so a replacement at the
-  `MaxVisible` cap, a notification queue refill and an expire+push in one render are covered too.
-  `restoreTrapFocusIfLost` moves focus only when a toast actually held it (a capture-phase
-  `focusin` records the last focus inside an inert-exempt container and the recovery requires that
-  element to be gone): **timer expiry moves focus only when the toast held it** — a toast expiring
-  while focus sat in the sheet (screen-reader browse mode, a mouse click) changes nothing, per
-  WCAG 3.2.1/APG. The recovery never steals from a live element, prefers tab stops over roving
-  `-1` items, and the modal Tab cycle now skips unchecked radios of a same-name group that has a
-  checked member (one tab stop per radio group, APG).
-
-- **A toast stays above any popup opened after it.** `overlay.js` promoted every
-  `TmOverlayPanel` popover (date pickers, dropdowns, menus, the notification bell) by
-  calling `showPopover()` directly, so a toast already on screen slipped behind it. It
-  now promotes through the shared top-layer helper, which re-raises pinned toasts; the
-  set of promoted surfaces is unchanged.
-
-- **F6 review round 2.** `TmEditorShell`: the tablet rail the shell imposes itself can be expanded
-  even when the host binds no `CollapsedPanels`; with `Breakpoints` the internal `TmMobileActionBar`
-  follows the shell's resolved mode (the actions stay reachable on a custom-threshold mobile shell),
-  and `TmLayoutObserver` rejects `Breakpoints` on the viewport-scope observer; Escape closes the
-  inline sheet that holds focus (non-modal focus traps close by focus ownership, not registration
-  order — two inline sheets on one page); focus no longer drops to `<body>` when the shell reopens
-  the sheet from its closed bar, when a host switches the Tabs panel, or when a desktop → tablet
-  flip rails the focused panel; restored widths are reported through `LeftWidthChanged` /
-  `RightWidthChanged`, a late or changed `PersistWidthsKey` loads, resizing back to the host width
-  clears the stored override, `aria-valuemax` is the reachable width and the resizer hit area is
-  wider under a coarse pointer; the resizer releases its pointer capture by pointer id and a
-  mid-drag detach restores the live width; an overflowing inline sheet body is named by its
-  `aria-label`; closing one of two sheet panels no longer remounts the other's content and a host
-  close that moves the sheet tab raises `ActiveMobilePanelChanged`; the `TmMobileActionBar` "More"
-  trigger omits `aria-controls` while its menu panel is not rendered.
-- **F3 review round 1.** `TmOverlayPanel` sheets keep `Role`/`Id`/`AdditionalAttributes` on a
-  content wrapper (menu/listbox ownership and `aria-controls` survive the popover→sheet switch);
-  menus and listboxes opened as sheets take initial focus on the first item, not Done;
-  `TmDropdown` returns focus to the trigger after a keyboard selection; trap-focus popups
-  activate only after `showPopover()`, so a cold Enter-open no longer drops focus to `<body>`;
-  a modal sheet's root is promoted to the browser top layer (sticky app bars and transformed
-  ancestors can no longer confine or cover it); the date-range sheet stacks its months, shows a
-  single Done and keeps it disabled until both dates are picked; overlay.js translates anchor
-  rects into visible-viewport space (a panned-down visible anchor is no longer dismissed as
-  hidden); `Title` also names the popover; Escape inside a sheet raises `OnDismissed("escape")`;
-  the swipe-enabled sheet shows its grabber; `TmPopover`'s arrow no longer paints inside a sheet.
-
-- **F3 review round 2.** Every modal viewport-anchored overlay root is promoted to the browser
-  top layer — a modal `TmDrawer` at any position, the `TmModal`/`TmDialog` overlay root and the
-  `TmToastContainer` (re-raised on each push) — so the top-layer order equals the open order: a
-  dialog opened from inside a bottom sheet no longer paints invisible under it, and a toast
-  pushed while a sheet is open lands above it. Each promoted root resets the UA `[popover]`
-  paint (Canvas background, CanvasText color, `overflow:auto`), so the page behind a sheet stays
-  dimmed instead of turning into a flat grey wall and dark body text keeps the themed colour.
-  An invalid `TmFocusScope.InitialFocusSelector` no longer throws after the inert/scroll lock
-  landed. The restored `@media (width < 768px)` `.tm-modal` margin is asserted on the real
-  element again (the round-1 adaptation measured a margin that came from an unrelated rule).
-
-- **F3 review round 3.** A toast that is already on screen is no longer covered by a drawer,
-  sheet or dialog opened after it — the toast containers are pinned on top and re-raise after
-  every later promotion, and a push at the `MaxVisible` cap (visible count unchanged) or an
-  expire+push in one render re-raises too. `TmCommandPalette`, `TmKeyboardShortcutsHelp`,
-  `TmLightbox`, `TmGanttImportDialog` and `TmNotificationToastContainer` join the promoted roots
-  (each resets the UA popover paint), so no focused modal surface paints invisible under another
-  promoted one anymore. For `TmGanttImportDialog` that reset — and the whole Gantt dialog style
-  block — lives in `TmGantt.razor.css`, whose scope attribute the sub-component dialogs never
-  carried; review round 4 re-wrote the block as `::deep` rules so the promoted import overlay
-  paints the full-screen scrim (not the UA popover box) and the export/import dialogs are styled
-  at every width. A click on a toast's dismiss button while a sheet or modal is open
-  dismisses the toast instead of passing through to the backdrop and closing the surface (the
-  toast containers are exempt from the focus trap's inert background), and `role=alert` toasts
-  keep being announced. The demo no longer renders two `TmToastContainer`s sharing one
-  `ToastService` on the feedback page (every toast painted twice).
-
-- **Round-6 overlay fixes.** Opening a `TmDialog` Prompt with Enter no longer submits it at once.
-  The opener activates on its Enter keydown and the per-type initial focus lands on the input while
-  the key is still down, so the submit that rode on a bare Enter keyup received the opener's
-  trailing keyup and fired the `DefaultValue` before the user ever saw the dialog. The submit is
-  now armed by the input's own Enter keydown and fires on its keyup, so a full press submits
-  exactly once, a keyup the input never saw go down does nothing, auto-repeat cannot double it,
-  and the arm resets when the dialog reopens. (A bare keydown submit was probed and rejected:
-  closing between keydown and keyup lets Chromium run the keydown's default action against the
-  re-focused opener and re-open the dialog with the default value.) The prompt input's focus ring
-  is no longer clipped by the scrolling content container — the input wrapper reserves one spacing
-  step of padding for the 4px ring. Below 640px a dialog presented as a sheet now uses the modal
-  sheet's 16px inline padding instead of 24px, so 36-character FR/CS footer labels fit at 320px
-  exactly as they do in the modal.
-
-- **Round-5 overlay fixes.** A `TmDrawer` with `SwipeToDismiss="false"` no longer dismisses on any
-  fast downward flick, and a net-upward drag whose tail flicks downward no longer closes the sheet:
-  every dismiss honours the flag, and the net drag direction — not the tail velocity — picks which
-  way a flick steps. Every `TmDialog` type now names an explicit initial-focus target (prompt → the
-  input, confirm → Cancel, alert → OK), and the scroller `div.tm-dialog-content` is a
-  keyboard-reachable region only while it actually overflows, so a short dialog grows no extra tab
-  stop and the title block no longer takes focus. A sheet footer no longer cuts ordinary labels in
-  half with a forced 50/50 split: buttons that do not fit side by side wrap to their own full-width
-  rows first, and only a label wider than the whole row truncates. The footer buttons carry their
-  label as a `title` only in the sheet presentation, so desktop dialogs stopped growing an "OK"
-  tooltip.
-
-- **A sheet backdrop stays clickable, and a nested dialog no longer strands the page (F2 review).**
-  `tm-focus-trap` keeps a per-trap set of the elements it marked `inert`, skips a backdrop marked
-  `data-tm-backdrop`, and re-applies the inert set of the trap that remains when the topmost one
-  closes. A class name is not a backdrop. The scroll lock is a ref count, so two open modals no
-  longer leave `html.tm-scroll-lock` behind. A sheet gesture writes only an inline height and
-  transition, and clears those two on release, cancel and a vetoed dismiss. It does not touch
-  `--tm-sheet-height`: that variable is Blazor-owned, and deleting it collapsed a snap whose index
-  had not changed. Flick velocity is the travel over the last 80ms, so a `pointerup` that lands on
-  the last move still dismisses. The keyboard gap pads the sheet overlay, so a dialog sheet keeps
-  its own safe-area padding. `TmDialog` awaits its result callbacks, and `TmCommandPalette` lets the
-  focus scope own Escape instead of closing twice.
-
-- **`ConstrainHeight` panels can now grow back after the room returns (N318).** `overlay.js`
-  used to read `getComputedStyle(panel).maxHeight` on every placement pass — which resolves the
-  panel's own *inline* `max-height` written by the previous pass. Once the available room
-  shrank (scrolling, a mobile keyboard opening), the cap could only ever get smaller until the
-  panel was closed. The stylesheet cap is now captured once per entry in `open()`
-  (`entry.cssMaxHeight`), and `place()` clears the inline `max-height`/`overflow-y` before
-  measuring, so `offsetHeight` — and therefore the flip decision — sees the panel's natural
-  height again. Affects every `ConstrainHeight` consumer: TmFilterableDropdown, TmEntityPicker,
-  TmQueryInput, TmMultiSelect, TmTagPicker and TmMultiColumnComboBox.
-
-- **Overlay menus now close BEFORE their item handler runs (N319).** `TmDropdown.SelectItemAsync`,
-  `TmContextMenuItem.HandleClick` and the `TmEntityPicker` create-new path used to invoke the
-  item's `OnSelect`/`OnClick`/`DataProvider.CreateAsync` first and only close the menu afterwards.
-  An async handler that opened a dialog (confirmation, create-form) therefore rendered it *under*
-  the still-open top-layer popover — and the first Escape peeled the stale menu instead of the
-  dialog. All three now close synchronously (and yield a render) before the handler runs; any
-  click inside a `TmSplitButton` menu also closes it. No z-index or top-layer changes to
-  TmModal/TmDialog.
-
-- **`MatchAnchorWidth` now respects the panel's own `min-width` (N324).** `overlay.js` used to
-  run the placement math against `anchorRect.width` and only then write `style.width` — a panel
-  whose stylesheet `min-width` exceeds the anchor (TmMultiColumnComboBox's 320px dropdown under
-  a 240px trigger) was positioned as if it were anchor-wide and its min-width-clamped box
-  overhung the viewport's right edge. The width write now happens before `offsetWidth` is
-  measured, so align, shift and the viewport clamp all use the *rendered* width.
-
-- **TmNotionNotificationCenter's panel width rule now actually applies (N325).** It sat in the
-  component's scoped `.razor.css`, but the panel element is rendered by `TmOverlayPanel` and
-  carries that component's scope attribute — the scoped selector could never match, so the
-  panel silently fell back to the global `.tm-notification-bell__dropdown` (360px instead of
-  the declared `min(24rem, 100vw − 1.5rem)`). The rule moved to the NotionEditor global
-  stylesheet (`_notion-notifications.css`, the N197 pattern) as `width: 24rem;
-  max-width: calc(100vw − 1.5rem)`, and a new source sweep
-  (`OverlayPanelScopedCssTests`) fails closed on any scoped rule targeting a class passed to
-  `TmOverlayPanel` without `::deep`.
-
-- **A panel whose anchor scrolled out of the viewport no longer traps focus (N329).** `overlay.js`
-  used to park the panel `visibility:hidden` and leave it open — focus inside (e.g. the
-  TmFilterableDropdown filter input) kept accepting keystrokes on an invisible surface. Now, when
-  the hide condition coincides with focus inside, the panel is dismissed through the normal
-  accepted-dismissal path (`OnDismissed` reports the new `"anchor-hidden"` reason) and focus
-  returns to the anchor. A hidden panel that does NOT hold focus keeps the old
-  park-and-reappear behaviour unchanged.
-
-- **Every `Role="dialog"` overlay panel now exposes an accessible name (N326).** `TmOverlayPanel`
-  gained `AriaLabel`/`AriaLabelledBy`; the seven dialog-role consumers ship names — both
-  notification centers point `aria-labelledby` at their visible title, the date pickers point at
-  the field label (falling back to a localized `aria-label` when `Label` is unset), and
-  TmColorPicker/TmMultiColumnComboBox use localized `aria-label`s. A new source sweep
-  (`TmOverlayPanelDialogNamingTests`) enumerates every `<TmOverlayPanel Role="dialog">` under
-  `src/`, verifies the rendered panel carries `aria-label` or an `aria-labelledby` that resolves
-  to a present element while open, and fails closed on unnamed sites — including sites it cannot
-  render (`unmeasurable:`).
-
-- **All NotionEditor floating surfaces now ride the `--tm-z-*` token bands (CF10n).** The
-  z-band sweep in `TmNotionFloatingZBandTests` used to cover only `UI/**/*.razor.css`; widened
-  to the whole `Components/NotionEditor` tree it exposed bare band-level levels elsewhere —
-  Share/Restrictions dialogs (10030/10020), db record detail and template editor and
-  import/export overlays (1200/1210), page-tree and database context menus (1000/299-300),
-  page settings menu (9999) and the three TempoBlocks edit modals (1000). Dialogs and
-  full-screen take-overs now sit on `var(--tm-z-modal)` (backdrops `calc(... - 1)`), anchored
-  and context menus on `var(--tm-z-dropdown)`/`var(--tm-z-popover)`, and two in-flow overlays
-  that only needed local stacking dropped under 100. Any future bare `z-index: NNN` or
-  `+ 9000`-style arithmetic escape anywhere in the NotionEditor fails the sweep.
-
-- **Notion AI menu, mention menu, and comment-mention dropdown now render in the browser top
-  layer (CF18-7).** All three used to be `position:fixed` surfaces on `z-index:1030` — below
-  the `--tm-z-modal` band — so any of them opened against a `TmModal` painted under the modal
-  overlay and was unreachable. They are `TmOverlayPanel` popovers now: `TmNotionAiMenu` and
-  `TmNotionMentionMenu` anchor to a zero-size virtual element pinned at the existing
-  `Top`/`Left` coordinates, and `TmCommentMentionInput` anchors its dropdown to the textarea
-  itself. `overlay.js` supplies flip/shift viewport clamping (replacing
-  `adjustSlashMenuPosition`), outside-pointerdown dismissal (replacing the transparent
-  backdrop) and Escape handling routed through `IsOpenChanged` into the existing `OnClosed`
-  callbacks — arrow navigation, Enter selection, selection callbacks and the mention-trigger
-  cancellation are unchanged. Panel-root styles moved to the new global
-  `_notion-floating-menus.css` (the N325 scoped-CSS rule applies: the panel element carries
-  `TmOverlayPanel`'s scope attribute, so scoped selectors could never match it). The z-band
-  sweep gained a fail-closed theory asserting these surfaces declare no `z-index` of their
-  own.
-
-- **A degenerate viewport pass no longer dismisses an open overlay panel.** Chromium applies
-  a 1×1 device-metrics emulation mid-way through a full-page screenshot capture (Playwright
-  `fullPage: true`), and the resulting resize pass used to see every anchor as out-of-view —
-  for a panel holding focus that meant an instant `anchor-hidden` dismissal and unmount.
-  `place()` now early-returns when `innerWidth`/`innerHeight` is below 2: the layout math is
-  meaningless at that size, and the next real resize pass re-runs it anyway. The migration
-  E2E surfaced this inside `NotionMentionMenuE2ETests`' baseline captures.
-
-- **TmValidatedField's green frame now tracks the field, not the context (N320).** The
-  `_validationRan` flag used to be set by any `OnValidationStateChanged` — including a pass
-  triggered by editing a *different* field — so a never-touched field painted `tm-input-valid`
-  on the strength of its neighbour's validation. The state is now field-scoped: the field's own
-  `OnFieldChanged` or a whole-form `OnValidationRequested` marks a pass as covering it, and only
-  then does `OnValidationStateChanged` mark it validated (the notify event still just re-renders;
-  it never marks on its own). Editing field A therefore leaves untouched field B neutral, while
-  `EditContext.Validate()`/form submit still paints every field. An EditContext swap resets both
-  flags and moves all three subscriptions to the new context; Dispose unsubscribes all three.
-
-- **TmNavigationGuard's dialog can no longer be dismissed during an in-flight save (N321).**
-  Escape used to reach `HandleDialogResultAsync(false)` through `TmDialog`'s default
-  `CloseOnEscape="true"` — it dismissed the dialog the save still reports through and fired
-  `OnCancel`, while the save's eventual success re-issued the navigation the user had just
-  "stayed" from. Both guard variants now pass `CloseOnEscape="@(!_saving)"`
-  (`CloseOnOverlayClick` stays false), and `HandleDialogResultAsync` early-returns while
-  `_saving` as a second line of defense for any path that skips the disabled/Escape gates.
-  A successful save still re-issues the blocked navigation unchanged.
-
-- **A pending debounce can no longer reopen a dismissed dropdown (N323).** `TmQueryInput`'s
-  close path bumped `_requestVersion` but left the `System.Timers.Timer` armed — type, Escape
-  inside the debounce window, and the pending timer still fired `LoadSuggestionsAsync`, which
-  stamps its own fresh version and re-set `_isOpen`, reopening the dropdown the user just
-  closed. `CloseDropdown()` now stops and disposes the timer alongside the version bump.
-  `TmEntityPicker` had the same hole on the other side of the mechanism: `SetShowDropdown(false)`
-  (overlay.js Escape / outside pointerdown) flipped only the flag while the awaited
-  `Task.Delay(Debounce, _debounceToken.Token)` kept running into a search that re-set
-  `_showDropdown`. Closing now cancels `_debounceToken`, and the delayed blur-close cancels it
-  too.
-
-- **Track-changes toggle no longer double-pushes the canvas engine (CF09b2).**
-  `ToggleTrackChanges` sent `setTrackChangesEnabled(CanvasEngineTracksChanges)` to the engine
-  but never updated `_appliedCanvasEngineTrackChanges` — the next `OnParametersSetAsync` read
-  the SAME value as a delta and pushed it again, so every user toggle cost two interop calls
-  (and any param-pass observer saw a phantom "change"). The toggle now records the applied
-  flag alongside `_trackChangesEnabled`, whether or not the host is mounted (a host mounting
-  later boots with the same expression).
-
-- **`TmNotionBlockContextMenu` submenus no longer strand keyboard focus (CF18).** Enter/Space
-  on a submenu trigger is a native button click arriving with `MouseEventArgs.Detail == 0` —
-  it opened the panel but never set `_pendingSubFocus`, so focus stayed on the trigger while
-  ArrowRight did both (an APG asymmetry). The click path now detects `Detail == 0` and queues
-  the same first-item focus; pointer clicks (`Detail >= 1`) are untouched. Separately, each
-  `.tm-notion-ctx__sub` wrapper tracks `focusin`/`focusout`: `mouseleave` no longer unmounts a
-  submenu that still holds keyboard focus (focus fell to `<body>`), and a sibling's
-  `mouseenter` hands focus back to the focused submenu's trigger before the swap.
-
-- **The Notion menus' focus re-assert loop no longer fights a deliberate focus move (CF18-3).**
-  `tmNotionEditor.focusMenuInput` re-focuses the just-opened search input for ~10 animation
-  frames because the same keystroke queues a Blazor render that can refocus the block
-  editable afterwards. The loop never checked what the user did in between: a Tab (or any
-  focus move to a real element) inside that window was yanked back to the menu input up to
-  nine more times. `tryFocus` now stops on attempts after the first when
-  `document.activeElement` is a real non-contenteditable element that is neither the target
-  nor `body` — the initial claim is unchanged, and the block-editable refocus the loop
-  exists to outlast still loses the race. Affects `TmNotionSlashMenu`,
-  `TmNotionMentionMenu`, and `TmNotionTokenDropdown`.
-
-- **The InteractiveAuto demo now proves the WebAssembly renderer actually claims the page
-  (CF18-4).** The shared demo layout stamps `data-render-mode` from `RendererInfo.Name` —
-  `Static` under prerender, `Server` while only the SignalR renderer is attached, and
-  `WebAssembly` only when the WASM renderer owns the layout. The new E2E test models the
-  real .NET auto-mode contract instead of asserting a live swap that `blazor.web.js`
-  deliberately never performs: on the first visit the `onWebAssemblyFailedToLoadQuickly`
-  latch assigns auto components to the Server renderer and there is no migration once a
-  renderer claims a component; only after the WASM runtime finishes booting does the
-  framework persist `blazor-resource-hash:<assembly>` to `localStorage`, and on subsequent
-  navigations the matching hash skips the latch so auto descriptors stay unassigned until
-  the WASM renderer claims them. The test waits for the persisted hash (deterministic
-  proof a WASM boot fully completed — Debug payloads at the auto throttle of one download
-  at a time take tens of seconds), reloads, and asserts the marker reaches `WebAssembly`.
-  Earlier RED runs that observed `Server` for 90+ seconds were this designed latch, not a
-  hosting defect: `dotnetReady` resolves, all ~300 runtime assets fetch 200, and the
-  second navigation does hydrate on `WebAssembly`.
-
-- **`TmFilterableDropdown` wires its combobox/listbox ARIA relationships (CF18-5a).**
-  The closed trigger no longer emits `aria-controls` (it pointed at a popup that does not
-  exist); once open it names the `TmOverlayPanel`'s generated id. The filter input —
-  the element that actually holds focus — gets `aria-controls` for the popup and
-  `aria-activedescendant` tracking the ArrowUp/ArrowDown highlight through stable
-  per-option ids (`<popup-id>-opt-<index>`). Because ARIA `listbox` may own only
-  `option` children, the popup keeps the stable id and `role="listbox"` moves to an
-  inner wrapper around the options alone; the filter input and the loading/error/empty
-  messages live outside it as siblings, and the messages now announce themselves via
-  `role="status"`/`role="alert"`. The trigger and the listbox both carry accessible
-  names — the trigger falls back to its visible placeholder/value text when
-  `AriaLabel` is unset, and the listbox uses the new `TmFilterableDropdown_Options`
-  resource. Verified by two bUnit tests plus an axe-core E2E scan of the open dropdown
-  on the demo page (0 critical/serious violations).
-
-- **`TmMultiViewList` list view exposes listbox semantics (CF18-5b).** The `<ul>` is
-  now `role="listbox"` with `aria-multiselectable` bound to `AllowSelection` and an
-  accessible name from the new `TmMvl_ListOptions` resource; each `<li>` is
-  `role="option"` with `aria-selected`. Custom status-badge colors now pair the
-  background with a luminance-picked ink (`--tm-text-primary` on light fills,
-  `--tm-text-inverse` on dark) instead of the muted-secondary default that failed
-  WCAG AA on saturated colors — mid-luminance fills remain the caller's choice.
-  The demo page's palette moves to darker shades so the badges meet 4.5:1. Verified
-  by a bUnit selection-state test plus an axe-core E2E scan of the list view
-  (0 critical/serious violations).
-
-- **`TmSankeyChart` sequence literals are monotonic again (CF18-6).** `BuildLinks`
-  and `BuildNodes` emitted the `onkeyup` attribute with sequence number `100`
-  between `14`/`15` and `13`/`14`, so every later literal sat out of order and the
-  renderer's frame diff could pair unrelated attributes. The numbers now run
-  strictly ascending inside each `Build*` method, and a source-level test scans
-  every `Build*` member for the integer first arguments of `builder.*` calls and
-  fails on any non-monotonic step — including a self-check that flags the
-  `100`-between-`14`/`15` shape this fix removes.
-
-- **Notion editor no longer loses keystrokes typed during the Enter-split
-  round-trip (CF29).** Pressing Enter creates the next block asynchronously, and
-  characters typed in the gap used to land in the old editable — where they were
-  either overwritten by the `setHtml(before)` rewrite or captured by the blur
-  save and committed as stale content. `notion-editor.js` now arms a pending-split
-  buffer on Enter: a capture-phase `beforeinput` listener intercepts `insertText`
-  aimed at the source block (matched by `data-block-id` so a recreated editable
-  still resolves), `focusAtStart`/`focus`/`focusAtEnd`/`focusAtOffset` replay the
-  buffered text into the block the caret actually lands in, queued Enters replay
-  as further splits, and a bounded retry window plus a 1.5 s give-up flush cover
-  slow landings. Two component-side guards close the revert paths: re-init after
-  a `Content`-instance swap consults the JS `isEditableDirty` witness before
-  overwriting `innerHTML`, and a stale same-instance render (queued before the
-  model update) can no longer push a superseded `Html` back into the DOM —
-  `_lastPropHtml` tracks the value the current content instance carried when it
-  was consumed, so only a genuinely advanced prop may overwrite live edits.
-  Covered by `FastTypingAfterEnter_LandsEveryCharacterInTheNewBlock` (Playwright,
-  6× CPU throttling): the source block keeps `abc` and the new block receives
-  `xyz`.
-
-- **New ratchet: undocumented JSON-doc parameters can no longer grow (CF06e1).**
-  `UndescribedParametersRatchetTests` counts `parameters[].description` entries
-  that are missing or whitespace across `JsonDocumentation/**/*.json` and fails
-  above a constant frozen at the measured value (882 of 4453 parameters on
-  ratchet day); filling in descriptions must lower the constant, never raise it.
-  A mutation fact proves the same counting and ceiling logic over synthetic JSON.
-
-- **Release lane: an unreachable nuget.org feed now fails the provenance guard
-  instead of skipping it (N276).** Both publish workflows set
-  `TEMPO_REQUIRE_FEED=1` on every `dotnet test` step; with the variable set, the
-  `FeedReachableFact` probe refuses to answer, the test runs, and its own
-  `survey.Unreachable` assertion reports `unmeasured:feed-unreachable` as a
-  failure. Without the variable the behaviour is unchanged — local and ordinary
-  CI runs keep their skip-on-outage. Guarded by
-  `ReleaseGateFilterTests.EveryPublishTestStep_SetsTempoRequireFeed` (step-, job-
-  and workflow-level env reach) plus three `DecideSkip` unit cells.
-
-- **Release evidence: `total` counts distinct test names, and duplicate keys
-  refuse (CF15).** The counting convention is now written into
-  `eng/verify-release-evidence.sh`'s header and `docs/e2e-test-lanes.md`:
-  `total`/`passed`/`failed`/`skipped` count DISTINCT test names in the TRX —
-  data-row instances sharing a name count once — not the number of `testId`
-  elements the file happens to carry, so the consistency sum compares like
-  with like (CF15a). The verifier rejects a second occurrence of any required
-  flat-JSON key rather than trusting that two copies of the number agree
-  (CF15b). And the lanes doc now records that `hostRestarts: 0` is vacuous
-  under `TM_E2E_SELF_HOST=false` — the counter only measures hosts the suite
-  itself started, so external-host evidence carries the watch-log requirement
-  instead (CF15c).
-
-- **Release evidence: eight fail-closed holes in the gate are closed (CF19).**
-  `eng/verify-release-evidence.sh` now diffs with `--no-renames`, so a
-  `git mv src/X docs/X` can no longer read as a prose-only change (CF19a);
-  `artifactsPath` must live inside the committed `eng/release-evidence/` store —
-  an outside path or a `..` traversal refuses (CF19b); a workflow guard pins the
-  verifier invocation inside the publish job, not merely somewhere in the file
-  (CF19c); a new `selfHost` key declares whether `hostRestarts` was measured —
-  `selfHost: false` requires the external `host-watch.log` in the artifacts dir,
-  and a missing or non-boolean value refuses (CF19d). Supporting fixes:
-  `HostRestartLog` increments its counter before the JSONL write so a failed
-  append can no longer hide a resurrection from the gate (CF19e);
-  `SqlServerCacheFixture` detects CREATE DATABASE denied by the canonical
-  262 number instead of a broad `permission`/`denied` substring (CF19f); the
-  three byte-identical `TestAssemblyInit` copies are now ONE linked file under
-  `tests/Shared/` (CF19g); and the 1200-line source sweep enumerates TRACKED
-  files via `git ls-files`, so untracked `artifacts/`/`TestResults/` output can
-  no longer move the count (CF19h). Covered by seven new verifier/fixture arms
-  over real worktrees and evidence fixtures.
-
-- **New guard: a component API change must carry `JsonDocumentation/**` in
-  the same commit (N328).** `ComponentChangeCarriesJsonTests` evaluates every
-  commit after the most recent tag (or the last 50 when the tag is fresh):
-  a `[Parameter]` attribute line or changed public property declaration in
-  `src/**/Components/**/Tm*.razor{,.cs}` without a `JsonDocumentation/**`
-  path in the same commit is a finding — the freshness guard on HEAD cannot
-  see WHEN either side moved, only that they currently agree. Calibrated on
-  history: `ee1ec3df` is detected (SortLabel shipped with JSON regenerated
-  only at the repo root), `56fa6f04` is clean (mass backfill carried its
-  docs), and `3980af1d` is the single frozen grandfather — its JSON landed
-  one commit later in `ca00f94d`. Shallow clones fail as
-  `unmeasurable:shallow-clone` under `TEMPO_REQUIRE_FULL_CLONE`.
-
-- **The Notion aggregate session can no longer deadlock on its own
-  overlapping saves.** `NotionEditorAggregateSession.ApplyAsync` cloned the
-  current snapshot per call, so two mutations that overlapped across a
-  network await both carried the same base concurrency token — the second
-  save returned 409, parked `_pendingMutation`, and every later mutation
-  was refused with `editor_conflict_pending` until manual resolution. The
-  deterministic symptom was `/wireframe` + Enter inserting nothing: the
-  blur-save and the conversion save raced, one lost, and the menu's
-  conversion was blocked by the self-inflicted conflict
-  (`DocLib2/DocLib4/Mcp4/DocLibShot2` E2E). `LoadAsync`, `ApplyAsync` and
-  `ReapplyAsync` now run one-at-a-time through `_mutationGate`, so queued
-  mutations build on the freshly committed token; genuine cross-actor
-  conflicts still produce the pending-conflict resolve flow. Regression
-  coverage: `OverlappingApplyAsync_QueuesSecondMutationBehindInFlightSave`.
-
-- **The Notion page-settings menu is clickable again.** CF10n migrated
-  `.tm-npsm` from `z-index: 9999` to the popover band
-  (`var(--tm-z-popover, 1030)`) but left the menu's click-outside backdrop
-  as an inline `z-index: 9998` — a literal the band sweep could not see.
-  The full-screen backdrop then painted *above* the 1030 panel and ate
-  every pointer event, so no export/import/comment item could be clicked
-  (`CF28`, `PageComment_MarkAllAsRead_SettingsMenu`, `CF25`/`CF26`
-  import-export E2E). The backdrop is now the scoped
-  `.tm-npsm__backdrop` class at `calc(var(--tm-z-popover, 1030) - 1)`,
-  one step under the panel like every other anchored surface. Regression
-  coverage: `OpenMenu_ClickOutsideBackdrop_UsesScopedClassNotInlineZIndex`
-  plus `NotionEditorRazor_BackdropLayers_CarryNoInlineZIndex`, which scans
-  the whole NotionEditor tree so the next inline band value cannot hide in
-  markup again.
-
-- `TmImageGallery` thumbnails are keyboard-operable native `<button type="button">` items (per
-  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md): the browser
-  delivers the activation, no emulated key handlers), carry an accessible name, and the lightbox
-  returns focus to the thumbnail of the image on screen when it closes.
-
-- **The command palette's keyboard highlight is visible in every theme.** The focused row painted
-  `--tm-color-gray-50`, which in dark mode IS `--tm-bg-surface` (1:1 — the highlight vanished
-  exactly where keyboard users need it) and about 1.04:1 on white in light. The row now paints
-  `--tm-bg-muted` plus a 2px `--tm-color-primary` outline, the `TmMultiSelect` focused-option
-  precedent; a `TokenContrastTests` entry holds the outline at ≥3:1 (WCAG 1.4.11 non-text) against
-  the palette surface in light, dark, indigo and indigo-dark.
 
 ### Erratum 2.9.0
 

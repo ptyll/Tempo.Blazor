@@ -8,14 +8,14 @@ The private gestures still to migrate:
 
 | Owner | Gesture |
 | --- | --- |
-| `TmDataTable` | column resize |
 | `dashboard.js` | widget drag and resize |
 | `workflow-designer.js` | node drag |
-| `TmColorGradient` | the gradient stop drag |
 | `TmGantt` | bar drag and resize |
 | `TmSigningFieldOverlay` | field drag |
 
-Migrated (they no longer own a private gesture): `TmSplitterPane` (the `eval` drag became
+Migrated (they no longer own a private gesture): `TmDataTable` (column resize became
+`data-table.js` over the helper), `TmColorGradient` (the gradient stop drag became
+`tm-color-gradient.js`), `TmSplitterPane` (the `eval` drag became
 `tm-splitter.js` over the helper), and `slider.js` (deleted: `TmRangeSlider` uses the standard
 dual-range CSS, so each native thumb drags itself and no JS gesture exists).
 
@@ -160,6 +160,8 @@ touch users who cannot drag precisely.
 | `tm-splitter.js` | `TmSplitterPane` resizer: `attach(handle, { threshold: 0, suppressClick: false, touchAction: null })`; `onMove` clamps the pane size and writes the inline `flex` (no Blazor render per move), `onEnd` commits once through `OnSplitterResizeCommitted`, `onCancel` restores the press-time `style` attribute verbatim (the drag's `flex` shorthand would otherwise leave the authored inline `flex-basis` destroyed), and the horizontal delta inverts in RTL. A press on the strip's collapse button is vetoed so the button keeps its click. Arrows / `Home` / `End` on the `role="separator"` stay in Blazor and share the clamp. |
 | `tm-sheet.js` | Bottom-sheet drag (TmDrawer/TmModal/TmDialog sheets): `attach(handle, { threshold: 6, captureOn: <grabber ? 'press' : 'start'>, touchAction: null, suppressClick: true, dragClass: null })`. The grabber captures on press (a fast drag whose first move leaves the 44px handle would otherwise never start); a header waits for the 6px arm so a close-button click stays a click. The sheet owns measuring, the inline height and the settle/dismiss decision; the velocity samples come from `onMove`'s `event.timeStamp`. |
 | `scheduler.js` | Event resize (time grid and timeline) with a mouse, finger or pen: `attach(document, { selector: '.tm-scheduler-event-resize-handle', threshold: 2, longPressMs: 400 })`. The long-press applies to touch only, so a quick swipe scrolls (the coarse handle is `touch-action: pan-y` on the time grid and `pan-x` on the timeline, capped at `min(var(--tm-space-4), 25%)`, with a visible grip under `hover: none`); mouse and pen keep the 2px threshold. Hold, then drag, to resize. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the `NotifyResizeComplete` callback are unchanged. The mouse keeps HTML5 drag-and-drop for moving the event body. Its resize has no keyboard alternative yet — deferred to the Scheduler plan; new adopters use `attachKeyboardMove`. |
+| `data-table.js` | `TmDataTable` column resize: one delegated `attach(root, { selector: '.tm-col-resize-handle', threshold: 0, suppressClick: false, touchAction: null })` per table (the classic script loads the helper with a dynamic `import()` resolved from `document.currentScript.src`). `onPress` measures the real `<th>` (and vetoes the gesture when the measure fails), `onMove` rAF-throttles live widths into `OnColumnResized`, `onEnd` flushes the final width and commits once through `OnColumnResizeCommitted`, and `onCancel` reports `OnColumnResizeCancelled` so the C# snapshot restores (or removes) the pre-gesture width — a cancelled drag persists nothing. The horizontal delta inverts in RTL. Arrows / `Home` / `End` on the `role="separator"` stay in Blazor, starting from `tmDataTable.measureColumn`; the axis keys are prevented here. |
+| `tm-color-gradient.js` | `TmColorGradient` saturation/value, hue and alpha gestures: one `attach(el, { threshold: 0, suppressClick: false, touchAction: null })` per slider part (a static `import { attach } from './pointer-drag.js'`). Positions stream as fractions of the element's real bounding box through rAF-throttled `OnGradientDrag` calls, a tap commits through the same `OnGradientCommit`, and `onCancel` reports `OnGradientCancel` so the C# snapshot restores the colour the press started from. The keyboard sliders stay in Blazor; only the axis keys and `Home`/`End` are prevented here. The horizontal mapping is deliberately not RTL-inverted — the painted gradient runs left-to-right in every writing direction. |
 
 Gantt, Dashboard, DiagramEditor, Wireframe and the Signing designer adopt it in their own plans; none
 of them may add a second implementation.

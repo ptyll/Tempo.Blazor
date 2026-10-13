@@ -1014,6 +1014,13 @@ public partial class TmDataTable<TItem> : IDisposable
         return null;
     }
 
+    /// <summary>
+    /// The width the keyboard End key jumps to and <c>aria-valuemax</c> announces on the resize
+    /// separator. A column has no enforced maximum (the drag is only min-clamped; the table
+    /// scrolls), so this is the keyboard bound, not a clamp: mouse users may set any width.
+    /// </summary>
+    private const int MaxColumnWidth = 1200;
+
     private void RecomputeSticky()
     {
         _stickyLeft.Clear();
@@ -1041,7 +1048,14 @@ public partial class TmDataTable<TItem> : IDisposable
     {
         var parts = new List<string>();
         var px = GetPixelWidth(col);
-        if (px.HasValue) parts.Add($"width:{px}px");
+        if (px.HasValue)
+        {
+            parts.Add($"width:{px}px");
+            // The table layout is auto: `width` alone is a suggestion the layout algorithm may
+            // ignore when the columns compete for space, so a user-set pixel width is repeated
+            // as min-width (the column's own MinWidth, if any, keeps priority over it).
+            if (string.IsNullOrEmpty(col.MinWidth)) parts.Add($"min-width:{px}px");
+        }
         else if (!string.IsNullOrEmpty(col.Width)) parts.Add($"width:{col.Width}");
         if (!string.IsNullOrEmpty(col.MinWidth)) parts.Add($"min-width:{col.MinWidth}");
 
@@ -1105,29 +1119,184 @@ public partial class TmDataTable<TItem> : IDisposable
         StateHasChanged();
     }
 
-    private async Task StartColumnResizeAsync(TmDataTableColumn<TItem> col, PointerEventArgs e)
+    // ── Column resize: pointer (data-table.js over pointer-drag.js) + keyboard ──
+
+    private ElementReference _tableRef;
+    private bool _resizeAttached;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var startWidth = GetPixelWidth(col) ?? DefaultPinnedWidth;
-        _dotNetRef ??= DotNetObjectReference.Create(this);
-        try
+        // One delegated attachment for the whole table (data-table.js listens on the root and
+        // starts only from .tm-col-resize-handle handles), not one per handle press: the gesture
+        // must be live before the first pointer move reaches .NET, which the old
+        // press-then-startColumnResize round trip could not guarantee on Server.
+        if (!_resizeAttached)
         {
-            await JS.InvokeVoidAsync("tmDataTable.startColumnResize", _dotNetRef, col.Key, e.ClientX, startWidth, MinColumnWidth);
+            _resizeAttached = true;
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("tmDataTable.attachColumnResize", _tableRef, _dotNetRef);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                                   or TaskCanceledException or ObjectDisposedException)
+            {
+                // JS unavailable (e.g. tests, prerender) — the drag is a no-op, the keyboard path
+                // and SetColumnWidthAsync still work.
+            }
         }
-        catch { /* JS unavailable (e.g. tests) — resize is a no-op */ }
     }
 
     /// <summary>Receives live width updates from the JavaScript resize drag (no persistence).</summary>
     [JSInvokable]
     public void OnColumnResized(string columnKey, double width)
     {
+        // The state the column was in before the FIRST live update of the active gesture, so a
+        // cancel can restore (or remove) it. An auto column had no width at all — the cancel must
+        // return it to the auto layout, not to the gesture's start measurement baked in as a value.
+        _resizeStart ??= (columnKey,
+                          _columnWidths.TryGetValue(columnKey, out var before),
+                          before);
         _columnWidths[columnKey] = Math.Max(MinColumnWidth, (int)Math.Round(width));
         RecomputeSticky();
         InvokeAsync(StateHasChanged);
     }
 
+    // (columnKey, had a width before the gesture, that width) — null while no gesture is running.
+    private (string Key, bool Existed, int Value)? _resizeStart;
+
+    /// <summary>
+    /// A cancelled resize drag (Escape, pointercancel, lost capture, mid-drag detach): the column
+    /// returns to the state the FIRST live update found it in — the snapshot width back, or the
+    /// width entry removed for a column that had none. The JavaScript side used to replay the
+    /// press-time start width through <see cref="OnColumnResized"/>, which silently converted an
+    /// auto column's measured width into a user-set one: the cancelled drag persisted something.
+    /// Nothing is committed.
+    /// </summary>
+    [JSInvokable]
+    public void OnColumnResizeCancelled()
+    {
+        if (_resizeStart is { } start)
+        {
+            if (start.Existed)
+            {
+                _columnWidths[start.Key] = start.Value;
+            }
+            else
+            {
+                _columnWidths.Remove(start.Key);
+            }
+            RecomputeSticky();
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
     /// <summary>Receives the resize-drag end signal from JavaScript and persists the layout.</summary>
     [JSInvokable]
-    public Task OnColumnResizeCommitted() => PersistLayoutAsync();
+    public Task OnColumnResizeCommitted()
+    {
+        // The gesture is finished: a stray late cancel must not roll a committed width back.
+        _resizeStart = null;
+        return PersistLayoutAsync();
+    }
+
+    /// <summary>
+    /// The name the resize separator announces: <c>Title</c> wins, then <c>SortLabel</c>, then the
+    /// column key. Unlike <see cref="SortButtonHeaderText"/> this never throws: a resizable column
+    /// may legitimately carry only a HeaderTemplate (the resize handle predates any naming
+    /// contract), and the key always names it.
+    /// </summary>
+    private string ResizeHandleAccessibleName(TmDataTableColumn<TItem> col)
+    {
+        if (!string.IsNullOrWhiteSpace(col.Title))
+        {
+            return col.Title;
+        }
+
+        if (!string.IsNullOrWhiteSpace(col.SortLabel))
+        {
+            return col.SortLabel!;
+        }
+
+        return col.Key;
+    }
+
+    /// <summary>
+    /// The keyboard resize on a focused <c>role="separator"</c> handle (the WCAG 2.5.7 non-drag
+    /// alternative). Arrows step by 8 px (Shift by 32 px, inverted in RTL like the drag delta),
+    /// Home jumps to <see cref="MinColumnWidth"/> and End to <see cref="MaxColumnWidth"/>; every
+    /// key commits through <see cref="SetColumnWidthAsync"/>, the single persisting path. The
+    /// browser's default for these keys on the handle — scrolling the table — is cancelled in
+    /// data-table.js, not here, so Tab and the other keys keep their behaviour.
+    /// </summary>
+    private async Task OnResizeHandleKeyAsync(TmDataTableColumn<TItem> col, KeyboardEventArgs e)
+    {
+        var current = GetPixelWidth(col) ?? await MeasureColumnWidthAsync(col);
+        switch (e.Key)
+        {
+            case "ArrowLeft":
+            case "ArrowRight":
+                var step = e.ShiftKey ? 32 : 8;
+                var growing = e.Key == "ArrowRight";
+                if (await IsRtlAsync()) growing = !growing;
+                await SetColumnWidthAsync(col.Key, current + (growing ? step : -step));
+                break;
+            case "Home":
+                await SetColumnWidthAsync(col.Key, MinColumnWidth);
+                break;
+            case "End":
+                await SetColumnWidthAsync(col.Key, MaxColumnWidth);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The column's real rendered <c>&lt;th&gt;</c> width, measured live by
+    /// <c>tmDataTable.measureColumn</c> (the keyboard step on a column without an explicit width
+    /// must start where the column actually is, not at the 160 fallback). Returns
+    /// <see cref="DefaultPinnedWidth"/> when JS is unavailable (tests, prerender) or the measure
+    /// fails — the step still works, it just starts from the historical default.
+    /// </summary>
+    private async Task<int> MeasureColumnWidthAsync(TmDataTableColumn<TItem> col)
+    {
+        try
+        {
+            var width = await JS.InvokeAsync<double>("tmDataTable.measureColumn", _tableRef, col.Key);
+            return width > 0 ? (int)Math.Round(width) : DefaultPinnedWidth;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or TaskCanceledException or ObjectDisposedException)
+        {
+            return DefaultPinnedWidth;
+        }
+    }
+
+    /// <summary>
+    /// The table's writing direction, read live from the DOM. In an RTL table the drag delta
+    /// inverts in JavaScript; the keyboard arrows invert here for the same reason: the arrow that
+    /// moves the column edge outward is the one that grows the width.
+    /// </summary>
+    private async Task<bool> IsRtlAsync()
+    {
+        try
+        {
+            var direction = await JS.InvokeAsync<string>("tmDataTable.directionOf", _tableRef);
+            return string.Equals(direction, "rtl", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or TaskCanceledException or ObjectDisposedException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>No-op click handler: gives the resize handle's <c>@onclick:stopPropagation</c> a
+    /// handler to be read by, so a tap on the handle cannot bubble a sort into the <c>&lt;th&gt;</c>
+    /// (a stop without a handler is never visited by the dispatcher).</summary>
+    private void SwallowHandleClick()
+    {
+    }
 
     private DataTableLayout CaptureLayout() => new()
     {
@@ -1170,8 +1339,26 @@ public partial class TmDataTable<TItem> : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        // Fire-and-forget: Dispose cannot await. The JS side cancels an in-flight drag first
+        // (restoring the start width, committing nothing), so an unmounted table never keeps one.
+        if (_resizeAttached)
+        {
+            _ = DetachColumnResizeAsync();
+        }
         _dotNetRef?.Dispose();
         _dotNetRef = null;
+    }
+
+    private async Task DetachColumnResizeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("tmDataTable.detachColumnResize", _tableRef);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or TaskCanceledException or ObjectDisposedException)
+        {
+        }
     }
 
     private IReadOnlyList<ColumnVisibilityItem> GetColumnVisibilityItems() =>

@@ -96,7 +96,7 @@
 </section>
 
 <!-- Color Gradient -->
-<section class="demo-section">
+<section class="demo-section" data-testid="color-gradient-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Color Gradient</h2>
@@ -123,5 +123,7 @@
     private string? _color1 = "#3b82f6";
     private string? _color2;
     private string? _color3;
-    private string? _color4;
+    // Starts bound so the gradient's value text and preview are observable from page load
+    // (the pointer-drag / keyboard E2E lanes assert changes against it).
+    private string? _color4 = "#3b82f6";
 }

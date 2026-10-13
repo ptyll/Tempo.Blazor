@@ -149,7 +149,7 @@
 
     @* ── Table ────────────────────────────────────────────────── *@
     <div class="@GetScrollContainerClass()" style="@GetScrollContainerStyle()">
-        <table class="tm-data-table" role="grid">
+        <table class="tm-data-table" role="grid" @ref="_tableRef">
             @if (_visibleColumns.Count > 0 || Selectable)
             {
                 <thead>
@@ -272,10 +272,32 @@
                                 }
                                 @if (col.Resizable)
                                 {
+                                    @* A keyboard-operable separator (WCAG 2.5.7): the drag runs in
+                                       data-table.js over the shared pointer-drag helper (attached once
+                                       per table on the first render); arrows / Home / End resize here
+                                       and commit through SetColumnWidthAsync. @onkeydown:stopPropagation
+                                       fences the <th>'s sort handler (a key must not BOTH resize and
+                                       sort); the empty SwallowHandleClick next to @onclick:stopPropagation
+                                       makes the barrier real — a stop without a handler is never visited
+                                       by the dispatcher, so the tap's click would otherwise sort.
+                                       valuenow/valuemin/valuemax are always emitted: a focusable
+                                       separator announces its value. data-col-key / data-min-width are
+                                       what the JS gesture reads on press. *@
                                     <span class="tm-col-resize-handle"
                                           data-testid="@TestId($"resize-{col.Key}")"
-                                          @onpointerdown:stopPropagation="true"
-                                          @onpointerdown="e => StartColumnResizeAsync(col, e)"></span>
+                                          data-col-key="@col.Key"
+                                          data-min-width="@MinColumnWidth"
+                                          role="separator"
+                                          aria-orientation="vertical"
+                                          tabindex="0"
+                                          aria-valuenow="@(GetPixelWidth(col) ?? DefaultPinnedWidth)"
+                                          aria-valuemin="@MinColumnWidth"
+                                          aria-valuemax="@(Math.Max(MaxColumnWidth, GetPixelWidth(col) ?? DefaultPinnedWidth))"
+                                          aria-label="@Loc["TmDataTable_ResizeColumn", ResizeHandleAccessibleName(col)]"
+                                          @onclick="SwallowHandleClick"
+                                          @onclick:stopPropagation="true"
+                                          @onkeydown="e => OnResizeHandleKeyAsync(col, e)"
+                                          @onkeydown:stopPropagation="true"></span>
                                 }
                             </th>
                         }

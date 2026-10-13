@@ -55,6 +55,8 @@ public sealed class ComponentChangeCarriesJsonTests
     ///   <c>TmFocusScope</c>/<c>TmSheetHandle</c>/<c>TmDrawer</c> API surface whose
     ///   <c>JsonDocumentation/**</c> overlays landed in later commits of the same window
     ///   (both components are documented today; the same-commit contract was the broken part).</item>
+    /// <item><c>ac24881a</c> — false positive: removed Width/Height of a private interop DTO +
+    ///   JSInvokable method, no [Parameter] change</item>
     /// </list>
     /// </summary>
     private static readonly HashSet<string> GrandfatheredViolations = new(StringComparer.Ordinal)
@@ -65,6 +67,10 @@ public sealed class ComponentChangeCarriesJsonTests
         "bd49e08990a77702a31019c93101f5ad6c7d8d26",
         "2dcaea5d90e2a28a42665197ee9d00b9402499b0",
         "5f5f2879117fb258ad0ef6e98971bbfe1f361a62",
+        // F20 (TmSplitterPane/TmRangeSlider without eval): the flagged lines are the removed
+        // Width/Height properties of a private JS-interop DTO and a [JSInvokable] method — no
+        // [Parameter] surface changed, so there was no overlay to update.
+        "ac24881a1c01b75791c3835ea5ccb1ae338e6a68",
     };
 
     /// <summary>

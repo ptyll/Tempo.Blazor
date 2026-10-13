@@ -108,7 +108,10 @@ public static class ColorHelper
         else if (h < 300) { r = x; g = 0; b = c; }
         else { r = c; g = 0; b = x; }
 
-        return (ClampByte((int)((r + m) * 255)), ClampByte((int)((g + m) * 255)), ClampByte((int)((b + m) * 255)));
+        // Round, don't truncate: the floor made every converted channel land a unit low, so an
+        // RGB → HSV → RGB round trip could not return to its input (a keyboard-stepped colour
+        // drifted as the value echoed back through the component).
+        return (ClampByte((int)Math.Round((r + m) * 255)), ClampByte((int)Math.Round((g + m) * 255)), ClampByte((int)Math.Round((b + m) * 255)));
     }
 
     private static byte ClampByte(int value)
