@@ -19,8 +19,8 @@ Migrated (they no longer own a private gesture): `TmDataTable` (column resize be
 `tm-splitter.js` over the helper), and `slider.js` (deleted: `TmRangeSlider` uses the standard
 dual-range CSS, so each native thumb drags itself and no JS gesture exists).
 
-Multi-pointer gestures (pinch and pan) are out of scope. They need a core sibling module, never an
-implementation inside a package.
+Multi-pointer gestures (pinch and pan) live in the core sibling module `pointer-gesture.js`
+(see "Multi-pointer gestures" below) — never an implementation inside a package.
 
 ```js
 import { attach } from './pointer-drag.js';            // from another file in wwwroot/js/
@@ -124,6 +124,71 @@ A browser decides whether a touch pans the page **before** any script runs, so t
 
 `.tm-pointer-dragging` is `user-select: none`, so text is not selected under the finger.
 
+## Multi-pointer gestures — `pointer-gesture.js`
+
+Two-finger pinch/pan and edge auto-scroll live in the `pointer-drag.js` sibling module
+`pointer-gesture.js` (`_content/Tempo.Blazor/js/pointer-gesture.js`, ES module, no dependencies).
+The same rule as for drags: a component or a package never writes its own pinch.
+
+```js
+import { attachPinch, createAutoScroller } from './pointer-gesture.js';
+
+const pinch = attachPinch(element, {
+    pointerTypes: ['touch'],         // mouse/pen cannot pinch; [] allows every pointer type
+    wheel: true,                     // ctrl+wheel (trackpad pinch) zooms around the cursor
+    minScale: 0, maxScale: Infinity, // clamp of the cumulative scale reported
+    touchAction: 'none',             // the default; null leaves the element alone (restored on detach)
+    onStart({ centerX, centerY, distance, reducedMotion }) { /* second finger landed */ },
+    onChange({ scale, centerX, centerY, dx, dy, event, reducedMotion }) { /* live zoom/pan */ },
+    onEnd({ scale, centerX, centerY, dx, dy }) { /* fingers lifted: commit ONCE */ },
+    onCancel({ reason }) { /* 'escape' | 'pointercancel' | 'lostpointercapture' | 'detached': roll back, commit nothing */ },
+});
+
+pinch.detach();                      // on dispose; cancels an active pinch, safe to call twice
+```
+
+| Concern | Behaviour |
+|---------|-----------|
+| **Two pointers** | The first two pointers of the allowed types are tracked by id: the pinch starts when the second finger lands and ends exactly once when the count drops below two. A third finger is ignored — it neither starts, moves, nor ends anything. |
+| **Pointer capture** | Both fingers are captured by id (they may slide off the element mid-gesture); every exit releases by id. A `lostpointercapture` for a tracked finger — the element left the DOM, the browser took the capture back — cannot be tracked around: mid-pinch it cancels (below), with a lone finger it just forgets the finger. |
+| **Scale** | `onChange`/`onEnd` report the scale relative to the gesture start, clamped to `minScale`/`maxScale`, with the centre of the two fingers and its pan `dx`/`dy` from the start centre. |
+| **Cancel** | `pointercancel` of either finger, `lostpointercapture` of a tracked finger, `Escape` and `detach()` call `onCancel({ reason })`, never `onEnd`. The `Escape` listener sits on `document` in the capture phase with `stopPropagation` (as in the drag helper): an ACTIVE pinch consumes the key, a lone finger leaves it to the surrounding dialog. |
+| **ctrl+wheel** | A non-passive wheel listener; each tick reports `scale = Math.exp(-deltaY / 100)` around the cursor and calls `preventDefault` only while ctrl is held — plain wheel keeps scrolling the page. A burst is one gesture: `onStart` on the first tick, `onChange` per tick with the cumulative scale, and one `onEnd` 150 ms after the last tick (`detach()` flushes a pending one). |
+| **Reduced motion** | `onStart`/`onChange` receive `reducedMotion` so the host can snap zoom steps instead of animating. |
+
+**Coexistence with `attach()`.** `pointer-drag.js` stays single-pointer. The first finger may already
+drive a drag; the drag helper's `isPrimary` guard means the second finger neither moves nor cancels
+that drag — the HOST hands over, in the pinch's `onStart`, so the drag rolls back exactly once the
+pinch takes over:
+
+```js
+const drag = attach(handle, { /* ... */ });
+const pinch = attachPinch(handle, { onStart() { drag.cancel('pinch'); } });
+```
+
+**A pinch is never the only way (WCAG 2.5.7).** Zoom buttons (+/−) beside the canvas are the
+single-pointer alternative and must ship in the same change; `onChange` already carries the scale a
+button press needs, so one commit path serves both.
+
+`createAutoScroller(container, { edge = 36, maxStep = 28, axis = 'both', onScroll })` is the edge
+auto-scroll for drags, ported from `spreadsheet-canvas.js`: within `edge` px of a container edge it
+scrolls `round(power * maxStep)` px per frame (0 in the middle) on a rAF loop with no listeners of
+its own — the host calls `scroller.update(x, y)` from its drag's `onMove` and `scroller.stop()` from
+`onRelease`. Unlike spreadsheet-canvas, the power is **capped at 1 past the edge**: a pointer dragged
+beyond the edge scrolls at full `maxStep` per frame, never faster. The scroll position is read back
+after each write, so `onScroll({ dx, dy })` and the accumulators carry only the **applied** delta —
+the browser clamps at the scroll limits, and a frame at a limit applies nothing and stays silent.
+The scroller is created once per component and reused across gestures: `stop()` ends
+the loop, the next `update()` starts a new one, and the accumulation continues.
+`scrolledX`/`scrolledY` accumulate everything applied since creation, so the content
+delta under a stationary pointer is `dx + scrolledX`; `onScroll({ dx, dy })` fires after each
+scrolled frame so the host can re-hit-test the drop target. `container = null` means the page itself
+(`document.scrollingElement`), edge-tested against the **viewport** rect
+(`documentElement.clientWidth`/`clientHeight`), not the document box its `getBoundingClientRect()`
+returns. The scroll is raw `scrollLeft`/`scrollTop`: a host with RTL scroll
+semantics applies its own logical translation. The scroller needs no alternative of its own — it
+only assists an existing drag, whose alternative carries the WCAG duty.
+
 ## A drag is never the only way (WCAG 2.5.7)
 
 WCAG 2.5.7 *Dragging Movements* (WCAG 2.2, level AA): anything done by dragging must also be possible with a
@@ -135,6 +200,7 @@ must ship a non-drag alternative in the same change.** The convention:
 | Move an item (event, card, node) | Alt+arrow (`Alt+ArrowDown`) moves it one step (slot, day, grid cell) | `aria-live="polite"` message "Moved to …" |
 | Resize an item | Alt+Shift+arrow grows/shrinks by one step | "Resized to …" |
 | Resize a panel (splitter) | arrows / `Home` / `End` on the `role="separator"` (`TmEditorShell`, `TmSplitterPane`) | `aria-valuenow` |
+| Zoom a canvas (pinch) | zoom buttons (+/−) beside the canvas (`pointer-gesture.js` hosts) | none needed |
 | Cancel | `Escape` while a mouse/touch gesture is active (handled by the helper) | none needed |
 
 `Alt`+arrow is the browser's Back/Forward shortcut, so the chord is cancelled in JavaScript, not with
@@ -169,7 +235,9 @@ of them may add a second implementation.
 ## Testing
 
 `src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs` drives the helper with hand-rolled
-DOM stubs (`npm run test:overlay`). A node test with fake pointer events cannot prove a gesture in a
+DOM stubs (`npm run test:overlay`), and `__tests__/pointer-gesture.test.mjs` does the same for
+`pointer-gesture.js` (pinch sessions, ctrl+wheel, the auto-scroller). A node test with fake pointer
+events cannot prove a gesture in a
 browser: drive every JS-owned gesture with a real Playwright mouse/touch drag and assert the result
 (width, persisted value, notified delta).
 

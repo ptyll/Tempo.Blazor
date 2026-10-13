@@ -26903,6 +26903,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/pointer-gesture.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/query-input.js",
       "kind": "JavaScript"
     },
@@ -26984,6 +26988,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/pointer-gesture.test.mjs",
       "kind": "JavaScript"
     },
     {

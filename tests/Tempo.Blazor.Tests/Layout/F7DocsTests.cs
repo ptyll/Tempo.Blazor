@@ -128,7 +128,10 @@ public class F7DocsTests
             doc.Should().Contain(owner);
         }
 
-        doc.Should().Contain("pinch").And.Contain("out of scope");
+        // Fáze 22: multi-pointer gestures got their core sibling module — the doc documents
+        // pointer-gesture.js instead of calling pinch out of scope.
+        doc.Should().Contain("pinch").And.Contain("Multi-pointer gestures").And.Contain("pointer-gesture.js");
+        doc.Should().NotContain("out of scope");
     }
 
     [Fact]

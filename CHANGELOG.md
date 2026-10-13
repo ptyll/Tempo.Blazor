@@ -1374,6 +1374,25 @@
 
 ### Added
 
+- **`pointer-gesture.js` — the shared multi-pointer module: `attachPinch` (two-finger pinch/pan)
+  and `createAutoScroller` (edge auto-scroll), with ctrl+wheel zoom.** Multi-pointer gestures now
+  have the same single home as drags. `attachPinch` tracks the first two touch pointers by id
+  (capture per finger, a third finger ignored), starts on the second finger, reports the scale
+  relative to the gesture start (clamped to `minScale`/`maxScale`) with the finger centre and its
+  pan, and commits exactly once when the count drops below two; `pointercancel`, `Escape`
+  (document capture phase, `stopPropagation` — a lone finger leaves the key to the surrounding
+  dialog) and `detach` roll back through `onCancel` and never commit. ctrl+wheel (trackpad pinch)
+  zooms around the cursor with `scale = Math.exp(-deltaY / 100)` — a non-passive listener,
+  `preventDefault` only while ctrl is held, one `onEnd` debounced 150 ms after the last tick.
+  `createAutoScroller` is the spreadsheet-canvas edge auto-scroll made generic: within 36 px of a
+  container edge it scrolls up to 28 px per frame, driven by `update(x, y)` from a drag's `onMove`
+  and stopped from `onRelease`, with cumulative `scrolledX`/`scrolledY` and an `onScroll` hook that
+  re-hit-tests the drop target. `pointer-drag.js` stays single-pointer: the second finger never
+  breaks an active drag by itself — the host hands over by calling `drag.cancel('pinch')` from the
+  pinch's `onStart`. A pinch must always ship a single-pointer alternative (zoom buttons,
+  WCAG 2.5.7); see "Multi-pointer gestures" in `docs/touch-interaction.md`. Not breaking; no
+  consumer yet — the workflow designer adopts it in its own plan.
+
 - **`attachKeyboardMove` accepts `{ shift: true }` and reports `step.shift` for Alt+Shift+Arrow
   (the keyboard resize alternative, e.g. growing a Scheduler event).** Without the option
   Alt+Shift+Arrow stays ignored and unprevented; Ctrl/Meta chords stay ignored either way; the

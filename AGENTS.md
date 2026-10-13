@@ -542,6 +542,7 @@ Core JS files in `src/Tempo.Blazor/wwwroot/js/` require `<script>` tags in host 
 - `richEditor.js` — required by `TmRichEditorFull` / `TmRichEditorSimple` (contenteditable interop)
 - `scheduler.js` — required by `TmScheduler` (event resize; imports the shared `pointer-drag.js` from the same folder)
 - `pointer-drag.js` — the shared ES-module pointer-drag helper (capture by pointerId, threshold, long-press, cancel paths); never write a second drag implementation, see [docs/touch-interaction.md](docs/touch-interaction.md)
+- `pointer-gesture.js` — the shared ES-module multi-pointer helper (`attachPinch` two-finger pinch/pan with ctrl+wheel zoom, `createAutoScroller` edge auto-scroll); never write a second pinch, a host cancels its drag from the pinch's `onStart`, see [docs/touch-interaction.md](docs/touch-interaction.md)
 - `signature-capture.js` — required by `TmSignatureCapture`
 
 Split package assets live under their own static-web-asset base paths:
