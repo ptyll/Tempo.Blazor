@@ -1041,6 +1041,45 @@ window.tmMarkdownEditor = {
     wrapSelection(el, before, after) { /* replaced by toggleFormat */ },
     insertAtLineStart(el, prefix) { /* replaced by setBlockType */ },
     insertAtCursor(el, text, offset) { /* replaced by insertHr / insertCodeBlock */ },
-    saveCursorBookmark(el) { return null; },
-    restoreCursorBookmark(el, bm) { },
+
+    // ── Caret bookmark across the link/table dialogs ────────────────────────────
+    // The dialogs are TmModals (FZE-10): opening one moves focus into the dialog and the
+    // browser selection leaves the editor, so the bookmark is taken before the dialog opens
+    // and replayed on close — on cancel, and right before the insertion on confirm.
+
+    _savedCaretBookmark: null,
+
+    saveCursorBookmark(el) {
+        if (!el) return null;
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        const range = sel.getRangeAt(0);
+        if (!el.contains(range.commonAncestorContainer)) return null;
+        this._savedCaretBookmark = {
+            startContainer: range.startContainer,
+            startOffset: range.startOffset,
+            endContainer: range.endContainer,
+            endOffset: range.endOffset
+        };
+        return this._savedCaretBookmark;
+    },
+
+    restoreCursorBookmark(el, bm) {
+        const bookmark = bm || this._savedCaretBookmark;
+        this._savedCaretBookmark = null;
+        if (!el || !bookmark) return false;
+        try {
+            if (!el.contains(bookmark.startContainer) || !el.contains(bookmark.endContainer)) return false;
+            const range = document.createRange();
+            range.setStart(bookmark.startContainer, bookmark.startOffset);
+            range.setEnd(bookmark.endContainer, bookmark.endOffset);
+            el.focus();
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
 };

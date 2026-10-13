@@ -1,73 +1,97 @@
 @namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
 
-@if (IsVisible)
-{
-    <div class="tm-rte-video-dialog tm-rte-dialog">
-        <div class="tm-rte-video-backdrop" @onclick="OnBackdropClick"></div>
-        <div class="tm-rte-video-content">
-            <div class="tm-rte-video-header">
-                <h5>@Loc["TmRichEditor_VideoDialog_Title"]</h5>
-                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
-            </div>
-            <div class="tm-rte-video-body">
-                <div class="tm-rte-form-group">
-                    <label for="video-url-input">@Loc["TmRichEditor_VideoDialog_Url"]</label>
-                    <input type="text"
-                           id="video-url-input"
-                           class="tm-rte-video-url-input"
-                           placeholder="https://youtube.com/watch?v=..."
-                           @bind="_url"
-                           @bind:event="oninput" />
-                    <small class="tm-rte-help-text">@Loc["TmRichEditor_VideoDialog_Help"]</small>
-                </div>
-                <div class="tm-rte-form-group">
-                    <label for="video-title-input">@Loc["TmRichEditor_VideoDialog_TitleLabel"]</label>
-                    <input type="text"
-                           id="video-title-input"
-                           class="tm-rte-video-title-input"
-                           placeholder="@Loc["TmRichEditor_VideoDialog_TitlePlaceholder"]"
-                           @bind="_title"
-                           @bind:event="oninput" />
-                </div>
-            </div>
-            <div class="tm-rte-video-footer">
-                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
-                    @Loc["Tm_Cancel"]
-                </button>
-                <button type="button" 
-                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
-                        disabled="@(!IsValidUrl())"
-                        @onclick="InsertVideo">
-                    @Loc["TmRichEditor_VideoDialog_Insert"]
-                </button>
-            </div>
+@* FZE-10: rendered on the core TmModal primitive — top layer, role="dialog", named title,
+   Escape and the shared focus trap. The fields sit in a real <form>: Enter in any field
+   submits it through the footer's type=submit button and the handler re-validates. *@
+<TmModal Show="@IsVisible"
+         Title="@Loc["TmRichEditor_VideoDialog_Title"]"
+         Size="ModalSize.Small"
+         Class="tm-rte-video-dialog tm-rte-dialog"
+         CloseOnOverlayClick="@CloseOnBackdropClick"
+         CloseOnEscape="true"
+         ShowCloseButton="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         InitialFocusTargetId="@_urlInputId"
+         OnClose="HandleClose">
+
+    <ChildContent>
+    <form id="@_formId" @onsubmit="InsertVideo" @onsubmit:preventDefault novalidate>
+        <div class="tm-rte-form-group">
+            <label for="@_urlInputId">@Loc["TmRichEditor_VideoDialog_Url"]</label>
+            <input type="text"
+                   id="@_urlInputId"
+                   class="tm-rte-video-url-input"
+                   placeholder="@Loc["TmRichEditor_VideoDialog_UrlPlaceholder"]"
+                   @bind="_url"
+                   @bind:event="oninput" />
+            <small class="tm-rte-help-text">@Loc["TmRichEditor_VideoDialog_Help"]</small>
         </div>
-    </div>
-}
+        <div class="tm-rte-form-group">
+            <label for="@_titleInputId">@Loc["TmRichEditor_VideoDialog_TitleLabel"]</label>
+            <input type="text"
+                   id="@_titleInputId"
+                   class="tm-rte-video-title-input"
+                   placeholder="@Loc["TmRichEditor_VideoDialog_TitlePlaceholder"]"
+                   @bind="_title"
+                   @bind:event="oninput" />
+        </div>
+    </form>
+
+    </ChildContent>
+
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost"
+                  OnClick="HandleClose"
+                  Class="tm-rte-btn-cancel">
+            @Loc["Tm_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  Type="ButtonType.Submit"
+                  Disabled="@(!IsValidUrl())"
+                  Class="tm-rte-btn-insert"
+                  AdditionalAttributes="@(new Dictionary<string, object> { ["form"] = _formId })">
+            @Loc["TmRichEditor_VideoDialog_Insert"]
+        </TmButton>
+    </Footer>
+</TmModal>
 
 @code {
     /// <summary>
     /// Whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
-    
+
     /// <summary>
     /// Whether to close on backdrop click.
     /// </summary>
     [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
-    
+
     /// <summary>
     /// Callback when video is confirmed.
     /// </summary>
     [Parameter] public EventCallback<(string Url, string Title)> OnConfirm { get; set; }
-    
+
     /// <summary>
-    /// Callback when dialog is cancelled.
+    /// Callback when dialog is cancelled (Escape, backdrop, close or cancel button).
     /// </summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes — the host editor's
+    /// content surface, so the caret that opened the dialog is not lost.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
     private string _url = string.Empty;
     private string _title = string.Empty;
+
+    // Per-instance ids: the input ids stay unique when a page hosts several editors.
+    private string _idSuffix { get; } = Guid.NewGuid().ToString("N")[..8];
+    private string _urlInputId => $"tm-rte-video-url-{_idSuffix}";
+    private string _titleInputId => $"tm-rte-video-title-{_idSuffix}";
+    private string _formId => $"tm-rte-video-form-{_idSuffix}";
 
     private bool IsValidUrl()
     {
@@ -75,30 +99,23 @@
             return false;
 
         // Accept YouTube, Vimeo, or direct URLs
-        return _url.Contains("youtube.com") || 
-               _url.Contains("youtu.be") || 
+        return _url.Contains("youtube.com") ||
+               _url.Contains("youtu.be") ||
                _url.Contains("vimeo.com") ||
-               Uri.TryCreate(_url, UriKind.Absolute, out var uri) && 
+               Uri.TryCreate(_url, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
     private async Task InsertVideo()
     {
+        // Re-validate on submit: Enter in a field runs this path too.
         if (!IsValidUrl()) return;
 
-        await OnConfirm.InvokeAsync((_url, string.IsNullOrWhiteSpace(_title) ? "Video" : _title));
+        await OnConfirm.InvokeAsync((_url, string.IsNullOrWhiteSpace(_title) ? Loc["TmRichEditor_VideoDialog_DefaultTitle"] : _title));
         Reset();
     }
 
-    private async Task OnBackdropClick()
-    {
-        if (CloseOnBackdropClick)
-        {
-            await OnCancel.InvokeAsync();
-        }
-    }
-
-    private async Task OnCancelClick()
+    private async Task HandleClose()
     {
         await OnCancel.InvokeAsync();
     }

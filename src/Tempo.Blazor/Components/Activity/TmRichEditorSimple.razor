@@ -18,6 +18,7 @@
     
     <div class="tm-rte-editor-content-wrapper">
         <div class="tm-rte-editor-content"
+             id="@_editorId"
              @ref="_editorRef"
              contenteditable="@(!IsDisabled)"
              @oninput="@HandleInput"
@@ -45,8 +46,11 @@
 
     @if (_showLinkDialog)
     {
-        <LinkDialog 
+        // FZE-10: the link dialog is a TmModal; on close focus returns to the editor surface and
+        // the host replays the saved caret/selection.
+        <LinkDialog
             IsVisible="true"
+            RestoreFocusTargetId="@_editorId"
             OnConfirm="@OnLinkConfirm"
             OnCancel="@OnLinkCancel" />
     }
@@ -188,6 +192,25 @@
     private bool _suppressKeyDown;
     private bool _isInsertingToken;
 
+    // FZE-10 review: the dialog UNMOUNTS before the caret bookmark is replayed and the insert
+    // runs (the TmModal focus trap owns inert/focus while rendered). The confirm/cancel
+    // handlers only close the dialog and stash what happens next; OnAfterRenderAsync replays
+    // it once the render WITHOUT the dialog completed.
+    private Func<Task>? _pendingAfterDialogClose;
+    private bool _restoreCaretAfterDialogClose;
+
+    /// <summary>Stable per-instance id of the content surface; the link dialog restores focus to it.</summary>
+    private string _editorId { get; } = $"tm-rte-editor-{Guid.NewGuid().ToString("N")[..8]}";
+
+    /// <summary>
+    /// True while the link dialog is open. The caret bookmark is a JS-side Range record (a
+    /// WeakMap in richEditor.js), but the getHtml/setHtml sync must still not run while the
+    /// dialog is open — the parent's Value may be stale relative to the live editor DOM and an
+    /// external setHtml here would clobber the user's content (the same guard
+    /// <c>_isInsertingToken</c> provides for the token flow).
+    /// </summary>
+    private bool AnyDialogOpen => _showLinkDialog;
+
     private bool IsOverLimit => MaxLength > 0 && _charCount > MaxLength;
 
     protected override void OnParametersSet()
@@ -217,7 +240,32 @@
             }
             catch { /* JS not available in tests / SSR */ }
         }
-        else if (_isInitialized && !_isInsertingToken)
+        else if (!AnyDialogOpen && (_pendingAfterDialogClose is not null || _restoreCaretAfterDialogClose))
+        {
+            // The link dialog just unmounted — the focus trap released the editor, so the caret
+            // bookmark can be replayed and the stashed insert can run. Both interop calls are
+            // best-effort: a JSException/JSDisconnectedException here runs on the render
+            // pipeline and would kill a Blazor Server circuit.
+            var restore = _restoreCaretAfterDialogClose;
+            var insert = _pendingAfterDialogClose;
+            _restoreCaretAfterDialogClose = false;
+            _pendingAfterDialogClose = null;
+            if (restore)
+            {
+                await RestoreCursorPositionAsync();
+            }
+            if (insert is not null)
+            {
+                try
+                {
+                    await insert();
+                }
+                catch (JSException) { }
+                catch (JSDisconnectedException) { }
+                catch (TaskCanceledException) { }
+            }
+        }
+        else if (_isInitialized && !_isInsertingToken && !AnyDialogOpen)
         {
             // Sync external Value changes to editor (only if different from current)
             try
@@ -320,6 +368,10 @@
         // Handle special formats
         if (format == "link")
         {
+            // The modal dialog moves focus out of the editor; bookmark the caret first so the
+            // insertion lands at the same spot when the dialog closes.
+            try { await JS.InvokeVoidAsync("tmRichEditor.saveCursorPosition", _editorRef); }
+            catch { /* JS not available in tests / SSR */ }
             _showLinkDialog = true;
             await InvokeAsync(StateHasChanged);
             return;
@@ -532,18 +584,31 @@
 
     private async Task OnLinkConfirm((string Url, string Text) link)
     {
+        // Close first — the trap must release before the caret bookmark is replayed; the
+        // insert itself runs from OnAfterRenderAsync once the dialog is not rendered.
         _showLinkDialog = false;
-        try
+        _restoreCaretAfterDialogClose = true;
+        _pendingAfterDialogClose = async () =>
         {
-            await JS.InvokeVoidAsync("tmRichEditor.insertLink", link.Url, link.Text);
+            await JS.InvokeVoidAsync("tmRichEditor.insertLink", _editorRef, link.Url, link.Text);
             await HandleInput(); // Update content
-        }
-        catch { /* JS not available in tests / SSR */ }
+        };
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void OnLinkCancel()
+    private async Task OnLinkCancel()
     {
         _showLinkDialog = false;
+        _restoreCaretAfterDialogClose = true;
+        _pendingAfterDialogClose = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Replays the caret bookmark saved when the dialog opened.</summary>
+    private async Task RestoreCursorPositionAsync()
+    {
+        try { await JS.InvokeVoidAsync("tmRichEditor.restoreCursorPosition", _editorRef); }
+        catch { /* JS not available in tests / SSR */ }
     }
 
     private async Task OnMentionSelected(MentionUser user)

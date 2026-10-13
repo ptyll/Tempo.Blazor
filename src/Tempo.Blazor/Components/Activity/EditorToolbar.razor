@@ -1,6 +1,10 @@
 @namespace Tempo.Blazor.Components.Activity
 
-<div class="tm-rte-toolbar @GetModeClass()">
+@* FZE-10: preventing mousedown's default keeps the editor's focus and selection intact when a
+   toolbar button is clicked — the caret bookmark the dialogs replay is taken in the button's
+   click handler, so the click itself must not have collapsed the selection first. Activation
+   itself is untouched: a <button> still fires click on Enter/Space/click. *@
+<div class="tm-rte-toolbar @GetModeClass()" @onmousedown:preventDefault="true">
     @if (Mode == ToolbarMode.Full)
     {
         @* Undo/Redo Group *@

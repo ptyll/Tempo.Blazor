@@ -12,6 +12,7 @@
 
     <div class="tm-mde-content-wrapper">
         <div class="tm-mde-content"
+             id="@_editorId"
              @ref="_editorRef"
              contenteditable="@(!IsDisabled ? "true" : "false")"
              @oninput="@HandleInput"
@@ -40,9 +41,12 @@
 
     @if (_showLinkDialog)
     {
+        // FZE-10: the link dialog is a TmModal; on close focus returns to the editor surface and
+        // the host replays the saved caret/selection.
         <LinkDialog
             IsVisible="true"
             PreselectedText="@_linkPreselectedText"
+            RestoreFocusTargetId="@_editorId"
             OnConfirm="@OnLinkConfirm"
             OnCancel="@OnLinkCancel" />
     }
@@ -51,6 +55,7 @@
     {
         <TableDialog
             IsVisible="true"
+            RestoreFocusTargetId="@_editorId"
             OnConfirm="@OnTableConfirm"
             OnCancel="@OnTableCancel" />
     }
@@ -100,6 +105,10 @@
     // ── Private state ──────────────────────────────────────────────────────────
 
     private ElementReference _editorRef;
+
+    /// <summary>Stable per-instance id of the content surface; the dialogs restore focus to it.</summary>
+    private string _editorId { get; } = $"tm-mde-editor-{Guid.NewGuid().ToString("N")[..8]}";
+
     private List<string> _activeFormats = new();
     private bool _isFocused;
     private bool _isEmpty = true;
@@ -111,6 +120,20 @@
     private bool _isInitialized;
     private bool _isUpdatingFromJs;     // guards OnAfterRenderAsync sync loop
     private string _lastSyncedValue = string.Empty;
+
+    // FZE-10 review: the dialog UNMOUNTS before the caret bookmark is replayed and the insert
+    // runs (the TmModal focus trap owns inert/focus while rendered). The confirm/cancel
+    // handlers only close the dialog and stash what happens next; OnAfterRenderAsync replays
+    // it once the render WITHOUT the dialog completed.
+    private Func<Task>? _pendingAfterDialogClose;
+    private bool _restoreCaretAfterDialogClose;
+
+    /// <summary>
+    /// True while a dialog is open. The OnAfterRenderAsync sync must not run then — the parent's
+    /// Value may be stale relative to the live editor DOM and an external setValue would clobber
+    /// the user's content (the same guard <c>_isUpdatingFromJs</c> provides for input sync).
+    /// </summary>
+    private bool AnyDialogOpen => _showLinkDialog || _showTableDialog;
 
     private bool IsOverLimit => MaxLength > 0 && _charCount > MaxLength;
 
@@ -137,7 +160,32 @@
             }
             catch { /* JS not available in SSR / tests */ }
         }
-        else if (_isInitialized && !_isUpdatingFromJs)
+        else if (!AnyDialogOpen && (_pendingAfterDialogClose is not null || _restoreCaretAfterDialogClose))
+        {
+            // The dialog just unmounted — the focus trap released the editor, so the caret
+            // bookmark can be replayed and the stashed insert can run. Both interop calls are
+            // best-effort: a JSException/JSDisconnectedException here runs on the render
+            // pipeline and would kill a Blazor Server circuit.
+            var restore = _restoreCaretAfterDialogClose;
+            var insert = _pendingAfterDialogClose;
+            _restoreCaretAfterDialogClose = false;
+            _pendingAfterDialogClose = null;
+            if (restore)
+            {
+                await RestoreCursorBookmarkAsync();
+            }
+            if (insert is not null)
+            {
+                try
+                {
+                    await insert();
+                }
+                catch (JSException) { }
+                catch (JSDisconnectedException) { }
+                catch (TaskCanceledException) { }
+            }
+        }
+        else if (_isInitialized && !_isUpdatingFromJs && !AnyDialogOpen)
         {
             // Sync externally-changed Value into the editor DOM
             if (Value != _lastSyncedValue)
@@ -242,6 +290,7 @@
 
                 // Table — open dialog
                 case "table":
+                    await SaveCursorBookmarkAsync();
                     _showTableDialog = true;
                     await InvokeAsync(StateHasChanged);
                     return;
@@ -249,6 +298,7 @@
                 // Link — open dialog, capture selected text as preset
                 case "link":
                     _linkPreselectedText = await JS.InvokeAsync<string>("tmMarkdownEditor.getSelectedText", _editorRef);
+                    await SaveCursorBookmarkAsync();
                     _showLinkDialog = true;
                     await InvokeAsync(StateHasChanged);
                     return; // skip value sync below — dialog handles it
@@ -263,18 +313,24 @@
 
     private async Task OnLinkConfirm((string Url, string Text) link)
     {
+        // Close first — the trap must release before the caret bookmark is replayed; the
+        // insert itself runs from OnAfterRenderAsync once the dialog is not rendered.
         _showLinkDialog = false;
-        try
+        _restoreCaretAfterDialogClose = true;
+        _pendingAfterDialogClose = async () =>
         {
             await JS.InvokeVoidAsync("tmMarkdownEditor.insertLink", _editorRef, link.Url, link.Text);
             await SyncValueFromEditorAsync();
-        }
-        catch { }
+        };
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void OnLinkCancel()
+    private async Task OnLinkCancel()
     {
         _showLinkDialog = false;
+        _restoreCaretAfterDialogClose = true;
+        _pendingAfterDialogClose = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Table dialog ───────────────────────────────────────────────────────────
@@ -282,17 +338,40 @@
     private async Task OnTableConfirm((int Rows, int Cols) table)
     {
         _showTableDialog = false;
-        try
+        _restoreCaretAfterDialogClose = true;
+        _pendingAfterDialogClose = async () =>
         {
             await JS.InvokeVoidAsync("tmMarkdownEditor.insertTable", _editorRef, table.Rows, table.Cols);
             await SyncValueFromEditorAsync();
-        }
-        catch { }
+        };
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void OnTableCancel()
+    private async Task OnTableCancel()
     {
         _showTableDialog = false;
+        _restoreCaretAfterDialogClose = true;
+        _pendingAfterDialogClose = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Caret bookmark across the dialog ───────────────────────────────────────
+
+    /// <summary>
+    /// Saves the caret/selection as a bookmark (markdownEditor.js) before the modal dialog takes
+    /// the focus, so the insertion or the caret can land at the same spot after it closes.
+    /// </summary>
+    private async Task SaveCursorBookmarkAsync()
+    {
+        try { await JS.InvokeVoidAsync("tmMarkdownEditor.saveCursorBookmark", _editorRef); }
+        catch { /* JS not available in SSR / tests */ }
+    }
+
+    /// <summary>Restores focus into the editor and replays the saved caret/selection.</summary>
+    private async Task RestoreCursorBookmarkAsync()
+    {
+        try { await JS.InvokeVoidAsync("tmMarkdownEditor.restoreCursorBookmark", _editorRef); }
+        catch { /* JS not available in SSR / tests */ }
     }
 
     // ── Value sync helper ──────────────────────────────────────────────────────

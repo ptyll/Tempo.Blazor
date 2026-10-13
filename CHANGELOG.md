@@ -4,6 +4,82 @@
 
 ### Breaking / Migration
 
+- **The rich text editor dialogs (link, image, table, video, find & replace) are now `TmModal`s.**
+  They used to paint their own `position: fixed` overlay at `z-index: 1040` with no `role`,
+  `aria-modal`, Escape handling or focus trap — opened while a promoted drawer, sheet or modal was
+  up they could paint underneath it. Now each dialog renders the core `TmModal` primitive: the
+  browser top layer, `role="dialog"` named by its title (`aria-labelledby`), Escape and the
+  backdrop dismiss it, the shared focus trap holds Tab inside, focus returns to the editor surface
+  on every close path, and the caret/selection that opened the dialog is replayed before the
+  insertion (link/image/table/video) or on plain close (find & replace). The dialog chrome
+  (header with the `h5` title, the `×` close button, the panel box) is the standard modal chrome
+  now. Consumers who positioned or targeted the removed self-overlay parts must target the modal
+  parts instead:
+
+  ```razor
+  @* before: dialog rendered its own fixed overlay *@
+  <div class="tm-rte-link-dialog">
+      <div class="tm-rte-link-backdrop"></div>
+      <div class="tm-rte-link-content">
+          <div class="tm-rte-link-header"><h5>Insert Link</h5><button class="tm-rte-btn-close">×</button></div>
+          <div class="tm-rte-link-body">…</div>
+          <div class="tm-rte-link-footer">…</div>
+      </div>
+  </div>
+
+  @* after: the same form content on the TmModal chrome; the dialog root class rides on the
+     overlay root, body content goes straight into the modal body *@
+  <div class="tm-modal-overlay tm-rte-link-dialog tm-rte-dialog" popover="manual">…</div>
+  ```
+
+  The `.tm-rte-link/image/table/video/findreplace-backdrop`, `-content`, `-header`, `-body`,
+  `-footer` and `.tm-rte-btn-close` classes no longer exist; the inputs (`.tm-rte-link-url-input`
+  …), the size grid and the result badge keep their classes. Each dialog also grew one optional
+  parameter: `RestoreFocusTargetId` — the id of the element (the editor surface) focus returns to
+  when the dialog closes; the rich editors pass their editor automatically. Two more breaking
+  details: the footer buttons are `TmButton`s now (Ghost Cancel + Primary/Secondary action, the
+  `tm-rte-btn-cancel`/`tm-rte-btn-insert`/`tm-rte-btn-replace`/`tm-rte-btn-replaceall` hook classes
+  stay), and `FindReplaceDialog.OnReplace`/`OnReplaceAll` changed from `EventCallback` to
+  `Func<(string Find, string Replace), Task<int>>?` — the handler must return the real replacement
+  count (from `tmRichEditor.findAndReplace`) so the dialog can report it; `OnFind` was removed.
+
+### Changed
+
+- **Editor caret/selection survives the rich-editor dialogs.** Opening a link/image/table/video/
+  find dialog bookmarks the caret and replays it when the dialog closes — before the insertion on
+  confirm, alone on cancel. The bookmark in `richEditor.js` is a NON-MUTATING Range record now (a
+  `WeakMap` keyed by the editor element, the same shape `markdownEditor.js` already shipped): the
+  old implementation inserted a hidden `#tm-cursor-marker` span into the edited document — it
+  leaked into `getHtml()`/saved `Value`, and restoring collapsed every selection to a caret.
+  `getHtml` strips any legacy marker left by an older build. `TmMarkdownEditor`'s bookmark helpers
+  in `markdownEditor.js` are real Range bookmarks too (they were no-op stubs, so a dialog
+  round-trip used to lose the caret entirely there).
+
+  The replay happens strictly AFTER the dialog unmounts (close-then-insert): the dialog's focus
+  trap owns inert/focus while it is rendered, so the confirm/cancel handlers only close the dialog
+  and stash the pending action; `OnAfterRenderAsync` replays the bookmark and runs the insert
+  (passing the editor element to `insertLink`/`insertImage`/`insertTable`/`insertVideo`) once the
+  render without the dialog completed. While a dialog is open the editors still skip their
+  `getHtml`/`setHtml` value sync — `TmMarkdownEditor` got the same guard it was missing.
+
+- **Enter submits the rich-editor dialogs; find & replace reports real counts.** Every dialog's
+  fields now sit in a real `<form>` (novalidate): the primary footer button is its `type="submit"`
+  (owned via the `form` attribute), Cancel is `type="button"`, and the submit handler re-validates —
+  an invalid URL shows the error instead of confirming. Footers use `TmButton` (Ghost Cancel,
+  Primary submit) instead of raw `tm-btn-sm` buttons. Find & replace is anchored to the TOP of the
+  viewport and immune to overlay clicks; Enter runs Replace (single) — Replace All is the only
+  primary action and is click-only. `OnReplace`/`OnReplaceAll` return the REAL replacement count
+  from `tmRichEditor.findAndReplace` (the unused `OnFind` parameter was removed); the result line
+  reports the true count, and 0 renders the new localized "No matches found" message
+  (`TmRichEditor_FindReplace_NoMatches`). The replace itself operates on text nodes only — it can
+  no longer match inside tags or attribute values and corrupt the markup. Known limitation:
+  matches are per text node; text split across inline formatting (e.g. `foo<b>bar</b>`) is not
+  matched. The table dialog's grid
+  preview is `aria-hidden` (pointer-only) with the chosen size announced via `aria-live="polite"`,
+  and the URL placeholders are localized keys
+  (`TmRichEditor_LinkDialog_UrlPlaceholder`, `TmRichEditor_ImageDialog_UrlPlaceholder`,
+  `TmRichEditor_VideoDialog_UrlPlaceholder`).
+
 - **Anchored panels present as a bottom sheet on mobile only where a component opts in.**
   `MobilePresentation` (new `PanelPresentation` enum: `Popover | Sheet | Auto`) follows the same
   viewport contract `TmModal`/`TmDialog` already ship, but `TmOverlayPanel` now **defaults to

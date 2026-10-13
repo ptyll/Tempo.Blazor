@@ -191,10 +191,11 @@ editor) keeps focus.
       date-range picker sets TrapFocus, so its calendar is a dialog promoted from here. A toast
       already on screen therefore stays above a popup opened after it, modal or not.
 9. **Known non-promoted surfaces (recorded exceptions).** Dialogs living in the extension
-   packages still paint in their z-index band and were NOT promoted in this pass: the rich-text
-   editor link/image/table/video/find dialogs, the Notion editor package surfaces, the
-   spreadsheet package dialogs, the document-editor package dialogs, the signing package dialogs
-   and the dashboard widget-selector layer (`_dashboard.css`). Opened while a core promoted
+   packages still paint in their z-index band and were NOT promoted in this pass: the
+   Notion editor package surfaces, the spreadsheet package dialogs, the document-editor
+   package dialogs and the dashboard widget-selector layer (`_dashboard.css`). (The
+   rich-text editor link/image/table/video/find dialogs migrated onto `TmModal` in 2.9.1
+   and promote themselves; the signing package has no dialogs.) Opened while a core promoted
    surface is up they can paint under it — migrate them onto `TmModal`/`TmDialog` (which promote
    themselves) one surface at a time, and never cover them from package CSS with a z-index arms
    race. Any NEW modal surface must promote through `TopLayerInterop`.

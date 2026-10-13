@@ -1,98 +1,124 @@
 @namespace Tempo.Blazor.Components.Activity
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
 
-@if (IsVisible)
-{
-    <div class="tm-rte-table-dialog tm-rte-dialog">
-        <div class="tm-rte-table-backdrop" @onclick="OnBackdropClick"></div>
-        <div class="tm-rte-table-content">
-            <div class="tm-rte-table-header">
-                <h5>@Loc["TmRichEditor_TableDialog_Title"]</h5>
-                <button type="button" class="tm-rte-btn-close" @onclick="OnCancelClick">&times;</button>
+@* FZE-10: rendered on the core TmModal primitive — top layer, role="dialog", named title,
+   Escape and the shared focus trap. The fields sit in a real <form>: Enter in a number field
+   submits it through the footer's type=submit button. The grid preview is mouse-only, so it is
+   aria-hidden; the live size label carries the same information for assistive technology. *@
+<TmModal Show="@IsVisible"
+         Title="@Loc["TmRichEditor_TableDialog_Title"]"
+         Size="ModalSize.Small"
+         Class="tm-rte-table-dialog tm-rte-dialog"
+         CloseOnOverlayClick="@CloseOnBackdropClick"
+         CloseOnEscape="true"
+         ShowCloseButton="true"
+         RestoreFocusTargetId="@RestoreFocusTargetId"
+         InitialFocusTargetId="@_rowsInputId"
+         OnClose="HandleClose">
+
+    <ChildContent>
+    <form id="@_formId" @onsubmit="InsertTable" @onsubmit:preventDefault novalidate>
+        <div class="tm-rte-form-row">
+            <div class="tm-rte-form-group">
+                <label for="@_rowsInputId">@Loc["TmRichEditor_TableDialog_Rows"]</label>
+                <input type="number"
+                       id="@_rowsInputId"
+                       class="tm-rte-table-rows-input"
+                       min="1"
+                       max="20"
+                       @bind="_rows" />
             </div>
-            <div class="tm-rte-table-body">
-                <div class="tm-rte-form-row">
-                    <div class="tm-rte-form-group">
-                        <label for="table-rows-input">@Loc["TmRichEditor_TableDialog_Rows"]</label>
-                        <input type="number"
-                               id="table-rows-input"
-                               class="tm-rte-table-rows-input"
-                               min="1"
-                               max="20"
-                               @bind="_rows" />
-                    </div>
-                    <div class="tm-rte-form-group">
-                        <label for="table-cols-input">@Loc["TmRichEditor_TableDialog_Cols"]</label>
-                        <input type="number"
-                               id="table-cols-input"
-                               class="tm-rte-table-cols-input"
-                               min="1"
-                               max="10"
-                               @bind="_cols" />
-                    </div>
-                </div>
-                
-                @* Visual grid preview *@
-                <div class="tm-rte-table-preview">
-                    <label>@Loc["TmRichEditor_TableDialog_Preview"]</label>
-                    <div class="tm-rte-table-grid" @onmouseleave="ClearHover">
-                        @for (int r = 1; r <= 8; r++)
-                        {
-                            <div class="tm-rte-table-grid-row">
-                                @for (int c = 1; c <= 6; c++)
-                                {
-                                    var row = r;
-                                    var col = c;
-                                    <div class="tm-rte-table-grid-cell @GetCellClass(row, col)"
-                                         @onmouseover="() => OnCellHover(row, col)"
-                                         @onclick="() => SelectGridSize(row, col)">
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                    <div class="tm-rte-table-size-label">@_rows × @_cols</div>
-                </div>
-            </div>
-            <div class="tm-rte-table-footer">
-                <button type="button" class="tm-btn tm-btn-secondary tm-btn-sm tm-rte-btn-cancel" @onclick="OnCancelClick">
-                    @Loc["Tm_Cancel"]
-                </button>
-                <button type="button" 
-                        class="tm-btn tm-btn-primary tm-btn-sm tm-rte-btn-insert"
-                        disabled="@(!IsValid())"
-                        @onclick="InsertTable">
-                    @Loc["TmRichEditor_TableDialog_Insert"]
-                </button>
+            <div class="tm-rte-form-group">
+                <label for="@_colsInputId">@Loc["TmRichEditor_TableDialog_Cols"]</label>
+                <input type="number"
+                       id="@_colsInputId"
+                       class="tm-rte-table-cols-input"
+                       min="1"
+                       max="10"
+                       @bind="_cols" />
             </div>
         </div>
+    </form>
+
+    @* Visual grid preview — pointer-only sizing aid, hidden from the accessibility tree; the
+       aria-live label below announces the same choice. *@
+    <div class="tm-rte-table-preview">
+        <div class="tm-rte-table-preview-label" aria-hidden="true">@Loc["TmRichEditor_TableDialog_Preview"]</div>
+        <div class="tm-rte-table-grid" aria-hidden="true" @onmouseleave="ClearHover">
+            @for (int r = 1; r <= 8; r++)
+            {
+                <div class="tm-rte-table-grid-row">
+                    @for (int c = 1; c <= 6; c++)
+                    {
+                        var row = r;
+                        var col = c;
+                        <div class="tm-rte-table-grid-cell @GetCellClass(row, col)"
+                             @onmouseover="() => OnCellHover(row, col)"
+                             @onclick="() => SelectGridSize(row, col)">
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <div class="tm-rte-table-size-label" aria-live="polite">@_rows × @_cols</div>
     </div>
-}
+
+    </ChildContent>
+
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost"
+                  OnClick="HandleClose"
+                  Class="tm-rte-btn-cancel">
+            @Loc["Tm_Cancel"]
+        </TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  Type="ButtonType.Submit"
+                  Disabled="@(!IsValid())"
+                  Class="tm-rte-btn-insert"
+                  AdditionalAttributes="@(new Dictionary<string, object> { ["form"] = _formId })">
+            @Loc["TmRichEditor_TableDialog_Insert"]
+        </TmButton>
+    </Footer>
+</TmModal>
 
 @code {
     /// <summary>
     /// Whether the dialog is visible.
     /// </summary>
     [Parameter] public bool IsVisible { get; set; }
-    
+
     /// <summary>
     /// Whether to close on backdrop click.
     /// </summary>
     [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
-    
+
     /// <summary>
     /// Callback when table is confirmed.
     /// </summary>
     [Parameter] public EventCallback<(int Rows, int Cols)> OnConfirm { get; set; }
-    
+
     /// <summary>
-    /// Callback when dialog is cancelled.
+    /// Callback when dialog is cancelled (Escape, backdrop, close or cancel button).
     /// </summary>
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to when the dialog closes — the host editor's
+    /// content surface, so the caret that opened the dialog is not lost.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     private int _rows = 3;
     private int _cols = 3;
     private int _hoverRow = 0;
     private int _hoverCol = 0;
+
+    // Per-instance ids: the input ids stay unique when a page hosts several editors.
+    private string _idSuffix { get; } = Guid.NewGuid().ToString("N")[..8];
+    private string _rowsInputId => $"tm-rte-table-rows-{_idSuffix}";
+    private string _colsInputId => $"tm-rte-table-cols-{_idSuffix}";
+    private string _formId => $"tm-rte-table-form-{_idSuffix}";
 
     private bool IsValid() => _rows > 0 && _rows <= 20 && _cols > 0 && _cols <= 10;
 
@@ -112,7 +138,7 @@
     {
         var isSelected = row <= _rows && col <= _cols;
         var isHovered = row <= _hoverRow && col <= _hoverCol;
-        
+
         if (isHovered && _hoverRow > 0) return "hovered";
         if (isSelected) return "selected";
         return "";
@@ -126,21 +152,14 @@
 
     private async Task InsertTable()
     {
+        // Re-validate on submit: Enter in a number field runs this path too.
         if (!IsValid()) return;
 
         await OnConfirm.InvokeAsync((_rows, _cols));
         Reset();
     }
 
-    private async Task OnBackdropClick()
-    {
-        if (CloseOnBackdropClick)
-        {
-            await OnCancel.InvokeAsync();
-        }
-    }
-
-    private async Task OnCancelClick()
+    private async Task HandleClose()
     {
         await OnCancel.InvokeAsync();
     }

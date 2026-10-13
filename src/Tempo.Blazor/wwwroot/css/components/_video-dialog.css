@@ -1,60 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════
-   Video Dialog - Video embed dialog styles
-   ═══════════════════════════════════════════════════════════════ */
-
-.tm-rte-video-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: var(--tm-z-modal, 1050);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tm-rte-video-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.tm-rte-video-content {
-  position: relative;
-  width: 100%;
-  max-width: 400px;
-  background: var(--tm-bg-surface);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: var(--tm-shadow-xl);
-  overflow: hidden;
-}
-
-.tm-rte-video-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--tm-space-4);
-  border-bottom: 1px solid var(--tm-border-color);
-}
-
-.tm-rte-video-header h5 {
-  font-size: var(--tm-font-size-lg);
-  font-weight: var(--tm-font-weight-semibold);
-  color: var(--tm-text-primary);
-  margin: 0;
-}
-
-.tm-rte-video-body {
-  padding: var(--tm-space-4);
-}
-
-.tm-rte-video-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--tm-space-2);
-  padding: var(--tm-space-3) var(--tm-space-4);
-  border-top: 1px solid var(--tm-border-color);
-  background: var(--tm-bg-muted);
-}
+   Video Dialog - content styles for the TmModal-hosted video dialog
+   ═══════════════════════════════════════════════════════════════
+   FZE-10: the dialog itself renders on TmModal (top layer, focus trap), so this
+   sheet owns only the form content. The former position:fixed/z-index overlay,
+   backdrop and header/footer chrome live in the modal primitives now. */
 
 .tm-rte-video-url-input,
 .tm-rte-video-title-input {

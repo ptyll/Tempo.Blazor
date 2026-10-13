@@ -64,13 +64,14 @@ window.tmRichEditor = {
     },
 
     /**
-     * Insert a link at current selection
+     * Insert a link at the current selection of the given editor element
+     * @param {HTMLElement} element - The editor element
      * @param {string} url - The URL
      * @param {string} text - The display text (optional, uses selection if empty)
      */
-    insertLink: function (url, text) {
-        this._ensureFocus();
-        
+    insertLink: function (element, url, text) {
+        this._focusEditor(element);
+
         if (text && text.trim()) {
             // Replace selection with link text first
             const selection = window.getSelection();
@@ -79,16 +80,16 @@ window.tmRichEditor = {
                 range.deleteContents();
                 const textNode = document.createTextNode(text);
                 range.insertNode(textNode);
-                
+
                 // Select the inserted text
                 range.selectNode(textNode);
                 selection.removeAllRanges();
                 selection.addRange(range);
             }
         }
-        
+
         document.execCommand('createLink', false, url);
-        this._restoreFocus();
+        this._focusEditor(element);
     },
 
     /**
@@ -143,24 +144,26 @@ window.tmRichEditor = {
     },
 
     /**
-     * Insert an image
+     * Insert an image into the given editor element
+     * @param {HTMLElement} element - The editor element
      * @param {string} url - Image URL
      * @param {string} alt - Alt text
      */
-    insertImage: function (url, alt = '') {
-        this._ensureFocus();
+    insertImage: function (element, url, alt = '') {
+        this._focusEditor(element);
         const imgHtml = `<img src="${this._escapeHtml(url)}" alt="${this._escapeHtml(alt)}" class="tm-rte-image" />`;
         document.execCommand('insertHTML', false, imgHtml);
-        this._restoreFocus();
+        this._focusEditor(element);
     },
 
     /**
-     * Insert a table
+     * Insert a table into the given editor element
+     * @param {HTMLElement} element - The editor element
      * @param {number} rows - Number of rows
      * @param {number} cols - Number of columns
      */
-    insertTable: function (rows, cols) {
-        this._ensureFocus();
+    insertTable: function (element, rows, cols) {
+        this._focusEditor(element);
         
         let tableHtml = '<table class="tm-rte-table"><tbody>';
         for (let i = 0; i < rows; i++) {
@@ -173,7 +176,7 @@ window.tmRichEditor = {
         tableHtml += '</tbody></table><p><br></p>';
         
         document.execCommand('insertHTML', false, tableHtml);
-        this._restoreFocus();
+        this._focusEditor(element);
     },
 
     /**
@@ -206,15 +209,16 @@ window.tmRichEditor = {
     },
 
     /**
-     * Insert video embed (iframe)
+     * Insert a video embed (iframe) into the given editor element
+     * @param {HTMLElement} element - The editor element
      * @param {string} embedUrl - The embed URL
      * @param {string} title - Video title
      */
-    insertVideo: function (embedUrl, title = 'Video') {
-        this._ensureFocus();
+    insertVideo: function (element, embedUrl, title = 'Video') {
+        this._focusEditor(element);
         const videoHtml = `<div class="tm-rte-video-wrapper"><iframe src="${this._escapeHtml(embedUrl)}" title="${this._escapeHtml(title)}" frameborder="0" allowfullscreen></iframe></div><p><br></p>`;
         document.execCommand('insertHTML', false, videoHtml);
-        this._restoreFocus();
+        this._focusEditor(element);
     },
 
     /**
@@ -304,12 +308,16 @@ window.tmRichEditor = {
     },
 
     /**
-     * Get HTML content of an editor element
+     * Get HTML content of an editor element. Content saved by older builds may still carry a
+     * legacy #tm-cursor-marker span — it never belongs to the document and is stripped here.
      * @param {HTMLElement} element - The editor element
      * @returns {string} The inner HTML
      */
     getHtml: function (element) {
-        return element ? element.innerHTML : '';
+        if (!element) return '';
+        const legacyMarker = element.querySelector('#tm-cursor-marker');
+        if (legacyMarker) legacyMarker.remove();
+        return element.innerHTML;
     },
 
     /**
@@ -400,89 +408,128 @@ window.tmRichEditor = {
     },
 
     /**
-     * Find and replace text in the editor
+     * Find and replace text in the given editor element. Operates on TEXT NODES only — a
+     * replace over the innerHTML string can match inside tags and attribute values and corrupt
+     * the markup. Known limitation: matches are per text node; text split across inline
+     * formatting (e.g. foo<b>bar</b>) is not matched.
+     * @param {HTMLElement} element - The editor element
      * @param {string} find - Text to find
      * @param {string} replace - Text to replace with
      * @param {boolean} replaceAll - Whether to replace all occurrences
      * @returns {number} Number of replacements made
      */
-    findAndReplace: function (find, replace, replaceAll = false) {
-        if (!find) return 0;
-        
-        const selection = window.getSelection();
-        const range = selection.getRangeAt(0);
-        const editor = this._getActiveEditor();
-        
-        if (!editor) return 0;
-        
-        let html = editor.innerHTML;
-        const escapedFind = this._escapeRegExp(find);
-        const regex = new RegExp(escapedFind, replaceAll ? 'g' : '');
-        
+    findAndReplace: function (element, find, replace, replaceAll = false) {
+        if (!element || !find) return 0;
+
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+        const regex = new RegExp(this._escapeRegExp(find), 'g');
         let count = 0;
-        if (replaceAll) {
-            const matches = html.match(regex);
-            count = matches ? matches.length : 0;
-            html = html.replace(regex, replace);
-        } else {
-            html = html.replace(regex, function(match) {
+
+        for (const node of textNodes) {
+            const text = node.textContent || '';
+            regex.lastIndex = 0;
+            if (!regex.test(text)) continue;
+
+            regex.lastIndex = 0;
+            const pieces = [];
+            let lastIndex = 0;
+            let match;
+            while ((match = regex.exec(text)) !== null) {
                 count++;
-                return replace;
-            });
+                pieces.push(document.createTextNode(text.substring(lastIndex, match.index)));
+                pieces.push(document.createTextNode(replace));
+                lastIndex = match.index + match[0].length;
+                if (!replaceAll) break;
+            }
+            pieces.push(document.createTextNode(text.substring(lastIndex)));
+
+            const parent = node.parentNode;
+            if (!parent) continue;
+            parent.insertBefore(pieces[0], node);
+            for (let i = 1; i < pieces.length; i++) {
+                parent.insertBefore(pieces[i], pieces[i - 1].nextSibling);
+            }
+            parent.removeChild(node);
+
+            if (!replaceAll) break;
         }
-        
-        editor.innerHTML = html;
+
         return count;
     },
 
-    /**
-     * Place cursor right after the last inserted .tm-token span inside the editor
-     * @param {HTMLElement} element - The editor element
-     */
-    // Saved cursor position for restoring after dialog closes
-    _savedCursorPosition: null,
+    // ── Caret bookmark across the RTE dialogs ──────────────────────────────────
+    // The dialogs are TmModals (FZE-10): opening one moves focus into the dialog and the
+    // browser selection leaves the editor. The bookmark is a NON-MUTATING Range record (the
+    // same shape markdownEditor.js uses) keyed per editor element in a WeakMap — the former
+    // hidden #tm-cursor-marker span mutated the edited document, leaked into getHtml()/saved
+    // Value and collapsed every selection to a caret.
+
+    _caretBookmarks: new WeakMap(),
 
     /**
-     * Save the current cursor position in the editor so it can be restored later.
+     * Save the current selection of the editor element as a Range bookmark so it can be
+     * replayed later. No-op when the selection lives outside the element.
      * @param {HTMLElement} element - The editor element
+     * @returns {boolean} true when a bookmark was saved
      */
     saveCursorPosition: function (element) {
-        if (!element) return;
+        if (!element) return false;
         const selection = window.getSelection();
-        if (selection.rangeCount === 0) return;
+        if (!selection || selection.rangeCount === 0) return false;
         const range = selection.getRangeAt(0);
-
-        // Save a bookmark by inserting a zero-width space marker
-        const marker = document.createElement('span');
-        marker.id = 'tm-cursor-marker';
-        marker.style.display = 'none';
-        range.insertNode(marker);
-
-        this._savedCursorPosition = element;
+        if (!element.contains(range.commonAncestorContainer)) return false;
+        this._caretBookmarks.set(element, {
+            startContainer: range.startContainer,
+            startOffset: range.startOffset,
+            endContainer: range.endContainer,
+            endOffset: range.endOffset
+        });
+        return true;
     },
 
     /**
-     * Restore cursor position from saved marker, then remove the marker.
+     * Restore the saved (full, non-collapsed) selection into the editor element and delete the
+     * bookmark. Refuses when either endpoint left the element (e.g. the content was replaced
+     * while the dialog was open).
      * @param {HTMLElement} element - The editor element
-     * @returns {boolean} true if cursor was restored
+     * @returns {boolean} true if the selection was restored
      */
     restoreCursorPosition: function (element) {
         if (!element) return false;
-        const marker = element.querySelector('#tm-cursor-marker');
-        if (!marker) return false;
+        const bookmark = this._caretBookmarks.get(element);
+        this._caretBookmarks.delete(element);
+        if (!bookmark) return false;
+        try {
+            if (!element.contains(bookmark.startContainer) || !element.contains(bookmark.endContainer)) return false;
+            const range = document.createRange();
+            range.setStart(bookmark.startContainer, bookmark.startOffset);
+            range.setEnd(bookmark.endContainer, bookmark.endOffset);
+            element.focus();
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
 
-        element.focus();
-        const range = document.createRange();
-        range.setStartAfter(marker);
-        range.collapse(true);
-        marker.remove();
-
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        this._savedCursorPosition = null;
-        return true;
+    /**
+     * Focus the given editor element, replaying its caret bookmark first when one exists.
+     * @param {HTMLElement|null} element - The editor element (falls back to the shared
+     *   heuristic when the caller has no element reference)
+     */
+    _focusEditor: function (element) {
+        if (element) {
+            if (!this.restoreCursorPosition(element)) {
+                element.focus();
+            }
+        } else {
+            this._ensureFocus();
+        }
     },
 
     /**
@@ -556,14 +603,8 @@ window.tmRichEditor = {
      * @param {object} [meta] - Optional metadata: { description, icon, colorClass, typeLabel }
      */
     insertToken: function (element, key, displayName, meta) {
-        // Restore saved cursor position first (e.g. after dialog closed)
-        if (element && this._savedCursorPosition) {
-            this.restoreCursorPosition(element);
-        } else if (element) {
-            element.focus();
-        } else {
-            this._ensureFocus();
-        }
+        // Restore the saved caret bookmark first (e.g. after a dialog closed); focus otherwise
+        this._focusEditor(element);
 
         const tokenSpan = this._createTokenSpan(key, displayName, meta);
 

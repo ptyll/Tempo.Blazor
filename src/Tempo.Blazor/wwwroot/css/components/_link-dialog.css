@@ -1,85 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════
-   Link Dialog - Modal dialog for inserting links
-   ═══════════════════════════════════════════════════════════════ */
-
-.tm-rte-link-dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: var(--tm-z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tm-rte-link-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.tm-rte-link-content {
-  position: relative;
-  width: 100%;
-  max-width: 400px;
-  margin: var(--tm-space-4);
-  background: var(--tm-bg-surface);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: var(--tm-shadow-xl);
-  z-index: 1;
-}
-
-.tm-rte-link-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--tm-space-4);
-  border-bottom: 1px solid var(--tm-border-color);
-}
-
-.tm-rte-link-header h5 {
-  margin: 0;
-  font-size: var(--tm-font-size-lg);
-  font-weight: var(--tm-font-weight-semibold);
-  color: var(--tm-text-primary);
-}
-
-.tm-rte-btn-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: var(--tm-font-size-xl);
-  color: var(--tm-text-tertiary);
-  border-radius: var(--tm-radius-md);
-  transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
-}
-
-.tm-rte-btn-close:hover {
-  background: var(--tm-bg-muted);
-  color: var(--tm-text-primary);
-}
-
-.tm-rte-link-body {
-  padding: var(--tm-space-4);
-}
+   Link Dialog - content styles for the TmModal-hosted link dialog
+   ═══════════════════════════════════════════════════════════════
+   FZE-10: the dialog itself renders on TmModal (top layer, focus trap), so this
+   sheet owns only the form content. The former position:fixed/z-index overlay,
+   backdrop and header/footer chrome live in the modal primitives now. */
 
 /* This class is shared scaffolding across every rte dialog, but this declaration is the LINK
-   dialog's own value. As a bare rule it raced _image-dialog.css's copy for all five dialogs and
-   lost on import order — the link dialog painted space-3 despite asking for space-4. Scoped under
-   the dialog's root class it owns exactly its own markup again: it is imported after the shared
-   default in _rte-dialog-shared.css (.tm-rte-dialog .tm-rte-form-group, space-3) at equal
-   specificity, so it still wins inside this dialog. The generic label/last-child spacing now
-   lives once in _rte-dialog-shared.css. */
+   dialog's own value. Scoped under the dialog's root class (which rides on the TmModal overlay
+   root) it owns exactly its own markup: it is imported after the shared default in
+   _rte-dialog-shared.css (.tm-rte-dialog .tm-rte-form-group, space-3) at equal specificity,
+   so it still wins inside this dialog — the deliberate wider spacing stays deliberate. */
 .tm-rte-link-dialog .tm-rte-form-group {
   margin-bottom: var(--tm-space-4);
 }
@@ -107,12 +37,4 @@
   margin-top: var(--tm-space-2);
   font-size: var(--tm-font-size-xs);
   color: var(--tm-color-danger);
-}
-
-.tm-rte-link-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--tm-space-3);
-  padding: var(--tm-space-4);
-  border-top: 1px solid var(--tm-border-color);
 }

@@ -3967,6 +3967,22 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSpreadsheet_Hyperlink_SelectNamedRange"] = "Select named range",
         ["TmSpreadsheet_Hyperlink_Save"] = "OK",
         ["TmSpreadsheet_Hyperlink_Cancel"] = "Cancel",
+
+        // Rich text editor dialogs (FZE-10)
+        ["TmRichEditor_LinkDialog_Title"] = "Insert Link",
+        ["TmRichEditor_LinkDialog_InvalidUrl"] = "Please enter a valid URL",
+        ["TmRichEditor_ImageDialog_Title"] = "Insert Image",
+        ["TmRichEditor_TableDialog_Title"] = "Insert Table",
+        ["TmRichEditor_VideoDialog_Title"] = "Insert Video",
+        ["TmRichEditor_FindReplaceDialog_Title"] = "Find & Replace",
+        ["TmRichEditor_FindReplaceDialog_Replace"] = "Replace",
+        ["TmRichEditor_FindReplaceDialog_ReplaceAll"] = "Replace All",
+        ["TmRichEditor_FindReplaceDialog_Replaced"] = "{0} occurrence(s) replaced",
+        ["TmRichEditor_FindReplace_NoMatches"] = "No matches found",
+        ["TmRichEditor_LinkDialog_UrlPlaceholder"] = "https://example.com",
+        ["TmRichEditor_ImageDialog_UrlPlaceholder"] = "https://example.com/image.jpg",
+        ["TmRichEditor_VideoDialog_UrlPlaceholder"] = "https://youtube.com/watch?v=...",
+        ["TmRichEditor_VideoDialog_DefaultTitle"] = "Video",
     });
 
     private static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
@@ -7138,6 +7154,22 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmMap_Loading"] = "Načítání mapy…",
         ["TmMap_Attribution"] = "&copy; přispěvatelé <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
         ["TmMap_ClusterAriaLabel"] = "Shluk – místa: {0}",
+
+        // Rich text editor dialogs (FZE-10)
+        ["TmRichEditor_LinkDialog_Title"] = "Vložit odkaz",
+        ["TmRichEditor_LinkDialog_InvalidUrl"] = "Zadejte platnou URL adresu",
+        ["TmRichEditor_ImageDialog_Title"] = "Vložit obrázek",
+        ["TmRichEditor_TableDialog_Title"] = "Vložit tabulku",
+        ["TmRichEditor_VideoDialog_Title"] = "Vložit video",
+        ["TmRichEditor_FindReplaceDialog_Title"] = "Najít a nahradit",
+        ["TmRichEditor_FindReplaceDialog_Replace"] = "Nahradit",
+        ["TmRichEditor_FindReplaceDialog_ReplaceAll"] = "Nahradit vše",
+        ["TmRichEditor_FindReplaceDialog_Replaced"] = "Nahrazené výskyty: {0}",
+        ["TmRichEditor_FindReplace_NoMatches"] = "Nebyly nalezeny žádné shody",
+        ["TmRichEditor_LinkDialog_UrlPlaceholder"] = "https://priklad.cz",
+        ["TmRichEditor_ImageDialog_UrlPlaceholder"] = "https://priklad.cz/obrazek.jpg",
+        ["TmRichEditor_VideoDialog_UrlPlaceholder"] = "https://youtube.com/watch?v=...",
+        ["TmRichEditor_VideoDialog_DefaultTitle"] = "Video",
     }, System.Globalization.CultureInfo.GetCultureInfo("cs"));
 }
 

@@ -758,7 +758,7 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Internal modal dialog providing find-and-replace functionality for the rich text editor. Supports single replace and replace-all operations with a result count indicator.",
+      "description": "Find-and-replace dialog for the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the saved editor selection). Anchored to the top of the viewport and immune to overlay clicks. The Replace/Replace All callbacks return the REAL replacement count from tmRichEditor.findAndReplace, which the result line reports (0 renders a localized 'no matches' message). Enter in a field submits the form and runs Replace (single) — never Replace All. Known limitation: matches are per text node; text split across inline formatting (e.g. foo<b>bar</b>) is not matched.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/FindReplaceDialog.razor",
       "documentationStatus": "merged",
@@ -771,7 +771,7 @@
           "type": "bool",
           "isRequired": false,
           "default": "true",
-          "description": "Whether to close on backdrop click."
+          "description": "Ignored: the find/replace dialog never closes on backdrop click (an accidental click would lose the typed query)."
         },
         {
           "name": "IsVisible",
@@ -783,45 +783,41 @@
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback when dialog is cancelled."
-        },
-        {
-          "name": "OnFind",
-          "type": "EventCallback<string>",
-          "isRequired": false,
-          "description": "Callback when find is triggered."
+          "description": "Callback when dialog is cancelled (Escape, close button)."
         },
         {
           "name": "OnReplace",
-          "type": "EventCallback<(string Find, string Replace)>",
+          "type": "Func<(string Find, string Replace), Task<int>>?",
           "isRequired": false,
-          "description": "Callback when replace is triggered."
+          "description": "Replaces the first occurrence. Must return the real number of replacements made (from tmRichEditor.findAndReplace) so the dialog can report the true outcome — including 'no matches' for 0."
         },
         {
           "name": "OnReplaceAll",
-          "type": "EventCallback<(string Find, string Replace)>",
+          "type": "Func<(string Find, string Replace), Task<int>>?",
           "isRequired": false,
-          "description": "Callback when replace all is triggered."
+          "description": "Replaces every occurrence. Must return the real number of replacements made (from tmRichEditor.findAndReplace) so the dialog can report the true outcome — including 'no matches' for 0."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the element focus returns to when the dialog closes — the host editor's content surface, so the saved caret/selection can be replayed."
         }
       ],
       "cssClasses": [
         "tm-rte-findreplace-dialog",
-        "tm-rte-findreplace-backdrop",
-        "tm-rte-findreplace-content",
-        "tm-rte-findreplace-header",
-        "tm-rte-findreplace-body",
-        "tm-rte-findreplace-footer",
+        "tm-rte-dialog",
         "tm-rte-findreplace-find-input",
         "tm-rte-findreplace-replace-input",
         "tm-rte-findreplace-result",
+        "tm-rte-btn-replace",
         "tm-rte-btn-replaceall",
-        "tm-rte-btn-close",
         "tm-rte-btn-cancel"
       ],
       "examples": [
         {
           "title": "Used internally by TmRichEditorFull",
-          "code": "<FindReplaceDialog IsVisible=\"true\" OnFind=\"HandleFind\" OnReplace=\"HandleReplace\" OnReplaceAll=\"HandleReplaceAll\" OnCancel=\"HandleCancel\" />"
+          "code": "<FindReplaceDialog IsVisible=\"true\" OnReplace=\"HandleReplace\" OnReplaceAll=\"HandleReplaceAll\" OnCancel=\"HandleCancel\" />"
         }
       ]
     },
@@ -830,7 +826,7 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Internal modal dialog for inserting images in the rich text editor. Provides URL and alt text inputs with URL validation and backdrop click to close.",
+      "description": "Modal dialog for inserting images in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and alt text inputs with URL validation.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/ImageDialog.razor",
       "documentationStatus": "merged",
@@ -855,25 +851,26 @@
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback when dialog is cancelled."
+          "description": "Callback when dialog is cancelled (Escape, backdrop, close or cancel button)."
         },
         {
           "name": "OnConfirm",
           "type": "EventCallback<(string Url, string Alt)>",
           "isRequired": false,
           "description": "Callback when image is confirmed."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Modal dialog for inserting images in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and alt text inputs with URL validation."
         }
       ],
       "cssClasses": [
         "tm-rte-image-dialog",
-        "tm-rte-image-backdrop",
-        "tm-rte-image-content",
-        "tm-rte-image-header",
-        "tm-rte-image-body",
-        "tm-rte-image-footer",
+        "tm-rte-dialog",
         "tm-rte-image-url-input",
         "tm-rte-image-alt-input",
-        "tm-rte-btn-close",
         "tm-rte-btn-cancel",
         "tm-rte-btn-insert"
       ],
@@ -889,7 +886,7 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Internal modal dialog for inserting hyperlinks in the rich text editor. Provides URL and display text inputs with URL validation. Supports backdrop click to close and preselected text.",
+      "description": "Modal dialog for inserting hyperlinks in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and display text inputs with URL validation.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/LinkDialog.razor",
       "documentationStatus": "merged",
@@ -914,7 +911,7 @@
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback when dialog is cancelled."
+          "description": "Callback when dialog is cancelled (Escape, backdrop, close or cancel button)."
         },
         {
           "name": "OnConfirm",
@@ -927,19 +924,20 @@
           "type": "string?",
           "isRequired": false,
           "description": "Preselected text for the link."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Modal dialog for inserting hyperlinks in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and display text inputs with URL validation."
         }
       ],
       "cssClasses": [
         "tm-rte-link-dialog",
-        "tm-rte-link-backdrop",
-        "tm-rte-link-content",
-        "tm-rte-link-header",
-        "tm-rte-link-body",
-        "tm-rte-link-footer",
+        "tm-rte-dialog",
         "tm-rte-link-url-input",
         "tm-rte-link-text-input",
         "tm-rte-link-error",
-        "tm-rte-btn-close",
         "tm-rte-btn-cancel",
         "tm-rte-btn-insert",
         "tm-rte-form-group"
@@ -1059,7 +1057,7 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Internal modal dialog for inserting tables in the rich text editor. Provides numeric row/column inputs (max 20x10) and a visual grid preview for interactive size selection with hover highlighting.",
+      "description": "Modal dialog for inserting tables in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Offers a rows/columns input pair and a hoverable size grid preview.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/TableDialog.razor",
       "documentationStatus": "merged",
@@ -1084,22 +1082,24 @@
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback when dialog is cancelled."
+          "description": "Callback when dialog is cancelled (Escape, backdrop, close or cancel button)."
         },
         {
           "name": "OnConfirm",
           "type": "EventCallback<(int Rows, int Cols)>",
           "isRequired": false,
           "description": "Callback when table is confirmed."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Modal dialog for inserting tables in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Offers a rows/columns input pair and a hoverable size grid preview."
         }
       ],
       "cssClasses": [
         "tm-rte-table-dialog",
-        "tm-rte-table-backdrop",
-        "tm-rte-table-content",
-        "tm-rte-table-header",
-        "tm-rte-table-body",
-        "tm-rte-table-footer",
+        "tm-rte-dialog",
         "tm-rte-table-rows-input",
         "tm-rte-table-cols-input",
         "tm-rte-table-preview",
@@ -1108,7 +1108,6 @@
         "tm-rte-table-grid-cell",
         "tm-rte-table-size-label",
         "tm-rte-form-row",
-        "tm-rte-btn-close",
         "tm-rte-btn-cancel",
         "tm-rte-btn-insert"
       ],
@@ -2251,7 +2250,7 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Internal modal dialog for embedding videos in the rich text editor. Accepts YouTube, Vimeo, or direct video URLs with an optional title field. URLs are validated before insertion.",
+      "description": "Modal dialog for embedding videos (YouTube, Vimeo, direct URLs) in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and title inputs with URL validation.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/VideoDialog.razor",
       "documentationStatus": "merged",
@@ -2276,26 +2275,27 @@
           "name": "OnCancel",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Callback when dialog is cancelled."
+          "description": "Callback when dialog is cancelled (Escape, backdrop, close or cancel button)."
         },
         {
           "name": "OnConfirm",
           "type": "EventCallback<(string Url, string Title)>",
           "isRequired": false,
           "description": "Callback when video is confirmed."
+        },
+        {
+          "name": "RestoreFocusTargetId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Modal dialog for embedding videos (YouTube, Vimeo, direct URLs) in the rich text editor, hosted on the core TmModal (browser top layer, role=dialog, Escape, focus trap; focus returns to the host editor). Provides URL and title inputs with URL validation."
         }
       ],
       "cssClasses": [
         "tm-rte-video-dialog",
-        "tm-rte-video-backdrop",
-        "tm-rte-video-content",
-        "tm-rte-video-header",
-        "tm-rte-video-body",
-        "tm-rte-video-footer",
+        "tm-rte-dialog",
         "tm-rte-video-url-input",
         "tm-rte-video-title-input",
         "tm-rte-help-text",
-        "tm-rte-btn-close",
         "tm-rte-btn-cancel",
         "tm-rte-btn-insert"
       ],
@@ -26667,6 +26667,10 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/rte-caret-bookmark.test.mjs",
       "kind": "JavaScript"
     },
     {

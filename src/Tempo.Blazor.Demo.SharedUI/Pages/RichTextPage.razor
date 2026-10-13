@@ -2,11 +2,13 @@
 @using Tempo.Blazor.Components.Activity
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Layout
 @using System.Net.Http.Json
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Demo.Shared
 @using Tempo.Blazor.Interfaces
 @inject IHttpClientFactory HttpFactory
+@inject ITmLocalizer Loc
 <PageTitle>Rich Text Editor – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -105,6 +107,36 @@
                 </div>
             </div>
         }
+    </div>
+</section>
+
+<!-- Editor inside a promoted drawer (FZE-10): dialogs opened from the editor's toolbar promote
+     after the drawer and must paint above it -->
+<section class="demo-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmRichEditorDemo_PromotedDrawerTitle"]</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">@Loc["TmRichEditorDemo_PromotedDrawerIntro"]</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Top layer</span>
+    </div>
+
+    <div class="showcase-card">
+        <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                  OnClick="() => _drawerEditorOpen = true"
+                  AdditionalAttributes="@(new Dictionary<string, object> { ["data-testid"] = "open-editor-drawer" })">
+            @Loc["TmRichEditorDemo_OpenDrawer"]
+        </TmButton>
+
+        <TmDrawer IsOpen="_drawerEditorOpen"
+                  IsOpenChanged="@(v => { _drawerEditorOpen = v; })"
+                  Position="DrawerPosition.Bottom"
+                  Modal="true"
+                  Title="@Loc["TmRichEditorDemo_DrawerTitle"]">
+            <TmRichEditorFull @bind-Value="_drawerEditorValue"
+                              Height="240px"
+                              Placeholder="@Loc["TmRichEditorDemo_DrawerPlaceholder"]" />
+        </TmDrawer>
     </div>
 </section>
 
@@ -344,6 +376,8 @@
     private string _htmlPreview = string.Empty;
     private string _contentPreview = string.Empty;
     private string _tokenHtmlPreview = string.Empty;
+    private bool _drawerEditorOpen;
+    private string _drawerEditorValue = string.Empty;
     private string? _lastInsertedToken;
     private string? _tokenCreateRequested;
     private bool _showCreateTokenDialog;
