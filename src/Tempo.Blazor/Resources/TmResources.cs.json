@@ -2460,6 +2460,7 @@
   "TmEditorShellDemo_HostControls": "Ovládání hostitele",
   "TmEditorShellDemo_HostTogglePanels": "Přepnout panely z hostitele",
   "TmEditorShellDemo_PresentationTabs": "Mobilní prezentace: záložky",
+  "TmEditorShellDemo_SnapsToggle": "Vlastní body sheetu",
   "TmEditorShellDemo_PresentationSheet": "Mobilní prezentace: sheet",
   "TmEditorShellDemo_ThresholdsTitle": "Vlastní prahy",
   "TmEditorShellDemo_ThresholdsIntro": "Stejný rámec s vlastními prahy (desktop od 1200, mobil pod 768, jako e-mailový editor). Na tabletu se sada bloků sbalí do lišty ikon a jeden panel zůstane rozbalený.",

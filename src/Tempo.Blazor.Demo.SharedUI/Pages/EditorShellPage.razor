@@ -22,6 +22,7 @@
                        MobilePanelPresentation="_presentation"
                        @bind-ActiveMobilePanel="_activePanel"
                        @bind-MobileSheetSnapIndex="_snap"
+                       MobileSheetSnapPoints="@(_customSnaps ? CustomSnaps : null)"
                        MobileActions="_mobileActions"
                        PersistWidthsKey="editor-shell-demo"
                        data-testid="editor-shell">
@@ -52,6 +53,7 @@
     <div class="es-host-controls" role="group" aria-label="@Loc["TmEditorShellDemo_HostControls"]">
         <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="TogglePanelsFromHost" data-testid="es-host-toggle-panels">@Loc["TmEditorShellDemo_HostTogglePanels"]</TmButton>
         <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="TogglePresentation" data-testid="es-presentation-toggle">@(_presentation == MobilePanelPresentation.Tabs ? Loc["TmEditorShellDemo_PresentationSheet"] : Loc["TmEditorShellDemo_PresentationTabs"])</TmButton>
+        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleCustomSnaps" aria-pressed="@(_customSnaps ? "true" : "false")" data-testid="es-snaps-toggle">@Loc["TmEditorShellDemo_SnapsToggle"]</TmButton>
     </div>
 
     <section class="es-thresholds-section" data-testid="thresholds-section">
@@ -133,6 +135,8 @@
     private EditorShellPanel _activePanel;
     private MobilePanelPresentation _presentation = MobilePanelPresentation.Sheet;
     private int _snap;
+    private bool _customSnaps;
+    private static readonly IReadOnlyList<double> CustomSnaps = [0.4, 0.75, 1.0];
     private bool _inspectorOpen;
     private bool _inspectorTouched;
     private SidePanelSide _inspectorSide = SidePanelSide.Right;
@@ -327,6 +331,8 @@
         _presentation = _presentation == MobilePanelPresentation.Tabs ? MobilePanelPresentation.Sheet : MobilePanelPresentation.Tabs;
         _activePanel = EditorShellPanel.None;
     }
+
+    private void ToggleCustomSnaps() => _customSnaps = !_customSnaps;
 
     private void ToggleInspector()
     {

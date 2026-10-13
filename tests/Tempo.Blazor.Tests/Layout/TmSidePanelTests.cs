@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Layout;
+using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Layout;
@@ -263,6 +264,103 @@ public class TmSidePanelTests : LocalizationTestBase
         var sheet = cut.Find(".tm-drawer");
         sheet.ClassList.Should().Contain("tm-drawer--bottom");
         sheet.GetAttribute("data-layout").Should().Be("mobile");
+    }
+
+    // ── C7: with no viewport scope the SHEET's own drawer probe measures the viewport ──────────
+
+    [Fact]
+    public async Task Auto_NoViewportScope_NarrowContainer_ProbeMeasuresDesktop_OpensASideSheet()
+    {
+        var cut = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+
+        // First frame: the container is the best guess (a bottom sheet on a mobile container)…
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom");
+
+        // …but the sheet's own probe measures a desktop viewport, so the sheet flips to the side.
+        var probe = cut.FindComponent<ViewportProbe>();
+        await cut.InvokeAsync(() => probe.Instance.OnLayoutModeChanged("desktop"));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
+        cut.Find(".tm-drawer").ClassList.Should().NotContain("tm-drawer--bottom");
+    }
+
+    [Fact]
+    public async Task Sheet_NoViewportScope_DesktopContainer_ProbeMeasuresMobile_OpensABottomSheet()
+    {
+        var cut = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.Presentation, SidePanelPresentation.Sheet)
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
+
+        var probe = cut.FindComponent<ViewportProbe>();
+        await cut.InvokeAsync(() => probe.Instance.OnLayoutModeChanged("mobile"));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom");
+        cut.Find(".tm-drawer").ClassList.Should().NotContain("tm-drawer--right");
+    }
+
+    [Fact]
+    public void Auto_WithAViewportScope_IgnoresTheDrawerReport()
+    {
+        // A cascaded viewport scope already decides the sheet geometry, so the drawer never opens
+        // its internal probe and a (here non-existent) report cannot flip the position.
+        var cut = Render<TmSidePanelCascadeHost>(p => p
+            .Add(x => x.ContainerContext, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .Add(x => x.ViewportContext, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .AddChildContent("Panel body"));
+
+        cut.FindComponents<ViewportProbe>().Should().BeEmpty("a viewport scope replaces the probe");
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right");
+        cut.Find(".tm-drawer").ClassList.Should().NotContain("tm-drawer--bottom");
+
+        // A container cascade change while the sheet is open moves neither the presentation
+        // (still not a desktop container) nor the position (the scope decides the geometry).
+        cut.Render(p => p
+            .Add(x => x.ContainerContext, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Tablet))
+            .Add(x => x.ViewportContext, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop)));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--right", "the scope still decides: unchanged");
+        cut.Find(".tm-drawer").ClassList.Should().NotContain("tm-drawer--bottom");
+    }
+
+    [Fact]
+    public void Auto_WithoutAViewportScope_AnOpenSheet_KeepsItsPositionWhenTheContainerChanges()
+    {
+        // C7 follow-up: a scope-less Auto sheet freezes the guess it opened with, so a container
+        // cascade that changes while the sheet is open must not move it — only the probe report may.
+        var cut = Render<TmSidePanelCascadeHost>(p => p
+            .Add(x => x.ContainerContext, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .AddChildContent("Panel body"));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom");
+
+        cut.Render(p => p
+            .Add(x => x.ContainerContext, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Tablet)));
+
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom",
+            "an open scope-less sheet keeps the position it opened with until the probe reports");
+        cut.Find(".tm-drawer").ClassList.Should().NotContain("tm-drawer--right");
+    }
+
+    [Fact]
+    public void ForcedMode_NeverReadsTheProbe()
+    {
+        // A forced LayoutMode wins over everything and never measures, so no probe renders.
+        var cut = Render<TmSidePanel>(p => p
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop))
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.Open, true)
+            .AddChildContent("Panel body"));
+
+        cut.FindComponents<ViewportProbe>().Should().BeEmpty("a forced mode never probes");
+        cut.Find(".tm-drawer").ClassList.Should().Contain("tm-drawer--bottom");
+        cut.Find(".tm-drawer").GetAttribute("data-layout").Should().Be("mobile");
     }
 
     // ── F7 / F14: names, Side, FooterContent, header gap ────────────────────

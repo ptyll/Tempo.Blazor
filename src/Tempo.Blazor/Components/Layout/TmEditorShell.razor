@@ -97,7 +97,8 @@
                 @* The stage is the positioned host of the inline panels sheet: the sheet fills it,
                    anchors to its bottom edge and its snap fractions are fractions of the stage. The
                    sheet root is click-through, so the canvas keeps the pointer outside the sheet panel. *@
-                <div class="tm-editor-shell__stage @(AnyPanelOpen ? "tm-editor-shell__stage--sheet-open" : null)">
+                <div class="tm-editor-shell__stage @(AnyPanelOpen ? "tm-editor-shell__stage--sheet-open" : null)"
+                     style="@StageStyle">
                     <div class="tm-editor-shell__canvas" data-region="canvas">@Canvas</div>
                     @if (AnyPanelOpen)
                     {
@@ -106,7 +107,8 @@
                                   Position="DrawerPosition.Bottom"
                                   Modal="false"
                                   Class="tm-editor-shell__sheet"
-                                  SnapPoints="DefaultSnaps"
+                                  SnapPoints="EffectiveSnaps"
+                                  MaxHeight="1"
                                   SnapIndex="_snap"
                                   SnapIndexChanged="OnSnapChanged"
                                   ShowOverlay="false"
@@ -187,6 +189,30 @@
 @code {
     private static readonly double[] DefaultSnaps = [0.5, 1.0];
 
+    /// <summary>
+    /// The snap fractions the mobile panels sheet renders, after the TmDrawer normalization: values
+    /// outside (0, 1] are dropped, the rest is deduplicated and sorted ascending; an empty result
+    /// falls back to the default half/full pair. The sheet is an inline fraction of its stage (and
+    /// MaxHeight 1), so no further clamping applies.
+    /// </summary>
+    private double[] EffectiveSnaps
+    {
+        get
+        {
+            var snaps = (MobileSheetSnapPoints ?? DefaultSnaps)
+                .Where(s => s > 0)
+                .Select(s => Math.Min(s, 1.0))
+                .Distinct()
+                .OrderBy(s => s)
+                .ToArray();
+            return snaps.Length == 0 ? DefaultSnaps : snaps;
+        }
+    }
+
+    /// <summary>The lowest snap fraction, as a CSS number: the canvas reserve while the sheet is open.</summary>
+    private string StageStyle =>
+        FormattableString.Invariant($"--tm-editor-shell-sheet-reserve: {EffectiveSnaps[0]:0.##}");
+
     private readonly string _leftToggleId = $"tm-editor-shell-left-toggle-{Guid.NewGuid():N}";
     private readonly string _rightToggleId = $"tm-editor-shell-right-toggle-{Guid.NewGuid():N}";
     private readonly string _mobileToggleId = $"tm-editor-shell-mobile-toggle-{Guid.NewGuid():N}";
@@ -229,10 +255,15 @@
     private int? _userRight;
     private string? _userBaseLeft;
     private string? _userBaseRight;
+    // C9: the tablet fit overlay — a tablet-only layout width that keeps the canvas at
+    // MinCanvasWidth. Not a user choice: never persisted, never reported through the width callbacks.
+    private int? _tabletFitLeft;
+    private int? _tabletFitRight;
     private string? _lastLeftWidth;
     private string? _lastRightWidth;
     private string? _loadedKey;
     private double _canvasWidth = double.NaN;
+    private bool _fitComputed;
     private bool _disposed;
     private EditorShellInterop? _shellJs;
     private DotNetObjectReference<TmEditorShell>? _dotNetRef;
@@ -341,11 +372,20 @@
     /// <summary>Raised when the user selects another mobile tab.</summary>
     [Parameter] public EventCallback<EditorShellPanel> ActiveMobilePanelChanged { get; set; }
 
-    /// <summary>The snap of the mobile panels sheet (0 = half height, 1 = full). Two-way with <see cref="MobileSheetSnapIndexChanged"/>, so a host can collapse the sheet on an "add block" action.</summary>
+    /// <summary>The snap of the mobile panels sheet: an index into <see cref="MobileSheetSnapPoints"/> (0 = the lowest snap). Two-way with <see cref="MobileSheetSnapIndexChanged"/>, so a host can collapse the sheet on an "add block" action.</summary>
     [Parameter] public int MobileSheetSnapIndex { get; set; }
 
     /// <summary>Raised when a gesture or the keyboard moves the mobile sheet to another snap, and when a layout flip resets it.</summary>
     [Parameter] public EventCallback<int> MobileSheetSnapIndexChanged { get; set; }
+
+    /// <summary>
+    /// Fractions (0–1] of the shell's stage the mobile panels sheet snaps to, ascending;
+    /// <see cref="MobileSheetSnapIndex"/> indexes this list (0 = the lowest). Default
+    /// <c>[0.5, 1.0]</c>. Invalid values are dropped and the list is sorted (the TmDrawer rules);
+    /// an empty result falls back to the default. The lowest snap is also the fraction of the
+    /// stage the canvas reserves while the sheet is open.
+    /// </summary>
+    [Parameter] public IReadOnlyList<double>? MobileSheetSnapPoints { get; set; }
 
     /// <summary>The label of the canvas tab in the <see cref="MobilePanelPresentation.Tabs"/> presentation. Null uses the localized default.</summary>
     [Parameter] public string? CanvasTitle { get; set; }
@@ -393,8 +433,19 @@
     /// <summary>The cascaded layout of an ancestor observer, when the shell is nested in one (the same input its own observer resolves with).</summary>
     [CascadingParameter] public TmLayoutContext? Parent { get; set; }
 
-    private string RootClasses => string.Join(" ", new[] { "tm-editor-shell", Class }
+    private string RootClasses => string.Join(" ", new[] { "tm-editor-shell", Class, FittingClass }
         .Where(static c => !string.IsNullOrWhiteSpace(c)));
+
+    /// <summary>
+    /// The first tablet frames render at the host width and jump once the C9 fit lands. Until the
+    /// first fit computation the docked panels stay invisible (visibility, so the layout the fit
+    /// measures is final). Forced modes never measure, so they never carry the class.
+    /// </summary>
+    private string? FittingClass => _resolved == TmLayoutMode.Tablet
+        && LayoutMode == TmLayoutMode.Auto
+        && !_fitComputed
+        ? "tm-editor-shell--fitting"
+        : null;
 
     private Dictionary<string, object> ShellAttributes
     {
@@ -415,6 +466,28 @@
     private string EffectiveLeftWidth => _userLeft is { } w ? $"{w}px" : LeftWidth;
     private string EffectiveRightWidth => _userRight is { } w ? $"{w}px" : RightWidth;
 
+    /// <summary>
+    /// The fit width of one side: a tablet-only layout width (C9). Returns null on any other
+    /// layout, so no stale fit survives a layout flip (a desktop frame renders the host width
+    /// even while the fields clear).
+    /// </summary>
+    private int? TabletFit(EditorShellPanel side) => _resolved == TmLayoutMode.Tablet
+        ? side == EditorShellPanel.Left ? _tabletFitLeft : _tabletFitRight
+        : null;
+
+    /// <summary>
+    /// The width a docked panel RENDERS at: the user/host width, narrowed on a tablet layout by the
+    /// fit overlay (C9). The fit is a layout decision, not a user choice — it is never persisted and
+    /// never reported through <see cref="LeftWidthChanged"/>/<see cref="RightWidthChanged"/>.
+    /// </summary>
+    private string RenderedWidth(EditorShellPanel side)
+        => TabletFit(side) is { } f
+            ? FormattableString.Invariant($"{f}px")
+            : side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
+
+    /// <summary>The rendered width in pixels — the fit overlay wins over the host/user width.</summary>
+    private int RenderedWidthPx(EditorShellPanel side) => TabletFit(side) ?? CurrentWidthPx(side);
+
     private int CurrentWidthPx(EditorShellPanel side)
     {
         var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
@@ -422,9 +495,13 @@
         return EditorShellResize.TryParsePx(text, out var px) ? px : side == EditorShellPanel.Left ? 280 : 320;
     }
 
-    /// <summary>The width the keyboard steps from: the pixel width in effect, or — for a non-pixel host width (rem, %) — the width the panel actually renders at.</summary>
+    /// <summary>The width the keyboard steps from: the width on screen — the tablet fit included —
+    /// or, for a non-pixel host width (rem, %), the width the panel actually renders at.</summary>
     private async Task<int> CurrentWidthMeasuredAsync(EditorShellPanel side)
     {
+        // The fit overlay IS the rendered width: stepping must start from it, not from the wider
+        // host width, or the first key press would jump the panel.
+        if (TabletFit(side) is { } fit) return fit;
         var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
         if (EditorShellResize.TryParsePx(text, out var px)) return px;
         _shellJs ??= new EditorShellInterop(JS);
@@ -567,8 +644,8 @@
             </div>;
         }
 
-        var width = isLeft ? EffectiveLeftWidth : EffectiveRightWidth;
-        var current = CurrentWidthPx(side);
+        var width = RenderedWidth(side);
+        var current = RenderedWidthPx(side);
         var min = side == EditorShellPanel.Left ? MinLeftWidth : MinRightWidth;
         var max = ReachableMax(side, current);
         RenderFragment aside = builder =>
@@ -854,10 +931,21 @@
     {
         // The two-way shadows adopt a host value only when the host CHANGED it: a host that ignores
         // the callback must not have its stale value re-imposed over what the user just did.
+        var snapAdopted = false;
         if (MobileSheetSnapIndex != _snapParamSeen)
         {
             _snapParamSeen = MobileSheetSnapIndex;
-            _snap = Math.Clamp(MobileSheetSnapIndex, 0, DefaultSnaps.Length - 1);
+            _snap = Math.Clamp(MobileSheetSnapIndex, 0, EffectiveSnaps.Length - 1);
+            snapAdopted = true;
+        }
+        // The snap list may have SHRUNK below the current snap (the host dropped points): clamp
+        // the shadow to the new top and tell the host. A value adopted from the host in this same
+        // pass is already the host's knowledge and raises nothing.
+        var snapTop = EffectiveSnaps.Length - 1;
+        if (_snap > snapTop)
+        {
+            _snap = snapTop;
+            if (!snapAdopted) await MobileSheetSnapIndexChanged.InvokeAsync(snapTop);
         }
         var activeParamChanged = false;
         if (ActiveMobilePanel != _activeParamSeen)

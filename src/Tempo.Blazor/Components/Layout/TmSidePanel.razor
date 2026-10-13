@@ -57,6 +57,8 @@ else if (Open)
               Title="@Title"
               AriaLabel="@(HasTitle ? Title : DefaultName)"
               LayoutMode="@(LayoutMode)"
+              InitialMode="@SheetInitialMode"
+              ResolvedLayoutChanged="OnSheetLayoutResolved"
               ShowOverlay="true"
               CloseOnOverlayClick="true"
               CloseOnEscape="true"
@@ -153,20 +155,50 @@ else if (Open)
     /// <summary>The container's layout — a side panel is positioned against its container (F1 contract).</summary>
     [CascadingParameter] public TmLayoutContext? Container { get; set; }
 
-    /// <summary>The viewport's layout. The sheet presentation is positioned against the viewport (side sheet vs bottom sheet), so it reads this scope; without one the container decides.</summary>
+    /// <summary>The viewport's layout. The sheet presentation is positioned against the viewport (side sheet vs bottom sheet), so it reads this scope; without one the sheet's own drawer probe measures the viewport and the container is only the first-frame guess.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
 
     private TmLayoutContext Context => new(LayoutMode, TmLayout.Resolve(LayoutMode, Container, null, InitialMode));
 
     /// <summary>
     /// The layout the SHEET geometry follows (side vs bottom): the forced mode, else the viewport
-    /// scope, else — with no scope — the container. Docked-vs-sheet stays on the container: whether
-    /// the panel has room in its host is a container question, where a modal surface sits is a
-    /// viewport one.
+    /// scope, else — with no scope — the drawer's own probe measurement, once it reports; until
+    /// then the guess the sheet OPENED with (the container is only the first-frame guess). While
+    /// the sheet is open a scope-less Auto panel freezes that open guess: a container cascade that
+    /// changes mid-open must not move an open sheet. Docked-vs-sheet stays on the container:
+    /// whether the panel has room in its host is a container question, where a modal surface sits
+    /// is a viewport one.
     /// </summary>
     private TmLayoutMode SheetMode => LayoutMode != TmLayoutMode.Auto
         ? LayoutMode
-        : Viewport?.Resolved ?? Context.Resolved;
+        : Viewport?.Resolved ?? _probedViewport ?? (Open ? _openGuess : null) ?? Context.Resolved;
+
+    /// <summary>
+    /// The drawer's first-frame layout: the viewport scope or the probe when there is one, else
+    /// the frozen open guess, else the container — the same chain <see cref="SheetMode"/> freezes
+    /// while open, so the drawer never starts a frame at a cascade that changed mid-open.
+    /// </summary>
+    private TmLayoutMode SheetInitialMode => LayoutMode != TmLayoutMode.Auto
+        ? LayoutMode
+        : Viewport?.Resolved ?? _probedViewport ?? _openGuess ?? Context.Resolved;
+
+    // C7: the viewport mode measured by the sheet's own drawer probe when no viewport scope exists.
+    private TmLayoutMode? _probedViewport;
+    // C7 follow-up: the sheet-mode guess in effect when the panel last OPENED (false -> true).
+    private TmLayoutMode? _openGuess;
+    private bool _wasOpen;
+
+    /// <summary>
+    /// The drawer reports a probe measurement that CHANGED its resolved layout. Only the scope-less
+    /// Auto case reads it; a scope or a forced mode already decided.
+    /// </summary>
+    private Task OnSheetLayoutResolved(TmLayoutMode mode)
+    {
+        if (LayoutMode != TmLayoutMode.Auto || Viewport is not null || _probedViewport == mode)
+            return Task.CompletedTask;
+        _probedViewport = mode;
+        return Task.CompletedTask; // EventCallback on this component re-renders it
+    }
 
     private DrawerPosition SheetPosition => SheetMode == TmLayoutMode.Mobile
         ? DrawerPosition.Bottom
@@ -192,6 +224,11 @@ else if (Open)
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        // The sheet-mode guess freezes at the moment the panel opens: snapshot it BEFORE anything
+        // else (a scope-less Auto sheet keeps this position while open — only the probe may move it).
+        if (Open && !_wasOpen) _openGuess = Viewport?.Resolved ?? _probedViewport ?? Context.Resolved;
+        _wasOpen = Open;
+
         var resolved = Context.Resolved;
         if (!_reportedInitialised)
         {

@@ -16,7 +16,7 @@ Read [responsive-conventions.md](responsive-conventions.md) first: the shell fol
 |---|---|---|---|
 | **Desktop** (≥ 1024) | Docked, resizable columns. A strip toggle per panel hides it, collapses it to a 44px rail, or expands it again. | Fills the remaining width. | Toolbar slot. |
 | **Tablet** (640–1023) | The **same docked panels**: `CollapsedPanels` is honoured, and **at most one** panel is expanded — expanding (or opening) one rails the other and raises `CollapsedPanelsChanged`. **No modal, nothing inert.** | Always visible and operable. | Toolbar slot. |
-| **Mobile** (< 640) | `MobilePanelPresentation.Sheet` (default): the canvas plus one **inline, non-modal bottom sheet** (snaps 50 % / 100 %); with two open panels the sheet shows a Left / Right tab strip. `MobilePanelPresentation.Tabs`: a full-region `tablist` **Left \| Canvas \| Right**, no sheet. | Keeps the pointer and its own scroll outside the sheet panel. | `MobileActions` through `TmMobileActionBar`; when set, the **Toolbar slot is not rendered** on mobile (the actions replace it). |
+| **Mobile** (< 640) | `MobilePanelPresentation.Sheet` (default): the canvas plus one **inline, non-modal bottom sheet** (snap points configurable through `MobileSheetSnapPoints`, default 50 % / 100 %, body floor 14rem on short stages); with two open panels the sheet shows a Left / Right tab strip. `MobilePanelPresentation.Tabs`: a full-region `tablist` **Left \| Canvas \| Right**, no sheet. | Keeps the pointer and its own scroll outside the sheet panel. | `MobileActions` through `TmMobileActionBar`; when set, the **Toolbar slot is not rendered** on mobile (the actions replace it). |
 
 `LeftOpen` / `RightOpen` mean the same on desktop and tablet (hidden vs shown); on tablet a panel
 that is shown but not the one expanded reads as a rail. The mobile sheet is inline on purpose
@@ -72,8 +72,13 @@ a private flag that could disagree with the host.
   panel is not open or has no content (it falls back to the one open panel), and raises
   `ActiveMobilePanelChanged` when the effective tab moves because the host closed a panel. A host switches to the properties when a block is
   selected by setting `ActiveMobilePanel="EditorShellPanel.Right"`; it collapses the sheet on an
-  "add block" action by setting `MobileSheetSnapIndex` (0 = half height). A layout flip resets the
+  "add block" action by setting `MobileSheetSnapIndex` (0 = the lowest snap). A layout flip resets the
   snap to 0 and raises the callback.
+* `MobileSheetSnapPoints` overrides the sheet's snap fractions (ascending, 0–1; default
+  `[0.5, 1.0]`): invalid values are dropped, the list is sorted/deduplicated with the `TmDrawer`
+  rules, an empty result falls back to the default, and the lowest snap drives the canvas reserve.
+  On a short stage the 14rem floor applies to the whole sheet panel (header, tabs and body), capped
+  at the stage height (`--tm-editor-shell-sheet-min-block`).
 * `CanvasTitle` labels the canvas tab of the Tabs presentation (localized default).
 * On a closed mobile sheet a labelled bar names what is behind it ("Blocks · Properties", from
   `LeftTitle` / `RightTitle`).
@@ -107,6 +112,17 @@ never takes the canvas below `MinCanvasWidth` (400). A resize raises `LeftWidthC
 `RightWidthChanged` with the new `"NNNpx"`. `aria-valuemax` is the width the user can really reach
 (the configured maximum, capped by what the canvas can give up above `MinCanvasWidth`); under a
 coarse pointer an invisible 24px hit area widens the 6px strip.
+
+On a **tablet layout** `MinCanvasWidth` also bounds the *initial* layout: the one expanded panel
+renders narrower — by the measured canvas deficit below `MinCanvasWidth`, **clamped to the panel's
+minimum** — so at 768 the canvas keeps everything the panel can give (~358px with the default
+320px inspector, which parks at `MinRightWidth` 240) instead of dropping to ~278. When even the
+panel minimum does not leave `MinCanvasWidth`, the fit stops at the minimum and the canvas stays
+below `MinCanvasWidth` — freeing more width means collapsing the other panel to its rail. This
+**fit width** is a layout decision, not a user choice: it is never persisted under
+`PersistWidthsKey` and never reported through the width callbacks; it converges in one extra
+render, relaxes back towards the host width when the container grows, and a user resize still wins
+(and clears the fit).
 
 `PersistWidthsKey` stores **only widths the user resized**, as `{"left":{"w":300,"base":"280px"}}`
 in `localStorage`. Precedence: a stored width applies on load only while the host still supplies the
@@ -203,7 +219,10 @@ flex child of your layout) when its **container** resolves Desktop (≥ 1024 by 
 becomes a modal sheet. The sheet's geometry follows the **viewport** scope
 (`TmLayoutScopes.Viewport`): a side sheet from the `Side` edge (`SidePanelSide.Right` default,
 `Left` for a navigation / task panel) unless the viewport resolves Mobile, which gives a bottom
-sheet. With no viewport scope the container decides; a forced `LayoutMode` wins over both. A
+sheet. With no viewport scope the sheet measures the viewport itself (the drawer's internal probe,
+reported through `ResolvedLayoutChanged` and seeded with `InitialMode`); the container is only the
+first-frame guess — a 500px column at a desktop viewport still opens a side sheet. A forced
+`LayoutMode` wins over both. A
 `FooterContent` slot hosts apply / cancel actions (sticky in the sheet), the docked `<aside>` is
 named by its title (a localized default when there is none), and `HeaderActions` keep a gap from
 the title. Pass `RestoreFocusTargetId` (the opener's id) so the sheet returns focus to the opener on

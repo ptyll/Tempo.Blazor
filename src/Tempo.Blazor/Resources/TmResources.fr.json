@@ -2452,6 +2452,7 @@
   "TmEditorShellDemo_HostControls": "Commandes de l'hôte",
   "TmEditorShellDemo_HostTogglePanels": "Basculer les panneaux depuis l'hôte",
   "TmEditorShellDemo_PresentationTabs": "Présentation mobile : onglets",
+  "TmEditorShellDemo_SnapsToggle": "Snaps personnalisés du sheet",
   "TmEditorShellDemo_PresentationSheet": "Présentation mobile : feuille",
   "TmEditorShellDemo_ThresholdsTitle": "Seuils personnalisés",
   "TmEditorShellDemo_ThresholdsIntro": "La même coquille avec ses propres seuils (desktop dès 1200, mobile sous 768, comme l'éditeur d'e-mails). Sur tablette, la boîte à outils se réduit à une barre d'icônes et un seul panneau reste déployé.",

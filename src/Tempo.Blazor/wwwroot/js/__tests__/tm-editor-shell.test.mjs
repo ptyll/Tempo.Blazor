@@ -3,13 +3,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    attachResize, canvasWidth, clampWidth, detachResize, measureWidth, loadPanelWidths, savePanelWidths, __resetForTests,
+    attachResize, canvasWidth, clampWidth, detachResize, disconnectCanvas, measureWidth, observeCanvas, loadPanelWidths, savePanelWidths, __resetForTests,
 } from '../tm-editor-shell.js';
 
 test.beforeEach(() => {
     __resetForTests();
     delete globalThis.localStorage;
     delete globalThis.document;
+    delete globalThis.ResizeObserver;
+    delete globalThis.requestAnimationFrame;
+    delete globalThis.cancelAnimationFrame;
 });
 
 // ── clampWidth: the same vectors as EditorShellResize.Clamp in C# ───────────────────────────
@@ -297,4 +300,83 @@ test('measureWidth reads the rendered width of an element, -1 when it cannot be 
     assert.equal(measureWidth({ getBoundingClientRect: () => ({ width: 319.6 }) }), 320);
     assert.equal(measureWidth(null), -1);
     assert.equal(measureWidth({}), -1);
+});
+
+// ── canvas ResizeObserver: the tablet fit recomputes without a Blazor render ────────────────
+
+class ResizeObserverStub {
+    static instances = [];
+    constructor(callback) {
+        this.callback = callback;
+        this.observed = [];
+        this.disconnected = false;
+        ResizeObserverStub.instances.push(this);
+    }
+    observe(element) { this.observed.push(element); }
+    disconnect() { this.disconnected = true; }
+    trigger() { if (!this.disconnected) this.callback(); }
+}
+
+function observerStage() {
+    ResizeObserverStub.instances = [];
+    globalThis.ResizeObserver = ResizeObserverStub;
+    const pending = new Map();
+    let nextFrame = 0;
+    globalThis.requestAnimationFrame = fn => { const id = ++nextFrame; pending.set(id, fn); return id; };
+    globalThis.cancelAnimationFrame = id => pending.delete(id);
+    const flush = () => { for (const fn of pending.values()) fn(); pending.clear(); };
+    const canvasEl = { clientWidth: 500 };
+    const main = { querySelector: selector => (selector.includes('canvas') ? canvasEl : null) };
+    const calls = [];
+    const dotnet = { invokeMethodAsync: (...args) => { calls.push(args); return Promise.resolve(); } };
+    return { main, canvasEl, calls, dotnet, flush };
+}
+
+test('observeCanvas watches the canvas region and reports a resize once per frame batch', () => {
+    const s = observerStage();
+    observeCanvas(s.main, s.dotnet);
+
+    const observer = ResizeObserverStub.instances[0];
+    assert.equal(observer.observed[0], s.canvasEl, 'the canvas region itself is watched, not the whole main');
+
+    observer.trigger();
+    observer.trigger();
+    assert.equal(s.calls.length, 0, 'rAF-debounced: nothing reports synchronously');
+    s.flush();
+    assert.deepEqual(s.calls, [['OnCanvasResized']], 'two callbacks in one frame batch report once');
+
+    observer.trigger();
+    s.flush();
+    assert.equal(s.calls.length, 2, 'a later resize reports again');
+});
+
+test('a second observeCanvas for the same main replaces the first observer', () => {
+    const s = observerStage();
+    observeCanvas(s.main, s.dotnet);
+    const first = ResizeObserverStub.instances[0];
+    observeCanvas(s.main, s.dotnet);
+    const second = ResizeObserverStub.instances[1];
+
+    assert.equal(first.disconnected, true, 'the replaced observer is disconnected');
+    second.trigger();
+    s.flush();
+    assert.equal(s.calls.length, 1);
+});
+
+test('disconnectCanvas stops the reports and is a safe no-op twice', () => {
+    const s = observerStage();
+    observeCanvas(s.main, s.dotnet);
+    const observer = ResizeObserverStub.instances[0];
+
+    disconnectCanvas(s.main);
+    assert.equal(observer.disconnected, true);
+    observer.trigger();
+    s.flush();
+    assert.equal(s.calls.length, 0, 'a disconnected observer reports nothing');
+    assert.doesNotThrow(() => disconnectCanvas(s.main));
+});
+
+test('observeCanvas without ResizeObserver is a no-op', () => {
+    delete globalThis.ResizeObserver;
+    assert.doesNotThrow(() => observeCanvas({ querySelector: () => null }, null));
 });

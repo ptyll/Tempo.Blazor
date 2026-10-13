@@ -35,6 +35,29 @@
     <TmDatePicker Label="Anchored picker" @bind-Value="_date" data-testid="noscope-datepicker" />
 </div>
 
+@* C7: a TmSidePanel in a narrow container on this scope-less page. The container measures mobile
+   (a 500px column), but the sheet's own drawer probe measures the desktop viewport — so the panel
+   still opens a SIDE sheet. The container is only the first-frame guess. *@
+<TmLayoutObserver IsContainer="true"
+                  Style="max-width: 500px; padding: 1rem; border: 1px dashed currentColor; margin-top: 2rem;"
+                  data-testid="noscope-side-panel-column">
+    <ChildContent>
+        <TmSidePanel @bind-Open="_sidePanel" Title="Scope-less inspector" Width="320px"
+                     RestoreFocusTargetId="noscope-side-panel-toggle"
+                     data-testid="noscope-side-panel">
+            <ChildContent>
+                <p>The page has no viewport scope: this sheet measures the viewport itself. At a
+                   desktop viewport it is a side sheet even inside this 500px column.</p>
+            </ChildContent>
+        </TmSidePanel>
+        <TmButton OnClick="() => _sidePanel = !_sidePanel" Variant="ButtonVariant.Secondary"
+                  id="noscope-side-panel-toggle" aria-expanded="@(_sidePanel ? "true" : "false")"
+                  data-testid="noscope-side-panel-toggle">
+            Toggle the scope-less inspector
+        </TmButton>
+    </ChildContent>
+</TmLayoutObserver>
+
 <TmModal Show="_modal" OnClose="() => _modal = false" Title="Modal without a scope" ShowDefaultFooterButtons="true">
     <ChildContent>
         <p>A phone presents this modal as a bottom sheet even though the page has no viewport scope.</p>
@@ -55,5 +78,6 @@
     private bool _modal;
     private bool _dialog;
     private bool _drawer;
+    private bool _sidePanel;
     private DateOnly? _date;
 }

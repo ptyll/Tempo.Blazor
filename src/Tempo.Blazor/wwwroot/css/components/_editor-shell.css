@@ -50,6 +50,13 @@
     border-inline-end: 1px solid var(--tm-color-border-subtle);
 }
 
+/* The first tablet frames render at the host width and jump once the C9 fit lands: until the
+   first fit computation the docked panels stay invisible (visibility, not display, so the layout
+   the fit measures is the final one). */
+.tm-editor-shell--fitting .tm-editor-shell__panel {
+    visibility: hidden;
+}
+
 .tm-editor-shell__panel--right {
     border-inline-end: none;
     border-inline-start: 1px solid var(--tm-color-border-subtle);
@@ -184,6 +191,9 @@
     /* container-type:size sizes the stage from its parent only; an auto-height host would collapse
        it to 0, so the stage keeps a floor that still shows the canvas and the sheet (F11). */
     min-block-size: 15rem;
+    /* The sheet panel floor (whole panel, capped at the stage height where it is used); the host
+       overrides the token, the canvas reserve and the panel min-block read it (C8). */
+    --tm-editor-shell-sheet-min-block: 14rem;
     display: flex;
     flex-direction: column;
     container-type: size;
@@ -194,10 +204,13 @@
     min-block-size: 0;
 }
 
-/* While the sheet sits at its first snap the lower half of the canvas is covered: reserve it so
-   the last block stays scrollable into view. */
+/* While the sheet sits at its first snap the lower part of the canvas is covered: reserve the
+   LOWEST snap fraction (the host-configurable --tm-editor-shell-sheet-reserve, set inline on the
+   stage; default 0.5) so the last block stays scrollable into view. The reserve never drops
+   below the sheet panel floor (the whole panel: header + tabs + body, C8) and never exceeds the
+   stage itself; both are host-overridable tokens. */
 .tm-editor-shell__stage--sheet-open .tm-editor-shell__canvas {
-    padding-block-end: calc(50cqh + var(--tm-space-4));
+    padding-block-end: calc(max(var(--tm-editor-shell-sheet-reserve, 0.5) * 100cqh, min(100cqh, var(--tm-editor-shell-sheet-min-block, 14rem))) + var(--tm-space-4));
 }
 
 .tm-editor-shell__main--mobile > .tm-mobile-action-bar,
@@ -230,6 +243,14 @@
 .tm-editor-shell__sheet {
     border-start-start-radius: var(--tm-radius-card);
     border-start-end-radius: var(--tm-radius-card);
+}
+
+/* C8 panel floor: on a short stage the half snap can leave less than a usable panel under the
+   header and tabs, so the whole sheet PANEL (header + tabs + body) never shrinks below the token
+   height — and never past the stage itself. The sheet module measures fractions from rects, so
+   the floor stays consistent with the snaps. */
+.tm-editor-shell__sheet .tm-drawer__panel.tm-sheet__panel {
+    min-block-size: min(100%, var(--tm-editor-shell-sheet-min-block, 14rem));
 }
 
 .tm-editor-shell__sheet .tm-drawer__header {

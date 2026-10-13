@@ -18660,14 +18660,20 @@
               "name": "MobileSheetSnapIndex",
               "type": "int",
               "isRequired": false,
-              "description": "The snap of the mobile panels sheet (0 = half height, 1 = full). Two-way with MobileSheetSnapIndexChanged, so a host can collapse the sheet on an add-block action.",
+              "description": "The snap of the mobile panels sheet: an index into MobileSheetSnapPoints (0 = the lowest snap). Two-way with MobileSheetSnapIndexChanged, so a host can collapse the sheet on an add-block action.",
               "default": "0"
             },
             {
               "name": "MobileSheetSnapIndexChanged",
               "type": "EventCallback<int>",
               "isRequired": false,
-              "description": "Raised when a gesture or the keyboard moves the mobile sheet to another snap."
+              "description": "Raised when a gesture or the keyboard moves the mobile sheet to another snap, and when a layout flip resets it."
+            },
+            {
+              "name": "MobileSheetSnapPoints",
+              "type": "IReadOnlyList<double>?",
+              "isRequired": false,
+              "description": "Fractions (0-1] of the shell's stage the mobile panels sheet snaps to, ascending; MobileSheetSnapIndex indexes this list (0 = the lowest). Default [0.5, 1.0]. Invalid values are dropped and the list is sorted (the TmDrawer rules); an empty result falls back to the default. The lowest snap is also the fraction of the stage the canvas reserves while the sheet is open. On a short stage the 14rem floor applies to the whole sheet panel, capped at the stage height (--tm-editor-shell-sheet-min-block)."
             },
             {
               "name": "PersistWidthsKey",

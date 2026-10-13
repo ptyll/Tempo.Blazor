@@ -502,6 +502,135 @@ public class TmEditorShellTests : LocalizationTestBase
 
         raised.Should().BeEmpty("the sheet is already at the top snap: nothing changed");
     }
+
+    // ── C8: host-configurable mobile sheet snap points ──────────────────────
+
+    [Fact]
+    public void MobileSheetSnapPoints_AreForwardedToTheSheet()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+            p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)[0.3, 0.6, 1.0]));
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-points").Should().Be("0.3,0.6,1");
+    }
+
+    [Fact]
+    public void MobileSheetSnapIndex_IndexesTheCustomList_AndClampsToItsLength()
+    {
+        var raised = new List<int>();
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)[0.25, 0.5, 1.0]);
+            p.Add(x => x.MobileSheetSnapIndex, 7);
+            p.Add(x => x.MobileSheetSnapIndexChanged, EventCallback.Factory.Create<int>(this, v => raised.Add(v)));
+        });
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("2",
+            "a host value past the last custom snap clamps to the custom list's top");
+
+        cut.Render(p => p.Add(x => x.MobileSheetSnapIndex, 1));
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("1",
+            "an in-range value indexes the custom list, not the default half/full pair");
+        raised.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void LayoutFlip_ResetsToTheLowestCustomSnap()
+    {
+        int? raised = null;
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)[0.25, 0.5, 1.0]);
+            p.Add(x => x.MobileSheetSnapIndex, 2);
+            p.Add(x => x.MobileSheetSnapIndexChanged, EventCallback.Factory.Create<int>(this, v => raised = v));
+        });
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("2");
+
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Desktop));
+        cut.Render(p => p.Add(x => x.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("0",
+            "the flip reset lands on the lowest CUSTOM snap");
+        raised.Should().Be(0);
+    }
+
+    [Fact]
+    public void ShrinkingMobileSheetSnapPoints_ClampsTheSnapAndRaises()
+    {
+        // The host drops snap points while the sheet sits at the top snap: the shadow snap must
+        // re-clamp to the shorter list and the host must hear about it (a drawer handed an index
+        // past its list would misrender the sheet).
+        var raised = new List<int>();
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+        {
+            p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)[0.25, 0.5, 1.0]);
+            p.Add(x => x.MobileSheetSnapIndex, 2);
+            p.Add(x => x.MobileSheetSnapIndexChanged, EventCallback.Factory.Create<int>(this, v => raised.Add(v)));
+        });
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("2");
+        raised.Should().BeEmpty("the initial host value is adopted, not raised");
+
+        cut.Render(p => p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)[0.5, 1.0]));
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-index").Should().Be("1");
+        raised.Should().Equal(1);
+    }
+
+    [Fact]
+    public void MobileSheet_FullSnap_CoversTheWholeStage_TheDrawerMaxHeightIs1()
+    {
+        // The inline sheet is a fraction of its stage: the "full" snap must reach the stage top,
+        // so the shell pins the drawer's sheet max to 1 (the drawer default would clamp at 0.85).
+        var cut = RenderShell(TmLayoutMode.Mobile);
+
+        cut.Find(".tm-editor-shell__sheet .tm-drawer__panel").GetAttribute("style")
+            .Should().Contain("--tm-sheet-max: 1");
+    }
+
+    [Fact]
+    public void Tablet_ForcedMode_NeverCarriesTheFittingClass()
+    {
+        // The --fitting class (hiding the docked panels until the first fit computation) exists
+        // on an AUTO tablet layout only: a forced mode never measures, so tests and prerendered
+        // frames never see invisible panels.
+        var cut = RenderShell(TmLayoutMode.Tablet);
+
+        cut.Find(".tm-editor-shell").ClassList.Should().NotContain("tm-editor-shell--fitting");
+    }
+
+    [Theory]
+    [InlineData(new double[] { })] // an empty normalization result falls back to the default pair
+    [InlineData(new double[] { -0.5, 0 })] // nothing valid in the list at all
+    public void MobileSheetSnapPoints_AnEmptyOrAllInvalidList_FallsBackToTheDefaultPair(double[] snaps)
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+            p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)snaps));
+
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-points").Should().Be("0.5,1");
+    }
+
+    [Fact]
+    public void MobileSheetSnapPoints_AreNormalized_LikeTheDrawerRules()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile, p =>
+            p.Add(x => x.MobileSheetSnapPoints, (IReadOnlyList<double>)[1.0, -0.5, 0.3, 0.6, 0.3, 0]));
+
+        // Dropped non-positive values, deduplicated, sorted ascending; the stage reserve follows
+        // the LOWEST snap so the canvas keeps reserving the covered fraction.
+        cut.Find(".tm-editor-shell__sheet").GetAttribute("data-snap-points").Should().Be("0.3,0.6,1");
+        cut.Find(".tm-editor-shell__stage").GetAttribute("style")
+            .Should().Contain("--tm-editor-shell-sheet-reserve: 0.3");
+    }
+
+    [Fact]
+    public void MobileSheet_ReservesTheLowestSnapHeightOnTheStage()
+    {
+        var cut = RenderShell(TmLayoutMode.Mobile);
+
+        cut.Find(".tm-editor-shell__stage").GetAttribute("style")
+            .Should().Contain("--tm-editor-shell-sheet-reserve: 0.5");
+    }
+
     [Fact]
     public void Mobile_ClosedSheet_RendersALabelledAffordance_WithNoAriaControls()
     {

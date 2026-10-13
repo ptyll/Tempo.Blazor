@@ -3,6 +3,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Layout;
@@ -198,6 +199,77 @@ public class TmEditorShellResizerTests : LocalizationTestBase
 
         cut.FindAll("[role='separator']").Should().HaveCount(1);
         cut.Find("[role='separator']").GetAttribute("data-side").Should().Be("right");
+    }
+
+    // ── C9: the tablet fit width keeps the canvas at MinCanvasWidth ─────────
+
+    [Fact]
+    public void Tablet_ExpandedPanel_ShrinksToKeepMinCanvasWidth_ButNotBelowItsMin()
+    {
+        // At 768 the measured canvas (278) sits below MinCanvasWidth (400): the expanded panel
+        // gives up the 122px deficit, clamped to its own minimum (240 for the right panel).
+        Module(canvas: 278);
+        var cut = RenderShell(TmLayoutMode.Tablet);
+
+        var aside = cut.Find("aside[data-region='right']");
+        aside.GetAttribute("style").Should().Contain("--tm-editor-shell-panel-width: 240px");
+        cut.Find("[role='separator']").GetAttribute("aria-valuenow").Should().Be("240",
+            "aria-valuenow reports the rendered width, the fit included");
+    }
+
+    [Fact]
+    public async Task Tablet_FitWidth_IsNotPersisted_NorReported()
+    {
+        var mod = Module(canvas: 278);
+        var raised = new List<string>();
+        var cut = RenderShell(TmLayoutMode.Tablet, p =>
+        {
+            p.Add(x => x.PersistWidthsKey, "tablet-fit-demo");
+            p.Add(x => x.LeftWidthChanged, EventCallback.Factory.Create<string>(this, v => raised.Add($"left:{v}")));
+            p.Add(x => x.RightWidthChanged, EventCallback.Factory.Create<string>(this, v => raised.Add($"right:{v}")));
+        });
+
+        cut.Find("aside[data-region='right']").GetAttribute("style").Should().Contain("240px");
+
+        raised.Should().BeEmpty("a fit width is a layout decision, not a user resize");
+        await Task.Yield();
+        mod.Save().Should().BeEmpty("the fit width is never persisted");
+    }
+
+    [Fact]
+    public void Desktop_IsUnaffected()
+    {
+        // The fit width exists on a tablet layout only: a desktop shell renders the host width
+        // even when the measured canvas sits below MinCanvasWidth.
+        Module(canvas: 278);
+        var cut = RenderShell(TmLayoutMode.Desktop);
+
+        cut.Find("aside[data-region='right']").GetAttribute("style")
+            .Should().Contain("--tm-editor-shell-panel-width: 320px");
+        cut.Find("[role='separator'][data-side='right']").GetAttribute("aria-valuenow").Should().Be("320");
+    }
+
+    [Fact]
+    public void Tablet_FitWidth_RelaxesBackTowardsTheHostWidth_WhenTheContainerGrows()
+    {
+        var module = JSInterop.SetupModule(ShellModule);
+        var measure = module.Setup<double>("measureCanvas", _ => true);
+        measure.SetResult(278);
+        module.Setup<double>("measureWidth", _ => true).SetResult(300);
+        var attach = module.SetupVoid("attachResize", _ => true); attach.SetVoidResult();
+        var detach = module.SetupVoid("detachResize", _ => true); detach.SetVoidResult();
+
+        var cut = RenderShell(TmLayoutMode.Tablet);
+        cut.Find("aside[data-region='right']").GetAttribute("style").Should().Contain("240px");
+
+        // The container grows: the canvas now measures a surplus over MinCanvasWidth, so the fit
+        // relaxes — in steps, up to the host width, never beyond it.
+        measure.SetResult(458);
+        cut.Render();
+
+        cut.Find("aside[data-region='right']").GetAttribute("style")
+            .Should().Contain("--tm-editor-shell-panel-width: 320px",
+                "with room again the panel renders at the host width");
     }
 
     // ── Keyboard (Blazor) ───────────────────────────────────────────────────
@@ -580,6 +652,146 @@ public class TmEditorShellResizerTests : LocalizationTestBase
         cut.Find("[role='separator'][data-side='left']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
 
         raised.Should().Equal(new[] { "336px" }, "320 measured + 16, not the 280 fallback + 16");
+    }
+
+    // ── C9 follow-up: user resize starts from the RENDERED (fit) width ──────
+
+    /// <summary>
+    /// A minimal <see cref="IJSRuntime"/> that feeds the measured canvas width back from the width
+    /// the right panel actually rendered at (canvas = base - rendered + surplus). A static bUnit
+    /// mock instead slides every fit to the panel minimum within a single render flush — which
+    /// never happens in a real browser, where the narrowed panel widens the canvas.
+    /// </summary>
+    private sealed class FeedbackJsRuntime : IJSRuntime
+    {
+        public Func<double>? MeasureCanvas { get; set; }
+        public int MeasureCount { get; private set; }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+            => InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            if (identifier == "import") return ValueTask.FromResult((TValue)(object)new FeedbackModule(this));
+            return ValueTask.FromResult<TValue>(default!);
+        }
+
+        private sealed class FeedbackModule : IJSObjectReference
+        {
+            private readonly FeedbackJsRuntime _runtime;
+            public FeedbackModule(FeedbackJsRuntime runtime) => _runtime = runtime;
+
+            public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+                => InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+            public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+            {
+                if (identifier == "measureCanvas")
+                {
+                    _runtime.MeasureCount++;
+                    return ValueTask.FromResult((TValue)(object)(_runtime.MeasureCanvas?.Invoke() ?? 700d));
+                }
+                if (identifier == "measureWidth") return ValueTask.FromResult((TValue)(object)300d);
+                if (identifier == "loadPanelWidths") return ValueTask.FromResult<TValue>(default!);
+                return ValueTask.FromResult<TValue>(default!);
+            }
+
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
+    }
+
+    private (IRenderedComponent<TmEditorShell> cut, FeedbackJsRuntime js) RenderTabletWithFeedback(
+        Action<ComponentParameterCollectionBuilder<TmEditorShell>>? extra = null)
+    {
+        var js = new FeedbackJsRuntime();
+        Services.AddSingleton<IJSRuntime>(js);
+        var cut = RenderShell(TmLayoutMode.Tablet, extra);
+        js.MeasureCanvas = () =>
+        {
+            var style = cut.Find("aside[data-region='right']").GetAttribute("style")!;
+            var rendered = double.Parse(System.Text.RegularExpressions.Regex.Match(style, @"(\d+(?:\.\d+)?)px").Groups[1].Value, CultureInfo.InvariantCulture);
+            // Geometry emulating the 768px demo host: a 320px panel leaves a 358px canvas, so the
+            // canvas measures 678 - rendered; _surplus emulates scrollbars coming and going.
+            return 678 - rendered + _surplus;
+        };
+        return (cut, js);
+    }
+
+    private double _surplus;
+
+    private async Task ConvergeFitAsync(IRenderedComponent<TmEditorShell> cut)
+    {
+        await cut.InvokeAsync(() => cut.Instance.OnCanvasResized());
+        // The fit converges at 278 (320 - the 42px deficit) and stays: the narrowed panel is what
+        // brings the canvas to MinCanvasWidth.
+        cut.WaitForAssertion(() => Width(cut, "right").Should().Contain("278px"));
+    }
+
+    [Fact]
+    public async Task Keyboard_TabletFitActive_StepsFromTheRenderedFitWidth()
+    {
+        var raised = new List<string>();
+        var (cut, _) = RenderTabletWithFeedback(p =>
+            p.Add(x => x.RightWidthChanged, EventCallback.Factory.Create<string>(this, v => raised.Add(v))));
+        await ConvergeFitAsync(cut);
+
+        cut.Find("[role='separator']").GetAttribute("aria-valuenow").Should().Be("278",
+            "aria-valuenow reports the rendered width, the fit included");
+
+        // ArrowRight SHRINKS the right panel (its separator is on the panel's left edge). The
+        // step starts from the FIT width on screen (278 - 16), not from the host 320 (336).
+        cut.Find("[role='separator'][data-side='right']").KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+
+        raised.Should().Equal(new[] { "262px" }, "the callback reports the width the screen shows");
+        cut.WaitForAssertion(() => Width(cut, "right").Should().Contain("262px"));
+        cut.Find("[role='separator']").GetAttribute("aria-valuenow").Should().Be("262");
+        raised.Should().Equal(new[] { "262px" }, "a settled width is reported once");
+    }
+
+    [Fact]
+    public async Task ResizeCommitted_FromTheFitWidth_SticksAsTheNewCeiling()
+    {
+        var raised = new List<string>();
+        var (cut, _) = RenderTabletWithFeedback(p =>
+            p.Add(x => x.RightWidthChanged, EventCallback.Factory.Create<string>(this, v => raised.Add(v))));
+        await ConvergeFitAsync(cut);
+
+        // A drag that settled below the fit (its start width was the RENDERED width) commits from
+        // the rendered width: the user width becomes the new ceiling and — the canvas has room
+        // again at 250px — the panel stays there instead of snapping back to the host width.
+        await cut.InvokeAsync(() => cut.Instance.HandleResizeCommitted("right", 250));
+
+        raised.Should().Equal("250px");
+        cut.WaitForAssertion(() => Width(cut, "right").Should().Contain("250px"));
+        cut.Find("[role='separator']").GetAttribute("aria-valuenow").Should().Be("250");
+    }
+
+    [Fact]
+    public async Task TabletFit_ASmallSurplusKeepsTheFit_ARelSurplusRelaxesIt()
+    {
+        var (cut, js) = RenderTabletWithFeedback();
+        await ConvergeFitAsync(cut);
+
+        // A scrollbar vanishes: the canvas gains a sliver of surplus. The fit must HOLD — relaxing
+        // on every sliver would oscillate the panel width and churn scrollbars.
+        _surplus = 10;
+        await cut.InvokeAsync(() => cut.Instance.OnCanvasResized());
+        Width(cut, "right").Should().Contain("278px", "a 10px surplus keeps the fit");
+
+        var measures = js.MeasureCount;
+        for (var i = 0; i < 4; i++)
+        {
+            _surplus = i % 2 == 0 ? 10 : 0;
+            await cut.InvokeAsync(() => cut.Instance.OnCanvasResized());
+        }
+        js.MeasureCount.Should().BeLessThanOrEqualTo(measures + 2 * 4 + 2, "a surplus sliver must not churn renders");
+        Width(cut, "right").Should().Contain("278px", "the fit holds through the surplus alternation");
+
+        // A real surplus (24px, a classic scrollbar) gives the width back, in steps.
+        _surplus = 24;
+        await cut.InvokeAsync(() => cut.Instance.OnCanvasResized());
+        cut.WaitForAssertion(() => Width(cut, "right").Should().Contain("302px",
+            "278 + the 24px surplus, relaxed towards the host width"));
     }
 
     // ── F6 r2 G8 ────────────────────────────────────────────────────────────

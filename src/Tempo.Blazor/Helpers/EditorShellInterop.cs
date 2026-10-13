@@ -20,6 +20,7 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     private readonly IJSRuntime _js;
     private readonly HashSet<string> _attached = new();
     private IJSObjectReference? _module;
+    private ElementReference? _observedCanvas;
     private bool _disposed;
 
     public EditorShellInterop(IJSRuntime js) => _js = js;
@@ -101,6 +102,35 @@ internal sealed class EditorShellInterop : IAsyncDisposable
         catch (Exception ex) when (IsBenign(ex)) { }
     }
 
+    /// <summary>
+    /// Watches the shell's canvas region with a ResizeObserver: a container resize that changes the
+    /// canvas without a Blazor render makes the module call <c>OnCanvasResized</c>. A second call
+    /// for the same element replaces the previous observer.
+    /// </summary>
+    public async Task ObserveCanvasAsync<T>(ElementReference main, DotNetObjectReference<T> dotnet) where T : class
+    {
+        try
+        {
+            var module = await ModuleAsync();
+            if (module is null) return;
+            _observedCanvas = main;
+            await module.InvokeVoidAsync("observeCanvas", main, dotnet);
+        }
+        catch (Exception ex) when (IsBenign(ex)) { }
+    }
+
+    /// <summary>Stops the canvas watch started by <see cref="ObserveCanvasAsync{T}"/>.</summary>
+    public async Task DisconnectCanvasAsync()
+    {
+        if (_observedCanvas is not { } main) return;
+        _observedCanvas = null;
+        try
+        {
+            if (_module is not null) await _module.InvokeVoidAsync("disconnectCanvas", main);
+        }
+        catch (Exception ex) when (IsBenign(ex)) { }
+    }
+
     private async ValueTask<IJSObjectReference?> ModuleAsync()
     {
         if (_disposed) return null;
@@ -115,6 +145,7 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
+        await DisconnectCanvasAsync();
         var ids = _attached.ToArray();
         foreach (var id in ids) await DetachResizeAsync(id);
         _disposed = true;

@@ -2449,6 +2449,7 @@
   "TmEditorShellDemo_HostControls": "Host controls",
   "TmEditorShellDemo_HostTogglePanels": "Toggle panels from the host",
   "TmEditorShellDemo_PresentationTabs": "Mobile tabs presentation",
+  "TmEditorShellDemo_SnapsToggle": "Custom sheet snaps",
   "TmEditorShellDemo_PresentationSheet": "Mobile sheet presentation",
   "TmEditorShellDemo_ThresholdsTitle": "Custom thresholds",
   "TmEditorShellDemo_ThresholdsIntro": "The same shell with its own thresholds (desktop from 1200, mobile below 768, like the e-mail editor). On a tablet the toolbox collapses to an icon rail and one panel stays expanded.",

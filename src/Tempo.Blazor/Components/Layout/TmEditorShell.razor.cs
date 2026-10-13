@@ -45,22 +45,84 @@ public partial class TmEditorShell
 
     /// <summary>
     /// Measures the canvas after each render while panels are docked, so the separators can announce
-    /// the width the user can really reach. Re-renders only when the measurement changes.
+    /// the width the user can really reach and the tablet fit overlay can keep the canvas at
+    /// <see cref="TmEditorShell.MinCanvasWidth"/>. Re-renders only when the measurement or a fit width
+    /// changes.
     /// </summary>
     private async Task SyncCanvasWidthAsync()
     {
         if (_disposed) return;
+        var collapsed = EffectiveCollapsed(_resolved);
         var docked = _resolved != TmLayoutMode.Mobile && _attachedResizers.Count > 0;
         if (!docked)
         {
             _canvasWidth = double.NaN;
+            _tabletFitLeft = null;
+            _tabletFitRight = null;
+            _fitComputed = false;
+            if (_shellJs is not null) await _shellJs.DisconnectCanvasAsync();
             return;
         }
         _shellJs ??= new EditorShellInterop(JS);
+        // A container resize can change the canvas width without a Blazor render (a window resize,
+        // a sibling pane): the module watches the canvas region and calls back, so the tablet fit
+        // recomputes in that case too.
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        await _shellJs.ObserveCanvasAsync(_main, _dotNetRef);
         var measured = await _shellJs.MeasureCanvasAsync(_main);
-        if (_disposed || measured.Equals(_canvasWidth)) return;
+        if (_disposed) return;
+        _fitComputed = true;
+        var fitChanged = SyncTabletFit(measured, collapsed);
+        if (!fitChanged && measured.Equals(_canvasWidth)) return;
         _canvasWidth = measured;
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Called by the module's canvas ResizeObserver: the canvas region changed size without a
+    /// Blazor render (a container or window resize), so the tablet fit must be recomputed.
+    /// </summary>
+    [JSInvokable("OnCanvasResized")]
+    public Task OnCanvasResized()
+        => _disposed ? Task.CompletedTask : InvokeAsync(SyncCanvasWidthAsync);
+
+    /// <summary>
+    /// Recomputes the tablet fit overlay for both sides. Returns true when a fit width changed (the
+    /// caller re-renders even when the canvas measurement itself is unchanged).
+    /// </summary>
+    private bool SyncTabletFit(double measured, EditorShellPanel collapsed)
+    {
+        var left = NextFit(EditorShellPanel.Left, measured, collapsed);
+        var right = NextFit(EditorShellPanel.Right, measured, collapsed);
+        if (left == _tabletFitLeft && right == _tabletFitRight) return false;
+        _tabletFitLeft = left;
+        _tabletFitRight = right;
+        return true;
+    }
+
+    /// <summary>
+    /// The fit width of one side: on a tablet layout, an expanded panel narrows — from the width it
+    /// renders at, by the measured canvas deficit below <see cref="TmEditorShell.MinCanvasWidth"/> —
+    /// clamped to the side's minimum and never beyond the width in effect (user or host). Reaching
+    /// the width in effect clears the overlay, so a grown container relaxes back to the host width.
+    /// Converges in one extra render: rendered at the fit, the canvas measures exactly
+    /// MinCanvasWidth (unless the minimum clamped the fit).
+    /// </summary>
+    private int? NextFit(EditorShellPanel side, double measured, EditorShellPanel collapsed)
+    {
+        if (_resolved != TmLayoutMode.Tablet || !IsExpanded(side, collapsed) || double.IsNaN(measured))
+            return null;
+        var ceiling = CurrentWidthPx(side);
+        var active = TabletFit(side);
+        var current = active ?? ceiling;
+        var deficit = (int)Math.Floor(measured) - MinCanvasWidth;
+        // Hysteresis: a sliver of surplus (a fractional relayout, a scrollbar coming and going)
+        // must not relax the fit — relaxing and re-applying on every pass would oscillate the
+        // rendered width and churn scrollbars. Only a real surplus (24px, a classic scrollbar)
+        // gives the width back.
+        if (active is { } && deficit is > 0 and < 24) return active;
+        var next = Math.Clamp(current + deficit, MinWidth(side), ceiling);
+        return next >= ceiling ? null : next;
     }
 
     // One shell instance, one registration per side: the module keeps a single map, so a shared
@@ -103,16 +165,31 @@ public partial class TmEditorShell
             _ => EditorShellPanel.None,
         };
         if (panel == EditorShellPanel.None) return Task.CompletedTask;
-        var clamped = (int)EditorShellResize.Clamp(width, CurrentWidthPx(panel), MinWidth(panel), MaxWidth(panel), double.NaN, MinCanvasWidth);
+        // The drag started from the RENDERED width (the tablet fit included), so the clamp must
+        // too: growth is measured against what is on screen, not the wider host width.
+        var clamped = (int)EditorShellResize.Clamp(width, RenderedWidthPx(panel), MinWidth(panel), MaxWidth(panel), double.NaN, MinCanvasWidth);
         return InvokeAsync(() => CommitWidthAsync(panel, clamped));
     }
 
     private async Task CommitWidthAsync(EditorShellPanel side, int width)
     {
         if (_disposed) return;
+        // A user resize is a choice of width: it wins over the tablet fit overlay (the fit may
+        // recompute on the next measurement, but never overrides a width the user set). Cleared
+        // BEFORE the early return below: a commit of exactly the host width while a fit is active
+        // is the user taking the panel back — the fit must not survive it.
+        var hadFit = TabletFit(side) is not null;
+        if (side == EditorShellPanel.Left) _tabletFitLeft = null; else _tabletFitRight = null;
+
         // A non-pixel host width has no pixel value to compare with: any committed width is a change.
         var effective = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
-        if (EditorShellResize.TryParsePx(effective, out var currentPx) && width == currentPx) return;
+        if (EditorShellResize.TryParsePx(effective, out _)
+            && width == RenderedWidthPx(side) && TabletFit(side) is null)
+        {
+            // The fit was dropped: re-render so the panel shows the committed width, not the fit.
+            if (hadFit) StateHasChanged();
+            return;
+        }
 
         if (side == EditorShellPanel.Left)
         {

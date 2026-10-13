@@ -745,20 +745,28 @@ public class EditorShellE2ETests : WasmTestBase
     public async Task Demo_768_Touch_Resizer_HitAreaIsWiderThanTheVisualStrip_DragEightPixelsOffWorks()
     {
         // F6 r2 G8: under (pointer: coarse) the 6px strip is a poor target; the hit area is widened.
+        // Phase 15 (C9): at 768 the tablet fit parks the inspector at MinRightWidth (240) — the panel
+        // minimum — so no drag can change it: shrinking clamps at the minimum, growing is refused
+        // while the canvas is below MinCanvasWidth. The regression guard is the HIT AREA itself: a
+        // touch starting 8px off the strip must still reach the resizer (the separator enters its
+        // dragging state) and the clamp keeps the parked width.
         var context = await CreateTouchContextAsync(768, 1024);
         var page = await GotoEditorShellAsync(context, 768, 1024);
         RegisterContext(context);
         var shell = page.Locator(Shell);
         await Assertions.Expect(shell).ToHaveAttributeAsync("data-layout", "tablet");
-        var separator = shell.Locator("[role='separator']");
+        var separator = shell.Locator("[role='separator'][data-side='right']");
         await Assertions.Expect(separator).ToBeVisibleAsync();
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation must be on");
 
         var hit = await page.EvaluateAsync<double>("() => parseFloat(getComputedStyle(document.querySelector(\"[data-testid='editor-shell'] .tm-editor-shell__resizer\"), '::before').width) || 0");
         Assert.IsTrue(hit >= 24, $"the coarse-pointer hit area (::before) is at least 24px wide ({hit}px)");
 
+        // The C9 fit converges one extra render after the first canvas measurement: the inspector
+        // parks at its minimum (240) and the canvas keeps everything the panel can give (~358).
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "240", new LocatorAssertionsToHaveAttributeOptions { Timeout = 15000 });
+
         var box = (await separator.BoundingBoxAsync())!;
-        var asideBefore = await WidthOfAsync(page, $"{Shell} aside.tm-editor-shell__panel--right");
         var cdp = await context.NewCDPSessionAsync(page);
         var x = box.X + box.Width / 2 + 8;   // 8px off the visual strip
         var y = box.Y + 300;
@@ -767,12 +775,21 @@ public class EditorShellE2ETests : WasmTestBase
         {
             await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object> { ["type"] = "touchMove", ["touchPoints"] = new[] { new Dictionary<string, object> { ["x"] = x + 6 * i, ["y"] = y } } });
             await page.WaitForTimeoutAsync(16);
+            if (i == 3)
+            {
+                // The gesture reached the resizer 8px off the strip: the dragging class is on.
+                var dragging = await page.EvaluateAsync<bool>(
+                    "() => document.querySelector(\"[data-testid='editor-shell'] [role='separator'][data-side='right']\").classList.contains('tm-editor-shell__resizer--dragging')");
+                Assert.IsTrue(dragging, "a touch drag 8px off the strip is captured by the widened hit area");
+            }
         }
         await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object> { ["type"] = "touchEnd", ["touchPoints"] = Array.Empty<object>() });
         await page.WaitForTimeoutAsync(500);
 
-        var asideAfter = await WidthOfAsync(page, $"{Shell} aside.tm-editor-shell__panel--right");
-        Assert.IsTrue(asideAfter < asideBefore - 30, $"a touch drag 8px off the strip resizes the right panel ({asideBefore} -> {asideAfter})");
+        // The drag was received — and clamped: the parked minimum width holds.
+        await Assertions.Expect(separator).ToHaveAttributeAsync("aria-valuenow", "240");
+        Assert.AreEqual(240, Math.Round(await WidthOfAsync(page, $"{Shell} aside.tm-editor-shell__panel--right")),
+            "the drag clamps at the panel minimum the tablet fit parked at");
     }
     [TestMethod]
     public async Task Demo_1440_Resizer_MalformedStoredValue_IsIgnored_NeverInjectedIntoTheStyle()

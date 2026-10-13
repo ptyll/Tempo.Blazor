@@ -170,7 +170,50 @@ export function detachResize(id) {
     entry.drag.detach();
     entry.handle.removeEventListener('keydown', entry.onKey);
 }
+
+const canvasObservers = new Map();
+
+/**
+ * Watches the canvas region of a shell main element with a ResizeObserver. A container or window
+ * resize can change the canvas width without a Blazor render (no OnAfterRender runs), which would
+ * leave the tablet fit stale; the rAF-debounced observer reports the change through
+ * OnCanvasResized so the fit recomputes. One observer per element: observing the same main again
+ * replaces the first. No-op where ResizeObserver is unavailable (the fit then follows renders).
+ * @param {HTMLElement} main the shell main element (its canvas region is watched)
+ * @param {{ invokeMethodAsync: Function }|null} dotnet the shell, which receives OnCanvasResized
+ */
+export function observeCanvas(main, dotnet) {
+    if (!main) return;
+    disconnectCanvas(main);
+    if (typeof ResizeObserver === 'undefined') return;
+    const canvas = main.querySelector?.('[data-region="canvas"]') ?? main;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+            frame = 0;
+            // The circuit may already be gone: a rejected invoke must not become an unhandled rejection.
+            dotnet?.invokeMethodAsync('OnCanvasResized')?.catch?.(() => {});
+        });
+    });
+    observer.observe(canvas);
+    canvasObservers.set(main, {
+        observer,
+        cancel() { if (frame) { cancelAnimationFrame(frame); frame = 0; } },
+    });
+}
+
+/** Stops the canvas watch for one main element. Safe to call twice or for an unknown element. */
+export function disconnectCanvas(main) {
+    const entry = canvasObservers.get(main);
+    if (!entry) return;
+    canvasObservers.delete(main);
+    entry.cancel();
+    entry.observer.disconnect();
+}
+
 /** Drop every registration. Test-only: a module imported by Node is shared across tests. */
 export function __resetForTests() {
     for (const id of [...resizers.keys()]) detachResize(id);
+    for (const main of [...canvasObservers.keys()]) disconnectCanvas(main);
 }

@@ -45,6 +45,24 @@
 
 ### Changed
 
+- **On a tablet layout an expanded `TmEditorShell` panel now shrinks so the canvas keeps
+  `MinCanvasWidth` (C9).** Previously `MinCanvasWidth` only bounded user resizes: at 768 with the
+  inspector expanded the canvas could measure ~278px. Now the expanded panel gives up the measured
+  canvas deficit below `MinCanvasWidth` (clamped to `MinLeftWidth` / `MinRightWidth`), converging
+  in one extra render and relaxing back towards the host width when the container grows. The fit
+  stops at the panel minimum: at 768 the default 320px inspector parks at `MinRightWidth` (240) and
+  the canvas keeps ~358px — everything the parked minimum allows — so it can still land below
+  `MinCanvasWidth` when even the panel minimum does not leave it (freeing more width means
+  collapsing the other panel to its rail). The fit width is a layout decision, not a user choice:
+  it is **not** persisted under `PersistWidthsKey` and **not** reported through
+  `LeftWidthChanged` / `RightWidthChanged`; `aria-valuenow` on the separator reports the rendered
+  width (before: the parameter width). Visual change at 768: the inspector renders at ~240–300px
+  instead of 320px.
+
+- **The shell's mobile panels sheet full snap now reaches the top of the stage.** The sheet was
+  clamped to the drawer's default `MaxHeight` (0.85), so the "full" snap covered 85% of the stage;
+  as an inline sheet it now passes `MaxHeight="1"` and the full snap covers the whole stage.
+
 - **A `TmDropdown` or `TmSplitButton` inside a `TmToolbar` is now one stop of the toolbar's roving
   tab stop instead of its own Tab stop (F14/C6).** The trigger (and, for a split button, the primary
   action too) carries `data-tm-toolbar-control` automatically (through the cascade) when it sits in
@@ -656,6 +674,15 @@
 
 ### Added
 
+- **`TmEditorShell.MobileSheetSnapPoints` (C8).** The mobile panels sheet no longer hard-wires its
+  half/full snap pair: a host passes the fractions of the shell's stage the sheet snaps to
+  (ascending, `0–1`; `MobileSheetSnapIndex` indexes the list, 0 = the lowest). Invalid values are
+  dropped and the list is sorted and deduplicated with the `TmDrawer` rules; an empty result falls
+  back to the default `[0.5, 1.0]`. The lowest snap also drives the canvas reserve, so the covered
+  fraction stays scrollable into view with custom snaps. On a short stage the 14rem floor
+  (`--tm-editor-shell-sheet-min-block`, overridable) now applies to the whole sheet panel — header,
+  tabs and body — capped at the stage height: at 390×520 the half snap used to leave ~40px of body.
+
 - **Toolbar non-button items: `TmToolbarItem` (F14/C1).** A toolbar can now hold controls that are
   not buttons — a `TmSelect`, `TmColorPicker`, `TmToggle`, a custom dropdown — and they leave the
   bar exactly like a `TmToolbarButton`. The `TmToolbarItem` wrapper is the measured item
@@ -1072,6 +1099,15 @@
   legacy classes loses the styles.
 
 ### Fixed
+
+- **`TmSidePanel` without a viewport scope now opens the sheet the viewport measured (C7).** With
+  no `TmLayoutScopes.Viewport` cascade the container used to decide the sheet geometry
+  (side vs bottom) entirely: a narrow container on a desktop viewport opened a bottom sheet, a
+  desktop container on a phone opened a side sheet. The panel's own sheet now reads the position
+  from its drawer's internal viewport probe (through `ResolvedLayoutChanged` + `InitialMode`; the
+  container is only the first-frame guess), so a 500px column at 1440 opens a right side sheet and
+  a phone viewport opens a bottom sheet. A host with a viewport scope, or a forced `LayoutMode`,
+  is unchanged.
 
 - **The toolbar's fit measurement no longer ignores a group wrapper's margins and its own gap
   (F14/C5).** `tm-toolbar.js` counted only a flattened wrapper's padding and border, so a wrapper
