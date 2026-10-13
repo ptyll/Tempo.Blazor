@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 
 namespace Tempo.Blazor.Components.Layout;
 
@@ -8,9 +7,6 @@ public partial class TmSplitter : ComponentBase
 {
     private ElementReference _splitterRef;
     private readonly List<TmSplitterPane> _panes = new();
-    private TmSplitterPane? _activePane;
-    private double _dragStartX;
-    private double _dragStartY;
 
     /// <summary>The child content (TmSplitterPane elements).</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -22,6 +18,9 @@ public partial class TmSplitter : ComponentBase
     [Parameter] public string? AdditionalCssClass { get; set; }
 
     internal IReadOnlyList<TmSplitterPane> Panes => _panes;
+
+    /// <summary>The splitter root element, for measuring the main-axis length (aria-valuemax / End).</summary>
+    internal ElementReference SplitterElement => _splitterRef;
 
     internal bool IsNotLastPane(TmSplitterPane pane) => _panes.IndexOf(pane) < _panes.Count - 1;
 
@@ -36,13 +35,6 @@ public partial class TmSplitter : ComponentBase
     internal void RemovePane(TmSplitterPane pane)
     {
         _panes.Remove(pane);
-    }
-
-    internal void HandleResizerPointerDown(PointerEventArgs e, TmSplitterPane leftPane)
-    {
-        _activePane = leftPane;
-        _dragStartX = e.ClientX;
-        _dragStartY = e.ClientY;
     }
 
     internal void RequestStateUpdate() => StateHasChanged();

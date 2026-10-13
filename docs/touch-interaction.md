@@ -8,14 +8,16 @@ The private gestures still to migrate:
 
 | Owner | Gesture |
 | --- | --- |
-| `TmSplitterPane` | the eval drag |
-| `slider.js` | the slider thumb drag |
 | `TmDataTable` | column resize |
 | `dashboard.js` | widget drag and resize |
 | `workflow-designer.js` | node drag |
 | `TmColorGradient` | the gradient stop drag |
 | `TmGantt` | bar drag and resize |
 | `TmSigningFieldOverlay` | field drag |
+
+Migrated (they no longer own a private gesture): `TmSplitterPane` (the `eval` drag became
+`tm-splitter.js` over the helper), and `slider.js` (deleted: `TmRangeSlider` uses the standard
+dual-range CSS, so each native thumb drags itself and no JS gesture exists).
 
 Multi-pointer gestures (pinch and pan) are out of scope. They need a core sibling module, never an
 implementation inside a package.
@@ -132,7 +134,7 @@ must ship a non-drag alternative in the same change.** The convention:
 |---------|----------------------|--------------|
 | Move an item (event, card, node) | Alt+arrow (`Alt+ArrowDown`) moves it one step (slot, day, grid cell) | `aria-live="polite"` message "Moved to …" |
 | Resize an item | Alt+Shift+arrow grows/shrinks by one step | "Resized to …" |
-| Resize a panel (splitter) | arrows / `Home` / `End` on the `role="separator"` (`TmEditorShell`) | `aria-valuenow` |
+| Resize a panel (splitter) | arrows / `Home` / `End` on the `role="separator"` (`TmEditorShell`, `TmSplitterPane`) | `aria-valuenow` |
 | Cancel | `Escape` while a mouse/touch gesture is active (handled by the helper) | none needed |
 
 `Alt`+arrow is the browser's Back/Forward shortcut, so the chord is cancelled in JavaScript, not with
@@ -155,6 +157,7 @@ touch users who cannot drag precisely.
 | Module | What it does with the helper |
 |--------|------------------------------|
 | `tm-editor-shell.js` | Panel resizer: `attach(handle, { threshold: 0 })`; `onMove` clamps the width and writes the CSS variable, `onEnd` commits once, `onCancel` restores the start width. The keyboard path stays in Blazor and shares the clamp vectors. |
+| `tm-splitter.js` | `TmSplitterPane` resizer: `attach(handle, { threshold: 0, suppressClick: false, touchAction: null })`; `onMove` clamps the pane size and writes the inline `flex` (no Blazor render per move), `onEnd` commits once through `OnSplitterResizeCommitted`, `onCancel` restores the press-time `style` attribute verbatim (the drag's `flex` shorthand would otherwise leave the authored inline `flex-basis` destroyed), and the horizontal delta inverts in RTL. A press on the strip's collapse button is vetoed so the button keeps its click. Arrows / `Home` / `End` on the `role="separator"` stay in Blazor and share the clamp. |
 | `tm-sheet.js` | Bottom-sheet drag (TmDrawer/TmModal/TmDialog sheets): `attach(handle, { threshold: 6, captureOn: <grabber ? 'press' : 'start'>, touchAction: null, suppressClick: true, dragClass: null })`. The grabber captures on press (a fast drag whose first move leaves the 44px handle would otherwise never start); a header waits for the 6px arm so a close-button click stays a click. The sheet owns measuring, the inline height and the settle/dismiss decision; the velocity samples come from `onMove`'s `event.timeStamp`. |
 | `scheduler.js` | Event resize (time grid and timeline) with a mouse, finger or pen: `attach(document, { selector: '.tm-scheduler-event-resize-handle', threshold: 2, longPressMs: 400 })`. The long-press applies to touch only, so a quick swipe scrolls (the coarse handle is `touch-action: pan-y` on the time grid and `pan-x` on the timeline, capped at `min(var(--tm-space-4), 25%)`, with a visible grip under `hover: none`); mouse and pen keep the 2px threshold. Hold, then drag, to resize. `window.TempoBlazor.Scheduler.init/registerInstance/unregisterInstance/destroy` and the `NotifyResizeComplete` callback are unchanged. The mouse keeps HTML5 drag-and-drop for moving the event body. Its resize has no keyboard alternative yet — deferred to the Scheduler plan; new adopters use `attachKeyboardMove`. |
 

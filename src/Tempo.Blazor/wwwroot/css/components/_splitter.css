@@ -27,42 +27,101 @@
     overflow: hidden;
 }
 
-.tm-splitter__resizer {
+/* The gutter is the layout box between the panes; the separator strip and the collapse button are
+   its children as SIBLINGS — a button inside role="separator" would be announced as part of the
+   separator's value. */
+.tm-splitter__gutter {
     flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
+    display: flex;
+}
+
+.tm-splitter__resizer {
     background: var(--tm-color-border);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    z-index: 1;
     touch-action: none;
 }
 
+/* The separator is a tab stop (role="separator"): the focus indicator is the shared ring. */
+.tm-splitter__resizer:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-splitter__resizer--dragging {
+    background: var(--tm-color-primary);
+}
+
+/* Forced colors: the strip must stay a visible, resizable landmark; the active drag speaks in
+   Highlight, the system's own "selected" voice. */
+@media (forced-colors: active) {
+    .tm-splitter__resizer {
+        background: CanvasText;
+        forced-color-adjust: none;
+    }
+
+    .tm-splitter__resizer--dragging {
+        background: Highlight;
+    }
+}
+
 .tm-splitter--horizontal .tm-splitter__resizer {
-    width: 8px;
+    width: var(--tm-space-2);
     cursor: col-resize;
 }
 
 .tm-splitter--vertical .tm-splitter__resizer {
-    height: 8px;
+    height: var(--tm-space-2);
     cursor: row-resize;
+}
+
+/* A finger needs more than an 8px strip: the hit area widens into a full touch target without
+   moving or resizing the visible strip. */
+@media (pointer: coarse) {
+    .tm-splitter__resizer::before {
+        content: '';
+        position: absolute;
+        /* A horizontal splitter's strip is a vertical bar: widen it sideways to the target size. */
+        inset: 0 calc((var(--tm-space-2) - var(--tm-touch-target)) / 2);
+    }
+
+    .tm-splitter--vertical .tm-splitter__resizer::before {
+        inset: calc((var(--tm-space-2) - var(--tm-touch-target)) / 2) 0;
+    }
+
+    .tm-splitter__collapse-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-splitter__collapse-btn {
     position: absolute;
+    top: 50%;
+    inset-inline-start: 50%;
+    transform: translate(-50%, -50%);
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm);
-    padding: 2px;
+    padding: var(--tm-space-1);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: var(--tm-space-5);
+    height: var(--tm-space-5);
+}
+
+.tm-splitter__collapse-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-splitter__collapse-icon {
-    width: 12px;
-    height: 12px;
+    width: var(--tm-space-3);
+    height: var(--tm-space-3);
 }

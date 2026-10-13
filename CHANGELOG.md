@@ -43,6 +43,75 @@
   `Func<(string Find, string Replace), Task<int>>?` — the handler must return the real replacement
   count (from `tmRichEditor.findAndReplace`) so the dialog can report it; `OnFind` was removed.
 
+- **`TmSplitterPane`'s resizer is a keyboard-operable separator driven by the new `tm-splitter.js`
+  module (no more `eval`).** The strip renders `role="separator"` with `tabindex="0"`,
+  `aria-orientation` (a horizontal splitter's separator is a vertical strip and reports
+  `vertical`), `aria-valuenow` with `aria-valuetext` (`"200 px"` — the pane is measured in the DOM
+  when its `Size` is not a plain pixel length, so the value is never missing),
+  `aria-valuemin` (always emitted; `0` without a parseable `MinSize`), `aria-valuemax` (always
+  emitted; the splitter's measured main-axis length without a parseable `MaxSize`) and a
+  localized `aria-label` (`TmSplitter_Resize`). Arrows resize by 16 px (Shift by 64 px, along the
+  splitter's axis only, inverted in RTL exactly like the pointer drag) and `Home`/`End` jump to a
+  bound — `0` and the measured splitter length when no pixel `MinSize`/`MaxSize` parses — the
+  WCAG 2.5.7 non-drag alternative. The collapse button (localized now,
+  `TmSplitter_Collapse`/`TmSplitter_Expand`) is the strip's SIBLING inside a
+  `.tm-splitter__gutter` wrapper, never a child of `role="separator"`. The drag itself
+  moved out of Blazor pointer handlers (which re-rendered on every move) and out of the `eval`'d
+  `window.TempoSplitter` shim into `tm-splitter.js` over the shared `pointer-drag.js` helper: the
+  pane follows the pointer as an inline `flex` with no re-render per move and exactly one commit
+  per gesture; Escape, pointercancel and a mid-drag detach restore the pane's exact start style
+  (the drag's `flex` shorthand would otherwise leave the authored inline `flex-basis` destroyed);
+  the horizontal delta inverts in RTL; and under `(pointer: coarse)` the strip's hit area widens
+  to a full `--tm-touch-target` (the collapse button grows to it too). There is deliberately no
+  `SizeChanged` event. Consumer-facing DOM, before/after:
+
+  ```razor
+  @* before: a bare div with Blazor pointer handlers, no role, not focusable *@
+  <div class="tm-splitter__resizer">
+      <button type="button" class="tm-splitter__collapse-btn">…</button>
+  </div>
+
+  @* after: a gutter wrapping the separator tab stop (keys resize) and, as its sibling, the
+     collapse button with its own accessible name — never inside the separator *@
+  <div class="tm-splitter__gutter">
+      <div class="tm-splitter__resizer" role="separator" tabindex="0"
+           aria-orientation="vertical" aria-valuenow="200" aria-valuetext="200 px"
+           aria-valuemin="100" aria-valuemax="800" aria-label="Resize panes"></div>
+      <button type="button" class="tm-splitter__collapse-btn" aria-label="Collapse pane">…</button>
+  </div>
+  ```
+
+  **CSP:** a `script-src` policy must allow `tm-splitter.js` next to `pointer-drag.js` (same
+  `_content/Tempo.Blazor/js/` origin, so the host-wide nonce or hash that covers `scheduler.js`
+  covers both; a per-file hash must list the module too). In exchange the splitter — and the range
+  slider below — no longer need `unsafe-eval`.
+
+- **`TmRangeSlider` drags natively: two stacked `input[type=range]`, no JS and no `eval`.** The
+  `window.TempoSlider` shim (an `eval`'d pointer gesture that leaked its window listeners, never
+  released capture and died on touch, because the container had no `touch-action`) is gone, and the
+  shipped `wwwroot/js/slider.js` static asset is **deleted** — no host page ever loaded it, and a
+  host that did would have silently degraded the eval-free component. Each thumb now drags itself
+  through CSS: the input swallows pointer events, the thumb pseudo-elements answer them, and on
+  `(pointer: coarse)` the thumbs grow to `--tm-touch-target`. Both thumbs carry localized
+  accessible names (`TmRangeSlider_Start` / `TmRangeSlider_End`, prefixed `{Label} – ` when a
+  `Label` is set), and the root gains `tm-range-slider--start-on-top` whenever the start thumb is
+  in the upper half of the range — parked on or a step from the end thumb, it would otherwise be
+  trapped beneath it — so the start thumb stays draggable. A gesture that runs past a bound is
+  clamped on the INPUT itself (the raw value renders first, then the clamped rewrite forces the
+  thumb back inside the range), and the fill uses `inset-inline-start`, so the range mirrors in
+  RTL. Behaviour change: clicking the empty track no longer jumps the nearest thumb — grab a
+  thumb, or focus it and use the arrows. DOM, before/after:
+
+  ```razor
+  @* before: unnamed thumbs; a JS gesture owned the container *@
+  <input type="range" class="tm-range-slider__input tm-range-slider__input--start"
+         min="0" max="100" />
+
+  @* after: named thumbs that drag themselves; the container has no listeners *@
+  <input type="range" class="tm-range-slider__input tm-range-slider__input--start"
+         min="0" max="100" aria-label="Price – Minimum" />
+  ```
+
 ### Changed
 
 - **Escape during a bottom-sheet drag cancels the drag first (internal change, no API surface).**

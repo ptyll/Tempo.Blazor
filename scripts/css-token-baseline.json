@@ -1,5 +1,5 @@
 {
-  "count": 5822,
+  "count": 5820,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2423,7 +2423,6 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_query-input.css|box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_query-input.css|box-shadow: 0 0 0 3px var(--tm-color-primary-100, #dbeafe);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_query-input.css|box-shadow: var(--tm-shadow-lg, 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1));": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_range-slider.css|box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_range-slider.css|box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_section.css|background: var(--tm-bg-surface-secondary, #f8fafc);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_section.css|background: var(--tm-bg-surface, #fff);": 1,

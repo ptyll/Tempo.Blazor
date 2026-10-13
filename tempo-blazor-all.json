@@ -26929,10 +26929,6 @@
           "kind": "JavaScript"
         },
         {
-          "path": "src/Tempo.Blazor/wwwroot/js/slider.js",
-          "kind": "JavaScript"
-        },
-        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-editor-shell.js",
           "kind": "JavaScript"
         },
@@ -26946,6 +26942,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-sheet.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-splitter.js",
           "kind": "JavaScript"
         },
         {
@@ -27002,6 +27002,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-sheet.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-splitter.test.mjs",
           "kind": "JavaScript"
         },
         {

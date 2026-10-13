@@ -1,6 +1,6 @@
 @namespace Tempo.Blazor.Components.Inputs
 
-<div class="tm-range-slider @AdditionalCssClass" @ref="_containerRef">
+<div class="@GetCssClass()">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label class="tm-range-slider__label">@Label</label>
@@ -14,6 +14,7 @@
                min="@Min"
                max="@Max"
                step="@Step"
+               aria-label="@StartThumbName"
                @bind-value:get="_currentStartValue"
                @bind-value:set="SetStartValueAsync"
                @bind-value:event="oninput"
@@ -23,6 +24,7 @@
                min="@Min"
                max="@Max"
                step="@Step"
+               aria-label="@EndThumbName"
                @bind-value:get="_currentEndValue"
                @bind-value:set="SetEndValueAsync"
                @bind-value:event="oninput"

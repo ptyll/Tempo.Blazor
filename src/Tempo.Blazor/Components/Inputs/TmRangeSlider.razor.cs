@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 
 namespace Tempo.Blazor.Components.Inputs;
 
@@ -39,12 +38,8 @@ public partial class TmRangeSlider : ComponentBase
     /// <summary>Additional CSS classes.</summary>
     [Parameter] public string? AdditionalCssClass { get; set; }
 
-    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
-
     private int _currentStartValue;
     private int _currentEndValue;
-    private ElementReference _containerRef;
-    private bool _jsInitialized;
 
     protected override void OnParametersSet()
     {
@@ -52,131 +47,87 @@ public partial class TmRangeSlider : ComponentBase
         _currentEndValue = EndValue.GetValueOrDefault(Max);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    internal string GetCssClass()
     {
-        if (firstRender && !Disabled)
+        var classes = new System.Text.StringBuilder("tm-range-slider");
+        // With both thumbs parked on the same value the end thumb would trap the start one; the
+        // start input lifts whenever the start thumb is in the upper half of the range, so the
+        // lower half — and the thumb parked in it — stays draggable below.
+        if (_currentStartValue > Min + (Max - Min) / 2.0)
         {
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("eval", @"
-                    if (!window.TempoSlider) {
-                        window.TempoSlider = {
-                            initRangeSlider: function(container) {
-                                const startInput = container.querySelector('.tm-range-slider__input--start');
-                                const endInput = container.querySelector('.tm-range-slider__input--end');                                
-                                if (!startInput || !endInput) {
-                                    console.error('[TmRangeSlider] inputs not found');
-                                    return;
-                                }
-                                
-                                let activeInput = null;
-                                let min = parseFloat(startInput.min);
-                                let max = parseFloat(startInput.max);
-                                let step = parseFloat(startInput.step) || 1;
-                                
-                                function getValueFromX(clientX) {
-                                    const rect = container.getBoundingClientRect();
-                                    const x = (clientX - rect.left) / rect.width;
-                                    const pct = Math.max(0, Math.min(1, x));
-                                    let val = min + pct * (max - min);
-                                    val = Math.round(val / step) * step;
-                                    return Math.max(min, Math.min(val, max));
-                                }
-                                
-                                function updateValue(input, value) {
-                                    if (parseFloat(input.value) !== value) {
-                                        input.value = value;
-                                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                                    }
-                                }
-                                
-                                function onPointerDown(e) {
-                                    if (e.button !== 0) return;
-                                    const rect = container.getBoundingClientRect();
-                                    const x = (e.clientX - rect.left) / rect.width;
-                                    const startVal = parseFloat(startInput.value);
-                                    const endVal = parseFloat(endInput.value);
-                                    const startPos = (startVal - min) / (max - min);
-                                    const endPos = (endVal - min) / (max - min);
-                                    const startCloser = Math.abs(x - startPos) < Math.abs(x - endPos);
-                                    
-                                    activeInput = startCloser ? startInput : endInput;                                    
-                                    
-                                    e.preventDefault();
-                                    
-                                    const val = getValueFromX(e.clientX);
-                                    if (activeInput === startInput) {
-                                        updateValue(startInput, Math.min(val, parseFloat(endInput.value)));
-                                    } else {
-                                        updateValue(endInput, Math.max(val, parseFloat(startInput.value)));
-                                    }
-                                }
-                                
-                                function onPointerMove(e) {
-                                    if (!activeInput) return;
-                                    const val = getValueFromX(e.clientX);
-                                    if (activeInput === startInput) {
-                                        updateValue(startInput, Math.min(val, parseFloat(endInput.value)));
-                                    } else {
-                                        updateValue(endInput, Math.max(val, parseFloat(startInput.value)));
-                                    }
-                                }
-                                
-                                function onPointerUp() {                                    
-                                    activeInput = null;
-                                }
-                                
-                                container.addEventListener('pointerdown', onPointerDown);
-                                window.addEventListener('pointermove', onPointerMove);
-                                window.addEventListener('pointerup', onPointerUp);
-                                window.addEventListener('pointercancel', onPointerUp);                                
-                            }
-                        };
-                    }
-                ");
-                await JSRuntime.InvokeVoidAsync("TempoSlider.initRangeSlider", _containerRef);
-                _jsInitialized = true;
-            }
-            catch
-            {
-                // JS interop may fail in prerendering or tests
-            }
+            classes.Append(" tm-range-slider--start-on-top");
         }
+
+        if (!string.IsNullOrEmpty(AdditionalCssClass))
+        {
+            classes.Append(' ').Append(AdditionalCssClass);
+        }
+
+        return classes.ToString();
     }
+
+    /// <summary>The start thumb's accessible name: "{Label} – Start" when a Label is set.</summary>
+    internal string StartThumbName
+        => ComposeThumbName(Loc["TmRangeSlider_Start"]);
+
+    /// <summary>The end thumb's accessible name: "{Label} – End" when a Label is set.</summary>
+    internal string EndThumbName
+        => ComposeThumbName(Loc["TmRangeSlider_End"]);
+
+    private string ComposeThumbName(string localizedRole)
+        => string.IsNullOrEmpty(Label) ? localizedRole : $"{Label} – {localizedRole}";
 
     private string GetFillStyle()
     {
         var range = Max - Min;
 
-        if (range <= 0) return "left: 0%; width: 100%;";
+        if (range <= 0) return "inset-inline-start: 0%; width: 100%;";
 
-        var left = ((double)(_currentStartValue - Min) / range * 100);
+        var start = ((double)(_currentStartValue - Min) / range * 100);
         var width = ((double)(_currentEndValue - _currentStartValue) / range * 100);
 
-        var leftStr = left.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+        var startStr = start.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
         var widthStr = width.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
 
-        return $"left: {leftStr}%; width: {widthStr}%;";
+        // The logical property mirrors the fill in RTL: the range grows from the inline start.
+        return $"inset-inline-start: {startStr}%; width: {widthStr}%;";
     }
 
     private async Task SetStartValueAsync(int value)
     {
-        value = Math.Max(Min, Math.Min(value, _currentEndValue));
-        if (_currentStartValue != value)
+        var clamped = Math.Max(Min, Math.Min(value, _currentEndValue));
+        if (clamped != value)
         {
+            // Blazor skips a bind whose bound value did not CHANGE, so without this the input would
+            // keep the raw out-of-range gesture value and the thumb would sit past the end thumb.
+            // Render the raw value first, yield so the DOM takes it, then render the clamped one —
+            // the second rewrite always lands.
             _currentStartValue = value;
-            await StartValueChanged.InvokeAsync(value);
+            StateHasChanged();
+            await Task.Yield();
+        }
+        if (_currentStartValue != clamped)
+        {
+            _currentStartValue = clamped;
+            await StartValueChanged.InvokeAsync(clamped);
             StateHasChanged();
         }
     }
 
     private async Task SetEndValueAsync(int value)
     {
-        value = Math.Max(_currentStartValue, Math.Min(value, Max));
-        if (_currentEndValue != value)
+        var clamped = Math.Max(_currentStartValue, Math.Min(value, Max));
+        if (clamped != value)
         {
+            // Same forced rewrite as the start thumb: raw first, yield, then the clamped value.
             _currentEndValue = value;
-            await EndValueChanged.InvokeAsync(value);
+            StateHasChanged();
+            await Task.Yield();
+        }
+        if (_currentEndValue != clamped)
+        {
+            _currentEndValue = clamped;
+            await EndValueChanged.InvokeAsync(clamped);
             StateHasChanged();
         }
     }

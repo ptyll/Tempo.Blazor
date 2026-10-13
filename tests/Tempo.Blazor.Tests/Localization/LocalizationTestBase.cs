@@ -886,6 +886,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmContextMenu_SheetTitle"]  = "Menu",
         ["TmSplitButton_SheetTitle"]  = "More actions",
 
+        // TmSplitter
+        ["TmSplitter_Resize"] = "Resize panes",
+        ["TmSplitter_Collapse"] = "Collapse pane",
+        ["TmSplitter_Expand"] = "Expand pane",
+
         // TmImageGallery
         ["TmImageGallery_PreviousImage"] = "Previous image",
         ["TmImageGallery_NextImage"]     = "Next image",
@@ -2485,6 +2490,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRecipientRoleEditor_RemoveRole"] = "Remove role",
         ["TmRecipientRoleEditor_AddRole"] = "Add role",
         ["TmRecipientRoleEditor_EmailRequired"] = "Email is required for this recipient.",
+
+        // TmRangeSlider
+        ["TmRangeSlider_Start"] = "Minimum",
+        ["TmRangeSlider_End"] = "Maximum",
+
         ["SigningComponents_Role_Signer"] = "Signer",
         ["SigningComponents_Role_Approver"] = "Approver",
         ["SigningComponents_InviteField_ManagerEmail"] = "Manager email",
@@ -4626,6 +4636,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmContextMenu_SheetTitle"] = "Nabídka",
         ["TmSplitButton_SheetTitle"] = "Další akce",
 
+        // TmSplitter
+        ["TmSplitter_Resize"] = "Změnit velikost panelů",
+        ["TmSplitter_Collapse"] = "Sbalit panel",
+        ["TmSplitter_Expand"] = "Rozbalit panel",
+
         // TmImageGallery
         ["TmImageGallery_PreviousImage"] = "Předchozí obrázek",
         ["TmImageGallery_NextImage"]     = "Další obrázek",
@@ -5877,6 +5892,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmRecipientRoleEditor_RemoveRole"] = "Odebrat roli",
         ["TmRecipientRoleEditor_AddRole"] = "Přidat roli",
         ["TmRecipientRoleEditor_EmailRequired"] = "E-mail je pro tohoto příjemce povinný.",
+
+        // TmRangeSlider
+        ["TmRangeSlider_Start"] = "Od",
+        ["TmRangeSlider_End"] = "Do",
+
         ["SigningComponents_Role_Signer"] = "Podepisující",
         ["SigningComponents_Role_Approver"] = "Schvalovatel",
         ["SigningComponents_InviteField_ManagerEmail"] = "E-mail manažera",
