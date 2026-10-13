@@ -45,6 +45,16 @@
 
 ### Changed
 
+- **`TmCalendarView` colours come from `--tm-calendar-view-*` tokens.** The today background
+  and ink, the event fill/border/ink and the highlighted-date dot read six new tokens
+  declared in `tokens.css` with their dark pairs in `tokens-dark.css`; the component's two
+  `[data-theme="dark"]` dark blocks and ten hex fallbacks are gone. A host that restyled the
+  dark calendar view must override the tokens instead of `[data-theme="dark"]
+  .tm-calendar-view__event`. The highlighted-date dot moves `primary-400` → `primary-500`
+  in light: 400 measured 2.54:1 (indigo 2.98:1) on the light surface, under the 3:1 floor
+  for a non-text indicator; the dark dot stays `primary-400`. The selected day now paints
+  `--tm-cal-selected-bg`/`--tm-cal-selected-fg` (same values, no white-on-primary literal).
+
 - **On a tablet layout an expanded `TmEditorShell` panel now shrinks so the canvas keeps
   `MinCanvasWidth` (C9).** Previously `MinCanvasWidth` only bounded user resizes: at 768 with the
   inspector expanded the canvas could measure ~278px. Now the expanded panel gives up the measured
@@ -483,6 +493,28 @@
   ```css
   :root, [data-theme="dark"], .tm-dark { --tm-focus-ring: var(--tm-shadow-focus); }
   ```
+
+- **The rest of the core focus rules paint `--tm-focus-ring` too.** The date picker and
+  date-range triggers, the multiselect (root, filter input, confirm button and open state),
+  the filterable dropdown filter input, the entity picker and masked text box inputs, the
+  time input, the pagination page-size and column-filter inputs, the code/markdown/rich-text
+  editors and their find/replace, image, link and video dialog inputs, the pivot field
+  editor inputs and the import-wizard map select used to paint `var(--tm-shadow-focus)` and
+  now paint `var(--tm-focus-ring)`. Focus rules that removed the outline for the ring keep a
+  transparent 2px outline (`outline: 2px solid transparent`), and so do the focus rules
+  migrated earlier (`.tm-btn`, `.tm-input`, `.tm-select`, `.tm-search-input`, the editor-shell
+  panel toggle/resizer/tab, the search clear button, the overlay-panel Done button and the
+  side-panel close button): under Windows High Contrast (`forced-colors: active`) the UA
+  forces `box-shadow: none`, and the transparent outline is then painted in the system
+  colour, so focus stays visible. The calendar heatmap cell (12px, 4px gap) cannot host the
+  4px ring — it drops the glow and keeps its 2px outline as the only indicator. The same
+  restore override applies.
+
+- **In the dark theme the in-range days of a date-range picker fill with `primary-900`.**
+  `--tm-cal-range-bg` used to keep the light `primary-100` in the dark theme, so dark day
+  text sat on a light fill at 1.1:1 (indigo 1.12:1). `primary-900` holds 9.45:1 (indigo
+  10.43:1) for `--tm-text-primary` and is already the dark convention for a primary-tinted
+  fill (`--tm-control-hover-fill`). Light is unchanged.
 
 - **A scheduler event without its own colour now fills with `--tm-scheduler-event-bg`.** In the dark
   theme that token is `primary-600`, where it used to be `primary-400`. White event text holds AA on

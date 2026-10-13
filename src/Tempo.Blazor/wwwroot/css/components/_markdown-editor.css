@@ -19,8 +19,9 @@
 }
 
 .tm-markdown-editor.tm-mde-focused {
+  outline: 2px solid transparent;
   border-color: var(--tm-color-primary);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-markdown-editor.tm-mde-disabled {

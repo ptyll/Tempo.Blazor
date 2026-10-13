@@ -27,7 +27,7 @@
   transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
 .tm-date-picker-trigger:hover:not(:disabled) { border-color: var(--tm-color-primary); }
-.tm-date-picker-trigger:focus { outline: none; border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+.tm-date-picker-trigger:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-date-picker-trigger[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 .tm-date-picker-icon { margin-left: auto; color: var(--tm-text-tertiary); }

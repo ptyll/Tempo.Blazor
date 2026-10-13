@@ -67,9 +67,9 @@
   color: var(--tm-text-primary);
 }
 .tm-filterable-dropdown-filter-input:focus {
-  outline: none;
+  outline: 2px solid transparent;
   border-color: var(--tm-color-primary);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-filterable-dropdown-loading,

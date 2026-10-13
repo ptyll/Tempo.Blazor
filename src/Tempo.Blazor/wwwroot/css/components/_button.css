@@ -27,6 +27,7 @@
   -webkit-user-select: none;
 }
 .tm-btn:focus-visible {
+  outline: 2px solid transparent;
   box-shadow: var(--tm-focus-ring);
 }
 /* The label span TmButton wraps its content in. display: contents keeps the span geometry-neutral —
@@ -154,6 +155,7 @@
   border-color: var(--tm-color-warning-hover);
 }
 .tm-btn.tm-btn-warning:focus-visible {
+  outline: 2px solid transparent;
   box-shadow: var(--tm-focus-ring);
 }
 

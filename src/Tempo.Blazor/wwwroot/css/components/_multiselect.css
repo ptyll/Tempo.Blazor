@@ -21,13 +21,13 @@
 .tm-multiselect:hover { border-color: var(--tm-color-primary); }
 .tm-multiselect:focus,
 .tm-multiselect:focus-within {
-    outline: none;
+    outline: 2px solid transparent;
     border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* ── States ──────────────────────────────────────────── */
-.tm-multiselect--open { border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+.tm-multiselect--open { border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-multiselect--error { border-color: var(--tm-color-danger) !important; }
 .tm-multiselect--disabled {
     background-color: var(--tm-color-gray-50, #f9fafb);
@@ -163,9 +163,9 @@
     color: var(--tm-text-primary);
 }
 .tm-multiselect__filter-input:focus {
-    outline: none;
+    outline: 2px solid transparent;
     border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Select All ──────────────────────────────────────── */
@@ -235,8 +235,8 @@
     background: var(--tm-color-primary-hover);
 }
 .tm-multiselect__confirm-btn:focus {
-    outline: none;
-    box-shadow: var(--tm-shadow-focus);
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 /* ── Individual option ───────────────────────────────── */

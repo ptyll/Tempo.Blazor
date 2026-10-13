@@ -32,8 +32,9 @@
 }
 
 .tm-masked-text-box__input:focus {
+  outline: 2px solid transparent;
   border-color: var(--tm-border-color-focus);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-masked-text-box__input:disabled {

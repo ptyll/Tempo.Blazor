@@ -24,8 +24,9 @@
 }
 
 .tm-code-editor__body:focus-within {
+    outline: 2px solid transparent;
     border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-code-editor--error .tm-code-editor__body {

@@ -9,8 +9,9 @@
   transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
 .tm-rte-wrapper:focus-within {
+  outline: 2px solid transparent;
   border-color: var(--tm-color-primary);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 /* .tm-rte-toolbar's bare rule used to sit here — an older copy of _editor-toolbar.css's, which is

@@ -22,8 +22,7 @@ Recorded follow-ups that are **not** part of the foundation and are **not** done
 
 | Follow-up | Owner |
 | --- | --- |
-| Migrate the remaining component rules from `--tm-shadow-focus` to `--tm-focus-ring`; move the calendar-view dark blocks and the NotionEditor nested-dark aliases into the token files | the component's own plan, one component at a time |
-| `--tm-cal-range-bg` stays light-blue in `tokens-dark.css`, so in-range days of a date-range picker fail contrast in the dark theme | date-picker plan |
+| Move the NotionEditor nested-dark aliases into the token files | Notion plan (Fáze 2 tokenizace) |
 | The dashboard grid (`.tm-dashboard-grid-container`, not the `.tm-dashboard` root) is a size container, and its observer is deliberately `IsContainer="false"` | Dashboard plan (the shrink-to-fit rule for a size container is in [responsive-conventions.md](responsive-conventions.md)) |
 | The private pointer gestures listed in [touch-interaction.md](touch-interaction.md) migrate onto `pointer-drag.js` | each owner's plan |
 | Scheduler event resize has no keyboard alternative yet; new adopters use `attachKeyboardMove` | Scheduler plan |

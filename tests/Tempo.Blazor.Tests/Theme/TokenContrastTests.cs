@@ -475,6 +475,10 @@ public sealed class TokenContrastTests
         {
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
+            "--tm-cal-range-bg",
+            "--tm-calendar-view-event-bg", "--tm-calendar-view-event-border",
+            "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
+            "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",
             "--tm-color-border-subtle", "--tm-color-primary", "--tm-color-primary-hover",
             "--tm-color-primary-soft-border", "--tm-color-primary-subtle", "--tm-color-primary-text",
             "--tm-color-surface-elevated", "--tm-color-surface-hover", "--tm-control-hover-fill",
@@ -822,6 +826,93 @@ public sealed class TokenContrastTests
             .Should().BeGreaterThanOrEqualTo(4.5,
                 "text vybraného dne na jeho výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
     }
+
+    /// <summary>
+    /// 421a41ce: the in-range fill used to stay the LIGHT <c>primary-100</c> in the dark theme, so
+    /// dark day text (<c>--tm-text-primary</c>) sat on a light fill at 1.11:1 (indigo 1.12:1).
+    /// The dark <c>--tm-cal-range-bg</c> is <c>primary-900</c> — 9.45:1 / 10.43:1, and already the
+    /// dark convention for a primary-tinted fill (<c>--tm-control-hover-fill</c>). The guard reads
+    /// the real declarations out of <c>_calendar-grid.css</c> first, so a revert to a hardcoded
+    /// fill fails on the value, not only on the ratio.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CalendarInRangeDayText_HoldsAa(bool indigo, bool dark)
+    {
+        ThemeCss.Property("_calendar-grid.css", ".tm-cal-day--in-range", "background")
+            .Should().Be("var(--tm-cal-range-bg)");
+        ThemeCss.Property("_calendar-grid.css", ".tm-cal-day", "color")
+            .Should().Be("var(--tm-text-primary)");
+
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+        ThemeCss.Contrast(ThemeCss.ResolveColour("var(--tm-text-primary)", tokens),
+                          PaintedColour("var(--tm-cal-range-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text dne v rozsahu ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    /// <summary>
+    /// 8b3c2021 §1b: <c>TmCalendarView</c> today/event pairs come from the
+    /// <c>--tm-calendar-view-*</c> tokens (light/dark pairs in the token files, not a component
+    /// dark block). Today text must hold AA on the today fill and event text on the event fill;
+    /// the highlighted-date dot is a non-text indicator held to 3:1 against the surface. The
+    /// light dot moved <c>primary-400</c> → <c>primary-500</c> because 400 measured 2.54:1
+    /// (indigo 2.98:1) against white, under the 1.4.11 floor.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CalendarViewTodayAndEvents_HoldAa(bool indigo, bool dark)
+    {
+        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-calendar-view-today-fg)", tokens),
+                ThemeCss.ResolveColour("var(--tm-calendar-view-today-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text dnešního dne na jeho výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-calendar-view-event-fg)", tokens),
+                ThemeCss.ResolveColour("var(--tm-calendar-view-event-bg)", tokens))
+            .Should().BeGreaterThanOrEqualTo(4.5,
+                "text události na její výplni ({0} {1})", indigo ? "indigo" : "default", dark ? "dark" : "light");
+
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-calendar-view-highlight)", tokens),
+                ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+            .Should().BeGreaterThanOrEqualTo(3.0,
+                "tečka zvýrazněného data je non-text indikátor a musí držet 3:1 proti povrchu ({0} {1})",
+                indigo ? "indigo" : "default", dark ? "dark" : "light");
+    }
+
+    /// <summary>
+    /// 8b3c2021 §1b: <c>_calendar-view.css</c> used to carry two component dark blocks and ten hex
+    /// fallbacks (one not even the real scale value — <c>#1e3a5f</c> vs <c>primary-900</c>'s
+    /// <c>#1e3a8a</c>). Light/dark pairs live in the token files now; the component stylesheet is
+    /// theme-agnostic. The selected day paints <c>--tm-cal-selected-fg</c>, which removes the
+    /// white-on-primary baseline entry.
+    /// </summary>
+    [Fact]
+    public void CalendarView_HasNoComponentDarkBlocksOrHexFallbacks()
+    {
+        var css = ThemeCss.ComponentCss("_calendar-view.css");
+
+        css.Should().NotContain("data-theme", "the component has no dark block of its own anymore");
+        css.Should().NotContain(".tm-dark", "the component has no dark block of its own anymore");
+        Regex.IsMatch(css, @"#[0-9a-fA-F]{3,8}\b", RegexOptions.None, TimeSpan.FromSeconds(5))
+            .Should().BeFalse("hex fallbacks moved into the token files");
+
+        ThemeCss.Property(
+                "_calendar-view.css", ".tm-calendar-view__day-cell .tm-cal-day--selected", "color")
+            .Should().Be("var(--tm-cal-selected-fg)");
+    }
+
 
     [Theory]
     [InlineData(false, false)]

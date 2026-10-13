@@ -90,7 +90,7 @@
 }
 
 .tm-editor-shell__panel-toggle:focus-visible {
-    outline: none;
+    outline: 2px solid transparent;
     box-shadow: inset var(--tm-focus-ring);
 }
 
@@ -114,7 +114,7 @@
 }
 
 .tm-editor-shell__resizer:focus-visible {
-    outline: none;
+    outline: 2px solid transparent;
     background: var(--tm-color-primary-subtle);
     box-shadow: inset var(--tm-focus-ring);
 }
@@ -324,7 +324,7 @@
 }
 
 .tm-editor-shell__tab:focus-visible {
-    outline: none;
+    outline: 2px solid transparent;
     box-shadow: inset var(--tm-focus-ring);
 }
 

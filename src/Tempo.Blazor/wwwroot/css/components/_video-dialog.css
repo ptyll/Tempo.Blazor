@@ -19,9 +19,9 @@
 
 .tm-rte-video-url-input:focus,
 .tm-rte-video-title-input:focus {
-  outline: none;
+  outline: 2px solid transparent;
   border-color: var(--tm-color-primary);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 .tm-rte-help-text {

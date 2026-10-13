@@ -594,9 +594,9 @@
   min-width: 4rem;
 }
 .tm-pagination-page-size:focus {
-  outline: none;
+  outline: 2px solid transparent;
   border-color: var(--tm-color-primary);
-  box-shadow: var(--tm-shadow-focus);
+  box-shadow: var(--tm-focus-ring);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -838,7 +838,7 @@
   color: var(--tm-text-primary);
   background: var(--tm-bg-surface);
 }
-.tm-col-filter-input:focus { outline: none; border-color: var(--tm-color-primary); box-shadow: var(--tm-shadow-focus); }
+.tm-col-filter-input:focus { outline: 2px solid transparent; border-color: var(--tm-color-primary); box-shadow: var(--tm-focus-ring); }
 .tm-col-filter-clear {
   position: absolute;
   right: var(--tm-space-1);
