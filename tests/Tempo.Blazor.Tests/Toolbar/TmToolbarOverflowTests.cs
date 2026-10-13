@@ -27,7 +27,9 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         bool Disabled = false,
         ButtonVariant Variant = ButtonVariant.Ghost,
         EventCallback OnClick = default,
-        string? Icon = "plus");
+        string? Icon = "plus",
+        bool? Pressed = null,
+        bool PressedMixed = false);
 
     private BunitJSModuleInterop SetupModule()
     {
@@ -49,6 +51,8 @@ public class TmToolbarOverflowTests : LocalizationTestBase
             builder.AddComponentParameter(3, nameof(TmToolbarButton.Disabled), spec.Disabled);
             builder.AddComponentParameter(4, nameof(TmToolbarButton.Variant), spec.Variant);
             builder.AddComponentParameter(5, nameof(TmToolbarButton.OnClick), spec.OnClick);
+            builder.AddComponentParameter(6, nameof(TmToolbarButton.Pressed), spec.Pressed);
+            builder.AddComponentParameter(7, nameof(TmToolbarButton.PressedMixed), spec.PressedMixed);
             builder.SetKey(spec.Text);
             builder.CloseComponent();
         }
@@ -494,5 +498,55 @@ public class TmToolbarOverflowTests : LocalizationTestBase
 
         OpenMenu(cut);
         MenuLabels(cut).Should().Equal("F", "B", "L");
+    }
+
+    // ── C2: a pressed button keeps its state in the More menu ────────────────────────────────────
+
+    private static IReadOnlyList<string> MenuCheckboxLabels(IRenderedComponent<TmToolbar> cut)
+        => cut.FindAll("[role='menu'] [role='menuitemcheckbox']").Select(i => i.TextContent.Trim()).ToList();
+
+    [Theory]
+    [InlineData(true, false, "true")]
+    [InlineData(false, false, "false")]
+    [InlineData(false, true, "mixed")]
+    public void PressedButton_InMore_IsMenuItemCheckbox_WithAriaChecked(bool pressed, bool mixed, string expected)
+    {
+        SetupModule();
+        var cut = RenderToolbar(Buttons(
+            new Spec("Alpha"),
+            new Spec("Pan", ToolbarButtonPriority.OverflowOnly, Pressed: pressed, PressedMixed: mixed)));
+        cut.WaitForAssertion(() => cut.FindAll("button.tm-toolbar-more").Should().HaveCount(1));
+
+        OpenMenu(cut);
+
+        var boxes = cut.FindAll("[role='menu'] [role='menuitemcheckbox']");
+        boxes.Should().ContainSingle("the collapsed toggle is a menuitemcheckbox, not a menuitem");
+        boxes[0].TextContent.Trim().Should().Be("Pan");
+        boxes[0].GetAttribute("aria-checked").Should().Be(expected);
+        // and the toggle is no longer a plain menuitem: the only menu entry is the checkbox
+        // (Alpha fits on the bar at the unmeasured budget and never enters the menu).
+        MenuLabels(cut).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TogglingPressed_WhileCollapsed_RefreshesTheMenuEntry()
+    {
+        // The host owns the state: flipping Pressed while the button is collapsed must reach the open
+        // menu through the toolbar's ButtonChanged snapshot (Pressed/PressedMixed are part of it).
+        SetupModule();
+        var pressed = true;
+        RenderFragment content = builder => builder.AddContent(0, Buttons(
+            new Spec("Alpha"),
+            new Spec("Pan", ToolbarButtonPriority.Secondary, Pressed: pressed)));
+        var cut = RenderToolbar(content);
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(2));
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0));
+        OpenMenu(cut);
+        cut.Find("[role='menu'] [role='menuitemcheckbox']").GetAttribute("aria-checked").Should().Be("true");
+
+        pressed = false;
+        cut.Render(p => p.Add(c => c.ChildContent, content));
+
+        cut.Find("[role='menu'] [role='menuitemcheckbox']").GetAttribute("aria-checked").Should().Be("false");
     }
 }

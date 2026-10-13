@@ -1671,6 +1671,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("labelPosition", "Label position", PropType.Enum, "inline", cat: "Appearance",
                     opts: ["inline","below","hidden"]),
                 P("disabled", "Disabled", PropType.Bool,   false,    cat: "Behavior"),
+                // F12/C2: a toggle (aria-pressed) — the wireframe draws the pressed look.
+                P("pressed",  "Pressed (toggle)", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 

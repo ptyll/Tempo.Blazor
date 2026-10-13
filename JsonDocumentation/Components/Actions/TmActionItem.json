@@ -43,6 +43,19 @@
       "isRequired": false,
       "default": "false",
       "description": "Marks a destructive action. The overflow menu tints the entry with the danger colour so a destructive item keeps its meaning when it leaves the surface."
+    },
+    {
+      "name": "Checked",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "The action's on/off state when it is a toggle. null (default) is a plain action — a menuitem in the \"More\" menu. true/false make it a menuitemcheckbox with aria-checked and a check mark in the menu, and add aria-pressed to its tile on the mobile action bar. Activating it still runs OnClick (and closes the menu like every entry); the host flips the state in the callback.",
+      "example": "new() { Id = \"grid\", Label = \"Grid\", Checked = _gridOn,\n         OnClick = EventCallback.Factory.Create(this, () => _gridOn = !_gridOn) }"
+    },    {
+      "name": "CheckedMixed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders a toggle whose Checked is false as partially on (aria-checked / aria-pressed = \"mixed\"). Ignored when Checked is null or true."
     },    {
       "name": "Disabled",
       "type": "bool",

@@ -220,6 +220,10 @@
                 Icon = button.Icon,
                 Disabled = button.Disabled,
                 Danger = button.Variant == Tempo.Blazor.Components.Buttons.ButtonVariant.Danger,
+                // C2: a pressed toggle keeps its state in the menu — the entry becomes a
+                // menuitemcheckbox with aria-checked (null Pressed stays a plain menuitem).
+                Checked = button.Pressed,
+                CheckedMixed = button.PressedMixed,
                 OnClick = EventCallback.Factory.Create(this, () => target.ClickAsync()),
             });
         }
@@ -235,9 +239,10 @@
         builder.AddComponentParameter(8, nameof(ActionOverflowMenu.MenuClass), "tm-toolbar-more__menu");
         builder.AddComponentParameter(9, nameof(ActionOverflowMenu.ItemClass), "tm-toolbar-more__item");
         builder.AddComponentParameter(10, nameof(ActionOverflowMenu.LabelClass), "tm-toolbar-more__label");
+        builder.AddComponentParameter(11, nameof(ActionOverflowMenu.CheckClass), "tm-toolbar-more__check");
         // The viewport scope (cascaded from TmLayoutObserver / the app shell) decides sheet vs popover
         // inside TmOverlayPanel - Auto presents as a bottom sheet on a phone-sized viewport.
-        builder.AddComponentParameter(11, nameof(ActionOverflowMenu.MobilePresentation), OverflowPresentation);
+        builder.AddComponentParameter(12, nameof(ActionOverflowMenu.MobilePresentation), OverflowPresentation);
         builder.CloseComponent();
     };
 

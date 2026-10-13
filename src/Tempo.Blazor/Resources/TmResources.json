@@ -98,6 +98,8 @@
   "TmToolbarDemo_Find": "Find",
   "TmToolbarDemo_RibbonTitle": "Ribbon with labels below the icons",
   "TmToolbarDemo_RibbonDescription": "Icon over label, groups separated by dividers - the tablet layout of the diagram editor mockup.",
+  "TmToolbarDemo_PressedTitle": "Toggle buttons (pressed state)",
+  "TmToolbarDemo_PressedDescription": "A button with Pressed renders aria-pressed and the pressed look; collapsed into the More menu it is a checkable entry (menuitemcheckbox) with the same state. Activating it closes the menu and toggles.",
   "TmToolbarDemo_LabelsTitle": "Labels: Auto",
   "TmToolbarDemo_LabelsDescription": "Auto shows button labels and drops them when the toolbar itself is narrower than 640 px (the text stays the accessible name).",
   "TmToolbarDemo_LabelsAuto": "Toolbar with automatic labels",

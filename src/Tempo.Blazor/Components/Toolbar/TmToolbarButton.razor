@@ -20,6 +20,7 @@ else
             class="tm-toolbar-btn tm-toolbar-btn--@Variant.ToString().ToLowerInvariant() @ModifierClasses"
             title="@EffectiveTitle"
             aria-label="@EffectiveAriaLabel"
+            aria-pressed="@AriaPressed"
             disabled="@Disabled"
             inert="@Collapsed"
             aria-hidden="@(Collapsed ? "true" : null)"
@@ -41,7 +42,7 @@ else
 
 @code {
     private TmToolbar? _registeredWith;
-    private (string?, string?, string?, ToolbarButtonPriority, bool, ButtonVariant, ToolbarLabelPosition)? _snapshot;
+    private (string?, string?, string?, ToolbarButtonPriority, bool, ButtonVariant, ToolbarLabelPosition, bool?, bool)? _snapshot;
 
     /// <summary>The toolbar this button sits in; null when used on its own.</summary>
     [CascadingParameter] private TmToolbar? Toolbar { get; set; }
@@ -75,6 +76,24 @@ else
     /// text then stays the accessible name). Only an icon button can hide its label.
     /// </summary>
     [Parameter] public ToolbarLabelPosition LabelPosition { get; set; }
+
+    /// <summary>
+    /// Makes the button a toggle: <see langword="null"/> (default) is a plain button with no
+    /// <c>aria-pressed</c>; <see langword="true"/>/<see langword="false"/> render <c>aria-pressed</c>
+    /// and the pressed look, and when the button sits in a <see cref="TmToolbar"/>'s "More" menu it
+    /// becomes a <c>menuitemcheckbox</c> with the same state (<c>aria-checked</c>). The host owns the
+    /// state: flip it in <see cref="OnClick"/>. A host-splatted <c>aria-pressed</c> (AdditionalAttributes)
+    /// still wins on the bar button.
+    /// </summary>
+    [Parameter] public bool? Pressed { get; set; }
+
+    /// <summary>
+    /// Renders a toggle whose <see cref="Pressed"/> is <see langword="false"/> as partially on —
+    /// <c>aria-pressed="mixed"</c> on the bar, <c>aria-checked="mixed"</c> in "More" (e.g. Bold over a
+    /// partly bold selection). Ignored when <see cref="Pressed"/> is <see langword="null"/> or
+    /// <see langword="true"/>.
+    /// </summary>
+    [Parameter] public bool PressedMixed { get; set; }
 
     /// <summary>Additional CSS class for the button element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -119,11 +138,17 @@ else
 
     private string? EffectiveTitle => !string.IsNullOrEmpty(Tooltip) ? Tooltip : HasIcon && !ShowText ? Text : null;
 
+    /// <summary>null (a plain button), "true", "false" or "mixed" — a host splat wins (@attributes comes last).</summary>
+    private string? AriaPressed => Pressed is null
+        ? null
+        : Pressed == true ? "true" : PressedMixed ? "mixed" : "false";
+
     protected override void OnParametersSet()
     {
         // Register once, with the toolbar the cascade handed us; tell it about a change only when
         // something it partitions or renders in the menu changed. OnClick is deliberately NOT part of
-        // the snapshot (a fresh lambda per parent render would loop) - the menu reads it live.
+        // the snapshot (a fresh lambda per parent render would loop) - the menu reads it live. Pressed
+        // IS: a flipped toggle must re-render its "More" menu entry (aria-checked).
         if (Toolbar is not null && !ReferenceEquals(_registeredWith, Toolbar))
         {
             _registeredWith?.Unregister(this);
@@ -141,8 +166,8 @@ else
         }
     }
 
-    private (string?, string?, string?, ToolbarButtonPriority, bool, ButtonVariant, ToolbarLabelPosition) Snapshot()
-        => (Text, Icon, Tooltip, Priority, Disabled, Variant, LabelPosition);
+    private (string?, string?, string?, ToolbarButtonPriority, bool, ButtonVariant, ToolbarLabelPosition, bool?, bool) Snapshot()
+        => (Text, Icon, Tooltip, Priority, Disabled, Variant, LabelPosition, Pressed, PressedMixed);
 
     /// <summary>Re-render after the toolbar's partition or labels changed.</summary>
     internal void Refresh() => _ = InvokeAsync(StateHasChanged);

@@ -98,6 +98,8 @@
   "TmToolbarDemo_Find": "Hledat",
   "TmToolbarDemo_RibbonTitle": "Pás s popisky pod ikonami",
   "TmToolbarDemo_RibbonDescription": "Ikona nad popiskem, skupiny oddělené děliči – tabletové rozvržení z návrhu editoru diagramů.",
+  "TmToolbarDemo_PressedTitle": "Přepínací tlačítka (stisknutý stav)",
+  "TmToolbarDemo_PressedDescription": "Tlačítko s Pressed vykresluje aria-pressed a stisknutý vzhled; sbalené v menu Více je zaškrtávací položkou (menuitemcheckbox) se stejným stavem. Jeho aktivace menu zavře a přepne.",
   "TmToolbarDemo_LabelsTitle": "Popisky: Auto",
   "TmToolbarDemo_LabelsDescription": "Auto zobrazí popisky tlačítek a skryje je, když je samotná lišta užší než 640 px (text zůstává přístupným názvem).",
   "TmToolbarDemo_LabelsAuto": "Lišta s automatickými popisky",

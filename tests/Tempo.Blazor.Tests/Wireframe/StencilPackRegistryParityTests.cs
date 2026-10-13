@@ -190,6 +190,35 @@ public class StencilPackRegistryParityTests
     }
 
     [Fact]
+    public void ToolbarButtonSchema_ExposesPressedToggle()
+    {
+        // F12/C2: the toolbar button has a pressed (toggle) state, so the wireframe schema must offer
+        // it. The built-in pack takes its props from this schema, so the two cannot drift.
+        var schema = new BuiltInComponentSchemas()
+            .GetSchemas()
+            .Single(candidate => candidate.Type == "TmToolbarButton");
+
+        schema.Props.Should().ContainSingle(prop =>
+            prop.Name == "pressed" &&
+            prop.Type == PropType.Bool &&
+            Equals(prop.Default, false) &&
+            prop.Category == "Behavior");
+    }
+
+    [Fact]
+    public void ToolbarButtonPack_RendersThePressedStateAsAHighlight()
+    {
+        // Parity in the render: a pressed toolbar button draws highlighted (the subtle primary fill
+        // with the primary border), unpressed keeps the plain outline.
+        var entry = BuiltInStencilPackProvider.ReadPackJson()
+            .Split('\n')
+            .Single(line => line.Contains("\"type\": \"TmToolbarButton\""));
+
+        entry.Should().Contain("pressed ? token(\\\"color.primary.subtle\\\"");
+        entry.Should().Contain("pressed ? token(\\\"color.primary.border\\\"");
+    }
+
+    [Fact]
     public void BuiltInPack_MarksKnownLayoutContainers()
     {
         var pack = StencilPackSerializer.Deserialize(BuiltInStencilPackProvider.ReadPackJson());

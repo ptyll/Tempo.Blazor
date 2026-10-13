@@ -205,19 +205,27 @@ else
             builder.AddAttribute(seq + 4, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
             builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
             builder.AddAttribute(seq + 5, "onclick", EventCallback.Factory.Create(this, () => InvokeItemAsync(item)));
+            // C2: a checkable action's tile is a toggle button on the bar too. Attributes must come
+            // BEFORE the tile's children (right after the other attribute frames), so the children
+            // shifted one slot (+7..+14) and +6 holds aria-pressed inside the 16-slot stride.
+            if (item.Checked is not null)
+            {
+                builder.AddAttribute(seq + 6, "aria-pressed", item.Checked == true ? "true" : item.CheckedMixed ? "mixed" : "false");
+            }
+
             if (!string.IsNullOrEmpty(item.Icon))
             {
-                builder.OpenElement(seq + 6, "span");
-                builder.AddAttribute(seq + 7, "class", "tm-mobile-action-bar__icon");
-                builder.OpenComponent<TmIcon>(seq + 8);
-                builder.AddAttribute(seq + 9, "Name", item.Icon);
-                builder.AddAttribute(seq + 10, "Size", IconSize.Sm);
+                builder.OpenElement(seq + 7, "span");
+                builder.AddAttribute(seq + 8, "class", "tm-mobile-action-bar__icon");
+                builder.OpenComponent<TmIcon>(seq + 9);
+                builder.AddAttribute(seq + 10, "Name", item.Icon);
+                builder.AddAttribute(seq + 11, "Size", IconSize.Sm);
                 builder.CloseComponent();
                 builder.CloseElement();
             }
-            builder.OpenElement(seq + 11, "span");
-            builder.AddAttribute(seq + 12, "class", "tm-mobile-action-bar__label-text");
-            builder.AddContent(seq + 13, item.Label);
+            builder.OpenElement(seq + 12, "span");
+            builder.AddAttribute(seq + 13, "class", "tm-mobile-action-bar__label-text");
+            builder.AddContent(seq + 14, item.Label);
             builder.CloseElement();
             builder.CloseElement();
         }
@@ -242,8 +250,9 @@ else
             builder.AddComponentParameter(6, nameof(ActionOverflowMenu.MenuClass), "tm-mobile-action-bar__menu");
             builder.AddComponentParameter(7, nameof(ActionOverflowMenu.ItemClass), "tm-mobile-action-bar__menu-item");
             builder.AddComponentParameter(8, nameof(ActionOverflowMenu.LabelClass), "tm-mobile-action-bar__menu-label");
-            builder.AddComponentParameter(9, nameof(ActionOverflowMenu.InitialMode), context.Resolved);
-            builder.AddComponentReferenceCapture(10, value => _moreMenu = (ActionOverflowMenu)value);
+            builder.AddComponentParameter(9, nameof(ActionOverflowMenu.CheckClass), "tm-mobile-action-bar__menu-check");
+            builder.AddComponentParameter(10, nameof(ActionOverflowMenu.InitialMode), context.Resolved);
+            builder.AddComponentReferenceCapture(11, value => _moreMenu = (ActionOverflowMenu)value);
             builder.CloseComponent();
             builder.CloseRegion();
         }

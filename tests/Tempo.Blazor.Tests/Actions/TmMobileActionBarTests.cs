@@ -883,6 +883,33 @@ public class TmMobileActionBarTests : LocalizationTestBase
         cut.Find(".tm-mobile-action-bar__more").GetAttribute("aria-expanded").Should().Be("true");
     }
 
+    // ── C2: a checkable item's tile carries aria-pressed ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(true, false, "true")]
+    [InlineData(false, true, "mixed")]
+    [InlineData(false, false, "false")]
+    public void CheckedItem_TileCarriesAriaPressed(bool state, bool mixed, string expected)
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.MaxVisible, 3)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                new() { Id = "tool", Label = "Tool", Checked = state, CheckedMixed = mixed },
+                Action("Plain"),
+                Action("Another"),
+            }));
+
+        var tile = cut.FindAll(".tm-mobile-action-bar__action")
+            .Single(b => b.GetAttribute("data-action-id") == "tool");
+        tile.GetAttribute("aria-pressed").Should().Be(expected);
+        // and a plain action still carries no pressed state at all.
+        cut.FindAll(".tm-mobile-action-bar__action")
+            .Single(b => b.GetAttribute("data-action-id") == "Plain")
+            .HasAttribute("aria-pressed").Should().BeFalse();
+    }
+
     private static string BarCss(bool stripComments = false)
     {
         var css = File.ReadAllText(RepoPath(

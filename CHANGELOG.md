@@ -45,6 +45,11 @@
 
 ### Changed
 
+- **A `TmToolbarButton` with `aria-pressed="true"` (including one splatted by a host through
+  `AdditionalAttributes`) now paints the pressed look** — subtle primary fill, primary ink and an
+  inset primary ring. Previously the attribute was announced by assistive technology but painted
+  nothing (F12/C2). Existing toolbars without `aria-pressed` are unchanged.
+
 - **Editor caret/selection survives the rich-editor dialogs.** Opening a link/image/table/video/
   find dialog bookmarks the caret and replays it when the dialog closes — before the insertion on
   confirm, alone on cancel. The bookmark in `richEditor.js` is a NON-MUTATING Range record now (a
@@ -642,6 +647,41 @@
   unchanged (same visual).
 
 ### Added
+
+- **Toolbar and action-surface toggle state (F12/C2): `TmToolbarButton.Pressed` and
+  `TmActionItem.Checked`.** A toolbar button can now be a toggle: `Pressed` (`bool?`, default
+  `null` = a plain button with no `aria-pressed`; `true`/`false` render `aria-pressed` and the
+  pressed look — subtle primary fill, primary ink and an inset primary ring that clears 3:1 in
+  both themes) and `PressedMixed` (`bool`, renders `aria-pressed="mixed"` for a toggle whose
+  state is `false` — e.g. Bold over a partly bold selection; mixed paints ring-only, a
+  transparent background with the same inset ring, so a partly-on control reads apart from a
+  pressed one — and hover restyles neither state like a plain control). Both states survive
+  forced colors (Windows High Contrast): pressed paints the `SelectedItem` fill with
+  `SelectedItemText` ink, mixed keeps the ring-only distinction (`Canvas` background, the
+  `SelectedItem` ring). The host owns the state and flips
+  it in `OnClick`. When a pressed button collapses into the toolbar's "More" menu, its entry is a
+  `role="menuitemcheckbox"` with the matching `aria-checked` and a check-mark slot (Check when
+  on, Minus when mixed, empty when off) instead of a plain `menuitem` — activating it still
+  closes the menu (the close-before-invoke contract) and toggles. In a menu that offers
+  checkable entries, plain entries are indented by the check-mark slot, so every label starts at
+  the same left edge. The same model is exposed by
+  the shared action model: `TmActionItem.Checked` (`bool?`) and `CheckedMixed` (`bool`) render
+  `TmMobileActionBar` tiles with `aria-pressed` and checkable entries in its "More" menu. Radio
+  modes (`menuitemradio`) are deliberately not part of this. The sheet's initial-focus selector
+  now names `menuitemcheckbox`/`menuitemradio` beside `menuitem`/`option`, so a sheet whose
+  first entry is checkable focuses the entry, not the header Done. The wireframe
+  `TmToolbarButton` stencil gained a `pressed` prop that draws the highlighted button.
+
+  ```razor
+  @* before: a host could only splat the attribute — the bar button announced it,
+     the "More" menu entry stayed a plain menuitem *@
+  <TmToolbarButton Icon="@IconNames.Hand" Text="Pan"
+                   aria-pressed="@(_panPressed ? "true" : "false")" />
+
+  @* after: the parameter drives the bar button AND the "More" menu entry *@
+  <TmToolbarButton Icon="@IconNames.Hand" Text="Pan"
+                   Pressed="@_panPressed" OnClick="@(() => _panPressed = !_panPressed)" />
+  ```
 
 - **`TmContextMenu`, `TmSplitButton` and `TmNotificationBell` opt into the shared mobile bottom
   sheet (F11).** All three render `TmOverlayPanel` and kept the anchored popover at every width;

@@ -952,4 +952,97 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         Assert.AreNotEqual("BODY", activeTag, "the menu closed with the trigger gone: focus lands on the toolbar's last roving control");
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => !!document.activeElement?.closest('.tm-toolbar')"), "and stays inside the toolbar");
     }
+
+    // ── F12/C2: a pressed tool keeps its state in More ───────────────────────────────────────────
+
+    private ILocator PressedPanEntry(IPage page)
+        => page.Locator("[role='menu'] [role='menuitemcheckbox']", new PageLocatorOptions { HasTextString = "Pan" });
+
+    [TestMethod]
+    public async Task C2_PressedToolInMore_IsACheckedEntry_AndSpaceTogglesIt_AndClosesTheMenu()
+    {
+        // 1440 desktop, popover: the Pan tool is OverflowOnly+Pressed=true, so the 300px demo bar
+        // keeps it in the More menu at every width — deterministic, no resizing needed.
+        var page = await OpenAsync(1440, 900, touch: false);
+        await SettleAsync(page, "toolbar-pressed");
+        var bar = Bar(page, "toolbar-pressed");
+
+        // The toggle that stays on the bar announces its state too (Select starts unpressed).
+        var select = bar.Locator("button.tm-toolbar-btn", new LocatorLocatorOptions { HasTextString = "Select" });
+        Assert.AreEqual("false", await select.GetAttributeAsync("aria-pressed"), "the on-bar toggle carries aria-pressed");
+        await select.ClickAsync();
+        Assert.AreEqual("true", await select.GetAttributeAsync("aria-pressed"), "clicking the host toggle flips it");
+        await ShootAsync(page, bar, "toolbar-1440-pressed-bar");
+
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await trigger.ClickAsync();
+        var entry = PressedPanEntry(page);
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("menuitemcheckbox", await entry.GetAttributeAsync("role"), "collapsed: the toggle is a menuitemcheckbox");
+        Assert.AreEqual("true", await entry.GetAttributeAsync("aria-checked"), "the collapsed pressed tool keeps its state");
+        Assert.IsNull(await entry.GetAttributeAsync("aria-pressed"), "a menu entry announces checked, not pressed");
+
+        // A REAL Space press activates the focused checkbox: the menu CLOSES (close-before-invoke) and the state flips.
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitemcheckbox]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("Pan", await page.EvaluateAsync<string>("() => document.activeElement.closest('[role=menuitemcheckbox]').textContent.trim()"), "initial focus is on the first entry");
+
+        // C2 review: in a menu that offers checkable entries the plain entries are indented by the
+        // check-mark slot, so checkbox and plain labels share the same left x (±1px rounding).
+        var labelLefts = await page.EvaluateAsync<double[]>("() => Array.from(document.querySelectorAll(\"[role='menu'] .tm-toolbar-more__label\")).map(l => l.getBoundingClientRect().left)");
+        Assert.IsTrue(labelLefts.Length > 0, "the open menu rendered labelled entries");
+        Assert.IsTrue(labelLefts.Max() - labelLefts.Min() <= 1,
+            $"checkbox and plain labels share the same left x ±1px (measured {labelLefts.Min():F2}..{labelLefts.Max():F2})");
+
+        await page.Keyboard.PressAsync("Space");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        await trigger.ClickAsync();
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("false", await entry.GetAttributeAsync("aria-checked"), "Space toggled the collapsed tool");
+        // The reopen races the initial focus move: Enter must land ON the checkbox, so wait for the
+        // focus before pressing (same wait as after the first open above).
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitemcheckbox]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+
+        await trigger.ClickAsync();
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("true", await entry.GetAttributeAsync("aria-checked"), "Enter toggled it back on");
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator("[role='menu']")).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    public async Task C2_PressedToolInThePhoneSheet_IsACheckedEntry_AndTapTogglesIt()
+    {
+        // 390 phone: the More menu is the shared bottom sheet; the checkable entry behaves the same
+        // and the sheet's initial focus lands ON the checkbox (the old sheet selector knew only
+        // menuitem/option).
+        var page = await OpenAsync(390, 844, touch: true);
+        await SettleAsync(page, "toolbar-pressed");
+        var bar = Bar(page, "toolbar-pressed");
+
+        var trigger = bar.Locator("button.tm-toolbar-more");
+        await trigger.TapAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet");
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        var entry = PressedPanEntry(page);
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("true", await entry.GetAttributeAsync("aria-checked"));
+        await page.WaitForFunctionAsync("() => !!document.activeElement?.closest('[role=menuitemcheckbox]')", null, new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        var path = Path.Combine(ShotDir, "toolbar-390-pressed-sheet.png");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = path, FullPage = false });
+        Assert.IsTrue(File.Exists(path));
+        Assert.IsTrue(await page.EvaluateAsync<bool>("() => matchMedia('(pointer: coarse)').matches"), "touch emulation still on");
+
+        await entry.TapAsync();
+        await Assertions.Expect(sheet).ToHaveCountAsync(0);
+        await trigger.TapAsync();
+        await Assertions.Expect(entry).ToBeVisibleAsync();
+        Assert.AreEqual("false", await entry.GetAttributeAsync("aria-checked"), "the tap toggled the collapsed tool");
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(page.Locator(".tm-overlay-panel-sheet")).ToHaveCountAsync(0);
+    }
 }

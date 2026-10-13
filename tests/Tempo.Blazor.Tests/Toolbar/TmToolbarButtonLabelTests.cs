@@ -237,6 +237,25 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
         RuleBody(css, $".{itemClass}--danger").Should().NotBeNull($"the .{itemClass}--danger modifier needs a rule")
             .And.Contain("color: var(--tm-color-danger)");
     }
+
+    [Fact]
+    public void MenusWithCheckableEntries_IndentPlainEntries_ByTheCheckMarkSlot()
+    {
+        // C2 review: in a menu that offers menuitemcheckbox entries, a plain menuitem must be indented
+        // by the check-mark slot (the 1rem slot plus the item gap, on top of the base space-3 padding),
+        // so checkbox and plain labels share the same left x. bUnit cannot compute styles — the real
+        // geometry is asserted in ToolbarOverflowE2ETests; this guard keeps the rule in the sheets.
+        var indent = "padding-inline-start: calc(var(--tm-space-3) + 1rem + var(--tm-space-2))";
+
+        RuleBody(ToolbarCss(), ".tm-toolbar-more__menu:has([role=\"menuitemcheckbox\"]) .tm-toolbar-more__item[role=\"menuitem\"]")
+            .Should().NotBeNull("the toolbar's More menu needs the checkbox-aware indent").And.Contain(indent);
+        RuleBody(BarCss(), ".tm-mobile-action-bar__menu:has([role=\"menuitemcheckbox\"]) .tm-mobile-action-bar__menu-item[role=\"menuitem\"]")
+            .Should().NotBeNull("the action bar's More menu needs the checkbox-aware indent").And.Contain(indent);
+    }
+
+    private static string BarCss()
+        => File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_mobile-action-bar.css"));
+
     [Fact]
     public void DividerMarkedRedundantByTheMeasurement_IsHiddenByVisibility_NeverDisplay()
     {

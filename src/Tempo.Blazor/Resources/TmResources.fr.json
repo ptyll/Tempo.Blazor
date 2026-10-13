@@ -98,6 +98,8 @@
   "TmToolbarDemo_Find": "Rechercher",
   "TmToolbarDemo_RibbonTitle": "Ruban avec libellés sous les icônes",
   "TmToolbarDemo_RibbonDescription": "Icône au-dessus du libellé, groupes séparés par des diviseurs - la disposition tablette de la maquette de l'éditeur de diagrammes.",
+  "TmToolbarDemo_PressedTitle": "Boutons à bascule (état enfoncé)",
+  "TmToolbarDemo_PressedDescription": "Un bouton avec Pressed affiche aria-pressed et l'apparence enfoncée ; replié dans le menu Plus, c'est une case à cocher (menuitemcheckbox) avec le même état. L'activer ferme le menu et bascule l'état.",
   "TmToolbarDemo_LabelsTitle": "Libellés : Auto",
   "TmToolbarDemo_LabelsDescription": "Auto affiche les libellés et les masque quand la barre elle-même est plus étroite que 640 px (le texte reste le nom accessible).",
   "TmToolbarDemo_LabelsAuto": "Barre avec libellés automatiques",

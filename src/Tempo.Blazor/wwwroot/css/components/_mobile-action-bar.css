@@ -105,6 +105,17 @@
   .tm-mobile-action-bar__bar .tm-mobile-action-bar__more:hover:not(:disabled) {
     background: var(--tm-bg-muted);
   }
+
+  /* C2: :hover must not restyle a pressed tile like a plain one — the pressed state survives the
+     pointer (mixed keeps its ring-only paint). */
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__action[aria-pressed="true"]:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+  }
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__action[aria-pressed="mixed"]:hover:not(:disabled) {
+    background: transparent;
+    color: inherit;
+  }
 }
 
 .tm-mobile-action-bar__bar .tm-mobile-action-bar__action:disabled,
@@ -198,3 +209,51 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* C2: the check-mark slot of a checkable entry (menuitemcheckbox) — mirrors the toolbar's. */
+.tm-mobile-action-bar__menu-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* C2: in a menu that offers checkable entries, the plain ones are indented by the check-mark slot
+   (the slot width plus the item gap, on top of the base padding) so every label starts at the same x. */
+.tm-mobile-action-bar__menu:has([role="menuitemcheckbox"]) .tm-mobile-action-bar__menu-item[role="menuitem"] {
+  padding-inline-start: calc(var(--tm-space-3) + 1rem + var(--tm-space-2));
+}
+
+/* C2: a checked action's tile is a toggle on the bar (aria-pressed) — the same state paint as the
+   toolbar button: subtle fill, primary ink, inset primary ring as the ≥3:1 state boundary. Mixed
+   stays ring-only (transparent background, inherited ink) so a partly-on tile reads apart from a
+   pressed one. */
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action[aria-pressed="true"] {
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  box-shadow: inset 0 0 0 2px var(--tm-color-primary-500);
+}
+.tm-mobile-action-bar__bar .tm-mobile-action-bar__action[aria-pressed="mixed"] {
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 0 0 2px var(--tm-color-primary-500);
+}
+
+/* C2: forced colors (Windows High Contrast) — mirrors the toolbar button: pressed paints the
+   SelectedItem fill with SelectedItemText ink, mixed keeps its ring-only distinction (Canvas
+   background, the 2px SelectedItem ring). */
+@media (forced-colors: active) {
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__action[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: SelectedItem;
+    color: SelectedItemText;
+  }
+  .tm-mobile-action-bar__bar .tm-mobile-action-bar__action[aria-pressed="mixed"] {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: inset 0 0 0 2px SelectedItem;
+  }
+}
+

@@ -45,6 +45,23 @@ public sealed class TmActionItem
     /// </summary>
     public bool Danger { get; set; }
 
+    /// <summary>
+    /// The action's on/off state when it is a toggle. <see langword="null"/> (default) is a plain
+    /// action — a <c>menuitem</c> in the "More" menu. <see langword="true"/>/<see langword="false"/>
+    /// make it a <c>menuitemcheckbox</c> with <c>aria-checked</c> and a check mark in the menu, and
+    /// add <c>aria-pressed</c> to its tile on the mobile action bar. Activating it still runs
+    /// <see cref="OnClick"/> (and closes the menu like every entry — the close-before-invoke
+    /// contract); the host flips the state in the callback.
+    /// </summary>
+    public bool? Checked { get; set; }
+
+    /// <summary>
+    /// Renders a toggle whose <see cref="Checked"/> is <see langword="false"/> as partially on
+    /// (<c>aria-checked</c> / <c>aria-pressed</c> = <c>mixed</c>). Ignored when
+    /// <see cref="Checked"/> is <see langword="null"/> or <see langword="true"/>.
+    /// </summary>
+    public bool CheckedMixed { get; set; }
+
     /// <summary>Disables the action. Disabled items render as disabled buttons/menuitems.</summary>
     public bool Disabled { get; set; }
 

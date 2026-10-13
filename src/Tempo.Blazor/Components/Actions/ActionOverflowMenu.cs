@@ -62,6 +62,9 @@ internal sealed class ActionOverflowMenu : ComponentBase
     /// <summary>CSS class of a menu item label.</summary>
     [Parameter] public string? LabelClass { get; set; }
 
+    /// <summary>CSS class of the check-mark slot of a checkable item (<see cref="TmActionItem.Checked"/>).</summary>
+    [Parameter] public string? CheckClass { get; set; }
+
     /// <summary>The layout the panel presentation resolves from before its own measurement.</summary>
     [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
 
@@ -163,30 +166,56 @@ internal sealed class ActionOverflowMenu : ComponentBase
             var item = Items[i];
             // Sequence numbers are loop-invariant: a keyed item that moves to another index keeps its frame
             // sequences, so the diff matches its children one to one (an index-derived seq made a moved item's
-            // children look removed and re-added, which throws on a capture frame).
+            // children look removed and re-added, which throws on a capture frame). The C2 offsets are fixed
+            // constants too — a Checked flip appears/disappears only the frames of ONE item, and the
+            // element-reference capture (seq + 20, ALWAYS present, last) keeps pointing at the same retained
+            // button, so a reorder or a state flip while open never moves a capture (the F4 H1 crash).
             const int seq = 16;
             builder.OpenElement(seq, "button");
             builder.AddAttribute(seq + 1, "type", "button");
-            builder.AddAttribute(seq + 2, "role", "menuitem");
-            builder.AddAttribute(seq + 3, "class", item.Danger ? $"{ItemClass} {ItemClass}--danger" : ItemClass);
-            builder.AddAttribute(seq + 4, "disabled", item.Disabled);
-            builder.AddAttribute(seq + 5, "data-action-id", ActionId(item));
+            builder.AddAttribute(seq + 2, "role", item.Checked is null ? "menuitem" : "menuitemcheckbox");
+            if (item.Checked is not null)
+            {
+                builder.AddAttribute(seq + 3, "aria-checked", item.Checked == true ? "true" : item.CheckedMixed ? "mixed" : "false");
+            }
+
+            builder.AddAttribute(seq + 4, "class", item.Danger ? $"{ItemClass} {ItemClass}--danger" : ItemClass);
+            builder.AddAttribute(seq + 5, "disabled", item.Disabled);
+            builder.AddAttribute(seq + 6, "data-action-id", ActionId(item));
             builder.SetKey(string.IsNullOrEmpty(item.Id) ? item : item.Id);
-            builder.AddAttribute(seq + 6, "onclick", EventCallback.Factory.Create(this, () => InvokeAsync(item)));
+            builder.AddAttribute(seq + 7, "onclick", EventCallback.Factory.Create(this, () => InvokeAsync(item)));
+            if (item.Checked is not null)
+            {
+                // The check-mark slot: a fixed-size box that paints the state (Check when on, Minus when
+                // mixed, empty when off) and stays aria-hidden — aria-checked carries the state for AT.
+                builder.OpenElement(seq + 8, "span");
+                builder.AddAttribute(seq + 9, "class", CheckClass);
+                builder.AddAttribute(seq + 10, "aria-hidden", "true");
+                if (item.Checked == true || item.CheckedMixed)
+                {
+                    builder.OpenComponent<TmIcon>(seq + 11);
+                    builder.AddAttribute(seq + 12, "Name", item.Checked == true ? IconNames.Check : IconNames.Minus);
+                    builder.AddAttribute(seq + 13, "Size", IconSize.Sm);
+                    builder.CloseComponent();
+                }
+
+                builder.CloseElement();
+            }
+
             if (!string.IsNullOrEmpty(item.Icon))
             {
-                builder.OpenComponent<TmIcon>(seq + 7);
-                builder.AddAttribute(seq + 8, "Name", item.Icon);
-                builder.AddAttribute(seq + 9, "Size", IconSize.Sm);
+                builder.OpenComponent<TmIcon>(seq + 14);
+                builder.AddAttribute(seq + 15, "Name", item.Icon);
+                builder.AddAttribute(seq + 16, "Size", IconSize.Sm);
                 builder.CloseComponent();
             }
 
-            builder.OpenElement(seq + 10, "span");
-            builder.AddAttribute(seq + 11, "class", LabelClass);
-            builder.AddContent(seq + 12, item.Label);
+            builder.OpenElement(seq + 17, "span");
+            builder.AddAttribute(seq + 18, "class", LabelClass);
+            builder.AddContent(seq + 19, item.Label);
             builder.CloseElement();
             var captureId = ActionId(item);
-            builder.AddElementReferenceCapture(seq + 13, reference => _itemRefs[captureId] = reference);
+            builder.AddElementReferenceCapture(seq + 20, reference => _itemRefs[captureId] = reference);
             builder.CloseElement();
         }
 

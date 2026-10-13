@@ -27,6 +27,8 @@ buttons can show their text next to or under the icon.
 | `TmToolbar` | `OverflowPresentation` | `PanelPresentation` of the More menu | `Auto` (sheet on phones) |
 | `TmToolbarButton` | `Priority` | `Primary` · `Secondary` · `OverflowOnly` · `Pinned` | `Primary` |
 | `TmToolbarButton` | `LabelPosition` | `Inline` · `Below` · `Hidden` | `Inline` |
+| `TmToolbarButton` | `Pressed` | `bool?` — `null` = plain button, `true`/`false` = toggle | `null` |
+| `TmToolbarButton` | `PressedMixed` | renders a `false` toggle as `aria-pressed="mixed"` | `false` |
 
 ## Overflow = Menu
 
@@ -89,7 +91,13 @@ buttons can show their text next to or under the icon.
   so it honours the whole host contract of [overlays.md](overlays.md): close-before-invoke,
   first enabled item focused, `aria-expanded` accurate on every close path (a Tab out of an open
   popover menu closes it), focus back to the trigger, a disabled trigger when only disabled items
-  remain. A `Danger` button's entry is tinted. On a phone-sized viewport the menu is the shared bottom
+  remain. A `Danger` button's entry is tinted. **A pressed button keeps its state in More**
+  (F12/C2): `Pressed` (`bool?` — `null` is a plain button with no `aria-pressed`;
+  `true`/`false` render `aria-pressed` and the pressed look, a host-splatted `aria-pressed` still
+  wins on the bar) and `PressedMixed` (`aria-pressed="mixed"` for a partly-on toggle) make the
+  bar button a toggle and its menu entry a `role="menuitemcheckbox"` with the matching
+  `aria-checked` and a check-mark slot — activating it closes the menu like every entry, and the
+  host flips the state in `OnClick`. On a phone-sized viewport the menu is the shared bottom
   sheet with 44px entries; an editor/formatting toolbar sets `OverflowPresentation="Popover"` so the
   user's selection survives (see the F4 decision in overlays.md). The menu survives a reorder while
   open (resize, rotation): its items are keyed and every item carries a stable capture.
@@ -179,9 +187,8 @@ The following are **not** in the core yet and gate the adoption (recorded as cor
 1. **A collapsible non-button item contract** — `Select`, `ColorPicker`, `GridPicker`, `Toggle` and similar
    custom controls need a `Priority` and a menu-entry template, so they can leave the bar like a button
    (today only `TmToolbarButton` registers).
-2. **Pressed / checked state** — `TmToolbarButton.Pressed` → `aria-pressed` → `TmActionItem.Checked` →
-   `role="menuitemcheckbox"` in the menu. The DiagramEditor's tool modes lose their active state in More
-   until this exists.
+2. **Pressed / checked state** — done (F12/C2): `TmToolbarButton.Pressed` → `aria-pressed` →
+   `TmActionItem.Checked` → `role="menuitemcheckbox"` in the menu (see "The More menu" above).
 3. **Group headers and separators in `ActionOverflowMenu`** — a flat list loses the "Edit / View / Insert"
    structure the ribbon groups carry.
 4. **Toolbar groups** — done here (`data-tm-toolbar-group`, see above): grouped rows measure and collapse

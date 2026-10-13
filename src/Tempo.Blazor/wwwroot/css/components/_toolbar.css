@@ -41,6 +41,48 @@
 .tm-toolbar-btn--danger:hover:not(:disabled)  { background: var(--tm-color-danger-subtle); color: var(--tm-color-danger); }
 .tm-toolbar-btn-text { display: inline; }
 
+/* C2: a pressed toggle (aria-pressed) — attribute selector, no extra class. "true" paints the full
+   state: the subtle fill, the primary ink and the inset primary ring (the ring is the state
+   boundary, ≥3:1 against the fill and the surface in both themes). "mixed" stays ring-only —
+   transparent background, inherited ink — so a partly-on toggle reads apart from a pressed one.
+   A host-splatted aria-pressed paints the same way (it lands in the DOM). */
+.tm-toolbar-btn[aria-pressed="true"] {
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  box-shadow: inset 0 0 0 2px var(--tm-color-primary-500);
+}
+.tm-toolbar-btn[aria-pressed="mixed"] {
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 0 0 2px var(--tm-color-primary-500);
+}
+/* C2: :hover would otherwise restyle a pressed button like a plain one (it outranks the attribute
+   rules) — the pressed state must survive the pointer. */
+.tm-toolbar-btn[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+}
+.tm-toolbar-btn[aria-pressed="mixed"]:hover:not(:disabled) {
+  background: transparent;
+  color: inherit;
+}
+/* C2: forced colors (Windows High Contrast). The token fill/ring pair does not survive palette
+   substitution: pressed paints the SelectedItem fill with SelectedItemText ink, mixed keeps its
+   ring-only distinction (Canvas background, the 2px SelectedItem ring). */
+@media (forced-colors: active) {
+  .tm-toolbar-btn[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: SelectedItem;
+    color: SelectedItemText;
+  }
+  .tm-toolbar-btn[aria-pressed="mixed"] {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: inset 0 0 0 2px SelectedItem;
+  }
+}
+
 /* F4 - label below the icon (the ribbon style of the tablet mockups): the button is a column, the
    label span its second row, truncated with an ellipsis rather than wrapping. */
 .tm-toolbar-btn--label-below {
@@ -167,4 +209,20 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* C2: the check-mark slot of a checkable entry (menuitemcheckbox) — a fixed box so checked and
+   plain entries align; it paints the glyph (Check when on, Minus when mixed, empty when off). */
+.tm-toolbar-more__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* C2: in a menu that offers checkable entries, the plain ones are indented by the check-mark slot
+   (the slot width plus the item gap, on top of the base padding) so every label starts at the same x. */
+.tm-toolbar-more__menu:has([role="menuitemcheckbox"]) .tm-toolbar-more__item[role="menuitem"] {
+  padding-inline-start: calc(var(--tm-space-3) + 1rem + var(--tm-space-2));
 }

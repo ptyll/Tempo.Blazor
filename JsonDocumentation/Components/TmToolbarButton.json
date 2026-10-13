@@ -63,6 +63,20 @@
       "isRequired": false,
       "default": "Inline",
       "description": "Where the Text label sits: next to the icon, under it, or hidden (the text then stays the accessible name)."
+    },
+    {
+      "name": "Pressed",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Makes the button a toggle: null (default) is a plain button with no aria-pressed; true/false render aria-pressed and the pressed look, and when the button sits in a TmToolbar's \"More\" menu it becomes a menuitemcheckbox with the same state (aria-checked). The host owns the state: flip it in OnClick. A host-splatted aria-pressed (AdditionalAttributes) still wins on the bar button.",
+      "example": "Pressed=\"@_panPressed\" OnClick=\"@(() => _panPressed = !_panPressed)\""
+    },
+    {
+      "name": "PressedMixed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders a toggle whose Pressed is false as partially on — aria-pressed=\"mixed\" on the bar, aria-checked=\"mixed\" in \"More\" (e.g. Bold over a partly bold selection). Ignored when Pressed is null or true."
     }
   ],
   "cssClasses": [

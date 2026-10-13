@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Tests.Localization;
 
@@ -15,8 +16,19 @@ namespace Tempo.Blazor.Tests.Actions;
 /// </summary>
 public class ActionOverflowMenuTests : LocalizationTestBase
 {
-    private static TmActionItem Item(string id, bool disabled = false, bool danger = false, bool keepOpen = false, EventCallback? onClick = null)
-        => new() { Id = id, Label = id, Disabled = disabled, Danger = danger, KeepMenuOpen = keepOpen, OnClick = onClick ?? default };
+    private static TmActionItem Item(
+        string id,
+        bool disabled = false,
+        bool danger = false,
+        bool keepOpen = false,
+        EventCallback? onClick = null,
+        bool? checkState = null,
+        bool checkMixed = false)
+        => new()
+        {
+            Id = id, Label = id, Disabled = disabled, Danger = danger, KeepMenuOpen = keepOpen,
+            OnClick = onClick ?? default, Checked = checkState, CheckedMixed = checkMixed,
+        };
 
     private IRenderedComponent<ActionOverflowMenu> RenderMenu(
         IReadOnlyList<TmActionItem> items,
@@ -30,6 +42,7 @@ public class ActionOverflowMenuTests : LocalizationTestBase
             .Add(c => c.MenuClass, "test-menu")
             .Add(c => c.ItemClass, "test-item")
             .Add(c => c.LabelClass, "test-label")
+            .Add(c => c.CheckClass, "test-check")
             .Add(c => c.MobilePresentation, presentation)
             .Add(c => c.InitialMode, mode)
             .AddCascadingValue(TmLayoutScopes.Viewport, new TmLayoutContext(TmLayoutMode.Auto, mode)));
@@ -169,5 +182,84 @@ public class ActionOverflowMenuTests : LocalizationTestBase
 
         act.Should().NotThrow();
         cut.FindAll("[role='menuitem']").Select(i => i.GetAttribute("data-action-id")).Should().Equal("Off", "A", "B");
+    }
+
+    // ── C2: checkable items (menuitemcheckbox) ───────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(true, false, "true", "check")]
+    [InlineData(false, true, "mixed", "minus")]
+    [InlineData(false, false, "false", null)]
+    public void CheckedItem_RendersMenuItemCheckbox_WithCheckMarkSlot(bool state, bool mixed, string ariaChecked, string? icon)
+    {
+        var cut = RenderMenu([Item("grid", checkState: state, checkMixed: mixed)]);
+        cut.Find("button.test-trigger").Click();
+
+        var entry = cut.Find("[role='menu'] [role='menuitemcheckbox']");
+        entry.GetAttribute("aria-checked").Should().Be(ariaChecked);
+        var slot = entry.QuerySelector(".test-check");
+        slot.Should().NotBeNull("the check-mark slot paints the state");
+        slot!.GetAttribute("aria-hidden").Should().Be("true", "the glyph is decoration; aria-checked carries the state");
+        var iconNode = slot.QuerySelector(".tm-icon");
+        if (icon is null)
+        {
+            iconNode.Should().BeNull("an unchecked entry shows an empty slot (alignment), no glyph");
+            cut.FindComponents<TmIcon>().Should().BeEmpty("an unchecked entry paints no glyph at all");
+        }
+        else
+        {
+            iconNode.Should().NotBeNull();
+            // The glyph must be the STATE — Check when on, Minus when mixed — never just any icon.
+            cut.FindComponents<TmIcon>().Select(c => c.Instance.Name).Should().ContainSingle().Which.Should().Be(icon);
+        }
+    }
+
+    [Fact]
+    public void UncheckableItem_HasNoCheckSlot()
+    {
+        var cut = RenderMenu([Item("plain"), Item("grid", checkState: true)]);
+        cut.Find("button.test-trigger").Click();
+
+        var plain = cut.Find("[role='menu'] [role='menuitem']");
+        plain.HasAttribute("aria-checked").Should().BeFalse();
+        plain.QuerySelector(".test-check").Should().BeNull();
+        cut.FindAll("[role='menuitemcheckbox']").Should().ContainSingle("only the checked item changed role");
+    }
+
+    [Fact]
+    public void ReorderWhileOpen_TogglingCheckedOnTheFirstItem_DoesNotCrashTheRenderer()
+    {
+        // H1 invariant under C2: the item frame sequence stays loop-invariant and the element-reference
+        // capture stays on EVERY item (offset seq+20, last) — so a Checked flip (check-mark slot appears)
+        // or a reorder while open never moves a capture between retained elements.
+        var cut = RenderMenu([Item("grid", checkState: true)]);
+        cut.Find("button.test-trigger").Click();
+        cut.Find("[role='menuitemcheckbox']").Should().NotBeNull();
+
+        var act = () => cut.Render(p => p.Add(c => c.Items, new List<TmActionItem>
+        {
+            Item("plain"),
+            Item("grid", checkState: false, checkMixed: true),
+            Item("off", disabled: true, checkState: false),
+        }));
+
+        act.Should().NotThrow();
+        cut.FindAll("[role='menuitemcheckbox']").Select(i => i.GetAttribute("data-action-id"))
+            .Should().Equal("grid", "off");
+        cut.Find("[data-action-id='grid']").GetAttribute("aria-checked").Should().Be("mixed");
+    }
+
+    [Fact]
+    public void Sheet_FirstEntryIsCheckbox_IsTheInitialFocusTarget()
+    {
+        // The sheet's initial-focus selector listed only menuitem/option, so a sheet whose first entry
+        // is a checkable item focused the wrong element (the header Done fallback). The selector must
+        // name menuitemcheckbox (and menuitemradio) too.
+        var cut = RenderMenu([Item("grid", checkState: true), Item("a")], PanelPresentation.Sheet, TmLayoutMode.Mobile);
+        cut.Find("button.test-trigger").Click();
+
+        cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
+        var drawer = cut.FindComponent<Tempo.Blazor.Components.Layout.TmDrawer>();
+        drawer.Instance.InitialFocusSelector.Should().Contain("menuitemcheckbox");
     }
 }

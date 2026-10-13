@@ -177,6 +177,40 @@ test('enabledItems returns only focusable menu items in DOM order', () => {
     assert.deepEqual(enabledItems(m).map(i => i.textContent), ['A', 'C']);
 });
 
+// ── C2: checkable entries are part of the roving set ──────────────────────────────────────────
+
+function roleAwareItem(label, role) {
+    const it = item(label);
+    it.role = role;
+    return it;
+}
+
+test('C2 ArrowDown roves across menuitem and menuitemcheckbox entries', () => {
+    // The stub honours the module's REAL ITEM_SELECTOR: only elements whose role the selector
+    // names come back from querySelectorAll, so this pins the selector itself — a checked entry
+    // (role=menuitemcheckbox) is a stop of the roving set, a role=option is not.
+    const plain = roleAwareItem('Delete', 'menuitem');
+    const box = roleAwareItem('Grid', 'menuitemcheckbox');
+    const radio = roleAwareItem('Edge', 'menuitemradio');
+    const stray = roleAwareItem('Option', 'option');
+    const all = [plain, box, radio, stray];
+    const m = stubMenu(all);
+    m.querySelectorAll = selector => {
+        const roles = [...selector.matchAll(/role="([^"]+)"/g)].map(match => match[1]);
+        return all.filter(el => roles.includes(el.role));
+    };
+
+    attach(m);
+    m.activeElement = plain;
+
+    m.press('ArrowDown');
+    assert.equal(m.activeElement, box, 'a menuitemcheckbox entry is part of the roving set');
+    m.press('ArrowDown');
+    assert.equal(m.activeElement, radio, 'a menuitemradio entry too');
+    m.press('ArrowDown');
+    assert.equal(m.activeElement, plain, 'wraps back to the first real item, skipping role=option');
+});
+
 test('the roving tabindex follows focus: the focused item is tabbable, the others are not', () => {
     const items = [item('A'), item('B')];
     const m = stubMenu(items);
