@@ -101,6 +101,26 @@
     background-color: var(--tm-border-color);
 }
 
+/* ── Sheet presentation (F11, MobilePresentation) ──────── */
+/* On a touch screen the menu is usually the bottom-sheet presentation — every item must be a
+   44px tap target (the same contract as .tm-dropdown-item). */
+@media (pointer: coarse) {
+    .tm-context-menu__item {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* The sheet body already pads like the sheet header's left edge (T15 sibling): the popover's
+   own item padding would push the text further in, so items become full-width rows flush with
+   the title, like the dropdown sheet. */
+.tm-overlay-panel-sheet .tm-context-menu__item {
+    padding-inline: 0;
+}
+
+.tm-overlay-panel-sheet .tm-context-menu__divider {
+    margin-inline: 0;
+}
+
 /* ═══════════════════════════════════════════════════════
    Dark mode
    ═══════════════════════════════════════════════════════ */

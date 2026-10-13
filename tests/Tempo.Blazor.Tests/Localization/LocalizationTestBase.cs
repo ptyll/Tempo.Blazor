@@ -859,6 +859,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotificationBell_NewCount_Other"]   = "{0} new notifications",
         ["TmNotificationBell_NoNotifications"]  = "No notifications",
         ["TmNotificationBell_MarkAllRead"]      = "Mark all as read",
+        ["TmNotificationBell_SheetTitle"]       = "Notifications",
+
+        // F11 mobile presentation sheet titles
+        ["TmContextMenu_SheetTitle"]  = "Menu",
+        ["TmSplitButton_SheetTitle"]  = "More actions",
 
         // TmImageGallery
         ["TmImageGallery_PreviousImage"] = "Previous image",
@@ -4570,6 +4575,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotificationBell_NewCount_Other"]  = "{0} nových oznámení",
         ["TmNotificationBell_NoNotifications"] = "Žádná oznámení",
         ["TmNotificationBell_MarkAllRead"] = "Označit vše jako přečtené",
+        ["TmNotificationBell_SheetTitle"]      = "Oznámení",
+
+        // F11 mobile presentation sheet titles
+        ["TmContextMenu_SheetTitle"] = "Nabídka",
+        ["TmSplitButton_SheetTitle"] = "Další akce",
 
         // TmImageGallery
         ["TmImageGallery_PreviousImage"] = "Předchozí obrázek",

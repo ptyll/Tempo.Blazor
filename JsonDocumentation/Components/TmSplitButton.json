@@ -2,7 +2,7 @@
   "itemName": "TmSplitButton",
   "kind": "Component",
   "category": "Buttons",
-  "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items. The menu is a top-layer TmOverlayPanel; any click inside it closes it (bubbling panel click), and the primary button also sets the menu closed before OnClick — a handler-opened dialog never renders under the still-open menu.",
+  "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items. The menu is a top-layer TmOverlayPanel; any click inside it closes it (bubbling panel click), and the primary button also sets the menu closed before OnClick — a handler-opened dialog never renders under the still-open menu. The menu stays the anchored popover at every width unless the host opts into the shared mobile bottom sheet through MobilePresentation.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Buttons"
   ],
@@ -52,6 +52,19 @@
       "description": "Dropdown menu items (e.g. TmDropdownItem or TmContextMenuItem)."
     },
     {
+      "name": "MobilePresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "PanelPresentation.Popover",
+      "description": "How the dropdown presents on a narrow viewport. Default Popover: the anchored popover at every width. Auto opts into the shared content-height bottom sheet on a mobile viewport (the anchored popover otherwise). A forced value renders that presentation without measuring (since 2.9.1)."
+    },
+    {
+      "name": "SheetTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title of the sheet header when the dropdown presents as a bottom sheet. When null (default), the localized TmSplitButton_SheetTitle default is used. The value also names the popover (aria-label) — the menu carries no other accessible name, so a role menu popover is not unnamed (since 2.9.1)."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -81,6 +94,10 @@
     {
       "title": "Danger variant with loading",
       "code": "<TmSplitButton Text=\"Delete\" Variant=\"ButtonVariant.Danger\" IsLoading=\"_isDeleting\" OnClick=\"HandleDelete\">\n    <button @onclick=\"ArchiveInstead\">Archive Instead</button>\n</TmSplitButton>"
+    },
+    {
+      "title": "Opt-in mobile bottom sheet",
+      "code": "<TmSplitButton Text=\"Save\" OnClick=\"HandleSave\" MobilePresentation=\"PanelPresentation.Auto\">\n    <button @onclick=\"SaveAsDraft\">Save as Draft</button>\n</TmSplitButton>"
     }
   ]
 }

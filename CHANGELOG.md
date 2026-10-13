@@ -643,6 +643,33 @@
 
 ### Added
 
+- **`TmContextMenu`, `TmSplitButton` and `TmNotificationBell` opt into the shared mobile bottom
+  sheet (F11).** All three render `TmOverlayPanel` and kept the anchored popover at every width;
+  each now carries two additive parameters (default behaviour is unchanged, nothing to migrate):
+  `MobilePresentation` (`PanelPresentation`, default `Popover` — `Auto` presents the shared
+  content-height bottom sheet on a mobile viewport and the anchored popover otherwise, a forced
+  value renders that presentation without measuring) and `SheetTitle` (`string?`, names the sheet
+  header; `null` falls back to new localized defaults `TmContextMenu_SheetTitle` ("Menu" /
+  "Nabídka" / "Menu"), `TmSplitButton_SheetTitle` ("More actions" / "Další akce" / "Autres
+  actions") and `TmNotificationBell_SheetTitle` ("Notifications" / "Oznámení" / "Notifications")).
+  There is no sheet logic in the components — the same `TmDrawer Position=Bottom` primitive every
+  anchored panel composes (title + Done in the header, Escape/backdrop/swipe dismiss, focus back
+  on the trigger). Sheet-mode details: the menus' `role="menu"` moves onto the sheet content
+  wrapper, menu items become full-width rows flush with the sheet header and 44px tap targets on
+  coarse pointers, and the bell's in-panel header title is dropped inside the sheet (it would
+  duplicate the sheet header) while its filter/mark-all actions stay reachable and the popover's
+  400px list cap is not inherited by the content-height sheet. The popover presentation keeps its
+  markup — the bell stays named by its visible in-panel title, and the two menus gain only the
+  `aria-label` that `TmOverlayPanel` already derives from `Title` (the same contract
+  `TmDropdown` has had since F3).
+
+  ```razor
+  @* opt-in: bottom sheet on a phone, popover on desktop *@
+  <TmContextMenu MobilePresentation="PanelPresentation.Auto" SheetTitle="Row actions">…</TmContextMenu>
+  <TmSplitButton Text="Save" MobilePresentation="PanelPresentation.Auto">…</TmSplitButton>
+  <TmNotificationBell MobilePresentation="PanelPresentation.Auto" />
+  ```
+
 - **`docs/redesign-foundation.md` maps the redesign foundation.** One page links the
   contracts this release introduced (tokens, layout, sheet, focus scope, overlays,
   toolbar overflow, the mobile action bar, the editor shell, pointer drag, plurals

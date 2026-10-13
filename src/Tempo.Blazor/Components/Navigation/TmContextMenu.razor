@@ -29,7 +29,10 @@
     @* The menu is a TmOverlayPanel: popover="manual" puts it in the browser top layer, so an
        ancestor's overflow (modal body, scrolling region) can no longer clip it, and overlay.js
        repositions it on scroll/resize, flipping when the space below runs out. Bottom + End +
-       4px keep the historical "under the trigger, right edge aligned" look. *@
+       4px keep the historical "under the trigger, right edge aligned" look. F11: the menu opts
+       into the shared bottom sheet on a mobile viewport through MobilePresentation (default
+       Popover keeps the anchored popover at every width); the sheet header is titled with
+       SheetTitle or the localized TmContextMenu_SheetTitle default. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
@@ -38,6 +41,8 @@
                     Align="OverlayAlign.End"
                     Offset="4"
                     Role="menu"
+                    Title="@EffectiveSheetTitle"
+                    MobilePresentation="MobilePresentation"
                     Class="tm-context-menu">
         <CascadingValue Value="this" IsFixed="true">
             @ChildContent
@@ -64,12 +69,33 @@
     /// <summary>Menu item children (TmContextMenuItem).</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// How the menu presents on a narrow viewport. Default
+    /// <see cref="PanelPresentation.Popover"/>: the anchored popover at every width.
+    /// <see cref="PanelPresentation.Auto"/> opts into the shared bottom sheet on a mobile
+    /// viewport (the anchored popover otherwise) — the choice resolves from the viewport scope.
+    /// A forced value renders that presentation without measuring.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Popover;
+
+    /// <summary>
+    /// Title of the sheet header when the menu presents as a bottom sheet. When
+    /// <see langword="null"/> (default), the localized <c>TmContextMenu_SheetTitle</c> default
+    /// is used. The value also names the popover (<c>aria-label</c>) — the menu carries no other
+    /// accessible name, so a <c>role="menu"</c> popover is not unnamed.
+    /// </summary>
+    [Parameter] public string? SheetTitle { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Additional HTML attributes.</summary>
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    // SheetTitle=null falls back to the localized per-component default; the value also names
+    // the popover (TmOverlayPanel emits Title as its aria-label when nothing else names it).
+    private string EffectiveSheetTitle => string.IsNullOrEmpty(SheetTitle) ? Loc["TmContextMenu_SheetTitle"] : SheetTitle!;
 
     private void ToggleMenu()
     {

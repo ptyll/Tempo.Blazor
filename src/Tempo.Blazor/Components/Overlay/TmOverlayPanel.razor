@@ -34,7 +34,8 @@
            is handed down — the drawer never measures a second time. ChildContent wraps in a
            content div that carries Role/Id/AdditionalAttributes, so menu/listbox ownership (axe
            aria-required-parent) and aria-controls targets survive the popover→sheet switch; a
-           dialog role stays on the drawer's focus-scope root. *@
+           dialog role stays on the drawer's focus-scope root, and the wrapper (a generic div then)
+           emits no aria-label/aria-labelledby — name attributes are prohibited on a generic div. *@
         <TmDrawer IsOpen="true"
                   IsOpenChanged="HandleSheetOpenChanged"
                   Position="DrawerPosition.Bottom"
@@ -70,8 +71,8 @@
                 <div @ref="_sheetContentRef"
                      class="tm-overlay-panel-sheet__content"
                      id="@Id"
-                     role="@(Role is "dialog" ? null : Role)"
-                     aria-label="@AriaLabel"
+                     role="@SheetContentRole"
+                     aria-label="@SheetContentAriaLabel"
                      aria-labelledby="@SheetContentLabelledBy"
                      @attributes="AdditionalAttributes">
                     @ChildContent
@@ -327,11 +328,25 @@
     private string SheetAriaLabel => SheetTitle ?? Loc["TmOverlayPanel_SheetFallback"];
 
     /// <summary>
+    /// The role the sheet's content wrapper carries. "dialog" resolves to null — the dialog role
+    /// stays on the drawer's focus-scope root, and the wrapper is then a generic div, which must
+    /// carry no accessible-name attributes at all (axe aria-prohibited-attr).
+    /// </summary>
+    private string? SheetContentRole => Role is "dialog" ? null : Role;
+
+    /// <summary>The wrapper's <c>aria-label</c> — only when the wrapper carries a role.</summary>
+    private string? SheetContentAriaLabel => SheetContentRole is not null ? AriaLabel : null;
+
+    /// <summary>
     /// The content wrapper's <c>aria-labelledby</c>: the consumer's explicit id wins; otherwise the
     /// sheet header title names the wrapper (menu/listbox/dialog content inside the sheet is then
-    /// labelled by the same visible title the user reads).
+    /// labelled by the same visible title the user reads). Emitted only when the wrapper carries a
+    /// role — a generic div (Role null or "dialog") prohibits name attributes; the sheet's name
+    /// lives on the drawer root (<see cref="SheetAriaLabel"/>) instead.
     /// </summary>
-    private string? SheetContentLabelledBy => AriaLabelledBy ?? (SheetTitle is not null ? _sheetTitleId : null);
+    private string? SheetContentLabelledBy => SheetContentRole is null
+        ? null
+        : AriaLabelledBy ?? (SheetTitle is not null ? _sheetTitleId : null);
 
     /// <summary>
     /// Menus and listboxes opened as a sheet land initial focus on the first menuitem/option —

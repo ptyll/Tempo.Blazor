@@ -179,9 +179,13 @@ public sealed class MarkupClassCoverageTests
         "tm-pagination-prev",
         "tm-query-input__overlay-text",
         "tm-rating__star--empty",
-        "tm-rte-btn-cancel",
-        "tm-rte-btn-insert",
+        // F10 moved the RTE dialogs onto TmModal: the footer buttons became TmButtons whose
+        // Class="tm-rte-btn-cancel" / Class="tm-rte-btn-insert" (capital-C component parameters)
+        // the sweep's class="…" derivation no longer collects, so the entries left the
+        // population (2.9.1).
         "tm-rte-emoji-btn",
+        // F10's table dialog emits this label hook with no rule (2.9.1).
+        "tm-rte-table-preview-label",
         "tm-rte-token-loading",
         "tm-scheduler-event",
         "tm-scheduler-event-dot",
@@ -371,7 +375,11 @@ public sealed class MarkupClassCoverageTests
     [
         new Scope("Tempo.Blazor", "Tempo.Blazor", UnstyledMarkupClasses,
             MinRazorFiles: 190, MinMarkupClasses: 2000, InheritsCoreCss: false,
-            ExpectedUnmeasurableStems: 38),
+            // F11 (2.9.1): TmRichEditorFull's @code moved to a .razor.cs, so its quoted
+            // id-prefix literal ("tm-rte-editor-{Guid…}") joined the scanned population
+            // (the same literal in TmRichEditorSimple stays inside the .razor @code, which
+            // the sweep does not read) — 38 → 39.
+            ExpectedUnmeasurableStems: 39),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 6),

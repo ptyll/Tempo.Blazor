@@ -2935,7 +2935,7 @@
           "kind": "Component",
           "category": "Buttons",
           "namespace": "Tempo.Blazor.Components.Buttons",
-          "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items. The menu is a top-layer TmOverlayPanel; any click inside it closes it (bubbling panel click), and the primary button also sets the menu closed before OnClick — a handler-opened dialog never renders under the still-open menu.",
+          "description": "Split button combining a primary action button with a dropdown toggle for secondary actions. Supports variants (Primary, Secondary, Danger), sizes, loading state, and accepts child content for dropdown menu items. The menu is a top-layer TmOverlayPanel; any click inside it closes it (bubbling panel click), and the primary button also sets the menu closed before OnClick — a handler-opened dialog never renders under the still-open menu. The menu stays the anchored popover at every width unless the host opts into the shared mobile bottom sheet through MobilePresentation.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Buttons/TmSplitButton.razor",
           "documentationStatus": "merged",
@@ -2968,10 +2968,23 @@
               "description": "Shows a loading spinner on the primary button."
             },
             {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the dropdown presents on a narrow viewport. Default Popover: the anchored popover at every width. Auto opts into the shared content-height bottom sheet on a mobile viewport (the anchored popover otherwise). A forced value renders that presentation without measuring (since 2.9.1)."
+            },
+            {
               "name": "OnClick",
               "type": "EventCallback",
               "isRequired": false,
               "description": "Fires when the primary button is clicked."
+            },
+            {
+              "name": "SheetTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Title of the sheet header when the dropdown presents as a bottom sheet. When null (default), the localized TmSplitButton_SheetTitle default is used. The value also names the popover (aria-label) — the menu carries no other accessible name, so a role menu popover is not unnamed (since 2.9.1)."
             },
             {
               "name": "Size",
@@ -3017,6 +3030,10 @@
             {
               "title": "Danger variant with loading",
               "code": "<TmSplitButton Text=\"Delete\" Variant=\"ButtonVariant.Danger\" IsLoading=\"_isDeleting\" OnClick=\"HandleDelete\">\n    <button @onclick=\"ArchiveInstead\">Archive Instead</button>\n</TmSplitButton>"
+            },
+            {
+              "title": "Opt-in mobile bottom sheet",
+              "code": "<TmSplitButton Text=\"Save\" OnClick=\"HandleSave\" MobilePresentation=\"PanelPresentation.Auto\">\n    <button @onclick=\"SaveAsDraft\">Save as Draft</button>\n</TmSplitButton>"
             }
           ]
         },
@@ -19621,7 +19638,7 @@
           "kind": "Component",
           "category": "Navigation",
           "namespace": "Tempo.Blazor.Components.Navigation",
-          "description": "Dropdown context menu triggered by a custom element. Contains TmContextMenuItem children and closes on Escape key press.",
+          "description": "Dropdown context menu triggered by a custom element. Contains TmContextMenuItem children and closes on Escape key press. The menu is a top-layer TmOverlayPanel; it stays the anchored popover at every width unless the host opts into the shared mobile bottom sheet through MobilePresentation.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Navigation/TmContextMenu.razor",
           "documentationStatus": "merged",
@@ -19642,6 +19659,19 @@
               "description": "Additional CSS class for the root element."
             },
             {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the menu presents on a narrow viewport. Default Popover: the anchored popover at every width. Auto opts into the shared content-height bottom sheet on a mobile viewport (the anchored popover otherwise). A forced value renders that presentation without measuring (since 2.9.1)."
+            },
+            {
+              "name": "SheetTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Title of the sheet header when the menu presents as a bottom sheet. When null (default), the localized TmContextMenu_SheetTitle default is used. The value also names the popover (aria-label) — the menu carries no other accessible name, so a role menu popover is not unnamed (since 2.9.1)."
+            },
+            {
               "name": "Trigger",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -19657,6 +19687,10 @@
             {
               "title": "Context menu with actions",
               "code": "<TmContextMenu>\n    <Trigger>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">...</TmButton>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" Icon=\"edit\" OnClick=\"EditItem\" />\n        <TmContextMenuItem Label=\"Duplicate\" Icon=\"copy\" OnClick=\"DuplicateItem\" />\n        <TmContextMenuItem IsDivider=\"true\" />\n        <TmContextMenuItem Label=\"Delete\" Icon=\"trash-2\" IsDangerous=\"true\" OnClick=\"DeleteItem\" />\n    </ChildContent>\n</TmContextMenu>"
+            },
+            {
+              "title": "Opt-in mobile bottom sheet",
+              "code": "<TmContextMenu MobilePresentation=\"PanelPresentation.Auto\" SheetTitle=\"Row actions\">\n    <Trigger>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">Actions</TmButton>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" Icon=\"edit\" OnClick=\"EditItem\" />\n    </ChildContent>\n</TmContextMenu>"
             }
           ]
         },
@@ -20193,7 +20227,7 @@
           "kind": "Component",
           "category": "Notifications",
           "namespace": "Tempo.Blazor.Components.Notifications",
-          "description": "Notification bell icon button backed by ITmNotificationService. It shows unread count, loads recipient notifications on demand, supports unread filtering, and marks individual or all notifications as read through the shared service.",
+          "description": "Notification bell icon button backed by ITmNotificationService. It shows unread count, loads recipient notifications on demand, supports unread filtering, and marks individual or all notifications as read through the shared service. The panel stays the anchored popover at every width unless the host opts into the shared mobile bottom sheet through MobilePresentation.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Notifications/TmNotificationBell.razor",
           "documentationStatus": "merged",
@@ -20216,10 +20250,23 @@
               "description": "Recipient user id used when querying ITmNotificationService."
             },
             {
+              "name": "MobilePresentation",
+              "type": "PanelPresentation",
+              "isRequired": false,
+              "default": "PanelPresentation.Popover",
+              "description": "How the notification panel presents on a narrow viewport. Default Popover: the anchored popover at every width. Auto opts into the shared content-height bottom sheet on a mobile viewport (the anchored popover otherwise). A forced value renders that presentation without measuring (since 2.9.1)."
+            },
+            {
               "name": "OnDropdownOpenChanged",
               "type": "EventCallback<bool>",
               "isRequired": false,
               "description": "Fires when the notification dropdown opens or closes."
+            },
+            {
+              "name": "SheetTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Title of the sheet header when the panel presents as a bottom sheet. When null (default), the localized TmNotificationBell_SheetTitle default is used. Has no effect on the popover presentation, which stays named by the visible in-panel title (since 2.9.1)."
             },
             {
               "name": "AdditionalAttributes",
@@ -20261,6 +20308,10 @@
             {
               "title": "React to dropdown state",
               "code": "<TmNotificationBell CurrentUserId=\"@_currentUserId\"\n                    OnDropdownOpenChanged=\"HandleDropdownChanged\" />"
+            },
+            {
+              "title": "Opt-in mobile bottom sheet",
+              "code": "<TmNotificationBell CurrentUserId=\"@_currentUserId\" MobilePresentation=\"PanelPresentation.Auto\" />"
             }
           ]
         },

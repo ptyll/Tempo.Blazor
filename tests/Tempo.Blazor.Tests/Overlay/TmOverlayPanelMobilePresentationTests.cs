@@ -190,19 +190,60 @@ public class TmOverlayPanelMobilePresentationTests : LocalizationTestBase
     public void MobilePresentationSheet_DialogRole_KeepsDialogRoleOnTheDrawerRoot()
     {
         // Role="dialog" panels (date pickers) keep the dialog role on the focus-scope/drawer
-        // root; the content wrapper carries no conflicting role, only the id + name.
+        // root; the content wrapper carries no conflicting role, only the id. A generic div
+        // prohibits name attributes — the wrapper must not emit aria-label/aria-labelledby
+        // (axe aria-prohibited-attr); the drawer root carries the sheet's name instead.
         var cut = Render<TmOverlayPanel>(p => p
             .Add(c => c.IsOpen, true)
             .Add(c => c.Id, "calendar-popup")
             .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
             .Add(c => c.Role, "dialog")
+            .Add(c => c.AriaLabel, "Pick a date")
             .Add(c => c.Title, "Pick a date")
             .AddChildContent("<div>Calendar</div>"));
 
         var content = cut.Find(".tm-overlay-panel-sheet__content");
         content.GetAttribute("role").Should().BeNull();
         content.GetAttribute("id").Should().Be("calendar-popup");
+        content.GetAttribute("aria-label").Should().BeNull(
+            "aria-label is prohibited on a generic div");
+        content.GetAttribute("aria-labelledby").Should().BeNull(
+            "aria-labelledby is prohibited on a generic div");
         cut.Find(".tm-focus-scope").GetAttribute("role").Should().Be("dialog");
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_WithoutRole_ContentWrapperCarriesNoNameAttributes()
+    {
+        // Role=null makes the wrapper a generic div too — the same aria-prohibited-attr
+        // contract as the dialog role above.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Title, "Filters")
+            .AddChildContent("<div>Body</div>"));
+
+        var content = cut.Find(".tm-overlay-panel-sheet__content");
+        content.GetAttribute("role").Should().BeNull();
+        content.GetAttribute("aria-label").Should().BeNull();
+        content.GetAttribute("aria-labelledby").Should().BeNull();
+    }
+
+    [Fact]
+    public void MobilePresentationSheet_MenuRole_KeepsLabelledByOnTheContentWrapper()
+    {
+        // A menu/listbox wrapper is NOT a generic div: the visible sheet header title keeps
+        // naming it, so menu ownership and the accessible name survive the presentation switch.
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.MobilePresentation, PanelPresentation.Sheet)
+            .Add(c => c.Role, "menu")
+            .Add(c => c.Title, "Filters")
+            .AddChildContent("<button role='menuitem'>One</button>"));
+
+        var content = cut.Find(".tm-overlay-panel-sheet__content");
+        content.GetAttribute("role").Should().Be("menu");
+        content.GetAttribute("aria-labelledby").Should().NotBeNullOrEmpty();
     }
 
     [Fact]

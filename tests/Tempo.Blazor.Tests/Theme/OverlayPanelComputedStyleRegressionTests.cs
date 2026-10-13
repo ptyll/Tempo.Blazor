@@ -361,6 +361,17 @@ public sealed class OverlayPanelComputedStyleRegressionTests
     /// (T8 — the months stack and the doubled footer hide). Every one of them keys on the SHEET
     /// element (a TmDrawer root) or its descendants — never on the shared <c>.tm-overlay-panel</c>
     /// floating element — so the N196 weight argument does not apply to them either.
+    /// F11 (2.9.1) adds the ContextMenu and NotificationBell sheet-context rules for the same
+    /// reason: <c>.tm-overlay-panel-sheet .tm-context-menu__item/-divider</c> (the sheet-mode item
+    /// inset, the T15 pattern) and <c>.tm-overlay-panel-sheet .tm-notification-bell__title/-list</c>
+    /// (the in-panel title drops so it does not duplicate the sheet header; the popover's 400px
+    /// list cap is a popover-height contract the content-height sheet does not inherit). They key
+    /// on the sheet's descendants only.
+    /// F11 review adds the bell's sheet inset rules: <c>.tm-overlay-panel-sheet
+    /// .tm-notification-bell__header/-item</c> (the popover's inline padding goes — the sheet body
+    /// pads instead, the T15 sibling contract) and <c>.tm-overlay-panel-sheet
+    /// .tm-notification-bell__actions</c> (the actions' optical inset shifts back by their own
+    /// padding). They key on the sheet's descendants only.
     /// </remarks>
     private static readonly IReadOnlyList<string> KnownOverlayPanelRules =
     [
@@ -378,6 +389,13 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         ".tm-overlay-panel-sheet .tm-dropdown-sep",
         ".tm-overlay-panel-sheet .tm-date-range-calendars",
         ".tm-overlay-panel-sheet .tm-date-range-footer",
+        ".tm-overlay-panel-sheet .tm-context-menu__item",
+        ".tm-overlay-panel-sheet .tm-context-menu__divider",
+        ".tm-overlay-panel-sheet .tm-notification-bell__title",
+        ".tm-overlay-panel-sheet .tm-notification-bell__list",
+        ".tm-overlay-panel-sheet .tm-notification-bell__header",
+        ".tm-overlay-panel-sheet .tm-notification-bell__item",
+        ".tm-overlay-panel-sheet .tm-notification-bell__actions",
     ];
 
     /// <summary>The live inventory: the bundle carries exactly the three known rules.</summary>

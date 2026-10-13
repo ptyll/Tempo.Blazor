@@ -2,7 +2,7 @@
   "itemName": "TmContextMenu",
   "kind": "Component",
   "category": "Navigation",
-  "description": "Dropdown context menu triggered by a custom element. Contains TmContextMenuItem children and closes on Escape key press.",
+  "description": "Dropdown context menu triggered by a custom element. Contains TmContextMenuItem children and closes on Escape key press. The menu is a top-layer TmOverlayPanel; it stays the anchored popover at every width unless the host opts into the shared mobile bottom sheet through MobilePresentation.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Navigation"
   ],
@@ -20,6 +20,19 @@
       "description": "Menu item children (TmContextMenuItem)."
     },
     {
+      "name": "MobilePresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "PanelPresentation.Popover",
+      "description": "How the menu presents on a narrow viewport. Default Popover: the anchored popover at every width. Auto opts into the shared content-height bottom sheet on a mobile viewport (the anchored popover otherwise). A forced value renders that presentation without measuring (since 2.9.1)."
+    },
+    {
+      "name": "SheetTitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Title of the sheet header when the menu presents as a bottom sheet. When null (default), the localized TmContextMenu_SheetTitle default is used. The value also names the popover (aria-label) — the menu carries no other accessible name, so a role menu popover is not unnamed (since 2.9.1)."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -35,6 +48,10 @@
     {
       "title": "Context menu with actions",
       "code": "<TmContextMenu>\n    <Trigger>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">...</TmButton>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" Icon=\"edit\" OnClick=\"EditItem\" />\n        <TmContextMenuItem Label=\"Duplicate\" Icon=\"copy\" OnClick=\"DuplicateItem\" />\n        <TmContextMenuItem IsDivider=\"true\" />\n        <TmContextMenuItem Label=\"Delete\" Icon=\"trash-2\" IsDangerous=\"true\" OnClick=\"DeleteItem\" />\n    </ChildContent>\n</TmContextMenu>"
+    },
+    {
+      "title": "Opt-in mobile bottom sheet",
+      "code": "<TmContextMenu MobilePresentation=\"PanelPresentation.Auto\" SheetTitle=\"Row actions\">\n    <Trigger>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">Actions</TmButton>\n    </Trigger>\n    <ChildContent>\n        <TmContextMenuItem Label=\"Edit\" Icon=\"edit\" OnClick=\"EditItem\" />\n    </ChildContent>\n</TmContextMenu>"
     }
   ]
 }

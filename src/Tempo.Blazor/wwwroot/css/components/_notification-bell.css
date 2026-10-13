@@ -188,6 +188,40 @@
     color: var(--tm-text-secondary);
 }
 
+/* ── Sheet presentation (F11, MobilePresentation) ───────────────────────────── */
+/* The sheet header already carries the title, so the in-panel duplicate is dropped; the
+   filter/mark-all actions stay reachable inside the sheet body. */
+.tm-overlay-panel-sheet .tm-notification-bell__title {
+    display: none;
+}
+
+/* The popover's 400px list cap is a popover-height contract; a content-height sheet sizes to
+   its content under the drawer's MaxHeight instead. */
+.tm-overlay-panel-sheet .tm-notification-bell__list {
+    max-height: none;
+}
+
+/* On a touch screen the small header actions must still hit the shared touch-target size —
+   the same contract as .tm-context-menu__item. */
+@media (pointer: coarse) {
+    .tm-notification-bell__filter,
+    .tm-notification-bell__mark-all {
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* The sheet body pads like the sheet header's left edge (the T15 sibling contract): the
+   popover's own header/item padding would push the content further in, so rows become flush
+   with the title — and the actions' optical inset shifts back by their own padding. */
+.tm-overlay-panel-sheet .tm-notification-bell__header,
+.tm-overlay-panel-sheet .tm-notification-bell__item {
+    padding-inline: 0;
+}
+
+.tm-overlay-panel-sheet .tm-notification-bell__actions {
+    margin-inline-start: calc(-1 * var(--tm-space-2));
+}
+
 /* Dark mode */
 [data-theme="dark"] .tm-notification-bell__dropdown,
 .tm-dark .tm-notification-bell__dropdown {

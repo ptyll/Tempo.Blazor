@@ -1,9 +1,12 @@
 @page "/feedback"
 @inject ToastService Toast
+@inject ITmNotificationService Notifications
 @inject ITmLocalizer Loc
+@implements IDisposable
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Workflow
 @using Tempo.Blazor.Components.Notifications
+@using Tempo.Blazor.Components.Overlay
 <PageTitle>Feedback – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -123,8 +126,11 @@
     
     <div class="showcase-card">
         <div class="flex items-center justify-between">
-            <TmNotificationBell />
-            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="AddNotification">
+            <TmNotificationBell CurrentUserId="demo" />
+            <TmNotificationBell CurrentUserId="demo"
+                                MobilePresentation="PanelPresentation.Auto"
+                                data-testid="feedback-bell-mobile" />
+            <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="AddNotificationAsync">
                 <span class="flex items-center space-x-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -133,6 +139,7 @@
                 </span>
             </TmButton>
         </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">@Loc["TmDemo_MobileSheet"]</p>
     </div>
 </section>
 
@@ -687,6 +694,48 @@
     </div>
 </section>
 
+<!-- Opt-in mobile presentation (F11): the sheet shows on a phone viewport only -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Mobile presentation (opt-in)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Resize to &lt; 640 px</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_MobileSheet"] — every surface below defaults to the anchored popover at
+            desktop widths.
+        </p>
+        <div class="flex flex-wrap items-start gap-6">
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Context Menu</p>
+                <TmContextMenu MobilePresentation="PanelPresentation.Auto"
+                               SheetTitle="@Loc["TmDemo_ActionsSheetTitle"]"
+                               data-testid="feedback-contextmenu-sheet">
+                    <Trigger>
+                        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm">Actions</TmButton>
+                    </Trigger>
+                    <ChildContent>
+                        <TmContextMenuItem Label="Edit" Icon="edit" OnClick="@(() => Toast.ShowInfo("Edit clicked"))" />
+                        <TmContextMenuItem Label="Duplicate" Icon="copy" OnClick="@(() => Toast.ShowInfo("Duplicate clicked"))" />
+                        <TmContextMenuItem IsDivider="true" />
+                        <TmContextMenuItem Label="Delete" Icon="trash" IsDangerous="true" OnClick="@(() => Toast.ShowError("Delete clicked"))" />
+                    </ChildContent>
+                </TmContextMenu>
+            </div>
+
+            <div>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Split Button</p>
+                <TmSplitButton Text="Save" MobilePresentation="PanelPresentation.Auto" data-testid="feedback-splitbutton-sheet"
+                               OnClick="@(() => Toast.ShowSuccess("Saved!"))">
+                    <button class="tm-context-menu__item" role="menuitem" @onclick="@(() => Toast.ShowInfo("Saved as draft"))">Save as Draft</button>
+                    <button class="tm-context-menu__item" role="menuitem" @onclick="@(() => Toast.ShowInfo("Saved and closed"))">Save &amp; Close</button>
+                </TmSplitButton>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Progress Bar -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -1002,7 +1051,13 @@
     private bool _paletteOpen;
     private List<Tempo.Blazor.Interfaces.ICommandPaletteAction> _paletteActions = new();
 
-    protected override void OnInitialized()
+    /// <summary>The recipient every bell, the chip and every published notification share.</summary>
+    private const string Recipient = "demo";
+
+    private int _unreadCount;
+    private int _addedCount;
+
+    protected override async Task OnInitializedAsync()
     {
         // Field initializers cannot reference the injected Toast service — build the probe
         // actions here.
@@ -1011,7 +1066,63 @@
             new PaletteAction("toast", "Show a toast", "Push a toast through the shared ToastService", "bell",
                 () => { Toast.ShowInfo("Palette action"); return Task.CompletedTask; }),
         };
+
+        // The bells render the SHARED service's notifications, so this page must publish through
+        // it too — the local list that used to feed only the chip could never agree with them.
+        // Seeds go in only when the service has none for the recipient, so a reload (or a
+        // persistent backend such as the demo API store) never duplicates them.
+        Notifications.OnChanged += OnNotificationsChanged;
+        var existing = await Notifications.GetNotificationsAsync(new TmNotificationQuery
+        {
+            RecipientUserId = Recipient,
+            IncludeRead = true,
+            Take = 1,
+        });
+        if (existing.Count == 0)
+        {
+            await Notifications.PublishAsync(new TmNotification
+            {
+                Id = "n1",
+                RecipientUserId = Recipient,
+                Type = TmNotificationTypes.PageEdited,
+                Title = "Deployment succeeded",
+                Body = "Build #142 deployed to production."
+            });
+            await Notifications.PublishAsync(new TmNotification
+            {
+                Id = "n2",
+                RecipientUserId = Recipient,
+                Type = TmNotificationTypes.PageCommentAdded,
+                Title = "New comment",
+                Body = "Alice commented on PR #88."
+            });
+            await Notifications.PublishAsync(new TmNotification
+            {
+                Id = "n3",
+                RecipientUserId = Recipient,
+                Type = TmNotificationTypes.ThreadResolved,
+                Title = "Issue resolved",
+                Body = "Bug #301 was closed.",
+                ReadAt = DateTimeOffset.UtcNow
+            });
+            _addedCount = 3;
+        }
+
+        await RefreshUnreadCountAsync();
     }
+
+    /// <summary>The chip tracks the service, refreshed on every change notification.</summary>
+    private void OnNotificationsChanged() =>
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshUnreadCountAsync();
+            StateHasChanged();
+        });
+
+    private async Task RefreshUnreadCountAsync() =>
+        _unreadCount = await Notifications.GetUnreadCountAsync(Recipient);
+
+    public void Dispose() => Notifications.OnChanged -= OnNotificationsChanged;
 
     private bool _showInternal;
     private int _activeStep;
@@ -1077,33 +1188,14 @@
         Toast.ShowWarning("Disk space low.");
     }
 
-    private int _unreadCount => _notifications.Count(n => !n.IsRead);
-
-    private List<TmNotification> _notifications = new()
+    private async Task AddNotificationAsync()
     {
-        new() { Id = "n1", RecipientUserId = "demo", Type = TmNotificationTypes.PageEdited, Title = "Deployment succeeded", Body = "Build #142 deployed to production." },
-        new() { Id = "n2", RecipientUserId = "demo", Type = TmNotificationTypes.PageCommentAdded, Title = "New comment", Body = "Alice commented on PR #88." },
-        new() { Id = "n3", RecipientUserId = "demo", Type = TmNotificationTypes.ThreadResolved, Title = "Issue resolved", Body = "Bug #301 was closed.", ReadAt = DateTimeOffset.UtcNow },
-    };
-
-    private void MarkAllRead() =>
-        _notifications = _notifications
-            .Select(n =>
-            {
-                n.ReadAt ??= DateTimeOffset.UtcNow;
-                return n;
-            })
-            .ToList();
-
-    private void AddNotification()
-    {
-        var newId = $"n{_notifications.Count + 1}";
-        _notifications.Insert(0, new TmNotification
+        _addedCount++;
+        await Notifications.PublishAsync(new TmNotification
         {
-            Id = newId,
-            RecipientUserId = "demo",
+            RecipientUserId = Recipient,
             Type = TmNotificationTypes.Mention,
-            Title = $"New notification {_notifications.Count + 1}",
+            Title = $"New notification {_addedCount}",
             Body = "This is a dynamically added notification."
         });
     }

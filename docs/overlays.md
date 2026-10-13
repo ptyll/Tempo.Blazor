@@ -30,8 +30,10 @@ Anchored panels carry `MobilePresentation` (`PanelPresentation`):
   popover otherwise. The choice resolves from the **viewport** (the `TmLayoutScopes.Viewport`
   cascade or the internal probe), because the sheet is positioned against the viewport; the
   popover's *size* still follows the **trigger's container**. `TmDropdown` and `TmPopover` keep
-  `Auto` as their wrapper default; the column picker and the date/time pickers opt into `Auto`
-  explicitly.
+  `Auto` as their wrapper default; the column picker, the date/time pickers and — since F11 —
+  the deliberate `TmContextMenu` / `TmSplitButton` / `TmNotificationBell` opt-ins
+  (`MobilePresentation="Auto"`, sheet title from `SheetTitle` or a per-component localized
+  default) opt into `Auto` explicitly.
 - `Sheet` — forced, renders without measurement (testable in bUnit without a DOM).
 
 **A surface whose anchor keeps focus never presents as a sheet.** A typeahead
