@@ -29,7 +29,7 @@
       "name": "ErrorMessage",
       "type": "string?",
       "isRequired": false,
-      "description": "Explicit validation error message shown below the field in red. Takes precedence over EditContext validation."
+      "description": "Explicit validation error message shown below the field in red. Takes precedence over EditContext validation. The message keeps role=\"alert\": the input-level AnnounceError=\"false\" opt-out (e.g. TmTextInput.AnnounceError) mutes only the wrapped control's own error message, never this wrapper's error display."
     },
     {
       "name": "ValidationFor",

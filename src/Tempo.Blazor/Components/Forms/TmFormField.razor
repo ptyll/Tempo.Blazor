@@ -43,7 +43,14 @@
     /// <summary>Helper text shown below the field when there is no error.</summary>
     [Parameter] public string? HelpText { get; set; }
 
-    /// <summary>Explicit validation error message shown below the field in red. Takes precedence over EditContext validation.</summary>
+    /// <summary>
+    /// Explicit validation error message shown below the field in red. Takes precedence over EditContext validation.
+    /// <para>
+    /// The message keeps <c>role="alert"</c>: the input-level <c>AnnounceError="false"</c> opt-out
+    /// (e.g. <c>TmTextInput.AnnounceError</c>) mutes only the wrapped control's own error message,
+    /// never this wrapper's error display.
+    /// </para>
+    /// </summary>
     [Parameter] public string? ErrorMessage { get; set; }
 
     /// <summary>Expression identifying the model field to track for EditContext validation errors.</summary>

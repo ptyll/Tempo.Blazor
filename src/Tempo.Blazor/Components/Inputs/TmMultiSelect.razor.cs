@@ -60,6 +60,24 @@ public partial class TmMultiSelect<TItem, TValue>
     /// <summary>Validation error message.</summary>
     [Parameter] public string? Error { get; set; }
 
+    /// <summary>
+    /// When <c>true</c> (default), the rendered <see cref="Error"/> message carries
+    /// <c>role="alert"</c> so screen readers announce it assertively the moment it appears.
+    /// Set <c>false</c> when the host moves focus to the invalid field itself (typically a modal
+    /// submit that focuses the first invalid control): the error is then read through
+    /// <c>aria-describedby</c> on the trigger, and the live region would announce the same text a
+    /// second time. With <c>false</c> the message still renders, keeps its error styling and stays
+    /// referenced by <c>aria-describedby</c>; only the <c>role</c> attribute is dropped.
+    /// <para>
+    /// Only safe when the same render that shows the error also moves focus to this control. Keep
+    /// the default for validation on blur or on input, async/server validation, or when focus
+    /// stays on the submit button — otherwise the error is not announced at all. With several
+    /// invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first
+    /// invalid field.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool AnnounceError { get; set; } = true;
+
     /// <summary>Help text shown below when no error is present.</summary>
     [Parameter] public string? HelpText { get; set; }
 

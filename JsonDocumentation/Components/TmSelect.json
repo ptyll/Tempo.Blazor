@@ -46,6 +46,13 @@
       "description": "Validation error message."
     },
     {
+      "name": "AnnounceError",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
+    },
+    {
       "name": "HelpText",
       "type": "string?",
       "isRequired": false,
@@ -136,6 +143,10 @@
     {
       "title": "Select with validation error and help text",
       "code": "@* Error takes priority over HelpText — when Error is set, HelpText is hidden. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_selectedDepartment\"\n          Label=\"Department\"\n          Placeholder=\"Select department\"\n          Error=\"@_error\"\n          HelpText=\"Choose your primary department\"\n          Options=\"@_departments\" />\n\n<button @onclick=\"Validate\">Submit</button>\n\n@code {\n    private string? _selectedDepartment;\n    private string? _error;\n\n    private List<SelectOption<string>> _departments =\n    [\n        new(\"IT\", \"IT\"),\n        new(\"HR\", \"Human Resources\"),\n        new(\"FIN\", \"Finance\")\n    ];\n\n    private void Validate()\n    {\n        _error = string.IsNullOrEmpty(_selectedDepartment)\n            ? \"Please select a department\"\n            : null;\n    }\n}"
+    },
+    {
+      "title": "Error without the assertive announcement (host moves focus to the field)",
+      "code": "@* AnnounceError=\"false\" drops role=\"alert\" from the error message: when the submit handler\n   moves focus to the invalid select, the error is already read through aria-describedby and\n   the live region would announce the same text a second time. The message itself, its\n   styling and the aria-describedby link are unchanged. *@\n\n<TmSelect TValue=\"string\"\n          @bind-Value=\"_currency\"\n          Label=\"Currency\"\n          Error=\"@_currencyError\"\n          AnnounceError=\"false\"\n          Options=\"@_currencies\" />"
     },
     {
       "title": "Manual option rendering via ChildContent (with preselection)",

@@ -678,6 +678,34 @@
 
 ### Accessibility
 
+- **The input-family error messages can opt out of the assertive `role="alert"` announcement.**
+  Every input component with an `Error` parameter — `TmTextInput`, `TmTextArea`, `TmSelect`,
+  `TmNumberInput`, `TmDecimalInput`, `TmMultiSelect`, `TmEntityPicker`, `TmCodeEditor` and
+  `TmExpressionEditor` — announced its own error through `role="alert"` unconditionally. When the
+  host also moves focus to the invalid field after a failed submit (e.g. a modal form whose submit
+  focuses the first invalid field), the screen reader read the error twice: once from the live
+  region, once through `aria-describedby` on the focused control. The new `AnnounceError`
+  parameter (default `true`, so the current output is unchanged) drops only the `role` attribute
+  when set to `false` — the message still renders, keeps its error styling and stays referenced
+  by `aria-describedby`/`aria-invalid`:
+
+  ```razor
+  <!-- default: role="alert" announces the error the moment it appears -->
+  <TmTextInput @bind-Value="model.Name" Label="Name" Error="@_nameError" />
+
+  <!-- the host focuses the field itself, aria-describedby reads the error: no live region -->
+  <TmTextInput @bind-Value="model.Amount" Label="Amount" Error="@_amountError" AnnounceError="false" />
+  ```
+
+  **Scope:** the opt-out covers only the input's own `Error` message. `TmFormField`,
+  `TmFormValidationMessage` and the range pickers' own field errors (`TmTimeRangePicker`,
+  `TmDateTimeRangePicker` invalid-range messages) keep their `role="alert"`, so EditContext-driven
+  and cross-field validation keep announcing. **Only safe when the same render that shows the
+  error also moves focus to this control.** Keep the default for validation on blur or on input,
+  async/server validation, or when focus stays on the submit button — otherwise the error is not
+  announced at all. With several invalid fields, pair it with a summary (e.g.
+  `TmValidationSummary`) or focus the first invalid field.
+
 - **A `TmNotificationBell` unread entry announces its state.** The blue dot was `aria-hidden`
   decoration, so a read and an unread entry were indistinguishable to a screen reader. Unread
   entries now carry a localized screen-reader-only text alternative (`tm-sr-only`,
