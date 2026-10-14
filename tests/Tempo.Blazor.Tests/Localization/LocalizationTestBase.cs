@@ -892,6 +892,24 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSplitter_Collapse"] = "Collapse pane",
         ["TmSplitter_Expand"] = "Expand pane",
 
+        // TmWorkflowDesignerCanvas
+        ["TmWorkflowDesignerCanvas_Aria"] = "Workflow designer canvas",
+        ["TmWorkflowDesignerCanvas_EditProperties"] = "Edit properties",
+        ["TmWorkflowDesignerCanvas_DeleteState"] = "Delete state",
+        ["TmWorkflowDesignerCanvas_DeleteTransition"] = "Delete transition",
+        ["TmWorkflowDesignerCanvas_AddInitialState"] = "Add initial state",
+        ["TmWorkflowDesignerCanvas_AddState"] = "Add state",
+        ["TmWorkflowDesignerCanvas_AddFinalState"] = "Add final state",
+        ["TmWorkflowDesignerCanvas_ConnectTo"] = "Connect to…",
+        ["TmWorkflowDesignerCanvas_StateLabel"] = "{0} ({1})",
+        ["TmWorkflowDesignerCanvas_InitialState"] = "initial state",
+        ["TmWorkflowDesignerCanvas_IntermediateState"] = "intermediate state",
+        ["TmWorkflowDesignerCanvas_FinalState"] = "final state",
+        ["TmWorkflowDesignerCanvas_StateMoved"] = "{0} moved to {1}, {2}",
+        ["TmWorkflowDesignerCanvas_StateDeleted"] = "{0} deleted",
+        ["TmWorkflowDesignerCanvas_ZoomIn"] = "Zoom in",
+        ["TmWorkflowDesignerCanvas_ZoomOut"] = "Zoom out",
+
         // TmImageGallery
         ["TmImageGallery_PreviousImage"] = "Previous image",
         ["TmImageGallery_NextImage"]     = "Next image",
@@ -4644,6 +4662,24 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSplitter_Resize"] = "Změnit velikost panelů",
         ["TmSplitter_Collapse"] = "Sbalit panel",
         ["TmSplitter_Expand"] = "Rozbalit panel",
+
+        // TmWorkflowDesignerCanvas
+        ["TmWorkflowDesignerCanvas_Aria"] = "Plátno návrháře workflow",
+        ["TmWorkflowDesignerCanvas_EditProperties"] = "Upravit vlastnosti",
+        ["TmWorkflowDesignerCanvas_DeleteState"] = "Smazat stav",
+        ["TmWorkflowDesignerCanvas_DeleteTransition"] = "Smazat přechod",
+        ["TmWorkflowDesignerCanvas_AddInitialState"] = "Přidat počáteční stav",
+        ["TmWorkflowDesignerCanvas_AddState"] = "Přidat stav",
+        ["TmWorkflowDesignerCanvas_AddFinalState"] = "Přidat koncový stav",
+        ["TmWorkflowDesignerCanvas_ConnectTo"] = "Propojit s…",
+        ["TmWorkflowDesignerCanvas_StateLabel"] = "{0} ({1})",
+        ["TmWorkflowDesignerCanvas_InitialState"] = "počáteční stav",
+        ["TmWorkflowDesignerCanvas_IntermediateState"] = "mezistav",
+        ["TmWorkflowDesignerCanvas_FinalState"] = "koncový stav",
+        ["TmWorkflowDesignerCanvas_StateMoved"] = "{0} přesunut na {1}, {2}",
+        ["TmWorkflowDesignerCanvas_StateDeleted"] = "{0} smazán",
+        ["TmWorkflowDesignerCanvas_ZoomIn"] = "Přiblížit",
+        ["TmWorkflowDesignerCanvas_ZoomOut"] = "Oddálit",
 
         // TmImageGallery
         ["TmImageGallery_PreviousImage"] = "Předchozí obrázek",

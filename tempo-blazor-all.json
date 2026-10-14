@@ -7118,6 +7118,16 @@
           "documentationStatus": "merged"
         },
         {
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Workflow",
+          "description": "The viewBox (plus the matching zoom scale) a JS zoom helper reports back to the TmWorkflowDesignerCanvas — the return shape of tmWorkflowDesigner.zoomTo and tmWorkflowDesigner.fitToView, so the component can assign its viewBox fields from the result BEFORE StateHasChanged (JS and the Blazor-rendered attribute never disagree).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Workflow/WorkflowCanvasModels.cs",
+          "documentationStatus": "generated",
+          "itemName": "WorkflowViewBox"
+        },
+        {
           "itemName": "ServiceCollectionExtensions",
           "kind": "Class",
           "category": "Configuration",
@@ -27035,15 +27045,19 @@
         {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-user-zone.test.mjs",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/workflow-designer-pointer.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 372,
+        "itemCount": 373,
         "manualItemCount": 372,
-        "generatedItemCount": 364,
-        "generatedOnlyItemCount": 0,
+        "generatedItemCount": 365,
+        "generatedOnlyItemCount": 1,
         "componentCount": 203,
-        "publicApiTypeCount": 161
+        "publicApiTypeCount": 162
       }
     },
     {
@@ -114634,10 +114648,10 @@
   ],
   "summary": {
     "packageCount": 26,
-    "itemCount": 3203,
+    "itemCount": 3204,
     "manualItemCount": 3203,
-    "generatedOnlyItemCount": 0,
+    "generatedOnlyItemCount": 1,
     "componentCount": 474,
-    "publicApiTypeCount": 2676
+    "publicApiTypeCount": 2677
   }
 }

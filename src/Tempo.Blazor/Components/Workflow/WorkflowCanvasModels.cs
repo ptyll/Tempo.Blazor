@@ -67,3 +67,27 @@ public sealed class WorkflowCanvasDefinition
     /// <summary>All transitions in the workflow.</summary>
     public List<CanvasTransition> Transitions { get; set; } = [];
 }
+
+/// <summary>
+/// The viewBox (plus the matching zoom scale) a JS zoom helper reports back to the
+/// <see cref="TmWorkflowDesignerCanvas"/> — the return shape of <c>tmWorkflowDesigner.zoomTo</c>
+/// and <c>tmWorkflowDesigner.fitToView</c>, so the component can assign its viewBox fields from
+/// the result BEFORE StateHasChanged (JS and the Blazor-rendered attribute never disagree).
+/// </summary>
+public sealed class WorkflowViewBox
+{
+    /// <summary>Zoom scale the viewBox corresponds to (1.0 = the 800-unit base viewBox).</summary>
+    public double Scale { get; set; }
+
+    /// <summary>viewBox left edge.</summary>
+    public double X { get; set; }
+
+    /// <summary>viewBox top edge.</summary>
+    public double Y { get; set; }
+
+    /// <summary>viewBox width.</summary>
+    public double W { get; set; }
+
+    /// <summary>viewBox height.</summary>
+    public double H { get; set; }
+}

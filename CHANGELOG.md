@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- **The `TmWorkflowDesignerCanvas` context menu is localized.** Its items ("Edit properties",
+  "Delete state", "Delete transition", "Add initial state", "Add state", "Add final state") were
+  hardcoded English inside the component; they now use the `TmWorkflowDesignerCanvas_*` resource
+  keys in all three languages (en/cs/fr) and answer to `ITmLocalizer`, like every other
+  user-visible string in the library.
+
 - **Cancelling a `TmDataTable` column resize no longer saves the width, and the drag runs on the
   shared pointer-drag helper.** The resize gesture moved out of `data-table.js`'s own document
   listeners into `attachColumnResize(root, dotNetRef)` over `pointer-drag.js`: the start width is
@@ -571,6 +577,16 @@
   the palette surface in light, dark, indigo and indigo-dark.
 ### Accessibility
 
+- **The `TmWorkflowDesignerCanvas` states are named, focusable buttons on a labelled canvas.** The
+  svg root dropped `role="img"` for `role="group"` (see Breaking/Migration), every state node is a
+  `role="button"` with a localized `aria-label` (`TmWorkflowDesignerCanvas_StateLabel` —
+  "{name} ({type})", the type word localized too) and a roving tabindex (one tab stop for the
+  group; the arrows move the focus, their page-scroll default is cancelled in `workflow-designer.js`).
+  The `:focus-visible` ring works on the SVG shapes, with a `forced-colors` variant; the temporary
+  transition line lost its hardcoded hex for the `--tm-color-primary` token (Highlight under
+  forced colors), and the connection ports are always visible with a ≥24 px coarse-pointer target
+  (touch has no hover to reveal them).
+
 - **The `TmDataTable` resize handle is a keyboard-operable separator.** The handle renders
   `role="separator"` with `tabindex="0"`, `aria-orientation="vertical"`, always-emitted
   `aria-valuenow` / `aria-valuemin` (60) / `aria-valuemax` (1200, raised to track the width when
@@ -594,6 +610,29 @@
   variant) and the thumbs grow on a coarse pointer.
 
 ### Breaking / Migration
+
+- **`TmWorkflowDesignerCanvas`'s svg root is `role="group"`, not `role="img"`** — `img` tells
+  assistive technology the subtree is a picture, which hid the now-focusable state nodes from it
+  entirely. The accessible name (the canvas aria-label) is unchanged. DOM, before/after:
+
+  ```html
+  <!-- before: the states inside were invisible to assistive technology -->
+  <svg viewBox="0 0 800 500" aria-label="Workflow designer canvas" role="img">…</svg>
+
+  <!-- after: a labelled group whose state nodes are focusable buttons -->
+  <svg viewBox="0 0 800 500" aria-label="Workflow designer canvas" role="group">…</svg>
+  ```
+
+  Two more behaviour changes ride along: **plain wheel no longer zooms the canvas** — ctrl+wheel
+  (trackpad pinch) does, exactly like the diagram editor, and plain wheel scrolls the page again;
+  and **a click that follows a real node drag no longer also selects the node** (a tap still
+  selects — the drag gesture swallows only the click that terminates a drag).
+
+- **`workflow-designer.js` now imports `pointer-drag.js` and `pointer-gesture.js`.** A `script-src`
+  policy that allows `workflow-designer.js` must also allow the two helpers it loads with a dynamic
+  `import()` — same `_content/Tempo.Blazor/js/` origin, so the host-wide nonce or hash that covers
+  `scheduler.js` covers all of them; a per-file hash must list `pointer-drag.js` and
+  `pointer-gesture.js` too. In exchange the designer no longer carries its own mouse gesture.
 
 - **The rich text editor dialogs (link, image, table, video, find & replace) are now `TmModal`s.**
   They used to paint their own `position: fixed` overlay at `z-index: 1040` with no `role`,
@@ -1373,6 +1412,34 @@
   unchanged (same visual).
 
 ### Added
+
+- **`TmWorkflowDesignerCanvas` works on touch, and every drag has a keyboard alternative.** The
+  private document mouse listeners are gone; `workflow-designer.js` now runs three delegated
+  `pointer-drag.js` sessions plus `pointer-gesture.js`: states drag with a finger immediately (a
+  canvas owns its surface, no long-press — a tap still selects), the empty canvas pans with one
+  finger, two fingers pinch-zoom around their centre (the first finger's drag hands over and rolls
+  back the moment the second finger lands, committing nothing), ctrl+wheel zooms around the cursor,
+  and a node dragged against the viewport edge auto-scrolls the page (`createAutoScroller`), with
+  the node re-positioned under the stationary finger on every applied frame. Escape, pointercancel
+  and a mid-drag unmount restore the start transform/viewBox VERBATIM and commit nothing. For the
+  keyboard: states are `role="button"` tab stops with a roving tabindex inside the canvas group —
+  Tab reaches them, the arrows move the focus, Enter selects (Space on keyup, exactly once),
+  Delete removes the focused state, and **Alt+arrows move the node one grid step through the same
+  commit path as the drag**, announced on a `role="status"` live region ("Draft moved to 60, 200").
+  Shift+F10 (or the ContextMenu key) opens the context menu on a focused state — a right-click
+  opens the same menu and cancels the gesture in flight — whose new
+  **"Connect to…"** entry lists the other states — the non-drag alternative to dragging from a
+  port — and the new overlay **+ / − zoom buttons** are the single-pointer alternative to the
+  pinch (WCAG 2.5.7). The menu opens with the focus on its first item (the arrows/Home/End rove
+  through it via `tm-menu-nav.js`), Escape closes it and returns the focus to the state, and the
+  Connect-to switch keeps the focus inside the menu. Keyboard Delete removes the focused state and
+  hands the roving focus to the neighbouring state (the zoom buttons when the last one goes). The
+  port drop is hit-tested with `document.elementFromPoint`, so the
+  transition lands on the state under the finger even though the pointer was captured by the port.
+  Localization keys `TmWorkflowDesignerCanvas_EditProperties/_DeleteState/_DeleteTransition/
+  _AddInitialState/_AddState/_AddFinalState/_ConnectTo/_StateLabel/_InitialState/
+  _IntermediateState/_FinalState/_StateMoved/_StateDeleted/_ZoomIn/_ZoomOut` (en/cs/fr) replace
+  the hardcoded menu strings.
 
 - **`pointer-gesture.js` — the shared multi-pointer module: `attachPinch` (two-finger pinch/pan)
   and `createAutoScroller` (edge auto-scroll), with ctrl+wheel zoom.** Multi-pointer gestures now

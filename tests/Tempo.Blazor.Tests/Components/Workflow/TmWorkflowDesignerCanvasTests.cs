@@ -488,6 +488,44 @@ public class TmWorkflowDesignerCanvasTests : LocalizationTestBase
         cut.Instance.ZoomLevel.Should().Be(2.0);
     }
 
+    [Fact]
+    public async Task Canvas_SetZoom_Assigns_The_ViewBox_From_The_Js_Result()
+    {
+        var cut = Render<TmWorkflowDesignerCanvas>(p => p
+            .Add(x => x.Definition, SimpleWorkflow));
+        JSInterop.Setup<double[]>("tmWorkflowDesigner.zoomTo", new Bunit.InvocationMatcher(_ => true))
+            .SetResult([200, 125, 400, 250]);
+
+        await cut.Instance.SetZoom(2.0);
+        cut.Render();
+
+        cut.Find("svg").GetAttribute("viewBox").Should().Be("200 125 400 250",
+            "the component assigns its viewBox fields from the JS result BEFORE StateHasChanged");
+        cut.Instance.ZoomLevel.Should().Be(2.0);
+    }
+
+    [Fact]
+    public async Task Canvas_FitToView_Assigns_ViewBox_And_Zoom_From_The_Js_Result()
+    {
+        var cut = Render<TmWorkflowDesignerCanvas>(p => p
+            .Add(x => x.Definition, SimpleWorkflow));
+        JSInterop.Setup<WorkflowViewBox>("tmWorkflowDesigner.fitToView", new Bunit.InvocationMatcher(_ => true))
+            .SetResult(new WorkflowViewBox
+            {
+                Scale = 1.5,
+                X = 10,
+                Y = 20,
+                W = 533.33,
+                H = 333.33
+            });
+
+        await cut.Instance.FitToView();
+        cut.Render();
+
+        cut.Find("svg").GetAttribute("viewBox").Should().Be("10 20 533.33 333.33");
+        cut.Instance.ZoomLevel.Should().Be(1.5);
+    }
+
     // ── Context menu ──
 
     [Fact]
@@ -535,7 +573,7 @@ public class TmWorkflowDesignerCanvasTests : LocalizationTestBase
         cut.Render();
 
         var items = cut.FindAll(".tm-wf-context-menu__item");
-        items.Count.Should().Be(2); // edit properties, delete
+        items.Count.Should().Be(3); // edit properties, connect to…, delete
         cut.FindAll(".tm-wf-context-menu__item--danger").Count.Should().Be(1);
     }
 

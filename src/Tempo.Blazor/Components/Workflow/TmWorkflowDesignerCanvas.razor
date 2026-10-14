@@ -12,8 +12,9 @@
              preserveAspectRatio="xMidYMid meet"
              width="100%"
              height="100%"
+             tabindex="-1"
              aria-label="@Loc["TmWorkflowDesignerCanvas_Aria"]"
-             role="img">
+             role="group">
 
             <defs>
                 @if (ShowGrid)
@@ -43,30 +44,54 @@
 
         @if (_ctxMenuVisible && !ReadOnly)
         {
+            @* A click inside the menu belongs to the menu: it never reaches the canvas click that
+               would close the menu before the Connect-to submenu could show its targets. Escape
+               closes it and returns the focus to the state it came from. *@
             <div class="tm-wf-context-menu" role="menu"
+                 @ref="_ctxMenuRef"
+                 @onclick:stopPropagation="true"
+                 @onkeydown="HandleMenuKeyDown"
                  style="left: @(_ctxMenuClientX.ToString("0", System.Globalization.CultureInfo.InvariantCulture))px; top: @(_ctxMenuClientY.ToString("0", System.Globalization.CultureInfo.InvariantCulture))px;">
-                @if (_ctxMenuStateId is not null)
+                @if (_ctxMenuStateId is not null && _ctxMenuMode == "connect")
+                {
+                    @foreach (var target in ConnectTargets(_ctxMenuStateId))
+                    {
+                        var capturedTarget = target;
+                        <button class="tm-wf-context-menu__item" role="menuitem"
+                                @onclick="@(() => ContextConnectTo(capturedTarget.Id))">
+                            @capturedTarget.Name
+                        </button>
+                    }
+                }
+                else if (_ctxMenuStateId is not null)
                 {
                     <button class="tm-wf-context-menu__item" role="menuitem"
                             @onclick="ContextSelectState">
-                        Edit properties
+                        @Loc["TmWorkflowDesignerCanvas_EditProperties"]
                     </button>
+                    @if (ConnectTargets(_ctxMenuStateId).Count > 0)
+                    {
+                        <button class="tm-wf-context-menu__item" role="menuitem"
+                                @onclick="@(() => SwitchToConnectMode())">
+                            @Loc["TmWorkflowDesignerCanvas_ConnectTo"]
+                        </button>
+                    }
                     <div class="tm-wf-context-menu__divider" role="separator"></div>
                     <button class="tm-wf-context-menu__item tm-wf-context-menu__item--danger" role="menuitem"
                             @onclick="ContextDeleteState">
-                        Delete state
+                        @Loc["TmWorkflowDesignerCanvas_DeleteState"]
                     </button>
                 }
                 else if (_ctxMenuTransitionId is not null)
                 {
                     <button class="tm-wf-context-menu__item" role="menuitem"
                             @onclick="ContextSelectTransition">
-                        Edit properties
+                        @Loc["TmWorkflowDesignerCanvas_EditProperties"]
                     </button>
                     <div class="tm-wf-context-menu__divider" role="separator"></div>
                     <button class="tm-wf-context-menu__item tm-wf-context-menu__item--danger" role="menuitem"
                             @onclick="ContextDeleteTransition">
-                        Delete transition
+                        @Loc["TmWorkflowDesignerCanvas_DeleteTransition"]
                     </button>
                 }
                 else
@@ -74,21 +99,34 @@
                     <button class="tm-wf-context-menu__item" role="menuitem"
                             @onclick="@(() => ContextAddState(CanvasStateType.Initial))">
                         <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--initial"></span>
-                        Add initial state
+                        @Loc["TmWorkflowDesignerCanvas_AddInitialState"]
                     </button>
                     <button class="tm-wf-context-menu__item" role="menuitem"
                             @onclick="@(() => ContextAddState(CanvasStateType.Intermediate))">
                         <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--intermediate"></span>
-                        Add state
+                        @Loc["TmWorkflowDesignerCanvas_AddState"]
                     </button>
                     <button class="tm-wf-context-menu__item" role="menuitem"
                             @onclick="@(() => ContextAddState(CanvasStateType.Final))">
                         <span class="tm-wf-toolbox__btn-icon tm-wf-toolbox__btn-icon--final"></span>
-                        Add final state
+                        @Loc["TmWorkflowDesignerCanvas_AddFinalState"]
                     </button>
                 }
             </div>
         }
+
+        @* The single-pointer (and keyboard) alternative to pinch zoom — WCAG 2.5.7. *@
+        <div class="tm-wf-zoom-overlay">
+            <button type="button" class="tm-wf-zoom-overlay__btn"
+                    aria-label="@Loc["TmWorkflowDesignerCanvas_ZoomOut"]"
+                    @onclick="@(async () => await SetZoom(Math.Max(MinZoom, ZoomLevel - ZoomStep)))">&minus;</button>
+            <button type="button" class="tm-wf-zoom-overlay__btn"
+                    aria-label="@Loc["TmWorkflowDesignerCanvas_ZoomIn"]"
+                    @onclick="@(async () => await SetZoom(Math.Min(MaxZoom, ZoomLevel + ZoomStep)))">+</button>
+        </div>
+
+        @* Announces the keyboard move/delete (the non-drag alternative) to assistive technology. *@
+        <div class="tm-sr-only" role="status" aria-live="polite">@_announcement</div>
     </div>
 </div>
 
@@ -101,8 +139,11 @@
 
     private readonly string _instanceId = Guid.NewGuid().ToString("N")[..8];
     private ElementReference _svgRef;
+    private ElementReference _ctxMenuRef;
     private DotNetObjectReference<TmWorkflowDesignerCanvas>? _dotNetRef;
     private bool _jsInitialized;
+    /// <summary>The ReadOnly value the JS side was last told about (OnParametersSetAsync pushes deltas).</summary>
+    private bool _lastReadOnly;
 
     private double _viewBoxX;
     private double _viewBoxY;
@@ -117,6 +158,19 @@
     private double _ctxMenuSvgY;
     private string? _ctxMenuStateId;
     private string? _ctxMenuTransitionId;
+    /// <summary>Context-menu sub-mode: null = commands, "connect" = pick the transition target.</summary>
+    private string? _ctxMenuMode;
+
+    // Keyboard accessibility: the roving tabindex inside the state group, the state whose focus
+    // move is pending (applied through JS after the render that updated the tabindex), and the
+    // live-region announcement of the keyboard commits.
+    private string? _rovingStateId;
+    private string? _pendingFocusStateId;
+    private string? _announcement;
+    /// <summary>The open context menu waits for the focus move to its first item.</summary>
+    private bool _pendingMenuFocus;
+    /// <summary>The last state was keyboard-deleted: the focus moves to the zoom button (or the svg).</summary>
+    private bool _pendingFocusZoom;
 
     [Parameter, EditorRequired] public WorkflowCanvasDefinition? Definition { get; set; }
     [Parameter] public EventCallback<WorkflowCanvasDefinition> DefinitionChanged { get; set; }
@@ -135,22 +189,85 @@
     /// <summary>Current zoom level (1.0 = 100%).</summary>
     public double ZoomLevel { get; private set; } = 1.0;
 
+    private const double MinZoom = 0.25;
+    private const double MaxZoom = 4.0;
+    private const double ZoomStep = 0.25;
+
     private string ViewBoxString =>
         $"{F(_viewBoxX)} {F(_viewBoxY)} {F(_viewBoxW)} {F(_viewBoxH)}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_pendingFocusStateId is not null && Definition is not null
+            && Definition.States.Any(s => s.Id == _pendingFocusStateId))
+        {
+            var focusId = _pendingFocusStateId;
+            _pendingFocusStateId = null;
+            try
+            {
+                await JS.InvokeVoidAsync("tmWorkflowDesigner.focusState", _svgRef, focusId);
+            }
+            catch (JSException) { /* bUnit - no JS runtime */ }
+            catch (InvalidOperationException) { /* prerender */ }
+            catch (TaskCanceledException) { }
+        }
+
+        if (_pendingFocusZoom)
+        {
+            _pendingFocusZoom = false;
+            try
+            {
+                await JS.InvokeVoidAsync("tmWorkflowDesigner.focusZoom", _svgRef);
+            }
+            catch (JSException) { /* bUnit - no JS runtime */ }
+            catch (InvalidOperationException) { /* prerender */ }
+            catch (TaskCanceledException) { }
+        }
+
+        if (_pendingMenuFocus)
+        {
+            _pendingMenuFocus = false;
+            try
+            {
+                // The first item owns the focus when the menu opens (and after the Connect-to
+                // switch replaced the items); tm-menu-nav roves the arrows from there.
+                await JS.InvokeVoidAsync("tmWorkflowDesigner.focusMenu", _ctxMenuRef);
+            }
+            catch (JSException) { /* bUnit - no JS runtime */ }
+            catch (InvalidOperationException) { /* prerender */ }
+            catch (TaskCanceledException) { }
+        }
+
         if (firstRender && !_jsInitialized)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             try
             {
-                await JS.InvokeVoidAsync("tmWorkflowDesigner.init", _svgRef, _dotNetRef, ReadOnly);
+                await JS.InvokeVoidAsync("tmWorkflowDesigner.init", _svgRef, _dotNetRef, ReadOnly,
+                    new { gridSize = GridSize, minZoom = MinZoom, maxZoom = MaxZoom });
                 _jsInitialized = true;
+                _lastReadOnly = ReadOnly;
             }
             catch (JSException) { /* bUnit - no JS runtime */ }
+            catch (ObjectDisposedException) { /* disposed while the call was in flight */ }
             catch (InvalidOperationException) { /* prerender */ }
         }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // A parent flipped ReadOnly after init: the JS gestures must follow (the init-time value
+        // covers the first render).
+        if (!_jsInitialized || ReadOnly == _lastReadOnly) return;
+        _lastReadOnly = ReadOnly;
+        try
+        {
+            await JS.InvokeVoidAsync("tmWorkflowDesigner.setReadOnly", _svgRef, ReadOnly);
+        }
+        catch (JSException) { /* bUnit - no JS runtime */ }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { /* prerender */ }
+        catch (TaskCanceledException) { }
     }
 
     public async ValueTask DisposeAsync()
@@ -159,6 +276,7 @@
         {
             try { await JS.InvokeVoidAsync("tmWorkflowDesigner.destroy", _svgRef); }
             catch (JSDisconnectedException) { }
+            catch (ObjectDisposedException) { }
             catch (InvalidOperationException) { }
             catch (TaskCanceledException) { }
         }
@@ -170,25 +288,81 @@
     [JSInvokable]
     public void OnNodeDragged(string stateId, double x, double y)
     {
-        if (Definition is null) return;
+        if (ReadOnly || Definition is null) return;
         var state = Definition.States.FirstOrDefault(s => s.Id == stateId);
         if (state is null) return;
 
-        // Snap to grid
-        var snappedX = Math.Round(x / GridSize) * GridSize;
-        var snappedY = Math.Round(y / GridSize) * GridSize;
-
-        state.X = snappedX;
-        state.Y = snappedY;
-
+        ApplyNodePosition(state, x, y);
         DefinitionChanged.InvokeAsync(Definition);
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// The keyboard alternative to a node drag (Alt+arrow through <c>attachKeyboardMove</c>):
+    /// one commit path with the drag (snap + DefinitionChanged) plus a live-region announcement.
+    /// </summary>
+    [JSInvokable]
+    public void OnNodeKeyboardMoved(string stateId, double x, double y)
+    {
+        if (ReadOnly || Definition is null) return;
+        var state = Definition.States.FirstOrDefault(s => s.Id == stateId);
+        if (state is null) return;
+
+        ApplyNodePosition(state, x, y);
+        _announcement = Loc["TmWorkflowDesignerCanvas_StateMoved", state.Name, F(state.X), F(state.Y)];
+        DefinitionChanged.InvokeAsync(Definition);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Delete on a focused state — the keyboard alternative to the context-menu command. Before
+    /// the removal the roving focus moves to a NEIGHBOUR (next, else previous): exactly one state
+    /// keeps tabindex 0 and the focus lands there after the re-render. With no neighbour left the
+    /// zoom button (the surviving canvas chrome) takes the focus.
+    /// </summary>
+    [JSInvokable]
+    public void OnNodeKeyboardDeleted(string stateId)
+    {
+        if (ReadOnly || Definition is null) return;
+        var state = Definition.States.FirstOrDefault(s => s.Id == stateId);
+        if (state is null) return;
+
+        var index = Definition.States.IndexOf(state);
+        var neighbour = index + 1 < Definition.States.Count ? Definition.States[index + 1]
+            : (index - 1 >= 0 ? Definition.States[index - 1] : null);
+        if (neighbour is not null)
+        {
+            _rovingStateId = neighbour.Id;
+            _pendingFocusStateId = neighbour.Id;
+        }
+        else
+        {
+            _rovingStateId = null;
+            _pendingFocusStateId = null;
+            _pendingFocusZoom = true;
+        }
+
+        RemoveState(stateId);
+        _announcement = Loc["TmWorkflowDesignerCanvas_StateDeleted", state.Name];
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyNodePosition(CanvasState state, double x, double y)
+    {
+        // Snap to grid — the single commit path shared by the drag and the keyboard move.
+        state.X = Math.Round(x / GridSize) * GridSize;
+        state.Y = Math.Round(y / GridSize) * GridSize;
     }
 
     [JSInvokable]
     public void OnTransitionCreated(string fromId, string toId)
     {
-        if (Definition is null) return;
+        CreateTransition(fromId, toId);
+    }
+
+    private void CreateTransition(string fromId, string toId)
+    {
+        if (ReadOnly || Definition is null) return;
         // Reject self-loops
         if (fromId == toId) return;
         // Reject duplicates
@@ -234,13 +408,146 @@
         _ctxMenuClientY = clientY;
         _ctxMenuStateId = stateId;
         _ctxMenuTransitionId = transitionId;
+        _ctxMenuMode = null;
         _ctxMenuVisible = true;
+        _pendingMenuFocus = true;
         InvokeAsync(StateHasChanged);
     }
 
     // ── Context menu actions ──
 
     private void CloseContextMenu() => _ctxMenuVisible = false;
+
+    /// <summary>The "Connect to…" entry: the menu switches to the target list and keeps the focus.</summary>
+    private void SwitchToConnectMode()
+    {
+        _ctxMenuMode = "connect";
+        _pendingMenuFocus = true;
+    }
+
+    /// <summary>The states a transition FROM the given state may go to (every other state).</summary>
+    private List<CanvasState> ConnectTargets(string fromStateId) =>
+        Definition?.States.Where(s => s.Id != fromStateId).ToList() ?? [];
+
+    /// <summary>
+    /// Opens the state context menu from the KEYBOARD (Shift+F10 / ContextMenu key on a focused
+    /// state). The pointer path is the svg <c>contextmenu</c> event; both feed the same menu.
+    /// The menu first sits at the node's viewBox position and is then re-anchored to the
+    /// JS-measured state rect minus the container rect — exact under zoom and pan.
+    /// </summary>
+    private void OpenContextMenuForState(CanvasState state)
+    {
+        _ctxMenuSvgX = state.X + NodeW / 2.0;
+        _ctxMenuSvgY = state.Y + NodeH;
+        _ctxMenuClientX = _ctxMenuSvgX;
+        _ctxMenuClientY = _ctxMenuSvgY;
+        _ctxMenuStateId = state.Id;
+        _ctxMenuTransitionId = null;
+        _ctxMenuMode = null;
+        _ctxMenuVisible = true;
+        _pendingMenuFocus = true;
+        _ = PositionContextMenuAsync(state.Id);
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Re-anchors the open menu from the DOM measurement (state rect − canvas container rect).
+    /// The fallback viewBox position stands when JS is unavailable or the menu moved on.
+    /// </summary>
+    private async Task PositionContextMenuAsync(string stateId)
+    {
+        if (!_jsInitialized) return;
+        try
+        {
+            var point = await JS.InvokeAsync<double[]?>("tmWorkflowDesigner.stateMenuPoint", _svgRef, stateId);
+            if (point is not { Length: 2 }) return;
+            if (!_ctxMenuVisible || _ctxMenuStateId != stateId) return;
+            _ctxMenuClientX = point[0];
+            _ctxMenuClientY = point[1];
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (JSException) { /* bUnit - no JS runtime */ }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { /* prerender */ }
+        catch (TaskCanceledException) { }
+    }
+
+    /// <summary>Escape in the open menu closes it and returns the focus to the originating state.</summary>
+    private void HandleMenuKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key != "Escape") return;
+        var originStateId = _ctxMenuStateId;
+        CloseContextMenu();
+        if (originStateId is not null && Definition is not null
+            && Definition.States.Any(s => s.Id == originStateId))
+        {
+            _rovingStateId = originStateId;
+            _pendingFocusStateId = originStateId;
+        }
+    }
+
+    private void ContextConnectTo(string toStateId)
+    {
+        if (_ctxMenuStateId is not null)
+        {
+            CreateTransition(_ctxMenuStateId, toStateId);
+        }
+        CloseContextMenu();
+    }
+
+    // ── State keyboard handling (focus, activation, menu) ──
+
+    private string RovingStateId =>
+        _rovingStateId is not null && Definition is not null && Definition.States.Any(s => s.Id == _rovingStateId)
+            ? _rovingStateId
+            : (Definition is not null && Definition.States.Count > 0 ? Definition.States[0].Id : string.Empty);
+
+    private void HandleStateKeyDown(CanvasState state, KeyboardEventArgs e)
+    {
+        if (e.AltKey) return; // Alt+arrows belong to the JS keyboard move (attachKeyboardMove)
+
+        switch (e.Key)
+        {
+            case "Enter" when !e.Repeat:
+                // Emulated activation: an SVG group is not natively activatable (exactly once per press).
+                SelectState(state);
+                break;
+            case "ArrowRight":
+            case "ArrowDown":
+                MoveRovingFocus(state, 1);
+                break;
+            case "ArrowLeft":
+            case "ArrowUp":
+                MoveRovingFocus(state, -1);
+                break;
+            case "F10" when e.ShiftKey:
+            case "ContextMenu":
+                OpenContextMenuForState(state);
+                break;
+            case "Escape" when _ctxMenuVisible:
+                // The menu kept the focus open in principle; if it did not take it, Escape here
+                // still closes it (the focus already sits on this state).
+                CloseContextMenu();
+                break;
+        }
+    }
+
+    private void HandleStateKeyUp(CanvasState state, KeyboardEventArgs e)
+    {
+        // Space activates on KEYUP, where a native button fires its click (one activation per press).
+        if (e.Key == " ") SelectState(state);
+    }
+
+    private void MoveRovingFocus(CanvasState state, int delta)
+    {
+        if (Definition is null || Definition.States.Count == 0) return;
+        var index = Definition.States.FindIndex(s => s.Id == state.Id);
+        if (index < 0) return;
+        var target = Definition.States[Math.Clamp(index + delta, 0, Definition.States.Count - 1)];
+        _rovingStateId = target.Id;
+        // The focus move lands after the render that made the target the roving tab stop.
+        _pendingFocusStateId = target.Id;
+    }
 
     private void HandleCanvasClick()
     {
@@ -344,15 +651,26 @@
         InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>Sets zoom level programmatically (also calls JS to update viewBox).</summary>
+    /// <summary>
+    /// Sets zoom level programmatically. The JS <c>zoomTo</c> reports the new viewBox back as
+    /// [x, y, w, h]; the fields are assigned from the result BEFORE StateHasChanged, so the
+    /// Blazor-rendered viewBox attribute matches what the canvas now shows.
+    /// </summary>
     public async Task SetZoom(double scale)
     {
-        ZoomLevel = Math.Clamp(scale, 0.25, 4.0);
+        ZoomLevel = Math.Clamp(scale, MinZoom, MaxZoom);
         if (_jsInitialized)
         {
             try
             {
-                await JS.InvokeVoidAsync("tmWorkflowDesigner.zoomTo", _svgRef, ZoomLevel);
+                var viewBox = await JS.InvokeAsync<double[]?>("tmWorkflowDesigner.zoomTo", _svgRef, ZoomLevel);
+                if (viewBox is { Length: 4 })
+                {
+                    _viewBoxX = viewBox[0];
+                    _viewBoxY = viewBox[1];
+                    _viewBoxW = viewBox[2];
+                    _viewBoxH = viewBox[3];
+                }
             }
             catch (JSDisconnectedException) { }
             catch (InvalidOperationException) { }
@@ -362,21 +680,32 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    /// <summary>Fits the canvas view to show all nodes.</summary>
+    /// <summary>
+    /// Fits the canvas view to show all nodes. The JS <c>fitToView</c> reports the fit as one
+    /// { scale, x, y, w, h } object; the zoom level and the viewBox fields are assigned from it
+    /// before StateHasChanged.
+    /// </summary>
     public async Task FitToView()
     {
         if (!_jsInitialized) return;
 
         try
         {
-            var scale = await JS.InvokeAsync<double>("tmWorkflowDesigner.fitToView", _svgRef, 40);
-            ZoomLevel = scale;
-            await OnZoomLevelChanged.InvokeAsync(scale);
-            await InvokeAsync(StateHasChanged);
+            var fit = await JS.InvokeAsync<WorkflowViewBox?>("tmWorkflowDesigner.fitToView", _svgRef, 40);
+            if (fit is not null)
+            {
+                ZoomLevel = Math.Clamp(fit.Scale, MinZoom, MaxZoom);
+                _viewBoxX = fit.X;
+                _viewBoxY = fit.Y;
+                _viewBoxW = fit.W;
+                _viewBoxH = fit.H;
+                await OnZoomLevelChanged.InvokeAsync(ZoomLevel);
+            }
         }
         catch (JSDisconnectedException) { }
         catch (InvalidOperationException) { }
         catch (TaskCanceledException) { }
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Helpers ──
@@ -481,15 +810,33 @@
             var strokeColor = isSel ? "#3b82f6" : "#d1d5db";
             var strokeW = isSel ? "3" : "1.5";
             var capturedState = state;
+            var typeLabel = state.Type switch
+            {
+                CanvasStateType.Initial => Loc["TmWorkflowDesignerCanvas_InitialState"],
+                CanvasStateType.Final => Loc["TmWorkflowDesignerCanvas_FinalState"],
+                _ => Loc["TmWorkflowDesignerCanvas_IntermediateState"]
+            };
 
             builder.OpenElement(seq++, "g");
             builder.AddAttribute(seq++, "class", stateCss);
             builder.AddAttribute(seq++, "data-state-id", state.Id);
             builder.AddAttribute(seq++, "transform", $"translate({F(state.X)}, {F(state.Y)})");
             builder.AddAttribute(seq++, "style", "cursor: pointer;");
+            // Focusable + named + roving: one tab stop inside the role=group canvas, the arrows
+            // move the focus, Enter/Space activate (emulated — an SVG group is not natively so).
+            builder.AddAttribute(seq++, "tabindex", state.Id == RovingStateId ? "0" : "-1");
+            builder.AddAttribute(seq++, "role", "button");
+            builder.AddAttribute(seq++, "aria-label",
+                Loc["TmWorkflowDesignerCanvas_StateLabel", state.Name, typeLabel]);
             builder.AddAttribute(seq++, "onclick",
                 EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
                     this, () => SelectState(capturedState)));
+            builder.AddAttribute(seq++, "onkeydown",
+                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs>(
+                    this, e => HandleStateKeyDown(capturedState, e)));
+            builder.AddAttribute(seq++, "onkeyup",
+                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.KeyboardEventArgs>(
+                    this, e => HandleStateKeyUp(capturedState, e)));
 
             if (state.Type == CanvasStateType.Initial)
             {
