@@ -1,0 +1,30 @@
+@namespace Tempo.Blazor.Demo.SharedUI.Components
+@using Tempo.Blazor.Components.Forms
+@inject ITmLocalizer Loc
+
+@* Autofocuses its input as soon as it renders — the pattern a host form dialog uses to start the
+   user in the first field. It renders INSIDE the modal's content, so its OnAfterRenderAsync (a
+   child lifecycle) runs BEFORE the modal's own: the field already holds the focus while the focus
+   trap is still activating. That is exactly the ordering the trap's opener note and the
+   restore-target hygiene have to survive — on close, the focus must return to the trigger that
+   opened the modal, never to this (removed) field. *@
+<TmFormField Label="@Loc["TmDemo_FocusRestoreFieldName"]" For="restore-field">
+    <input @ref="_input"
+           id="restore-field"
+           data-testid="restore-field"
+           class="tm-input"
+           placeholder="@Loc["TmDemo_FocusRestoreFieldName"]" />
+</TmFormField>
+
+@code {
+    private ElementReference _input;
+
+    /// <summary>Moves the focus into the field as soon as it exists (a real dialog's autofocus).</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _input.FocusAsync();
+        }
+    }
+}

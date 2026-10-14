@@ -36,6 +36,10 @@ public class RteDialogHostFlowTests : LocalizationTestBase
         topLayer.SetupVoid("promote", _ => true).SetVoidResult();
         topLayer.SetupVoid("demote", _ => true).SetVoidResult();
         var trap = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-focus-trap.js");
+        // Cold-start pre-import + the opener note (P04-CF F7): the gated owners warm the module on
+        // their first render and note the opener at the scope's mount parameter-set phase.
+        trap.SetupVoid("ensureLoaded", _ => true).SetVoidResult();
+        trap.SetupVoid("noteReturnTarget", _ => true).SetVoidResult();
         trap.SetupVoid("activate", _ => true).SetVoidResult();
         trap.SetupVoid("deactivate", _ => true).SetVoidResult();
         trap.SetupVoid("syncScrollRegion", _ => true).SetVoidResult();

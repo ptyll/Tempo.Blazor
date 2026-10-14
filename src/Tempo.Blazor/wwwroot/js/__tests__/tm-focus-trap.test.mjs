@@ -3,11 +3,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    activate, deactivate, isInnermost, isTopmost, modalOwnsEscape, restoreTrapFocusIfLost,
-    syncScrollRegion, stopScrollRegion, focusIfLost, focusWithin, __resetForTests,
+    activate, deactivate, ensureLoaded, isInnermost, isTopmost, modalOwnsEscape,
+    restoreTrapFocusIfLost, syncScrollRegion, stopScrollRegion, focusIfLost, focusWithin,
+    noteReturnTarget, __resetForTests,
 } from '../tm-focus-trap.js';
 
 test.beforeEach(() => __resetForTests());
+
+/** Marks a stub element focusable for the module's FOCUSABLE lookups: the stub closest() below
+ * understands only bare attribute selectors, so the complex FOCUSABLE selector query (used by the
+ * pointerdown record and the focus history) would otherwise match nothing. The override answers
+ * only the focusability query and forwards everything else. */
+function focusable(el) {
+    const original = el.closest.bind(el);
+    el.closest = (selector) => (
+        typeof selector === 'string' && selector.includes('button:not([disabled])')
+            ? el
+            : original(selector));
+    return el;
+}
 
 function element(parent = null) {
     const listeners = new Map();
@@ -45,7 +59,14 @@ function element(parent = null) {
         get children() { return el._children; },
         set children(value) { el._children = value; },
         dataset: {},
-        focus() { el.focusCalls++; },
+        focus() {
+            el.focusCalls++;
+            // The real DOM moves document.activeElement with every focus() — the restore guard
+            // reads it to decide whether the close still owns the focus. A stub that kept
+            // activeElement parked would make every deactivate look like "focus already went
+            // elsewhere" and silently mask the guard.
+            if (globalThis.document) globalThis.document.activeElement = el;
+        },
         dispatch(type, event) { listeners.get(type)?.(event); },
     };
     if (parent) parent.children.push(el);
@@ -343,11 +364,13 @@ test('an invalid consumer selector must not throw after the inert and scroll loc
 
 test('initial focus retries on the next animation frames when the first move did not land', () => {
     // UX r2 m1: a focus() on a visibility:hidden panel (anchor mid-scroll) is dropped. The stub
-    // focus() never moves document.activeElement, which models the same "move did not land"
-    // shape — the trap must schedule its two retries and re-run the resolution.
+    // element's focus() moves document.activeElement (like the real DOM), so a dropped move is
+    // modelled explicitly: focus is counted but activeElement stays put — the trap must schedule
+    // its two retries and re-run the resolution.
     const body = element();
     const scope = element(body);
     const first = element(scope);
+    first.focus = () => { first.focusCalls++; };
     scope.querySelectorAll = () => [first];
     const frames = [];
     globalThis.requestAnimationFrame = (cb) => { frames.push(cb); return frames.length; };
@@ -546,6 +569,375 @@ test('RestoreFocus=false restores nothing, not even the opener', () => {
 
     assert.equal(opener.focusCalls, 0);
     assert.equal(body.focusCalls, 0, 'RestoreFocus=false restores nothing at all');
+});
+
+// ── Return-target hygiene ─────────────────────────────────────────
+// The trap's own capture runs when the LAZY import completes, so an app that focuses a field
+// inside the overlay during the open lands BEFORE activate(): the capture then names an element
+// that dies with the surface, and the close focused that dying element (the focus fell to <body>
+// the moment Blazor removed it). FocusTrap therefore notes the opener BEFORE the surface renders
+// (noteReturnTarget), that note wins over the late capture, and a capture that lies inside the
+// surface is never recorded. Deactivation must also never steal a focus the app already placed
+// on a live element outside the overlay (a post-close action button focused before the render).
+
+test('a field focused inside the overlay before activation never becomes the return target', () => {
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const trigger = element(body);
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    // The app focused the field while the lazy import was still in flight; a note that raced and
+    // lost reads the same poisoned element.
+    document.activeElement = field;
+    noteReturnTarget('scope');
+    activate(dialog, 'scope', null, false, null, true);
+
+    deactivate('scope');
+
+    assert.equal(field.focusCalls, 0, 'the poisoned capture must not focus the dying overlay');
+    assert.equal(body.focusCalls, 1, 'without a valid opener the close lands on the body deterministically');
+});
+
+test('a noted opener beats the app focus that landed inside the overlay during the import', () => {
+    const body = element();
+    const trigger = element(body);
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    // FocusTrap notes the opener BEFORE the overlay renders — the trigger is still focused.
+    noteReturnTarget('scope');
+    // The app focused its field while the import was in flight; the late capture lies inside.
+    document.activeElement = field;
+    activate(dialog, 'scope', null, false, null, true);
+
+    deactivate('scope');
+
+    assert.equal(field.focusCalls, 0, 'the dying field is never focused on close');
+    assert.equal(trigger.focusCalls, 1, 'focus returns to the opener, not to the body');
+});
+
+test('the last pointerdown rescues a poisoned capture for a pointer-opened surface', () => {
+    // No note (the note rides the same lazy import and lands poisoned too): the user CLICKED the
+    // trigger — the last document pointerdown names it — while the capture and the activeElement
+    // both name the field the app focused inside the overlay.
+    const body = element();
+    const trigger = focusable(element(body));
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    activate(dialog, 'first', null, false, null, true);   // installs the pointerdown listener
+    deactivate('first');
+    // The warm-up open already exercised the restore path on this shared opener; the assertions
+    // below must see only what THIS open's rescue does.
+    trigger.focusCalls = 0;
+    document.dispatch('pointerdown', { target: trigger }); // the user clicks the open trigger
+    document.activeElement = field;                        // the app focuses its field inside
+    activate(dialog, 'scope', null, false, null, true);
+
+    deactivate('scope');
+
+    assert.equal(field.focusCalls, 0, 'the dying field is never focused on close');
+    assert.equal(trigger.focusCalls, 1, 'the engaged element is the opener the restore returns to');
+});
+
+test('a keyboard-opened surface is rescued by the focus history, and a stale press never wins', () => {
+    // Enter on a focused trigger: there IS no pointerdown for this open — and a press from an
+    // earlier interaction must not survive the keyboard gesture anyway. The focusin the trigger's
+    // own focus produced is what names it.
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const trigger = focusable(element(body));
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    activate(dialog, 'first', null, false, null, true);   // installs the listeners
+    deactivate('first');
+    trigger.focusCalls = 0;
+
+    document.dispatch('pointerdown', { target: trigger }); // an earlier pointer interaction...
+    document.dispatch('focusin', { target: trigger });     // ...the trigger takes focus (focusin seen)
+    document.dispatch('keydown', { key: 'Enter' });        // Enter opens — clears the press record
+    document.activeElement = field;                        // the app focuses its field inside
+    activate(dialog, 'scope', null, false, null, true);
+
+    deactivate('scope');
+
+    assert.equal(field.focusCalls, 0, 'the dying field is never focused on close');
+    assert.equal(trigger.focusCalls, 1, 'the focus history names the keyboard-opened opener');
+});
+
+test('a pointerdown with no focusable ancestor records nothing (Safari body press)', () => {
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const plain = element(body);           // a div: no focusable ancestor at all
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = body;
+
+    activate(dialog, 'first', null, false, null, true);
+    deactivate('first');
+    body.focusCalls = 0;               // the warm-up close already fell back to the body
+    document.dispatch('pointerdown', { target: plain });   // closest(FOCUSABLE) → null
+    document.activeElement = field;
+    activate(dialog, 'scope', null, false, null, true);
+
+    deactivate('scope');
+
+    assert.equal(field.focusCalls, 0);
+    assert.equal(body.focusCalls, 1, 'a dead pointerdown candidate is never the opener — body fallback');
+});
+
+test('a pointerdown older than the staleness window is not the opener', () => {
+    const realNow = Date.now;
+    try {
+        let now = 1_000_000;
+        Date.now = () => now;
+        const body = element();
+        body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+        const trigger = focusable(element(body));
+        trigger.focus = () => { trigger.focusCalls++; };
+        const dialog = element(body);
+        const field = element(dialog);
+        field.focus = () => { field.focusCalls++; };
+        installDom(body);
+        document.activeElement = trigger;
+
+        activate(dialog, 'first', null, false, null, true);
+        deactivate('first');
+        trigger.focusCalls = 0;
+        document.dispatch('pointerdown', { target: trigger });
+        now += 3000;                                       // the press is three seconds old
+        document.activeElement = field;
+        activate(dialog, 'scope', null, false, null, true);
+
+        deactivate('scope');
+
+        assert.equal(field.focusCalls, 0);
+        assert.equal(body.focusCalls, 1, 'a stale press is dropped — body fallback');
+        assert.equal(trigger.focusCalls, 0);
+    }
+    finally {
+        Date.now = realNow;
+    }
+});
+
+test('a pointerdown inside the closing overlay is never the opener', () => {
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const dialog = element(body);
+    const close = element(dialog);   // the user's last press was the close button, INSIDE the overlay
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = body;
+
+    // The press is dispatched BEFORE the activation (the real click-to-close sequence: press the
+    // X, then the close render deactivates) with a poisoned activeElement — the press on the
+    // surface itself must not win the opener vote over the outside check.
+    document.dispatch('pointerdown', { target: close });
+    document.activeElement = field;
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+
+    assert.equal(close.focusCalls, 0, 'the close button press must not become the return target');
+    assert.equal(field.focusCalls, 0, 'the dying field is never focused on close');
+    assert.equal(body.focusCalls, 1, 'no candidate outside the surface — the close lands on the body');
+});
+
+test('a noted opener that is disconnected while the surface is open is never focused', () => {
+    const body = element();
+    body.focus = () => { body.focusCalls = (body.focusCalls ?? 0) + 1; };
+    const trigger = focusable(element(body));
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    noteReturnTarget('scope');
+    document.activeElement = field;
+    activate(dialog, 'scope', null, false, null, true);
+    trigger.isConnected = false;               // a re-render replaced the trigger while open
+    deactivate('scope');
+
+    assert.equal(trigger.focusCalls, 0, 'a disconnected opener is never focused');
+    assert.equal(body.focusCalls, 1, 'the close falls back to the body deterministically');
+});
+
+test('ensureLoaded installs the records before the FIRST activation of a session', () => {
+    // Cold start: the owner warms the module up while still closed, so the first open already has
+    // the pointerdown record — previously the first activation loaded the module and lost the
+    // opener record with it.
+    const body = element();
+    const trigger = focusable(element(body));
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    ensureLoaded();                                        // the owner's first OnAfterRenderAsync
+    document.dispatch('pointerdown', { target: trigger });
+    document.activeElement = field;                        // the app autofocus races the import
+    activate(dialog, 'scope', null, false, null, true);
+
+    deactivate('scope');
+
+    assert.equal(field.focusCalls, 0);
+    assert.equal(trigger.focusCalls, 1, 'the very first open of a session restores its opener too');
+});
+
+test('a note sent without an activate never leaks into the next open', () => {
+    const body = element();
+    const stale = element(body);
+    stale.focus = () => { stale.focusCalls++; };
+    const fresh = focusable(element(body));
+    fresh.focus = () => { fresh.focusCalls++; };
+    const dialog = element(body);
+    const field = element(dialog);
+    field.focus = () => { field.focusCalls++; };
+    installDom(body);
+    document.activeElement = stale;
+
+    // Open cancelled before the trap ever activated (a close that beat the promote gate): the
+    // note reached the module, but no trap is registered under the id.
+    noteReturnTarget('scope');
+    deactivate('scope');
+
+    // The next open of the SAME id must not inherit the stale note.
+    document.activeElement = fresh;
+    noteReturnTarget('scope');
+    document.activeElement = field;
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+
+    assert.equal(stale.focusCalls, 0, 'the cancelled open must not leave a note behind');
+    assert.equal(fresh.focusCalls, 1, 'the next open restores ITS OWN opener');
+    assert.equal(field.focusCalls, 0);
+});
+
+test('the first note of an open wins, later notes never overwrite it, and it is consumed once', () => {
+    const body = element();
+    const first = element(body);
+    first.focus = () => { first.focusCalls++; };
+    const second = element(body);
+    second.focus = () => { second.focusCalls++; };
+    const dialog = element(body);
+    installDom(body);
+    document.activeElement = first;
+
+    // The owner's early note (its creation render, before the surface mounted) is the trustworthy
+    // capture; a LATER note for the same open — a gated scope re-noting at its Active flip, by
+    // which time the app's autofocus may already sit inside the surface — must not overwrite it.
+    noteReturnTarget('scope');
+    document.activeElement = second;
+    noteReturnTarget('scope');
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+
+    assert.equal(second.focusCalls, 0, 'the late note must not replace the early opener');
+    assert.equal(first.focusCalls, 1, 'the early opener wins');
+
+    // A second activate on the same id must not resurrect the consumed note: the capture is its own.
+    document.activeElement = first;
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+    assert.equal(first.focusCalls, 2, 'the second open captures the opener it saw at activation');
+    assert.equal(second.focusCalls, 0);
+
+    // And a FRESH note of a NEW open is honoured: the consumed entry left the slot empty.
+    document.activeElement = second;
+    noteReturnTarget('scope');
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+    assert.equal(second.focusCalls, 1, 'the fresh open notes its own opener');
+    assert.equal(first.focusCalls, 2);
+});
+
+test('an explicit restore target inside the closing surface is skipped, not focused', () => {
+    const body = element();
+    const dialog = element(body);
+    const inside = element(dialog);
+    inside.focus = () => { inside.focusCalls++; };
+    const trigger = element(body);
+    trigger.focus = () => { trigger.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    activate(dialog, 'scope', null, false, inside, true);
+    deactivate('scope');
+
+    assert.equal(inside.focusCalls, 0, 'a target that dies with the overlay is never focused');
+    assert.equal(trigger.focusCalls, 1, 'the opener is the fallback');
+});
+
+test('deactivation never steals a focus the app placed outside the overlay', () => {
+    const body = element();
+    const trigger = element(body);
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    const create = element(body);
+    create.focus = () => { create.focusCalls++; };
+    installDom(body);
+    document.activeElement = trigger;
+
+    activate(dialog, 'scope', null, false, null, true);
+    // The OK handler settled focus on its post-close action BEFORE the close render deactivated
+    // the trap. The restore must not yank it back to the opener.
+    document.activeElement = create;
+    deactivate('scope');
+
+    assert.equal(create.focusCalls, 0, 'the app focus is not touched');
+    assert.equal(trigger.focusCalls, 0, 'the opener must not be re-focused over the app decision');
+});
+
+test('a non-modal close keeps its restore-only-when-held contract', () => {
+    const body = element();
+    const drawer = element(body);
+    const behind = element(body);
+    behind.focus = () => { behind.focusCalls++; };
+    installDom(body);
+    document.activeElement = behind;
+
+    activate(drawer, 'inline', null, false, null, false);
+    deactivate('inline');
+
+    assert.equal(behind.focusCalls, 0, 'the canvas focus behind the sheet is not stolen');
+});
+
+test('deactivation still restores the opener when the overlay holds the focus', () => {
+    const body = element();
+    const trigger = element(body);
+    trigger.focus = () => { trigger.focusCalls++; };
+    const dialog = element(body);
+    installDom(body);
+    document.activeElement = trigger;
+
+    activate(dialog, 'scope', null, false, null, true);
+    deactivate('scope');
+
+    assert.equal(trigger.focusCalls, 1, 'a close that still owns the focus returns it to the opener');
 });
 
 test('initial focus lands on the named target, not the first focusable', () => {

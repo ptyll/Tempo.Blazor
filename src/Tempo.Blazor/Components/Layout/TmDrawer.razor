@@ -25,6 +25,7 @@
        immediately. *@
     <TmFocusScope @ref="_scope"
                   Active="@(!Modal || _gate?.ScopeActive == true)"
+                  NoteOpenerOnMount="true"
                   Modal="Modal"
                   Class="@RootClass"
                   AriaLabelledBy="@LabelledBy"
@@ -336,6 +337,15 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, so the FIRST open of the session restores its opener — a module that
+            // loaded with the first activation opened with no opener record, and that close fell
+            // to <body>.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         var gestureKey = $"{ShowHandle}:{SnapList}";
         if (IsOpen && IsSheet && (!_gestureAttached || _gestureKey != gestureKey))
         {

@@ -17,6 +17,7 @@
                   Class="tm-lightbox"
                   popover="manual"
                   Active="@(_gate?.ScopeActive == true)"
+                  NoteOpenerOnMount="true"
                   AriaLabel="@Loc["TmLightbox_Aria"]"
                   CloseOnEscape="true"
                   OnEscape="OnClose"
@@ -155,6 +156,13 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, so the FIRST open of the session restores its opener.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         // The scope root is the promoted element. Closing unmounts the subtree; a detached
         // top-layer element is hidden by the browser automatically — promote only. The gate also
         // holds the trap back until the promote completed (c51ddf81 #1).

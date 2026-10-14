@@ -31,6 +31,7 @@
                initial-focus move would land on <body>. *@
             <TmFocusScope @ref="_scope"
                           Active="@(_gate?.ScopeActive == true)"
+                          NoteOpenerOnMount="true"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
                           CloseOnEscape="CloseOnEscape"
@@ -178,10 +179,19 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
     
-    /// <summary>The element focus returns to when the modal closes.</summary>
+    /// <summary>
+    /// The element focus returns to when the modal closes. A target that is disconnected or inside
+    /// this modal is skipped (it would die with the overlay): the restore then falls back to the
+    /// opener. A focus the app placed on a live element outside the modal before the close render
+    /// is never stolen.
+    /// </summary>
     [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
-    /// <summary>The id of the restore target, for a target rendered outside this modal.</summary>
+    /// <summary>
+    /// The id of the restore target, for a target rendered outside this modal. Same skip rules as
+    /// <see cref="RestoreFocusTarget"/>: a disconnected or inside-the-modal target falls back to
+    /// the opener.
+    /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
@@ -275,6 +285,15 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, while still closed, so the FIRST open of the session restores its
+            // opener — a module that loaded with the first activation opened with no opener
+            // record, and that close fell to <body>.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         // The sheet module tracks the on-screen keyboard so the footer stays visible. A modal sheet
         // has no snap points, so the module only ever applies the keyboard offset.
         if (Show && IsSheet && !_gestureAttached)

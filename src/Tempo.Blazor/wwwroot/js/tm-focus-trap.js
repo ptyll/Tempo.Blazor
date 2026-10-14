@@ -9,6 +9,18 @@
 // Everything is keyed by a caller-supplied id so nested/stacked traps do not clobber
 // each other's return target or listeners. Imported lazily from OnAfterRenderAsync so
 // it is safe under InteractiveAuto prerendering (no interop during prerender).
+//
+// Because activation is gated on the lazy import, activate() can run long after the
+// overlay rendered — long enough for the app to have focused a field inside it.
+// noteReturnTarget lets the owner record the opener BEFORE the surface renders; it
+// outranks the late capture, and a capture that lies inside the surface is never
+// used. A capture-phase focus-history listener and the last document-level pointerdown
+// rescue the cases where both the note and the capture name an inside-element (a
+// keyboard-opened surface was never pressed; the history names its trigger anyway).
+// Deactivate restores only while the surface still holds the focus (or focus fell to
+// <body>): a focus the app placed on a live element outside is never stolen. Owners
+// pre-import the module with ensureLoaded() on their first render, so even the first
+// trap of a session opens with the listeners (and the note) already in place.
 
 const FOCUSABLE = [
     'a[href]', 'button:not([disabled])', 'textarea:not([disabled])',
@@ -19,6 +31,32 @@ const FOCUSABLE = [
 
 // id -> { element, tabHandler, escHandler, returnTarget }
 const traps = new Map();
+
+// id -> element an owner noted as the opener (noteReturnTarget). The capture activate() would
+// take itself runs only after the lazy ES-module import completed — an app that focuses a field
+// inside the overlay during the open then gets that field captured as the "opener", and the close
+// would focus a dying element. A gated owner notes in its FIRST parameter-set phase (the mount
+// render, before any content can autofocus), so the note still names the trigger. activate()
+// consumes the note, so every open captures its own opener; deactivate drops it, even when no
+// trap was ever registered (a close that beat the promote gate).
+const openers = new Map();
+
+/**
+ * Notes the element that should receive focus when the trap identified by `id` deactivates —
+ * the OPENER. The focus-trap interop calls this in the owning scope's FIRST parameter-set
+ * phase — the mount render, BEFORE the render that presents the surface is applied (ahead of
+ * the render batch; its own interop message on Blazor Server) — so the trigger is still the
+ * focused element there. A LATER note for the same id never overwrites it: the earliest capture
+ * of an open is the trustworthy one, and a scope can note again only after a deactivate cleared
+ * the entry. activate() prefers the note over its own (late) capture, consumes it, and falls
+ * back to the focus history and the last pointerdown when it names an inside-element.
+ * @param {string} id the caller's trap id (the same key activate/deactivate use)
+ */
+export function noteReturnTarget(id) {
+    if (!id) return;
+    if (openers.has(id)) return;
+    openers.set(id, document.activeElement ?? null);
+}
 
 // The element of an inert-exempt surface (a toast card) that last took focus, or null. Two
 // capture-phase document listeners keep it current: a focusin records focus entering an exempt
@@ -47,6 +85,88 @@ function installExemptFocusListener() {
     // record is dropped. A press ON an exempt surface keeps it (the gesture may genuinely move
     // focus into the toast).
     document.addEventListener('pointerdown', (e) => { const t = e.target; if (!(t && typeof t.closest === 'function' && t.closest('[data-tm-inert-exempt]'))) exemptFocus = null; }, true);
+}
+
+// The target of the last pointerdown anywhere in the document, or null. The opener capture can be
+// POISONED: activate() runs after the lazy import, by which time the app may have focused a field
+// inside the overlay (its own OnAfterRender autofocus, or a focus that raced the import) — and a
+// late note reads the same poisoned state. The last pointerdown is the element the user actually
+// ENGAGED to open the surface, and at capture time it still lies OUTSIDE it, so activate() uses it
+// when the note and the capture name a dying inside-element. Hardened three ways: only a press
+// with a FOCUSABLE ancestor is recorded (focus() on a bare div or on <body> is a no-op — Safari
+// proves it with body — so a dead candidate must never join the vote); the record EXPIRES (~2 s),
+// because a press that old no longer says where the user is; and any non-modifier KEYDOWN clears
+// it, because a keyboard gesture between the press and the activation retargeted the user. A
+// pointerdown on the surface itself (the close button, a footer action) is filtered by the same
+// outside check at vote time. Installed by ensureLoaded()/the first activate; reset with the
+// traps in the tests.
+let lastPointerDown = null;
+let lastPointerDownAt = 0;
+let pointerDownListenerInstalled = false;
+
+// How long a pointerdown stays a trustworthy opener candidate. Two seconds is far longer than any
+// real open gesture, and short enough that a stale press cannot beat fresher signals.
+const POINTER_DOWN_TTL_MS = 2000;
+
+// Keys that do not themselves move the user's attention.
+const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta']);
+
+function installPointerDownListener() {
+    if (pointerDownListenerInstalled) return;
+    if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+    pointerDownListenerInstalled = true;
+    document.addEventListener('pointerdown', (e) => {
+        const t = e && e.target ? e.target : null;
+        if (!t || typeof t.closest !== 'function') { lastPointerDown = null; lastPointerDownAt = 0; return; }
+        // The press can land on a label span or an svg line inside the real control; the opener
+        // restore needs the focusable control itself, so resolve the nearest focusable ancestor
+        // (closest() includes the target itself when it already matches). NO focusable ancestor
+        // (a plain div, <body>) records NOTHING — restoring to such an element is a silent no-op.
+        lastPointerDown = t.closest(FOCUSABLE);
+        lastPointerDownAt = lastPointerDown ? Date.now() : 0;
+    }, true);
+    document.addEventListener('keydown', (e) => {
+        // A key press (Enter on a trigger, Tab, anything that is not a bare modifier) means the
+        // pointerdown record no longer describes the user's attention.
+        if (e && MODIFIER_KEYS.has(e.key)) return;
+        lastPointerDown = null;
+        lastPointerDownAt = 0;
+    }, true);
+}
+
+// The most recently focused focusable elements, most recent first. Belt-and-braces behind the
+// owner's note: activate() consults the history when its capture lies inside the surface, and the
+// most recent entry OUTSIDE it names the opener even for a KEYBOARD-opened surface (Enter on a
+// trigger was never a pointerdown, but the trigger took focus and the focusin was seen). Capture
+// phase, so the record exists before the target's own handlers run. Installed by ensureLoaded()
+// and the first activate; reset with the traps in the tests.
+let focusHistory = [];
+let focusHistoryListenerInstalled = false;
+const FOCUS_HISTORY_LIMIT = 12;
+
+function installFocusHistoryListener() {
+    if (focusHistoryListenerInstalled) return;
+    if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+    focusHistoryListenerInstalled = true;
+    document.addEventListener('focusin', (e) => {
+        const t = e && e.target;
+        if (!t || typeof t.closest !== 'function' || !t.closest(FOCUSABLE)) return;
+        focusHistory = [t, ...focusHistory.filter(el => el !== t)].slice(0, FOCUS_HISTORY_LIMIT);
+    }, true);
+}
+
+/**
+ * Eager warm-up for the FIRST trap of a session. Imports already happened (this module only runs
+ * once loaded); what this installs is the document-level listener state — the pointerdown record,
+ * the focus history, the inert-exempt record — so the first activation opens with the same
+ * evidence every later one has. Without it the first open of a browser session had no opener
+ * record at all and its close landed on <body>. Owners call this from their first
+ * OnAfterRenderAsync while still closed. Idempotent.
+ */
+export function ensureLoaded() {
+    installExemptFocusListener();
+    installPointerDownListener();
+    installFocusHistoryListener();
 }
 
 // CSS.escape is missing in the stub DOM the node tests run against. Attribute values only need
@@ -101,20 +221,51 @@ function radioGroupTabStops(list) {
     });
 }
 
+/** Whether `candidate` may name the opener of `element`'s surface: it must be a live element
+ * OUTSIDE the surface, and never <body> — a focus() on the body is a no-op (Safari proves it),
+ * and focusing an inside-element on close would hand focus to a dying element. */
+function isOpenerCandidate(candidate, element) {
+    return !!candidate
+        && candidate !== element
+        && candidate !== document.body
+        && candidate.isConnected !== false
+        && !(typeof element.contains === 'function' && element.contains(candidate));
+}
+
 export function activate(element, id, escapeHandler, closeOnEscape, restoreTarget, modal = true, initialTarget = null) {
     if (!element) return;
 
-    // The exempt-focus record must exist before any surface can ask for a recovery.
+    // The exempt-focus record must exist before any surface can ask for a recovery. The pointerdown
+    // and focus-history records have to exist before THIS open can consult them.
     installExemptFocusListener();
+    installPointerDownListener();
+    installFocusHistoryListener();
+
+    // The opener is whatever held focus when the trap opened. An explicit restore target and a named
+    // id both outrank it; they are resolved at deactivation, because the target may not exist yet.
+    // The candidates, most trustworthy first — the first one that lies OUTSIDE this element wins,
+    // because focusing an inside-element on close would hand focus to a dying element:
+    //   1. the owner's note (noteReturnTarget) — captured in the surface's mount parameter-set
+    //      phase, before the render was applied and before any content autofocus ran;
+    //   2. document.activeElement — right after the lazy import, so an app focus that landed inside
+    //      the overlay during the open has usually already poisoned it;
+    //   3. the most recent focus-history entry outside the surface — rescues the poisoned capture
+    //      for KEYBOARD-opened surfaces, which no pointerdown can name;
+    //   4. the last pointerdown — the element the user actually engaged, still fresh (a stale press
+    //      is dropped) — rescues the poisoned capture for pointer-opened surfaces.
+    // The note is consumed BEFORE the stale-trap deactivate below, which clears the map entry.
+    const noted = openers.has(id) ? openers.get(id) : null;
+    openers.delete(id);
+    const historyOpener = focusHistory.find(candidate => isOpenerCandidate(candidate, element)) ?? null;
+    const pointerOpener = lastPointerDown !== null
+        && Date.now() - lastPointerDownAt <= POINTER_DOWN_TTL_MS ? lastPointerDown : null;
+    const openerCandidates = [noted, document.activeElement, historyOpener, pointerOpener];
+    const returnTarget = openerCandidates.find(candidate => isOpenerCandidate(candidate, element)) ?? null;
 
     // Deactivate any stale trap reusing this id before re-registering.
     if (traps.has(id)) {
         deactivate(id);
     }
-
-    // The opener is whatever held focus when the trap opened. An explicit restore target and a named
-    // id both outrank it; they are resolved at deactivation, because the target may not exist yet.
-    const returnTarget = document.activeElement;
 
     const tabHandler = function (e) {
         if (e.key !== 'Tab' || !modal) return;
@@ -390,14 +541,25 @@ function releaseBackground(id) {
 /** Drops every trap without touching the DOM. The node tests call it between cases. */
 export function __resetForTests() {
     traps.clear();
+    openers.clear();
     inertedByTrap.clear();
     scrollLockCount = 0;
     scrollLockWasPresent = false;
     exemptFocus = null;
     exemptFocusListenerInstalled = false;
+    lastPointerDown = null;
+    lastPointerDownAt = 0;
+    pointerDownListenerInstalled = false;
+    focusHistory = [];
+    focusHistoryListenerInstalled = false;
 }
 
 export function deactivate(id) {
+    // A note whose activate never ran (a close that beat the promote gate) must not leak into a
+    // later trap reusing this id — and the drop must happen even when NO trap is registered,
+    // because the note reached the module before its trap ever activated.
+    openers.delete(id);
+
     const trap = traps.get(id);
     if (!trap) return;
     traps.delete(id);
@@ -534,28 +696,43 @@ export function restoreTrapFocusIfLost() {
     return focusOf(top.element);
 }
 
+/** Whether `target` may take the focus on close: it must still be in the DOM and must lie OUTSIDE
+ * the closing surface — a target inside it dies with the overlay, and focusing it hands focus to
+ * an element the render is about to remove (it then falls to <body> uncontrolled). */
+function restorable(target, element) {
+    if (!target || target.isConnected === false || typeof target.focus !== 'function') return false;
+    return !(element && typeof element.contains === 'function' && element.contains(target));
+}
+
 function restoreFocus(trap) {
-    // A non-modal surface restores focus only if it held it. Restoring while the user is on the
-    // canvas behind an inline sheet would steal that focus.
-    // Skip only when focus is already on a connected element outside the sheet. A removed sheet
-    // leaves activeElement on body, and that must still restore to the opener.
+    // Focus that already sits on a CONNECTED element outside this surface holds: the app (or the
+    // user) decided where it belongs — a modal close used to yank it back to the opener even after
+    // the app's OK handler had settled it on its post-close action button. A close only restores
+    // while its own surface still holds the focus (the common case — the trap moved it in and the
+    // render that removes the surface has not run yet) or nothing does (focus fell to <body>).
     const active = document.activeElement;
-    if (trap.modal === false && active && active !== document.body && active.isConnected && trap.element && !trap.element.contains(active)) return;
+    if (active && active !== document.body && active.isConnected !== false
+        && trap.element && typeof trap.element.contains === 'function'
+        && !trap.element.contains(active)) {
+        return;
+    }
     // Resolved at deactivation: an explicit false restores nothing; an explicit element wins; then
-    // the id recorded on the root; then the opener captured at activation; then body.
+    // the id recorded on the root; then the opener captured at activation; then body. Every
+    // candidate passes restorable() — a disconnected or inside-the-surface target is skipped.
     const dataset = trap.element && trap.element.dataset;
     if (dataset && dataset.restoreFocus === 'false') return;
 
-    if (focusOf(trap.restoreTarget)) return;
+    if (restorable(trap.restoreTarget, trap.element) && focusOf(trap.restoreTarget)) return;
 
     const id = dataset ? dataset.restoreTarget : null;
     const byId = id && document.getElementById ? document.getElementById(id) : null;
     const byData = !byId && id && document.querySelector
         ? document.querySelector(`[data-tm-id="${escapeAttr(id)}"]`)
         : null;
-    if (focusOf(byId) || focusOf(byData)) return;
+    if ((restorable(byId, trap.element) && focusOf(byId))
+        || (restorable(byData, trap.element) && focusOf(byData))) return;
 
-    if (focusOf(trap.returnTarget)) return;
+    if (restorable(trap.returnTarget, trap.element) && focusOf(trap.returnTarget)) return;
     focusOf(document.body);
 }
 

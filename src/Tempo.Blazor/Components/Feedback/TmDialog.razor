@@ -31,6 +31,7 @@
                initial-focus move would land on <body>. *@
             <TmFocusScope @ref="_scope"
                           Active="@(_gate?.ScopeActive == true)"
+                          NoteOpenerOnMount="true"
                           DialogRole="@(IsDangerous ? "alertdialog" : "dialog")"
                           Class="@ScopeClass"
                           AriaLabelledBy="@_titleId"
@@ -195,10 +196,19 @@
     [Parameter] public string? Class { get; set; }
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    /// <summary>The element focus returns to when the dialog closes.</summary>
+    /// <summary>
+    /// The element focus returns to when the dialog closes. A target that is disconnected or inside
+    /// this dialog is skipped (it would die with the overlay): the restore then falls back to the
+    /// opener. A focus the app placed on a live element outside the dialog before the close render
+    /// is never stolen.
+    /// </summary>
     [Parameter] public ElementReference? RestoreFocusTarget { get; set; }
 
-    /// <summary>The id of the restore target, for a target rendered outside this dialog.</summary>
+    /// <summary>
+    /// The id of the restore target, for a target rendered outside this dialog. Same skip rules as
+    /// <see cref="RestoreFocusTarget"/>: a disconnected or inside-the-dialog target falls back to
+    /// the opener.
+    /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>The viewport's layout. A dialog is positioned against the viewport, not its container.</summary>
@@ -333,6 +343,15 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, while still closed, so the FIRST open of the session restores its
+            // opener — a module that loaded with the first activation opened with no opener
+            // record, and that close fell to <body>.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         var sheet = Show && ResolvedPresentation == MobilePresentation.Sheet;
         if (sheet && !_gestureAttached)
         {

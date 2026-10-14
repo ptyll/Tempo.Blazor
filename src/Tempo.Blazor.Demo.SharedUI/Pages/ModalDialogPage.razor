@@ -152,6 +152,29 @@
     </div>
 </section>
 
+<!-- Focus restore: the form modal autofocuses its first field from the content's own lifecycle
+     (the host-app pattern), so the focus trap activates while the field already holds the focus.
+     A plain close (X, Cancel, Esc) returns the focus to the trigger on BOTH render modes — the
+     scope notes the opener at its mount render, before the content can autofocus. The OK button
+     settles the focus on the post-close action after the close render, and the close never fights
+     that focus. -->
+<section class="demo-section" data-testid="focus-restore-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">@Loc["TmDemo_FocusRestoreSection"]</h2>
+    <div class="flex flex-wrap gap-3">
+        <TmButton OnClick="() => _showRestoreModal = true" Variant="ButtonVariant.Primary" data-testid="open-restore-modal">
+            @Loc["TmDemo_OpenRestoreModal"]
+        </TmButton>
+        <button type="button"
+                id="restore-post-action"
+                data-testid="restore-post-action"
+                class="tm-btn tm-btn-secondary"
+                @ref="_restorePostAction">
+            @Loc["TmDemo_RestorePostAction"]
+        </button>
+    </div>
+    <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">@Loc["TmDemo_FocusRestoreBody"]</p>
+</section>
+
 <!-- ═══════════════════════════════════════════════════════════════
    MODALS & DIALOGS
    ═══════════════════════════════════════════════════════════════ -->
@@ -278,6 +301,35 @@
     </div>
 </TmModal>
 
+<!-- Focus-restore modal: the field autofocuses from the content's own lifecycle (the host-app
+     pattern). A plain close (X, Cancel, Escape, overlay click) returns the focus to the opener; the
+     OK handler schedules the post-close focus for after the close render (see
+     CloseRestoreModalWithPostActionAsync) — the close must never focus the dying field nor fight
+     the app's own focus. The nested confirm opens a TmDialog ON TOP of the modal: closing the
+     dialog returns the focus to the button that opened it, and only then does closing the modal
+     return to the page's trigger. -->
+<TmModal Show="_showRestoreModal"
+         OnClose="() => _showRestoreModal = false"
+         OnOk="CloseRestoreModalWithPostActionAsync"
+         Title="@Loc["TmDemo_FocusRestoreModalTitle"]"
+         ShowDefaultFooterButtons="true">
+    <p>@Loc["TmDemo_FocusRestoreBody"]</p>
+    <RestoreFocusAutoField />
+    <div class="mt-3">
+        <TmButton Variant="ButtonVariant.Secondary"
+                  data-testid="open-nested-dialog"
+                  OnClick="() => _showNestedConfirm = true">
+            @Loc["TmDemo_FocusRestoreNestedAction"]
+        </TmButton>
+    </div>
+</TmModal>
+<TmDialog Show="_showNestedConfirm"
+          Type="DialogType.Confirm"
+          Variant="DialogVariant.Info"
+          Title="@Loc["TmDemo_FocusRestoreNestedTitle"]"
+          Message="@Loc["TmDemo_FocusRestoreNestedMessage"]"
+          OnResult="_ => _showNestedConfirm = false" />
+
 @code {
     // Basic Modal
     private bool _showBasicModal;
@@ -311,6 +363,38 @@
     private bool _showSheet;
     private bool _showStacked;
     private bool _showInlineDrawer;
+    // Focus-restore modal
+    private bool _showRestoreModal;
+    private bool _showNestedConfirm;
+    private bool _focusPostActionPending;
+    private ElementReference _restorePostAction;
+
+    /// <summary>
+    /// Closes the focus-restore modal the way an app's OK handler does: the post-close action takes
+    /// the focus AFTER the close render. A focus issued EARLIER is dropped by the browser — the
+    /// open modal holds the page inert, and focus() on an inert element does nothing — which is why
+    /// hosts used to re-focus in a requestAnimationFrame after close. The library's close restores
+    /// the opener (or the body) deterministically and never fights this focus.
+    /// </summary>
+    private Task CloseRestoreModalWithPostActionAsync()
+    {
+        _showRestoreModal = false;
+        _focusPostActionPending = true;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Runs after the render that closed the modal, so the overlay is gone (its inert background
+        // released) and the post-close focus can actually land.
+        if (_focusPostActionPending)
+        {
+            _focusPostActionPending = false;
+            await _restorePostAction.FocusAsync();
+        }
+    }
+
     // The locked entry opens the same inline drawer with the swipe-off gesture off, so a review can
     // see a fast downward flick leave the sheet open.
     private bool _inlineDrawerSwipe = true;

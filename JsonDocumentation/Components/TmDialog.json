@@ -150,13 +150,13 @@
       "name": "RestoreFocusTarget",
       "type": "ElementReference?",
       "isRequired": false,
-      "description": "The element focus returns to when the dialog closes."
+      "description": "The element focus returns to when the dialog closes. A disconnected or inside-the-dialog target is skipped (it would die with the overlay) and the restore falls back to the opener; a focus the app placed on a live element outside before the close render is never stolen."
     },
     {
       "name": "RestoreFocusTargetId",
       "type": "string?",
       "isRequired": false,
-      "description": "The id of the restore target."
+      "description": "The id of the restore target, for a target rendered outside the dialog. Same skip rules as RestoreFocusTarget: a disconnected or inside-the-dialog target falls back to the opener."
     },
     {
       "name": "Class",

@@ -4,6 +4,44 @@
 
 ### Fixed
 
+- **A modal/dialog close returns the focus to its opener — pointer or keyboard, first open or
+  later — and can no longer land on an element inside the closing overlay.** The focus trap
+  (`TmModal`, `TmDialog`, `TmDrawer`, `TmFocusScope` — the shared `tm-focus-trap.js` module)
+  captured its return target only when the lazily imported module finished loading. A form modal
+  whose content autofocuses its first field during the open therefore captured that field as
+  "the opener": closing the dialog focused the dying field, and the focus fell to `<body>` the
+  moment the overlay left the DOM. When the OK handler settled the focus on its post-close action
+  button before the close render ran, the unconditional restore also yanked it back to the dying
+  overlay. The contract is now:
+
+  - A gated owner's scope notes the opener in its FIRST parameter-set phase — the mount render,
+    before the overlay's content can autofocus (`NoteOpenerOnMount`); TmModal, TmDialog, TmDrawer,
+    TmLightbox, TmCommandPalette, TmKeyboardShortcutsHelp and TmGanttImportDialog do, so closing
+    a form modal that autofocuses its field returns the focus to the trigger on every open, on
+    both render modes.
+  - Every gated owner pre-imports the module on its first render while still closed
+    (`ensureLoaded`), so even the first open of a browser session opens with the opener records
+    (the pointerdown record, the focus history) already in place — previously that open loaded
+    the module with it and its close landed on `<body>`.
+  - A capture that lies INSIDE the surface is never used as the return target — restoring to it
+    would focus an element the close is about to remove. The module keeps a short focus history
+    (and the last document-level pointerdown, now expiring after ~2 s and cleared by a keydown,
+    recording nothing when the press had no focusable ancestor), so a surface whose capture was
+    poisoned still restores to the element the user actually engaged — clicked OR focused (the
+    history covers keyboard-opened surfaces, which no pointerdown can name).
+  - A deactivation restores focus only while its own surface still holds it (or the focus fell to
+    `<body>`): a focus the app placed on a live element outside the overlay is never stolen. This
+    guard now covers modal surfaces as well (it previously existed only for non-modal inline
+    sheets), and a restore target that is disconnected or inside the closing surface is skipped
+    (an explicit `RestoreFocusTarget`/`RestoreFocusTargetId` inside the overlay degrades to the
+    opener instead of stranding the focus). The only `<body>` fallback left is the honest one: no
+    live candidate outside the surface existed (for example the opener was removed from the DOM
+    while the surface was open).
+
+  An app focus issued while the modal is still open is dropped by the browser anyway (the open
+  modal holds the page `inert`): settle the post-close focus AFTER the overlay is gone, which is
+  what the old `requestAnimationFrame` workarounds effectively did and can now be removed.
+
 - **`TmSelect` with a nullable `TValue` now really displays and selects the empty (null) option.**
   A null-valued `SelectOption<TValue>` (e.g. a "Root (no parent)" entry in `Options`) rendered as a
   value-less `<option>` — whose value silently became its text content — and a bound `Value` of
@@ -801,6 +839,42 @@
   "Select color {name}" (see `TmColorPalette.ColorNames` for the matching and fallback rules).
 
 ### Breaking / Migration
+
+- **An overlay close now leaves the focus where a live element OUTSIDE the closing surface
+  already holds it, and an explicit restore target INSIDE the surface is skipped.** Previously
+  `TmModal`/`TmDialog`/`TmDrawer`/`TmFocusScope` always ran their restore on close: when an app's
+  OK handler had settled the focus on a post-close action button before the close render, the
+  restore yanked it back to the opener (or, worse, onto a captured element inside the overlay,
+  which then fell to `<body>` when the render removed it). And a `RestoreFocusTarget` that lay
+  inside the closing surface was focused anyway — handing focus to an element the close was about
+  to remove. Now the restore runs only while the closing surface still holds the focus (or focus
+  fell to `<body>`), and every restore candidate — opener or explicit target — must be connected
+  and OUTSIDE the surface. Apps that depended on the close re-focusing the opener after they had
+  placed focus elsewhere must migrate, before/after:
+
+  ```razor
+  <!-- before: the close stole the focus back from the "Created" button -->
+  <TmModal OnOk="() => { show = false; createdButton.FocusAsync(); }" />
+
+  <!-- after: unchanged code, new behaviour — the focus placed on the live "Created" button
+       (after the close render) holds; the close restores the opener only when the surface
+       still owned the focus -->
+  <TmModal OnOk="() => { show = false; _focusCreatedPending = true; }" />
+  @code {
+      protected override async Task OnAfterRenderAsync(bool firstRender)
+      {
+          if (_focusCreatedPending) { _focusCreatedPending = false; await _createdButton.FocusAsync(); }
+      }
+  }
+  ```
+
+  (A focus issued synchronously inside the OK handler — BEFORE the close render — was and is
+  dropped by the browser, because the open modal holds the page `inert`; the pending-flag pattern
+  above is the supported way and works on both render modes.)
+
+  The second half: a `RestoreFocusTarget`/`RestoreFocusTargetId` that resolves to an element
+  inside the closing surface (or a disconnected one) no longer receives the focus — the restore
+  falls back to the opener, so a misconfigured target cannot strand the focus on a dying element.
 
 - **`TmColorPalette`'s accessibility tree moved from an invalid grid to a radiogroup of radios.**
   The old markup put `role="grid"` on the palette and `role="gridcell"` + `aria-selected` on the
@@ -1868,6 +1942,16 @@
   legacy classes loses the styles.
 
 ### Added
+
+- **`TmFocusScope.NoteOpenerOnMount`** (advanced, default `false`): set when the scope's `Active`
+  flips true only after its content has mounted (e.g. behind a promote/gate), so the opener is
+  noted before content autofocus — a surface whose gate releases `Active` after its content child
+  has already autofocus-focussed a field then restores the focus to the trigger on close instead
+  of to that dying field. The note is sent once per open and never suppresses the trap itself: a
+  scope that is `Active` on the same first parameter set (an inline drawer, a plain scope)
+  activates as usual. The library's gated owners (`TmModal`, `TmDialog`, `TmDrawer`,
+  `TmLightbox`, `TmCommandPalette`, `TmKeyboardShortcutsHelp`, `TmGanttImportDialog`) set this
+  themselves; hosts rendering `TmFocusScope` behind their own mount-then-activate gate can opt in.
 
 - **`TmSelect.PlaceholderSelectable`** (bool, default `false`): when `true` (and `Placeholder` is
   set), the placeholder renders as a selectable — not disabled — `<option value="">` mapped to

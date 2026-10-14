@@ -26,6 +26,7 @@
                interop completed — an unpromoted popover root can be display:none and the
                initial-focus move would land on <body>. *@
             <TmFocusScope Active="@(_gate?.ScopeActive == true)"
+                          NoteOpenerOnMount="true"
                           Class="tm-keyboard-shortcuts-modal"
                           CloseOnEscape="true"
                           OnEscape="OnClose"
@@ -149,6 +150,13 @@
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, so the FIRST open of the session restores its opener.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         // The overlay unmounts when IsVisible goes false; a detached top-layer element is hidden
         // by the browser automatically, so closing needs no demote — promote only. The gate also
         // holds the trap back until the promote completed (c51ddf81 #1) and drops a promote that

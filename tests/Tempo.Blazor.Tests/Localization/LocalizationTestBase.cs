@@ -1073,6 +1073,15 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDemo_ToggleInline"] = "Inline layout",
         ["TmDemo_ToggleSheet"] = "Sheet presentation",
         ["TmDemo_ToggleContentHeight"] = "Size to content",
+        ["TmDemo_FocusRestoreSection"] = "Focus restore",
+        ["TmDemo_FocusRestoreModalTitle"] = "New project",
+        ["TmDemo_OpenRestoreModal"] = "Open form modal",
+        ["TmDemo_RestorePostAction"] = "Post-close action",
+        ["TmDemo_FocusRestoreFieldName"] = "Project name",
+        ["TmDemo_FocusRestoreBody"] = "This form starts in its first field. Close it (X, Cancel or Esc) and focus returns to the button that opened it. OK moves focus to \"Post-close action\" instead.",
+        ["TmDemo_FocusRestoreNestedAction"] = "Confirm inside the modal",
+        ["TmDemo_FocusRestoreNestedTitle"] = "Name available?",
+        ["TmDemo_FocusRestoreNestedMessage"] = "A dialog opened on top of the modal. Closing it returns the focus to the button that opened it.",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Bulk actions",
@@ -4825,6 +4834,15 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDemo_ToggleInline"] = "Řádkové rozložení",
         ["TmDemo_ToggleSheet"] = "Prezentace jako panel",
         ["TmDemo_ToggleContentHeight"] = "Výška podle obsahu",
+        ["TmDemo_FocusRestoreSection"] = "Obnovení fokusu",
+        ["TmDemo_FocusRestoreModalTitle"] = "Nový projekt",
+        ["TmDemo_OpenRestoreModal"] = "Otevřít formulářové modální okno",
+        ["TmDemo_RestorePostAction"] = "Akce po zavření",
+        ["TmDemo_FocusRestoreFieldName"] = "Název projektu",
+        ["TmDemo_FocusRestoreBody"] = "Tento formulář začíná v prvním poli. Zavřete ho (křížkem, tlačítkem Zrušit nebo klávesou Esc) a fokus se vrátí na tlačítko, které ho otevřelo. Tlačítko OK místo toho přesune fokus na „Akci po zavření“.",
+        ["TmDemo_FocusRestoreNestedAction"] = "Potvrdit v modálním okně",
+        ["TmDemo_FocusRestoreNestedTitle"] = "Je název volný?",
+        ["TmDemo_FocusRestoreNestedMessage"] = "Dialog otevřený nad modálním oknem. Jeho zavření vrátí fokus na tlačítko, které ho otevřelo.",
 
         // TmBulkActionBar
         ["TmBulkAction_Toolbar"] = "Hromadné akce",

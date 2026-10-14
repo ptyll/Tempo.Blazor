@@ -25,6 +25,28 @@ innermost active scope handles Tab, and only the topmost one handles Escape.
 the scope does not land focus back on the trigger that opened it. Leave it unset and the scope
 restores whatever was focused when it opened, which is what an overlay wants.
 
+**The opener capture and the close, precisely:** the opener is resolved from four
+candidates, first survivor outside the surface wins: the owner's note (`noteReturnTarget`, sent
+from the scope's FIRST parameter-set phase — the mount render, before any content child can
+autofocus — when the owner wires the scope's `NoteOpenerOnMount`, which every gated owner
+(TmModal, TmDialog, TmDrawer, TmLightbox, TmCommandPalette, TmKeyboardShortcutsHelp,
+TmGanttImportDialog) does), the activation-time `document.activeElement`, the most recent focus
+history entry outside the surface (which rescues a KEYBOARD-opened surface — nothing was ever
+pressed), and the last document-level pointerdown — the element the user actually engaged, still
+counted only within ~2 s and cleared by any non-modifier keydown, which rescues the
+pointer-opened case where an app autofocus inside the overlay poisoned both earlier candidates.
+A capture that lies inside the surface is never used, and at close the restore skips any
+candidate that is disconnected, `<body>`, or inside the closing surface. Owners pre-import the
+module with the scope's `ensureLoaded` path on their first render while still closed, so the
+FIRST open of a browser session opens with the same opener evidence every later one has. The
+remaining `<body>` fallback is the honest one: no candidate outside the surface existed (for
+example the opener was removed from the DOM while the surface was open). Deactivation restores
+only while the surface still holds the focus (or the focus fell to `<body>`): a focus the app
+placed on a live element outside is never stolen — and because the open modal holds the page
+`inert`, an app focus issued BEFORE the close render is dropped by the browser itself; settle the
+post-close focus AFTER the overlay is gone (the page's `OnAfterRenderAsync`, not a
+`requestAnimationFrame`).
+
 A backdrop belongs inside the scope root, and it carries `data-tm-backdrop`. The module inerts every
 sibling it walks, so a backdrop left outside the root is inert and swallows the click that should
 close the overlay. The attribute is the only contract; a class name is not recognised.

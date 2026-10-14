@@ -14,7 +14,8 @@
            interop completed — an unpromoted popover root can be display:none and the
            initial-focus move would land on <body>. *@
         <TmFocusScope @ref="_scope" Class="tm-gantt__dialog tm-gantt__import-dialog"
-                      Active="@(_gate?.ScopeActive == true)" CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
+                      Active="@(_gate?.ScopeActive == true)" NoteOpenerOnMount="true"
+                      CloseOnEscape="true" OnEscape="OnClose" AriaLabelledBy="@_titleId"
                       @onclick:stopPropagation>
             <div class="tm-gantt__dialog-header">
                 <span id="@_titleId" class="tm-gantt__dialog-title">@Loc["TmGantt_Import"]</span>

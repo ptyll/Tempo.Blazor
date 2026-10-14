@@ -67,6 +67,13 @@ public partial class TmGanttImportDialog : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Cold start: import the focus-trap module and install its document-level opener
+            // records NOW, so the FIRST open of the session restores its opener.
+            await FocusTrap.EnsureLoadedAsync(JS);
+        }
+
         // Register the NATIVE click listener ahead of the first click — re-attempted on EVERY
         // render while the trigger element exists, because tab switches (@if/else-if in the
         // markup) destroy and recreate the file area: a C# "registered once" flag can never see
