@@ -37,6 +37,12 @@
       "description": "Predefined colors to display in the palette."
     },
     {
+      "name": "PaletteColorNames",
+      "type": "IReadOnlyDictionary<string, string>?",
+      "isRequired": false,
+      "description": "Accessible names for the palette colors, passed through to the embedded TmColorPalette (see TmColorPalette.ColorNames). A named swatch announces the localized 'Select color {0}' template with its name; unnamed colors announce their raw value."
+    },
+    {
       "name": "PaletteColumns",
       "type": "int",
       "isRequired": false,

@@ -878,6 +878,7 @@
   "TmCheckbox_Indeterminate": "Partiellement sélectionné",
   "TmColorPalette_Clear": "Effacer",
   "TmColorPalette_SelectColor": "Sélectionner une couleur",
+  "TmColorPalette_SelectColorNamed": "Sélectionner la couleur {0}",
   "TmColorPicker_Hex": "Hex",
   "TmColorPicker_SelectColor": "Sélectionner une couleur",
   "TmCommandPalette_NoResults": "Aucune commande trouvée",

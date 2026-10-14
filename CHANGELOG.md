@@ -704,7 +704,83 @@
   `tm-color-gradient.js`. The sliders paint the shared focus ring (with a `forced-colors`
   variant) and the thumbs grow on a coarse pointer.
 
+- **Every `TmColorPalette` swatch announces its own color.** Every swatch and the grid carried
+  the same generic `aria-label` "Select color", and the color value was never passed to the
+  localizer, so a screen reader read an indistinguishable "Select color, button" for all 64
+  default swatches (WCAG 1.1.1/4.1.2). The grid is now a labelled `role="radiogroup"` and each
+  swatch is a native `<button role="radio">` with `aria-checked` for the selection, the existing
+  roving tabindex, and a per-swatch accessible name: the new optional
+  `ColorNames` parameter (`IReadOnlyDictionary<string, string>`, keyed by the color string as it
+  appears in `Colors`, matched case-insensitively — a key spelled exactly like the palette color
+  wins over a case-variant duplicate) names its swatch with the localized
+  `TmColorPalette_SelectColorNamed` template ("Select color {0}" / "Vybrat barvu {0}" /
+  "Sélectionner la couleur {0}", en/cs/fr), and a color without a — non-empty — entry falls back
+  to announcing its raw value ("Select color #2E7D32"), so the swatches are always tellable
+  apart even without `ColorNames`. The name lookup is cached per `ColorNames`/`Colors` reference
+  in `OnParametersSet` instead of a linear scan per swatch per render. Custom `ITmLocalizer`
+  implementations that predate the `TmColorPalette_SelectColorNamed` key stay supported: when
+  the template is missing the label falls back to the plain `TmColorPalette_SelectColor` text
+  plus the name/value ("Select color #FF0000") instead of a raw `[key]` placeholder.
+  The `TmFlatColorPicker` / `TmColorPicker` palettes inherit the fix through their embedded
+  `TmColorPalette`, and can now be named directly through their new `PaletteColorNames`
+  parameter (see below).
+
+- **`TmColorPalette` keyboard navigation moves focus only — selection follows Enter/Space.**
+  The arrow keys, `Home` and `End` move the roving tabindex without committing a selection
+  (selection does not follow focus), so keyboard users can explore a palette embedded in a
+  `TmFlatColorPicker` / `TmColorPicker` without committing a color or closing the picker on
+  every stroke; Enter/Space select through the native button activation. The keyboard-focus
+  state now also clears on `focusout` (the ring used to survive focus having left the palette,
+  and the stale roving tabindex blocked `OnParametersSet` from returning it to the selected
+  swatch). Documented in the class XML docs and the component JSON documentation.
+
+- **The `TmColorPalette` focus ring no longer paints onto neighbouring swatches, and survives
+  forced-colors mode.** The old indicator was a 2px `--tm-color-primary` outline with a 2px
+  offset — outward, exactly across the 2px grid gap onto the adjacent swatch, where a primary
+  ring over a blue swatch measured ~1:1 (WCAG 1.4.11). The ring is now two-tone and inward:
+  `outline: 2px solid var(--tm-color-primary); outline-offset: -2px;` plus an inset
+  `var(--tm-surface)` band (`box-shadow: inset 0 0 0 4px var(--tm-surface)`) that separates the
+  ring from the swatch fill — independent of the neighbours, ≥3:1 in both themes
+  (`ColorPaletteFocusRingContrastTests`). A focused-and-selected swatch keeps its selection
+  border under the inward ring, so the two states stay distinguishable. Under
+  `(forced-colors: active)` the swatches opt out of the system override
+  (`forced-color-adjust: none`) so the authored colors stay visible and the selection is marked
+  with a 3px `Highlight` outline (system colors are allowed there).
+
+- **`TmFlatColorPicker` and `TmColorPicker` accept `PaletteColorNames`.** Hosts of the embedded
+  palettes previously had no way to name their colors — a screen reader read raw hex values
+  unless they switched to a standalone `TmColorPalette`. The new optional
+  `PaletteColorNames` (`IReadOnlyDictionary<string, string>`) is forwarded to the embedded
+  `TmColorPalette`'s `ColorNames` exactly like `PaletteColors`/`PaletteColumns`, so
+  `TmColorPicker` → `TmFlatColorPicker` → `TmColorPalette` all announce the localized
+  "Select color {name}" (see `TmColorPalette.ColorNames` for the matching and fallback rules).
+
 ### Breaking / Migration
+
+- **`TmColorPalette`'s accessibility tree moved from an invalid grid to a radiogroup of radios.**
+  The old markup put `role="grid"` on the palette and `role="gridcell"` + `aria-selected` on the
+  swatch buttons — an ARIA grid needs `role="row"` wrappers, so screen readers never exposed a
+  usable grid, and `aria-selected` on a non-list option carried no checked semantics. The grid
+  is now `role="radiogroup"` (same localized `aria-label`) and each swatch is `role="radio"`
+  with `aria-checked` instead of `aria-selected`; the roving tabindex, the arrow/Home/End focus
+  movement and the native-button Enter/Space activation are unchanged. Hosts querying the
+  palette's roles or the selected swatch must migrate, before/after:
+
+  ```html
+  <!-- before -->
+  <div class="tm-color-palette-grid" role="grid" aria-label="Select color">
+      <button type="button" role="gridcell" aria-selected="true" …></button>
+  </div>
+
+  <!-- after -->
+  <div class="tm-color-palette-grid" role="radiogroup" aria-label="Select color">
+      <button type="button" role="radio" aria-checked="true" aria-label="Select color Red" …></button>
+  </div>
+  ```
+
+  The generic per-swatch `aria-label` is gone with it: unnamed colors announce
+  "Select color {value}", and `ColorNames` (see Accessibility) replaces the value with a real
+  name.
 
 - **`TmNotificationBell` entries are native `<button type="button">` elements, not
   `div @onclick` rows.** A `div` with a click handler is a keyboard trap — a keyboard user could

@@ -2078,6 +2078,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmColorPicker_SelectColor"] = "Select color",
         ["TmColorPicker_Hex"] = "Hex",
         ["TmColorPalette_SelectColor"] = "Select color",
+        ["TmColorPalette_SelectColorNamed"] = "Select color {0}",
         ["TmColorPalette_Clear"] = "Clear",
 
         // TmSignature
@@ -5498,6 +5499,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmColorPicker_SelectColor"] = "Vybrat barvu",
         ["TmColorPicker_Hex"] = "Hex",
         ["TmColorPalette_SelectColor"] = "Vybrat barvu",
+        ["TmColorPalette_SelectColorNamed"] = "Vybrat barvu {0}",
         ["TmColorPalette_Clear"] = "Vymazat",
 
         // TmSignature

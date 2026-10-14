@@ -14527,7 +14527,7 @@
           "kind": "Component",
           "category": "Inputs",
           "namespace": "Tempo.Blazor.Components.Inputs",
-          "description": "A color palette that displays predefined colors in a grid. Users can click a swatch to select a color.",
+          "description": "A color palette that displays predefined colors in a grid. Users can click a swatch to select a color. The grid is a labelled radiogroup and every swatch is a native button with role=radio, its own accessible name (from ColorNames, or the color value) and aria-checked for the selection; the roving tabindex moves with the arrows and Home/End. Arrow keys move focus only (selection does not follow focus) so embedded pickers do not commit on navigation; Enter/Space select. The two-tone focus ring runs inside the swatch edge, independent of neighbouring swatches, and a forced-colors variant keeps the swatch colors and marks the selection with the system highlight color.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmColorPalette.razor",
           "documentationStatus": "merged",
@@ -14540,6 +14540,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class."
+            },
+            {
+              "name": "ColorNames",
+              "type": "IReadOnlyDictionary<string, string>?",
+              "isRequired": false,
+              "description": "Accessible names for the colors, keyed by the color string as it appears in Colors (matched case-insensitively; a key spelled exactly like the palette color wins over a case-variant duplicate). A named swatch announces the localized 'Select color {0}' template with its name; an unnamed — or blank-named — color falls back to announcing its raw value, so a screen reader can always tell the swatches apart. Custom ITmLocalizer implementations without the SelectColorNamed template fall back to the plain Select color text plus the name/value."
             },
             {
               "name": "Colors",
@@ -14572,6 +14578,16 @@
               "type": "EventCallback<string>",
               "isRequired": false,
               "description": "Event fired when a color is selected."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Basic palette",
+              "code": "<TmColorPalette @bind-Value=\"selectedColor\" />"
+            },
+            {
+              "title": "Named swatches",
+              "code": "<TmColorPalette @bind-Value=\"selectedColor\"\n             Colors=\"@new[] { \"#C62828\", \"#2E7D32\" }\"\n             ColorNames=\"@new Dictionary<string, string> { [\"#C62828\"] = \"Crimson\", [\"#2E7D32\"] = \"Forest green\" }\" />"
             }
           ]
         },
@@ -14624,6 +14640,12 @@
               "type": "EventCallback<bool>",
               "isRequired": false,
               "description": "Fires when the dropdown open state changes."
+            },
+            {
+              "name": "PaletteColorNames",
+              "type": "IReadOnlyDictionary<string, string>?",
+              "isRequired": false,
+              "description": "Accessible names for the palette colors, passed through the embedded TmFlatColorPicker to its TmColorPalette (see TmColorPalette.ColorNames). A named swatch announces the localized 'Select color {0}' template with its name; unnamed colors announce their raw value."
             },
             {
               "name": "PaletteColors",
@@ -15331,6 +15353,12 @@
               "isRequired": false,
               "default": "ColorFormat.Hex",
               "description": "Output format. Default is <see cref=\"ColorFormat.Hex\"/>."
+            },
+            {
+              "name": "PaletteColorNames",
+              "type": "IReadOnlyDictionary<string, string>?",
+              "isRequired": false,
+              "description": "Accessible names for the palette colors, passed through to the embedded TmColorPalette (see TmColorPalette.ColorNames). A named swatch announces the localized 'Select color {0}' template with its name; unnamed colors announce their raw value."
             },
             {
               "name": "PaletteColors",

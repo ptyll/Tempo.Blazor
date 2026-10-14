@@ -38,6 +38,14 @@ public partial class TmFlatColorPicker
     /// <summary>Predefined colors to display in the palette.</summary>
     [Parameter] public IReadOnlyList<string>? PaletteColors { get; set; }
 
+    /// <summary>
+    /// Accessible names for the palette colors, passed through to the embedded
+    /// <see cref="TmColorPalette"/> (see <see cref="TmColorPalette.ColorNames"/> for the exact
+    /// matching and fallback rules). Named swatches announce the localized "Select color {0}"
+    /// template with their name; unnamed colors announce their raw value.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? PaletteColorNames { get; set; }
+
     /// <summary>Number of columns in the palette grid. Default 8.</summary>
     [Parameter] public int PaletteColumns { get; set; } = 8;
 

@@ -880,6 +880,7 @@
   "TmCheckbox_Indeterminate": "Částečně vybráno",
   "TmColorPalette_Clear": "Vymazat",
   "TmColorPalette_SelectColor": "Vybrat barvu",
+  "TmColorPalette_SelectColorNamed": "Vybrat barvu {0}",
   "TmColorPicker_Hex": "Hex",
   "TmColorPicker_SelectColor": "Vybrat barvu",
   "TmCommandPalette_NoResults": "Žádné příkazy nenalezeny",

@@ -32,14 +32,28 @@
 
 .tm-color-palette-swatch:focus-visible,
 .tm-color-palette-swatch--keyboard-focus {
+    /* Two-tone INWARD ring: the primary outline runs inside the swatch edge with a surface
+       band between it and the swatch fill. The indicator therefore never paints across the
+       2px grid gap onto a neighbouring swatch (an outward primary ring measured ~1:1 next to
+       a blue swatch). Tokens only — the pair is guarded >=3:1 in both themes by
+       ColorPaletteFocusRingContrastTests. */
     outline: 2px solid var(--tm-color-primary);
-    outline-offset: 2px;
+    outline-offset: -2px;
+    box-shadow: inset 0 0 0 4px var(--tm-surface);
     z-index: 1;
 }
 
 .tm-color-palette-swatch--selected {
     border-color: var(--tm-text-primary);
     box-shadow: 0 0 0 1px var(--tm-surface), 0 0 0 3px var(--tm-color-primary);
+}
+
+/* Focused AND selected: the selection keeps its border while the inward two-tone ring
+   replaces the outer selection halo, so the focused+selected swatch stays distinguishable
+   from a merely selected one. */
+.tm-color-palette-swatch--selected:focus-visible,
+.tm-color-palette-swatch--selected.tm-color-palette-swatch--keyboard-focus {
+    box-shadow: inset 0 0 0 4px var(--tm-surface);
 }
 
 .tm-color-palette-clear {
@@ -56,4 +70,16 @@
 
 .tm-color-palette-clear:hover {
     background: var(--tm-color-surface-hover);
+}
+
+/* Forced colors strips authored backgrounds and box-shadows; keep the swatch colors visible
+   and mark the selection with the system highlight color (system colors are allowed here). */
+@media (forced-colors: active) {
+    .tm-color-palette-swatch {
+        forced-color-adjust: none;
+    }
+
+    .tm-color-palette-swatch[aria-checked="true"] {
+        outline: 3px solid Highlight;
+    }
 }

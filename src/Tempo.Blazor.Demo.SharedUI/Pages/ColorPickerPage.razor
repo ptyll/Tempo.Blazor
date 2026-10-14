@@ -27,7 +27,9 @@
                            ShowPalette="true"
                            ShowClearButton="true"
                            ShowApplyButton="true"
-                           Placeholder="Select a color..." />
+                           Placeholder="Select a color..."
+                           PaletteColors="@_namedColors"
+                           PaletteColorNames="@_paletteColorNames" />
 
             @if (!string.IsNullOrEmpty(_color1))
             {
@@ -55,7 +57,9 @@
         <div class="flex flex-col md:flex-row gap-8 items-start">
             <TmFlatColorPicker @bind-Value="_color2"
                                ShowAlpha="true"
-                               ShowPalette="true" />
+                               ShowPalette="true"
+                               PaletteColors="@_namedColors"
+                               PaletteColorNames="@_paletteColorNames" />
 
             @if (!string.IsNullOrEmpty(_color2))
             {
@@ -81,7 +85,7 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full">Palette</span>
     </div>
 
-    <div class="showcase-card">
+    <div class="showcase-card" data-testid="color-palette-card">
         <TmColorPalette @bind-Value="_color3" />
 
         @if (!string.IsNullOrEmpty(_color3))
@@ -92,6 +96,28 @@
                 <code class="text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">@_color3</code>
             </div>
         }
+    </div>
+
+    <div class="showcase-card mt-4" data-testid="color-palette-named-card">
+        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Accessible color names</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            With <code>ColorNames</code> every swatch announces its own name to screen readers
+            ("Select color Forest green"); unnamed colors announce their value instead.
+        </p>
+        <div class="max-w-xs">
+            <TmColorPalette @bind-Value="_colorNamed"
+                            ColorNames="@_paletteColorNames"
+                            Colors="@_namedColors"
+                            Columns="3" />
+        </div>
+
+        <div class="mt-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm"
+                 style="background-color: @(string.IsNullOrEmpty(_colorNamed) ? "transparent" : _colorNamed)"></div>
+            <code class="text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded" data-testid="color-palette-named-value">
+                @(ResolveNamedValueDisplay(_colorNamed))
+            </code>
+        </div>
     </div>
 </section>
 
@@ -123,7 +149,42 @@
     private string? _color1 = "#3b82f6";
     private string? _color2;
     private string? _color3;
+    private string? _colorNamed;
     // Starts bound so the gradient's value text and preview are observable from page load
     // (the pointer-drag / keyboard E2E lanes assert changes against it).
     private string? _color4 = "#3b82f6";
+
+    // Named palette for the ColorNames demo: a fixed color list (never derived from the
+    // dictionary keys at render time) plus the name map keyed by exactly those strings.
+    private static readonly string[] _namedColors =
+    [
+        "#C62828", // Crimson
+        "#F9A825", // Amber
+        "#2E7D32", // Forest green
+        "#1565C0", // Ocean blue
+        "#6D4C41", // Walnut brown
+        "#37474F", // Slate gray
+    ];
+
+    private static readonly Dictionary<string, string> _paletteColorNames = new()
+    {
+        ["#C62828"] = "Crimson",
+        ["#F9A825"] = "Amber",
+        ["#2E7D32"] = "Forest green",
+        ["#1565C0"] = "Ocean blue",
+        ["#6D4C41"] = "Walnut brown",
+        ["#37474F"] = "Slate gray",
+    };
+
+    private static string ResolveNamedValueDisplay(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return "none";
+        }
+
+        return _paletteColorNames.TryGetValue(value, out var name)
+            ? $"{name} · {value}"
+            : value;
+    }
 }

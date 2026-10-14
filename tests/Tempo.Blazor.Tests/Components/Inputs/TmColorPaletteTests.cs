@@ -87,15 +87,209 @@ public class TmColorPaletteTests : LocalizationTestBase
         var cut = RenderPalette("#222222");
 
         var grid = cut.Find(".tm-color-palette-grid");
-        grid.GetAttribute("role").Should().Be("grid");
+        grid.GetAttribute("role").Should().Be("radiogroup");
+        grid.GetAttribute("aria-label").Should().Be("Select color");
 
         var swatches = cut.FindAll(".tm-color-palette-swatch");
         swatches.Should().HaveCount(4);
+        swatches.Should().OnlyContain(swatch => swatch.GetAttribute("role") == "radio");
         swatches[1].GetAttribute("tabindex").Should().Be("0");
-        swatches[1].GetAttribute("aria-selected").Should().Be("true");
         swatches.Where((_, index) => index != 1)
             .Should()
             .OnlyContain(swatch => swatch.GetAttribute("tabindex") == "-1");
+    }
+
+    [Fact]
+    public void TmColorPalette_SelectedSwatch_IsAriaChecked_True()
+    {
+        var cut = RenderPalette("#222222");
+
+        var swatches = cut.FindAll(".tm-color-palette-swatch");
+        swatches[1].GetAttribute("aria-checked").Should().Be("true");
+        swatches.Where((_, index) => index != 1)
+            .Should()
+            .OnlyContain(swatch => swatch.GetAttribute("aria-checked") == "false");
+    }
+
+    [Fact]
+    public void TmColorPalette_WithoutColorNames_EachSwatchNamesItsColorValue()
+    {
+        // WCAG 1.1.1/4.1.2: the generic "Select color" label on every swatch made them
+        // indistinguishable; without ColorNames the swatch must at least announce its value.
+        var cut = RenderPalette("#222222");
+
+        var swatches = cut.FindAll(".tm-color-palette-swatch");
+        swatches[0].GetAttribute("aria-label").Should().Be("Select color #111111");
+        swatches[1].GetAttribute("aria-label").Should().Be("Select color #222222");
+        swatches[2].GetAttribute("aria-label").Should().Be("Select color #333333");
+        swatches[3].GetAttribute("aria-label").Should().Be("Select color #444444");
+    }
+
+    [Fact]
+    public void TmColorPalette_ColorNames_GiveEachSwatchItsOwnAccessibleName()
+    {
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Colors, new[] { "#FF0000", "#2E7D32", "#0000FF" })
+            .Add(c => c.ColorNames, new Dictionary<string, string>
+            {
+                ["#FF0000"] = "Red",
+                ["#2E7D32"] = "Forest green",
+            })
+            .Add(c => c.ShowClearButton, false));
+
+        var swatches = cut.FindAll(".tm-color-palette-swatch");
+        swatches[0].GetAttribute("aria-label").Should().Be("Select color Red");
+        swatches[1].GetAttribute("aria-label").Should().Be("Select color Forest green");
+        // A color without a name falls back to its value, never to the generic grid label.
+        swatches[2].GetAttribute("aria-label").Should().Be("Select color #0000FF");
+    }
+
+    [Fact]
+    public void TmColorPalette_ColorNames_KeyMatch_IsCaseInsensitive()
+    {
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Colors, new[] { "#2E7D32" })
+            .Add(c => c.ColorNames, new Dictionary<string, string>
+            {
+                ["#2e7d32"] = "Forest green",
+            })
+            .Add(c => c.ShowClearButton, false));
+
+        cut.FindAll(".tm-color-palette-swatch")[0]
+            .GetAttribute("aria-label").Should().Be("Select color Forest green");
+    }
+
+    [Fact]
+    public void TmColorPalette_ColorNames_ExactCaseKey_WinsOverCaseVariantDuplicate()
+    {
+        // Two keys differing only in case: the one spelled exactly like the palette color wins,
+        // even though the case-variant was inserted after it into the ignore-case lookup.
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Colors, new[] { "#2E7D32" })
+            .Add(c => c.ColorNames, new Dictionary<string, string>
+            {
+                ["#2E7D32"] = "Exact key",
+                ["#2e7d32"] = "case variant",
+            })
+            .Add(c => c.ShowClearButton, false));
+
+        cut.FindAll(".tm-color-palette-swatch")[0]
+            .GetAttribute("aria-label").Should().Be("Select color Exact key");
+    }
+
+    [Fact]
+    public void TmColorPalette_ColorNames_BlankName_FallsBackToColorValue()
+    {
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Colors, new[] { "#FF0000" })
+            .Add(c => c.ColorNames, new Dictionary<string, string>
+            {
+                ["#FF0000"] = "   ",
+            })
+            .Add(c => c.ShowClearButton, false));
+
+        cut.FindAll(".tm-color-palette-swatch")[0]
+            .GetAttribute("aria-label").Should().Be("Select color #FF0000");
+    }
+
+    [Fact]
+    public void TmColorPalette_CustomLocalizer_WithoutNamedTemplate_FallsBackToPlainSelectColor()
+    {
+        // A custom ITmLocalizer that predates TmColorPalette_SelectColorNamed must keep working:
+        // the label falls back to the plain "Select color" text instead of a "[key]" placeholder.
+        UseCustomLocalization(new Dictionary<string, string>
+        {
+            ["TmColorPalette_SelectColor"] = "Select color",
+            ["TmColorPalette_Clear"] = "Clear",
+        });
+
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Colors, new[] { "#FF0000" })
+            .Add(c => c.ShowClearButton, false));
+
+        cut.FindAll(".tm-color-palette-swatch")[0]
+            .GetAttribute("aria-label").Should().Be("Select color #FF0000");
+    }
+
+    [Fact]
+    public void TmColorPalette_FocusOut_ClearsKeyboardFocusState()
+    {
+        var cut = RenderPalette("#222222");
+
+        cut.FindAll(".tm-color-palette-swatch")[0].KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        cut.FindAll(".tm-color-palette-swatch")[1].ClassList.Should().Contain("tm-color-palette-swatch--keyboard-focus");
+
+        // Focus leaves the palette entirely (Tab out): the stale focus ring disappears and a
+        // later value change can move the roving tabindex back to the selected swatch.
+        cut.Find(".tm-color-palette-grid").FocusOut();
+
+        cut.FindAll(".tm-color-palette-swatch")[1].ClassList.Should().NotContain("tm-color-palette-swatch--keyboard-focus");
+
+        cut.Render(p => p.Add(x => x.Value, "#444444"));
+
+        var swatches = cut.FindAll(".tm-color-palette-swatch");
+        swatches[1].GetAttribute("tabindex").Should().Be("-1");
+        swatches[3].GetAttribute("tabindex").Should().Be("0");
+    }
+
+    [Fact]
+    public void TmColorPalette_Czech_ColorNames_FormatWithCzechTemplate()
+    {
+        UseCzechLocalization();
+
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Colors, new[] { "#2E7D32" })
+            .Add(c => c.ColorNames, new Dictionary<string, string>
+            {
+                ["#2E7D32"] = "Lesní zeleň",
+            })
+            .Add(c => c.ShowClearButton, false));
+
+        cut.Find(".tm-color-palette-grid").GetAttribute("aria-label").Should().Be("Vybrat barvu");
+        cut.FindAll(".tm-color-palette-swatch")[0]
+            .GetAttribute("aria-label").Should().Be("Vybrat barvu Lesní zeleň");
+    }
+
+    [Fact]
+    public void TmColorPalette_Markup_RadioGroup_OfNamedRadios_IsFrozen()
+    {
+        // Full-markup snapshot freezing the accessible DOM: a labelled radiogroup of native
+        // buttons (role=radio + aria-checked + roving tabindex), each with its own name.
+        var cut = Render<TmColorPalette>(p => p
+            .Add(c => c.Value, "#2E7D32")
+            .Add(c => c.Colors, new[] { "#FF0000", "#2E7D32" })
+            .Add(c => c.ColorNames, new Dictionary<string, string>
+            {
+                ["#FF0000"] = "Red",
+                ["#2E7D32"] = "Forest green",
+            })
+            .Add(c => c.Columns, 2)
+            .Add(c => c.ShowClearButton, false));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-color-palette "">
+                <div class=""tm-color-palette-grid""
+                     role=""radiogroup""
+                     aria-label=""Select color""
+                     style=""grid-template-columns: repeat(2, 1fr);"">
+                    <button type=""button""
+                            class=""tm-color-palette-swatch""
+                            style=""background-color: #FF0000;""
+                            role=""radio""
+                            aria-label=""Select color Red""
+                            aria-checked=""false""
+                            tabindex=""-1""
+                            data-palette-index=""0""></button>
+                    <button type=""button""
+                            class=""tm-color-palette-swatch tm-color-palette-swatch--selected""
+                            style=""background-color: #2E7D32;""
+                            role=""radio""
+                            aria-label=""Select color Forest green""
+                            aria-checked=""true""
+                            tabindex=""0""
+                            data-palette-index=""1""></button>
+                </div>
+            </div>");
     }
 
     [Fact]

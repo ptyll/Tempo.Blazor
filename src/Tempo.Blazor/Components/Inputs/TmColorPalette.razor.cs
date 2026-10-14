@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -7,6 +8,23 @@ namespace Tempo.Blazor.Components.Inputs;
 /// <summary>
 /// A color palette that displays predefined colors in a grid.
 /// Users can click a swatch to select a color.
+/// <para>
+/// Accessibility: the grid is a <c>role="radiogroup"</c> labelled with the localized
+/// "Select color" text, and every swatch is a native <c>&lt;button role="radio"&gt;</c> that
+/// announces its own color through <see cref="ColorNames"/> (or its raw value when unnamed),
+/// carries <c>aria-checked</c> for the selection and a roving tabindex with
+/// arrows/Home/End moving the focus (Enter/Space activate the native button — exactly one
+/// activation per key press).
+/// </para>
+/// <para>
+/// Keyboard model: the arrow keys, <c>Home</c> and <c>End</c> move focus only — selection does
+/// NOT follow focus — so keyboard navigation over a palette embedded in a
+/// <see cref="TmFlatColorPicker"/> or <see cref="TmColorPicker"/> never commits a color (and
+/// never closes the picker) while the user is merely moving through the swatches. Enter or
+/// Space performs the selection through the native button activation. The roving tabindex and
+/// the keyboard-focus ring clear again on <c>focusout</c>, so leaving the palette restores the
+/// selected swatch as the tab stop.
+/// </para>
 /// </summary>
 public partial class TmColorPalette
 {
@@ -14,6 +32,13 @@ public partial class TmColorPalette
     private int _keyboardIndex;
     private bool _hasKeyboardFocus;
     private bool _focusSwatchAfterRender;
+
+    // Case-insensitive name lookup rebuilt in OnParametersSet whenever the ColorNames or Colors
+    // reference changes; exact-case keys win over case-variant duplicates and blank names are
+    // dropped (a color with no usable name falls back to its value).
+    private Dictionary<string, string>? _colorNamesLookup;
+    private IReadOnlyDictionary<string, string>? _colorNamesSource;
+    private IReadOnlyList<string>? _colorsSource;
 
     // ── Default palette ──────────────────────────────────────────
     private static readonly string[] DefaultColors =
@@ -38,6 +63,18 @@ public partial class TmColorPalette
 
     /// <summary>Predefined colors to display. Defaults to a standard palette.</summary>
     [Parameter] public IReadOnlyList<string>? Colors { get; set; }
+
+    /// <summary>
+    /// Accessible names for the colors, keyed by the color string exactly as it appears in
+    /// <see cref="Colors"/> (keys match case-insensitively, so <c>"#2e7d32"</c> names a
+    /// <c>"#2E7D32"</c> swatch). A named swatch announces the localized
+    /// <c>TmColorPalette_SelectColorNamed</c> template ("Select color {0}") with its name; a
+    /// color without an entry — or with an empty name — falls back to announcing its raw value
+    /// ("Select color #2E7D32"), so a screen reader can always tell the swatches apart
+    /// (WCAG 1.1.1/4.1.2). Colors that are not in the palette may carry names too; they are
+    /// simply never used.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? ColorNames { get; set; }
 
     /// <summary>Number of columns in the grid. Default 8.</summary>
     [Parameter] public int Columns { get; set; } = 8;
@@ -79,6 +116,84 @@ public partial class TmColorPalette
     private string GetSwatchTabIndex(int index)
         => index == _keyboardIndex ? "0" : "-1";
 
+    /// <summary>
+    /// The accessible name of one swatch: the localized <c>TmColorPalette_SelectColorNamed</c>
+    /// template ("Select color {0}") formatted with the color's <see cref="ColorNames"/> name,
+    /// or with the raw color value when the color has no name.
+    /// <para>
+    /// Backward compatible with custom <c>ITmLocalizer</c> implementations that predate the
+    /// <c>TmColorPalette_SelectColorNamed</c> key: when <see cref="ITmLocalizer.TryGetString"/>
+    /// reports the template missing, the label falls back to the plain
+    /// <c>TmColorPalette_SelectColor</c> text followed by the name, so such hosts render
+    /// "Select color #FF0000" instead of a raw <c>[key]</c> placeholder.
+    /// </para>
+    /// </summary>
+    private string GetSwatchAriaLabel(string color)
+    {
+        var name = ResolveColorName(color);
+        return Loc.TryGetString("TmColorPalette_SelectColorNamed", out var template)
+            ? string.Format(Loc.Culture, template, name)
+            : $"{Loc["TmColorPalette_SelectColor"]} {name}";
+    }
+
+    private string ResolveColorName(string color)
+        => TryGetColorName(color, out var name) ? name : color;
+
+    private bool TryGetColorName(string color, [NotNullWhen(true)] out string? name)
+    {
+        name = null;
+        if (_colorNamesLookup is not null && _colorNamesLookup.TryGetValue(color, out var lookupName))
+        {
+            name = lookupName;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Rebuilds the case-insensitive color-name lookup when the <see cref="ColorNames"/> or
+    /// <see cref="Colors"/> reference changed. Exact-case keys win over case-variant duplicates
+    /// and blank names are dropped, so those colors announce their raw value instead.
+    /// </summary>
+    private void RebuildColorNamesLookup()
+    {
+        if (ReferenceEquals(_colorNamesSource, ColorNames)
+            && ReferenceEquals(_colorsSource, Colors))
+        {
+            return;
+        }
+
+        _colorNamesSource = ColorNames;
+        _colorsSource = Colors;
+        if (ColorNames is not { Count: > 0 })
+        {
+            _colorNamesLookup = null;
+            return;
+        }
+
+        var lookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in ColorNames)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                lookup[key] = value;
+            }
+        }
+
+        // A key spelled exactly like a palette color beats a case-variant duplicate: read the
+        // exact match straight off the source dictionary and overwrite the lookup entry.
+        foreach (var color in _effectiveColors)
+        {
+            if (ColorNames.TryGetValue(color, out var exact) && !string.IsNullOrWhiteSpace(exact))
+            {
+                lookup[color] = exact;
+            }
+        }
+
+        _colorNamesLookup = lookup.Count > 0 ? lookup : null;
+    }
+
     private static string AriaBool(bool value)
         => value ? "true" : "false";
 
@@ -87,6 +202,8 @@ public partial class TmColorPalette
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        RebuildColorNamesLookup();
+
         var colors = _effectiveColors;
         if (colors.Count == 0)
         {
@@ -154,6 +271,15 @@ public partial class TmColorPalette
         _hasKeyboardFocus = true;
         _keyboardIndex = Math.Clamp(index, 0, Math.Max(0, _effectiveColors.Count - 1));
     }
+
+    /// <summary>
+    /// Focus left the grid (focusout bubbles from the swatch that lost it): drop the keyboard
+    /// state so the stale focus ring disappears and <see cref="OnParametersSet"/> can move the
+    /// roving tabindex back to the selected swatch. Focus moving BETWEEN swatches also passes
+    /// through here, but the follow-up <c>focus</c> on the next swatch re-arms the flag.
+    /// </summary>
+    private void HandleSwatchFocusOut(FocusEventArgs args)
+        => _hasKeyboardFocus = false;
 
     private void HandleSwatchKeyDown(KeyboardEventArgs args, int index)
     {
