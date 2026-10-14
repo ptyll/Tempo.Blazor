@@ -214,7 +214,12 @@ Two bottom bars exist and they are not interchangeable:
     (tokens.css) defaults to the bar height plus the bottom safe area and is what the
     `FixedViewport` body padding consumes. A host scrolling content under a fixed bar reads the
     same token for its own `scroll-padding-bottom`, so focused content is never hidden behind
-    the bar.
+    the bar. The reserve tracks the C13 icon chip only while the chip tokens are set on
+    `:root` — the token is evaluated there, with the default icon box. A scoped opt-in (a class
+    on one bar) that enlarges `--tm-mobile-action-bar-icon-box` in its own scope MUST
+    re-declare the reserve in that scope —
+    `--tm-mobile-action-bar-reserve-block-size: calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px))` —
+    or its body padding stays at the chip-off height while the bar grows.
   - **`position: sticky` breaks under an `overflow: hidden` or `overflow: auto` ancestor**
     (the scroll container becomes the sticky box's viewport — often the component itself, so
     the bar can never move). `overflow: clip` is fine. Render the bar outside clipped

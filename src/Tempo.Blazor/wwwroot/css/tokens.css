@@ -277,10 +277,26 @@
   --tm-mobile-action-bar-reserve-block-size:
       calc(var(--tm-space-2) + var(--tm-space-2) + var(--tm-border-width)
            + max(var(--tm-touch-target),
-                 calc(1rem + var(--tm-space-1)
+                 calc(var(--tm-mobile-action-bar-icon-box) + var(--tm-space-1)
                       + (2 * var(--tm-font-size-xs) * var(--tm-line-height-tight))
                       + var(--tm-space-1)))
            + env(safe-area-inset-bottom, 0px));
+
+  /* C13: the tile icon's box and the icon-chip paint, token-only — a host turns the chip on by
+     enlarging the box and giving it a fill (the tile, the bar height and the reserve above all
+     derive from --tm-mobile-action-bar-icon-box, so they grow together and the reserve stays
+     exact). That holds ONLY while the chip tokens are set here on :root: this reserve is
+     evaluated with the :root values, so a SCOPED opt-in (a class on one bar) enlarges the box
+     in its own scope while this token keeps the default one — such a scope must re-declare
+     --tm-mobile-action-bar-reserve-block-size from its own
+     calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px)), or its body
+     padding stays at the chip-off height while the bar grows. Defaults are today's look: the
+     box is the IconSize.Sm icon itself and the chip is transparent. No dark override — the box
+     is a length and an enabled chip reads the themed
+     --tm-color-primary-subtle/--tm-color-primary pair, which tokens-dark.css already re-declares. */
+  --tm-mobile-action-bar-icon-box: 1rem;
+  --tm-mobile-action-bar-icon-chip-bg: transparent;
+  --tm-mobile-action-bar-icon-chip-fg: currentColor;
 
   /* ── Alias Tokens (used by components) ──────────────────────── */
   --tm-surface:                var(--tm-bg-surface);

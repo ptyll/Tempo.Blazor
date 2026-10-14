@@ -484,6 +484,38 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
             Assert.IsTrue(button.Height >= 44, $"the overlay clear needs a 44px touch target, got {button.Height:0.#}");
         }
 
+        // cluster-D §6: the overlay clear is a compact icon-only tile below 640px of the
+        // component's own width, so it stops covering ~14% of the pad. The accessible name
+        // survives the visually-hidden label at every width.
+        var canvas = await capture.Locator(".tm-signature-capture__canvas").BoundingBoxAsync();
+        Assert.IsNotNull(canvas);
+        var ratio = button.Width * button.Height / (canvas!.Width * canvas!.Height);
+        var ratioCeiling = width <= 320 ? 0.10 : 0.07;
+        Assert.IsTrue(ratio <= ratioCeiling,
+            $"the overlay clear covers {ratio:P1} of the pad at {width}px (ceiling {ratioCeiling:P0})");
+
+        var accessible = capture.GetByRole(AriaRole.Button, new() { Name = "Clear" });
+        await Assertions.Expect(accessible).ToHaveCountAsync(1);
+
+        var label = capture.Locator(".tm-signature-capture__clear-label");
+        // The compact break is the COMPONENT's own width — the overlay root is the size
+        // container — not the viewport width: the demo's xl two-column grid keeps this capture
+        // at ~430px even on a 1280 screen, so a wide viewport still renders the compact tile.
+        // Branch on the measured container so the assertion follows the spec (≥640px of
+        // container shows icon + label) at every viewport.
+        var containerWidth = await capture.EvaluateAsync<double>("el => el.getBoundingClientRect().width");
+        if (containerWidth >= 640)
+        {
+            var labelWidth = await label.EvaluateAsync<double>("el => el.clientWidth");
+            Assert.IsTrue(labelWidth > 1, "at a wide container the label is real visible text");
+        }
+        else
+        {
+            var clipped = await label.EvaluateAsync<bool>(
+                "el => el.clientHeight <= 1 && getComputedStyle(el).overflow === 'hidden'");
+            Assert.IsTrue(clipped, "below 640px of container the label is visually hidden, not removed");
+        }
+
         await ShootAsync(page, capture, $"signature-overlay-clear-{width}");
     }
 

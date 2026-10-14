@@ -23,11 +23,16 @@
     <div class="tm-signature-capture__surface">
         @if (OverlayClear)
         {
+            @* cluster-D §6: the overlay tile shrinks to a compact icon-only button below the
+               640px container width (a plain labelled button covered ≈14% of the pad at 320).
+               The label span keeps the accessible name at every width — the stylesheet hides it
+               visually under the container query, never display:none. *@
             <button type="button"
                     class="tm-signature-capture__clear"
                     disabled="@Disabled"
                     @onclick="ClearAsync">
-                @Loc["TmSigning_Clear"]
+                <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
+                <span class="tm-signature-capture__clear-label">@Loc["TmSigning_Clear"]</span>
             </button>
         }
         @if (Mode == TmSignatureCaptureMode.Draw)

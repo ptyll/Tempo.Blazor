@@ -5,10 +5,11 @@
 .tm-mobile-action-bar {
   /* Y4: the tile is FLOORED at its two-line height, so the bar height is constant whether a
      label wraps or not — and the FixedViewport reserve (tokens.css, same terms) always matches
-     the real bar box. Terms: icon (1rem, IconSize.Sm) + gap + two xs label lines on the tight
-     leading + the tile's vertical padding (space-1/2 each side, border-box). */
+     the real bar box. Terms: icon (the C13 icon-box token, 1rem = IconSize.Sm by default)
+     + gap + two xs label lines on the tight leading + the tile's vertical padding
+     (space-1/2 each side, border-box). */
   --tm-mobile-action-bar-tile-block:
-      calc(1rem + var(--tm-space-1)
+      calc(var(--tm-mobile-action-bar-icon-box) + var(--tm-space-1)
            + (2 * var(--tm-font-size-xs) * var(--tm-line-height-tight))
            + var(--tm-space-1));
   /* The bar height drives the bar itself and the FixedViewport content reserve, so the two can
@@ -17,6 +18,18 @@
       calc(var(--tm-space-2) + var(--tm-space-2) + var(--tm-border-width)
            + max(var(--tm-touch-target), var(--tm-mobile-action-bar-tile-block)));
   display: block;
+}
+
+/* C11: in-flow bars (sticky/inline) reserve nothing, so their tiles floor at ONE label line —
+   the second line was only dead height (a 71px bar over a 61px one). A wrapping label GROWS the
+   bar instead (align-items: stretch keeps every tile equal while it does). FixedViewport keeps
+   the two-line floor its published reserve relies on, so the reserve == bar-height contract is
+   untouched. */
+.tm-mobile-action-bar:not(.tm-mobile-action-bar--fixed) {
+  --tm-mobile-action-bar-tile-block:
+      calc(var(--tm-mobile-action-bar-icon-box) + var(--tm-space-1)
+           + (var(--tm-font-size-xs) * var(--tm-line-height-tight))
+           + var(--tm-space-1));
 }
 
 /* X2 (a): with no ChildContent the ROOT is the sticky box. Otherwise the bar's containing block
@@ -124,11 +137,22 @@
   cursor: not-allowed;
 }
 
+/* C13: the icon slot is a token-sized box with the chip paint — both tokens default to
+   today's look (the 1rem icon itself on a transparent chip). A host turns the chip on by
+   enlarging --tm-mobile-action-bar-icon-box and giving --tm-mobile-action-bar-icon-chip-bg a
+   fill; the tile, the bar height and the FixedViewport reserve derive from the same token, so
+   they grow together. The ink follows --tm-mobile-action-bar-icon-chip-fg and falls back to
+   the tile's inherited colour while the chip is off. */
 .tm-mobile-action-bar__icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  inline-size: var(--tm-mobile-action-bar-icon-box);
+  block-size: var(--tm-mobile-action-bar-icon-box);
+  border-radius: var(--tm-radius-full);
+  background: var(--tm-mobile-action-bar-icon-chip-bg);
+  color: var(--tm-mobile-action-bar-icon-chip-fg);
 }
 
 /* Two-line clamp: short labels stay whole, long ones (cs/fr at 320) wrap instead of truncating

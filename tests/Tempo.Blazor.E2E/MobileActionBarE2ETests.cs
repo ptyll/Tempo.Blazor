@@ -424,6 +424,163 @@ public class MobileActionBarE2ETests : WasmTestBase
         await CaptureViewportOnlyAsync(page, "320-fixed-fr-reserve");
     }
 
+    /// <summary>
+    /// C11: rendered line-box count per bar label (a Range over the contents, the same
+    /// measurement the orphan check uses).
+    /// </summary>
+    private static async Task<List<int>> LabelLineCountsAsync(ILocator bar)
+    {
+        var labels = bar.Locator(".tm-mobile-action-bar__label-text");
+        var count = await labels.CountAsync();
+        var lineCounts = new List<int>();
+        for (var i = 0; i < count; i++)
+        {
+            lineCounts.Add(await labels.Nth(i).EvaluateAsync<int>(
+                """
+                el => {
+                    const range = document.createRange();
+                    range.selectNodeContents(el);
+                    return [...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).length;
+                }
+                """));
+        }
+
+        return lineCounts;
+    }
+
+    [TestMethod]
+    public async Task Demo_390_StickyBar_OneLineLabels_IsOneLineTall()
+    {
+        // C11: a sticky bar reserves nothing, so its tiles floor at ONE label line — the bar is
+        // ≈61px tall with one-line labels instead of the 71px two-line floor.
+        var context = await CreateTouchContextAsync(390, 844);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var root = page.Locator("[data-testid='mab-auto-bar']");
+        var bar = root.Locator(".tm-mobile-action-bar__bar");
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var lineCounts = await LabelLineCountsAsync(bar);
+        lineCounts.Should().OnlyContain(lines => lines == 1,
+            $"every label is a single line at 390 en, got [{string.Join(", ", lineCounts)}]");
+
+        var barBox = await bar.BoundingBoxAsync();
+        Assert.IsNotNull(barBox);
+        Assert.IsTrue(barBox!.Height is >= 59 and <= 63,
+            $"a one-line sticky bar is ≈61px tall, was {barBox.Height}");
+
+        await CaptureStickyBarViewportAsync(page, bar, "390-bar-sticky-one-line");
+
+        // Sticky vs fixed at 390: the FixedViewport tile keeps the two-line floor (and the demo
+        // chip on this bar widens the icon box), so the fixed bar is measurably taller — the
+        // C11 asymmetry end to end — and its reserve still matches its own real box.
+        await page.Locator("[data-testid='mab-toggle-fixed']").ClickAsync();
+        var fixedRoot = page.Locator("[data-testid='mab-variant-fixed'] .tm-mobile-action-bar");
+        var fixedBar = fixedRoot.Locator(".tm-mobile-action-bar__bar");
+        await fixedBar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var fixedBox = await fixedBar.BoundingBoxAsync();
+        Assert.IsNotNull(fixedBox);
+        Assert.IsTrue(fixedBox!.Height > barBox.Height + 5,
+            $"the FixedViewport bar keeps the taller floor (fixed {fixedBox.Height} vs sticky {barBox.Height})");
+        var reserve = await fixedRoot.Locator(".tm-mobile-action-bar__body")
+            .EvaluateAsync<string>("el => getComputedStyle(el).paddingBottom");
+        var reservePx = double.Parse(reserve.Replace("px", "", StringComparison.Ordinal), CultureInfo.InvariantCulture);
+        Assert.AreEqual(fixedBox.Height, reservePx, delta: 1.5,
+            $"the FixedViewport reserve ({reservePx}) must equal its own bar box ({fixedBox.Height})");
+
+        await CaptureViewportOnlyAsync(page, "390-bar-fixed-two-line");
+    }
+
+    [TestMethod]
+    public async Task Demo_320_French_StickyBar_WrapsAndAllTilesStayEqual()
+    {
+        // C11: with no floor to hide behind, a wrapping label GROWS the sticky bar, and
+        // align-items: stretch keeps every tile the same height while it does.
+        var context = await CreateTouchContextAsync(320, 740);
+        await context.AddInitScriptAsync(
+            """
+            localStorage.setItem('tm-demo-culture', 'fr');
+            document.cookie = 'tm-demo-culture=fr; path=/';
+            """);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var bar = page.Locator("[data-testid='mab-auto-bar'] .tm-mobile-action-bar__bar");
+        await bar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        var lineCounts = await LabelLineCountsAsync(bar);
+        lineCounts.Should().Contain(lines => lines > 1,
+            $"fr at 320 wraps at least one bar label onto two lines, got [{string.Join(", ", lineCounts)}]");
+
+        var tiles = bar.Locator(".tm-mobile-action-bar__action");
+        var count = await tiles.CountAsync();
+        var heights = new List<double>();
+        for (var i = 0; i < count; i++)
+        {
+            heights.Add((await tiles.Nth(i).BoundingBoxAsync())!.Height);
+        }
+
+        heights.Should().OnlyContain(h => Math.Abs(h - heights[0]) <= 1,
+            $"align-items: stretch keeps every tile equal, got [{string.Join(", ", heights)}]");
+
+        // The bar grows with the wrapped tile: bar = tile + 2×space-2 padding + 1px border.
+        var barBox = await bar.BoundingBoxAsync();
+        Assert.IsNotNull(barBox);
+        Assert.IsTrue(Math.Abs(barBox!.Height - (heights[0] + 17)) <= 1.5,
+            $"the bar ({barBox.Height}) must grow to the wrapped tile ({heights[0]}) plus 17px of chrome");
+    }
+
+    [TestMethod]
+    public async Task Demo_320_FrenchFixedViewport_IconChipOn_KeepsReserveEqualToBarHeight()
+    {
+        // C13: the demo's FixedViewport bar opts into the icon chip via tokens. The chip enlarges
+        // --tm-mobile-action-bar-icon-box; the tile, the bar and the published reserve all derive
+        // from that token, so the chip must grow them TOGETHER — and the chip box itself clears
+        // the 24px coarse-pointer floor.
+        var context = await CreateTouchContextAsync(320, 740);
+        await context.AddInitScriptAsync(
+            """
+            localStorage.setItem('tm-demo-culture', 'fr');
+            document.cookie = 'tm-demo-culture=fr; path=/';
+            """);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        await page.Locator("[data-testid='mab-toggle-fixed']").ClickAsync();
+        var fixedRoot = page.Locator("[data-testid='mab-variant-fixed'] .tm-mobile-action-bar");
+        var fixedBar = fixedRoot.Locator(".tm-mobile-action-bar__bar");
+        await fixedBar.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // The chip is on for this bar: the icon slot paints the chip fill (the default is
+        // transparent) and its box is a real coarse-pointer target.
+        var icon = fixedBar.Locator(".tm-mobile-action-bar__icon").First;
+        var iconBackground = await icon.EvaluateAsync<string>("el => getComputedStyle(el).backgroundColor");
+        Assert.AreNotEqual("rgba(0, 0, 0, 0)", iconBackground, "the demo turns the icon chip on");
+        var iconBox = await icon.BoundingBoxAsync();
+        Assert.IsNotNull(iconBox);
+        Assert.IsTrue(iconBox!.Width >= 24 && iconBox.Height >= 24,
+            $"the chip box clears the 24px coarse-pointer floor, was {iconBox.Width}×{iconBox.Height}");
+
+        // ...and the reserve still equals the real bar box with the chip on.
+        await AssertLabelsFitTwoLinesAsync(fixedBar);
+        var barBox = await fixedBar.BoundingBoxAsync();
+        var reserve = await fixedRoot.Locator(".tm-mobile-action-bar__body")
+            .EvaluateAsync<string>("el => getComputedStyle(el).paddingBottom");
+        var reservePx = double.Parse(reserve.Replace("px", "", StringComparison.Ordinal), CultureInfo.InvariantCulture);
+        Assert.AreEqual(barBox!.Height, reservePx, delta: 1.5,
+            $"the reserve ({reservePx}) must equal the chip-on bar box ({barBox.Height})");
+
+        await CaptureViewportOnlyAsync(page, "320-fixed-fr-icon-chip");
+    }
+
     [TestMethod]
     public async Task Demo_390_MoreSheet_AriaExpanded_FalseAfterEveryClosePath()
     {

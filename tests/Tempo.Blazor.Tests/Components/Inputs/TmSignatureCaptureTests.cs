@@ -21,6 +21,11 @@ public class TmSignatureCaptureTests : LocalizationTestBase
         // Frozen default: the clear button lives in the actions row, not over the surface.
         cut.Find(".tm-signature-capture__actions").InnerHtml.Should().Contain("tm-signature-capture__clear");
         cut.Find(".tm-signature-capture__surface").InnerHtml.Should().NotContain("tm-signature-capture__clear");
+        // cluster-D §6: the compact icon-only tile is an overlay-mode change — the actions-row
+        // button stays text-only (no icon, no label span) so the default markup is frozen.
+        cut.Find(".tm-signature-capture__actions .tm-signature-capture__clear")
+            .QuerySelector("svg").Should().BeNull("the actions-row clear carries no icon");
+        cut.FindAll(".tm-signature-capture__clear-label").Should().BeEmpty();
     }
 
     [Fact]
@@ -34,6 +39,23 @@ public class TmSignatureCaptureTests : LocalizationTestBase
         cut.Find(".tm-signature-capture__surface").InnerHtml.Should().Contain("tm-signature-capture__clear");
         cut.Find(".tm-signature-capture__actions").InnerHtml.Should().NotContain("tm-signature-capture__clear");
         cut.Find(".tm-signature-capture").ClassList.Should().Contain("tm-signature-capture--overlay-clear");
+    }
+
+    [Fact]
+    public void Render_OverlayClear_HasAnIconAndAnAccessibleLabel()
+    {
+        // cluster-D §6: the overlay tile becomes a compact icon-only button below the 640px
+        // container width. The icon ships in the markup at every width (CSS shrinks the tile);
+        // the label span keeps the accessible name — it is visually hidden under the container
+        // query, never display:none.
+        var cut = Render<TmSignatureCapture>(parameters =>
+            parameters.Add(p => p.ClearButtonPlacement, TmSignatureClearButtonPlacement.Overlay));
+
+        var overlayClear = cut.Find(".tm-signature-capture__surface .tm-signature-capture__clear");
+        overlayClear.QuerySelector("svg").Should().NotBeNull("the compact tile is icon-led");
+        var label = overlayClear.QuerySelector(".tm-signature-capture__clear-label");
+        label.Should().NotBeNull("the label span carries the accessible name");
+        label!.TextContent.Should().Be("Clear");
     }
 
     [Theory]

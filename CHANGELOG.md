@@ -744,6 +744,36 @@
 
 ### Changed
 
+- **A `TmMobileActionBar` in-flow bar is one label line shorter (C11).** Tiles of the default
+  `StickyContainer` and `Inline` bars floor at ONE label line (a ≈61px bar instead of 71px with
+  one-line labels); a wrapping label grows the bar and `align-items: stretch` keeps every tile
+  equal. `Placement="FixedViewport"` keeps the two-line floor its published
+  `--tm-mobile-action-bar-reserve-block-size` reserve derives from, so the reserve still equals
+  the real bar box.
+
+- **The `TmMobileActionBar` tile icon is a token-driven chip box (C13, off by default).**
+  `.tm-mobile-action-bar__icon` sizes itself from the new `--tm-mobile-action-bar-icon-box`
+  (default `1rem`, the `IconSize.Sm` icon — no visual change) and paints
+  `--tm-mobile-action-bar-icon-chip-bg` (default `transparent`) with `--tm-mobile-action-bar-icon-chip-fg`
+  ink (default `currentColor`). The tile floor, the bar height and the FixedViewport reserve
+  derive the icon term from that token, so a host that turns the chip on grows them together and
+  the reserve stays exact — but only while the chip tokens are set on `:root`, because the
+  published reserve is evaluated with the `:root` values. A scoped opt-in (a class on one bar)
+  must re-declare `--tm-mobile-action-bar-reserve-block-size` in that scope as
+  `calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px))`; the demo's
+  `FixedViewport` tile opts in that way as the working example.
+
+- **The `TmSignatureCapture` overlay clear becomes a compact icon-only tile below 640px of the
+  component's own width.** The overlay button (a labelled one covered ≈14% of the pad at 320,
+  where no stroke can start under it or pass beneath it) shrinks to exactly the 44px touch
+  target at `--tm-space-1` insets and now shows the ✕ icon followed by the label (the icon is
+  new — the button was text-only before). Below 640px of the component's own width the label is
+  visually hidden but kept in the DOM with the full screen-reader clip (`clip-path: inset(50%)`
+  alongside `clip`), so the accessible name is unchanged at every width; the overlay root pins
+  `inline-size: 100%` so the container query measures the pad's real width, and the compact pad
+  grows to 2.5 touch targets so the corner tile stays well under its ~10% ceiling of the pad.
+  At a container 640px or wider the button shows icon + label as before.
+
 - **Escape during a bottom-sheet drag cancels the drag first (internal change, no API surface).**
   The sheet gesture (`tm-sheet.js`) now runs on the shared `pointer-drag.js` helper instead of its
   own pointer handlers: the flick/snap/`SwipeToDismiss` behaviour is unchanged, but Escape mid-drag

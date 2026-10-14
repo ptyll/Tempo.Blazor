@@ -91,3 +91,20 @@
 .mab-variant-note {
   margin: 0 0 var(--tm-space-2);
 }
+
+/* C13: the icon chip is a token-only opt-in — the demo turns it on for the FixedViewport bar
+   the reserve tests measure. Enlarging the box grows the tile, the bar height and the published
+   reserve together (they all derive from --tm-mobile-action-bar-icon-box). The selector must
+   reach into the child component with ::deep: the Class parameter paints .mab-icon-chip on the
+   component root, which never carries this page's scope attribute, so the plain scoped class
+   matched nothing. The chip tokens live in THIS scope, not on :root, so the published
+   --tm-mobile-action-bar-reserve-block-size (tokens.css :root) keeps deriving from the DEFAULT
+   icon box — the scope re-declares the reserve from the element's own
+   --tm-mobile-action-bar-height, or the FixedViewport padding stays at the chip-off height
+   while the bar grows. */
+.mab-card ::deep .mab-icon-chip {
+  --tm-mobile-action-bar-icon-box: 1.75rem;
+  --tm-mobile-action-bar-icon-chip-bg: var(--tm-color-primary-subtle);
+  --tm-mobile-action-bar-icon-chip-fg: var(--tm-color-primary);
+  --tm-mobile-action-bar-reserve-block-size: calc(var(--tm-mobile-action-bar-height) + env(safe-area-inset-bottom, 0px));
+}
