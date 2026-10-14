@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers the core Tempo.Blazor services shared by all component groups.
     /// <list type="bullet">
-    ///   <item><description><see cref="ITmLocalizer"/>: Singleton (stateless, thread-safe, backed by embedded JSON)</description></item>
+    ///   <item><description><see cref="ITmLocalizer"/>: Singleton (stateless, thread-safe, backed by embedded JSON tables for en/cs/sk/fr)</description></item>
     ///   <item><description><see cref="ITmRelativeTimeFormatter"/>: Scoped relative-time formatter over a private <see cref="TimeProvider"/> that reads <see cref="ITmUserTimeZone"/> — the time comes from the host's <see cref="TimeProvider"/> (the system clock when none is registered), while the calendar day ("yesterday at 4:20 PM") is judged in the user's zone: the runtime's zone on WebAssembly, the browser's IANA zone on Blazor Server (UTC until the probe reports after the first interactive render, then the browser zone). The scoped <see cref="ITmUserTimeZone"/> instance is shared (the browser is read once per circuit); relative-time components re-render when the zone arrives and <c>ITmUserTimeZone.SetZone</c> lets a host profile setting win. Never replace the app-wide <see cref="TimeProvider"/>: Kestrel and cookie authentication are singletons that consume it, so a scoped replacement fails the host under <c>ValidateScopes</c>. No component takes a time-zone parameter for this.</description></item>
     ///   <item><description><see cref="ThemeService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
     ///   <item><description><see cref="ToastService"/>: Scoped (per-circuit in Server mode, per-tab in WASM)</description></item>
@@ -29,14 +29,15 @@ public static class ServiceCollectionExtensions
     /// builder.Services.AddTempoBlazor();
     /// </code>
     ///
-    /// To override the built-in localization with your own strings, register
-    /// a custom ITmLocalizer AFTER this call:
+    /// To reword shipped translations in your application, register a decorator
+    /// ITmLocalizer AFTER this call (it injects the built-in IStringLocalizer&lt;TmResources&gt;
+    /// and overrides only the keys you list):
     /// <code>
     /// builder.Services.AddTempoBlazor();
     /// builder.Services.AddSingleton&lt;ITmLocalizer, MyCustomTmLocalizer&gt;();
     /// </code>
     ///
-    /// To support Czech localization, configure culture in Program.cs:
+    /// To support e.g. Czech or Slovak localization, configure culture in Program.cs:
     /// <code>
     /// var culture = new System.Globalization.CultureInfo("cs");
     /// System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;

@@ -6,7 +6,7 @@ namespace Tempo.Blazor.Localization;
 /// <summary>
 /// Default implementation of ITmLocalizer backed by IStringLocalizer&lt;TmResources&gt; — which
 /// <see cref="JsonStringLocalizer{TResourceSource}"/> fulfils from the embedded JSON resources
-/// (English default, Czech and French available), resolving under both Server and WebAssembly.
+/// (English default, Czech, Slovak and French available), resolving under both Server and WebAssembly.
 /// </summary>
 internal sealed class DefaultTmLocalizer : ITmLocalizer
 {

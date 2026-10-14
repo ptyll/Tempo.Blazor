@@ -518,7 +518,7 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 
 ## Localization
 
-Built-in support for English and Czech. Override with your own `ITmLocalizer`:
+Built-in support for English, Czech, Slovak and French. Override with your own `ITmLocalizer`:
 
 ```csharp
 builder.Services.AddTempoBlazor();

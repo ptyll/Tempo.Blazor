@@ -23,6 +23,23 @@ public class JsonStringLocalizerTests
     public void Resolves_czech_value()
         => ForCulture("cs")["TmFileDropZone_DragDrop"].Value.Should().Be("Přetáhněte soubory sem");
 
+    [Fact]
+    public void Resolves_slovak_value()
+        => ForCulture("sk")["TmFileDropZone_DragDrop"].Value.Should().Be("Presuňte sem súbory");
+
+    [Fact]
+    public void Slovak_region_culture_falls_back_to_slovak() // sk-SK → sk
+        => ForCulture("sk-SK")["TmFileDropZone_DragDrop"].Value.Should().Be("Presuňte sem súbory");
+
+    [Fact]
+    public void Slovak_resolves_the_color_palette_keys_reported_missing_by_applications()
+    {
+        // SpravaFinanci reported these keys missing in sk (plan Fáze 3 context).
+        ForCulture("sk")["TmColorPalette_SelectColor"].Value.Should().Be("Vybrať farbu");
+        ForCulture("sk")["TmColorPalette_Clear"].Value.Should().Be("Vymazať");
+        ForCulture("sk")["TmColorPalette_SelectColorNamed", "Červená"].Value.Should().Be("Vybrať farbu Červená");
+    }
+
     /// <summary>
     /// A member whose subject IS the neutral table must reach it through
     /// <see cref="CultureInfo.InvariantCulture"/> rather than through <c>en</c>: pinning <c>en</c>

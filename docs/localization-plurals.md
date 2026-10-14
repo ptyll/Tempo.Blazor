@@ -40,14 +40,14 @@ The count is always template argument `{0}`; further arguments follow it:
 4. otherwise whatever the indexer returns for a missing key.
 
 So a language only has to provide the forms its grammar needs — English ships `_One` and `_Other`,
-French `_One`, `_Many`, `_Other`, Czech all four. The plain `Key` is used only when no family exists
+French `_One`, `_Many`, `_Other`, Czech and Slovak all four. The plain `Key` is used only when no family exists
 anywhere. A host that overrides only the plain key does **not** keep working when it
-delegates to the built-in localizer (the documented `PartialOverrideLocalizer` /
-`MyPartialLocalizer` pattern): the default `TryGetString` reads `Key_One` through the indexer, the
+delegates to the built-in localizer (the documented `AppTranslationOverrideLocalizer`
+pattern): the default `TryGetString` reads `Key_One` through the indexer, the
 inner localizer returns the shipped family, and the plain-key override is bypassed. A delegating
 localizer must override the family keys — `_One` / `_Other`, plus `_Few` / `_Many` where its
 language needs them. A family must show the count (`{0}`) in every form; a unit test enforces that
-and that all three languages provide every family.
+and that all four shipped languages provide every family.
 
 ```csharp
 // before — bypassed. Plural asks for Key_One, the indexer forwards it, the shipped family wins.
@@ -96,7 +96,7 @@ overrides `TmTimeline_MinutesAgo` moves that override to the `Tm_Time_*` family.
 ### Adding a counted text
 
 1. Add `Key_One` / `Key_Other` to `TmResources.json`, `Key_One/_Few/_Many/_Other` to
-   `TmResources.cs.json`, `Key_One/_Many/_Other` to `TmResources.fr.json`.
+   `TmResources.cs.json` and `TmResources.sk.json`, `Key_One/_Many/_Other` to `TmResources.fr.json`.
 2. Add the same keys to both maps in `LocalizationTestBase` (`BuildEnglishLocalizer`,
    `BuildCzechLocalizer`).
 3. Use `Loc.Plural("Key", n)`.

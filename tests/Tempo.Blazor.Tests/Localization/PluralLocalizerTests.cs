@@ -328,6 +328,9 @@ public class PluralLocalizerTests
     [InlineData("en", 3, "3 pending changes")]
     [InlineData("fr", 1, "1 modification en attente")]
     [InlineData("fr", 3, "3 modifications en attente")]
+    [InlineData("sk", 1, "1 čakajúca zmena")]
+    [InlineData("sk", 3, "3 čakajúce zmeny")]
+    [InlineData("sk", 5, "5 čakajúcich zmien")]
     public void The_shipped_B16_texts_are_natural_in_every_language(string culture, int count, string expected)
         => Real(culture).Plural("TmDocumentEditor_ReviewSummaryRevisions", count).Should().Be(expected);
 
@@ -339,6 +342,9 @@ public class PluralLocalizerTests
     [InlineData("en", 2, "2 issues")]
     [InlineData("fr", 1, "1 problème")]
     [InlineData("fr", 2, "2 problèmes")]
+    [InlineData("sk", 1, "1 nález")]
+    [InlineData("sk", 3, "3 nálezy")]
+    [InlineData("sk", 7, "7 nálezov")]
     public void The_modeling_issue_count_is_natural_in_every_language(string culture, int count, string expected)
         => Real(culture).Plural("TmModelingIssuePanel_Count", count).Should().Be(expected);
 
@@ -374,15 +380,17 @@ public class PluralLocalizerTests
             .ToHashSet(StringComparer.Ordinal);
 
     [Fact]
-    public void Every_plural_family_exists_in_all_three_languages_with_the_forms_the_language_needs()
+    public void Every_plural_family_exists_in_every_shipped_language_with_the_forms_the_language_needs()
     {
         var en = Table("TmResources.json");
         var cs = Table("TmResources.cs.json");
+        var sk = Table("TmResources.sk.json");
         var fr = Table("TmResources.fr.json");
 
         var families = Families(en);
         families.Should().NotBeEmpty("the B16 texts ship as plural families");
         Families(cs).Should().BeEquivalentTo(families, "Czech has the same families as English");
+        Families(sk).Should().BeEquivalentTo(families, "Slovak has the same families as English");
         Families(fr).Should().BeEquivalentTo(families, "French has the same families as English");
 
         foreach (var family in families)
@@ -395,6 +403,7 @@ public class PluralLocalizerTests
             foreach (var suffix in Suffixes)
             {
                 cs.Should().ContainKey(family + suffix, "Czech needs one/few/many/other");
+                sk.Should().ContainKey(family + suffix, "Slovak needs one/few/many/other");
             }
 
             foreach (var suffix in new[] { "_One", "_Many", "_Other" })
@@ -402,7 +411,7 @@ public class PluralLocalizerTests
                 fr.Should().ContainKey(family + suffix, "French needs one/many/other");
             }
 
-            foreach (var table in new[] { en, cs, fr })
+            foreach (var table in new[] { en, cs, sk, fr })
             {
                 foreach (var suffix in Suffixes.Where(s => table.ContainsKey(family + s)))
                 {

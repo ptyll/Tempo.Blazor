@@ -7,7 +7,7 @@
 ### Key Features
 - **125+ reusable Razor components** organized into 28 categories (inputs, data tables, pickers, layout, feedback, charts, dashboards, workflow designer, etc.)
 - **Multi-target .NET support**: .NET 8.0, 9.0, and 10.0
-- **Full localization support** via `ITmLocalizer` (English + Czech built-in, extensible)
+- **Full localization support** via `ITmLocalizer` (English, Czech, Slovak and French built-in, extensible)
 - **CSS design system** with CSS custom properties (`--tm-*` tokens)
 - **Dark mode support** via `ThemeService`
 - **FluentValidation integration** (optional separate package)
@@ -311,9 +311,10 @@ Uses `Microsoft.AspNetCore.Mvc.Testing` for integration testing.
 ## Localization
 
 ### Resource Files
-**Location**: `src/Tempo.Blazor/Resources/` — three embedded JSON files (flat `"Key": "Value"` maps):
+**Location**: `src/Tempo.Blazor/Resources/` — four embedded JSON files (flat `"Key": "Value"` maps):
 - `TmResources.json` – English (default)
 - `TmResources.cs.json` – Czech
+- `TmResources.sk.json` – Slovak
 - `TmResources.fr.json` – French
 
 > Note: these replaced the old `.resx` files; there are no `.resx` resources anymore.
@@ -321,9 +322,15 @@ Uses `Microsoft.AspNetCore.Mvc.Testing` for integration testing.
 ### Adding New Keys
 1. Add the key to `TmResources.json` (English)
 2. Add the key to `TmResources.cs.json` (Czech)
-3. Add the key to `TmResources.fr.json` (French)
-4. Use in a component: `@Loc["KeyName"]` (`ITmLocalizer Loc` is injected globally via `_Imports.razor`)
-5. Add the key to `MockTmLocalizer` in `tests/Tempo.Blazor.Tests/Localization/LocalizationTestBase.cs` (English map in `BuildEnglishLocalizer`, Czech map in `BuildCzechLocalizer`) so component tests resolve it
+3. Add the key to `TmResources.sk.json` (Slovak)
+4. Add the key to `TmResources.fr.json` (French)
+5. Use in a component: `@Loc["KeyName"]` (`ITmLocalizer Loc` is injected globally via `_Imports.razor`)
+6. Add the key to `MockTmLocalizer` in `tests/Tempo.Blazor.Tests/Localization/LocalizationTestBase.cs` (English map in `BuildEnglishLocalizer`, Czech map in `BuildCzechLocalizer`) so component tests resolve it
+
+`TmResourceCompletenessTests` (same test folder) guards key completeness: every key in the English
+table must exist in the Czech, Slovak and French tables, with identical `{0}`-style placeholders,
+and every plural family must provide the forms each language's grammar needs (see
+[docs/localization-plurals.md](docs/localization-plurals.md)).
 
 ### Consuming Application Setup
 ```csharp
@@ -621,7 +628,7 @@ Conventions the pipeline already encodes: `[Parameter(CaptureUnmatchedValues)]` 
 
 - **Code, XML documentation, and comments**: English
 - **Planning documents** (in `planning/`): Czech
-- **Library localization**: English (`en`) and Czech (`cs`) built-in, extensible
+- **Library localization**: English (`en`), Czech (`cs`), Slovak (`sk`) and French (`fr`) built-in, extensible. `TmResourceCompletenessTests` guards key parity: every English key must exist in the Czech, Slovak and French tables.
 
 ## NuGet Packages
 

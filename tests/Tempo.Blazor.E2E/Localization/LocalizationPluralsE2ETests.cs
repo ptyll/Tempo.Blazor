@@ -25,8 +25,8 @@ public sealed class LocalizationPluralsE2ETests : WasmTestBase
             IgnoreHTTPSErrors = true,
             Locale = culture + "-US",
         });
-        // The demo's default culture follows the browser — pin it (fr is seeded through
-        // localStorage/cookie; the visible switcher now offers en/cs/fr).
+        // The demo's default culture follows the browser — pin it (fr/sk are seeded through
+        // localStorage/cookie; the visible switcher offers en/cs/fr/sk).
         await context.AddInitScriptAsync(
             $"""
             localStorage.setItem('tm-demo-culture', '{culture}');
@@ -69,6 +69,13 @@ public sealed class LocalizationPluralsE2ETests : WasmTestBase
     [DataRow("fr", 21, "Other", "21 problèmes")]
     [DataRow("fr", 22, "Other", "22 problèmes")]
     [DataRow("fr", 25, "Other", "25 problèmes")]
+    [DataRow("sk", 0, "Other", "0 nálezov")]
+    [DataRow("sk", 1, "One", "1 nález")]
+    [DataRow("sk", 2, "Few", "2 nálezy")]
+    [DataRow("sk", 5, "Other", "5 nálezov")]
+    [DataRow("sk", 21, "Other", "21 nálezov")]
+    [DataRow("sk", 22, "Other", "22 nálezov")]
+    [DataRow("sk", 25, "Other", "25 nálezov")]
     public async Task PluralCell_AgreesWithTheCultureAndCount(string culture, int count, string category, string expected)
     {
         var page = await OpenAsync(culture, 1440);
@@ -100,10 +107,12 @@ public sealed class LocalizationPluralsE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    // 22 is "Other" in Czech — the tempting "Few" reading is wrong (2-4 only, 22 is 5+).
+    // 22 is "Other" in Czech and Slovak — the tempting "Few" reading is wrong (2-4 only, 22 is 5+).
     [DataRow("cs", 2, "2 nová oznámení")]
     [DataRow("cs", 22, "22 nových oznámení")]
-    public async Task NotificationBellCountCell_AgreesInCzech(string culture, int count, string expected)
+    [DataRow("sk", 2, "2 nové oznámenia")]
+    [DataRow("sk", 22, "22 nových oznámení")]
+    public async Task NotificationBellCountCell_AgreesInCzechAndSlovak(string culture, int count, string expected)
     {
         var page = await OpenAsync(culture, 1440);
 

@@ -4,25 +4,41 @@
 <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1" data-testid="language-switcher">
     <button @onclick='() => SetCultureAsync("en")'
             data-testid="language-switcher-en"
+            lang="en"
+            aria-label="English"
             aria-pressed="@(IsActiveCulture("en") ? "true" : "false")"
-            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("en") 
-                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("en")
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
         EN
     </button>
     <button @onclick='() => SetCultureAsync("cs")'
             data-testid="language-switcher-cs"
+            lang="cs"
+            aria-label="Čeština"
             aria-pressed="@(IsActiveCulture("cs") ? "true" : "false")"
-            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("cs") 
-                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("cs")
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
         CS
     </button>
+    <button @onclick='() => SetCultureAsync("sk")'
+            data-testid="language-switcher-sk"
+            lang="sk"
+            aria-label="Slovenčina"
+            aria-pressed="@(IsActiveCulture("sk") ? "true" : "false")"
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("sk")
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
+        SK
+    </button>
     <button @onclick='() => SetCultureAsync("fr")'
             data-testid="language-switcher-fr"
+            lang="fr"
+            aria-label="Français"
             aria-pressed="@(IsActiveCulture("fr") ? "true" : "false")"
-            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("fr") 
-                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm" 
+            class="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 @(IsActiveCulture("fr")
+                ? "bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200")">
         FR
     </button>

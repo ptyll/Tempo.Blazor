@@ -659,6 +659,23 @@
   `TmLightbox` also reads the direction once per open (on the opening render) instead of on
   every arrow-key press (m3).
 
+- **The Czech table covers every English key again.** 53 keys had shipped English-only under cs —
+  the `TmViewManager_*` view CRUD/scopes/visibility set (21 keys), the Notion block context menu
+  (`TmNotionBlockContextMenu_Color*` and `_TurnInto*`, 22 keys), `TmNotionBlock_Copied` /
+  `_CopyCode` / `_DragHandle` / `_HeadingPlaceholder` / `_MediaUrlPlaceholder` / `_Unsupported`,
+  the Spreadsheet slash-menu entry, `TmNotionPage_NoComments` and `TmDataTable_CurrentViewName` —
+  and now carry Czech translations. A new `TmResourceCompletenessTests` guard keeps all four
+  tables honest from now on: every English key must exist in cs/sk/fr with the same `{0}`-style
+  placeholders, the Slovak table must read as Slovak (no Czech-only ě/ř/ů), and every plural
+  family must provide the forms each language's grammar needs.
+
+- **The French comment-rail counter keeps its total.** `TmDocumentEditor_CommentCountVisible` had
+  shipped as "{0} commentaires visibles" — the English string's `{1}` (the total comment count)
+  was dropped, so the document editor's comment rail could not say how many comments exist. The
+  value is now "{0} sur {1} commentaires"; the placeholder parity half of the new
+  `TmResourceCompletenessTests` guard catches exactly this class of drift — a translation losing a
+  `{0}`-style placeholder — in every shipped table.
+
 ### Accessibility
 
 - **A `TmNotificationBell` unread entry announces its state.** The blue dot was `aria-hidden`
@@ -2235,6 +2252,23 @@
   `TmImageGallery` passes the thumbnail of the image on screen, so Escape after browsing lands on
   the image the user is looking at — in every browser, including the ones that never focus a
   clicked button.
+
+- **Slovak (sk) ships as a built-in language for every component.** `TmResources.sk.json` — all
+  5,606 English keys in natural Slovak (not a Czech copy-paste; a test rejects Czech-only
+  ě/ř/ů characters) plus the Slovak `_Few`/`_Many` forms of all 16 plural families — is embedded
+  into `Tempo.Blazor.dll` next to en/cs/fr and read by the same `JsonStringLocalizer` naming
+  convention, so `CultureInfo("sk")` (or `sk-SK`, which falls back to its language) localizes
+  every component under Blazor Server and WebAssembly alike. Counted texts agree with the count
+  through the Slovak one/few/many/other rules `TmPluralRules` already carried ("1 nález",
+  "2–4 nálezy", "5+ nálezov"; "1 čakajúca zmena", "2–4 čakajúce zmeny", "5+ čakajúcich zmien"),
+  and the relative-time stamps read "pred 2 dňami", "o 5 dní". The demo language switcher gained
+  an SK button; E2E (`LocalizationPluralsE2ETests`) verifies Slovak rows on the `/localization`
+  page, and bUnit covers the Slovak table via `JsonStringLocalizerTests`/`PluralLocalizerTests`.
+  The new `TmResourceCompletenessTests` guard enforces en→cs/sk/fr key parity with identical
+  placeholders;
+  `docs/localization-plurals.md`, README and AGENTS.md document the fourth language, and the
+  `ITmLocalizer` JSON documentation now shows the decorator pattern for rewording shipped
+  translations in an application (registered after `AddTempoBlazor()`).
 
 ### Erratum 2.9.0
 

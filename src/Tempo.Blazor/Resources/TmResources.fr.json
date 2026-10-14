@@ -1695,7 +1695,7 @@
   "TmDocumentEditor_CommentCount_One": "{0} commentaire",
   "TmDocumentEditor_CommentCount_Many": "{0:N0} de commentaires",
   "TmDocumentEditor_CommentCount_Other": "{0} commentaires",
-  "TmDocumentEditor_CommentCountVisible": "{0} commentaires visibles",
+  "TmDocumentEditor_CommentCountVisible": "{0} sur {1} commentaires",
   "TmDocumentEditor_CommentCreateFailed": "Impossible d'ajouter le commentaire.",
   "TmDocumentEditor_CommentCreated": "Commentaire ajouté",
   "TmDocumentEditor_CommentDeleteFailed": "Impossible de supprimer le commentaire.",
