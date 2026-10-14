@@ -678,14 +678,10 @@ public abstract class PlaywrightTestBase
     /// <summary>
     /// One pooled probe client for the whole class (N193): the previous per-call
     /// <c>new HttpClient(handler)</c> churned a socket per 500 ms readiness poll across eight
-    /// shards. The handler keeps the dangerous cert callback because every demo host is a
-    /// self-signed localhost dev cert.
+    /// shards. The handler accepts untrusted certificates on loopback addresses only — every demo
+    /// host is a self-signed localhost dev cert (see <see cref="DemoApiTestHttp"/>).
     /// </summary>
-    private static readonly HttpClient ProbeClient = new(
-        new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        })
+    private static readonly HttpClient ProbeClient = new(DemoApiTestHttp.CreateHandler())
     { Timeout = TimeSpan.FromSeconds(2) };
 
     /// <summary>

@@ -23,11 +23,7 @@ public class WireframeServerPreviewE2ETests : WasmTestBase
 
     private static async Task<string> ApiGetAsync(string path)
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler) { BaseAddress = new Uri(ApiBaseUrl) };
+        using var http = DemoApiTestHttp.CreateClient(ApiBaseUrl);
 
         using var response = await http.GetAsync(path);
         if (response.StatusCode == HttpStatusCode.NotFound)

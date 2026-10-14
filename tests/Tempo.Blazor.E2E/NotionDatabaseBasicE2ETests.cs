@@ -29,14 +29,7 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
 
     private static async Task ResetNotionDatabaseAsync()
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://localhost:5100")
-        };
+        using var http = DemoApiTestHttp.CreateClient();
 
         using var notionResponse = await http.PostAsync("/api/notion/reset", null);
         notionResponse.EnsureSuccessStatusCode();

@@ -14,10 +14,7 @@ public class McpToolsE2ETests
 
     private static async Task<McpJsonRpcClient> ConnectAsync()
     {
-        var http = new HttpClient(new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        var http = new HttpClient(DemoApiTestHttp.CreateHandler());
         var client = new McpJsonRpcClient(http, Endpoint);
         await client.InitializeAsync();
         return client;
@@ -130,10 +127,7 @@ public class McpToolsE2ETests
         });
         Assert.IsTrue(applied.GetProperty("success").GetBoolean(), applied.GetRawText());
 
-        using var http = new HttpClient(new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        using var http = new HttpClient(DemoApiTestHttp.CreateHandler());
         using var response = await http.GetAsync($"https://localhost:5100/api/document-library/wireframe/documents/{id}");
         response.EnsureSuccessStatusCode();
         using var metadata = JsonDocument.Parse(await response.Content.ReadAsStringAsync());

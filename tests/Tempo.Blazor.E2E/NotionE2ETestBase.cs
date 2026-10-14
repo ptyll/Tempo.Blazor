@@ -19,11 +19,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
     /// <summary>Restores the demo page, its blocks and its history to their seeded state.</summary>
     protected static async Task ResetNotionDemoDataAsync()
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler);
+        using var http = DemoApiTestHttp.CreateClient();
 
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* The API may not be up yet; the test's own waits will report that. */ }
@@ -671,14 +667,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
 
     protected static async Task SeedDatabaseAsync(string seed)
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://localhost:5100")
-        };
+        using var http = DemoApiTestHttp.CreateClient();
 
         using var response = await http.PostAsync($"/api/notion/databases/e2e/seed/{Uri.EscapeDataString(seed)}", null);
         if (response.StatusCode == HttpStatusCode.NotFound)

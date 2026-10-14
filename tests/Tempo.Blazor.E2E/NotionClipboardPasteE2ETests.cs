@@ -17,7 +17,7 @@ public class NotionClipboardPasteE2ETests : WasmTestBase
 
     private async Task<IPage> OpenNotionEditorAsync(bool readOnly = false)
     {
-        using var http = new HttpClient();
+        using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* ignore */ }
 

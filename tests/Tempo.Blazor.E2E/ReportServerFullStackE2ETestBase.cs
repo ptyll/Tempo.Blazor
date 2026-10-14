@@ -212,7 +212,7 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
         var adminUser = Environment.GetEnvironmentVariable("TM_RS_KC_ADMIN_USER") ?? "admin";
         var adminPass = Environment.GetEnvironmentVariable("TM_RS_KC_ADMIN_PASS") ?? "admin";
 
-        using var http = CreateInsecureHttpClient();
+        using var http = CreateLoopbackTolerantHttpClient();
         using var tokenResponse = await http.PostAsync(
             $"{KeycloakBaseUrl}/realms/master/protocol/openid-connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -242,7 +242,7 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
     protected static async Task<string> AcquireBearerAsync(string user, string password = "Pass123!")
     {
         _webClientSecret ??= await ResolveWebClientSecretAsync().ConfigureAwait(false);
-        using var http = CreateInsecureHttpClient();
+        using var http = CreateLoopbackTolerantHttpClient();
         using var response = await http.PostAsync(
             $"{KeycloakRealmUrl}/protocol/openid-connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -263,7 +263,7 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
     protected static async Task<HttpClient> CreateBearerApiClientAsync(string user)
     {
         var token = await AcquireBearerAsync(user).ConfigureAwait(false);
-        var client = CreateInsecureHttpClient();
+        var client = CreateLoopbackTolerantHttpClient();
         client.BaseAddress = new Uri(ApiBaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
@@ -272,19 +272,13 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
     /// <summary>Creates a bare HttpClient against the Api (no auth) for negative (401) assertions.</summary>
     protected static HttpClient CreateAnonymousApiClient()
     {
-        var client = CreateInsecureHttpClient();
+        var client = CreateLoopbackTolerantHttpClient();
         client.BaseAddress = new Uri(ApiBaseUrl);
         return client;
     }
 
-    private static HttpClient CreateInsecureHttpClient()
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-        };
-        return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };
-    }
+    private static HttpClient CreateLoopbackTolerantHttpClient()
+        => new(DemoApiTestHttp.CreateHandler()) { Timeout = TimeSpan.FromSeconds(60) };
 
     // ---- Keycloak browser login -------------------------------------------------------------------
 
@@ -436,7 +430,7 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
     /// arrives, and returns its message id. Fails after <paramref name="timeoutMs"/>.</summary>
     protected static async Task<string> WaitForEmailAsync(string subjectFragment, int timeoutMs = 180_000)
     {
-        using var http = CreateInsecureHttpClient();
+        using var http = CreateLoopbackTolerantHttpClient();
         var deadline = DateTimeOffset.UtcNow + TimeSpan.FromMilliseconds(timeoutMs);
         while (DateTimeOffset.UtcNow < deadline)
         {
@@ -477,7 +471,7 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
     /// </summary>
     protected static async Task<bool> MessageHasPdfAttachmentAsync(string messageId)
     {
-        using var http = CreateInsecureHttpClient();
+        using var http = CreateLoopbackTolerantHttpClient();
         var message = await http.GetFromJsonAsync<JsonElement>(
             $"{Smtp4DevWebUrl}/api/Messages/{messageId}", JsonWebOptions).ConfigureAwait(false);
         return message.TryGetProperty("parts", out var parts) && PartsHavePdf(parts);
@@ -682,7 +676,7 @@ public abstract class ReportServerFullStackE2ETestBase : PlaywrightTestBase
     {
         try
         {
-            using var client = CreateInsecureHttpClient();
+            using var client = CreateLoopbackTolerantHttpClient();
             client.Timeout = TimeSpan.FromSeconds(3);
             using var response = await client.GetAsync(url).ConfigureAwait(false);
             return response.StatusCode == HttpStatusCode.OK;

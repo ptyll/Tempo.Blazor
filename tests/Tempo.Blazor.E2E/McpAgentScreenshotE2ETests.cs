@@ -21,10 +21,7 @@ public class McpAgentScreenshotE2ETests : WasmTestBase
         // Unique title so the editor's open dialog can find this exact run.
         var title = "Správa objednávek " + Guid.NewGuid().ToString("N")[..6];
 
-        var http = new HttpClient(new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        var http = new HttpClient(DemoApiTestHttp.CreateHandler());
         var client = new McpJsonRpcClient(http, new Uri("https://localhost:5100/mcp"));
         await client.InitializeAsync();
         var id = (await client.CallToolAsync("wireframe_create_document", new { title })).GetProperty("id").GetGuid();

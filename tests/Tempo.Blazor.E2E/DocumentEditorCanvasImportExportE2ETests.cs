@@ -407,14 +407,7 @@ public sealed class DocumentEditorCanvasImportExportE2ETests : WasmTestBase
         await Assertions.Expect(page.GetByTestId("document-compare-dialog")).ToBeHiddenAsync(new() { Timeout = 5_000 });
     }
 
-    private static HttpClient CreateApiClient()
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        return new HttpClient(handler) { BaseAddress = new Uri("https://localhost:5100") };
-    }
+    private static HttpClient CreateApiClient() => DemoApiTestHttp.CreateClient();
 
     private static async Task<string> AssertDownloadedFileAsync(IDownload download, string expectedExtension, long minBytes, string label)
     {

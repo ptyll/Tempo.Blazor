@@ -20,7 +20,7 @@ public class NotionTokenDropdownE2ETests : WasmTestBase
 
     private async Task<IPage> OpenNotionEditorAsync()
     {
-        using var http = new HttpClient();
+        using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* ignore */ }
 
@@ -423,18 +423,24 @@ public class NotionTokenDropdownE2ETests : WasmTestBase
         await CaptureBaselineAsync(page, "token-dropdown", "eb5-token-edit-menu", dropdown);
     }
 
-    private static async Task SeedMentionTokenPageAsync(IPage page)
+    private async Task SeedMentionTokenPageAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            "methodName => window.tmNotionDemo && typeof window.tmNotionDemo[methodName] === 'function'",
-            "seedMentionTokenPage",
-            new PageWaitForFunctionOptions { Timeout = 60000 });
-        await page.EvaluateAsync("async methodName => await window.tmNotionDemo[methodName]()", "seedMentionTokenPage");
+        // Seed through the API endpoint the demo page's window.tmNotionDemo helper wraps. The
+        // helper schedules its own window.location.reload(), which then races the test-side
+        // ReloadAsync below: two concurrent navigations abort each other with net::ERR_ABORTED
+        // ("frame was detached"). Seeding over HTTP keeps this method the only navigator, and
+        // WaitUntil=Load replaces the former NetworkIdle, which a WASM host that keeps loading
+        // Tailwind/fonts never reliably reaches.
+        using var http = DemoApiTestHttp.CreateClient();
+        using var response = await http.PostAsync("/api/notion/e2e/seed/seedMentionTokenPage", null);
+        response.EnsureSuccessStatusCode();
+
         await page.ReloadAsync(new PageReloadOptions
         {
-            WaitUntil = WaitUntilState.NetworkIdle,
+            WaitUntil = WaitUntilState.Load,
             Timeout = 60000
         });
+        await WaitForAppReadyAsync(page);
         await page.WaitForSelectorAsync("[data-block-id='eb500000-0000-0000-0000-000000000003'] .tm-notion-token[data-key='unknown.invoice_deadline']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,

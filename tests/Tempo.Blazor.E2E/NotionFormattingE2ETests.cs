@@ -17,7 +17,7 @@ public class NotionFormattingE2ETests : WasmTestBase
     private async Task<IPage> OpenNotionEditorAsync()
     {
         // Reset API mock data so each test starts with a clean slate
-        using var http = new HttpClient();
+        using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* API may not be running; ignore */ }
 
@@ -549,14 +549,19 @@ public class NotionFormattingE2ETests : WasmTestBase
 
     private async Task SeedInlineToolbarPageAsync(IPage page)
     {
-        await page.WaitForFunctionAsync(
-            "methodName => window.tmNotionDemo && typeof window.tmNotionDemo[methodName] === 'function'",
-            "seedInlineToolbarPage",
-            new PageWaitForFunctionOptions { Timeout = 60000 });
-        await page.EvaluateAsync("async methodName => await window.tmNotionDemo[methodName]()", "seedInlineToolbarPage");
+        // Seed through the API endpoint the demo page's window.tmNotionDemo helper wraps. Calling
+        // the helper itself would schedule its own window.location.reload(), which then races the
+        // test-side ReloadAsync below: two concurrent navigations abort each other with
+        // net::ERR_ABORTED ("frame was detached"). Seeding over HTTP keeps this method the only
+        // navigator, and WaitUntil=Load replaces the former NetworkIdle, which a WASM host that
+        // keeps loading Tailwind/fonts never reliably reaches.
+        using var http = DemoApiTestHttp.CreateClient();
+        using var response = await http.PostAsync("/api/notion/e2e/seed/seedInlineToolbarPage", null);
+        response.EnsureSuccessStatusCode();
+
         await page.ReloadAsync(new PageReloadOptions
         {
-            WaitUntil = WaitUntilState.NetworkIdle,
+            WaitUntil = WaitUntilState.Load,
             Timeout = 60000
         });
         await WaitForAppReadyAsync(page);

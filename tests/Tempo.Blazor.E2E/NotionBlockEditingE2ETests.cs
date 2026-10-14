@@ -16,11 +16,7 @@ public class NotionBlockEditingE2ETests : WasmTestBase
 
     private async Task<IPage> OpenNotionEditorAsync(bool grantClipboard = false)
     {
-        using var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-        };
-        using var http = new HttpClient(handler);
+        using var http = DemoApiTestHttp.CreateClient();
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* API may already be in a clean state when running against a different host. */ }
 

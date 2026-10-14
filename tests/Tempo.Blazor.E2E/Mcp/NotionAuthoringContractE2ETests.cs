@@ -221,10 +221,7 @@ public sealed class NotionAuthoringContractE2ETests : WasmTestBase
     }
 
     private static HttpClient CreateHttpsClient()
-        => new(new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        => new(DemoApiTestHttp.CreateHandler());
 
     private static bool ContainsForbiddenSchemaKeyword(JsonElement element)
     {
