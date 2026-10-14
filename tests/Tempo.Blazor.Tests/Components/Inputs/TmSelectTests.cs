@@ -422,4 +422,560 @@ public class TmSelectTests : LocalizationTestBase
 
         captured.Should().BeNull();
     }
+
+    // ── Nullable TValue: displaying and selecting the empty (null) option ─────────
+
+    [Fact]
+    public void TmSelect_NullableDecimal_NullOption_RendersEmptyValueSelectedAndSelectValueEmpty()
+    {
+        // A null-valued SelectOption must render as <option value=""> (never a value-less option,
+        // whose value would silently become its text content) and, with Value=null, carry the
+        // selected marker while the <select> itself pins the preselection with value="".
+        var options = new List<SelectOption<decimal?>>
+        {
+            new(null, "Kořenová"),
+            new(1.5m, "1.5 %"),
+        };
+        var cut = Render<TmSelect<decimal?>>(p => p
+            .Add(c => c.Value, (decimal?)null)
+            .Add(c => c.Options, options));
+
+        var nullOption = cut.FindAll("option")[0];
+        nullOption.TextContent.Trim().Should().Be("Kořenová");
+        nullOption.GetAttribute("value").Should().BeEmpty("FormatOptionValue(null) must render value=\"\"");
+        nullOption.HasAttribute("selected").Should().BeTrue("Value=null must mark the null option selected");
+        cut.Find("select").GetAttribute("value").Should().BeEmpty("the <select> must carry value=\"\" so the preselection lands on the null option");
+    }
+
+    [Fact]
+    public void TmSelect_NullableDecimal_Selection_Moves_Between_Null_And_Value_Options()
+    {
+        var options = new List<SelectOption<decimal?>>
+        {
+            new(null, "Kořenová"),
+            new(1.5m, "1.5 %"),
+        };
+        var cut = Render<TmSelect<decimal?>>(p => p
+            .Add(c => c.Value, (decimal?)null)
+            .Add(c => c.Options, options));
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue();
+
+        cut.Render(p => p.Add(c => c.Value, (decimal?)1.5m));
+
+        cut.Find("select").GetAttribute("value").Should().Be("1.5");
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeFalse();
+        cut.FindAll("option")[1].HasAttribute("selected").Should().BeTrue();
+
+        cut.Render(p => p.Add(c => c.Value, (decimal?)null));
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue("selecting back to the null option must re-mark it selected");
+    }
+
+    [Fact]
+    public void TmSelect_NullableDecimal_ChangeToEmpty_FiresValueChangedNull_Repeatedly()
+    {
+        var captured = new List<decimal?>();
+        var options = new List<SelectOption<decimal?>>
+        {
+            new(null, "Kořenová"),
+            new(1.5m, "1.5 %"),
+        };
+        var cut = Render<TmSelect<decimal?>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<decimal?>(this, v => captured.Add(v))));
+
+        cut.Find("select").Change("1.5");
+        cut.Find("select").Change("");
+        cut.Find("select").Change("1.5");
+        cut.Find("select").Change("");
+
+        captured.Should().Equal(new decimal?[] { 1.5m, null, 1.5m, null },
+            "switching to a real option and back to the empty option must round-trip repeatedly");
+    }
+
+    [Fact]
+    public void TmSelect_NullableInt_NullOption_RendersAndSelectsEmpty()
+    {
+        var options = new List<SelectOption<int?>>
+        {
+            new(null, "Kořenová"),
+            new(5, "Pět"),
+        };
+        int? captured = 5;
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<int?>(this, v => captured = v)));
+
+        var nullOption = cut.FindAll("option")[0];
+        nullOption.GetAttribute("value").Should().BeEmpty();
+        nullOption.HasAttribute("selected").Should().BeTrue();
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull();
+
+        cut.Find("select").Change("5");
+        captured.Should().Be(5);
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull();
+    }
+
+    [Fact]
+    public void TmSelect_NullableGuid_NullOption_RendersAndSelectsEmpty()
+    {
+        var sample = Guid.Parse("a1b2c3d4-0000-0000-0000-000000000001");
+        var options = new List<SelectOption<Guid?>>
+        {
+            new(null, "Kořenová"),
+            new(sample, "Alpha"),
+        };
+        Guid? captured = sample;
+        var cut = Render<TmSelect<Guid?>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<Guid?>(this, v => captured = v)));
+
+        var nullOption = cut.FindAll("option")[0];
+        nullOption.GetAttribute("value").Should().BeEmpty();
+        nullOption.HasAttribute("selected").Should().BeTrue();
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull();
+
+        cut.Find("select").Change(sample.ToString());
+        captured.Should().Be(sample);
+    }
+
+    [Fact]
+    public void TmSelect_NullableEnum_NullOption_RendersAndSelectsEmpty()
+    {
+        var options = new List<SelectOption<SampleStatus?>>
+        {
+            new(null, "Kořenová"),
+            new(SampleStatus.Active, "Active"),
+        };
+        SampleStatus? captured = SampleStatus.Active;
+        var cut = Render<TmSelect<SampleStatus?>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<SampleStatus?>(this, v => captured = v)));
+
+        var nullOption = cut.FindAll("option")[0];
+        nullOption.GetAttribute("value").Should().BeEmpty();
+        nullOption.HasAttribute("selected").Should().BeTrue();
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull();
+
+        cut.Find("select").Change("Active");
+        captured.Should().Be(SampleStatus.Active);
+    }
+
+    [Fact]
+    public void TmSelect_String_NullOption_RendersEmptyValueSelected_AndChangeEmptyYieldsNull()
+    {
+        // For TValue=string a null-valued option also renders value="" (like every nullable case);
+        // an empty change event maps to null — the empty string and null share one wire value, and
+        // the pre-existing parse contract ("" → default) is unchanged.
+        var options = new List<SelectOption<string>>
+        {
+            new(null!, "Kořenová"),
+            new("dbo", "dbo"),
+        };
+        string? captured = "dbo";
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<string?>(this, v => captured = v)));
+
+        var nullOption = cut.FindAll("option")[0];
+        nullOption.GetAttribute("value").Should().BeEmpty();
+        nullOption.HasAttribute("selected").Should().BeTrue();
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull();
+
+        cut.Find("select").Change("dbo");
+        captured.Should().Be("dbo");
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull();
+    }
+
+    [Fact]
+    public void TmSelect_String_EmptyStringValue_WithoutNullOption_SelectsEmptyOption()
+    {
+        // Empty string vs null: without a null-valued option in the list, the "" option is the only
+        // value="" option and carries the selection; the <select> pins it with value="".
+        var options = new List<SelectOption<string>>
+        {
+            new("", "Prázdný"),
+            new("dbo", "dbo"),
+        };
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(c => c.Value, "")
+            .Add(c => c.Options, options));
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue();
+        cut.FindAll("option")[1].HasAttribute("selected").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmSelect_String_NullAndEmptyOptions_Collide_OnEmptyWireValue()
+    {
+        // A null-valued and an ""-valued string option both render value="" — HTML has a single
+        // empty wire value, so the FIRST one is what the browser (and AngleSharp) resolves the
+        // <select value=""> preselection to. Documented behaviour: don't mix null and "" options;
+        // a change to "" parses back to null in either case.
+        var options = new List<SelectOption<string>>
+        {
+            new(null!, "Kořenová"),
+            new("", "Prázdný"),
+            new("dbo", "dbo"),
+        };
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(c => c.Value, "")
+            .Add(c => c.Options, options));
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue("the first value=\"\" option is what value=\"\" resolves to");
+        // The ""-option can also carry a selected marker (it matches Value by equality), but the
+        // wire resolution of <select value=""> lands on the first value="" option — the null one.
+    }
+
+    // ── PlaceholderSelectable ────────────────────────────────────
+
+    [Fact]
+    public void TmSelect_PlaceholderSelectable_RendersPlaceholderEnabled_AndMapsEmptyToDefault()
+    {
+        int? captured = 3;
+        var options = new List<SelectOption<int?>>
+        {
+            new(3, "Three"),
+            new(4, "Four"),
+        };
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(c => c.Placeholder, "Vyberte…")
+            .Add(c => c.PlaceholderSelectable, true)
+            .Add(c => c.Value, (int?)3)
+            .Add(c => c.Options, options)
+            .Add(c => c.ValueChanged, EventCallback.Factory.Create<int?>(this, v => captured = v)));
+
+        var placeholder = cut.FindAll("option")[0];
+        placeholder.TextContent.Trim().Should().Be("Vyberte…");
+        placeholder.GetAttribute("value").Should().BeEmpty();
+        placeholder.HasAttribute("disabled").Should().BeFalse("PlaceholderSelectable makes the placeholder pickable");
+
+        cut.Find("select").Change("");
+        captured.Should().BeNull("selecting the placeholder maps value=\"\" back to default(TValue)");
+
+        cut.Find("select").Change("4");
+        captured.Should().Be(4);
+    }
+
+    [Fact]
+    public void TmSelect_PlaceholderSelectable_False_KeepsPlaceholderDisabled()
+    {
+        var options = new List<SelectOption<int?>> { new(3, "Three") };
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(c => c.Placeholder, "Vyberte…")
+            .Add(c => c.Options, options));
+
+        cut.FindAll("option")[0].HasAttribute("disabled").Should().BeTrue();
+    }
+
+    // ── DOM stability for existing usage (no null option, non-nullable, disabled placeholder) ──
+
+    [Fact]
+    public void TmSelect_String_ValueNull_DoesNotEmitSelectValueAttribute()
+    {
+        // Without a null-valued option in the list, TValue=string keeps the old no-attribute
+        // behaviour — the value="" pin only appears when a null option exists (see the
+        // null-option tests below).
+        var options = new List<SelectOption<string>>
+        {
+            new("dbo", "dbo"),
+            new("sales", "sales"),
+        };
+        var cut = Render<TmSelect<string>>(p => p.Add(c => c.Options, options));
+
+        // string is not Nullable<T> and there is no null option: no <select value> attribute —
+        // the option's selected marker carries the display.
+        cut.Find("select").HasAttribute("value").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmSelect_NonNullableInt_DefaultValue_DoesNotEmitSelectValueAttribute()
+    {
+        var options = new List<SelectOption<int>> { new(0, "Zero"), new(1, "One") };
+        var cut = Render<TmSelect<int>>(p => p
+            .Add(c => c.Value, 0)
+            .Add(c => c.Options, options));
+
+        cut.Find("select").HasAttribute("value").Should().BeFalse("non-nullable default keeps the no-attribute behaviour");
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue("int 0 still matches the 0-valued option");
+    }
+
+    [Fact]
+    public void TmSelect_NullableWithoutEmptyOption_ValueNull_DoesNotEmitSelectValueAttribute()
+    {
+        // Without a placeholder and without a null-valued option there is nothing for value="" to
+        // land on — emitting it would deselect everything (selectedIndex = -1). The old behaviour
+        // (no attribute, browser shows the first option) must stay.
+        var options = new List<SelectOption<int?>> { new(1, "One"), new(2, "Two") };
+        var cut = Render<TmSelect<int?>>(p => p.Add(c => c.Options, options));
+
+        cut.Find("select").HasAttribute("value").Should().BeFalse();
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmSelect_DisabledPlaceholder_DefaultDom_Unchanged()
+    {
+        // Freezes the pre-existing placeholder markup: value="", disabled, selected when Value is default.
+        var options = new List<SelectOption<string>> { new("a", "Alpha") };
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(c => c.Placeholder, "Choose...")
+            .Add(c => c.Options, options));
+
+        var placeholder = cut.FindAll("option")[0];
+        placeholder.GetAttribute("value").Should().BeEmpty();
+        placeholder.HasAttribute("disabled").Should().BeTrue();
+        placeholder.HasAttribute("selected").Should().BeTrue();
+        cut.Find("select").HasAttribute("value").Should().BeFalse("TmSelect<string> keeps the no-value-attribute behaviour");
+    }
+
+    // ── TValue=string: a null-valued option pins the <select value=""> preselection ─────────
+
+    [Fact]
+    public void TmSelect_String_NullOption_ValueNull_PinsSelectValueEmpty_AndTogglesAcrossRerenders()
+    {
+        // For TValue=string the empty-option pin is driven by the presence of a null-valued option
+        // (not by a nullable TValue): with Value null the <select> carries value="" so the
+        // preselection lands on the null option, and the attribute toggles on later re-renders.
+        var options = new List<SelectOption<string>>
+        {
+            new(null!, "Kořenová"),
+            new("dbo", "dbo"),
+        };
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(c => c.Value, (string?)null)
+            .Add(c => c.Options, options));
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty("string + null option pins value=\"\" when Value is null");
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue();
+
+        cut.Render(p => p.Add(c => c.Value, "dbo"));
+        cut.Find("select").GetAttribute("value").Should().Be("dbo");
+
+        cut.Render(p => p.Add(c => c.Value, (string?)null));
+        cut.Find("select").GetAttribute("value").Should().BeEmpty("the pin must come back when Value returns to null");
+    }
+
+    // ── ChildContent: the pin also covers a nullable TValue with hand-written options ─────────
+
+    [Fact]
+    public void TmSelect_NullableInt_ChildContent_ValueNull_PinsSelectValueEmpty()
+    {
+        // With ChildContent the component cannot add selected markers to raw <option> elements —
+        // for a nullable TValue the <select value=""> pin is what lands the preselection on the
+        // hand-written empty option.
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(c => c.Value, (int?)null)
+            .AddChildContent("<option value=\"\">Kořenová</option><option value=\"2\">Books</option>"));
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        cut.FindAll("option")[0].TextContent.Trim().Should().Be("Kořenová");
+    }
+
+    // ── Accessibility: a selectable placeholder is not an accessible name ─────────
+
+    [Fact]
+    public void TmSelect_PlaceholderSelectable_NoLabel_DoesNotUsePlaceholderAsAriaLabel()
+    {
+        // A selectable placeholder is a real empty choice, not a name for the control — it must
+        // not double as the aria-label. Documented contract: set Label so the <select> keeps an
+        // accessible name when PlaceholderSelectable is true.
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(x => x.Placeholder, "No priority")
+            .Add(x => x.PlaceholderSelectable, true));
+
+        cut.Find("select").GetAttribute("aria-label").Should().BeNull();
+    }
+
+    // ── Required + PlaceholderSelectable DOM freeze ─────────────
+
+    [Fact]
+    public void TmSelect_Required_PlaceholderSelectable_Dom_Freeze()
+    {
+        // Freezes the Required + PlaceholderSelectable DOM: the <select> keeps required +
+        // aria-required while the placeholder stays an enabled <option value=""> — picking it
+        // submits the empty value, so native validation counts the field as missing. That is the
+        // documented intent (a required select must not silently accept the empty choice), not a
+        // rendering defect; hosts that need a required-and-clearable select must validate client-side.
+        var options = new List<SelectOption<int?>> { new(1, "Low"), new(2, "High") };
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(x => x.Label, "Priority")
+            .Add(x => x.Required, true)
+            .Add(x => x.Placeholder, "No priority")
+            .Add(x => x.PlaceholderSelectable, true)
+            .Add(x => x.Options, options));
+
+        var select = cut.Find("select");
+        select.HasAttribute("required").Should().BeTrue();
+        select.GetAttribute("aria-required").Should().Be("true");
+
+        var placeholder = cut.FindAll("option")[0];
+        placeholder.TextContent.Trim().Should().Be("No priority");
+        placeholder.GetAttribute("value").Should().BeEmpty();
+        placeholder.HasAttribute("disabled").Should().BeFalse();
+    }
+
+    // ── Full-markup snapshots (fixed Id) ─────────
+
+    private const string SnapshotArrowMarkup =
+        "<div class=\"tm-select-arrow\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"16\" height=\"16\"><polyline points=\"6 9 12 15 18 9\" /></svg></div>";
+
+    [Fact]
+    public void TmSelect_Markup_String_Placeholder_Options_ValueNull()
+    {
+        // string + Placeholder + Options + Value null: no <select value> attribute (no null option),
+        // the disabled placeholder carries the selection.
+        var options = new List<SelectOption<string>> { new("a", "Alpha"), new("b", "Beta") };
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(x => x.Id, "tmsel-snap-1")
+            .Add(x => x.Label, "Department")
+            .Add(x => x.Placeholder, "Choose...")
+            .Add(x => x.Options, options)
+            .Add(x => x.Value, (string?)null));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-select-wrapper "">
+                <label for=""tmsel-snap-1"" class=""tm-select-label "">Department</label>
+                <div class=""tm-select-container"">
+                    <select id=""tmsel-snap-1"" class=""tm-select"">
+                        <option value="""" disabled selected>Choose...</option>
+                        <option value=""a"">Alpha</option>
+                        <option value=""b"">Beta</option>
+                    </select>
+                    " + SnapshotArrowMarkup + @"
+                </div>
+            </div>");
+    }
+
+    [Fact]
+    public void TmSelect_Markup_Int_Options_ValueZero()
+    {
+        // Non-nullable int with Value 0 (the default): no <select value> attribute, the 0-option
+        // carries the selected marker.
+        var options = new List<SelectOption<int>> { new(0, "Zero"), new(1, "One") };
+        var cut = Render<TmSelect<int>>(p => p
+            .Add(x => x.Id, "tmsel-snap-2")
+            .Add(x => x.Label, "Level")
+            .Add(x => x.Options, options)
+            .Add(x => x.Value, 0));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-select-wrapper "">
+                <label for=""tmsel-snap-2"" class=""tm-select-label "">Level</label>
+                <div class=""tm-select-container"">
+                    <select id=""tmsel-snap-2"" class=""tm-select"">
+                        <option value=""0"" selected>Zero</option>
+                        <option value=""1"">One</option>
+                    </select>
+                    " + SnapshotArrowMarkup + @"
+                </div>
+            </div>");
+    }
+
+    [Fact]
+    public void TmSelect_Markup_String_ValueB()
+    {
+        // Plain string selection: the <select value="b"> pin carries the preselection.
+        var options = new List<SelectOption<string>> { new("a", "Alpha"), new("b", "Beta") };
+        var cut = Render<TmSelect<string>>(p => p
+            .Add(x => x.Id, "tmsel-snap-3")
+            .Add(x => x.Options, options)
+            .Add(x => x.Value, "b"));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-select-wrapper "">
+                <div class=""tm-select-container"">
+                    <select id=""tmsel-snap-3"" value=""b"" class=""tm-select"">
+                        <option value=""a"">Alpha</option>
+                        <option value=""b"" selected>Beta</option>
+                    </select>
+                    " + SnapshotArrowMarkup + @"
+                </div>
+            </div>");
+    }
+
+    [Fact]
+    public void TmSelect_Markup_NullableInt_Placeholder_ValueNull()
+    {
+        // int? + Placeholder + Value null: the <select> pins value="" and the disabled placeholder
+        // carries the selection.
+        var options = new List<SelectOption<int?>> { new(1, "Low"), new(2, "High") };
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(x => x.Id, "tmsel-snap-4")
+            .Add(x => x.Label, "Priority")
+            .Add(x => x.Placeholder, "No priority")
+            .Add(x => x.Options, options)
+            .Add(x => x.Value, (int?)null));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-select-wrapper "">
+                <label for=""tmsel-snap-4"" class=""tm-select-label "">Priority</label>
+                <div class=""tm-select-container"">
+                    <select id=""tmsel-snap-4"" value="""" class=""tm-select"">
+                        <option value="""" disabled selected>No priority</option>
+                        <option value=""1"">Low</option>
+                        <option value=""2"">High</option>
+                    </select>
+                    " + SnapshotArrowMarkup + @"
+                </div>
+            </div>");
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        var placeholder = cut.FindAll("option")[0];
+        placeholder.HasAttribute("disabled").Should().BeTrue();
+        placeholder.HasAttribute("selected").Should().BeTrue();
+    }
+
+    [Fact]
+    public void TmSelect_Markup_NullableInt_Placeholder_And_NullOption_ValueNull()
+    {
+        // Nullable select with BOTH a non-selectable placeholder and a null-valued option, Value
+        // null: value="" pins the preselection and both empty-valued options carry the selected
+        // marker (they match Value by equality); the wire resolution lands on the first one.
+        var options = new List<SelectOption<int?>> { new(null, "Kořenová"), new(5, "Pět") };
+        var cut = Render<TmSelect<int?>>(p => p
+            .Add(x => x.Id, "tmsel-snap-5")
+            .Add(x => x.Label, "Parent")
+            .Add(x => x.Placeholder, "Choose...")
+            .Add(x => x.Options, options)
+            .Add(x => x.Value, (int?)null));
+
+        cut.MarkupMatches(
+            @"<div class=""tm-select-wrapper "">
+                <label for=""tmsel-snap-5"" class=""tm-select-label "">Parent</label>
+                <div class=""tm-select-container"">
+                    <select id=""tmsel-snap-5"" value="""" class=""tm-select"">
+                        <option value="""" disabled selected>Choose...</option>
+                        <option value="""" selected>Kořenová</option>
+                        <option value=""5"">Pět</option>
+                    </select>
+                    " + SnapshotArrowMarkup + @"
+                </div>
+            </div>");
+
+        cut.Find("select").GetAttribute("value").Should().BeEmpty();
+        cut.FindAll("option")[0].HasAttribute("disabled").Should().BeTrue();
+        cut.FindAll("option")[0].HasAttribute("selected").Should().BeTrue();
+        cut.FindAll("option")[1].HasAttribute("selected").Should().BeTrue();
+    }
 }

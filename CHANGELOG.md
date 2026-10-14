@@ -4,6 +4,25 @@
 
 ### Fixed
 
+- **`TmSelect` with a nullable `TValue` now really displays and selects the empty (null) option.**
+  A null-valued `SelectOption<TValue>` (e.g. a "Root (no parent)" entry in `Options`) rendered as a
+  value-less `<option>` — whose value silently became its text content — and a bound `Value` of
+  `null` never pinned the preselection, so the dropdown showed the first option by accident and
+  picking the null entry round-tripped through the label text. Null-valued options now render as
+  real `<option value="">` elements (marked `selected` when the bound value is null), and the
+  `<select>` pins the preselection with `value=""` — for nullable value types (`decimal?`, `int?`,
+  `Guid?`, `enum?`, …) whenever an empty-valued option exists, and for `TmSelect<string>` when
+  `Options` contains a null-valued entry — so the displayed selection finally matches the model.
+  Nullable selects with a `Placeholder` now also pin `value=""` (visually identical — the
+  placeholder was already the selected option); nullable selects with neither a placeholder nor an
+  empty-valued option keep the old no-attribute behaviour, since a literal `value=""` would leave
+  nothing selected. A null-valued and an `""`-valued `string` option share the single empty wire
+  value and must not be mixed. Selecting the empty option fires `ValueChanged(null)` and the
+  value → null → value switch repeats indefinitely. **Required caveat:** with `Required="true"`,
+  picking the empty/null option (or a selectable placeholder) submits the empty value, so native
+  validation counts the field as missing — that is the intended "please choose" behaviour, not a
+  regression.
+
 - **The `TmWorkflowDesignerCanvas` context menu is localized.** Its items ("Edit properties",
   "Delete state", "Delete transition", "Add initial state", "Add state", "Add final state") were
   hardcoded English inside the component; they now use the `TmWorkflowDesignerCanvas_*` resource
@@ -1728,6 +1747,15 @@
   legacy classes loses the styles.
 
 ### Added
+
+- **`TmSelect.PlaceholderSelectable`** (bool, default `false`): when `true` (and `Placeholder` is
+  set), the placeholder renders as a selectable — not disabled — `<option value="">` mapped to
+  `default(TValue)` (typically `null` for nullable types), giving users a one-click "clear the
+  selection" affordance without adding a null entry to `Options` themselves. The default `false`
+  keeps the placeholder disabled exactly as before. Two documented caveats: a selectable
+  placeholder is a real empty choice, not a name for the control — it is no longer used as the
+  `<select>` aria-label, so set `Label` to keep an accessible name; and with `Required="true"`
+  picking it submits the empty value, which native validation counts as missing.
 
 - **`TmWorkflowDesignerCanvas` works on touch, and every drag has a keyboard alternative.** The
   private document mouse listeners are gone; `workflow-designer.js` now runs three delegated

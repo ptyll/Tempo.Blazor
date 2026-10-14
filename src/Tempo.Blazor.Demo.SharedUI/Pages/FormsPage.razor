@@ -81,6 +81,30 @@
             }
         </div>
     </div>
+    <div class="demo-grid demo-grid-2 mt-4">
+        <div class="showcase-card" data-testid="select-nullable-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Nullable value with a root (null) option</h3>
+            <TmSelect TValue="decimal?"
+                      Label="Parent category"
+                      Options="@_categoryTreeOptions"
+                      @bind-Value="_selectedParentCategory" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                Bound value: <strong class="font-mono" data-testid="select-nullable-value">@FormatBound(_selectedParentCategory)</strong>
+            </p>
+        </div>
+        <div class="showcase-card" data-testid="select-clearable-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Selectable placeholder (clears back to null)</h3>
+            <TmSelect TValue="int?"
+                      Label="Priority"
+                      Placeholder="No priority"
+                      PlaceholderSelectable="true"
+                      Options="@_priorityOptions"
+                      @bind-Value="_selectedPriority" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                Bound value: <strong class="font-mono" data-testid="select-clearable-value">@FormatNullableInt(_selectedPriority)</strong>
+            </p>
+        </div>
+    </div>
 </section>
 
 <!-- Cascading Select -->
@@ -817,6 +841,27 @@
     /// <summary>Renders the bound decimal invariantly so the demo shows what the model really holds.</summary>
     private static string FormatBound(decimal? value) =>
         value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null";
+
+    private static string FormatNullableInt(int? value) => value?.ToString() ?? "null";
+
+    // Nullable TmSelect demo (a null-valued option + a selectable placeholder)
+    private static readonly List<SelectOption<decimal?>> _categoryTreeOptions =
+    [
+        new(null, "Root (no parent)"),
+        new(1m, "Electronics"),
+        new(2m, "Books"),
+    ];
+
+    private static readonly List<SelectOption<int?>> _priorityOptions =
+    [
+        new(1, "Low"),
+        new(2, "Medium"),
+        new(3, "High"),
+    ];
+
+    // null on purpose: with a null-valued option in the list, "no parent" is a real displayed choice.
+    private decimal? _selectedParentCategory;
+    private int? _selectedPriority = 2;
 
     private void HandlePriceSubmit()
     {
