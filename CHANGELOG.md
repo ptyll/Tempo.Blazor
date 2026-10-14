@@ -956,6 +956,24 @@
   for a non-text indicator; the dark dot stays `primary-400`. The selected day now paints
   `--tm-cal-selected-bg`/`--tm-cal-selected-fg` (same values, no white-on-primary literal).
 
+- **`TmLightbox` chrome comes from `--tm-lightbox-*` tokens.** The backdrop scrim, the round
+  control fills (idle + hover), the control ink and the loading-line ink read five new
+  `tokens.css` tokens, replacing the last colour literals in `_lightbox.css` (the recorded
+  CSS-audit debt: the `rgba(0,0,0,.85)` backdrop, the `rgba(0,0,0,.5/.8)` button fills, the
+  white ink and the `rgba(255,255,255,.7)` loading text). Rendered values are unchanged —
+  the scrim stays near-black by design (an image reads against an almost-black field; it is
+  deliberately deeper than the `--tm-bg-overlay` TmModal dimmer, same pure-black hue), and
+  the chrome ink stays white in BOTH themes, because the controls ride the scrim over an
+  arbitrary image where a themed ink would flip dark and sink into its own fill. Worst-case
+  contrast (a pure-white image under the whole stack) is pinned by `TokenContrastTests`:
+  ink ≥ 3:1 on the idle and hover fills (icons), loading ≥ 4.5:1 on the scrim (text). A host
+  can now retheme the lightbox (e.g. a lighter scrim) by overriding the tokens.
+  The 390/1440 light/dark presentation was re-evaluated with screenshots over landscape,
+  portrait and panorama sources, with new geometric E2E assertions for the invariants
+  (image inside the viewport, close/delete never covering the image, arrows overlaying only
+  the image edges on phones and sitting strictly beside it on desktop, the counter pill
+  inside the viewport).
+
 - **On a tablet layout an expanded `TmEditorShell` panel now shrinks so the canvas keeps
   `MinCanvasWidth` (C9).** Previously `MinCanvasWidth` only bounded user resizes: at 768 with the
   inspector expanded the canvas could measure ~278px. Now the expanded panel gives up the measured

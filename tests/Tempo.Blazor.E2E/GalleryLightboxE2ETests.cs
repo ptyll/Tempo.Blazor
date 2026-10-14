@@ -419,6 +419,200 @@ public class GalleryLightboxE2ETests : WasmTestBase
             $"delete={deleteBox!.X:0.#},{deleteBox.Y:0.#} {deleteBox.Width:0.#}x{deleteBox.Height:0.#})");
     }
 
+    /// <summary>
+    /// b32847d0 (presentation polish): the lightbox is captured and geometrically asserted at the
+    /// phone (390×844) and desktop (1440×900) viewports, in BOTH themes, over a landscape (the
+    /// seeded 4:3 demo SVG), a portrait (3:4) and a panorama (3:1) source. The invariants, in px:
+    /// the contained image never leaves the viewport; the close button never covers the image
+    /// (allowance: the 4px chrome offset a 44px touch target leaves above a -3rem band); below
+    /// 640px the arrows may overlay the image EDGES only (protrusion ≤ touch target + gutter,
+    /// the d49c9776 design) and are 44px targets; from 640px up they sit strictly beside the
+    /// image; the counter pill is visible and inside the viewport; with Delete Mode on the
+    /// footer delete clears the image band. One case runs dark WITH Delete Mode on.
+    /// Screenshots land in tmp/lightbox-shots/ for the UX review.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(390, 844, "landscape", false, false, DisplayName = "390 light landscape")]
+    [DataRow(390, 844, "portrait", false, false, DisplayName = "390 light portrait")]
+    [DataRow(390, 844, "panorama", false, false, DisplayName = "390 light panorama")]
+    [DataRow(390, 844, "landscape", true, true, DisplayName = "390 dark landscape + Delete Mode")]
+    [DataRow(390, 844, "portrait", true, false, DisplayName = "390 dark portrait")]
+    [DataRow(390, 844, "panorama", true, false, DisplayName = "390 dark panorama")]
+    [DataRow(1440, 900, "landscape", false, false, DisplayName = "1440 light landscape")]
+    [DataRow(1440, 900, "portrait", false, false, DisplayName = "1440 light portrait")]
+    [DataRow(1440, 900, "panorama", false, false, DisplayName = "1440 light panorama")]
+    [DataRow(1440, 900, "landscape", true, false, DisplayName = "1440 dark landscape")]
+    [DataRow(1440, 900, "portrait", true, false, DisplayName = "1440 dark portrait")]
+    [DataRow(1440, 900, "panorama", true, false, DisplayName = "1440 dark panorama")]
+    public async Task Gallery_Lightbox_Presentation_Matrix(
+        int width, int height, string aspect, bool dark, bool deleteMode)
+    {
+        const double allowance = 0.5;
+
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            HasTouch = width < 640,
+            IsMobile = width < 640,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/gallery");
+        await WaitForAppReadyAsync(page);
+
+        if (dark)
+        {
+            await SetDarkThemeAsync(page);
+        }
+
+        if (deleteMode)
+        {
+            var deleteToggle = page.Locator("button").Filter(new() { HasText = "Delete Mode" }).First;
+            await deleteToggle.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+            await deleteToggle.ClickAsync();
+        }
+
+        var items = page.Locator(".tm-gallery-item");
+        await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await items.First.ClickAsync();
+
+        var lightbox = page.Locator(".tm-lightbox");
+        await lightbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Portrait and panorama do not exist in the seed (all eight demo photos are 4:3
+        // landscape); the src swap is the established pattern (the panorama regression test).
+        var (naturalWidth, naturalHeight) = aspect switch
+        {
+            "portrait" => (900, 1200),
+            "panorama" => (1200, 400),
+            _ => (1200, 900),
+        };
+        if (aspect != "landscape")
+        {
+            var body = aspect == "portrait"
+                ? SvgDataUrl(900, 1200, "#312e81", "#f59e0b")
+                : SvgDataUrl(1200, 400, "#0f766e", "#f472b6");
+            await lightbox.Locator(".tm-lightbox-img").EvaluateAsync("(el, src) => { el.src = src; }", body);
+            await page.WaitForFunctionAsync(
+                "w => { const el = document.querySelector('.tm-lightbox-img'); return !!el && el.naturalWidth === w; }",
+                naturalWidth);
+        }
+
+        await page.WaitForTimeoutAsync(400);
+
+        // ── Invariant 1: the contained image stays inside the viewport ──
+        var imgBox = await lightbox.Locator(".tm-lightbox-img").BoundingBoxAsync();
+        Assert.IsNotNull(imgBox, "the image renders a box");
+        Assert.IsTrue(imgBox!.X >= -allowance && imgBox.Y >= -allowance,
+            $"the image must not start outside the viewport ({aspect}, {width}x{height}): {imgBox.X:0.#},{imgBox.Y:0.#}");
+        Assert.IsTrue(imgBox.X + imgBox.Width <= width + allowance && imgBox.Y + imgBox.Height <= height + allowance,
+            $"the image must fit the viewport ({aspect}, {width}x{height}): right={imgBox.X + imgBox.Width:0.#}, bottom={imgBox.Y + imgBox.Height:0.#}");
+        Assert.IsTrue(imgBox.Width >= 200, $"the image must use real width, was {imgBox.Width:0.#}");
+
+        // ── Invariant 2: the close button never covers the image ──
+        // The chrome band sits 3rem above the row; a touch-target-sized close leaves exactly 4px.
+        var closeBox = await lightbox.Locator(".tm-lightbox-close").BoundingBoxAsync();
+        Assert.IsNotNull(closeBox, "the close button renders a box");
+        var closeGap = GapBetween(imgBox, closeBox!);
+        Assert.IsTrue(closeGap >= 4 - allowance,
+            $"the close button must stay clear of the image (allowance 4px), gap={closeGap:0.#} ({aspect}, {width})");
+
+        // ── Invariant 3: the arrows — 44px targets on the phone overlaying only the image
+        //    edges (≤ touch target + one gutter), strictly beside the image on desktop ──
+        var prevBox = await lightbox.Locator(".tm-lightbox-prev").BoundingBoxAsync();
+        var nextBox = await lightbox.Locator(".tm-lightbox-next").BoundingBoxAsync();
+        Assert.IsNotNull(prevBox);
+        Assert.IsNotNull(nextBox);
+        if (width < 640)
+        {
+            Assert.IsTrue(prevBox!.Width >= 44 - allowance && prevBox.Height >= 44 - allowance,
+                $"the prev arrow is a 44px touch target, was {prevBox.Width:0.#}x{prevBox.Height:0.#}");
+            Assert.IsTrue(nextBox!.Width >= 44 - allowance && nextBox.Height >= 44 - allowance,
+                $"the next arrow is a 44px touch target, was {nextBox.Width:0.#}x{nextBox.Height:0.#}");
+            const float maxProtrusion = 44 + 8; // touch target + one --tm-space-2 gutter
+            Assert.IsTrue(prevBox!.X + prevBox.Width <= imgBox.X + maxProtrusion + allowance,
+                $"the prev arrow may only overlay the image edge (≤{maxProtrusion}px), protrudes to {prevBox.X + prevBox.Width - imgBox.X:0.#}");
+            Assert.IsTrue(nextBox!.X >= imgBox.X + imgBox.Width - maxProtrusion - allowance,
+                $"the next arrow may only overlay the image edge (≤{maxProtrusion}px), protrudes to {imgBox.X + imgBox.Width - nextBox.X:0.#}");
+        }
+        else
+        {
+            Assert.IsTrue(prevBox!.X + prevBox!.Width <= imgBox.X + allowance,
+                $"from 640px up the prev arrow sits beside the image (prev right={prevBox.X + prevBox.Width:0.#}, image left={imgBox.X:0.#})");
+            Assert.IsTrue(nextBox!.X >= imgBox.X + imgBox.Width - allowance,
+                $"from 640px up the next arrow sits beside the image (next left={nextBox.X:0.#}, image right={imgBox.X + imgBox.Width:0.#})");
+        }
+
+        // ── Invariant 4: the counter pill is visible and inside the viewport ──
+        var counter = lightbox.Locator(".tm-lightbox-counter");
+        await Assertions.Expect(counter).ToBeVisibleAsync();
+        var counterBox = await counter.BoundingBoxAsync();
+        Assert.IsNotNull(counterBox, "the counter pill renders a box");
+        Assert.IsTrue(counterBox!.X >= -allowance && counterBox.Y >= -allowance
+            && counterBox.X + counterBox.Width <= width + allowance
+            && counterBox.Y + counterBox.Height <= height + allowance,
+            $"the counter pill must stay inside the viewport ({aspect}, {width}x{height}): {counterBox.X:0.#},{counterBox.Y:0.#} {counterBox.Width:0.#}x{counterBox.Height:0.#}");
+
+        // ── Invariant 5 (Delete Mode case): the footer delete clears the image band ──
+        if (deleteMode)
+        {
+            var deleteButton = lightbox.Locator(".tm-lightbox-delete");
+            await Assertions.Expect(deleteButton).ToBeVisibleAsync();
+            var deleteBox = await deleteButton.BoundingBoxAsync();
+            Assert.IsNotNull(deleteBox, "the delete button renders a box");
+            var deleteGap = GapBetween(imgBox, deleteBox!);
+            Assert.IsTrue(deleteGap >= 4 - allowance,
+                $"the footer delete must stay clear of the image band (allowance 4px), gap={deleteGap:0.#}");
+        }
+
+        // ── The capture for the UX review ──
+        var shotDir = Path.Combine(FindRepoRoot(), "tmp", "lightbox-shots");
+        Directory.CreateDirectory(shotDir);
+        var shotPath = Path.Combine(shotDir,
+            $"{width}-{(dark ? "dark" : "light")}-{aspect}{(deleteMode ? "-delete" : string.Empty)}.png");
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = shotPath, FullPage = false });
+        Assert.IsTrue(File.Exists(shotPath), $"the screenshot must exist on disk: {shotPath}");
+        TestContext.WriteLine($"shot: {shotPath}");
+
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(lightbox).ToBeHiddenAsync();
+    }
+
+    /// <summary>Flips the demo to the dark theme the way the app actually paints it: the theme
+    /// lives on the layout wrapper (<c>[data-theme]</c>), so both that element and
+    /// <c>&lt;html&gt;</c> are switched, then the switch is guarded against a computed token that
+    /// only dark declares — an attribute with no CSS behind it would "pass" and shoot light.</summary>
+    private static async Task SetDarkThemeAsync(IPage page)
+    {
+        await page.EvaluateAsync(
+            """
+            () => {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', 'dark'));
+            }
+            """);
+        await page.Locator("[data-theme='dark']").First.WaitForAsync(
+            new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 15000 });
+        var overlay = await page.EvaluateAsync<string>(
+            "() => getComputedStyle(document.querySelector('[data-theme]')).getPropertyValue('--tm-bg-overlay').trim()");
+        StringAssert.Contains(overlay, "0.7", "the dark theme must be live where the lightbox inherits it");
+        await page.WaitForTimeoutAsync(400);
+    }
+
+    /// <summary>A local demo image with explicit dimensions (the X8 lesson: dimension-less SVGs
+    /// collapse the lightbox <c>&lt;img&gt;</c>), painted with shapes so the capture shows
+    /// content the layout can be judged against.</summary>
+    private static string SvgDataUrl(int width, int height, string fill, string accent) =>
+        "data:image/svg+xml;charset=utf-8," + Uri.EscapeDataString(
+            $"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='{height}' viewBox='0 0 {width} {height}'>"
+            + $"<rect width='{width}' height='{height}' fill='{fill}'/>"
+            + $"<circle cx='{(int)(width * 0.32)}' cy='{(int)(height * 0.34)}' r='{(int)(Math.Min(width, height) * 0.2)}' fill='{accent}'/>"
+            + $"<rect x='{(int)(width * 0.55)}' y='{(int)(height * 0.58)}' width='{(int)(width * 0.3)}' height='{(int)(height * 0.24)}' fill='#ffffff' opacity='0.85'/>"
+            + "</svg>");
+
     /// <summary>dir=rtl on <c>&lt;html&gt;</c> — the lightbox inherits the page direction. The
     /// init script runs as a PLAIN SCRIPT BODY (this repo's convention — Playwright evaluates the
     /// string, it does not call a function value, so an arrow expression would be a silent no-op;

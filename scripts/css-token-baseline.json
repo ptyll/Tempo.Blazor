@@ -1,5 +1,5 @@
 {
-  "count": 5820,
+  "count": 5815,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2333,11 +2333,6 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_keyboard-shortcuts.css|color: var(--tm-text-primary, #0f172a);": 3,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_keyboard-shortcuts.css|color: var(--tm-text-secondary, #475569);": 2,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_keyboard-shortcuts.css|color: var(--tm-text-tertiary, #94a3b8);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_lightbox.css|.tm-lightbox-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); }": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_lightbox.css|.tm-lightbox-loading { color: rgba(255,255,255,0.7); font-size: var(--tm-font-size-sm); }": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_lightbox.css|.tm-lightbox-next:hover { background: rgba(0,0,0,0.8); }": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_lightbox.css|background: rgba(0,0,0,0.5); border: none; border-radius: 50%;": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_lightbox.css|color: white; cursor: pointer; width: 2.5rem; height: 2.5rem;": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_modal.css|background: rgba(0, 0, 0, 0.5);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-column-combobox.css|background: var(--tm-surface, #ffffff);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_multi-column-combobox.css|border: 1px solid var(--tm-border-color, #d1d5db);": 1,

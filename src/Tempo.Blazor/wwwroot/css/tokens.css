@@ -458,6 +458,25 @@
   --tm-calendar-view-event-fg:     var(--tm-text-primary);
   --tm-calendar-view-event-border: var(--tm-color-primary-500);
   --tm-calendar-view-highlight:    var(--tm-color-primary-500);
+
+  /* ── TmLightbox ─────────────────────────────────────────────── */
+  /* The lightbox is the library's topmost full-screen surface (b32847d0). Its scrim is
+     DEEPER than --tm-bg-overlay (the TmModal dimmer, 0.5 light / 0.7 dark) on purpose:
+     an image has to read against an almost-black field, not a half-dimmed page — every
+     photo viewer's scrim sits near-black. Hue still matches the modal family: pure black,
+     no tint. The control chrome rides ON that scrim over an ARBITRARY image, so there is
+     no themed surface to derive the fills from — they stay literal black washes, and the
+     ink is pinned white in BOTH themes (a themed ink would go dark in dark mode and sink
+     into the same-black scrim). The values resolve identically in dark, so the dark file
+     re-declares nothing (the convention for literals — see the SemanticTokens note).
+     Worst-case contrast (a pure white image under the whole stack) is pinned by
+     TokenContrastTests: ink on the idle and hover fills ≥3:1 (icons), the loading line
+     on the scrim ≥4.5:1 (text). Modern space syntax, so the alpha is machine-readable. */
+  --tm-lightbox-scrim:            rgb(0 0 0 / 0.85);
+  --tm-lightbox-control-bg:       rgb(0 0 0 / 0.5);
+  --tm-lightbox-control-bg-hover: rgb(0 0 0 / 0.8);
+  --tm-lightbox-control-fg:       var(--tm-color-white);
+  --tm-lightbox-loading-fg:       rgb(255 255 255 / 0.7);
 }
 
 /* Pod 768 px se `__inner` láme do sloupce (viz TmFormActionBar.razor.css), takže se k rezervě

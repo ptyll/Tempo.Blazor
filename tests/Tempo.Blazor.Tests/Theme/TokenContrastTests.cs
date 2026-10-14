@@ -914,6 +914,82 @@ public sealed class TokenContrastTests
     }
 
 
+    /// <summary>
+    /// b32847d0: the lightbox chrome paints from the <c>--tm-lightbox-*</c> tokens instead of the
+    /// literals the strict CSS audit carried, and the ink keeps its threshold over the WORST case
+    /// the stack can paint — a pure white image under the whole scrim → control-fill composite
+    /// (a darker image only raises the ratio). The round controls carry ICONS, so 3:1 (WCAG
+    /// 1.4.11); the loading line is text on the bare scrim, so 4.5:1. Both themes are measured:
+    /// the tokens resolve identically in dark by design — the chrome rides the near-black scrim,
+    /// where a themed ink would flip dark and sink into its own fill (tokens.css documents this).
+    /// The declaration pins make a revert to a literal fail on the string, before any ratio runs.
+    /// </summary>
+    [Fact]
+    public void LightboxControls_KeepContrast_OverTheScrim_WorstCaseImage()
+    {
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-backdrop", "background")
+            .Should().Be("var(--tm-lightbox-scrim)",
+                "the recorded CSS-audit debt was the literal backdrop; a revert re-opens it");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-prev", "background")
+            .Should().Be("var(--tm-lightbox-control-bg)");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-prev", "color")
+            .Should().Be("var(--tm-lightbox-control-fg)");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-next:hover", "background")
+            .Should().Be("var(--tm-lightbox-control-bg-hover)");
+        ThemeCss.Property("_lightbox.css", ".tm-lightbox-loading", "color")
+            .Should().Be("var(--tm-lightbox-loading-fg)");
+
+        foreach (var dark in new[] { false, true })
+        {
+            var tokens = ThemeCss.TokenGraph(dark);
+            var scrim = OverScrim("var(--tm-lightbox-scrim)", tokens, "#ffffff");
+            var ink = ThemeCss.ResolveColour("var(--tm-lightbox-control-fg)", tokens);
+
+            foreach (var fill in new[] { "--tm-lightbox-control-bg", "--tm-lightbox-control-bg-hover" })
+            {
+                var painted = OverScrim($"var({fill})", tokens, scrim);
+                ThemeCss.Contrast(ink, painted).Should().BeGreaterThanOrEqualTo(
+                    3.0,
+                    "{0} ink over {1} painted to {2} over a white image ({3}) is icon chrome and "
+                        + "holds the 1.4.11 floor — measured {4:0.00}:1",
+                    ink, fill, painted, dark ? "dark" : "light", ThemeCss.Contrast(ink, painted));
+            }
+
+            var loading = OverScrim("var(--tm-lightbox-loading-fg)", tokens, scrim);
+            ThemeCss.Contrast(loading, scrim).Should().BeGreaterThanOrEqualTo(
+                4.5,
+                "the loading line is text on the scrim painted over a white image ({0}) — AA floor; "
+                    + "measured {1:0.00}:1",
+                dark ? "dark" : "light", ThemeCss.Contrast(loading, scrim));
+        }
+    }
+
+    /// <summary>
+    /// The opaque colour a translucent <c>--tm-lightbox-*</c> wash paints over
+    /// <paramref name="background"/>. <see cref="ThemeCss.ResolveColour"/> stops at the raw
+    /// <c>rgb(… / a)</c> literal (only the <c>rgb(from var(…))</c> form resolves deeper), so the
+    /// channels and the alpha are read out of the DECLARED value here — the same one-value source
+    /// the stylesheet ships, never a number copied into the test.
+    /// </summary>
+    private static string OverScrim(string tokenExpr, Dictionary<string, string> tokens, string background)
+    {
+        var value = ThemeCss.ResolveColour(tokenExpr, tokens);
+        var match = Regex.Match(
+            value,
+            @"rgba?\(\s*([0-9.]+)(?:\s*,\s*|\s+)([0-9.]+)(?:\s*,\s*|\s+)([0-9.]+)(?:\s*[,/]\s*([0-9.]+))?\s*\)",
+            RegexOptions.None, TimeSpan.FromSeconds(5));
+        match.Success.Should().BeTrue("'{0}' must be an rgb()/rgba() wash", value);
+
+        var channels = new[] { match.Groups[1], match.Groups[2], match.Groups[3] }
+            .Select(group => (int)Math.Round(
+                double.Parse(group.Value, CultureInfo.InvariantCulture), MidpointRounding.AwayFromZero));
+        var hex = "#" + string.Concat(channels.Select(channel => channel.ToString("x2", CultureInfo.InvariantCulture)));
+        var alpha = match.Groups[4].Success
+            ? double.Parse(match.Groups[4].Value, CultureInfo.InvariantCulture)
+            : 1.0;
+        return alpha >= 1.0 ? hex : ThemeCss.Composite(hex, alpha, background);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

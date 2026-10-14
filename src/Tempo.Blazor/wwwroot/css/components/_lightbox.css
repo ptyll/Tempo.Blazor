@@ -26,7 +26,7 @@
   color: inherit;
   overflow: visible;
 }
-.tm-lightbox-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); }
+.tm-lightbox-backdrop { position: absolute; inset: 0; background: var(--tm-lightbox-scrim); }
 .tm-lightbox-content {
   position: relative; z-index: 1;
   display: flex; align-items: center; gap: var(--tm-space-2);
@@ -35,8 +35,8 @@
 .tm-lightbox-image-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
 .tm-lightbox-img { max-width: 80vw; max-height: 85vh; object-fit: contain; border-radius: var(--tm-radius-md); }
 .tm-lightbox-close, .tm-lightbox-prev, .tm-lightbox-next, .tm-lightbox-delete {
-  background: rgba(0,0,0,0.5); border: none; border-radius: 50%;
-  color: white; cursor: pointer; width: 2.5rem; height: 2.5rem;
+  background: var(--tm-lightbox-control-bg); border: none; border-radius: 50%;
+  color: var(--tm-lightbox-control-fg); cursor: pointer; width: 2.5rem; height: 2.5rem;
   display: flex; align-items: center; justify-content: center;
   transition: background var(--tm-transition-fast); flex-shrink: 0;
 }
@@ -47,7 +47,7 @@
 .tm-lightbox-delete { top: -3rem; inset-inline-end: 3rem; }
 .tm-lightbox-close:hover,
 .tm-lightbox-prev:hover,
-.tm-lightbox-next:hover  { background: rgba(0,0,0,0.8); }
+.tm-lightbox-next:hover  { background: var(--tm-lightbox-control-bg-hover); }
 .tm-lightbox-delete:hover { background: var(--tm-color-danger); }
 .tm-lightbox-prev:disabled, .tm-lightbox-next:disabled { opacity: 0.3; cursor: not-allowed; }
 /* Keyboard focus ring, two-tone: a white outline over the dark chrome plus a dark outer ring,
@@ -78,7 +78,7 @@
   backdrop-filter: blur(4px);
   white-space: nowrap;
 }
-.tm-lightbox-loading { color: rgba(255,255,255,0.7); font-size: var(--tm-font-size-sm); }
+.tm-lightbox-loading { color: var(--tm-lightbox-loading-fg); font-size: var(--tm-font-size-sm); }
 
 /* In RTL the strip mirrors: the next image lies to the LEFT — the buttons' logical insets below
    already place prev at the right edge and next at the left, and the code swaps ArrowLeft/Right
