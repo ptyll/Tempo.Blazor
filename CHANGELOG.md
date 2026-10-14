@@ -1607,6 +1607,108 @@
   see `TmLightbox.RestoreFocusTargetId` under Added. The wireframe gallery stencil is
   unchanged (same visual).
 
+- **The demo API allows any loopback origin in Development.** The CORS default policy no longer
+  hard-codes `localhost:5010`/`localhost:7106`: the launch-profile origins stay allowed as hard
+  defaults in `DemoCorsPolicy.DefaultOrigins`, `Cors:AllowedOrigins` (env
+  `Cors__AllowedOrigins__0=…`) is purely additive on top of them (`appsettings.json` ships an
+  empty list; configured entries are trimmed and a trailing slash is stripped), and in the
+  Development environment any http(s) origin on a loopback host (`localhost`, `127.0.0.1`,
+  `[::1]`) on ANY port is accepted — so a demo/E2E WASM host started on a nonstandard port
+  (e.g. 7116) can call the API without editing it. Production answers only the defaults plus the
+  configured list. Credentials stay enabled for the SignalR WebSocket handshake
+  (`SetIsOriginAllowed` echoes the origin; the policy lives in `DemoCorsPolicy`).
+- **The repository enforces LF.** `.gitattributes` now carries `* text=auto eol=lf` (every text
+  file is LF in the index and in every working copy, whatever `core.autocrlf` says) with
+  `eng/release-evidence/** -text` kept byte-verbatim. Before, a Windows checkout made under
+  `core.autocrlf=true` produced CRLF working copies that broke the workflow-reading packaging
+  guards and the frozen `TmTabs` markup baseline; those tests now also normalise CRLF→LF at the
+  reader, so they pass on any checkout. Existing Windows working copies keep their CRLF files
+  until refreshed: re-clone, or — on a clean tree — plain `git checkout -- .` re-checks out every
+  text file as LF (the index is already LF, so no renormalization commit is needed).
+
+- **`TmDropdown`, `TmSplitButton` and `TmContextMenu` now move focus to their first enabled item when the menu
+  opens** (`tm-menu-nav.js` `focusFirst`, once per open, best-effort without JS). *Before:* focus stayed on the
+  trigger and the roving keys — which listen on the menu — were unreachable from the keyboard until a Tab. *After:*
+  Enter/Space on the trigger lands on the first item; Escape/selection return focus to the trigger. Tests that
+  asserted the trigger keeps focus after opening must adjust.
+- **`TmDrawer` and `TmModal` bodies that overflow gain a tab stop.** Both now run the shared
+  `syncScrollRegion` (`tm-focus-trap.js`), exactly like `TmDialog` already did: while the body
+  overflows it becomes `role="region"` with `tabindex="0"` (named by the title when there is one) so
+  a keyboard user can scroll it; a body that fits grows no extra tab stop and the region never takes
+  initial focus. *Before:* the overflowing body was not focusable, so keyboard users could not scroll
+  it and Tab went straight from the header to the first control. *After:* one extra Tab stop on the
+  scroller, only while it overflows. Tests that count tab stops inside a long drawer or modal body,
+  or that snapshot the body element, will see the `tabindex` / `role` attributes.
+
+- Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
+  `{0} čekajících změn`, `{0} řádků`) now use a neutral phrasing (`Počet: {0}`, `Komentáře: {0}`,
+  `Čekající změny: {0}`), so a count of one no longer reads as a plural. (a stop-gap step, superseded by the `Loc.Plural` families in the counted-texts entry above)
+- Czech count strings for a further 30 keys now use the same neutral phrasing (`Nálezy: {0}`,
+  `Stránky: {0}`, `Prvky: {0}`, and the rest listed in the review of B16). `Tm_More` is `Více`.
+- Scheduler event text on a consumer-supplied fill uses `--tm-scheduler-event-fg`, and the
+  time-grid event wash mixes the event colour into `--tm-bg-surface` instead of white. The
+  filter-builder apply button uses `--tm-color-on-primary`. The data-table card mode drops its
+  hardcoded white and gray fallbacks, and the
+  dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
+  instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
+
+- **Documentation — the generated JSON documentation now lists expression-bodied properties as
+  `Property` members and includes positional record parameters.** The doc generator's member
+  scanner only recognised `{ get;` properties and read every other line up to its first `=`, so
+  members like `public bool IsMobile => …;` were mis-kinded as `"kind": "Field"` (272 member
+  entries flip from `Field` to `Property` in the regenerated `tempo-blazor-all.json`) and
+  everything whose body wrapped — `=> Resolved switch …`, `{ get => …; init => …; }` — was
+  missing entirely, as were the generated properties of positional records (`TmLayoutContext`
+  listed 3 of its 6 members). The bundles are regenerated; consumers that filtered members by
+  `kind == "Field"` must match on `"Property"` instead, and types modelled as positional records
+  gained member entries. Overlay member descriptions take precedence over generated ones — the
+  overlays under `JsonDocumentation/` stay the editable source, so regeneration no longer blanks
+  a hand-written member description. Declarations whose signature wraps across lines, and
+  tuple-typed expression-bodied properties, are not yet extracted.
+
+- **`TmCommandPalette` is a real combobox, its options carry stable ids, and a click on the
+  backdrop closes it.** The search input is now the `role="combobox"` owning the result listbox:
+  it gained `aria-controls` (pointing at the listbox id — which also takes the scrolling list out
+  of axe's `scrollable-region-focusable` matcher), `aria-expanded`, `aria-autocomplete="list"` and
+  `aria-activedescendant`, which follows the ArrowUp/ArrowDown highlight so a screen reader
+  announces the row the arrows moved to. Every `role="option"` row now renders a stable `id`.
+  Grouped markup changed: `group` is not an allowed role for `li` (axe `aria-allowed-role`), so
+  each category is now a presentational row hosting a named group div — selectors keyed on
+  `li.tm-command-palette-group` must move to `div.tm-command-palette-group` (the divider between
+  categories stays a CSS border, now on `.tm-command-palette-group-item +
+  .tm-command-palette-group-item`):
+
+  ```html
+  <!-- before -->
+  <ul role="listbox" class="tm-command-palette-list">
+    <li class="tm-command-palette-group" role="group" aria-labelledby="…">…</li>
+  </ul>
+
+  <!-- after -->
+  <ul role="listbox" class="tm-command-palette-list" id="…">
+    <li role="none" class="tm-command-palette-group-item">
+      <div class="tm-command-palette-group" role="group" aria-labelledby="…">…</div>
+    </li>
+  </ul>
+  ```
+
+  The backdrop also became a click-to-dismiss surface — a click outside the panel closes the
+  palette (no opt-out parameter, matching `TmModal` and `TmKeyboardShortcutsHelp`); the dismissal
+  requires the press to START on the backdrop, so a drag-select that begins on the input and ends
+  over the backdrop (only the click lands there) keeps the palette open; clicks inside the panel
+  are fenced off and never reach the backdrop's handler. Grouped lists no longer render a group
+  for a null/empty category — a `role=group` must be named, so those options render without the
+  wrapper — and the combobox drops `aria-controls` when the listbox is gone (no results).
+  Consumers that asserted "the palette stays open after any click" must adjust.
+
+- **The lightbox stylesheet lost its never-rendered legacy section.** `_lightbox.css` carried a
+  first block for `.tm-lightbox-overlay`, `-container`, `-nav`, `-image-wrapper`, `-image` and
+  `-error` — classes no component has ever rendered — plus a 768px media block and legacy rules
+  that leaked onto the live `-close`/`-prev`/`-next`/`-counter` classes through the shared names
+  (the counter pill's ≤768px `bottom: 0.5rem` offset included). The pill was re-homed into the
+  live section with its styling tokenized. Only a host that rendered its OWN markup with those
+  legacy classes loses the styles.
+
 ### Added
 
 - **`TmWorkflowDesignerCanvas` works on touch, and every drag has a keyboard alternative.** The
@@ -2011,110 +2113,6 @@
   `TmImageGallery` passes the thumbnail of the image on screen, so Escape after browsing lands on
   the image the user is looking at — in every browser, including the ones that never focus a
   clicked button.
-
-### Changed
-
-- **The demo API allows any loopback origin in Development.** The CORS default policy no longer
-  hard-codes `localhost:5010`/`localhost:7106`: the launch-profile origins stay allowed as hard
-  defaults in `DemoCorsPolicy.DefaultOrigins`, `Cors:AllowedOrigins` (env
-  `Cors__AllowedOrigins__0=…`) is purely additive on top of them (`appsettings.json` ships an
-  empty list; configured entries are trimmed and a trailing slash is stripped), and in the
-  Development environment any http(s) origin on a loopback host (`localhost`, `127.0.0.1`,
-  `[::1]`) on ANY port is accepted — so a demo/E2E WASM host started on a nonstandard port
-  (e.g. 7116) can call the API without editing it. Production answers only the defaults plus the
-  configured list. Credentials stay enabled for the SignalR WebSocket handshake
-  (`SetIsOriginAllowed` echoes the origin; the policy lives in `DemoCorsPolicy`).
-- **The repository enforces LF.** `.gitattributes` now carries `* text=auto eol=lf` (every text
-  file is LF in the index and in every working copy, whatever `core.autocrlf` says) with
-  `eng/release-evidence/** -text` kept byte-verbatim. Before, a Windows checkout made under
-  `core.autocrlf=true` produced CRLF working copies that broke the workflow-reading packaging
-  guards and the frozen `TmTabs` markup baseline; those tests now also normalise CRLF→LF at the
-  reader, so they pass on any checkout. Existing Windows working copies keep their CRLF files
-  until refreshed: re-clone, or — on a clean tree — plain `git checkout -- .` re-checks out every
-  text file as LF (the index is already LF, so no renormalization commit is needed).
-
-- **`TmDropdown`, `TmSplitButton` and `TmContextMenu` now move focus to their first enabled item when the menu
-  opens** (`tm-menu-nav.js` `focusFirst`, once per open, best-effort without JS). *Before:* focus stayed on the
-  trigger and the roving keys — which listen on the menu — were unreachable from the keyboard until a Tab. *After:*
-  Enter/Space on the trigger lands on the first item; Escape/selection return focus to the trigger. Tests that
-  asserted the trigger keeps focus after opening must adjust.
-- **`TmDrawer` and `TmModal` bodies that overflow gain a tab stop.** Both now run the shared
-  `syncScrollRegion` (`tm-focus-trap.js`), exactly like `TmDialog` already did: while the body
-  overflows it becomes `role="region"` with `tabindex="0"` (named by the title when there is one) so
-  a keyboard user can scroll it; a body that fits grows no extra tab stop and the region never takes
-  initial focus. *Before:* the overflowing body was not focusable, so keyboard users could not scroll
-  it and Tab went straight from the header to the first control. *After:* one extra Tab stop on the
-  scroller, only while it overflows. Tests that count tab stops inside a long drawer or modal body,
-  or that snapshot the body element, will see the `tabindex` / `role` attributes.
-
-- Czech count strings that used one plural form for every number (`{0} položek`, `{0} komentářů`,
-  `{0} čekajících změn`, `{0} řádků`) now use a neutral phrasing (`Počet: {0}`, `Komentáře: {0}`,
-  `Čekající změny: {0}`), so a count of one no longer reads as a plural.
-- Czech count strings for a further 30 keys now use the same neutral phrasing (`Nálezy: {0}`,
-  `Stránky: {0}`, `Prvky: {0}`, and the rest listed in the review of B16). `Tm_More` is `Více`.
-- Scheduler event text on a consumer-supplied fill uses `--tm-scheduler-event-fg`, and the
-  time-grid event wash mixes the event colour into `--tm-bg-surface` instead of white. The
-  filter-builder apply button uses `--tm-color-on-primary`. The data-table card mode drops its
-  hardcoded white and gray fallbacks, and the
-  dashboard widget-selector overlay uses `--tm-bg-overlay` and sits in the `--tm-z-modal` band
-  instead of the dropdown band (`z-index: 1000`), so it paints above an open drawer.
-
-- **Documentation — the generated JSON documentation now lists expression-bodied properties as
-  `Property` members and includes positional record parameters.** The doc generator's member
-  scanner only recognised `{ get;` properties and read every other line up to its first `=`, so
-  members like `public bool IsMobile => …;` were mis-kinded as `"kind": "Field"` (272 member
-  entries flip from `Field` to `Property` in the regenerated `tempo-blazor-all.json`) and
-  everything whose body wrapped — `=> Resolved switch …`, `{ get => …; init => …; }` — was
-  missing entirely, as were the generated properties of positional records (`TmLayoutContext`
-  listed 3 of its 6 members). The bundles are regenerated; consumers that filtered members by
-  `kind == "Field"` must match on `"Property"` instead, and types modelled as positional records
-  gained member entries. Overlay member descriptions take precedence over generated ones — the
-  overlays under `JsonDocumentation/` stay the editable source, so regeneration no longer blanks
-  a hand-written member description. Declarations whose signature wraps across lines, and
-  tuple-typed expression-bodied properties, are not yet extracted.
-
-- **`TmCommandPalette` is a real combobox, its options carry stable ids, and a click on the
-  backdrop closes it.** The search input is now the `role="combobox"` owning the result listbox:
-  it gained `aria-controls` (pointing at the listbox id — which also takes the scrolling list out
-  of axe's `scrollable-region-focusable` matcher), `aria-expanded`, `aria-autocomplete="list"` and
-  `aria-activedescendant`, which follows the ArrowUp/ArrowDown highlight so a screen reader
-  announces the row the arrows moved to. Every `role="option"` row now renders a stable `id`.
-  Grouped markup changed: `group` is not an allowed role for `li` (axe `aria-allowed-role`), so
-  each category is now a presentational row hosting a named group div — selectors keyed on
-  `li.tm-command-palette-group` must move to `div.tm-command-palette-group` (the divider between
-  categories stays a CSS border, now on `.tm-command-palette-group-item +
-  .tm-command-palette-group-item`):
-
-  ```html
-  <!-- before -->
-  <ul role="listbox" class="tm-command-palette-list">
-    <li class="tm-command-palette-group" role="group" aria-labelledby="…">…</li>
-  </ul>
-
-  <!-- after -->
-  <ul role="listbox" class="tm-command-palette-list" id="…">
-    <li role="none" class="tm-command-palette-group-item">
-      <div class="tm-command-palette-group" role="group" aria-labelledby="…">…</div>
-    </li>
-  </ul>
-  ```
-
-  The backdrop also became a click-to-dismiss surface — a click outside the panel closes the
-  palette (no opt-out parameter, matching `TmModal` and `TmKeyboardShortcutsHelp`); the dismissal
-  requires the press to START on the backdrop, so a drag-select that begins on the input and ends
-  over the backdrop (only the click lands there) keeps the palette open; clicks inside the panel
-  are fenced off and never reach the backdrop's handler. Grouped lists no longer render a group
-  for a null/empty category — a `role=group` must be named, so those options render without the
-  wrapper — and the combobox drops `aria-controls` when the listbox is gone (no results).
-  Consumers that asserted "the palette stays open after any click" must adjust.
-
-- **The lightbox stylesheet lost its never-rendered legacy section.** `_lightbox.css` carried a
-  first block for `.tm-lightbox-overlay`, `-container`, `-nav`, `-image-wrapper`, `-image` and
-  `-error` — classes no component has ever rendered — plus a 768px media block and legacy rules
-  that leaked onto the live `-close`/`-prev`/`-next`/`-counter` classes through the shared names
-  (the counter pill's ≤768px `bottom: 0.5rem` offset included). The pill was re-homed into the
-  live section with its styling tokenized. Only a host that rendered its OWN markup with those
-  legacy classes loses the styles.
 
 ### Erratum 2.9.0
 

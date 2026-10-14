@@ -254,9 +254,10 @@ DocumentEditor changed here.
 | `TmDocumentToolbarOverflowMenu` | `ActionOverflowMenu` (the shared host, over `TmOverlayPanel Role="menu"`) |
 | a menu that must not collapse the editor selection | `OverflowPresentation="PanelPresentation.Popover"` (editor/formatting toolbars; F3-PANEL-PRESENTATION) |
 
-### Core prerequisites DE-1.2 / DiagramEditor adoption still needs
+### Core prerequisites DE-1.2 / DiagramEditor adoption
 
-The following are **not** in the core yet and gate the adoption (recorded as core follow-ups):
+All four were recorded as core follow-ups and are **in the core now** (2.9.1) —
+nothing gates the adoption any more:
 
 1. **A collapsible non-button item contract** — done (F14/C1): `TmToolbarItem` wraps a `Select`,
    `ColorPicker`, `GridPicker`, `Toggle` or a similar custom control so it leaves the bar like a

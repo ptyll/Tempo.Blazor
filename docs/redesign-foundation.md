@@ -26,10 +26,8 @@ Recorded follow-ups that are **not** part of the foundation and are **not** done
 | The dashboard grid (`.tm-dashboard-grid-container`, not the `.tm-dashboard` root) is a size container, and its observer is deliberately `IsContainer="false"` | Dashboard plan (the shrink-to-fit rule for a size container is in [responsive-conventions.md](responsive-conventions.md)) |
 | The private pointer gestures listed in [touch-interaction.md](touch-interaction.md) migrate onto `pointer-drag.js` | each owner's plan |
 | Scheduler event resize has no keyboard alternative yet; new adopters use `attachKeyboardMove` | Scheduler plan |
-| A shared `ITmUserTimeZone` (one browser read, reused by Scheduler and Gantt) | recorded, not scheduled |
 | `TmDocumentEditorToolbar` keeps its own overflow mechanism; core exposes `TmToolbar.OverflowPresentation="Popover"` for selection-keeping editor toolbars | DocumentEditor plan (DE-1.2) |
 | `TmDiagramEditor` renders its toolbar buttons outside `TmToolbar` | DiagramEditor plan |
-| Toolbar core prerequisites for DE-1.2 and DiagramEditor adoption: a collapsible non-button item contract, `Pressed` → checked menu entries (`menuitemcheckbox`), and group headers in the More menu ([toolbar.md](toolbar.md)) | core follow-up, not scheduled |
 | Extension-package dialogs still paint in their z-index band (rule 9 of [overlays.md](overlays.md#rules)) | each package's plan |
 
 ## Where to read what
@@ -195,7 +193,9 @@ resolves desktop, a sheet otherwise).
 
 `src/Tempo.Blazor/wwwroot/js/pointer-drag.js` exports `attach`, `attachKeyboardMove`
 and `prefersReducedMotion`. New drags use it; the private gestures still to migrate
-are inventoried in [touch-interaction.md](touch-interaction.md).
+are inventoried in [touch-interaction.md](touch-interaction.md). Multi-pointer work is
+the sibling `pointer-gesture.js` (`attachPinch` — two-finger pinch/pan with ctrl+wheel
+zoom, `createAutoScroller` — edge auto-scroll); never a second pinch inside a package.
 
 The import is **relative**. A bare `_content/…` string is not a module specifier:
 
@@ -264,8 +264,9 @@ A change that builds on the foundation keeps these green:
 - `ComponentDocumentationFreshnessTests`. After touching a `[Parameter]` surface, run
   `dotnet run --project JsonDocumentation/JsonDocumentationGenerator/JsonDocumentationGenerator.csproj -- JsonDocumentation generate`
   and commit the bundles in the **same** commit (history gate N328).
-- `npm run test:overlay` for `pointer-drag.js`, `tm-toolbar.js`, `tm-top-layer.js` and
-  `overlay.js`.
+- `npm run test:overlay` — the Node suite over `wwwroot/js/__tests__`: `pointer-drag.js`,
+  `pointer-gesture.js`, `tm-toolbar.js`, `tm-top-layer.js`/`overlay.js`, `tm-sheet.js`,
+  `tm-splitter.js`, `tm-menu-nav.js` and the scheduler/workflow/data-table gesture suites.
 - The smoke E2E lane: `scripts/run-e2e-smoke.ps1` ([e2e-test-lanes.md](e2e-test-lanes.md#smoke-lane-pr-gate--20-minutes)).
 
 ## Demo
@@ -290,7 +291,7 @@ From the dependency matrix
 | F1 layout | every plan's desktop/visual phase; Dashboard container layout; DocumentEditor workspace |
 | F2 sheet, dialog, focus | the mobile dialogs — the most common dependency (17 groups) |
 | F3 overlays | anchored menus and pickers on mobile |
-| F4 toolbar | Scheduler and Gantt toolbars; DocumentEditor (DE-1.2) and DiagramEditor only after the core prerequisites in [toolbar.md](toolbar.md) |
+| F4 toolbar | Scheduler and Gantt toolbars; DocumentEditor (DE-1.2) and DiagramEditor — the core prerequisites they waited on ([toolbar.md](toolbar.md)) are in since 2.9.1 |
 | F5 action bar | mobile primary actions |
 | F6 editor shell | DocumentEditor, DiagramEditor, Notion, Spreadsheet, Signing and Wireframe panel frames |
 | F7 pointer drag | Scheduler (pilot), then Gantt, Dashboard, DiagramEditor, Wireframe, Signing |
