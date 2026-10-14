@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.Layout
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Microsoft.JSInterop
+@using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Abstractions.Layout
 @implements IAsyncDisposable
 @inject IJSRuntime JS
@@ -34,7 +35,7 @@
     private readonly string _id = $"tm-layout-{Guid.NewGuid():n}";
     private ElementReference _root;
     private bool _attaching;
-    private IJSObjectReference? _module;
+    private LazyJsModule? _lazy;
     private DotNetObjectReference<TmLayoutObserver>? _dotNetRef;
     private bool _observing;
     private TmLayoutBreakpoints _observedBreakpoints = TmLayoutBreakpoints.Default;
@@ -170,10 +171,10 @@
     {
         // Re-register when the thresholds changed: the module classifies with what it was given, so
         // the same width must be re-evaluated against the new pair (it reports on the next frame).
-        if (_observing && !_disposed && _module is not null && EffectiveBreakpoints != _observedBreakpoints)
+        if (_observing && !_disposed && _lazy is { IsImported: true } && EffectiveBreakpoints != _observedBreakpoints)
         {
             _observedBreakpoints = EffectiveBreakpoints;
-            await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
+            await _lazy.TryInvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
             return;
         }
 
@@ -182,22 +183,20 @@
         // Set before the first await, so a second render during the import cannot start another one.
         _attaching = true;
         _dotNetRef ??= DotNetObjectReference.Create(this);
-        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        // Dispose may have run while the import was awaiting. Release what it could not see.
-        if (_disposed)
+        _lazy ??= new LazyJsModule(JS, ModulePath);
+        // Null when JS is unavailable — or when dispose ran while the import was awaiting and the
+        // helper released the module it outlived. As before, _attaching stays set: the observer
+        // never retries a failed import.
+        if (await _lazy.GetAsync() is null)
         {
-            await ReleaseAsync();
+            if (_disposed) await ReleaseAsync();
             return;
         }
-
-        // A loose or substituted runtime (bUnit's default) resolves the import to null. There is
-        // nothing to observe then, and nothing to leak on dispose.
-        if (_module is null) return;
 
         _observing = true;
         _attaching = false;
         _observedBreakpoints = EffectiveBreakpoints;
-        await _module.InvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
+        await _lazy.TryInvokeVoidAsync("observe", _root, _dotNetRef, _id, ObserveOptions(_observedBreakpoints));
         if (_disposed) await ReleaseAsync();
     }
 
@@ -243,21 +242,16 @@
 
     private async Task ReleaseAsync()
     {
-        var module = _module;
+        var lazy = _lazy;
         var observing = _observing;
-        _module = null;
         _observing = false;
         _dotNetRef?.Dispose();
         _dotNetRef = null;
-        if (module is null) return;
+        if (lazy is null) return;
 
-        try
-        {
-            if (observing) await module.InvokeVoidAsync("disconnect", _id);
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        // The disconnect never triggers a fresh import: a module that was never imported has
+        // nothing to disconnect. The helper swallows the guarded failure classes itself.
+        if (observing && lazy.IsImported) await lazy.TryInvokeVoidAsync("disconnect", _id);
+        await lazy.DisposeAsync();
     }
 }

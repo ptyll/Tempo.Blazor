@@ -8,7 +8,8 @@ namespace Tempo.Blazor.Helpers;
 /// Per-instance wrapper around the <c>tm-color-gradient</c> ES module: the pointer-drag gestures of
 /// a <c>TmColorGradient</c> (saturation/value area, hue track, alpha track) and the scroll-key
 /// suppression for its keyboard sliders. Lazily imports the module on first use (safe to construct
-/// during prerender).
+/// during prerender). The import/guard boilerplate is delegated to <see cref="LazyJsModule"/>
+/// (cluster-B 8.8).
 /// </summary>
 /// <remarks>Every interop is guarded: where JS is unavailable the gradient keeps its pointer
 /// handlers' absence harmless (the RGBA number inputs remain the non-drag alternative) and never
@@ -17,12 +18,14 @@ internal sealed class ColorGradientInterop : IAsyncDisposable
 {
     private const string ModulePath = "./_content/Tempo.Blazor/js/tm-color-gradient.js";
 
-    private readonly IJSRuntime _js;
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _lazy;
     private bool _attached;
     private bool _disposed;
 
-    public ColorGradientInterop(IJSRuntime js) => _js = js;
+    public ColorGradientInterop(IJSRuntime js)
+    {
+        _lazy = new LazyJsModule(js, ModulePath);
+    }
 
     /// <summary>
     /// Attaches the drag gestures to a gradient root; a second attach with the same id replaces
@@ -32,10 +35,9 @@ internal sealed class ColorGradientInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return;
+            if (await _lazy.GetAsync() is null) return;
             _attached = true;
-            await module.InvokeVoidAsync("attachGradient", root, dotnet, id);
+            await _lazy.TryInvokeVoidAsync("attachGradient", root, dotnet, id);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
     }
@@ -47,35 +49,18 @@ internal sealed class ColorGradientInterop : IAsyncDisposable
         _attached = false;
         try
         {
-            if (_module is not null) await _module.InvokeVoidAsync("detachGradient", id);
+            if (_lazy.IsImported) await _lazy.TryInvokeVoidAsync("detachGradient", id);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
-    }
-
-    private async ValueTask<IJSObjectReference?> ModuleAsync()
-    {
-        if (_disposed) return null;
-        var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        return _disposed ? null : module;
     }
 
     private static bool IsBenign(Exception ex)
         => ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException;
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
-        var module = _module;
-        _module = null;
-        if (module is null) return;
-        try
-        {
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        await _lazy.DisposeAsync();
     }
 }

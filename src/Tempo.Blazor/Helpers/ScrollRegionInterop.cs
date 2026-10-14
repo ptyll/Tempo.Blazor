@@ -8,7 +8,8 @@ namespace Tempo.Blazor.Helpers;
 /// ES module. Keeps an overlay's scroller a keyboard-reachable region only while it actually
 /// overflows, so a short dialog grows no extra tab stop and the region never takes initial focus.
 /// Lazily imports the module on first attach (safe to construct during prerender — no interop
-/// happens until <see cref="AttachAsync"/> is called from <c>OnAfterRenderAsync</c>).
+/// happens until <see cref="AttachAsync"/> is called from <c>OnAfterRenderAsync</c>). The
+/// import/guard boilerplate is delegated to <see cref="LazyJsModule"/> (cluster-B 8.8).
 /// </summary>
 /// <remarks>
 /// Used by <c>TmDialog</c>, <c>TmModal</c> and <c>TmDrawer</c>. Every interop is guarded: when JS is
@@ -19,12 +20,8 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
 {
     private const string ModulePath = "./_content/Tempo.Blazor/js/tm-focus-trap.js";
 
-    private readonly IJSRuntime _js;
     private readonly string _id = Guid.NewGuid().ToString("N");
-    private IJSObjectReference? _module;
-    // One import per wrapper, shared by every attach: concurrent attaches await the same task
-    // instead of racing two imports of the same module.
-    private Task<IJSObjectReference>? _moduleTask;
+    private readonly LazyJsModule _lazy;
     private bool _attached;
     // The region is wanted from AttachAsync until a detach/dispose. A stale attach's cleanup
     // decision needs this: a newer attach REUSES the same region id, so a blind stop would tear
@@ -41,7 +38,12 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
     // `!_attached` early return and the attach then left its ResizeObserver on the removed node.
     private int _generation;
 
-    public ScrollRegionInterop(IJSRuntime js) => _js = js;
+    public ScrollRegionInterop(IJSRuntime js)
+    {
+        // An import that outlived the owner is stopped, then released — an attach that lost the
+        // race against a dispose must still tear its region down.
+        _lazy = new LazyJsModule(js, ModulePath, async module => await module.InvokeVoidAsync("stopScrollRegion", _id));
+    }
 
     /// <summary>
     /// Starts watching <paramref name="element"/>. <paramref name="labelledBy"/> names the region
@@ -55,41 +57,34 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
         _labelledBy = labelledBy;
         _label = label;
         var generation = ++_generation;
-        try
+        // Null when JS is unavailable — or when the owner was disposed while the import awaited
+        // (the helper released the module in that case).
+        var module = await _lazy.GetAsync();
+        if (_disposed || generation != _generation)
         {
-            var module = await (_moduleTask ??= _js.InvokeAsync<IJSObjectReference>("import", ModulePath).AsTask());
-            _module = module;
-            if (_disposed || generation != _generation)
-            {
-                // A newer attach that still wants the region owns the shared region id — stopping
-                // here would kill ITS region. Only an unwanted or disposed wrapper cleans up.
-                if (_disposed || !_wanted) await StopOrDropAsync(module);
-                if (_disposed) await ReleaseAsync(module);
-                return;
-            }
-            // A substitute IJSRuntime (bUnit tests) imports null — the region simply never attaches.
-            if (module is null) return;
-
-            await module.InvokeVoidAsync("syncScrollRegion", element, _id, labelledBy, label);
-            if (_disposed || generation != _generation)
-            {
-                if (_disposed || !_wanted) await StopOrDropAsync(module);
-                if (_disposed) await ReleaseAsync(module);
-                return;
-            }
-            _attached = true;
-            // A label update that landed while this sync was in flight could only be stored (there
-            // was no region to re-point yet) — reconcile it once if it already moved on.
-            if (_labelledBy != labelledBy || _label != label)
-            {
-                await module.InvokeVoidAsync("updateScrollRegionLabel", _id, _labelledBy, _label);
-            }
+            // A newer attach that still wants the region owns the shared region id — stopping
+            // here would kill ITS region. Only an unwanted or disposed wrapper cleans up.
+            if (_disposed || !_wanted) await StopOrDropAsync();
+            return;
         }
-        catch (JSException) { }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
-        catch (InvalidOperationException) { }
+        if (module is null) return;
+
+        var synced = await _lazy.TryInvokeVoidAsync("syncScrollRegion", element, _id, labelledBy, label);
+        if (_disposed || generation != _generation)
+        {
+            if (_disposed || !_wanted) await StopOrDropAsync();
+            return;
+        }
+        // A failed sync never attached: stay unattached so a later UpdateLabelAsync stays silent
+        // instead of re-pointing a region that does not exist.
+        if (!synced) return;
+        _attached = true;
+        // A label update that landed while this sync was in flight could only be stored (there
+        // was no region to re-point yet) — reconcile it once if it already moved on.
+        if (_labelledBy != labelledBy || _label != label)
+        {
+            await _lazy.TryInvokeVoidAsync("updateScrollRegionLabel", _id, _labelledBy, _label);
+        }
     }
 
     /// <summary>
@@ -103,16 +98,8 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
         _labelledBy = labelledBy;
         _label = label;
         if (!_attached) return;
-        try
-        {
-            if (_module is not { } module) return;
-            await module.InvokeVoidAsync("updateScrollRegionLabel", _id, labelledBy, label);
-        }
-        catch (JSException) { }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
-        catch (InvalidOperationException) { }
+        if (!_lazy.IsImported) return;
+        await _lazy.TryInvokeVoidAsync("updateScrollRegionLabel", _id, labelledBy, label);
     }
 
     /// <summary>
@@ -124,39 +111,23 @@ internal sealed class ScrollRegionInterop : IAsyncDisposable
         _generation++;
         _attached = false;
         _wanted = false;
-        await StopOrDropAsync(_module);
+        await StopOrDropAsync();
     }
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
         _wanted = false;
         await DetachAsync();
-        await ReleaseAsync(_module);
+        await _lazy.DisposeAsync();
     }
 
-    private async Task StopOrDropAsync(IJSObjectReference? module)
+    // Never triggers the import: a stale attach that lost the race detaches through the module the
+    // helper already imported, and a module that was never imported has no region to stop.
+    private async Task StopOrDropAsync()
     {
-        if (module is null) return;
-        try { await module.InvokeVoidAsync("stopScrollRegion", _id); }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
-        catch (InvalidOperationException) { }
-    }
-
-    private async Task ReleaseAsync(IJSObjectReference? module)
-    {
-        if (module is null) return;
-        if (ReferenceEquals(_module, module)) _module = null;
-        // There is only ever one module per wrapper — the cached import task resolves to it, so
-        // it must not be handed out again after the release.
-        _moduleTask = null;
-        try { await module.DisposeAsync(); }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        if (!_lazy.IsImported) return;
+        await _lazy.TryInvokeVoidAsync("stopScrollRegion", _id);
     }
 }

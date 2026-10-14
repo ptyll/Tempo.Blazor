@@ -12,7 +12,8 @@ namespace Tempo.Blazor.Helpers;
 /// the trap, inert and Escape are unchanged. Modal roots use it through
 /// <see cref="PromotedScopeGate"/>, which also gates <c>TmFocusScope.Active</c>; only the toast
 /// containers call it directly. Wraps the shared <c>tm-top-layer</c> module, imported
-/// lazily on first use (safe to construct during prerender).
+/// lazily on first use (safe to construct during prerender). The import/guard boilerplate is
+/// delegated to <see cref="LazyJsModule"/> (cluster-B 8.8).
 /// </summary>
 /// <remarks>
 /// Every interop is guarded: where JS is unavailable the surface renders exactly as before,
@@ -25,11 +26,13 @@ internal sealed class TopLayerInterop : IAsyncDisposable
 {
     private const string ModulePath = "./_content/Tempo.Blazor/js/tm-top-layer.js";
 
-    private readonly IJSRuntime _js;
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _lazy;
     private bool _disposed;
 
-    public TopLayerInterop(IJSRuntime js) => _js = js;
+    public TopLayerInterop(IJSRuntime js)
+    {
+        _lazy = new LazyJsModule(js, ModulePath);
+    }
 
     /// <summary>
     /// Promotes the root to the browser top layer. A no-op when it is already promoted, the
@@ -59,33 +62,13 @@ internal sealed class TopLayerInterop : IAsyncDisposable
     private async Task InvokeAsync(string function, ElementReference root)
     {
         if (_disposed) return;
-        try
-        {
-            var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
-            if (_disposed || module is null) return;
-            await module.InvokeVoidAsync(function, root);
-        }
-        catch (JSException) { }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
-        catch (InvalidOperationException) { }
+        await _lazy.TryInvokeVoidAsync(function, root);
     }
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
-        var module = _module;
-        _module = null;
-        if (module is null) return;
-        try
-        {
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        await _lazy.DisposeAsync();
     }
 }

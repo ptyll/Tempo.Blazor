@@ -9,7 +9,8 @@ namespace Tempo.Blazor.Helpers;
 /// <summary>
 /// Per-instance wrapper around the <c>tm-editor-shell</c> ES module: the panel resize separator
 /// (pointer drag, canvas measurement) and the optional width persistence of <c>TmEditorShell</c>.
-/// Lazily imports the module on first use (safe to construct during prerender).
+/// Lazily imports the module on first use (safe to construct during prerender). The import/guard
+/// boilerplate is delegated to <see cref="LazyJsModule"/> (cluster-B 8.8).
 /// </summary>
 /// <remarks>Every interop is guarded: where JS or storage is unavailable the shell simply keeps its
 /// parameter widths and never throws into the render loop.</remarks>
@@ -17,21 +18,23 @@ internal sealed class EditorShellInterop : IAsyncDisposable
 {
     private const string ModulePath = "./_content/Tempo.Blazor/js/tm-editor-shell.js";
 
-    private readonly IJSRuntime _js;
     private readonly HashSet<string> _attached = new();
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _lazy;
     private ElementReference? _observedCanvas;
     private bool _disposed;
 
-    public EditorShellInterop(IJSRuntime js) => _js = js;
+    public EditorShellInterop(IJSRuntime js)
+    {
+        _lazy = new LazyJsModule(js, ModulePath);
+    }
 
     /// <summary>Reads the stored widths JSON for the key, or null when nothing is stored.</summary>
     public async Task<string?> LoadWidthsAsync(string key)
     {
         try
         {
-            var module = await ModuleAsync();
-            return module is null ? null : await module.InvokeAsync<string?>("loadPanelWidths", key);
+            var (ok, json) = await _lazy.TryInvokeAsync<string?>("loadPanelWidths", key);
+            return ok ? json : null;
         }
         catch (Exception ex) when (IsBenign(ex)) { }
         return null;
@@ -42,8 +45,7 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is not null) await module.InvokeVoidAsync("savePanelWidths", key, json);
+            await _lazy.TryInvokeVoidAsync("savePanelWidths", key, json);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
     }
@@ -53,10 +55,9 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return double.NaN;
-            var width = await module.InvokeAsync<double>("measureCanvas", main);
-            return width < 0 ? double.NaN : width;
+            var (ok, width) = await _lazy.TryInvokeAsync<double>("measureCanvas", main);
+            if (!ok || width < 0) return double.NaN;
+            return width;
         }
         catch (Exception ex) when (IsBenign(ex)) { }
         return double.NaN;
@@ -67,10 +68,9 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return double.NaN;
-            var width = await module.InvokeAsync<double>("measureWidth", element);
-            return width < 0 ? double.NaN : width;
+            var (ok, width) = await _lazy.TryInvokeAsync<double>("measureWidth", element);
+            if (!ok || width < 0) return double.NaN;
+            return width;
         }
         catch (Exception ex) when (IsBenign(ex)) { }
         return double.NaN;
@@ -82,10 +82,9 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return;
+            if (await _lazy.GetAsync() is null) return;
             _attached.Add(id);
-            await module.InvokeVoidAsync("attachResize", handle, panel, main, dotnet, id,
+            await _lazy.TryInvokeVoidAsync("attachResize", handle, panel, main, dotnet, id,
                 new { side, min, max, minCanvas });
         }
         catch (Exception ex) when (IsBenign(ex)) { }
@@ -97,7 +96,7 @@ internal sealed class EditorShellInterop : IAsyncDisposable
         if (!_attached.Remove(id)) return;
         try
         {
-            if (_module is not null) await _module.InvokeVoidAsync("detachResize", id);
+            if (_lazy.IsImported) await _lazy.TryInvokeVoidAsync("detachResize", id);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
     }
@@ -111,10 +110,9 @@ internal sealed class EditorShellInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return;
+            if (await _lazy.GetAsync() is null) return;
             _observedCanvas = main;
-            await module.InvokeVoidAsync("observeCanvas", main, dotnet);
+            await _lazy.TryInvokeVoidAsync("observeCanvas", main, dotnet);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
     }
@@ -126,22 +124,14 @@ internal sealed class EditorShellInterop : IAsyncDisposable
         _observedCanvas = null;
         try
         {
-            if (_module is not null) await _module.InvokeVoidAsync("disconnectCanvas", main);
+            if (_lazy.IsImported) await _lazy.TryInvokeVoidAsync("disconnectCanvas", main);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
-    }
-
-    private async ValueTask<IJSObjectReference?> ModuleAsync()
-    {
-        if (_disposed) return null;
-        var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        return _disposed ? null : module;
     }
 
     private static bool IsBenign(Exception ex)
         => ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException;
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
@@ -149,16 +139,7 @@ internal sealed class EditorShellInterop : IAsyncDisposable
         var ids = _attached.ToArray();
         foreach (var id in ids) await DetachResizeAsync(id);
         _disposed = true;
-        var module = _module;
-        _module = null;
-        if (module is null) return;
-        try
-        {
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        await _lazy.DisposeAsync();
     }
 }
 

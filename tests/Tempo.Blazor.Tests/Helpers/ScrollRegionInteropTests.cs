@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Tests.Localization;
 
@@ -69,6 +70,24 @@ public class ScrollRegionInteropTests : LocalizationTestBase
             "both attaches reached the module");
         JSInterop.Invocations.Should().ContainSingle(i => i.Identifier == "import",
             "the module import is cached — the re-attach must not import again");
+    }
+
+    [Fact]
+    public async Task AttachAsync_WhenTheSyncInvokeFails_IsNotAttached()
+    {
+        var module = JSInterop.SetupModule(FocusTrapModule);
+        module.SetupVoid("syncScrollRegion", _ => true).SetException(new JSException("sync failed"));
+        module.SetupVoid("updateScrollRegionLabel", _ => true).SetVoidResult();
+
+        var interop = new ScrollRegionInterop(JSInterop.JSRuntime);
+        await interop.AttachAsync(default, "title-1");
+
+        await interop.UpdateLabelAsync("title-2", null);
+
+        module.Invocations.Should().Contain(i => i.Identifier == "syncScrollRegion",
+            "the sync attempt reached the module");
+        module.Invocations.Should().NotContain(i => i.Identifier == "updateScrollRegionLabel",
+            "a failed sync never attached the region — there is no label to re-point");
     }
 
     [Fact]

@@ -6,7 +6,8 @@ namespace Tempo.Blazor.Helpers;
 /// <summary>
 /// Per-instance wrapper around the <c>tm-splitter</c> ES module: the pointer-drag resize of a
 /// <c>TmSplitterPane</c> separator and the pane measurement the keyboard path steps from. Lazily
-/// imports the module on first use (safe to construct during prerender).
+/// imports the module on first use (safe to construct during prerender). The import/guard
+/// boilerplate is delegated to <see cref="LazyJsModule"/> (cluster-B 8.8).
 /// </summary>
 /// <remarks>Every interop is guarded: where JS is unavailable the splitter keeps its parameter size
 /// and never throws into the render loop.</remarks>
@@ -14,12 +15,14 @@ internal sealed class SplitterInterop : IAsyncDisposable
 {
     private const string ModulePath = "./_content/Tempo.Blazor/js/tm-splitter.js";
 
-    private readonly IJSRuntime _js;
     private readonly HashSet<string> _attached = new();
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _lazy;
     private bool _disposed;
 
-    public SplitterInterop(IJSRuntime js) => _js = js;
+    public SplitterInterop(IJSRuntime js)
+    {
+        _lazy = new LazyJsModule(js, ModulePath);
+    }
 
     /// <summary>Attaches the pointer-drag resize to a separator; a second attach with the same id replaces the first.</summary>
     public async Task AttachResizeAsync<T>(string id, ElementReference handle, ElementReference pane,
@@ -27,10 +30,9 @@ internal sealed class SplitterInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return;
+            if (await _lazy.GetAsync() is null) return;
             _attached.Add(id);
-            await module.InvokeVoidAsync("attachResize", handle, pane, dotnet, id, new { orientation, min, max });
+            await _lazy.TryInvokeVoidAsync("attachResize", handle, pane, dotnet, id, new { orientation, min, max });
         }
         catch (Exception ex) when (IsBenign(ex)) { }
     }
@@ -40,9 +42,8 @@ internal sealed class SplitterInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return -1;
-            return await module.InvokeAsync<int>("measureSize", pane, orientation);
+            var (ok, size) = await _lazy.TryInvokeAsync<int>("measureSize", pane, orientation);
+            return ok ? size : -1;
         }
         catch (Exception ex) when (IsBenign(ex)) { }
         return -1;
@@ -53,9 +54,8 @@ internal sealed class SplitterInterop : IAsyncDisposable
     {
         try
         {
-            var module = await ModuleAsync();
-            if (module is null) return "ltr";
-            return await module.InvokeAsync<string>("directionOf", element) ?? "ltr";
+            var (ok, direction) = await _lazy.TryInvokeAsync<string>("directionOf", element);
+            return ok ? direction ?? "ltr" : "ltr";
         }
         catch (Exception ex) when (IsBenign(ex)) { }
         return "ltr";
@@ -67,38 +67,21 @@ internal sealed class SplitterInterop : IAsyncDisposable
         if (!_attached.Remove(id)) return;
         try
         {
-            if (_module is not null) await _module.InvokeVoidAsync("detachResize", id);
+            if (_lazy.IsImported) await _lazy.TryInvokeVoidAsync("detachResize", id);
         }
         catch (Exception ex) when (IsBenign(ex)) { }
-    }
-
-    private async ValueTask<IJSObjectReference?> ModuleAsync()
-    {
-        if (_disposed) return null;
-        var module = _module ??= await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        return _disposed ? null : module;
     }
 
     private static bool IsBenign(Exception ex)
         => ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException;
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         var ids = _attached.ToArray();
         foreach (var id in ids) await DetachResizeAsync(id);
         _disposed = true;
-        var module = _module;
-        _module = null;
-        if (module is null) return;
-        try
-        {
-            await module.DisposeAsync();
-        }
-        catch (JSDisconnectedException) { }
-        catch (TaskCanceledException) { }
-        catch (ObjectDisposedException) { }
+        await _lazy.DisposeAsync();
     }
 }
 
