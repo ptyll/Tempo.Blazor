@@ -12043,7 +12043,7 @@
       "kind": "Interface",
       "category": "Localization",
       "namespace": "Tempo.Blazor.Localization",
-      "description": "The end user's time zone, resolved once per circuit. AddTempoUserTimeZone() opts the relative-time formatter into it; until then nothing changes for hosts that do not opt in. The scoped instance can be shared by other consumers (e.g. Scheduler, Gantt), so the browser is read only once per circuit. UTC on Blazor Server until the browser reports its zone after the first interactive render; on WebAssembly the runtime's local zone, which already is the browser's zone. AddTempoBlazor() always registers it (scoped); SetZone lets a host profile setting win over the browser value.",
+      "description": "The end user's time zone, resolved once per circuit. AddTempoBlazor() registers it (scoped) and the relative-time formatter, the Scheduler and the Gantt read it by default — on Blazor Server the zone starts as UTC and becomes the browser's zone once the probe reports after the first interactive render; on WebAssembly it is the runtime's zone, which already is the browser's zone. The scoped instance is shared by every consumer, so the browser is read only once per circuit. SetZone lets a host profile setting win over the browser value. The former AddTempoUserTimeZone() opt-in is an obsolete no-op alias since the 2.9.1 default flip.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmUserTimeZone.cs",
       "documentationStatus": "merged",
@@ -12055,8 +12055,8 @@
       ],
       "examples": [
         {
-          "title": "Opt the relative-time formatter into the browser zone",
-          "code": "builder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoUserTimeZone();"
+          "title": "The default already reads the browser zone (2.9.1)",
+          "code": "builder.Services.AddTempoBlazor();"
         },
         {
           "title": "Host profile setting wins over the browser value",

@@ -1,12 +1,11 @@
 namespace Tempo.Blazor.Localization;
 
 /// <summary>
-/// Wires one relative-time component to <see cref="ITmUserTimeZone"/>: subscribes to
-/// <see cref="ITmUserTimeZone.Changed"/> and re-renders through the renderer's
-/// <c>InvokeAsync</c> (the stamp is computed at render time; the zone event only triggers that
-/// render), and triggers the one-time browser probe after the first interactive render.
-/// A no-op when the service is not registered (a bare test context) — opt-in means no behaviour
-/// change unless the host opted in.
+/// Wires one consumer (a relative-time component, the Scheduler, the Gantt) to
+/// <see cref="ITmUserTimeZone"/>: subscribes to <see cref="ITmUserTimeZone.Changed"/> and re-renders
+/// through the renderer's <c>InvokeAsync</c> (the stamp is computed at render time; the zone event
+/// only triggers that render), and triggers the one-time browser probe after the first interactive
+/// render. A no-op when the service is not registered (a bare test context).
 /// </summary>
 internal sealed class TmUserZoneObserver : IDisposable
 {

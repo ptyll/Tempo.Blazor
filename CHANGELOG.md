@@ -846,6 +846,67 @@
          min="0" max="100" aria-label="Price – Minimum" />
   ```
 
+- **Relative time (and the Scheduler/Gantt "today") is judged in the USER's time zone by default;
+  `AddTempoUserTimeZone()` is an obsolete no-op.** An earlier 2.9.1 preview added
+  `ITmUserTimeZone` + `AddTempoUserTimeZone()` as an OPT-IN (2.9.0 never shipped it); this release
+  flips the default on, so the call is gone — it is kept as an `[Obsolete]` no-op so code written
+  against it compiles. `AddTempoBlazor()` registers the relative-time formatter over a private clock
+  whose `LocalTimeZone` reads `ITmUserTimeZone.Zone` — the browser's zone on Blazor Server (UTC
+  until the browser probe reports after the first interactive render, then
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`), the runtime's zone on WebAssembly. The day
+  boundary and the clock time inside "yesterday at 4:20 PM" follow the browser, not the server.
+  `TmScheduler.ResolveTimeZone()` (when the host set no `TimeZoneId`) and the Gantt's "today" (the
+  today marker, new-task defaults, the overdue highlight, the embedded calendar) reuse the same
+  `ITmUserTimeZone`, so Scheduler/Gantt and the stamps agree; the Scheduler and the Gantt now also
+  trigger the browser probe from their first interactive render and re-render when the zone arrives.
+  The app-wide `TimeProvider` is still never replaced (Kestrel and cookie authentication consume
+  it), and a host profile setting still wins via `ITmUserTimeZone.SetZone`.
+  **Breaking vs 2.9.0** (2.9.0 had no opt-in, so this is the real before/after):
+
+  ```csharp
+  // before (2.9.0): the SERVER's zone decided the day boundaries
+  builder.Services.AddTempoBlazor();
+  // formatter ran over TimeProvider.System → days judged in the server zone;
+  // TmScheduler.ResolveTimeZone() with no TimeZoneId → TimeZoneInfo.Local (the server zone)
+
+  // after (2.9.1 default): the USER's zone decides
+  builder.Services.AddTempoBlazor();
+  // formatter runs over the browser probe → UTC until it reports, then the browser zone;
+  // TmScheduler.ResolveTimeZone() with no TimeZoneId → ITmUserTimeZone.Zone (UTC until the probe)
+  ```
+
+  A host that wants the 2.9.0 server-zone behaviour (or its own zone plumbing) registers a scoped
+  `ITmRelativeTimeFormatter` over the clock of its choice after `AddTempoBlazor()` and passes an
+  explicit `TimeZoneId` to its `TmScheduler` instances:
+
+  ```csharp
+  // keep the 2.9.0 server-zone behaviour
+  builder.Services.AddTempoBlazor();
+  builder.Services.AddScoped<ITmRelativeTimeFormatter>(sp => new TmRelativeTimeFormatter(
+      sp.GetRequiredService<ITmLocalizer>(), TimeProvider.System));
+  // <TmScheduler TimeZoneId="Central Europe Standard Time" … /> — the display zone, explicitly
+  ```
+
+  See [docs/localization-plurals.md](docs/localization-plurals.md) for the full plumbing notes
+  (why the app-wide `TimeProvider` must stay untouched, the probe timing, host overrides). A host
+  with no `IJSRuntime` at all (a pure backend resolving the formatter) gets a formatter over a
+  machine-local/resolved zone service — the same day boundary the plain formatter had — and never
+  faults on the missing interop.
+
+- **The deprecated `TmTimeline_*` keys are removed from the resources.** `TmTimeline_JustNow`,
+  `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`, `TmTimeline_DaysAgo` and `TmTimeline_DateFormat`
+  were deprecated earlier in this release (the library stopped reading them); they are now gone from
+  `TmResources.json`, `TmResources.cs.json` and `TmResources.fr.json` as well, so a host that still
+  overrides them no longer shadows anything. **Migration:** override the `Tm_Time_*` family instead
+  (or register your own `ITmRelativeTimeFormatter`):
+
+  ```csharp
+  // before
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "TmTimeline_MinutesAgo"
+  // after
+  services.AddSingleton<ITmLocalizer, MyLocalizer>();   // overriding "Tm_Time_MinutesAgo"
+  ```
+
 ### Changed
 
 - **A `TmMobileActionBar` in-flow bar is one label line shorter (C11).** Tiles of the default
@@ -1469,8 +1530,9 @@
   (registered by `AddTempoBlazor()`), which also says "yesterday at 4:20 PM", handles the future
   ("in 3 h", "tomorrow at 9:00") and prints an absolute date from a week on. The strings are
   `Tm_Time_*`; `TmTimeline_JustNow`, `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`,
-  `TmTimeline_DaysAgo` and `TmTimeline_DateFormat` are not used by the library any more (the
-  resources remain so a host that reads them is not broken). **Migration:** override
+  `TmTimeline_DaysAgo` and `TmTimeline_DateFormat` are not used by the library any more — and they
+  are now removed from the resources entirely (see the removal entry under Breaking / Migration
+  above). **Migration:** override
   `Tm_Time_*` (or register your own `ITmRelativeTimeFormatter`) instead of `TmTimeline_*Ago`:
 
   ```csharp
@@ -1599,19 +1661,14 @@
   Alt+Shift+Arrow stays ignored and unprevented; Ctrl/Meta chords stay ignored either way; the
   plain Alt+Arrow step reports `shift: false`. Not breaking.
 
-- **Opt-in user time zone: `ITmUserTimeZone` + `AddTempoUserTimeZone()` (F7 follow-up).** Relative
-  time ("yesterday at 4:20 PM") used to be judged in the clock's local zone — on Blazor Server that
-  is the *server's* zone, so a circuit whose browser sits elsewhere got the wrong day and the wrong
-  clock time. `AddTempoBlazor()` now registers a scoped `ITmUserTimeZone` (one browser read per
-  circuit, shared by every consumer), and one line opts the formatter in:
+- **`GanttHelper.GetTodayOffset(timelineStart, pixelPerDay, today)` overload** — pass the
+  user-zone today so a custom today line lands where the host's zone says "now" is; the existing
+  two-argument call keeps using the machine's `DateTime.Today`.
 
-  ```csharp
-  builder.Services.AddTempoBlazor();
-  builder.Services.AddTempoUserTimeZone();
-  ```
-
-  `AddTempoUserTimeZone()` replaces the `ITmRelativeTimeFormatter` registration with one over a
-  private `TimeProvider` that reads `ITmUserTimeZone.Zone` lazily. Never replace the app-wide
+- **User time zone plumbing: `ITmUserTimeZone` (default since this release, see Breaking /
+  Migration above).** The scoped `ITmUserTimeZone` (one browser read per circuit, shared by every
+  consumer) and the private `TmUserTimeProvider` clock over it power relative time, the Scheduler's
+  `ResolveTimeZone()` fallback and the Gantt's "today". Never replace the app-wide
   `TimeProvider`: Kestrel and cookie authentication are singletons that consume it, so a scoped
   `TimeProvider` fails the host under `ValidateScopes`. On WebAssembly `ITmUserTimeZone.Zone` is the
   runtime's local zone immediately (it already is the browser's zone; `InvariantTimezone` must stay
@@ -1624,8 +1681,7 @@
   browser probe from their first interactive render — a page with none of them on screen must call
   `ITmUserTimeZone.SetZone` to get a resolved zone. `SetZone` also lets a host profile setting win
   over the browser value. Nothing ticks the stamps — the host re-renders as
-  before. Until the host calls `AddTempoUserTimeZone()`, nothing changes: the default formatter
-  keeps judging days in the clock's zone, and no `TimeProvider` registration is added. The manual
+  before. The manual
   registration snippet in `docs/localization-plurals.md` (scoped formatter over your own lazy
   `TimeProvider`) stays valid for hosts that prefer to own the plumbing.
 

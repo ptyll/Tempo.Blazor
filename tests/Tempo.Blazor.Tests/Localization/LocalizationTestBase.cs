@@ -839,11 +839,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["Tm_Time_DaysAgo_Other"]  = "{0} days ago",
         ["Tm_Time_InDays_One"]     = "in {0} day",
         ["Tm_Time_InDays_Other"]   = "in {0} days",
-        ["TmTimeline_JustNow"]     = "Just now",
-        ["TmTimeline_MinutesAgo"]  = "{0} min ago",
-        ["TmTimeline_HoursAgo"]    = "{0} h ago",
-        ["TmTimeline_DaysAgo"]     = "{0} days ago",
-        ["TmTimeline_DateFormat"]  = "MMM d, yyyy",
         ["TmTimeline_FilterLabel"]        = "Search activity",
         ["TmTimeline_FilterPlaceholder"]  = "Search activity...",
         ["TmTimeline_LoadMore"]           = "Load more",
@@ -4615,11 +4610,6 @@ public abstract class LocalizationTestBase : BunitContext
         ["Tm_Time_InDays_Few"] = "za {0} dny",
         ["Tm_Time_InDays_Many"] = "za {0} dne",
         ["Tm_Time_InDays_Other"] = "za {0} dní",
-        ["TmTimeline_JustNow"] = "Právě teď",
-        ["TmTimeline_MinutesAgo"] = "před {0} min",
-        ["TmTimeline_HoursAgo"] = "před {0} h",
-        ["TmTimeline_DaysAgo"] = "před {0} dny",
-        ["TmTimeline_DateFormat"] = "d. M. yyyy",
 
         // TmTreeView
         ["TmTreeView_Search"]    = "Hledat...",

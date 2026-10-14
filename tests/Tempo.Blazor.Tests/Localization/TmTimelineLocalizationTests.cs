@@ -53,7 +53,7 @@ public class TmTimelineLocalizationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmTimeline_JustNow_UsesLocalizer()
+    public void TmTimeline_Time_JustNow_UsesLocalizer()
     {
         UseCzechLocalization();
 
@@ -66,7 +66,7 @@ public class TmTimelineLocalizationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmTimeline_MinutesAgo_UsesLocalizer()
+    public void TmTimeline_Time_MinutesAgo_UsesLocalizer()
     {
         UseCzechLocalization();
 
@@ -79,7 +79,7 @@ public class TmTimelineLocalizationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmTimeline_HoursAgo_UsesLocalizer_OnAFixedClock()
+    public void TmTimeline_Time_HoursAgo_UsesLocalizer_OnAFixedClock()
     {
         // The hours format is gated on the CALENDAR day of the timestamp, so a live clock made
         // this test flake when a run crossed midnight (2 h ago read as the yesterday format).
@@ -100,7 +100,7 @@ public class TmTimelineLocalizationTests : LocalizationTestBase
     }
 
     [Fact]
-    public void TmTimeline_HoursAgoAcrossMidnight_FormatsAsYesterday_OnAFixedClock()
+    public void TmTimeline_Time_HoursAgoAcrossMidnight_FormatsAsYesterday_OnAFixedClock()
     {
         // The midnight case itself, pinned: 2 h before 00:30 is the neighbouring calendar day,
         // so the stamp is the yesterday format — deterministically, never "před 2 h". The local

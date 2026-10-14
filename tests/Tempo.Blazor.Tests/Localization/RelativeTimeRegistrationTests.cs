@@ -3,6 +3,7 @@ using System.Reflection;
 using Bunit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Components.Timeline;
 using Tempo.Blazor.Configuration;
 using Tempo.Blazor.Interfaces;
@@ -74,8 +75,20 @@ public class RelativeTimeRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddTempoBlazor();
+        // TmUserTimeZone takes an IJSRuntime (the browser probe); no interop happens in these tests.
+        services.AddSingleton<IJSRuntime>(new NeverUsedJSRuntime());
         configure(services);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    }
+
+    /// <summary>Throws on every call — these tests never let the probe run.</summary>
+    private sealed class NeverUsedJSRuntime : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+            => throw new InvalidOperationException("not used");
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+            => throw new InvalidOperationException("not used");
     }
 
     [Fact]
@@ -117,8 +130,11 @@ public class RelativeTimeRegistrationTests
     }
 
     [Fact]
-    public void ScopedTimeProvider_ChangesYesterdayAndTheDayBoundary()
+    public void TheUserZone_JudgesTheDayBoundary_PerScope()
     {
+        // Fáze 25b (default flip): the day boundary comes from the scope's ITmUserTimeZone (UTC
+        // until the browser reports), NOT from the registered TimeProvider's LocalTimeZone any
+        // more. The registered TimeProvider still supplies the instant.
         // 2026-06-15 03:30 UTC is still 14 June in New York (EDT, UTC-4) and already 15 June in Prague (CEST, UTC+2).
         var instant = new DateTimeOffset(2026, 6, 15, 3, 30, 0, TimeSpan.Zero);
         var eightHoursEarlier = instant.AddHours(-8); // 2026-06-14 19:30 UTC
@@ -136,10 +152,15 @@ public class RelativeTimeRegistrationTests
 
         using var prague = provider.CreateScope();
         using var newYork = provider.CreateScope();
+        prague.ServiceProvider.GetRequiredService<ITmUserTimeZone>()
+            .SetZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague"));
+        newYork.ServiceProvider.GetRequiredService<ITmUserTimeZone>()
+            .SetZone(TimeZoneInfo.FindSystemTimeZoneById("America/New_York"));
+        // The registered TimeProvider's zone is deliberately the OTHER zone and must not win.
         prague.ServiceProvider.GetRequiredService<ZoneClockHolder>().Clock =
-            new ZoneClock(TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague"));
-        newYork.ServiceProvider.GetRequiredService<ZoneClockHolder>().Clock =
             new ZoneClock(TimeZoneInfo.FindSystemTimeZoneById("America/New_York"));
+        newYork.ServiceProvider.GetRequiredService<ZoneClockHolder>().Clock =
+            new ZoneClock(TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague"));
 
         var pragueText = prague.ServiceProvider.GetRequiredService<ITmRelativeTimeFormatter>()
             .Format(eightHoursEarlier, instant);
@@ -147,25 +168,26 @@ public class RelativeTimeRegistrationTests
             .Format(eightHoursEarlier, instant);
 
         pragueText.Should().StartWith("yesterday at",
-            "Prague has already crossed midnight, so the same instant is the previous calendar day");
+            "Prague's USER zone has already crossed midnight, so the same instant is the previous calendar day");
         newYorkText.Should().Contain("h ago",
-            "New York is still on 14 June, so eight hours earlier is the same calendar day");
+            "New York's USER zone is still on 14 June, so eight hours earlier is the same calendar day");
         pragueText.Should().NotBe(newYorkText);
     }
 
     [Fact]
     public void DocumentedOneLinerSnippet_Compiles_AndMatchesTheDoc()
     {
-        // The opt-in one-liner from docs/localization-plurals.md is compiled here too
+        // The registration snippet from docs/localization-plurals.md is compiled here too
         // (DocumentedUserZoneRegistration.RegisterOneLiner), and the registration lines must be the
-        // documented ones, not a paraphrase.
+        // documented ones, not a paraphrase. Since the 2.9.1 default flip the snippet is one real
+        // line (the obsolete alias is a comment), so the compared window is 1.
         var doc = File.ReadAllText(Path.Combine(Theme.ThemeCss.RepositoryRoot().FullName, "docs", "localization-plurals.md"));
         var sample = File.ReadAllText(Path.Combine(
             Theme.ThemeCss.RepositoryRoot().FullName,
             "tests", "Tempo.Blazor.Tests", "Localization", "DocumentedUserZoneRegistration.cs"));
 
         const string marker = "doc-sample:user-zone-oneliner";
-        LinesAfterMarker(doc, marker, 2).Should().Equal(LinesAfterMarker(sample, marker, 2));
+        LinesAfterMarker(doc, marker, 1).Should().Equal(LinesAfterMarker(sample, marker, 1));
     }
 
     private static string[] LinesAfterMarker(string text, string marker, int count)

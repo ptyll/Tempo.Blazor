@@ -1,11 +1,11 @@
 namespace Tempo.Blazor.Localization;
 
 /// <summary>
-/// The end user's time zone, resolved once per circuit. Registering <c>AddTempoUserTimeZone()</c>
-/// opts the relative-time formatter into this zone; until then the default formatter keeps judging
-/// "yesterday" in the clock's local zone, so nothing changes for hosts that do not opt in. The
-/// scoped instance can be shared by other consumers (e.g. Scheduler, Gantt), so the browser is
-/// read only once per circuit.
+/// The end user's time zone, resolved once per circuit. <c>AddTempoBlazor()</c> registers it (scoped)
+/// and the relative-time formatter, the Scheduler and the Gantt read it by default: on Server the
+/// zone starts as UTC and becomes the browser's zone once the probe reports after the first
+/// interactive render; on WebAssembly it is the runtime's zone, which already is the browser's zone.
+/// The scoped instance is shared by every consumer, so the browser is read only once per circuit.
 /// <see cref="Zone"/> is UTC on Blazor Server until the browser reports its zone after the first
 /// interactive render; on WebAssembly it is the runtime's local zone, which already is the
 /// browser's zone.

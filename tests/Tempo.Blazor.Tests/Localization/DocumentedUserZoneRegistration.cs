@@ -28,7 +28,7 @@ internal static class DocumentedUserZoneRegistration
         var builder = new HostBuilder(builderServices);
         // doc-sample:user-zone-oneliner
         builder.Services.AddTempoBlazor();
-        builder.Services.AddTempoUserTimeZone();
+        // builder.Services.AddTempoUserTimeZone(); // earlier 2.9.1 preview opt-in — a no-op since the default flip
     }
 
     private sealed class HostBuilder(IServiceCollection services)

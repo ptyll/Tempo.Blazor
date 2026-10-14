@@ -4,10 +4,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Tempo.Blazor.E2E;
 
 /// <summary>
-/// Fáze 18 (opt-in): the Server demo calls AddTempoUserTimeZone(), so the relative-time stamps on
-/// the /feedback TmTimeline must be judged in the BROWSER's zone, not the server's. The browser
-/// context reports "Pacific/Auckland" (UTC+12/+13, ahead of the UTC server) — the expected values
-/// are computed with Intl inside the page itself, so the test is deterministic at any hour.
+/// Fáze 25b (default on): the Server demo no longer calls AddTempoUserTimeZone() — the obsolete
+/// alias is gone from its Program.cs, because `AddTempoBlazor()` itself registers the relative-time
+/// formatter over the user's zone since 2.9.1. The relative-time stamps on the /feedback TmTimeline
+/// must therefore be judged in the BROWSER's zone, not the server's, with no opt-in anywhere. The
+/// browser context reports "Pacific/Auckland" (UTC+12/+13, ahead of the UTC server) — the expected
+/// values are computed with Intl inside the page itself, so the test is deterministic at any hour.
 /// </summary>
 [TestClass]
 public class UserTimeZoneServerE2ETests : ServerTestBase

@@ -97,8 +97,8 @@ builder.Services.AddScoped<DemoNotionImportExportProvider>();
 
 // Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
 builder.Services.AddTempoBlazor();
-// Opt the relative-time stamps into the browser's time zone (ITmUserTimeZone, tm-user-zone.js).
-builder.Services.AddTempoUserTimeZone();
+// Since 2.9.1 the relative-time stamps read the browser's time zone by default (ITmUserTimeZone,
+// tm-user-zone.js); the former AddTempoUserTimeZone() call is an obsolete no-op alias.
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();

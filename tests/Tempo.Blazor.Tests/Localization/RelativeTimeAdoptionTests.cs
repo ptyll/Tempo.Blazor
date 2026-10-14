@@ -176,12 +176,26 @@ public class RelativeTimeAdoptionTests : LocalizationTestBase
     }
 
     [Fact]
-    public void DeprecatedTimelineKeys_AreNotReadBySource()
+    public void DeprecatedTimelineKeys_AreRemoved()
     {
-        // 37682aee: the TmTimeline_*Ago/DateFormat keys are deprecated in 2.9.1 (kept so a host
-        // that reads them is not broken) and removed in the next release. The library must not
-        // start reading them again — sweep every library source for the literal keys.
+        // 37682aee deprecated the TmTimeline_*Ago/DateFormat keys in 2.9.1; Fáze 25b removed them
+        // from all three resource files (still unreleased 2.9.1). No key may come back and no
+        // library source may start reading them again.
         var root = Tempo.Blazor.Tests.Theme.ThemeCss.RepositoryRoot().FullName;
+
+        foreach (var file in new[] { "TmResources.json", "TmResources.cs.json", "TmResources.fr.json" })
+        {
+            var text = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "Resources", file));
+            foreach (var key in new[]
+            {
+                "TmTimeline_JustNow", "TmTimeline_MinutesAgo", "TmTimeline_HoursAgo",
+                "TmTimeline_DaysAgo", "TmTimeline_DateFormat",
+            })
+            {
+                text.Should().NotContain($"\"{key}\"", $"{file} must not ship the removed key {key}");
+            }
+        }
+
         var pattern = new Regex("TmTimeline_(JustNow|MinutesAgo|HoursAgo|DaysAgo|DateFormat)", RegexOptions.Compiled);
 
         var offenders = Directory.EnumerateFiles(Path.Combine(root, "src"), "*", SearchOption.AllDirectories)
@@ -195,7 +209,7 @@ public class RelativeTimeAdoptionTests : LocalizationTestBase
             .ToList();
 
         offenders.Should().BeEmpty(
-            "the deprecated TmTimeline_* keys must not be read by the library (they are removed in the next release): " +
+            "the removed TmTimeline_* keys must not be read by the library: " +
             string.Join(" | ", offenders));
     }
 }

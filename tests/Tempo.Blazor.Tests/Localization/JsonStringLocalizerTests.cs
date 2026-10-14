@@ -70,11 +70,12 @@ public class JsonStringLocalizerTests
         => ForCulture("en")["TmDataTable_ShowingItems", 1, 10, 42].Value.Should().Be("Showing 1–10 of 42");
 
     [Fact]
-    public void TmTimeline_date_format_is_a_real_format_string_not_the_key()
+    public void Tm_Time_date_format_is_a_real_format_string_not_the_key()
     {
         // Regression for the scrambled-timestamp bug: the key must resolve to a date format pattern.
-        ForCulture("en")["TmTimeline_DateFormat"].Value.Should().Be("MMM d, yyyy");
-        ForCulture("cs")["TmTimeline_DateFormat"].Value.Should().Be("d. M. yyyy");
+        // (The old TmTimeline_DateFormat keys were removed in 2.9.1 — the formatter reads Tm_Time_DateFormat.)
+        ForCulture("en")["Tm_Time_DateFormat"].Value.Should().Be("MMM d, yyyy");
+        ForCulture("cs")["Tm_Time_DateFormat"].Value.Should().Be("d. M. yyyy");
     }
 
     [Fact]

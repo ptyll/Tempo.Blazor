@@ -12,10 +12,10 @@ using Tempo.Blazor.Services;
 namespace Tempo.Blazor.Tests.Localization;
 
 /// <summary>
-/// Fáze 18 (8d6b99e3, opt-in varianta B): <see cref="ITmUserTimeZone"/> resolves the browser zone
-/// once per circuit, <see cref="TmUserTimeProvider"/> gives the formatter a private clock over it,
-/// and <c>AddTempoUserTimeZone()</c> opts the formatter in without touching the app-wide
-/// <see cref="TimeProvider"/>. RED tests per cluster-D.md §11 (4).
+/// Fáze 18 (8d6b99e3): <see cref="ITmUserTimeZone"/> resolves the browser zone once per circuit and
+/// <see cref="TmUserTimeProvider"/> gives the formatter a private clock over it. Since Fáze 25b the
+/// default formatter already reads the zone (the former <c>AddTempoUserTimeZone()</c> opt-in is an
+/// obsolete no-op), so these tests pin the plumbing itself. RED tests per cluster-D.md §11 (4).
 /// </summary>
 public class UserTimeZoneTests : LocalizationTestBase
 {
@@ -105,6 +105,109 @@ public class UserTimeZoneTests : LocalizationTestBase
     {
         var act = () => ServiceCollectionExtensions.AddTempoUserTimeZone(null!);
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void AddTempoUserTimeZone_IsMarkedObsolete()
+    {
+        // Fáze 25b: the default flipped — the opt-in call is an obsolete no-op alias kept for
+        // source compatibility. The method must stay public, callable and marked [Obsolete].
+        var method = typeof(ServiceCollectionExtensions).GetMethod(
+            nameof(ServiceCollectionExtensions.AddTempoUserTimeZone),
+            new[] { typeof(IServiceCollection) });
+        method.Should().NotBeNull("the alias must stay part of the public API");
+        method!.GetCustomAttributes(typeof(ObsoleteAttribute), inherit: false)
+            .Should().HaveCount(1, "the alias is marked [Obsolete]");
+    }
+
+    [Fact]
+    public void AddTempoBlazor_Formatter_WithoutJsInterop_FallsBackToThePlainFormatter()
+    {
+        // A pure backend host (no IJSRuntime registered at all) must still resolve the formatter —
+        // it keeps judging days in the clock's zone, exactly like before the flip. A non-opted host
+        // must never fault.
+        var services = new ServiceCollection();
+        services.AddTempoBlazor();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        using var scope = provider.CreateScope();
+
+        var formatter = scope.ServiceProvider.GetRequiredService<ITmRelativeTimeFormatter>();
+        var instant = new DateTimeOffset(2026, 6, 15, 3, 30, 0, TimeSpan.Zero);
+        formatter.Invoking(f => f.Format(instant, instant)).Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddTempoBlazor_WithoutJsRuntime_RegistersAResolvedMachineLocalZone()
+    {
+        // Fáze 25b fix: the ITmUserTimeZone registration must not require IJSRuntime — a pure
+        // backend scope (or any host that never registered interop) still resolves the service,
+        // and without a browser to ask, the machine-local zone IS the right zone, resolved.
+        var services = new ServiceCollection();
+        services.AddTempoBlazor();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        using var scope = provider.CreateScope();
+
+        var zone = scope.ServiceProvider.GetRequiredService<ITmUserTimeZone>();
+        zone.Zone.Should().Be(TimeZoneInfo.Local, "no IJSRuntime → nothing to probe → the machine zone");
+        zone.IsResolved.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddTempoBlazor_RespectsAHostRegisteredUserZone()
+    {
+        // TryAddScoped: a host that registers its own ITmUserTimeZone (a profile-driven zone)
+        // keeps it — the library must not clobber it with the default.
+        var services = new ServiceCollection();
+        services.AddTempoBlazor();
+        services.AddScoped<ITmUserTimeZone>(_ => new StubTmUserTimeZone(
+            TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague")));
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        using var scope = provider.CreateScope();
+
+        scope.ServiceProvider.GetRequiredService<ITmUserTimeZone>().Zone.Id.Should().Be(
+            TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague").Id);
+    }
+
+    [Fact]
+    public async Task TmUserTimeZone_WithoutJsRuntime_IsLocalResolved_AndNeverProbes()
+    {
+        var zone = new TmUserTimeZone(null!, isBrowser: false);
+        var raised = 0;
+        zone.Changed += (_, _) => raised++;
+
+        await zone.EnsureResolvedAsync();
+
+        zone.Zone.Should().Be(TimeZoneInfo.Local);
+        zone.IsResolved.Should().BeTrue();
+        raised.Should().Be(0);
+    }
+
+    [Fact]
+    public void AddTempoBlazor_Formatter_JudgesDaysInTheUserZone_ByDefault()
+    {
+        // Fáze 25b: the default flipped — AddTempoBlazor() itself registers the formatter over
+        // TmUserTimeProvider. No AddTempoUserTimeZone() call is needed any more.
+        Services.AddTempoBlazor();
+        var fake = new FakeTimeProvider(new DateTimeOffset(2026, 6, 14, 22, 30, 0, TimeSpan.Zero));
+        Services.AddSingleton<TimeProvider>(fake);
+
+        var formatter = Services.GetRequiredService<ITmRelativeTimeFormatter>();
+
+        // 22:30 and 20:00 UTC are the same UTC day, but Prague (UTC+2) has already crossed midnight.
+        var earlier = new DateTimeOffset(2026, 6, 14, 20, 0, 0, TimeSpan.Zero);
+        formatter.Format(earlier).Should().Contain("h ago",
+            "before the zone arrives the clock reads UTC, so both instants are still 14 June");
+
+        Services.GetRequiredService<ITmUserTimeZone>().SetZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague"));
+        formatter.Format(earlier).Should().StartWith("yesterday at",
+            "the DEFAULT formatter is the one over TmUserTimeProvider, so it reads the zone that arrived late");
+
+        Services.GetRequiredService<ITmUserTimeZone>().SetZone(TimeZoneInfo.Utc);
+        formatter.Format(earlier).Should().Contain("h ago",
+            "the same formatter instance reads the zone on every format, never capturing it");
     }
 
     [Fact]
@@ -212,6 +315,36 @@ public class UserTimeZoneTests : LocalizationTestBase
         zone.IsResolved.Should().BeFalse();
         zone.Zone.Should().Be(TimeZoneInfo.Utc);
         raised.Should().Be(0);
+    }
+
+    private sealed class SwitchableJSRuntime : IJSRuntime
+    {
+        public IJSRuntime Current { get; set; } = null!;
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+            => Current.InvokeAsync<TValue>(identifier, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+            => Current.InvokeAsync<TValue>(identifier, cancellationToken, args);
+    }
+
+    [Fact]
+    public async Task Probe_AfterAFailedImport_CanBeRetried()
+    {
+        // Fáze 25b: the one-shot flag flips only after a SUCCESSFUL import — a probe attempted
+        // while interop was unavailable (prerender-like) must not burn it; a later call resolves.
+        var switcher = new SwitchableJSRuntime { Current = new UnavailableJSRuntime() };
+        var zone = new TmUserTimeZone(switcher, isBrowser: false);
+
+        await zone.EnsureResolvedAsync();
+        zone.IsResolved.Should().BeFalse("the import never landed; the one-shot must not burn");
+
+        SetupZoneModule("America/New_York");
+        switcher.Current = JSInterop.JSRuntime;
+        await zone.EnsureResolvedAsync();
+
+        zone.Zone.Id.Should().Be(TimeZoneInfo.FindSystemTimeZoneById("America/New_York").Id,
+            "the retried probe resolved the browser zone");
     }
 
     [Fact]

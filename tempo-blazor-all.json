@@ -7118,14 +7118,14 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "WorkflowViewBox",
           "kind": "Class",
           "category": "Components",
           "namespace": "Tempo.Blazor.Components.Workflow",
           "description": "The viewBox (plus the matching zoom scale) a JS zoom helper reports back to the TmWorkflowDesignerCanvas — the return shape of tmWorkflowDesigner.zoomTo and tmWorkflowDesigner.fitToView, so the component can assign its viewBox fields from the result BEFORE StateHasChanged (JS and the Blazor-rendered attribute never disagree).",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Workflow/WorkflowCanvasModels.cs",
-          "documentationStatus": "generated",
-          "itemName": "WorkflowViewBox"
+          "documentationStatus": "merged"
         },
         {
           "itemName": "ServiceCollectionExtensions",
@@ -7165,7 +7165,7 @@
               "name": "AddTempoUserTimeZone",
               "kind": "Method",
               "type": "IServiceCollection",
-              "description": "Opts the relative-time formatter into the user's browser time zone. Replaces the ITmRelativeTimeFormatter registration with one over a private TimeProvider whose LocalTimeZone reads the scoped ITmUserTimeZone lazily — \"yesterday at 4:20 PM\" is judged in the user's zone on Blazor Server instead of the server's. The app-wide TimeProvider is untouched (Kestrel and cookie authentication are singletons that consume it), and the zone is read once per circuit from Intl.DateTimeFormat().resolvedOptions().timeZone after the first interactive render; relative-time components re-render automatically when it arrives. Nothing ticks the stamps — the host re-renders as before. builder.Services.AddTempoBlazor(); builder.Services.AddTempoUserTimeZone();",
+              "description": "Obsolete no-op alias. Since 2.9.1 AddTempoBlazor itself registers the relative-time formatter over a private TimeProvider whose LocalTimeZone reads the scoped ITmUserTimeZone lazily — the browser's zone on Blazor Server (UTC until the probe reports after the first interactive render), the runtime's zone on WebAssembly. Calling this method changes nothing; it stays so existing hosts compile. The app-wide TimeProvider is untouched, and a host profile setting can still win via ITmUserTimeZone.SetZone. Hosts that want the 2.9.0 behaviour (days judged in the server's zone) register a scoped ITmRelativeTimeFormatter over the clock of their choice after AddTempoBlazor — see docs/localization-plurals.md.",
               "parameters": [
                 {
                   "name": "services",
@@ -22688,6 +22688,13 @@
               "default": "[]"
             },
             {
+              "name": "Today",
+              "type": "DateTime",
+              "isRequired": false,
+              "default": "DateTime.Today",
+              "description": "Today's date in the display zone — caps the rolling window at (today − 7 days) and seeds it when no data exists. TmGantt passes the user-zone today."
+            },
+            {
               "name": "WorkingSchedule",
               "type": "WorkingSchedule",
               "isRequired": true
@@ -23202,6 +23209,13 @@
               "isRequired": false,
               "default": "true",
               "description": "When true, events are also rendered in adjacent-month day cells visible in the grid."
+            },
+            {
+              "name": "Today",
+              "type": "DateTime",
+              "isRequired": false,
+              "default": "DateTime.Today",
+              "description": "Today's date in the display zone (highlights the today cell). Defaults to DateTime.Today."
             }
           ],
           "cssClasses": [
@@ -27057,9 +27071,9 @@
       ],
       "summary": {
         "itemCount": 373,
-        "manualItemCount": 372,
+        "manualItemCount": 373,
         "generatedItemCount": 365,
-        "generatedOnlyItemCount": 1,
+        "generatedOnlyItemCount": 0,
         "componentCount": 203,
         "publicApiTypeCount": 162
       }
@@ -75075,7 +75089,7 @@
           "kind": "Interface",
           "category": "Localization",
           "namespace": "Tempo.Blazor.Localization",
-          "description": "The end user's time zone, resolved once per circuit. AddTempoUserTimeZone() opts the relative-time formatter into it; until then nothing changes for hosts that do not opt in. The scoped instance can be shared by other consumers (e.g. Scheduler, Gantt), so the browser is read only once per circuit. UTC on Blazor Server until the browser reports its zone after the first interactive render; on WebAssembly the runtime's local zone, which already is the browser's zone. AddTempoBlazor() always registers it (scoped); SetZone lets a host profile setting win over the browser value.",
+          "description": "The end user's time zone, resolved once per circuit. AddTempoBlazor() registers it (scoped) and the relative-time formatter, the Scheduler and the Gantt read it by default — on Blazor Server the zone starts as UTC and becomes the browser's zone once the probe reports after the first interactive render; on WebAssembly it is the runtime's zone, which already is the browser's zone. The scoped instance is shared by every consumer, so the browser is read only once per circuit. SetZone lets a host profile setting win over the browser value. The former AddTempoUserTimeZone() opt-in is an obsolete no-op alias since the 2.9.1 default flip.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Localization/ITmUserTimeZone.cs",
           "documentationStatus": "merged",
@@ -75087,8 +75101,8 @@
           ],
           "examples": [
             {
-              "title": "Opt the relative-time formatter into the browser zone",
-              "code": "builder.Services.AddTempoBlazor();\nbuilder.Services.AddTempoUserTimeZone();"
+              "title": "The default already reads the browser zone (2.9.1)",
+              "code": "builder.Services.AddTempoBlazor();"
             },
             {
               "title": "Host profile setting wins over the browser value",
@@ -114653,8 +114667,8 @@
   "summary": {
     "packageCount": 26,
     "itemCount": 3204,
-    "manualItemCount": 3203,
-    "generatedOnlyItemCount": 1,
+    "manualItemCount": 3204,
+    "generatedOnlyItemCount": 0,
     "componentCount": 474,
     "publicApiTypeCount": 2677
   }

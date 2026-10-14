@@ -199,7 +199,7 @@
 
     private ITmRelativeTimeFormatter? _relativeTime;
 
-    /// <summary>Re-renders the stamps once the user zone arrives (opt-in via AddTempoUserTimeZone()).</summary>
+    /// <summary>Re-renders the stamps once the user zone arrives (the default registration via AddTempoBlazor()).</summary>
     private TmUserZoneObserver? _userZoneObserver;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

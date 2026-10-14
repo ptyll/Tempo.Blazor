@@ -8,30 +8,33 @@ namespace Tempo.Blazor.Localization;
 /// resolved immediately. On Blazor Server (and InteractiveAuto's Server circuits) the zone is UTC
 /// until <see cref="EnsureResolvedAsync"/> reads <c>Intl.DateTimeFormat().resolvedOptions().timeZone</c>
 /// once per circuit — after the first interactive render, when JS interop is available; an unknown
-/// IANA id falls back to UTC.
+/// IANA id falls back to UTC. A scope with no <see cref="IJSRuntime"/> at all (a pure backend
+/// resolving the formatter) has nothing to probe: the machine-local zone IS the right zone, so it
+/// is resolved from the start.
 /// </summary>
 internal sealed class TmUserTimeZone : ITmUserTimeZone
 {
     internal const string ModulePath = "./_content/Tempo.Blazor/js/tm-user-zone.js";
 
-    private readonly IJSRuntime _js;
+    private readonly IJSRuntime? _js;
     private readonly bool _isBrowser;
     private bool _probed;
     private bool _hostOverride;
     private TimeZoneInfo _zone;
 
-    public TmUserTimeZone(IJSRuntime js)
+    public TmUserTimeZone(IJSRuntime? js)
         : this(js, OperatingSystem.IsBrowser())
     {
     }
 
-    internal TmUserTimeZone(IJSRuntime js, bool isBrowser)
+    internal TmUserTimeZone(IJSRuntime? js, bool isBrowser)
     {
-        ArgumentNullException.ThrowIfNull(js);
         _js = js;
         _isBrowser = isBrowser;
-        if (isBrowser)
+        if (isBrowser || js is null)
         {
+            // WASM: the runtime zone already is the browser zone. No IJSRuntime at all: there is
+            // nothing to probe, and the machine-local zone is the best answer — resolved.
             _zone = TimeZoneInfo.Local;
             IsResolved = true;
         }
@@ -61,23 +64,26 @@ internal sealed class TmUserTimeZone : ITmUserTimeZone
     /// <summary>
     /// Reads the browser zone once per circuit. Call from <c>OnAfterRenderAsync(firstRender: true)</c>;
     /// before the first interactive render (prerender) JS interop is unavailable and the zone stays
-    /// UTC/unresolved. A host override from <see cref="SetZone"/> skips the probe entirely.
-    /// Never throws: the zone is best-effort and must not fault a circuit.
+    /// UTC/unresolved. A host override from <see cref="SetZone"/> skips the probe entirely, and a
+    /// scope with no <see cref="IJSRuntime"/> (or the WASM runtime) has nothing to probe. The
+    /// one-shot flag flips only after a SUCCESSFUL import, so a probe attempted while interop was
+    /// unavailable can still be retried later. Never throws: the zone is best-effort and must not
+    /// fault a circuit.
     /// </summary>
     internal async Task EnsureResolvedAsync()
     {
-        if (_isBrowser || _probed || _hostOverride)
+        if (_isBrowser || _js is null || _probed || _hostOverride)
         {
             return;
         }
-
-        _probed = true;
 
         string? iana = null;
         IJSObjectReference? module = null;
         try
         {
             module = await _js.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            // The import landed: from here the probe has run for this circuit.
+            _probed = true;
             if (module is not null)
             {
                 iana = await module.InvokeAsync<string?>("resolve");

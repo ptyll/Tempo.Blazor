@@ -88,9 +88,10 @@ reservation and are excluded from the parity guard: `TmDiagramProperties_Arrowhe
 `TmDiagramProperties_Cardinality_*` (labels such as "Many", not counts). Do not add to that list.
 
 `TmTimeline_JustNow`, `TmTimeline_MinutesAgo`, `TmTimeline_HoursAgo`, `TmTimeline_DaysAgo` and
-`TmTimeline_DateFormat` are deprecated. The library no longer reads them — relative time goes through
-`ITmRelativeTimeFormatter` and `Tm_Time_*`. The resources remain so a host that reads them is not
-broken; new code must not.
+`TmTimeline_DateFormat` were the pre-formatter keys, deprecated when `ITmRelativeTimeFormatter`
+landed and **removed in 2.9.1** (the same unreleased version that made the user's time zone the
+default). Relative time goes through `ITmRelativeTimeFormatter` and `Tm_Time_*`; a host that still
+overrides `TmTimeline_MinutesAgo` moves that override to the `Tm_Time_*` family.
 
 ### Adding a counted text
 
@@ -134,30 +135,35 @@ public interface ITmRelativeTimeFormatter
   not "Yesterday at {0}" ("yesterday at 4:20 PM", "5 min ago", "před 5 min"). Do not capitalise the
   in-sentence forms to match the opening stamps, and do not lowercase the opening stamps either.
 - **Time zone.** "Yesterday" is a calendar-day judgement made in the zone you pass (default: the
-  clock's local zone), from the *instant* — the offset a `DateTimeOffset` happens to carry is
-  irrelevant. A component that knows the user's zone (the Scheduler's `ResolveTimeZone()`) passes it.
+  formatter clock's zone — `ITmUserTimeZone.Zone`, see below), from the *instant* — the offset a
+  `DateTimeOffset` happens to carry is irrelevant. A component that knows a specific display zone
+  (the Scheduler's `ResolveTimeZone()` when the host set one) passes it.
   No component takes a time-zone parameter for this: the zone comes from the clock.
 - **Clock and lifetime.** `AddTempoBlazor()` registers `ITmRelativeTimeFormatter` as **scoped**, over
-  the `ITmLocalizer` and `TimeProvider` of the current scope (the system clock when no `TimeProvider`
-  is registered). Scoped, not singleton: a singleton would capture the first localizer, so a scoped
-  localizer either throws under `ValidateScopes` or every circuit shares the first language. Tests
-  register a `FakeTimeProvider` (`Microsoft.Extensions.Time.Testing`) or pass `now` explicitly — never
+  the `ITmLocalizer` of the current scope and a private clock: the time comes from the host's
+  `TimeProvider` (the system clock when no `TimeProvider` is registered), while `LocalTimeZone` — the
+  day boundary — reads `ITmUserTimeZone.Zone` (see below). Scoped, not singleton: a singleton would
+  capture the first localizer, so a scoped localizer either throws under `ValidateScopes` or every
+  circuit shares the first language. Tests register a `FakeTimeProvider`
+  (`Microsoft.Extensions.Time.Testing`) or pass `now` explicitly — never
   `DateTime.Now`.
-- **Blazor Server / prerender: the user's zone.** `TimeProvider.System.LocalTimeZone` is the
-  *server's* zone, so "yesterday at 16:20" is wrong for a circuit whose browser is elsewhere.
-  `AddTempoBlazor()` registers a scoped `ITmUserTimeZone` (one browser read per circuit, shared by
-  every consumer), but the formatter keeps judging days in the clock's zone until the host opts in
-  with one line:
+- **Blazor Server / prerender: the user's zone (the 2.9.1 default).** `TimeProvider.System.LocalTimeZone`
+  is the *server's* zone, so "yesterday at 16:20" used to be wrong for a circuit whose browser sits
+  elsewhere. Since 2.9.1 the default formatter runs over a private `TmUserTimeProvider` whose
+  `LocalTimeZone` reads the scoped `ITmUserTimeZone` (`AddTempoBlazor()` registers it; one browser
+  read per circuit, shared by every consumer — the relative-time components, the Scheduler's
+  `ResolveTimeZone()` fallback and the Gantt's "today"). There is nothing to opt in:
 
   ```csharp
   // doc-sample:user-zone-oneliner
   builder.Services.AddTempoBlazor();
-  builder.Services.AddTempoUserTimeZone();
+  // builder.Services.AddTempoUserTimeZone(); // earlier 2.9.1 preview opt-in — a no-op since the default flip
   ```
 
-  `AddTempoUserTimeZone()` replaces the formatter registration with one over a private
-  `TimeProvider` that reads `ITmUserTimeZone.Zone` lazily; it never replaces the app-wide
-  `TimeProvider`. Kestrel (`PinnedBlockMemoryPoolFactory`) and cookie authentication
+  `AddTempoUserTimeZone()` still exists as an `[Obsolete]` no-op alias so code written against the
+  earlier 2.9.1 preview compiles (2.9.0 never shipped it).
+  The user clock never replaces the app-wide `TimeProvider`: Kestrel
+  (`PinnedBlockMemoryPoolFactory`) and cookie authentication
   (`PostConfigureAuthenticationSchemeOptions`) are singletons that consume `TimeProvider`, so
   `AddScoped<TimeProvider>` fails the host at startup under `ValidateScopes` ("Cannot consume scoped
   service 'System.TimeProvider' from singleton") and, without validation, makes the user's zone drive
@@ -169,9 +175,9 @@ public interface ITmRelativeTimeFormatter
   The relative-time components re-render once the zone arrives (the stamp is computed at render
   time; nothing ticks it), and `ITmUserTimeZone.SetZone` lets a host profile setting win over the
   browser value. On Server the browser probe is triggered by the relative-time components
-  (`TmTimeline`, `TmActivityTimeline`, `TmActivityComments`, `TmNotificationBell`) from their
-  first interactive render; a consumer with no such component on screen (or a non-interactive
-  page) must call `SetZone` (or render one of the four) to get a resolved zone. There is no
+  (`TmTimeline`, `TmActivityTimeline`, `TmActivityComments`, `TmNotificationBell`) plus the
+  Scheduler and the Gantt from their first interactive render; a page with none of them (or a
+  non-interactive one) must call `SetZone` to get a resolved zone. There is no
   component parameter for this. A host that prefers to own the plumbing
   (its own cache, a profile-driven zone) registers a scoped `ITmRelativeTimeFormatter` the way the
   snippet below does — it stays valid:
