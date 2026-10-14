@@ -65,4 +65,49 @@ public sealed class GalleryLightboxCssGuardTests
             "the arrows are touch targets on the phones where they overlay the image");
         css.Should().Contain("height: var(--tm-touch-target)");
     }
+
+    [Fact]
+    public void LightboxCss_Rtl_MirrorsTheChevrons()
+    {
+        var css = ThemeCss.ComponentCss("_lightbox.css");
+
+        // m4 (review): the mirror keys off the element's OWN resolved direction (:dir), not a
+        // hardcoded ancestor [dir] attribute — the same live probe the tm-rtl.js helper uses, so
+        // a host that flips direction through CSS instead of the dir attribute mirrors too.
+        css.Should().Contain(".tm-lightbox-prev:dir(rtl) svg",
+            "in RTL the next image lies to the LEFT, so the chevron glyphs flip " +
+            "(the logical insets already swap the buttons and the code swaps the arrow keys)");
+        css.Should().Contain(".tm-lightbox-next:dir(rtl) svg");
+        css.Should().Contain("transform: scaleX(-1)");
+        css.Should().NotContain("[dir=\"rtl\"] .tm-lightbox",
+            "the ancestor-attribute form missed CSS-driven direction and is replaced by :dir(rtl)");
+    }
+
+    [Fact]
+    public void LightboxCss_MobileRow_KeepsATouchTargetOfHeight_Panorama()
+    {
+        var css = ThemeCss.ComponentCss("_lightbox.css");
+
+        // A panorama's row is shorter than the 44px arrows; centred on the row their tops reached
+        // into the close/delete band (-3rem) and overlapped the delete. The row floors at one
+        // touch target so the arrows never leave the image band.
+        css.Should().Contain("min-height: var(--tm-touch-target)");
+    }
+
+    [Fact]
+    public void LightboxCss_MobileDelete_SitsInTheFooterRow_ClearOfTheArrows()
+    {
+        // M2 (review): below 640px the delete leaves the top-end chrome band (-3rem, the corner
+        // the arrows' upper ends can reach on a short row) for the footer flex row; the footer
+        // drops by one --tm-space-2 so the row keeps that much real clearance from the arrows.
+        var css = ThemeCss.ComponentCss("_lightbox.css");
+        var mobile = css.Substring(css.IndexOf("@media (width < 640px)", StringComparison.Ordinal));
+
+        mobile.Should().Contain(".tm-lightbox-footer .tm-lightbox-delete {",
+            "the delete is re-targeted inside the media query");
+        mobile.Should().Contain("position: static;",
+            "the delete sits in the footer flex row, not the arrows' chrome band");
+        mobile.Should().Contain(".tm-lightbox-footer { bottom: calc(-2.5rem - var(--tm-space-2)); }",
+            "the footer keeps ≥8px (--tm-space-2) of clearance below the arrow row");
+    }
 }

@@ -881,6 +881,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotificationBell_NewCount_Other"]   = "{0} new notifications",
         ["TmNotificationBell_NoNotifications"]  = "No notifications",
         ["TmNotificationBell_MarkAllRead"]      = "Mark all as read",
+        ["TmNotificationBell_Unread"]           = "Unread notification",
         ["TmNotificationBell_SheetTitle"]       = "Notifications",
 
         // F11 mobile presentation sheet titles
@@ -4652,6 +4653,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotificationBell_NewCount_Other"]  = "{0} nových oznámení",
         ["TmNotificationBell_NoNotifications"] = "Žádná oznámení",
         ["TmNotificationBell_MarkAllRead"] = "Označit vše jako přečtené",
+        ["TmNotificationBell_Unread"] = "Nepřečtené oznámení",
         ["TmNotificationBell_SheetTitle"]      = "Oznámení",
 
         // F11 mobile presentation sheet titles

@@ -113,13 +113,33 @@
 }
 
 .tm-notification-bell__item {
+    /* A native <button> (2.9.1 — the div @onclick was a keyboard trap): strip the UA button
+       chrome so the entry reads exactly as the old row did. display:flex on the item makes it
+       a block-level box that fills the list width, like the old div. */
     display: flex;
+    width: 100%;
+    font: inherit;
+    color: inherit;
+    text-align: start;
+    background: none;
+    border: none;
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
     cursor: pointer;
     transition: background-color 0.15s;
     position: relative;
+}
+
+.tm-notification-bell__item:focus-visible {
+    /* M1 (2.9.1 review): an INSET indicator. The rows are flush with the panel edge and the
+       panel has overflow:hidden, so the old two-layer OUTSIDE ring (box-shadow around the box)
+       was clipped to invisible on the first/last row exactly where keyboard users land. The
+       outline draws INSIDE the row (offset -2px) in the primary colour; forced-colors mode keeps
+       painting it in the system colour. */
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+    box-shadow: none;
 }
 
 .tm-notification-bell__item:hover {

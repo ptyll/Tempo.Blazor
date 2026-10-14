@@ -3118,6 +3118,7 @@
   "TmMvl_TableView": "Zobrazení tabulkou",
   "TmNotificationBell_AriaLabel": "Oznámení",
   "TmNotificationBell_MarkAllRead": "Označit vše jako přečtené",
+"TmNotificationBell_Unread": "Nepřečtené oznámení",
   "TmNotificationBell_NewCount_One": "{0} nové oznámení",
   "TmNotificationBell_NewCount_Few": "{0} nová oznámení",
   "TmNotificationBell_NewCount_Many": "{0} nového oznámení",

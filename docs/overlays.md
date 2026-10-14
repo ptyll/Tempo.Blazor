@@ -86,7 +86,13 @@ bottom sheet on a mobile one. The host contract every action surface must honour
   panel's stable `Id`, and the menu renders `role="menu"` / `role="menuitem"`.
 - The initial focus moves to the first **enabled** menuitem (never a disabled one — `focus()`
   on a disabled button is a no-op and would leave focus on `<body>`); when every overflow item
-  is disabled, the trigger renders disabled instead of opening an inert menu.
+  is disabled, the trigger renders disabled instead of opening an inert menu. A menu that OPENED
+  while its anchor was scrolled out of the viewport is parked `visibility:hidden` and the first
+  `focus()` no-ops — overlay.js reports the panel's first real visibility once per open (only
+  when focus is free — nowhere, or still on the anchor trigger — and stamped with the open's
+  sequence, so a report of an earlier open that lands after a close-and-reopen is dropped) and
+  `TmOverlayPanel` re-raises `OnOpened`, so the pending initial focus lands when the anchor
+  scrolls back into view.
 - The default invocation closes the menu **before** running the action, and focus returns to
   the trigger on every close path — Escape, outside pointer, Done and selection — in the
   popover presentation too (a light popover close does not restore focus by itself; the

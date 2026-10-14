@@ -575,7 +575,83 @@
   `--tm-bg-muted` plus a 2px `--tm-color-primary` outline, the `TmMultiSelect` focused-option
   precedent; a `TokenContrastTests` entry holds the outline at ≥3:1 (WCAG 1.4.11 non-text) against
   the palette surface in light, dark, indigo and indigo-dark.
+
+- **A More menu opened mid-scroll lands its initial focus when the anchor comes back.** A
+  popover that opened while its trigger was scrolled out of the viewport was parked
+  `visibility:hidden` by `overlay.js`, so the post-open `focus()` on the first enabled
+  `menuitem` silently no-op'd — and the pending-focus flag was consumed on that first attempt,
+  leaving keyboard users on `<body>` even after the anchor scrolled back into view (the More
+  menu of `TmMobileActionBar` / the `TmToolbar` overflow, `TmDropdown`, `TmSplitButton`,
+  `TmContextMenu` — every anchored panel that moves initial focus from `OnOpened`). `overlay.js`
+  now reports a parked panel's first real visibility exactly once per open
+  (`NotifyPanelVisibleAsync`), `TmOverlayPanel` raises `OnOpened` again, and the pending initial
+  focus lands for real. A panel that opened on-screen never re-fires, and a report that lands
+  after the panel closed is ignored. Regression coverage: the `overlay-lifecycle.test.mjs`
+  park/first-visibility cases plus `PanelVisibleAfterParkedOpen_RunsThePendingInitialFocusAgain`.
+
+- **A click inside the keyboard-shortcuts dialog no longer closes it.** `TmKeyboardShortcutsHelp`
+  carried `@onclick:stopPropagation` on the `<TmFocusScope>` component tag — routed through a
+  component's parameters the renderer treats it as a plain splatted attribute and ignores it (a
+  runtime no-op), so the fence never existed and any click inside the dialog bubbled to the
+  backdrop's close handler. The fence is now a real element wrapper around the scope — the
+  `TmCommandPalette` pattern from phase 7 — so clicks inside stay off the backdrop while the
+  close button and the Escape path keep working. The backdrop close also tracks the PRESS origin
+  (m7): a drag that starts inside the panel and releases over the backdrop delivers only the
+  click there, so the dialog closes only when the press started on the backdrop itself.
+  Browser-proofed by `Shortcuts_ClickInsideTheDialog_DoesNotClose_BackdropClickDoes`.
+
+- **`TmLightbox` mirrors in RTL.** The strip used to ignore the writing direction: in RTL the
+  chevrons still pointed physically and ArrowLeft/Right kept their LTR mapping. The chevron
+  glyphs now flip (`scaleX(-1)`) and the arrow keys swap with the reading direction (ArrowLeft is
+  next, ArrowRight is previous), read live from the computed direction through the shared
+  `tm-rtl.js` helper — "ltr" wherever JS is unavailable. Below 640px a panorama's content row
+  also floors at one touch target: on a shorter row the centred arrows reached up into the
+  close/delete band (-3rem) and overlapped the delete button. Guarded by the lightbox CSS guard
+  tests and `TmLightboxRtlTests`.
+
+- **The `TmLightbox` delete button clears the navigation arrows below 640px.** The delete used to
+  sit in the top-end chrome band (top: -3rem, beside the close) — exactly the corner the
+  overlaid arrows' upper ends reach on a short (panorama) row. It now sits in the footer flex
+  row under the counter pill (still a 44px touch target), and the footer drops by one
+  `--tm-space-2`, so the arrows keep ≥ 8px of real clearance from it at every image height.
+  Desktop keeps the delete beside the close. Proven by
+  `Gallery_Lightbox_390_DeleteMode_ArrowsStayClearOfTheDeleteButton` with the demo's Delete Mode
+  on (next in LTR, prev in RTL).
+
+- **The chevron mirror keys off the element's own resolved direction.** The RTL rule matched a
+  hardcoded ancestor `[dir="rtl"]` attribute and missed hosts that flip direction through CSS;
+  `.tm-lightbox-prev:dir(rtl) svg, .tm-lightbox-next:dir(rtl) svg` reads the same live resolved
+  direction the `tm-rtl.js` probe reports, so the glyphs and the arrow-key semantics cannot
+  disagree (m4).
+
+- **`overlay.js` re-runs a parked panel's pending initial focus only when focus is free, and
+  stale reports are dropped.** The first-visibility report now fires only when focus went
+  nowhere (the parked panel's focus move dropped it to `<body>`) or still sits on the anchor
+  trigger — a user who tabbed elsewhere while the panel was parked is not yanked back (the flag
+  is still consumed). Each open carries a sequence number that rides on the report, and
+  `TmOverlayPanel.NotifyPanelVisibleAsync` compares it against its own open sequence, so a
+  report already in flight while the panel was closed and reopened can never fire the NEW open's
+  `OnOpened` (m1/m2).
+
+- **One `directionOf` for every RTL-aware component.** `tm-splitter.js` and `data-table.js` no
+  longer carry private copies of the writing-direction probe: both reuse the shared
+  `js/tm-rtl.js` helper (the splitter imports and re-exports it, the classic-script data table
+  loads it by URL like `pointer-drag.js`), so the ltr fallback contract cannot drift. The
+  `TmLightbox` also reads the direction once per open (on the opening render) instead of on
+  every arrow-key press (m3).
+
 ### Accessibility
+
+- **A `TmNotificationBell` unread entry announces its state.** The blue dot was `aria-hidden`
+  decoration, so a read and an unread entry were indistinguishable to a screen reader. Unread
+  entries now carry a localized screen-reader-only text alternative (`tm-sr-only`,
+  `TmNotificationBell_Unread` — en/cs/fr); read entries announce nothing (m6).
+
+- **The `TmNotificationBell` focus indicator draws inside the entry row.** The rows sit flush
+  with the panel edge and the dropdown clips overflow, so the old outside box-shadow ring was
+  invisible on the first and last row — exactly where a keyboard user lands. The
+  `:focus-visible` indicator is now an inset 2px `--tm-color-primary` outline (offset -2px,
+  `box-shadow: none`), guarded by `NotificationBellCssGuardTests` (M1).
 
 - **The `TmWorkflowDesignerCanvas` states are named, focusable buttons on a labelled canvas.** The
   svg root dropped `role="img"` for `role="group"` (see Breaking/Migration), every state node is a
@@ -610,6 +686,34 @@
   variant) and the thumbs grow on a coarse pointer.
 
 ### Breaking / Migration
+
+- **`TmNotificationBell` entries are native `<button type="button">` elements, not
+  `div @onclick` rows.** A `div` with a click handler is a keyboard trap — a keyboard user could
+  open the dropdown but never activate a notification (WCAG 2.1.1). Each entry is now a real
+  button (the browser delivers the activation; no emulated key handlers per
+  [docs/keyboard-activation-convention.md](docs/keyboard-activation-convention.md)), it holds no
+  nested interactive element, and its inner wrappers (`__avatar`, `__content`) became `<span>`s
+  because a button's content model is phrasing content. The entry keeps its previous styling
+  (the UA button chrome is reset in `_notification-bell.css`, a focus-visible ring was added).
+  DOM, before/after:
+
+  ```html
+  <!-- before -->
+  <div class="tm-notification-bell__item">
+      <div class="tm-notification-bell__avatar">…</div>
+      <div class="tm-notification-bell__content">…</div>
+  </div>
+
+  <!-- after -->
+  <button type="button" class="tm-notification-bell__item">
+      <span class="tm-notification-bell__avatar">…</span>
+      <span class="tm-notification-bell__content">…</span>
+  </button>
+  ```
+
+  Consumers styling the entries over the classes keep working (all selectors are class-based);
+  consumers selecting the entries by tag (`div.tm-notification-bell__item`) must select
+  `button.tm-notification-bell__item` instead.
 
 - **`TmWorkflowDesignerCanvas`'s svg root is `role="group"`, not `role="img"`** — `img` tells
   assistive technology the subtree is a picture, which hid the now-focusable state nodes from it

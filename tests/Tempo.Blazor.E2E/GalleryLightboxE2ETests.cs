@@ -240,6 +240,215 @@ public class GalleryLightboxE2ETests : WasmTestBase
             $"the next arrow must sit to the right of the image, next.X={next.X}, img right={img.X + img.Width}");
     }
 
+    [TestMethod]
+    public async Task Gallery_Lightbox_390_Rtl_MirroredArrows_SwappedArrowKeys()
+    {
+        // F25a: in RTL the strip mirrors — the next image lies to the LEFT: the logical insets
+        // already place prev at the right edge, the chevron glyphs flip, and the physical arrow
+        // keys swap (ArrowLeft is next, ArrowRight is previous).
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 },
+            HasTouch = true,
+            IsMobile = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        await AddRtlInitScriptAsync(context);
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/gallery");
+        await WaitForAppReadyAsync(page);
+
+        // Precondition, asserted: the page itself renders rtl (if the init script ever stops
+        // landing, this fails with a clear message instead of the lightbox sanity check below).
+        Assert.AreEqual("rtl", await page.EvaluateAsync<string>(
+                "() => document.documentElement.getAttribute('dir')"),
+            "the test page must render rtl for the lightbox to inherit it");
+
+        var items = page.Locator(".tm-gallery-item");
+        await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await items.First.ClickAsync();
+
+        var lightbox = page.Locator(".tm-lightbox");
+        await lightbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Sanity: the strip really renders in RTL.
+        Assert.AreEqual("rtl", await lightbox.EvaluateAsync<string>("el => getComputedStyle(el).direction"),
+            "the lightbox inherits the page's rtl direction");
+
+        // Placement mirrors through the logical insets: prev sits at the RIGHT edge, next at the left.
+        var prevBox = await lightbox.Locator(".tm-lightbox-prev").BoundingBoxAsync();
+        var nextBox = await lightbox.Locator(".tm-lightbox-next").BoundingBoxAsync();
+        Assert.IsNotNull(prevBox);
+        Assert.IsNotNull(nextBox);
+        Assert.IsTrue(prevBox!.X > nextBox!.X,
+            $"in RTL prev sits right of next (prev.X={prevBox.X}, next.X={nextBox.X})");
+
+        // The chevron glyphs flip so they keep pointing where the action goes.
+        var mirrored = await lightbox.Locator(".tm-lightbox-prev svg").EvaluateAsync<string>(
+            "el => getComputedStyle(el).transform");
+        StringAssert.Contains(mirrored, "-1", "the prev chevron is mirrored (scaleX(-1))");
+
+        // The arrow keys follow the reading direction: ArrowLeft is NEXT in RTL.
+        await page.Keyboard.PressAsync("ArrowLeft");
+        await Assertions.Expect(lightbox.Locator(".tm-lightbox-counter")).ToContainTextAsync("2");
+        await page.Keyboard.PressAsync("ArrowRight");
+        await Assertions.Expect(lightbox.Locator(".tm-lightbox-counter")).ToContainTextAsync("1");
+
+        // The mirrored next arrow (left edge) still works by pointer.
+        await lightbox.Locator(".tm-lightbox-next").ClickAsync();
+        await Assertions.Expect(lightbox.Locator(".tm-lightbox-counter")).ToContainTextAsync("2");
+    }
+
+    [TestMethod]
+    public async Task Gallery_Lightbox_390_Panorama_NextArrowStaysOutOfTheChromeBand()
+    {
+        // F25a: a panorama's row is shorter than the 44px arrows; centred on the row, the arrow
+        // tops reached up into the top-end chrome band (-3rem) where close and delete live, and
+        // overlapped the delete button. The row now floors at one touch target, so the arrows
+        // never leave the image band. The demo never enables CanDelete, so the overlap is proven
+        // against the CLOSE button — it occupies the same band, at the same insets class.
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 },
+            HasTouch = true,
+            IsMobile = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/gallery");
+        await WaitForAppReadyAsync(page);
+
+        var items = page.Locator(".tm-gallery-item");
+        await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await items.First.ClickAsync();
+
+        var lightbox = page.Locator(".tm-lightbox");
+        await lightbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Swap the displayed image for a panorama (a 12:1 SVG data URL): the content row collapses
+        // to the image height unless the min-height floor holds.
+        const string panorama = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221200%22%20height%3D%22100%22%3E%3Crect%20width%3D%221200%22%20height%3D%22100%22%20fill%3D%22%23334%22%2F%3E%3C%2Fsvg%3E";
+        await lightbox.Locator(".tm-lightbox-img").EvaluateAsync("(el, src) => { el.src = src; }", panorama);
+        await page.WaitForTimeoutAsync(300);
+
+        var content = lightbox.Locator(".tm-lightbox-content");
+        var minHeight = await content.EvaluateAsync<double>(
+            "el => parseFloat(getComputedStyle(el).minHeight)");
+        Assert.IsTrue(minHeight >= 44,
+            $"the panorama's content row must floor at the 44px touch target, was {minHeight}");
+
+        // The next arrow never rises above the content row into the chrome band, and it does not
+        // intersect the close button that lives there.
+        var nextBox = await lightbox.Locator(".tm-lightbox-next").BoundingBoxAsync();
+        var closeBox = await lightbox.Locator(".tm-lightbox-close").BoundingBoxAsync();
+        var contentBox = await content.BoundingBoxAsync();
+        Assert.IsNotNull(nextBox);
+        Assert.IsNotNull(closeBox);
+        Assert.IsNotNull(contentBox);
+        Assert.IsTrue(nextBox!.Y >= contentBox!.Y - 0.5,
+            $"the next arrow must stay inside the image band (next.Y={nextBox.Y}, content.Y={contentBox.Y})");
+        var intersects = nextBox.X < closeBox!.X + closeBox.Width
+            && nextBox.X + nextBox.Width > closeBox.X
+            && nextBox.Y < closeBox.Y + closeBox.Height
+            && nextBox.Y + nextBox.Height > closeBox.Y;
+        Assert.IsFalse(intersects, "the next arrow must not overlap the top-end chrome (close/delete band)");
+
+        // The arrows stay usable on the panorama row.
+        await lightbox.Locator(".tm-lightbox-next").ClickAsync();
+        await Assertions.Expect(lightbox.Locator(".tm-lightbox-counter")).ToContainTextAsync("2");
+    }
+
+    [DataTestMethod]
+    [DataRow(false, DisplayName = "LTR: the next arrow stays clear of the delete")]
+    [DataRow(true, DisplayName = "RTL: the prev arrow stays clear of the delete")]
+    public async Task Gallery_Lightbox_390_DeleteMode_ArrowsStayClearOfTheDeleteButton(bool rtl)
+    {
+        // M2 (review): below 640px the delete button used to share the top-end chrome band with
+        // the arrows' upper ends — on a short row they intersected. It now sits in the footer row
+        // below the image. The demo's Delete Mode turns CanDelete on BEFORE the lightbox opens so
+        // the button really renders, and the arrow sharing its inline corner (next in LTR, prev
+        // in RTL — both sit at inset-inline-end, mirrored with the strip) must keep ≥ 8px of
+        // clearance from it.
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 },
+            HasTouch = true,
+            IsMobile = true,
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+        });
+        if (rtl)
+        {
+            await AddRtlInitScriptAsync(context);
+        }
+        var page = await context.NewPageAsync();
+        RegisterContext(context);
+        await page.GotoAsync($"{BaseUrl}/gallery");
+        await WaitForAppReadyAsync(page);
+
+        var deleteToggle = page.Locator("button").Filter(new() { HasText = "Delete Mode" }).First;
+        await deleteToggle.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await deleteToggle.ClickAsync();
+
+        var items = page.Locator(".tm-gallery-item");
+        await items.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await items.First.ClickAsync();
+
+        var lightbox = page.Locator(".tm-lightbox");
+        await lightbox.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        var deleteButton = lightbox.Locator(".tm-lightbox-delete");
+        await Assertions.Expect(deleteButton).ToBeVisibleAsync();
+
+        // Navigate to image 2 so the asserted arrow is enabled (the strip start disables one).
+        await lightbox.Locator(".tm-lightbox-next").ClickAsync();
+        await Assertions.Expect(lightbox.Locator(".tm-lightbox-counter")).ToContainTextAsync("2");
+
+        var arrow = lightbox.Locator(rtl ? ".tm-lightbox-prev" : ".tm-lightbox-next");
+        var arrowBox = await arrow.BoundingBoxAsync();
+        var deleteBox = await deleteButton.BoundingBoxAsync();
+        Assert.IsNotNull(arrowBox, "the asserted arrow renders a box");
+        Assert.IsNotNull(deleteBox, "the delete button renders a box");
+        var gap = GapBetween(arrowBox!, deleteBox!);
+        Assert.IsTrue(gap >= 8,
+            $"the {(rtl ? "prev" : "next")} arrow must keep ≥8px from the delete button, gap={gap:0.#}px " +
+            $"(arrow={arrowBox!.X:0.#},{arrowBox.Y:0.#} {arrowBox.Width:0.#}x{arrowBox.Height:0.#}, " +
+            $"delete={deleteBox!.X:0.#},{deleteBox.Y:0.#} {deleteBox.Width:0.#}x{deleteBox.Height:0.#})");
+    }
+
+    /// <summary>dir=rtl on <c>&lt;html&gt;</c> — the lightbox inherits the page direction. The
+    /// init script runs as a PLAIN SCRIPT BODY (this repo's convention — Playwright evaluates the
+    /// string, it does not call a function value, so an arrow expression would be a silent no-op;
+    /// that is exactly how the original "Expected rtl, actual ltr" failure happened). At document
+    /// creation <c>documentElement</c> does not exist yet, so the attribute lands as soon as
+    /// <c>&lt;html&gt;</c> is parsed.</summary>
+    private static async Task AddRtlInitScriptAsync(IBrowserContext context)
+    {
+        await context.AddInitScriptAsync(
+            """
+            (() => {
+                const apply = () => document.documentElement.setAttribute('dir', 'rtl');
+                if (document.documentElement) {
+                    apply();
+                    return;
+                }
+                document.addEventListener('DOMContentLoaded', apply, { once: true });
+            })();
+            """);
+    }
+
+    /// <summary>The signed gap between two boxes: positive = the axis separation in px, negative
+    /// or zero = the boxes intersect (or touch).</summary>
+    private static double GapBetween(LocatorBoundingBoxResult a, LocatorBoundingBoxResult b)
+    {
+        var dx = Math.Max(b.X - (a.X + a.Width), a.X - (b.X + b.Width));
+        var dy = Math.Max(b.Y - (a.Y + a.Height), a.Y - (b.Y + b.Height));
+        return Math.Max(dx, dy);
+    }
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

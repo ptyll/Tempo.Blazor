@@ -97,6 +97,35 @@ public class AdditiveExtensionsE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task Shortcuts_ClickInsideTheDialog_DoesNotClose_BackdropClickDoes()
+    {
+        // F25a: the panel click fence is a real element wrapper — the old tag-level
+        // @onclick:stopPropagation on <TmFocusScope> was a runtime no-op and a click anywhere
+        // inside the dialog (a text selection, the kbd row) closed it. bUnit cannot see the
+        // difference (it never bubbles), so this is the browser proof.
+        var page = await OpenAsync("/layout", 1280, 720, touch: false);
+        await page.GetByTestId("shortcuts-described-open").ClickAsync();
+        var overlay = page.Locator(".tm-keyboard-shortcuts-overlay");
+        await Assertions.Expect(overlay).ToBeVisibleAsync();
+
+        // A click INSIDE the panel — the content area — must not dismiss the dialog.
+        await page.Locator(".tm-keyboard-shortcuts-content").ClickAsync();
+        await Assertions.Expect(overlay).ToBeVisibleAsync(
+            new LocatorAssertionsToBeVisibleOptions { Timeout = 2000 });
+
+        // The close button inside the fence still works through its OWN handler.
+        await page.Locator(".tm-keyboard-shortcuts-close").ClickAsync();
+        await Assertions.Expect(overlay).ToHaveCountAsync(0);
+
+        // Reopen: the backdrop click still dismisses.
+        await page.GetByTestId("shortcuts-described-open").ClickAsync();
+        await Assertions.Expect(overlay).ToBeVisibleAsync();
+        await page.Locator(".tm-keyboard-shortcuts-overlay").ClickAsync(
+            new LocatorClickOptions { Position = new Position { X = 8, Y = 8 } });
+        await Assertions.Expect(overlay).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
     public async Task Palette_Groups_RenderASeparator_AndOneKbdPerKey()
     {
         var page = await OpenAsync("/layout", 1280, 720, touch: false);

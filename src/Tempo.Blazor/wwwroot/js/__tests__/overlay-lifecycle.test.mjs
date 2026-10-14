@@ -311,6 +311,151 @@ test('hiding a panel without focus only hides it (N329)', () => {
     close('n329-unfocused');
 });
 
+// ── First visibility after a parked open (the More menu opened mid-scroll) ──────────────────
+
+// The stub anchors carry a real `contains`, so the m1 reporting gate (focus free OR on the
+// anchor) has an anchor to reason about. `contains` answers for the anchor itself, which is
+// exactly the "focus still parked on the trigger" case.
+function anchorAt(top, bottom) {
+    const anchor = {
+        isConnected: true,
+        getBoundingClientRect: () => ({ top, left: 0, right: 100, bottom, width: 100, height: 20 }),
+    };
+    anchor.contains = el => el === anchor;
+    return anchor;
+}
+const OFF_SCREEN_ANCHOR = () => anchorAt(-120, -100);
+const ON_SCREEN_ANCHOR = () => anchorAt(0, 20);
+
+test('a panel parked at open reports its first visibility to .NET exactly once', () => {
+    // Focus still sits on the anchor (the trigger that opened the menu): the m1 gate reports,
+    // because re-running the pending initial focus takes it from the trigger into the panel —
+    // the whole point of the first-visibility report.
+    const anchor = OFF_SCREEN_ANCHOR();
+    installDomStubs({ activeElement: anchor });
+    const panel = { ...stubPanel(), contains: () => false };
+    const reported = [];
+    const dotNetRef = {
+        invokeMethodAsync: async (method, openSeq) => { reported.push([method, openSeq]); return true; },
+    };
+
+    // The anchor scrolled out of view mid-gesture: the panel opens but is parked invisible —
+    // the host's OnOpened focus move no-op'd against visibility:hidden.
+    open('parked-first-visible', panel, anchor, dotNetRef, {});
+    assert.equal(panel.style.visibility, 'hidden', 'the panel is parked while the anchor is off-screen');
+    assert.deepEqual(reported, [], 'still hidden — nothing to report yet');
+
+    // The scroll brings the SAME anchor element back into view (the rect moves, the node does
+    // not — a real scroll never swaps the element) and the panel becomes visible; the host must
+    // learn it so the pending initial focus can land for real.
+    anchor.getBoundingClientRect = ON_SCREEN_ANCHOR().getBoundingClientRect;
+    update('parked-first-visible', anchor, {});
+    assert.equal(panel.style.visibility, '', 'the panel is visible again');
+    assert.deepEqual(reported, [['NotifyPanelVisibleAsync', 1]],
+        'the first real visibility is reported to the host with this open\'s sequence');
+
+    // Scrolling out and back again must NOT re-report: a re-focus could yank focus the user
+    // has already placed.
+    anchor.getBoundingClientRect = OFF_SCREEN_ANCHOR().getBoundingClientRect;
+    update('parked-first-visible', anchor, {});
+    anchor.getBoundingClientRect = ON_SCREEN_ANCHOR().getBoundingClientRect;
+    update('parked-first-visible', anchor, {});
+    assert.deepEqual(reported, [['NotifyPanelVisibleAsync', 1]], 'once per open');
+
+    close('parked-first-visible');
+});
+
+test('a panel that opened on-screen never reports a first visibility', () => {
+    installDomStubs({ activeElement: { isConnected: true } });
+    const panel = { ...stubPanel(), contains: () => false };
+    const reported = [];
+
+    open('visible-open', panel, ON_SCREEN_ANCHOR(), {
+        invokeMethodAsync: async method => { reported.push(method); return true; },
+    }, {});
+    update('visible-open', ON_SCREEN_ANCHOR(), {});
+    update('visible-open', ON_SCREEN_ANCHOR(), {});
+
+    assert.equal(panel.style.visibility, '');
+    assert.deepEqual(reported, [],
+        'OnOpened already fired against a visible panel — no re-report, no re-focus');
+    close('visible-open');
+});
+
+test('a fresh open re-arms the first-visibility report', () => {
+    // Focus went nowhere between the opens (body): the m1 gate is the focusWentNowhere branch.
+    installDomStubs();
+    globalThis.document.activeElement = globalThis.document.body;
+    const panel = { ...stubPanel(), contains: () => false };
+    const reported = [];
+    const dotNetRef = {
+        invokeMethodAsync: async (method, openSeq) => { reported.push([method, openSeq]); return true; },
+    };
+
+    open('rearm-open', panel, OFF_SCREEN_ANCHOR(), dotNetRef, {});
+    update('rearm-open', ON_SCREEN_ANCHOR(), {});
+    close('rearm-open');
+    assert.deepEqual(reported, [['NotifyPanelVisibleAsync', 1]]);
+
+    // Reopen parked: the report must be armed again for the new open, not consumed by the last —
+    // and the sequence must move on, so .NET can drop a stale report of the first open (m2).
+    open('rearm-open', panel, OFF_SCREEN_ANCHOR(), dotNetRef, {});
+    update('rearm-open', ON_SCREEN_ANCHOR(), {});
+    assert.deepEqual(reported,
+        [['NotifyPanelVisibleAsync', 1], ['NotifyPanelVisibleAsync', 2]],
+        'the second open reports its own first visibility under its own sequence');
+    close('rearm-open');
+});
+
+test('focus moved elsewhere while parked consumes the report without firing it (m1)', () => {
+    // The user tabbed away while the panel sat parked invisible. When the anchor scrolls back
+    // the panel becomes visible, but re-running the pending initial focus would YANK focus off
+    // the element the user placed it on — so nothing is reported. The flag is still consumed:
+    // this open never gets a second chance to re-focus.
+    installDomStubs({ activeElement: { isConnected: true } }); // a live element outside anchor and panel
+    const panel = { ...stubPanel(), contains: () => false };
+    const reported = [];
+
+    open('parked-focus-elsewhere', panel, OFF_SCREEN_ANCHOR(), {
+        invokeMethodAsync: async (method, openSeq) => { reported.push([method, openSeq]); return true; },
+    }, {});
+    assert.equal(panel.style.visibility, 'hidden');
+
+    update('parked-focus-elsewhere', ON_SCREEN_ANCHOR(), {});
+    assert.equal(panel.style.visibility, '', 'the panel itself is visible again');
+    assert.deepEqual(reported, [], 'a user-placed focus must not be yanked back');
+
+    // And no later park/unpark cycle revives the report — once per open, consumed silently.
+    update('parked-focus-elsewhere', OFF_SCREEN_ANCHOR(), {});
+    update('parked-focus-elsewhere', ON_SCREEN_ANCHOR(), {});
+    assert.deepEqual(reported, []);
+
+    close('parked-focus-elsewhere');
+});
+
+test('a parked panel holding focus is dismissed, never reported visible', async () => {
+    const insidePanel = { isConnected: true };
+    installDomStubs({ activeElement: insidePanel });
+    const panel = { ...stubPanel(), contains: el => el === insidePanel };
+    const reported = [];
+    const dismissed = [];
+    const anchor = OFF_SCREEN_ANCHOR();
+
+    open('parked-focused', panel, anchor, {
+        invokeMethodAsync: async (method, reason) => {
+            if (reason !== undefined) dismissed.push(reason); else reported.push(method);
+            return true;
+        },
+    }, {});
+
+    assert.equal(panel.style.visibility, 'hidden');
+    assert.deepEqual(reported, [],
+        'a hidden panel holding focus closes through the anchor-hidden path instead');
+    await new Promise(r => setTimeout(r, 0)); // dismiss() reports through a promise continuation
+    assert.deepEqual(dismissed, ['anchor-hidden']);
+    close('parked-focused');
+});
+
 test('matchAnchorWidth respects panel min-width when clamping (N324)', () => {
     installDomStubs();
 

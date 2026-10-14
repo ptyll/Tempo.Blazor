@@ -42,6 +42,8 @@
 }
 .tm-lightbox-close, .tm-lightbox-delete { position: absolute; }
 .tm-lightbox-close  { top: -3rem; inset-inline-end: 0; }
+/* The delete lives in the top-end chrome band beside the close on desktop. Below 640px it moves
+   into the footer flex row — see the media query at the end of the file. */
 .tm-lightbox-delete { top: -3rem; inset-inline-end: 3rem; }
 .tm-lightbox-close:hover,
 .tm-lightbox-prev:hover,
@@ -78,10 +80,25 @@
 }
 .tm-lightbox-loading { color: rgba(255,255,255,0.7); font-size: var(--tm-font-size-sm); }
 
+/* In RTL the strip mirrors: the next image lies to the LEFT — the buttons' logical insets below
+   already place prev at the right edge and next at the left, and the code swaps ArrowLeft/Right
+   with the direction — so the chevron glyphs flip to keep pointing where the action goes. The
+   :dir() pseudo-class reads the element's OWN resolved direction (inherited or set at any level
+   above it), not a hardcoded ancestor attribute — the same live probe the tm-rtl.js helper uses,
+   so a host that flips direction through CSS instead of the dir attribute mirrors too (m4). */
+.tm-lightbox-prev:dir(rtl) svg,
+.tm-lightbox-next:dir(rtl) svg {
+  transform: scaleX(-1);
+}
+
 /* Below 640px the image takes the whole row and the arrows sit over its edges, inside the
    viewport (d49c9776). From 640px up the arrows sit beside the image as before. */
 @media (width < 640px) {
   .tm-lightbox-content { width: calc(100vw - 2 * var(--tm-space-2)); max-width: none; }
+  /* A panorama's row can be SHORTER than the 44px arrows: the arrows centre on the row and their
+     tops reached up into the top-end chrome band (close/delete at -3rem), overlapping the delete
+     button. The row keeps one touch target of height, so the arrows never leave the image band. */
+  .tm-lightbox-content { min-height: var(--tm-touch-target); }
   .tm-lightbox-image-wrap { min-width: 0; }
   .tm-lightbox-img { max-width: 100%; max-height: 75vh; }
   .tm-lightbox-prev,
@@ -95,12 +112,16 @@
   }
   .tm-lightbox-prev { inset-inline-start: var(--tm-space-2); }
   .tm-lightbox-next { inset-inline-end: var(--tm-space-2); }
-  /* The top-end close and delete grow to touch targets too. The delete keeps the same gap
-     beside the now-44px close (was 3rem = 2.5rem close + half a space). */
-  .tm-lightbox-close,
-  .tm-lightbox-delete {
+  /* The top-end close grows to a touch target too. The DELETE moves out of the chrome band
+     altogether: it sat at -3rem next to the close, on the same corner the arrows' upper ends
+     can reach on a short (panorama) row. In the footer flex row (below the counter pill) it
+     keeps its 44px target in the bottom band, a full --tm-space-2 clear of the content row the
+     arrows live in — the clearance below moves the footer down by that same space (M2). */
+  .tm-lightbox-close { width: var(--tm-touch-target); height: var(--tm-touch-target); }
+  .tm-lightbox-footer .tm-lightbox-delete {
+    position: static;
     width: var(--tm-touch-target);
     height: var(--tm-touch-target);
   }
-  .tm-lightbox-delete { inset-inline-end: calc(var(--tm-touch-target) + var(--tm-space-2)); }
+  .tm-lightbox-footer { bottom: calc(-2.5rem - var(--tm-space-2)); }
 }

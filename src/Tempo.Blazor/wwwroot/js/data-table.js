@@ -28,6 +28,23 @@ window.tmDataTable = (function () {
         }
     })();
 
+    // The writing direction probe is the SHARED one (tm-rtl.js — the same single directionOf the
+    // lightbox and the splitter read). This file is a classic script, so the module loads the way
+    // pointer-drag.js does: by URL, once, at startup. Until the import lands (or wherever it
+    // fails, e.g. SSR) directionOf answers with the same computed-style probe inline, so the
+    // export is callable from the first synchronous line after script evaluation.
+    var rtlUrl = (function () {
+        try {
+            var script = document.currentScript;
+            if (script && script.src) return new URL('tm-rtl.js', script.src).href;
+            return new URL('_content/Tempo.Blazor/js/tm-rtl.js', document.baseURI).href;
+        } catch (e) {
+            return '_content/Tempo.Blazor/js/tm-rtl.js';
+        }
+    })();
+    var sharedRtl = null;
+    import(rtlUrl).then(function (m) { sharedRtl = m; }).catch(function () { /* inline probe stays */ });
+
     var HANDLE_SELECTOR = '.tm-col-resize-handle';
     // Keys the resize handle answers (Blazor performs the resize); the browser's default for them
     // on a focused handle is scrolling the table, which a width change must not also do.
@@ -36,10 +53,13 @@ window.tmDataTable = (function () {
     /**
      * The writing direction of an element, read live from its computed style. The horizontal drag
      * delta inverts in RTL, so the table has to ask the DOM (a `dir` attribute or CSS can flip it
-     * at any level above the table). Falls back to 'ltr' wherever the answer cannot be determined
-     * (Node, SSR).
+     * at any level above the table). Delegates to the shared tm-rtl.js probe once its import has
+     * landed; the inline branch is the identical fallback for the window before that (and for
+     * hosts where the import failed). Falls back to 'ltr' wherever the answer cannot be
+     * determined (Node, SSR).
      */
     function directionOf(element) {
+        if (sharedRtl) return sharedRtl.directionOf(element);
         try {
             if (typeof getComputedStyle !== 'function') return 'ltr';
             return getComputedStyle(element)?.direction === 'rtl' ? 'rtl' : 'ltr';

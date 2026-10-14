@@ -90,6 +90,30 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
     [Fact]
     public void TmKeyboardShortcutsHelp_Overlay_Click_Calls_OnClose()
     {
+        // m7: a real browser click on the backdrop always STARTS with a pointerdown there; the
+        // flag it arms is what lets HandleBackdropClickAsync treat this as an outside click.
+        bool closed = false;
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.OnClose, EventCallback.Factory.Create(this, () => closed = true)));
+
+        cut.Find(".tm-keyboard-shortcuts-overlay").TriggerEvent("onpointerdown", new PointerEventArgs());
+        cut.Find(".tm-keyboard-shortcuts-overlay").Click();
+
+        closed.Should().BeTrue("a press that starts and ends on the backdrop is an outside click");
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_BackdropClickWithoutAPressOnTheBackdrop_DoesNotClose()
+    {
+        // m7 (review, the TmCommandPalette pattern): a drag-select that starts inside the panel and
+        // ends over the backdrop delivers only the CLICK there (the common ancestor of press and
+        // release) — the backdrop's pointerdown never ran, the press flag was never armed, and the
+        // dialog must stay open. bUnit cannot replay the pointer sequence itself (its dispatcher
+        // bubbles a panel pointerdown straight into the backdrop's arming handler), so the bare
+        // click IS this scenario in bUnit; the real drag is proven in the browser by
+        // Shortcuts_ClickInsideTheDialog_DoesNotClose_BackdropClickDoes.
         bool closed = false;
         var cut = Render<TmKeyboardShortcutsHelp>(p => p
             .Add(c => c.Categories, TestCategories())
@@ -98,7 +122,68 @@ public class TmKeyboardShortcutsHelpTests : LocalizationTestBase
 
         cut.Find(".tm-keyboard-shortcuts-overlay").Click();
 
-        closed.Should().BeTrue();
+        closed.Should().BeFalse("the press started inside the panel, so this click is the end of " +
+            "a drag-select and must not dismiss the dialog");
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_ClickInsideThePanel_DoesNotClose()
+    {
+        // 2.9.1: the fence around the panel is a REAL element wrapper now (the phase-7 palette
+        // pattern) — the old tag-level @onclick:stopPropagation on <TmFocusScope> was a runtime
+        // no-op and a click anywhere inside the dialog closed it. bUnit delivers a click only to
+        // a handler on the element chain, so the missing-handler exception IS the observable: the
+        // content carries no close handler of its own and the backdrop's handler is out of reach.
+        bool closed = false;
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.OnClose, EventCallback.Factory.Create(this, () => closed = true)));
+
+        var act = () => cut.Find(".tm-keyboard-shortcuts-content").Click();
+        act.Should().Throw<Bunit.MissingEventHandlerException>(
+            "the content owns no click handler — the click cannot have reached the backdrop's close handler");
+
+        closed.Should().BeFalse("a click inside the dialog must not dismiss it");
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_CloseButton_StillCloses()
+    {
+        // The positive handler inside the fence: the close button's own click closes the dialog
+        // even though its click never reaches the backdrop (the wrapper stops it — the button's
+        // OWN handler is what fires).
+        bool closed = false;
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.OnClose, EventCallback.Factory.Create(this, () => closed = true)));
+
+        cut.Find(".tm-keyboard-shortcuts-close").Click();
+
+        closed.Should().BeTrue("the header close button works inside the fence");
+    }
+
+    [Fact]
+    public void TmKeyboardShortcutsHelp_PanelWrapper_IsAnElementFenceNotATagDirective()
+    {
+        // The fence must live on a real element: the wrapper is a direct div child of the overlay
+        // and carries only the stopPropagation directive — dispatching a click ON it proves there
+        // is no click handler there (a component tag-level directive would have been a splatted
+        // no-op and this wrapper would not exist at all).
+        bool closed = false;
+        var cut = Render<TmKeyboardShortcutsHelp>(p => p
+            .Add(c => c.Categories, TestCategories())
+            .Add(c => c.IsVisible, true)
+            .Add(c => c.OnClose, EventCallback.Factory.Create(this, () => closed = true)));
+
+        var wrapper = cut.Find(".tm-keyboard-shortcuts-overlay > div");
+        wrapper.Should().NotBeNull("the fence is an element wrapper (the palette pattern)");
+        var act = () => wrapper.Click();
+        act.Should().Throw<Bunit.MissingEventHandlerException>(
+            "the wrapper carries only @onclick:stopPropagation — no handler of its own");
+
+        closed.Should().BeFalse();
     }
 
     [Fact]

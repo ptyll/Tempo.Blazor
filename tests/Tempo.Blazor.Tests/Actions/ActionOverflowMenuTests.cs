@@ -426,4 +426,86 @@ public class ActionOverflowMenuTests : LocalizationTestBase
         cut.WaitForAssertion(() => JSInterop.Invocations
             .Count(i => i.Identifier == "Blazor._internal.domWrapper.focus").Should().Be(1));
     }
+
+    // ── Initial focus when the menu opened while its anchor was off-screen (overlay park) ───────
+
+    // "Blazor._internal.domWrapper.focus" is how bUnit surfaces ElementReference.FocusAsync.
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+
+    [Fact]
+    public async Task PanelVisibleAfterParkedOpen_RunsThePendingInitialFocusAgain()
+    {
+        // The More menu opened mid-scroll: overlay.js parked the popover visibility:hidden while
+        // the anchor was off-screen, so the OnOpened focus move no-op'd in the browser. When the
+        // anchor scrolls back into view overlay.js reports the panel's first real visibility
+        // (NotifyPanelVisibleAsync), OnOpened fires again and the pending initial focus lands.
+        var cut = RenderMenu([Item("a"), Item("off", disabled: true)]);
+        cut.Find("button.test-trigger").Click();
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == FocusInvocation).Should().Be(1,
+                "the open fired OnOpened once and the first focus move ran (a no-op in the browser)"));
+
+        var panel = cut.FindComponent<TmOverlayPanel>();
+        // The first open carries sequence 1 — the same number overlay.js stamps on its report (m2).
+        await cut.InvokeAsync(() => panel.Instance.NotifyPanelVisibleAsync(1));
+
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == FocusInvocation).Should().Be(2,
+                "the first-visibility report re-runs the pending initial focus"));
+    }
+
+    [Fact]
+    public async Task PanelVisibleReport_WhileClosed_IsIgnored()
+    {
+        // A late JS report (the panel closed before the scroll returned) must not focus anything.
+        var cut = RenderMenu([Item("a")]);
+
+        var panel = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => panel.Instance.NotifyPanelVisibleAsync(1));
+
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task StalePanelVisibleReport_OfAnEarlierOpen_IsIgnored()
+    {
+        // m2: a report that was already in flight while .NET closed and reopened the panel belongs
+        // to the EARLIER open. It must not fire the new open's OnOpened (no double focus move).
+        var cut = RenderMenu([Item("a")]);
+        cut.Find("button.test-trigger").Click();
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        // Close programmatically (every close path funnels through the controlled panel) and
+        // reopen through the trigger — the component's open sequence is now 2.
+        var panel = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => panel.Instance.CloseAsync());
+        cut.Find("button.test-trigger").Click();
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == FocusInvocation).Should().Be(2,
+                "the new open runs its own initial focus"));
+
+        // …then the STALE report of the first open lands: ignored, no extra focus move.
+        await cut.InvokeAsync(() => panel.Instance.NotifyPanelVisibleAsync(1));
+
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(2,
+            "a stale sequence may not re-fire the new open's OnOpened");
+    }
+
+    [Fact]
+    public async Task Sheet_RejectsThePanelVisibleReport_NeverRefocuses()
+    {
+        // The sheet never parks (no overlay.js positioning), so a report reaching a sheet is a
+        // stray: the sheet's own initial-focus contract stays single-shot.
+        var cut = RenderMenu([Item("a")], PanelPresentation.Sheet, TmLayoutMode.Mobile);
+        cut.Find("button.test-trigger").Click();
+        cut.WaitForAssertion(() => JSInterop.Invocations
+            .Count(i => i.Identifier == FocusInvocation).Should().Be(1));
+
+        var panel = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => panel.Instance.NotifyPanelVisibleAsync(1));
+
+        JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1,
+            "a sheet ignores the popover park report");
+    }
 }

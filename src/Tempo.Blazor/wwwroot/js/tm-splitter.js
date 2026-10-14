@@ -45,22 +45,13 @@ export function measureSize(pane, orientation) {
     return typeof size === 'number' && Number.isFinite(size) ? Math.round(size) : -1;
 }
 
-/**
- * The writing direction of an element, read live from its computed style: the horizontal delta
- * inverts in RTL, so the splitter has to ask the DOM (a `dir` attribute or CSS can flip it at any
- * level above the strip). Falls back to `ltr` wherever the answer cannot be determined (Node, SSR).
- * @param {HTMLElement|null} element any element inside the splitter
- * @returns {'ltr'|'rtl'}
- */
-export function directionOf(element) {
-    try {
-        if (typeof getComputedStyle !== 'function') return 'ltr';
-        return getComputedStyle(element)?.direction === 'rtl' ? 'rtl' : 'ltr';
-    }
-    catch {
-        return 'ltr';
-    }
-}
+// The writing direction probe is the SHARED one (tm-rtl.js) — the same single directionOf the
+// lightbox and the data table read, so the RTL fallback contract (ltr wherever the answer cannot
+// be determined: Node, SSR, a throwing probe) cannot drift between components. Imported AND
+// re-exported: the splitter's own public surface keeps `directionOf`, and the resize path below
+// keeps calling it under the same name.
+import { directionOf } from './tm-rtl.js';
+export { directionOf };
 
 /**
  * Attaches the pointer-drag resize to a separator strip. A press that starts on the collapse

@@ -882,6 +882,78 @@ public class MobileActionBarE2ETests : WasmTestBase
     }
 
     [TestMethod]
+    public async Task Demo_1280_MorePopover_OpenedOffScreen_FocusesFirstItemOnceTheAnchorScrollsBack()
+    {
+        // F25a: the More popover opened while its trigger was scrolled out of view used to park
+        // visibility:hidden (overlay.js) and the initial focus() no-op'd INSIDE the hidden panel —
+        // focus stayed on <body> forever, even after the anchor scrolled back (the 1280 test above
+        // works around it by scrolling first). The panel now reports its first real visibility and
+        // the pending initial focus lands then.
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.GotoAsync($"{BaseUrl}/mobile-action-bar");
+        await WaitForAppReadyAsync(page);
+
+        var more = page.Locator("[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__more");
+        await more.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+        // Put the trigger off-screen ABOVE the viewport so it is out of view when the menu opens —
+        // then focus and open it WITHOUT scrolling it into view. The bar is position:sticky
+        // inside its card, so it exits through the top only when the card itself scrolls past the
+        // viewport top; at 1280 the three variants share one grid row and the page is too short
+        // to scroll that far (the previous scrollBy setup clamped and left the bar pinned at
+        // Y=563), so the page is extended below the sticky section first. The spacer is
+        // aria-hidden test scaffolding; the product behaviour under test starts at the open.
+        await page.EvaluateAsync(
+            """
+            () => {
+                const host = document.querySelector("[data-testid='mab-variant-sticky']");
+                const spacer = document.createElement('div');
+                spacer.style.height = `${2 * window.innerHeight}px`;
+                spacer.setAttribute('aria-hidden', 'true');
+                host.appendChild(spacer);
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            "() => { const bar = document.querySelector(\"[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__more\"); if (!bar) return false; const r = bar.getBoundingClientRect(); return r.bottom <= 0; }",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 5000 });
+        var triggerBox = await more.BoundingBoxAsync();
+        Assert.IsNotNull(triggerBox);
+        Assert.IsTrue(triggerBox!.Y + triggerBox.Height <= 0,
+            $"the trigger must be off-screen ABOVE the viewport for this test, Y={triggerBox.Y}");
+        await more.EvaluateAsync("el => el.focus({ preventScroll: true })");
+        await page.Keyboard.PressAsync("Enter");
+
+        var panel = page.Locator("[data-testid='mab-variant-sticky'] .tm-mobile-action-bar__menu-panel");
+        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+        Assert.AreEqual("true", await more.GetAttributeAsync("aria-expanded"), "the menu is open");
+        Assert.AreEqual("hidden", await panel.EvaluateAsync<string>("el => getComputedStyle(el).visibility"),
+            "overlay.js parks the panel invisible while the anchor is off-screen");
+
+        // The scrolled-into-view trigger becomes visible again: the pending initial focus must
+        // land on the first ENABLED menuitem now.
+        await more.EvaluateAsync("el => el.scrollIntoView({ block: 'center', behavior: 'instant' })");
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.getAttribute('role') === 'menuitem'",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreNotEqual("hidden", await panel.EvaluateAsync<string>("el => getComputedStyle(el).visibility"),
+            "the panel is visible again once the anchor is back");
+        var focusedLabel = await page.EvaluateAsync<string>("() => document.activeElement?.textContent?.trim() ?? ''");
+        StringAssert.Contains(focusedLabel, "Duplicate", "the initial focus skips disabled items");
+
+        // The menu still works: Escape closes it and focus returns to the trigger.
+        await page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(panel).ToHaveCountAsync(0);
+        await page.WaitForFunctionAsync(
+            "() => document.activeElement?.classList?.contains('tm-mobile-action-bar__more') ?? false",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 5000 });
+    }
+
+    [TestMethod]
     public async Task Dashboard_390_EditMode_BarSticksAtViewportBottom()
     {
         // X2 (c): the real sticky proof at 390x844 — the viewport keeps its real height while

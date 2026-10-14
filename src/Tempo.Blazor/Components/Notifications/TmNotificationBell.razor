@@ -65,9 +65,16 @@
                 {
                     @foreach (var n in VisibleNotifications)
                     {
-                        <div class="tm-notification-bell__item @(n.IsRead ? "" : "tm-notification-bell__item--unread")"
-                             @onclick="() => OnItemClickAsync(n)">
-                            <div class="tm-notification-bell__avatar">
+                        @* 2.9.1: the entry is a native <button> — a div @onclick was a keyboard trap
+                           (WCAG 2.1.1). The item holds no nested interactive element (avatar, message,
+                           time and dot are all presentation), so the whole entry is ONE button; the
+                           inner wrappers are spans because a button's content model is phrasing
+                           content — the class selectors keep the previous styling. The button keeps
+                           the native Enter/Space activation: no @onkeydown emulation here. *@
+                        <button type="button"
+                                class="tm-notification-bell__item @(n.IsRead ? "" : "tm-notification-bell__item--unread")"
+                                @onclick="() => OnItemClickAsync(n)">
+                            <span class="tm-notification-bell__avatar">
                                 @if (!string.IsNullOrEmpty(n.Actor?.AvatarUrl))
                                 {
                                     <img src="@n.Actor.AvatarUrl" alt="" />
@@ -76,16 +83,20 @@
                                 {
                                     <TmIcon Name="@TypeIcon(n.Type)" Size="IconSize.Sm" />
                                 }
-                            </div>
-                            <div class="tm-notification-bell__content">
+                            </span>
+                            <span class="tm-notification-bell__content">
                                 <span class="tm-notification-bell__message">@n.Title</span>
                                 <time class="tm-notification-bell__time" datetime="@n.CreatedAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)" title="@AbsoluteTime(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
-                            </div>
+                            </span>
                             @if (!n.IsRead)
                             {
+                                @* m6 (review): the unread dot is aria-hidden decoration — without a
+                                   text alternative a screen reader hears two identical entries. The
+                                   sr-only span names the unread state. *@
+                                <span class="tm-sr-only">@Loc["TmNotificationBell_Unread"]</span>
                                 <span class="tm-notification-bell__dot" aria-hidden="true"></span>
                             }
-                        </div>
+                        </button>
                     }
                 }
                 else

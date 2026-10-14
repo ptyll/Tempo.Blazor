@@ -122,6 +122,35 @@
 
     private TmFocusScope? _scope;
     private PromotedScopeGate? _gate;
+    private LazyJsModule? _rtlModule;
+    // m3 (review): the direction is read ONCE per open, not on every arrow key press. Writing
+    // direction cannot change while the modal is up (the host would have to flip dir under an
+    // open lightbox), so the probe result is cached from the opening render and reset on close.
+    private bool? _isRtlCached;
+    private bool _rtlReadThisOpen;
+
+    /// <summary>
+    /// The lightbox's writing direction, read live from the scope root through the shared
+    /// <c>tm-rtl.js</c> helper. In RTL the strip mirrors — the next image lies to the LEFT, where
+    /// the buttons' logical insets already place it — so the physical arrow keys swap. Resolves
+    /// to LTR wherever JS is unavailable (prerender, bUnit without a handler): the historical
+    /// behaviour.
+    /// </summary>
+    private async Task<bool> IsRtlAsync()
+    {
+        try
+        {
+            _rtlModule ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-rtl.js");
+            var (ok, direction) = await _rtlModule.TryInvokeAsync<string>("directionOf", _scope?.Element ?? default);
+            return ok && string.Equals(direction, "rtl", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException
+                               or TaskCanceledException or ObjectDisposedException
+                               or InvalidOperationException)
+        {
+            return false;
+        }
+    }
 
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -134,6 +163,19 @@
         {
             StateHasChanged();
         }
+
+        // m3: the direction probe runs once per open (the first render with IsOpen true), not per
+        // key press — the arrow-key handler only reads the cache below.
+        if (IsOpen && !_rtlReadThisOpen)
+        {
+            _rtlReadThisOpen = true;
+            _isRtlCached = await IsRtlAsync();
+        }
+        else if (!IsOpen)
+        {
+            _rtlReadThisOpen = false;
+            _isRtlCached = null;
+        }
     }
 
     /// <inheritdoc />
@@ -141,14 +183,29 @@
     {
         if (_scope is not null) await _scope.DisposeAsync();
         if (_gate is not null) await _gate.DisposeAsync();
+        if (_rtlModule is not null) await _rtlModule.DisposeAsync();
     }
 
     private async Task HandleKeyAsync(KeyboardEventArgs e)
     {
+        // Only the arrows need the direction — every other keydown skips the interop call.
+        if (e.Key is not ("ArrowRight" or "ArrowLeft"))
+        {
+            return;
+        }
+
+        // In RTL the strip mirrors: the next image lies to the LEFT (the mirrored chevrons and the
+        // buttons' logical insets say so), so the physical arrow keys swap with the direction.
+        // m3: the probe ran once on the opening render; the cache is the per-press read.
+        var rtl = _isRtlCached ?? await IsRtlAsync();
         switch (e.Key)
         {
-            case "ArrowRight" when !IsLast:       await OnNext.InvokeAsync();  break;
-            case "ArrowLeft"  when !IsFirst:      await OnPrev.InvokeAsync();  break;
+            case "ArrowRight" when rtl ? !IsFirst : !IsLast:
+                await (rtl ? OnPrev : OnNext).InvokeAsync();
+                break;
+            case "ArrowLeft" when rtl ? !IsLast : !IsFirst:
+                await (rtl ? OnNext : OnPrev).InvokeAsync();
+                break;
         }
     }
 }

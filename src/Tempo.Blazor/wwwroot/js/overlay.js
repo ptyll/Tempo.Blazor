@@ -45,9 +45,21 @@ const FOCUSABLE = [
 ].join(',');
 
 const tracked = new Map();
+// Per-KEY open sequence (m2): every open() bumps the key's counter and stamps the entry with it,
+// and the first-visibility report carries the stamping open's number. The map survives close()
+// on purpose — the C# side (TmOverlayPanel._openSeq) never resets either, so both counters stay
+// 1:1 across close/reopen cycles of the same panel and a report of an EARLIER open is
+// recognizably stale. Keyed (not one module counter) so independent panels never share numbers.
+const openSeqByKey = new Map();
 let listenersBound = false;
 let resizeObserver = null;
 let frame = 0;
+
+function nextOpenSeq(key) {
+    const seq = (openSeqByKey.get(key) ?? 0) + 1;
+    openSeqByKey.set(key, seq);
+    return seq;
+}
 
 const supportsPopover = typeof HTMLElement !== 'undefined'
     && typeof HTMLElement.prototype.showPopover === 'function';
@@ -328,13 +340,38 @@ function place(entry) {
     // OnDismissed), and focus returns to the anchor via the shared restore.
     const anchorVisible = anchorIntersectsViewport(anchorRect, view.width, view.height);
     if (!anchorVisible && panel.contains(document.activeElement)) {
+        entry.parked = true;
         panel.style.visibility = 'hidden';
         if (dismiss(entry, 'anchor-hidden')) {
             maybeRestoreAnchorFocus(entry, null);
         }
         return;
     }
+    // First visibility after a park: the panel opened while its anchor was scrolled out of the
+    // viewport and was parked invisible, so the host's post-open focus move (OnOpened → focus())
+    // no-op'd against the visibility:hidden panel. Report the first real visibility so the host
+    // can re-run the pending initial focus (the More menu opened mid-scroll still lands it on
+    // the first enabled item). ONCE per open — a later re-focus must never yank focus the user
+    // has already placed; a fresh open() resets the flag. The openSeq rides along so .NET can
+    // drop a stale report that lands after a close-and-reopen (m2).
+    const reportFirstVisible = anchorVisible && entry.parked === true && entry.visibleReported !== true;
+    entry.parked = !anchorVisible;
     panel.style.visibility = anchorVisible ? '' : 'hidden';
+    if (reportFirstVisible) {
+        entry.visibleReported = true;
+        // m1: only a FREE focus may be re-placed by the host — focus that went nowhere (the
+        // parked panel's initial move dropped it to <body>) or that still sits on the anchor
+        // (the trigger that opened the menu and never left it). A user who tabbed somewhere
+        // while the panel was parked must not be yanked back; the flag is still consumed, so
+        // this open never reports again.
+        const active = document.activeElement;
+        const focusIsFree = focusWentNowhere(entry, active)
+            || (anchorEl && typeof anchorEl.contains === 'function' && anchorEl.contains(active));
+        if (focusIsFree) {
+            entry.dotNetRef?.invokeMethodAsync('NotifyPanelVisibleAsync', entry.openSeq ?? 0)
+                ?.catch(() => { /* the circuit may be gone; the panel is visible either way */ });
+        }
+    }
 
     if (options.constrainHeight && (placed.side === 'bottom' || placed.side === 'top')) {
         // The room math runs in the SAME visible space as placement: the anchor rect is already
@@ -647,6 +684,13 @@ export function open(key, panel, anchor, dotNetRef, options) {
         existing.dotNetRef = dotNetRef;
         existing.options = normalizeOptions(options);
         existing.dismissed = false;
+        // A fresh open re-arms the parked/first-visibility bookkeeping (place()) and stamps the
+        // entry with the key's next open sequence, so a first-visibility report of the PREVIOUS
+        // open (already in flight when .NET closed and reopened) is recognizably stale on the
+        // C# side (m2).
+        existing.parked = false;
+        existing.visibleReported = false;
+        existing.openSeq = nextOpenSeq(key);
         // Restore stacking order: a reopened entry counts as freshly opened, not stuck wherever
         // it was first inserted — onKeyDown walks [...tracked.values()].reverse() (N164).
         tracked.delete(key);
@@ -667,6 +711,12 @@ export function open(key, panel, anchor, dotNetRef, options) {
         cssMaxHeight: parseFloat(getComputedStyle(panel).maxHeight),
         usesPopover: supportsPopover,
         dismissed: false,
+        // Parked/first-visibility bookkeeping: place() parks the panel visibility:hidden while the
+        // anchor is off-screen and reports the first real visibility to .NET (once per open). The
+        // sequence number rides on every report so .NET can drop a stale one (m2).
+        parked: false,
+        visibleReported: false,
+        openSeq: nextOpenSeq(key),
     };
     tracked.set(key, entry);
     bindListeners();

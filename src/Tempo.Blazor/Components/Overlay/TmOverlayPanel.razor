@@ -144,6 +144,11 @@
     private bool _openedPending;
     private bool _openedFired;
     private string? _openOptionsSignature;
+    // m2: incremented on every overlay.js open(). overlay.js stamps its first-visibility reports
+    // with the sequence of the open that armed them, so a report that was already in flight while
+    // .NET closed and reopened the panel is recognizably stale and must not re-fire OnOpened of
+    // the NEW open.
+    private int _openSeq;
 
     /// <summary>
     /// Id of the rendered panel element. Defaults to a generated value; supply one when the anchor
@@ -210,7 +215,10 @@
     /// sheet mode after the sheet's opening render. Use it for post-open focus moves — e.g.
     /// focusing a filter input — because a consumer's <c>OnAfterRenderAsync</c> can run before
     /// the panel is displayed, and a focus move against a still-hidden popover is dropped
-    /// (UX review round 2, m3). Fires once per open; closing resets it.
+    /// (UX review round 2, m3). Fires once per open; closing resets it. A panel that OPENED
+    /// while its anchor was scrolled out of the viewport was parked <c>visibility:hidden</c> —
+    /// the focus move a handler ran here no-op'd — so it fires once more when overlay.js
+    /// reports the panel's first real visibility (<see cref="NotifyPanelVisibleAsync"/>).
     /// </summary>
     [Parameter] public EventCallback OnOpened { get; set; }
 
@@ -418,6 +426,38 @@
         return !IsVisible;
     }
 
+    /// <summary>
+    /// Called by overlay.js when a panel that opened while its anchor was scrolled out of the
+    /// viewport (parked <c>visibility:hidden</c>) becomes visible for the first time in this
+    /// open. The post-open focus move ran against the hidden panel and no-op'd, so
+    /// <see cref="OnOpened"/> is raised again now that the panel is actually on screen and a
+    /// pending initial focus can land for real (the More menu opened mid-scroll). Fire-and-forget
+    /// from overlay.js: a call that lands after the panel closed is ignored, and a sheet — which
+    /// never parks — rejects the report outright. The <paramref name="openSeq"/> argument is the
+    /// sequence of the JS open that armed the report; a report of an EARLIER open (in flight
+    /// while the panel was closed and reopened) is dropped, so a stale report can never fire the
+    /// new open's <see cref="OnOpened"/> (m2).
+    /// </summary>
+    [JSInvokable]
+    public Task NotifyPanelVisibleAsync(int openSeq)
+    {
+        if (!IsVisible || IsSheet || openSeq != _openSeq)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Inside the lambda: a report racing the close (its render already ran the release
+        // branch) must not arm a pending OnOpened for a panel that is on its way out.
+        return InvokeAsync(() =>
+        {
+            if (IsVisible && !IsSheet && openSeq == _openSeq)
+            {
+                _openedPending = true;
+            }
+            StateHasChanged();
+        });
+    }
+
     private async Task ApplyOpenAsync(bool open, bool dismissed, string? reason)
     {
         if (IsOpen.HasValue)
@@ -528,6 +568,9 @@
                 if (!_jsOpen)
                 {
                     _jsOpen = true;
+                    // m2: this open's sequence — overlay.js stamps its first-visibility reports
+                    // with it; the count matches the JS side (first open = 1, each reopen +1).
+                    _openSeq++;
                     _openOptionsSignature = signature;
                     await _module.InvokeVoidAsync("open", _key, panel, anchor, _dotNetRef, BuildOptions());
                     // m3: only now — showPopover() has run — is the panel actually displayed; a

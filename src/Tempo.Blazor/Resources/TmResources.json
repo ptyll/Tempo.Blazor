@@ -3097,6 +3097,7 @@
   "TmMvl_TableView": "Table view",
   "TmNotificationBell_AriaLabel": "Notifications",
   "TmNotificationBell_MarkAllRead": "Mark all as read",
+"TmNotificationBell_Unread": "Unread notification",
   "TmNotificationBell_NewCount_One": "{0} new notification",
   "TmNotificationBell_NewCount_Other": "{0} new notifications",
   "TmNotificationBell_NoNotifications": "No notifications",
