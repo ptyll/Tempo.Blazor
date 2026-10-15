@@ -76,6 +76,27 @@ public class TmActivityCommentsTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Comments_SubmitNewComment_EffectivelyEmptyMarkup_DoesNotCallOnCommentAdded()
+    {
+        string? received = null;
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnCommentAdded,
+                EventCallback.Factory.Create<string>(this, html => received = html)));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        // "<div><br></div>" is the markup a browser leaves behind when the editor is emptied;
+        // the submit guard must treat it like the draft flag does — nothing to submit.
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<div><br></div>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        // The submit is a no-op: OnCommentAdded never fires and the editor stays open so the
+        // user can keep (re)typing.
+        received.Should().BeNull();
+        cut.FindAll(".tm-comment-editor").Should().NotBeEmpty();
+    }
+
+    [Fact]
     public void Comments_EditButton_ShowsWhenCanEdit()
     {
         var cut = Render<TmActivityComments>(p => p

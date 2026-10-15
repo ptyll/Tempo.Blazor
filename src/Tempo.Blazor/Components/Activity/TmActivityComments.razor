@@ -371,6 +371,7 @@
 
     private async Task SubmitEditAsync(string commentId)
     {
+        // Deliberately IsNullOrWhiteSpace, not IsEffectivelyEmpty — the edit-submit guard stays unchanged to preserve existing edit behaviour.
         if (string.IsNullOrWhiteSpace(_editorContent)) return;
         await OnCommentEdited.InvokeAsync((commentId, _editorContent));
         // Closes through the shared CancelEdit so the closed-editor state is reported

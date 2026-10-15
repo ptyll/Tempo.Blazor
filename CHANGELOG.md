@@ -19,6 +19,17 @@
   editor) before opening the new-comment editor, bridging the two draft states with exactly one
   deduped `OnDraftChanged` notification.
 
+- **`TmActivityComments`: a new comment consisting only of empty editor markup (`<br>`,
+  `<div><br></div>`, `<p><br></p>`) is no longer submitted — the submit guard now uses the same
+  effectively-empty check as the draft flag (the edit-submit guard is unchanged).** The
+  new-comment submit invoked `OnCommentAdded` whenever the editor content was not
+  `IsNullOrWhiteSpace`, so clicking Submit with the placeholder-visible markup a browser leaves
+  behind after emptying the editor submitted that markup as a "comment" — and the dirty-guard
+  panel reported nothing unsaved, because the draft flag already uses the effectively-empty
+  check. Submitting such markup is now a no-op: nothing fires and the editor stays open. The
+  edit-submit guard keeps its plain `IsNullOrWhiteSpace` check, so editing behaviour is
+  unchanged.
+
 - **Six `TmDiagramEditor_*` toolbar keys ship in English instead of raw key names, and the
   `Tm_Time_TimeFormat` clock-format resource exists in all four languages.** `TmDiagramEditor`
   used `TmDiagramEditor_ShowGrid` / `HideGrid` / `ShowPageView` / `HidePageView` / `EnableSnap` /
@@ -2028,6 +2039,31 @@
   legacy classes loses the styles.
 
 ### Added
+
+- **`TmActivityComments` can now report its draft state to the host page — the hook behind
+  dirty-guard dialogs.** A host that must ask "discard your changes?" before a refresh/retry
+  could not see a half-written comment: the editor state is private and the existing events fire
+  only after the comment is submitted. Four consumer-facing additive members close the gap (the capability
+  was driven by a concrete consumer — an outage-management consumer page, whose guard needs
+  to see the draft before reloading):
+  the new `TmCommentDraftState` record in `Tempo.Blazor.Abstractions` (`IsEditorOpen`,
+  `EditingCommentId`, `HasUnsavedContent` — flags only, never the raw draft text), the new
+  `[Parameter] EventCallback<TmCommentDraftState> OnDraftChanged`, which fires ONLY when the state
+  value actually changes (value-equality dedup — never once per keystroke, so wiring the callback
+  does not re-render the parent while the user types), the new `public bool HasUnsavedDraft`
+  property for polling the current state at any time (e.g. from a refresh/retry guard), and the
+  new `public Task DiscardDraftAsync()` for the consumer path after the user confirmed the
+  discard in the host's OWN dialog — it closes the open editor (new comment or inline edit),
+  clears its content and is a deliberate no-op when nothing is open. Semantics: a new comment
+  counts as unsaved once its content is not effectively empty; an edit of an existing comment
+  counts as unsaved only once its content differs from the comment's original body — opening an
+  edit and leaving it untouched is not a draft. Consumers compiling against the previous version
+  behave identically without wiring `OnDraftChanged`; the only behaviour adjustments are the three
+  fixes recorded under Fixed above (starting an edit closes the new-comment editor; the Add button
+  is hidden while an edit is open; effectively-empty markup is not submitted as a new comment).
+  Test seam: new `SetEditorContentForTestAsync(string)` (awaits the draft notification); the
+  existing void `SetEditorContentForTest` keeps its signature and now also raises
+  `OnDraftChanged` (fire-and-forget). No new user-facing strings were added.
 
 - **`TmFocusScope.NoteOpenerOnMount`** (advanced, default `false`): set when the scope's `Active`
   flips true only after its content has mounted (e.g. behind a promote/gate), so the opener is

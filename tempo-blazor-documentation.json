@@ -1278,6 +1278,30 @@
           "default": "true"
         }
       ],
+      "methods": [
+        {
+          "name": "DiscardDraftAsync",
+          "signature": "Task DiscardDraftAsync()",
+          "description": "Closes the open editor (new comment or inline edit) and clears its content. Intended for the consumer AFTER the user confirmed the discard in the consumer's own confirmation dialog — the component never shows one itself. A deliberate no-op when nothing is open; doubles as recovery when the comment being edited was removed from Comments by a parent refresh."
+        },
+        {
+          "name": "RefreshAsync",
+          "signature": "Task RefreshAsync()",
+          "description": "Re-renders the component — parents can await this after updating Comments."
+        },
+        {
+          "name": "SetEditorContentForTestAsync",
+          "signature": "Task SetEditorContentForTestAsync(string html)",
+          "description": "Test seam: injects editor content without JS and awaits the draft notification, mirroring the real typing path (ValueChanged → OnDraftChanged). The void SetEditorContentForTest(string) overload keeps its signature for existing callers and runs the same notification fire-and-forget."
+        }
+      ],
+      "properties": [
+        {
+          "name": "HasUnsavedDraft",
+          "type": "bool",
+          "description": "Whether the component currently holds an unsaved comment draft — the same value the OnDraftChanged HasUnsavedContent flag carries, read live from the current editor state so consumers can poll it at any time (e.g. before a refresh that would discard the draft). Read it on the component's dispatcher (an event handler or InvokeAsync) from background threads."
+        }
+      ],
       "cssClasses": [
         "tm-comments",
         "tm-comments-empty",
