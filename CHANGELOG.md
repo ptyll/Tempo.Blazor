@@ -74,6 +74,27 @@
 
 ### Fixed
 
+- **`TmDashboard`: every remaining user-facing string is localized and cancelling an unsaved new
+  dashboard restores the previous one.** Seven hardcoded strings moved onto resource keys
+  (`TmDashboard_NamePlaceholder`, `TmDashboard_DefaultName`, `TmDashboard_NewDashboardName`,
+  `TmDashboard_UnknownWidget`, `TmDashboard_WidgetPlaceholder`, `TmDashboard_Expand`,
+  `TmDashboard_Collapse`), so the widget title/content placeholder, the collapse control, the
+  name editor's placeholder and the empty-dashboard name all follow the UI culture (previously a
+  Czech UI still showed "Dashboard", "New Dashboard", "Unknown Widget", "Widget: …",
+  "Expand"/"Collapse"). The Czech terminology is unified on „nástěnka" across every `TmDashboard_*`
+  and `TmWidgetSelector_*` key (previously mixed: „Moje dashboady", „Vytvořit nový dashboard",
+  „Přejmenovat nástěnku"). Additionally, creating a dashboard through the dialog now remembers the
+  dashboard on screen: **Cancel in edit mode brings the previous dashboard (with its widgets)
+  back without touching the provider** — previously the cancel left the empty, unsaved new
+  dashboard displayed with no way back. Saving ("Uložit změny") commits the new dashboard and
+  clears the restore. The "Create new dashboard" dialog also submits on Enter (the field sits in
+  a `<form>`, so implicit submission runs the same handler as the footer button) and auto-focuses
+  the name field on open.
+
+- **`TmDashboard` delete-confirmation buttons stay in the UI language.** The dialog now passes the
+  localized `CancelButtonText` explicitly alongside `OkButtonText`, so a host with a custom
+  `ITmLocalizer` sees „Zrušit"/"Cancel" on both footer buttons, not a default English label.
+
 - **Signing `TmDocumentCommentThreadPanel`: the reply composer is now bound internally and the
   reply text is cleared when the thread selection changes** (no visible behaviour change
   otherwise). The composer previously seeded from a parameter without a binding, so a reply draft
@@ -830,6 +851,32 @@
 
 ### Accessibility
 
+- **`TmWidgetSelector` is a real modal surface and the `TmDashboard` switcher is a WAI-ARIA menu.**
+  The widget selector previously rendered its own `position: fixed` overlay — no `role="dialog"`,
+  no `aria-modal`, no focus trap, no Escape handling and an unnamed close control. It now renders
+  on `TmModal` (extra-large): `role="dialog"` + `aria-modal` + `aria-labelledby` named by the
+  visible title, the shared focus trap with Escape close and scroll lock, a named close button,
+  and the bottom-sheet presentation on a narrow viewport. Inside it, widget cards are native
+  `<button>` elements whose children are phrasing content (the description span is referenced by
+  `aria-describedby`, so the announced name stays the widget's name and the "3×2" size token is
+  `aria-hidden`), a card that cannot be added again stays focusable and announces
+  `aria-disabled="true"` instead of disappearing from the tab order, and the category filters are
+  toggle buttons with `aria-pressed`. The dashboard switcher renders through `TmOverlayPanel` —
+  a top-layer popover positioned by `overlay.js`, which owns the Escape/outside/Tab-out dismissal
+  and the focus restore to the trigger, and attaches the shared `tm-menu-nav` module to the
+  `role="menu"` panel, so the roving arrow keys, Home/End and the typeahead are actually wired;
+  opening hands focus to the first item. Each dashboard row is a `role="none"` wrapper around a
+  native `role="menuitem"` select button (Enter/Space activate natively — exactly one activation
+  per press) and sibling `role="menuitem"` action buttons carrying the dashboard's NAME
+  ("Delete dashboard {0}" / "Set {0} as default"); the current dashboard is marked with
+  `aria-current`, the default-star badge carries the localized "Default dashboard" text through
+  `role="img"` + `aria-label`, and every icon-only button in the dashboard toolbar/widget headers
+  (apply/cancel rename, rename, remove widget, collapse/expand) has an `aria-label`; the collapse
+  control also exposes `aria-expanded` + `aria-controls` pointing at the widget content region it
+  toggles. Focus is never stranded: creating a dashboard moves focus to the "Add widget" button,
+  leaving edit mode (save or cancel) returns to the switcher trigger, and the inline rename is a
+  `<form>` whose Escape cancels and whose save/cancel return focus to the rename button.
+
 - **The input-family error messages can opt out of the assertive `role="alert"` announcement.**
   Every input component with an `Error` parameter — `TmTextInput`, `TmTextArea`, `TmSelect`,
   `TmNumberInput`, `TmDecimalInput`, `TmMultiSelect`, `TmEntityPicker`, `TmCodeEditor` and
@@ -991,6 +1038,62 @@
   "Select color {name}" (see `TmColorPalette.ColorNames` for the matching and fallback rules).
 
 ### Breaking / Migration
+
+- **`TmWidgetSelector` renders on `TmModal` — its private overlay markup is gone.** The selector
+  no longer renders `.tm-widget-selector-overlay` (its own `position: fixed` root) or a private
+  header/close button; the modal owns the overlay, the panel chrome, the title and the close
+  control. The dialog surface is now `.tm-modal-overlay > .tm-modal-container > .tm-modal`
+  (`.tm-focus-scope`, `role="dialog"`), and the familiar `.tm-widget-selector-modal` class moved
+  INSIDE it onto the content root (search + category/grid area). Hosts (or test suites) that
+  queried the old DOM must migrate, before/after:
+
+  ```css
+  /* before */
+  .tm-widget-selector-overlay { /* the fixed overlay root, z-index var(--tm-z-modal) */ }
+  .tm-widget-selector-header  { /* title + subtitle + close button */ }
+  .tm-widget-selector-close   { /* the × button */ }
+
+  /* after — styled by the library's _modal.css; style the content root instead */
+  .tm-modal-overlay { }              /* the overlay (was .tm-widget-selector-overlay) */
+  .tm-modal-close   { }              /* the × button (aria-label "Close") */
+  .tm-widget-selector-modal { }      /* now the content root INSIDE .tm-modal-body */
+  ```
+
+  ```csharp
+  // Playwright/bUnit selectors, before → after:
+  //   .tm-widget-selector-overlay        → .tm-modal-overlay  (or .tm-widget-selector-modal)
+  //   .tm-widget-selector-close          → .tm-modal-close
+  //   .tm-widget-selector-modal h3       → .tm-modal-title
+  ```
+
+  The `.tm-widget-selector-modal` contract class is unchanged in name — only its position in the
+  DOM moved one level down (inside the modal body), and `.tm-widget-selector-category` /
+  `.tm-widget-card-icon` are untouched.
+
+- **The `TmDashboard` switcher menu is an overlay-panel ARIA menu of native buttons.** The menu
+  renders through `TmOverlayPanel` (popover="manual", positioned by `overlay.js`) — hosts that
+  styled `.tm-dashboard-menu` as an absolutely-positioned dropdown (`position: absolute;
+  top: calc(100% …)`) must drop those declarations, exactly like the `TmDropdown` migration; the
+  class stays on the panel root. The old `div.tm-overlay` click-away backdrop behind it is gone
+  (the panel dismisses on outside pointerdown itself). Each dashboard row changed from a
+  `div[role="menuitem"]` with emulated Enter/Space to a `div[role="none"]` wrapper around a
+  native `button[role="menuitem"].tm-dashboard-menu-item__select` plus sibling native action
+  buttons (`button[role="menuitem"].tm-dashboard-menu-action[-danger]`) whose labels now name the
+  dashboard — the new `TmDashboard_DeleteNamed` ("Delete dashboard {0}") and
+  `TmDashboard_SetAsDefaultNamed` ("Set {0} as default") keys replace the bare
+  `TmDashboard_Delete`/`TmDashboard_SetAsDefault` labels on those buttons. The current dashboard's
+  select entry carries `aria-current="true"`. The rename save icon now uses
+  `TmDashboard_ApplyName` ("Apply name") instead of `TmDashboard_SaveChanges`, and the inline
+  rename is a `<form>` (Enter applies, Escape cancels). Tests that dispatched
+  `KeyDown("Enter")`/`KeyUp(" ")` at a `.tm-dashboard-menu-item` row must instead click the native
+  select button (or press keys in a real browser), and `.tm-dashboard-menu-item` rows no longer
+  carry `tabindex`/`role="menuitem"` themselves — the entries are the buttons inside. The widget
+  cards in `TmWidgetSelector` changed from `div.tm-widget-card` to `button.tm-widget-card` with
+  span children (`.tm-widget-card-title`, `.tm-widget-card-desc` replace the inner `h4`/`p`, the
+  icon/info/meta/add wrappers are spans) and render on a `ModalSize.XLarge` modal whose height is
+  the `--tm-widget-selector-height` token (`min(60vh, 35rem)`, applied as a `max-height`) —
+  `.tm-widget-card` queries keep working, but anything that asserted `TagName == "div"` (or relied
+  on the div not being focusable, or selected `.tm-widget-card-info h4`) must move to the button.
 
 - **The 267 demo-only localization keys are no longer in the `Tempo.Blazor` resource tables.** An
   application that read any of them through `ITmLocalizer` now gets the raw key — copy the strings

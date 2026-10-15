@@ -82,55 +82,19 @@
   letter-spacing: 0.05em;
 }
 
-/* Dashboard Views Menu */
+/* Dashboard Views Menu — a TmOverlayPanel popover: position/size come from _overlay-panel.css and
+   overlay.js writes top/left (the TmDropdown pattern), so no absolute-position declarations here. */
 .tm-dashboard-views {
   position: relative;
 }
 
 .tm-dashboard-menu {
-  position: absolute;
-  top: calc(100% + var(--tm-space-1));
-  right: 0;
-  z-index: var(--tm-z-dropdown);
   min-width: 200px;
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);
   box-shadow: var(--tm-shadow-lg);
   padding: var(--tm-space-1);
-}
-
-.tm-dashboard-menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--tm-space-2);
-  padding: var(--tm-space-2) var(--tm-space-3);
-  border-radius: var(--tm-radius-md);
-  cursor: pointer;
-  font-size: var(--tm-font-size-sm);
-  color: var(--tm-text-primary);
-  transition: background var(--tm-transition-fast);
-}
-
-.tm-dashboard-menu-item:hover {
-  background: var(--tm-bg-muted);
-}
-
-.tm-dashboard-menu-item--active {
-  background: var(--tm-color-primary-subtle);
-  color: var(--tm-color-primary-text);
-}
-
-.tm-dashboard-menu-badge {
-  color: var(--tm-color-warning);
-  font-size: var(--tm-font-size-xs);
-}
-
-.tm-dashboard-menu-divider {
-  height: 1px;
-  background: var(--tm-border-color);
-  margin: var(--tm-space-1) 0;
 }
 
 /* Grid Container */
@@ -410,80 +374,23 @@
 
 /* ═══════════════════════════════════════════════════════════════
    TmWidgetSelector - Widget Selection Modal
+   The selector renders on TmModal (_modal.css owns the overlay, the panel chrome, the header
+   and the close button); this block only styles the selector's own content root, its grid and
+   its footer fragment.
    ═══════════════════════════════════════════════════════════════ */
-
-.tm-widget-selector-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--tm-bg-overlay);
-  backdrop-filter: blur(4px);
-  z-index: var(--tm-z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--tm-space-4);
-}
 
 .tm-widget-selector-modal {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 900px;
-  height: 80vh;
-  max-height: 700px;
-  background: var(--tm-bg-surface);
-  border-radius: var(--tm-radius-xl);
-  box-shadow: var(--tm-shadow-xl);
-  overflow: hidden;
-}
-
-.tm-widget-selector-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--tm-space-1);
-  padding: var(--tm-space-6);
-  border-bottom: 1px solid var(--tm-border-color);
-  position: relative;
-}
-
-.tm-widget-selector-header h3 {
-  font-size: var(--tm-font-size-xl);
-  font-weight: var(--tm-font-weight-bold);
-  color: var(--tm-text-primary);
-  margin: 0;
-}
-
-.tm-widget-selector-header p {
-  font-size: var(--tm-font-size-sm);
-  color: var(--tm-text-secondary);
-  margin: 0;
-}
-
-.tm-widget-selector-close {
-  position: absolute;
-  top: var(--tm-space-4);
-  right: var(--tm-space-4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  background: transparent;
-  border: none;
-  border-radius: var(--tm-radius-md);
-  color: var(--tm-text-secondary);
-  cursor: pointer;
-  transition: all var(--tm-transition-fast);
-}
-
-.tm-widget-selector-close:hover {
-  background: var(--tm-bg-muted);
-  color: var(--tm-text-primary);
+  gap: var(--tm-space-4);
+  /* One working height for the whole selector: a custom property (not a fixed height) so the
+     inner scroll areas resolve the same cap and the modal never grows two nested scrollbars. */
+  --tm-widget-selector-height: min(60vh, 35rem);
+  max-height: var(--tm-widget-selector-height);
 }
 
 .tm-widget-selector-search {
-  padding: var(--tm-space-4) var(--tm-space-6);
-  border-bottom: 1px solid var(--tm-border-color);
+  flex-shrink: 0;
 }
 
 .tm-widget-selector-content {
@@ -578,12 +485,16 @@
   gap: var(--tm-space-4);
 }
 
-/* Widget Card */
+/* Widget Card — a native <button>: reset the browser button chrome and keep the layout. */
 .tm-widget-card {
   display: flex;
   align-items: flex-start;
   gap: var(--tm-space-3);
   padding: var(--tm-space-4);
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
   border-radius: var(--tm-radius-lg);
@@ -610,10 +521,10 @@
 }
 
 .tm-widget-card-icon {
+  display: flex;
   flex-shrink: 0;
   width: 48px;
   height: 48px;
-  display: flex;
   align-items: center;
   justify-content: center;
   background: var(--category-color, var(--tm-color-primary));
@@ -622,11 +533,15 @@
 }
 
 .tm-widget-card-info {
+  display: block;
   flex: 1;
   min-width: 0;
 }
 
-.tm-widget-card-info h4 {
+/* The card is a native <button>, so its children are phrasing content: the title and the
+   description are spans blockified here (they were h4/p inside the old div-based card). */
+.tm-widget-card-title {
+  display: block;
   font-size: var(--tm-font-size-sm);
   font-weight: var(--tm-font-weight-semibold);
   color: var(--tm-text-primary);
@@ -636,11 +551,11 @@
   text-overflow: ellipsis;
 }
 
-.tm-widget-card-info p {
+.tm-widget-card-desc {
+  display: -webkit-box;
   font-size: var(--tm-font-size-xs);
   color: var(--tm-text-secondary);
   margin: 0 0 var(--tm-space-2) 0;
-  display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -717,15 +632,13 @@
   font-size: var(--tm-font-size-sm);
 }
 
-/* Footer */
+/* Footer — renders inside the modal's footer bar, which owns padding and the top border. */
 .tm-widget-selector-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--tm-space-4);
-  padding: var(--tm-space-4) var(--tm-space-6);
-  border-top: 1px solid var(--tm-border-color);
-  background: var(--tm-bg-surface-secondary);
+  flex: 1;
 }
 
 .tm-widget-selector-hint {
@@ -781,19 +694,52 @@
   letter-spacing: 0.05em;
 }
 
+/* The row is a role="none" wrapper: layout only. The interactive children are real buttons that
+   carry their own padding, so the whole row stays the hover/paint target while the keyboard
+   activation lives on the native buttons. */
 .tm-dashboard-menu-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--tm-space-2);
+  border-radius: var(--tm-radius-md);
+  color: var(--tm-text-primary);
+}
+
+.tm-dashboard-menu-item--action {
+  width: 100%;
   padding: var(--tm-space-2) var(--tm-space-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--tm-font-size-sm);
+  text-align: left;
+}
+
+.tm-dashboard-menu-item--active {
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary-text);
+}
+
+/* The select entry: a native button that is the row's primary child — its padding defines the
+   row's height, and the row's hover paint covers the whole line (the actions sit beside it). */
+.tm-dashboard-menu-item__select {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  flex: 1;
+  min-width: 0;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  background: none;
+  border: none;
   border-radius: var(--tm-radius-md);
   cursor: pointer;
   font-size: var(--tm-font-size-sm);
-  color: var(--tm-text-primary);
-  transition: background var(--tm-transition-fast);
+  color: inherit;
+  text-align: left;
 }
 
-.tm-dashboard-menu-item > span {
+.tm-dashboard-menu-item__select > span {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -804,15 +750,11 @@
   background: var(--tm-bg-muted);
 }
 
-.tm-dashboard-menu-item--active {
-  background: var(--tm-color-primary-subtle);
-  color: var(--tm-color-primary-text);
-}
-
 .tm-dashboard-menu-actions {
   display: flex;
   align-items: center;
   gap: var(--tm-space-1);
+  padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-2) 0;
 }
 
 .tm-dashboard-menu-action {
@@ -863,15 +805,17 @@
 
 @media (width < 768px) {
   .tm-widget-selector-modal {
-    height: 100vh;
     max-height: none;
-    border-radius: 0;
   }
-  
+
+  .tm-widget-selector-content {
+    max-height: var(--tm-widget-selector-height);
+  }
+
   .tm-widget-selector-sidebar {
     display: none;
   }
-  
+
   .tm-widget-selector-grid {
     grid-template-columns: 1fr;
   }

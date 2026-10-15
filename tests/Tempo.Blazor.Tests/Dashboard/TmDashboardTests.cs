@@ -6,6 +6,7 @@ using NSubstitute;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Dashboard;
 using Tempo.Blazor.Components.Layout;
+using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -129,8 +130,8 @@ public class TmDashboardTests : LocalizationTestBase
         // Act
         var cut = Render<TmDashboard>();
 
-        // Assert - Should show default name
-        cut.Find(".tm-dashboard-title").TextContent.Should().Be("New Dashboard");
+        // Assert - Should show default name (localized — no hardcoded text)
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("New dashboard");
     }
 
     [Fact]
@@ -491,6 +492,376 @@ public class TmDashboardTests : LocalizationTestBase
             directory = directory.Parent;
         directory.Should().NotBeNull("the repository root should be discoverable from the test output directory");
         return directory!.FullName;
+    }
+
+    #endregion
+
+    #region 6. Fáze 1 — localization, a11y and DA3 (wave 0)
+
+    // These tests run against bUnit's own Loose JSInterop (no Substitute IJSRuntime): the dashboard's
+    // focus moves (FocusAsync) then surface as "Blazor._internal.domWrapper.focus" invocations that
+    // the assertions below can count.
+
+    private static DashboardConfig Dashboard(string id, string name, bool isDefault = false, params WidgetInstance[] widgets) =>
+        new() { Id = id, Name = name, IsDefault = isDefault, Widgets = [.. widgets] };
+
+    private (IDashboardProvider Provider, IWidgetRegistry Registry) SetupDashboard(DashboardConfig? defaultDashboard, params DashboardConfig[] others)
+    {
+        var provider = Substitute.For<IDashboardProvider>();
+        var all = new List<DashboardConfig>();
+        if (defaultDashboard is not null) all.Add(defaultDashboard);
+        all.AddRange(others);
+        provider.GetDashboardsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IEnumerable<DashboardConfig>>(all));
+        provider.GetDefaultDashboardAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult(defaultDashboard));
+        provider.GetDashboardAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(ci => Task.FromResult(all.FirstOrDefault(d => d.Id == ci.Arg<string>())));
+        provider.SaveDashboardAsync(Arg.Any<DashboardConfig>(), Arg.Any<CancellationToken>())
+                .Returns(ci => Task.FromResult(ci.Arg<DashboardConfig>()));
+        Services.AddSingleton(provider);
+
+        var registry = Substitute.For<IWidgetRegistry>();
+        registry.GetWidget(Arg.Any<string>()).Returns((WidgetDefinition?)null);
+        Services.AddSingleton(registry);
+        return (provider, registry);
+    }
+
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+
+    private int FocusCalls() => JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation);
+
+    private const string OverlayModulePath = "./_content/Tempo.Blazor/js/overlay.js";
+    private const string MenuNavModulePath = "./_content/Tempo.Blazor/js/tm-menu-nav.js";
+
+    /// <summary>Registers the overlay.js / tm-menu-nav.js module mocks the switcher panel attaches.</summary>
+    private BunitJSModuleInterop SetupSwitcherModules()
+    {
+        var overlay = JSInterop.SetupModule(OverlayModulePath);
+        overlay.SetupVoid("open", _ => true).SetVoidResult();
+        overlay.SetupVoid("update", _ => true).SetVoidResult();
+        overlay.SetupVoid("close", _ => true).SetVoidResult();
+        var nav = JSInterop.SetupModule(MenuNavModulePath);
+        nav.SetupVoid("attach", _ => true).SetVoidResult();
+        nav.Setup<bool>("focusFirst", _ => true).SetResult(true);
+        return nav;
+    }
+
+    [Fact]
+    public void Dashboard_DeleteDialog_CancelButton_IsLocalized()
+    {
+        UseCzechLocalization();
+        SetupDashboard(Dashboard("d1", "První", isDefault: true), Dashboard("d2", "Druhá"));
+        var cut = Render<TmDashboard>();
+
+        cut.Find(".tm-dashboard-views button").Click();
+        cut.Find(".tm-dashboard-menu-action--danger").Click();
+
+        cut.Find(".tm-dialog-btn-cancel").TextContent.Trim().Should().Be("Zrušit",
+            "B11: the cs UI must never show a bare 'Cancel' in the delete dialog");
+    }
+
+    [Fact]
+    public void Dashboard_HardcodedTexts_AreLocalized()
+    {
+        UseCzechLocalization();
+        SetupDashboard(new DashboardConfig
+        {
+            Id = "d1",
+            Name = "Pilot",
+            IsDefault = true,
+            Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "ghost", X = 0, Y = 0, Width = 4, Height = 2 }],
+        });
+        var cut = Render<TmDashboard>();
+
+        // Unknown widget (the registry knows no 'ghost') — title and content placeholder.
+        cut.Find("[data-instance-id='w1'] .tm-widget-title").TextContent.Should().Be("Neznámý widget");
+        cut.Find("[data-instance-id='w1'] .tm-widget-content").TextContent.Trim().Should().Be("Widget: Neznámý widget");
+
+        // Collapse control is localized.
+        cut.Find("[data-instance-id='w1'] .tm-widget-btn").GetAttribute("title").Should().Be("Sbalit");
+
+        // The inline name editor's placeholder is localized (TmTextInput puts Class on the input itself).
+        cut.Find("button[title='Upravit']").Click();
+        cut.Find("button[title='Přejmenovat nástěnku']").Click();
+        cut.Find("input.tm-dashboard-name-input").GetAttribute("placeholder").Should().Be("Pojmenujte nástěnku");
+    }
+
+    [Fact]
+    public void Dashboard_Title_FallsBackToLocalizedDefaultName()
+    {
+        UseCzechLocalization();
+        // No default dashboard in the provider: the dashboard creates an empty one named by the
+        // localized default — never a hardcoded English string.
+        SetupDashboard(null);
+        var cut = Render<TmDashboard>();
+
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Nová nástěnka");
+    }
+
+    [Fact]
+    public void Dashboard_IconButtons_HaveAccessibleNames()
+    {
+        UseCzechLocalization();
+        SetupDashboard(new DashboardConfig
+        {
+            Id = "d1",
+            Name = "Pilot",
+            IsDefault = true,
+            Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }],
+        });
+        var cut = Render<TmDashboard>();
+
+        // View mode: the collapse control on the widget header.
+        cut.Find("[data-instance-id='w1'] .tm-widget-btn").GetAttribute("aria-label").Should().Be("Sbalit");
+
+        // Edit mode: the rename trigger and the per-widget remove control.
+        cut.Find("button[title='Upravit']").Click();
+        var rename = cut.Find("button[title='Přejmenovat nástěnku']");
+        rename.GetAttribute("aria-label").Should().Be("Přejmenovat nástěnku");
+        cut.Find("button[title='Odebrat widget']").GetAttribute("aria-label").Should().Be("Odebrat widget");
+
+        // Name editing: the icon-only save/cancel pair must be named.
+        rename.Click();
+        cut.Find(".tm-dashboard-name-edit button.tm-btn-primary").GetAttribute("aria-label").Should().NotBeNullOrEmpty("save rename");
+        cut.Find(".tm-dashboard-name-edit button.tm-btn-ghost").GetAttribute("aria-label").Should().NotBeNullOrEmpty("cancel rename");
+    }
+
+    [Fact]
+    public void Dashboard_CollapseButton_HasAriaExpanded_AndAriaControls()
+    {
+        SetupDashboard(new DashboardConfig
+        {
+            Id = "d1",
+            Name = "Pilot",
+            IsDefault = true,
+            Widgets = [new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }],
+        });
+        var cut = Render<TmDashboard>();
+
+        var btn = cut.Find("[data-instance-id='w1'] .tm-widget-btn");
+        btn.GetAttribute("aria-expanded").Should().Be("true");
+        var controls = btn.GetAttribute("aria-controls");
+        controls.Should().NotBeNullOrEmpty();
+        cut.Find("[data-instance-id='w1'] .tm-widget-content").GetAttribute("id").Should().Be(controls);
+
+        btn.Click();
+
+        btn.GetAttribute("aria-expanded").Should().Be("false");
+        cut.FindAll("[data-instance-id='w1'] .tm-widget-content").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Dashboard_NewDashboardDialog_EnterSubmits_AndInputAutoFocused()
+    {
+        UseCzechLocalization();
+        SetupDashboard(Dashboard("d1", "První", isDefault: true));
+        var cut = Render<TmDashboard>();
+
+        cut.Find(".tm-dashboard-views button").Click();
+        cut.Find(".tm-dashboard-menu-item--action").Click();
+
+        var input = cut.Find(".tm-modal input");
+        input.GetAttribute("autofocus").Should().NotBeNull("the dialog opens typing-ready");
+        var form = cut.Find(".tm-modal form");
+
+        input.Change("Beta");
+        form.Submit();
+
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Beta", "submitting the form creates the dashboard");
+        cut.FindAll(".tm-modal-overlay").Should().BeEmpty("submit closes the dialog");
+        cut.FindAll(".tm-dashboard--edit").Should().NotBeEmpty("the new dashboard opens in edit mode");
+    }
+
+    [Fact]
+    public async Task Dashboard_CancelEditAfterCreate_RestoresPreviousDashboard()
+    {
+        var (provider, _) = SetupDashboard(Dashboard("d1", "Alpha", isDefault: true,
+            new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }));
+        var cut = Render<TmDashboard>();
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Alpha");
+
+        cut.Find(".tm-dashboard-views button").Click();
+        cut.Find(".tm-dashboard-menu-item--action").Click();
+        cut.Find(".tm-modal input").Change("Beta");
+        cut.Find(".tm-modal form").Submit();
+
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Beta");
+        cut.FindAll("[data-instance-id='w1']").Should().BeEmpty("the new dashboard starts empty");
+
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Cancel")).Click();
+
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Alpha",
+            "DA3: cancelling an unsaved new dashboard brings the previous dashboard back");
+        cut.Find("[data-instance-id='w1']").Should().NotBeNull("the previous dashboard's widgets are restored");
+        await provider.DidNotReceive().SaveDashboardAsync(Arg.Any<DashboardConfig>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Dashboard_SwitcherMenu_IsKeyboardOperable()
+    {
+        var nav = SetupSwitcherModules();
+        SetupDashboard(Dashboard("d1", "Alpha", isDefault: true), Dashboard("d2", "Beta"));
+        var cut = Render<TmDashboard>();
+
+        var trigger = cut.Find(".tm-dashboard-views button");
+        trigger.GetAttribute("aria-haspopup").Should().Be("menu");
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+        var triggerId = trigger.GetAttribute("id");
+        triggerId.Should().NotBeNullOrEmpty();
+
+        trigger.Click();
+
+        // The menu renders through TmOverlayPanel (the TmDropdown pattern), which attaches the
+        // shared tm-menu-nav module to this role=menu panel — the arrow keys, Home/End and the
+        // typeahead the entries rely on — and the open hands focus to the first item.
+        cut.WaitForAssertion(() => nav.Invocations["attach"].Should().ContainSingle());
+        nav.Invocations["focusFirst"].Should().ContainSingle("opening hands focus to the first item");
+
+        var menu = cut.Find(".tm-dashboard-menu");
+        menu.GetAttribute("role").Should().Be("menu");
+        menu.GetAttribute("aria-labelledby").Should().Be(triggerId);
+        trigger.GetAttribute("aria-expanded").Should().Be("true");
+
+        var items = cut.FindAll("[role='menuitem']").ToList();
+        items.Should().HaveCount(4,
+            "two dashboard select entries, the per-row delete action of the non-default row, and the create-new entry");
+
+        // The select entry is a NATIVE button — Enter/Space activate it exactly once, no emulation.
+        var beta = items.Single(i => i.TextContent.Contains("Beta"));
+        beta.TagName.Should().Be("BUTTON");
+        beta.Click();
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Beta");
+        cut.FindAll(".tm-dashboard-menu").Should().BeEmpty("selecting a dashboard closes the menu");
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+        FocusCalls().Should().BeGreaterThan(0, "closing the menu returns focus to the trigger");
+
+        // Escape dismisses through overlay.js → the panel's NotifyDismissedAsync (controlled close),
+        // not through a local keydown handler. The close re-render lands asynchronously.
+        trigger.Click();
+        var panel = cut.FindComponent<TmOverlayPanel>();
+        cut.WaitForAssertion(() => nav.Invocations["attach"].Should().HaveCount(2));
+        cut.InvokeAsync(() => panel.Instance.NotifyDismissedAsync("escape"));
+        cut.WaitForAssertion(() => cut.FindAll(".tm-dashboard-menu").Should().BeEmpty());
+        trigger.GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
+    public void Dashboard_SwitcherMenu_RowActions_AreNativeSiblingsOfTheRowActivation()
+    {
+        SetupSwitcherModules();
+        SetupDashboard(Dashboard("d1", "Alpha", isDefault: true), Dashboard("d2", "Beta"));
+        var cut = Render<TmDashboard>();
+
+        cut.Find(".tm-dashboard-views button").Click();
+
+        // Each dashboard row is a role="none" wrapper around a native select button — the row
+        // carries no activation of its own, so nothing is emulated and nothing needs a fence
+        // (docs/keyboard-activation-convention.md).
+        var rows = cut.FindAll(".tm-dashboard-menu-item").Where(r => r.GetAttribute("role") == "none").ToList();
+        rows.Should().HaveCount(2);
+        var betaRow = rows.Single(r => r.TextContent.Contains("Beta"));
+        var select = betaRow.QuerySelector(".tm-dashboard-menu-item__select");
+        select.Should().NotBeNull();
+        select!.TagName.Should().Be("BUTTON");
+        select.GetAttribute("role").Should().Be("menuitem");
+        // A native button carries NO emulated Enter/Space activation — bUnit surfaces the missing
+        // handler as the proof the browser's own key handling stays in charge.
+        var keyDown = () => select.KeyDown("Enter");
+        keyDown.Should().Throw<Bunit.MissingEventHandlerException>();
+        var keyUp = () => select.KeyUp(" ");
+        keyUp.Should().Throw<Bunit.MissingEventHandlerException>();
+
+        // The current dashboard is marked on its select entry.
+        var currentSelect = cut.Find(".tm-dashboard-menu-item--active .tm-dashboard-menu-item__select");
+        currentSelect.GetAttribute("aria-current").Should().Be("true");
+
+        // The per-row actions are SIBLING native buttons labelled with the dashboard's NAME — the
+        // row no longer carries one, so "Delete" can never be announced without its target.
+        var delete = betaRow.QuerySelector(".tm-dashboard-menu-action--danger");
+        delete.Should().NotBeNull();
+        delete!.TagName.Should().Be("BUTTON");
+        delete.GetAttribute("role").Should().Be("menuitem");
+        delete.GetAttribute("aria-label").Should().Be("Delete dashboard Beta");
+        delete.GetAttribute("tabindex").Should().Be("-1", "only one menu entry is the tab stop");
+        var actionKeyDown = () => delete.KeyDown("Enter");
+        actionKeyDown.Should().Throw<Bunit.MissingEventHandlerException>();
+        var actionKeyUp = () => delete.KeyUp(" ");
+        actionKeyUp.Should().Throw<Bunit.MissingEventHandlerException>();
+
+        // Activating the delete action opens the confirm dialog and NEVER switches the dashboard.
+        delete.Click();
+        cut.FindAll(".tm-dialog").Should().NotBeEmpty("the action opens the delete confirm");
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Alpha", "the row was not activated");
+    }
+
+    [Fact]
+    public async Task Dashboard_CreateDashboard_FocusesTheAddWidgetButton()
+    {
+        SetupSwitcherModules();
+        SetupDashboard(Dashboard("d1", "Alpha", isDefault: true));
+        var cut = Render<TmDashboard>();
+
+        cut.Find(".tm-dashboard-views button").Click();
+        cut.Find(".tm-dashboard-menu-item--action").Click();
+        cut.Find(".tm-modal input").Change("Beta");
+        var focusBefore = FocusCalls();
+        cut.Find(".tm-modal form").Submit();
+
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Beta");
+        // The create lands the user in edit mode on an empty grid: a focus move must follow the
+        // render, putting the next step ("Add widget") under the keyboard.
+        await cut.WaitForAssertionAsync(() =>
+            FocusCalls().Should().BeGreaterThan(focusBefore,
+                "after create, focus moves to the Add-widget button (next step), not <body>"));
+    }
+
+    [Fact]
+    public async Task Dashboard_CancelEdit_ReturnsFocusToTheSwitcherTrigger()
+    {
+        SetupSwitcherModules();
+        SetupDashboard(Dashboard("d1", "Alpha", isDefault: true,
+            new WidgetInstance { InstanceId = "w1", WidgetId = "kpi", X = 0, Y = 0, Width = 4, Height = 2 }));
+        var cut = Render<TmDashboard>();
+        cut.Find("button[title='Edit']").Click();
+
+        var focusBefore = FocusCalls();
+        cut.FindAll("button").Single(b => b.TextContent.Contains("Cancel")).Click();
+
+        cut.FindAll(".tm-dashboard--edit").Should().BeEmpty("edit mode ended");
+        await cut.WaitForAssertionAsync(() =>
+            FocusCalls().Should().BeGreaterThan(focusBefore,
+                "leaving edit mode via Cancel returns focus to the view-mode entry point"));
+    }
+
+    [Fact]
+    public async Task Dashboard_NameEdit_SaveAndCancel_ReturnFocusToTheRenameButton()
+    {
+        SetupSwitcherModules();
+        SetupDashboard(Dashboard("d1", "Alpha", isDefault: true));
+        var cut = Render<TmDashboard>();
+        cut.Find("button[title='Edit']").Click();
+        cut.Find("button[title='Rename dashboard']").Click();
+
+        var input = cut.Find("input.tm-dashboard-name-input");
+        input.GetAttribute("autofocus").Should().NotBeNull("the rename input is typing-ready");
+        input.Change("Renamed");
+        var focusBefore = FocusCalls();
+
+        // Enter applies through the form's implicit submission; Escape cancels at the form level.
+        cut.Find("form.tm-dashboard-name-edit").Submit();
+        cut.Find(".tm-dashboard-title").TextContent.Should().Be("Renamed");
+        await cut.WaitForAssertionAsync(() =>
+            FocusCalls().Should().BeGreaterThan(focusBefore,
+                "applying the name returns focus to the rename trigger"));
+
+        cut.Find("button[title='Rename dashboard']").Click();
+        focusBefore = FocusCalls();
+        cut.Find("form.tm-dashboard-name-edit").KeyDown("Escape");
+        cut.FindAll("form.tm-dashboard-name-edit").Should().BeEmpty("Escape cancels the edit");
+        await cut.WaitForAssertionAsync(() =>
+            FocusCalls().Should().BeGreaterThan(focusBefore,
+                "cancelling the name edit returns focus to the rename trigger"));
     }
 
     #endregion

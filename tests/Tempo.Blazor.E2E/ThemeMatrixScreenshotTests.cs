@@ -114,10 +114,10 @@ public sealed class ThemeMatrixScreenshotTests : WasmTestBase
         // The add-widget button only exists in edit mode, which the view-mode edit button enters.
         await page.Locator("[data-testid='dashboard-edit']").ClickAsync();
         await page.Locator("[data-testid='dashboard-add-widget']").ClickAsync();
-        var overlay = page.Locator(".tm-widget-selector-overlay");
+        var overlay = page.Locator(".tm-modal-overlay");
         await overlay.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         var zIndex = await overlay.EvaluateAsync<string>("el => getComputedStyle(el).zIndex");
-        Assert.AreEqual("1040", zIndex, "the widget selector overlay must sit at the overlay z-index");
+        Assert.AreEqual("1040", zIndex, "the widget selector modal overlay must sit at the overlay z-index");
         await SaveAsync(page, "dashboard--widget-selector", fullPage: false);
     }
 

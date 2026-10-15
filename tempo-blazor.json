@@ -7239,17 +7239,20 @@
           "name": "AllowEdit",
           "type": "bool",
           "isRequired": false,
-          "default": "true"
+          "default": "true",
+          "description": "Whether the user may enter edit mode (move, resize, add or remove widgets). Defaults to true."
         },
         {
           "name": "Class",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Additional CSS classes for the dashboard root element."
         },
         {
           "name": "DashboardId",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Id of the dashboard to load initially. When empty, the provider's default dashboard loads."
         },
         {
           "name": "InitialMode",
@@ -7268,7 +7271,8 @@
         {
           "name": "OnDashboardChanged",
           "type": "EventCallback<DashboardConfig>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised after a different dashboard becomes current: the initial load (the default dashboard or DashboardId) and a switcher selection. A dashboard created through the create dialog does NOT raise it, and neither does the cancel-restore that discards such an unsaved creation (DA3) — both stay client-side until \"Save changes\" commits the dashboard, at which point the saved dashboard is reported. In other words, the event only ever names a dashboard the provider knows about."
         },
         {
           "name": "ResolvedLayoutChanged",
@@ -7280,17 +7284,20 @@
           "name": "ShowTitle",
           "type": "bool",
           "isRequired": false,
-          "default": "true"
+          "default": "true",
+          "description": "Whether the dashboard title renders in the toolbar. Defaults to true."
         },
         {
           "name": "UserId",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Owner id passed through to IDashboardProvider; null means the provider's default scope."
         },
         {
           "name": "WidgetTemplate",
           "type": "RenderFragment<WidgetInstance>?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Host template for a widget's content. Receives the WidgetInstance; without it the dashboard renders a localized placeholder naming the widget."
         }
       ],
       "cssClasses": [
@@ -7311,8 +7318,15 @@
         "tm-dashboard-grid-col",
         "tm-dashboard-views",
         "tm-dashboard-menu",
+        "tm-dashboard-menu-header",
         "tm-dashboard-menu-item",
         "tm-dashboard-menu-item--active",
+        "tm-dashboard-menu-item--action",
+        "tm-dashboard-menu-item__select",
+        "tm-dashboard-menu-actions",
+        "tm-dashboard-menu-action",
+        "tm-dashboard-menu-action--danger",
+        "tm-dashboard-menu-badge",
         "tm-dashboard-menu-divider",
         "tm-dashboard-empty",
         "tm-widget",
@@ -7354,7 +7368,7 @@
       "kind": "Component",
       "category": "Dashboard",
       "namespace": "Tempo.Blazor.Components.Dashboard",
-      "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry.",
+      "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry. Renders on TmModal (dialog role, focus trap, Escape, bottom sheet on mobile).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Dashboard/TmWidgetSelector.razor",
       "documentationStatus": "merged",
@@ -7366,29 +7380,30 @@
           "name": "ExistingWidgets",
           "type": "List<string>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Ids of the widgets already on the dashboard — single-instance ones among them cannot be added again."
         },
         {
           "name": "OnClose",
           "type": "EventCallback",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the selector should close (Escape, close button, Done, backdrop)."
         },
         {
           "name": "OnSelect",
           "type": "EventCallback<WidgetDefinition>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the user activates an addable widget card."
         },
         {
           "name": "WidgetRegistry",
           "type": "IWidgetRegistry?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Registry of the widgets the host offers; null renders an empty selector."
         }
       ],
       "cssClasses": [
-        "tm-widget-selector-overlay",
         "tm-widget-selector-modal",
-        "tm-widget-selector-header",
-        "tm-widget-selector-close",
         "tm-widget-selector-search",
         "tm-widget-selector-content",
         "tm-widget-selector-sidebar",
@@ -7402,6 +7417,9 @@
         "tm-widget-card--disabled",
         "tm-widget-card-icon",
         "tm-widget-card-info",
+        "tm-widget-card-title",
+        "tm-widget-card-desc",
+        "tm-widget-card-size",
         "tm-widget-card-meta",
         "tm-widget-card-add",
         "tm-widget-selector-empty",

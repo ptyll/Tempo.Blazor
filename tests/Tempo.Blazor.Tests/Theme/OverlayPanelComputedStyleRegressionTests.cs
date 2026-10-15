@@ -110,6 +110,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // surface must keep winning over the zero-specificity reset exactly like the others.
         new("TmColumnPicker.razor", "tm-column-picker-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null),
+        // Fáze 1 review: the TmDashboard switcher migrated from an absolutely-positioned menu div
+        // onto the shared panel (the TmDropdown pattern) — its surface keeps the same chrome.
+        new("TmDashboard.razor", "tm-dashboard-menu",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-1)", null),
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>

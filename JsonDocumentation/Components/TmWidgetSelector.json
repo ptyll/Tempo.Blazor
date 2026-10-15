@@ -2,7 +2,7 @@
   "itemName": "TmWidgetSelector",
   "kind": "Component",
   "category": "Dashboard",
-  "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry.",
+  "description": "Modal dialog for browsing and adding widgets to a dashboard, with category sidebar filtering, text search, and grid display of available widgets from an IWidgetRegistry. Renders on TmModal (dialog role, focus trap, Escape, bottom sheet on mobile).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Dashboard"
   ],
@@ -10,30 +10,31 @@
     {
       "name": "WidgetRegistry",
       "type": "IWidgetRegistry?",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Registry of the widgets the host offers; null renders an empty selector."
     },
     {
       "name": "ExistingWidgets",
       "type": "List<string>",
       "isRequired": false,
-      "default": "[]"
+      "default": "[]",
+      "description": "Ids of the widgets already on the dashboard — single-instance ones among them cannot be added again."
     },
     {
       "name": "OnSelect",
       "type": "EventCallback<WidgetDefinition>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised when the user activates an addable widget card."
     },
     {
       "name": "OnClose",
       "type": "EventCallback",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised when the selector should close (Escape, close button, Done, backdrop)."
     }
   ],
   "cssClasses": [
-    "tm-widget-selector-overlay",
     "tm-widget-selector-modal",
-    "tm-widget-selector-header",
-    "tm-widget-selector-close",
     "tm-widget-selector-search",
     "tm-widget-selector-content",
     "tm-widget-selector-sidebar",
@@ -47,6 +48,9 @@
     "tm-widget-card--disabled",
     "tm-widget-card-icon",
     "tm-widget-card-info",
+    "tm-widget-card-title",
+    "tm-widget-card-desc",
+    "tm-widget-card-size",
     "tm-widget-card-meta",
     "tm-widget-card-add",
     "tm-widget-selector-empty",

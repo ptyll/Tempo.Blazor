@@ -3,152 +3,173 @@
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Inputs
 
-<div class="tm-widget-selector-overlay" @onclick="OnClose">
-    <div class="tm-widget-selector-modal" @onclick:stopPropagation>
-        
-        @* Header ──────────────────────────────────────────────── *@
-        <div class="tm-widget-selector-header">
-            <h3>@Loc["TmWidgetSelector_Title"]</h3>
-            <p>@Loc["TmWidgetSelector_Subtitle"]</p>
-            <button type="button" class="tm-widget-selector-close" @onclick="OnClose">
-                <TmIcon Name="x" Size="IconSize.Sm" />
-            </button>
-        </div>
-        
-        @* Search ──────────────────────────────────────────────── *@
-        <div class="tm-widget-selector-search">
-            <TmSearchInput @bind-Value="_searchText" 
-                          Placeholder="@Loc["TmWidgetSelector_SearchPlaceholder"]" />
-        </div>
-        
-        @* Content ─────────────────────────────────────────────── *@
-        <div class="tm-widget-selector-content">
-            
-            @* Category Sidebar ─────────────────────────────────── *@
-            <div class="tm-widget-selector-sidebar">
-                <div class="tm-widget-selector-categories">
-                    <button type="button" 
-                            class="tm-widget-selector-category @(_selectedCategory == null ? "tm-widget-selector-category--active" : "")"
-                            @onclick="() => SelectCategory(null)">
-                        <TmIcon Name="grid" Size="IconSize.Sm" />
-                        <span>@Loc["TmWidgetSelector_AllWidgets"]</span>
-                        <span class="tm-widget-selector-count">@GetTotalWidgetCount()</span>
-                    </button>
-                    
-                    @foreach (var category in GetCategories())
-                    {
-                        var count = GetWidgetCountByCategory(category.Id);
-                        if (count > 0)
+@* The selector is a TmModal surface (B12): dialog role, aria-modal, focus trap, Escape and the
+   scroll lock come from the modal, which also presents as a bottom sheet on a narrow viewport.
+   The extra-large surface keeps the category sidebar and the card grid from fighting for space.
+   The E2E/test contract class .tm-widget-selector-modal stays on the content root. *@
+<TmModal Show="true"
+         Size="ModalSize.XLarge"
+         Title="@Loc["TmWidgetSelector_Title"]"
+         Subtitle="@Loc["TmWidgetSelector_Subtitle"]"
+         OnClose="OnClose">
+    <ChildContent>
+        <div class="tm-widget-selector-modal">
+
+            @* Search ──────────────────────────────────────────── *@
+            <div class="tm-widget-selector-search">
+                <TmSearchInput @bind-Value="_searchText"
+                               Placeholder="@Loc["TmWidgetSelector_SearchPlaceholder"]" />
+            </div>
+
+            @* Content ─────────────────────────────────────────── *@
+            <div class="tm-widget-selector-content">
+
+                @* Category Sidebar ──────────────────────────────── *@
+                <div class="tm-widget-selector-sidebar">
+                    <div class="tm-widget-selector-categories">
+                        <button type="button"
+                                class="tm-widget-selector-category @(_selectedCategory == null ? "tm-widget-selector-category--active" : "")"
+                                aria-pressed="@(_selectedCategory == null ? "true" : "false")"
+                                @onclick="() => SelectCategory(null)">
+                            <TmIcon Name="grid" Size="IconSize.Sm" />
+                            <span>@Loc["TmWidgetSelector_AllWidgets"]</span>
+                            <span class="tm-widget-selector-count">@GetTotalWidgetCount()</span>
+                        </button>
+
+                        @foreach (var category in GetCategories())
                         {
-                            <button type="button"
-                                    class="tm-widget-selector-category @(_selectedCategory == category.Id ? "tm-widget-selector-category--active" : "") @GetCategoryColorClass(category.Id)"
-                                    @onclick="() => SelectCategory(category.Id)"
-                                    style="@GetCategoryColorStyle(category.Id)">
-                                <TmIcon Name="@category.Icon" Size="IconSize.Sm" />
-                                <span>@GetCategoryName(category)</span>
-                                <span class="tm-widget-selector-count">@count</span>
-                            </button>
+                            var count = GetWidgetCountByCategory(category.Id);
+                            if (count > 0)
+                            {
+                                <button type="button"
+                                        class="tm-widget-selector-category @(_selectedCategory == category.Id ? "tm-widget-selector-category--active" : "") @GetCategoryColorClass(category.Id)"
+                                        aria-pressed="@(_selectedCategory == category.Id ? "true" : "false")"
+                                        @onclick="() => SelectCategory(category.Id)"
+                                        style="@GetCategoryColorStyle(category.Id)">
+                                    <TmIcon Name="@category.Icon" Size="IconSize.Sm" />
+                                    <span>@GetCategoryName(category)</span>
+                                    <span class="tm-widget-selector-count">@count</span>
+                                </button>
+                            }
                         }
+                    </div>
+                </div>
+
+                @* Widget Grid ────────────────────────────────────── *@
+                <div class="tm-widget-selector-widgets">
+                    @if (_filteredWidgets.Any())
+                    {
+                        <div class="tm-widget-selector-grid">
+                            @foreach (var widget in _filteredWidgets)
+                            {
+                                @* A native button: Enter/Space activate it exactly once without
+                                   emulation; a widget that cannot be added stays focusable and
+                                   announces aria-disabled instead of being removed from the tab order.
+                                   The card's children are phrasing content (spans, no h4/p inside a
+                                   button), and the description span is referenced by
+                                   aria-describedby so the announced name stays the widget's name. *@
+                                <button type="button"
+                                        class="tm-widget-card @(!CanAddWidget(widget) ? "tm-widget-card--disabled" : "")"
+                                        aria-disabled="@(CanAddWidget(widget) ? "false" : "true")"
+                                        aria-describedby="@GetDescriptionId(widget)"
+                                        @onclick="() => SelectWidget(widget)">
+
+                                    <span class="tm-widget-card-icon @GetCategoryColorClass(widget.Category)" style="@GetCategoryColorStyle(widget.Category)" aria-hidden="true">
+                                        <TmIcon Name="@widget.Icon" Size="IconSize.Lg" />
+                                    </span>
+
+                                    <span class="tm-widget-card-info">
+                                        <span class="tm-widget-card-title">@widget.Name</span>
+                                        <span class="tm-widget-card-desc" id="@GetDescriptionId(widget)">@widget.Description</span>
+                                        <span class="tm-widget-card-meta">
+                                            <span class="tm-widget-card-size" aria-hidden="true">@widget.DefaultWidth×@widget.DefaultHeight</span>
+                                            @if (!widget.AllowMultiple && IsAlreadyAdded(widget))
+                                            {
+                                                <span class="tm-widget-card-badge tm-widget-card-badge--added">@Loc["TmWidgetSelector_Added"]</span>
+                                            }
+                                        </span>
+                                    </span>
+
+                                    @if (CanAddWidget(widget))
+                                    {
+                                        <span class="tm-widget-card-add" aria-hidden="true">
+                                            <TmIcon Name="plus" Size="IconSize.Sm" />
+                                        </span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="tm-widget-selector-empty">
+                            <TmIcon Name="search" Size="IconSize.Xl" />
+                            <p>@Loc["TmWidgetSelector_NoWidgets"]</p>
+                            <span>@Loc["TmWidgetSelector_NoWidgetsHint"]</span>
+                        </div>
                     }
                 </div>
             </div>
-            
-            @* Widget Grid ──────────────────────────────────────── *@
-            <div class="tm-widget-selector-widgets">
-                @if (_filteredWidgets.Any())
-                {
-                    <div class="tm-widget-selector-grid">
-                        @foreach (var widget in _filteredWidgets)
-                        {
-                            <div class="tm-widget-card @(!CanAddWidget(widget) ? "tm-widget-card--disabled" : "")"
-                                 @onclick="() => SelectWidget(widget)">
-                                
-                                <div class="tm-widget-card-icon @GetCategoryColorClass(widget.Category)" style="@GetCategoryColorStyle(widget.Category)">
-                                    <TmIcon Name="@widget.Icon" Size="IconSize.Lg" />
-                                </div>
-                                
-                                <div class="tm-widget-card-info">
-                                    <h4>@widget.Name</h4>
-                                    <p>@widget.Description</p>
-                                    <div class="tm-widget-card-meta">
-                                        <span class="tm-widget-card-size">@widget.DefaultWidth×@widget.DefaultHeight</span>
-                                        @if (!widget.AllowMultiple && IsAlreadyAdded(widget))
-                                        {
-                                            <span class="tm-widget-card-badge tm-widget-card-badge--added">@Loc["TmWidgetSelector_Added"]</span>
-                                        }
-                                    </div>
-                                </div>
-                                
-                                @if (CanAddWidget(widget))
-                                {
-                                    <div class="tm-widget-card-add">
-                                        <TmIcon Name="plus" Size="IconSize.Sm" />
-                                    </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="tm-widget-selector-empty">
-                        <TmIcon Name="search" Size="IconSize.Xl" />
-                        <p>@Loc["TmWidgetSelector_NoWidgets"]</p>
-                        <span>@Loc["TmWidgetSelector_NoWidgetsHint"]</span>
-                    </div>
-                }
-            </div>
         </div>
-        
-        @* Footer ──────────────────────────────────────────────── *@
+    </ChildContent>
+    <Footer>
         <div class="tm-widget-selector-footer">
             <span class="tm-widget-selector-hint">
                 <TmIcon Name="info" Size="IconSize.Sm" />
                 @Loc["TmWidgetSelector_Hint"]
             </span>
-            <button type="button" class="tm-btn tm-btn-ghost" @onclick="OnClose">
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">
                 @Loc["TmWidgetSelector_Done"]
-            </button>
+            </TmButton>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>
 
 @code {
+    /// <summary>Registry of the widgets the host offers; null renders an empty selector.</summary>
     [Parameter] public IWidgetRegistry? WidgetRegistry { get; set; }
+
+    /// <summary>Ids of the widgets already on the dashboard — single-instance ones among them cannot be added again.</summary>
     [Parameter] public List<string> ExistingWidgets { get; set; } = [];
+
+    /// <summary>Raised when the user activates an addable widget card.</summary>
     [Parameter] public EventCallback<WidgetDefinition> OnSelect { get; set; }
+
+    /// <summary>Raised when the selector should close (Escape, close button, Done, backdrop).</summary>
     [Parameter] public EventCallback OnClose { get; set; }
-    
+
     private string _searchText = "";
     private string? _selectedCategory;
-    
+
     private IEnumerable<WidgetDefinition> _filteredWidgets => FilterWidgets();
-    
+
     private IEnumerable<WidgetDefinition> FilterWidgets()
     {
         if (WidgetRegistry is null) return Enumerable.Empty<WidgetDefinition>();
-        
+
         var widgets = WidgetRegistry.GetAllWidgets();
-        
+
         // Filter by category
         if (!string.IsNullOrEmpty(_selectedCategory))
         {
             widgets = widgets.Where(w => w.Category == _selectedCategory);
         }
-        
+
         // Filter by search
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
             var term = _searchText.Trim().ToLowerInvariant();
-            widgets = widgets.Where(w => 
+            widgets = widgets.Where(w =>
                 w.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                 (w.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
         }
-        
+
         return widgets.OrderBy(w => w.Category).ThenBy(w => w.Name);
     }
-    
+
     private IEnumerable<WidgetCategory> GetCategories()
     {
         if (WidgetRegistry is null) return Enumerable.Empty<WidgetCategory>();
@@ -162,17 +183,17 @@
         var localized = Loc[key];
         return localized == key ? category.Name : localized;
     }
-    
+
     private int GetTotalWidgetCount()
     {
         return WidgetRegistry?.GetAllWidgets().Count() ?? 0;
     }
-    
+
     private int GetWidgetCountByCategory(string categoryId)
     {
         return WidgetRegistry?.GetWidgetsByCategory(categoryId).Count() ?? 0;
     }
-    
+
     // Built-in categories are rendered via theme-aware categorical tokens (--tm-category-N),
     // exposed through a BEM colour class so dark mode gets proper values. Custom/host-supplied
     // categories keep their inline model .Color (the model's public Color defaults are unchanged).
@@ -190,23 +211,26 @@
         var color = GetCategories().FirstOrDefault(c => c.Id == categoryId)?.Color ?? "var(--tm-category-fallback)";
         return $"--category-color: {color}";
     }
-    
+
     private void SelectCategory(string? categoryId)
     {
         _selectedCategory = categoryId;
     }
-    
+
     private bool CanAddWidget(WidgetDefinition widget)
     {
         if (widget.AllowMultiple) return true;
         return !IsAlreadyAdded(widget);
     }
-    
+
     private bool IsAlreadyAdded(WidgetDefinition widget)
     {
         return ExistingWidgets.Contains(widget.Id);
     }
-    
+
+    /// <summary>Id of the card's description span — the card button points at it via aria-describedby.</summary>
+    private static string GetDescriptionId(WidgetDefinition widget) => $"tm-widget-card-desc-{widget.Id}";
+
     private async Task SelectWidget(WidgetDefinition widget)
     {
         if (!CanAddWidget(widget)) return;

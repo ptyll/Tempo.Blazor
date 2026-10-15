@@ -1114,7 +1114,7 @@ public class MobileActionBarE2ETests : WasmTestBase
 
         // The bar's actions are wired: Add Widget opens the widget selector.
         await bar.Locator(".tm-mobile-action-bar__action", new() { HasText = "Add Widget" }).ClickAsync();
-        await page.Locator(".tm-widget-selector-overlay").First.WaitForAsync(
+        await page.Locator(".tm-widget-selector-modal").First.WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
     }
 

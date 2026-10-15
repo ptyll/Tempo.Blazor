@@ -115,7 +115,9 @@ public sealed class MarkupClassCoverageTests
         "tm-currency-input__manual-rate",
         "tm-currency-input__row",
         "tm-currency-input__spinner",
-        "tm-dashboard-menu-item--action",
+        // Fáze 1 review: the switcher's create-new entry became a native styled button —
+        // .tm-dashboard-menu-item--action gained its rule in _dashboard.css and left the
+        // population.
         "tm-data-table__edit-action--cancel",
         "tm-data-table__edit-action--start",
         "tm-data-table__export",
