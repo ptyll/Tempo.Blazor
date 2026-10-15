@@ -44,7 +44,8 @@
                         @if (_editingCommentId == c.Id)
                         {
                             <div class="tm-comment-editor">
-                                <TmRichEditorSimple @bind-Value="_editorContent" />
+                                <TmRichEditorSimple @bind-Value="_editorContent"
+                                                    @bind-Value:after="NotifyDraftChangedAsync" />
                                 <div class="tm-comment-editor-actions">
                                     <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
                                             type="button"
@@ -109,7 +110,8 @@
     {
         <div class="tm-comment-editor">
             <TmRichEditorSimple @bind-Value="_editorContent"
-                              Placeholder="@Loc["TmActivityComments_AddComment"]" />
+                                @bind-Value:after="NotifyDraftChangedAsync"
+                                Placeholder="@Loc["TmActivityComments_AddComment"]" />
             <div class="tm-comment-editor-actions">
                 <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
                         type="button"
@@ -141,6 +143,17 @@
     /// <see cref="TmCommentDraftState.IsEditorOpen"/> (an editor is visible),
     /// <see cref="TmCommentDraftState.EditingCommentId"/> (which comment is being edited, null
     /// for a new comment) and <see cref="TmCommentDraftState.HasUnsavedContent"/>.
+    /// <para>
+    /// Clicking Edit while a dirty new-comment draft exists discards that draft: both editors
+    /// share one content slot, so starting the edit replaces the new-comment content with the
+    /// comment's original body. The consumer observes this as a state transition (for example
+    /// <c>(true, null, true)</c> → <c>(true, "c1", false)</c>), not as a separate event — treat
+    /// any transition away from a dirty new-comment state as a discard.
+    /// </para>
+    /// <para>
+    /// The edit comparison is against the body as supplied (no HTML normalization): browser
+    /// HTML normalization may keep the flag set after the user types and reverts.
+    /// </para>
     /// </summary>
     [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
 
@@ -166,28 +179,88 @@
     }
 
     /// <summary>Used by tests to inject content into the editor without JS.</summary>
-    public void SetEditorContentForTest(string html)
+    /// <remarks>
+    /// Kept for compatibility with existing callers of the original <see langword="void"/> API.
+    /// The draft-changed notification runs fire-and-forget; callers that must observe the
+    /// notification before continuing should prefer <see cref="SetEditorContentForTestAsync"/>.
+    /// </remarks>
+    public void SetEditorContentForTest(string html) => _ = SetEditorContentForTestAsync(html);
+
+    /// <summary>Used by tests to inject content into the editor without JS.</summary>
+    /// <remarks>
+    /// Returns a <see cref="Task"/> so the draft notification can be awaited before the caller
+    /// continues. Call sites of the form
+    /// <c>await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync(html))</c>
+    /// bind the lambda to the <c>Func&lt;Task&gt;</c> overload of <c>InvokeAsync</c> and await the
+    /// returned task, exactly mirroring the real user-typing path where <c>ValueChanged</c>
+    /// flows through <see cref="NotifyDraftChangedAsync"/>.
+    /// </remarks>
+    public Task SetEditorContentForTestAsync(string html)
     {
         _editorContent = html;
         StateHasChanged();
+        return NotifyDraftChangedAsync();
     }
 
     /// <summary>
-    /// Builds the current draft snapshot. <see cref="TmCommentDraftState.HasUnsavedContent"/> is
-    /// reported as <see langword="false"/> here; its content semantics (non-empty for a new
-    /// comment, differs-from-original for an edit) are computed from the editor content.
+    /// Whether the currently open editor holds content that would be lost on discard. Two
+    /// branches, deliberately different:
+    /// <para>
+    /// <b>Edit of an existing comment</b> (<c>_editingCommentId</c> set): the editor opens
+    /// pre-filled with the comment's original body, so "has content" would report an unsaved
+    /// draft the moment the edit opens. The draft only exists once the content differs from
+    /// that original body — compared ordinally, exactly as the component holds it, without HTML
+    /// trimming. Reverting the content back to the original body therefore clears the flag
+    /// again; the comparison is stateless, not a "changed once" latch.
+    /// </para>
+    /// <para>
+    /// <b>New comment</b> (editor open, no comment being edited): the editor starts empty, so
+    /// any content that is not effectively empty (see <see cref="IsEffectivelyEmpty"/>) is
+    /// already an unsaved draft — markup-only artifacts such as a bare <c>&lt;br&gt;</c> left
+    /// behind by the browser do not count.
+    /// </para>
+    /// </summary>
+    private bool HasUnsavedContent
+        => _editingCommentId is not null
+            ? !string.Equals(_editorContent, _editorOriginalContent, StringComparison.Ordinal)
+            : _showEditor && !IsEffectivelyEmpty(_editorContent);
+
+    /// <summary>
+    /// Empty detection for the draft and submit guards. Uses the same set as
+    /// <see cref="TmRichEditorSimple"/>'s placeholder logic (whitespace-only values and the
+    /// bare-break / empty-container markup browsers leave behind when the editor is emptied),
+    /// extended with <c>&lt;p&gt;&lt;br&gt;&lt;/p&gt;</c>, so markup that would render the
+    /// editor's placeholder also does not surface as an unsaved draft.
+    /// </summary>
+    private static bool IsEffectivelyEmpty(string? html)
+        => string.IsNullOrWhiteSpace(html)
+            || html == "<br>"
+            || html == "<br/>"
+            || html == "<br />"
+            || html == "<div><br></div>"
+            || html == "<p><br></p>";
+
+    /// <summary>
+    /// Builds the current draft snapshot. <see cref="TmCommentDraftState.IsEditorOpen"/> is
+    /// <see langword="true"/> while either editor is visible;
+    /// <see cref="TmCommentDraftState.EditingCommentId"/> identifies the comment under edit;
+    /// <see cref="TmCommentDraftState.HasUnsavedContent"/> follows
+    /// <see cref="HasUnsavedContent"/> — any content beyond effectively-empty markup for a new
+    /// comment, content differing from the original body for an edit (see the remarks on
+    /// <see cref="HasUnsavedContent"/>).
     /// </summary>
     private TmCommentDraftState BuildDraftState()
         => new(
             _showEditor || _editingCommentId is not null,
             _editingCommentId,
-            HasUnsavedContent: false);
+            HasUnsavedContent);
 
     /// <summary>
     /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed. The dedup
-    /// is mandatory: without it the callback would fire on every keystroke once content changes
-    /// from both editors call this method, re-rendering the parent and leaking per-keystroke churn; the record's
-    /// value equality makes the comparison cheap and exact.
+    /// is mandatory: both editors report content changes into this method (via
+    /// the editors' bind after-hook, i.e. per keystroke in real usage), and without the value-equality
+    /// check each keystroke would invoke the callback and re-render the parent; the record's value
+    /// equality makes the comparison cheap and exact.
     /// </summary>
     private async Task NotifyDraftChangedAsync()
     {
@@ -238,7 +311,7 @@
 
     private async Task SubmitNewCommentAsync()
     {
-        if (string.IsNullOrWhiteSpace(_editorContent)) return;
+        if (IsEffectivelyEmpty(_editorContent)) return;
         await OnCommentAdded.InvokeAsync(_editorContent);
         // Closes through the shared CancelEditor, which emits the closed-editor state
         // exactly once.

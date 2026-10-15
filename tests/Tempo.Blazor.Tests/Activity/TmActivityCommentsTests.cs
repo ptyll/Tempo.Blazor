@@ -248,13 +248,14 @@ public class TmActivityCommentsTests : LocalizationTestBase
                 EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
 
         cut.Find(".tm-comments-add-btn").Click();
-        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTest("<p>Draft text</p>"));
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>Draft text</p>"));
         cut.Find(".tm-comment-submit-btn").Click();
 
-        // The full sequence must be exactly open → closed: the last state must carry the closed
-        // editor, otherwise the consumer keeps a stale dirty flag after a successful submit.
+        // The typed content must surface as the unsaved state (true, null, true) before the
+        // submit resets to the closed editor.
         states.Should().Equal(
             new TmCommentDraftState(true, null, false),
+            new TmCommentDraftState(true, null, true),
             new TmCommentDraftState(false, null, false));
     }
 
@@ -268,12 +269,14 @@ public class TmActivityCommentsTests : LocalizationTestBase
                 EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
 
         cut.FindAll(".tm-comment-edit-btn").First().Click();
-        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTest("<p>First comment edited</p>"));
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>First comment edited</p>"));
         cut.Find(".tm-comment-submit-btn").Click();
 
-        // The full sequence must be exactly open("c1") → closed.
+        // The edited content differs from the original body, so the unsaved state
+        // (true, "c1", true) must surface before the submit resets to the closed editor.
         states.Should().Equal(
             new TmCommentDraftState(true, "c1", false),
+            new TmCommentDraftState(true, "c1", true),
             new TmCommentDraftState(false, null, false));
     }
 
@@ -302,6 +305,161 @@ public class TmActivityCommentsTests : LocalizationTestBase
             states[i].Should().NotBe(states[i - 1],
                 "OnDraftChanged fires only when the draft state value actually changes");
         }
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_ReportsUnsavedContentWhenTypingNewComment()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>x</p>"));
+
+        // Typing into the new-comment editor flips HasUnsavedContent exactly once.
+        states.Should().Equal(
+            new TmCommentDraftState(true, null, false),
+            new TmCommentDraftState(true, null, true));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_EmptyMarkupArtifacts_AreNotUnsavedContent()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        // "<div><br></div>" is the markup a browser leaves behind when the editor is emptied;
+        // it renders the placeholder and must NOT surface as an unsaved draft, so the
+        // editor-open state remains the only notification.
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<div><br></div>"));
+
+        states.Should().Equal(new TmCommentDraftState(true, null, false));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_EditWithoutChangeReportsNoUnsavedContent()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        // No content change: the editor is pre-filled with the original body, which must NOT
+        // count as an unsaved draft. The edit-open state must be the ONLY notification.
+        await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+
+        states.Should().Equal(new TmCommentDraftState(true, "c1", false));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_EditWithChangeReportsUnsavedContent()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>First comment changed</p>"));
+
+        // Changing the body of the edited comment flips HasUnsavedContent while the editor
+        // stays open on "c1".
+        states.Should().Equal(
+            new TmCommentDraftState(true, "c1", false),
+            new TmCommentDraftState(true, "c1", true));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_EditRevertedToOriginalReportsNoUnsavedContent()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>First comment changed</p>"));
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>First comment</p>"));
+
+        // Reverting the edit back to the ORIGINAL body must drop HasUnsavedContent again —
+        // the comparison is against the original body, not a "changed once" latch.
+        states.Should().Equal(
+            new TmCommentDraftState(true, "c1", false),
+            new TmCommentDraftState(true, "c1", true),
+            new TmCommentDraftState(true, "c1", false));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_RepeatedTypingDoesNotRefire()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>a</p>"));
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>bb</p>"));
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>ccc</p>"));
+
+        // Dedup is mandatory: after the first transition to HasUnsavedContent == true the
+        // state value is unchanged, so no further notification may arrive.
+        states.Should().Equal(
+            new TmCommentDraftState(true, null, false),
+            new TmCommentDraftState(true, null, true));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_ValueChangedPath_NewCommentEditorNotifies()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        // Drive the REAL user-typing path (ValueChanged → bind → @bind-Value:after) instead of
+        // the SetEditorContentForTest seam, so the markup wiring itself is under test. Exactly
+        // one editor instance is rendered while the new-comment editor is open.
+        var editor = cut.FindComponents<TmRichEditorSimple>().Single();
+        await cut.InvokeAsync(() => editor.Instance.ValueChanged.InvokeAsync("<p>x</p>"));
+
+        states.Should().Equal(
+            new TmCommentDraftState(true, null, false),
+            new TmCommentDraftState(true, null, true));
+    }
+
+    [Fact]
+    public async Task Comments_OnDraftChanged_ValueChangedPath_EditEditorNotifies()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnDraftChanged,
+                EventCallback.Factory.Create<TmCommentDraftState>(this, state => states.Add(state))));
+
+        cut.FindAll(".tm-comment-edit-btn").First().Click();
+        // The SAME real-typing path on the SECOND editor instance: the edit editor is separate
+        // markup with its own @bind-Value:after wiring and must notify on its own.
+        var editor = cut.FindComponents<TmRichEditorSimple>().Single();
+        await cut.InvokeAsync(() => editor.Instance.ValueChanged.InvokeAsync("<p>First comment changed</p>"));
+
+        states.Should().Equal(
+            new TmCommentDraftState(true, "c1", false),
+            new TmCommentDraftState(true, "c1", true));
     }
 
     private static TmCommentEntry Comment(
