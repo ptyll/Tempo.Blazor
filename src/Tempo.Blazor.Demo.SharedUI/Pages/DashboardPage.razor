@@ -16,6 +16,11 @@
 
 <!-- Dashboard Component -->
 <section class="demo-section">
+    @* Fáze 6 (DA1): the CloseOnSelect switch demos both widget-selector behaviours — on (default)
+       each add closes the selector, off keeps it open while cards flip to the "Added" state. *@
+    <div class="mb-4">
+        <TmToggle @bind-Value="_closeOnSelect" Label="CloseOnSelect" data-testid="dashboard-close-on-select" />
+    </div>
     @* F2: Title/Subtitle name the screen, HeaderActions demo host-side header controls and the
        WidgetHeaderActions slot demos per-widget host content. The widget BODIES below are demo
        content rendered through WidgetTemplate — library components, not a library page widget (G12). *@
@@ -24,6 +29,7 @@
                  Title="Project Aurora"
                  Subtitle="Current state and key metrics"
                  AllowEdit="true"
+                 CloseOnSelect="_closeOnSelect"
                  OnDashboardChanged="OnDashboardChanged">
         <HeaderActions>
             <TmButton Variant="ButtonVariant.Secondary" OnClick="ExportDashboard">
@@ -98,6 +104,7 @@
 
     private TmDashboard? _dashboard;
     private string CurrentUserId => "demo-user";
+    private bool _closeOnSelect = true;
 
     // Demo chart data — plain demo content (G12), not library state.
     private static readonly ChartData VisitorsData = new()

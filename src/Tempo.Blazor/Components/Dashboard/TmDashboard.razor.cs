@@ -123,6 +123,14 @@ public partial class TmDashboard : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 
+    /// <summary>
+    /// Whether selecting a widget in the widget selector closes it. Defaults to <c>true</c> (the
+    /// historical behaviour). With <c>false</c> the selector stays open while the host keeps
+    /// receiving <see cref="OnWidgetSelected"/>'s additions; the freshly added widget still gets
+    /// the highlight and the scroll-into-view once the selector closes (DA1).
+    /// </summary>
+    [Parameter] public bool CloseOnSelect { get; set; } = true;
+
     private Task OnResolvedLayoutChanged(TmLayoutMode mode) => ResolvedLayoutChanged.InvokeAsync(mode);
 
     [Inject] public IDashboardProvider? DashboardProvider { get; set; }
@@ -537,7 +545,13 @@ public partial class TmDashboard : IAsyncDisposable
         instance.Y = position.Y;
         
         _widgets.Add(instance);
-        _showWidgetSelector = false;
+        // DA1: with CloseOnSelect=false the selector stays open so the host can add several
+        // widgets in a row; the highlight/scroll pair still fires, so the latest addition is
+        // emphasized (and scrolled to) once the selector eventually closes.
+        if (CloseOnSelect)
+        {
+            _showWidgetSelector = false;
+        }
         // F4 compact mode: highlight the fresh widget briefly so the user sees what the selector
         // just added (the CSS keeps the highlight sub-second-quiet under prefers-reduced-motion).
         _highlightedInstanceId = instance.InstanceId;

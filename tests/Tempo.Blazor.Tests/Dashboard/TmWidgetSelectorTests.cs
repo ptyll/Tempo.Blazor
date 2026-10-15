@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Web;
 using NSubstitute;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Dashboard;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Interfaces;
@@ -30,6 +31,7 @@ public class TmWidgetSelectorTests : LocalizationTestBase
             {
                 Id = SingleInstanceWidgetId, Name = "KPI", Description = "Key metric",
                 Category = WidgetCategories.Analytics, Icon = "bar-chart-2", AllowMultiple = false,
+                DefaultWidth = 4, DefaultHeight = 3,
             },
             new()
             {
@@ -51,13 +53,17 @@ public class TmWidgetSelectorTests : LocalizationTestBase
     private IRenderedComponent<TmWidgetSelector> RenderSelector(
         List<string>? existing = null,
         List<WidgetDefinition>? selected = null,
-        Action? closed = null)
+        Action? closed = null,
+        bool closeOnSelect = true,
+        TmLayoutMode layoutMode = TmLayoutMode.Auto)
         => Render<TmWidgetSelector>(p =>
         {
             p.Add(x => x.WidgetRegistry, CreateRegistry());
             p.Add(x => x.ExistingWidgets, existing ?? []);
             p.Add(x => x.OnSelect, (WidgetDefinition w) => selected?.Add(w));
             p.Add(x => x.OnClose, () => closed?.Invoke());
+            p.Add(x => x.CloseOnSelect, closeOnSelect);
+            p.Add(x => x.LayoutMode, layoutMode);
         });
 
     // ── B12: the selector is a TmModal surface ─────────────────────────────────────────
@@ -190,5 +196,145 @@ public class TmWidgetSelectorTests : LocalizationTestBase
         // Re-query after the re-render (the modal content rebuilds its subtree).
         cut.FindAll(".tm-widget-selector-category")[1].GetAttribute("aria-pressed").Should().Be("true");
         cut.FindAll(".tm-widget-selector-category")[0].GetAttribute("aria-pressed").Should().Be("false");
+    }
+
+    // ── Fáze 6 (DA1): CloseOnSelect, added state, size label ───────────────────────────
+
+    [Fact]
+    public void WidgetSelector_CloseOnSelectDefaultTrue_ClosesAfterAdd()
+    {
+        var closed = false;
+        var cut = RenderSelector(closed: () => closed = true);
+
+        cut.FindAll(".tm-widget-card").First().Click();
+
+        closed.Should().BeTrue("CloseOnSelect defaults to true — today's close-on-add behaviour");
+    }
+
+    [Fact]
+    public void WidgetSelector_CloseOnSelectFalse_StaysOpen_ShowsAddedState_AnnouncesLive()
+    {
+        var selected = new List<WidgetDefinition>();
+        var cut = RenderSelector(selected: selected, closeOnSelect: false);
+
+        cut.FindAll(".tm-widget-card").First().Click();
+
+        closed_guard(cut);
+        void closed_guard(IRenderedComponent<TmWidgetSelector> c)
+        {
+            // The selector stays open — the modal is still rendered.
+            c.FindAll(".tm-modal").Should().HaveCount(1);
+        }
+
+        selected.Should().ContainSingle();
+        selected[0].Id.Should().Be(SingleInstanceWidgetId);
+
+        // The just-added single-instance card switches to the "Added" state: the green badge
+        // replaces the plus indicator, and the card announces itself as not addable.
+        var card = cut.FindAll(".tm-widget-card")
+            .Single(c => (c.GetAttribute("aria-label") ?? "").Contains("KPI"));
+        card.GetAttribute("aria-disabled").Should().Be("true");
+        card.QuerySelector(".tm-widget-card-badge--added").Should().NotBeNull();
+        card.QuerySelector(".tm-widget-card-add").Should().BeNull();
+
+        // A polite live region announces the addition for screen readers.
+        var live = cut.Find(".tm-widget-selector-live");
+        live.GetAttribute("aria-live").Should().Be("polite");
+        live.TextContent.Should().Contain("Added");
+    }
+
+    [Fact]
+    public void WidgetSelector_AllowMultiple_ShowsAddedCount()
+    {
+        var cut = RenderSelector(closeOnSelect: false);
+
+        // The chart widget allows multiple instances: add it twice through the session.
+        cut.FindAll(".tm-widget-card").First(c => c.TextContent.Contains("Chart")).Click();
+        cut.FindAll(".tm-widget-card").First(c => c.TextContent.Contains("Chart")).Click();
+
+        var card = cut.FindAll(".tm-widget-card").First(c => c.TextContent.Contains("Chart"));
+        card.QuerySelector(".tm-widget-card-badge--added")!.TextContent.Should().Contain("2");
+        // A multiple-instance widget stays addable: the plus indicator remains.
+        card.QuerySelector(".tm-widget-card-add").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void WidgetSelector_AddedSingleInstance_ShowsAddedBadge_InsteadOfPlus_AriaDisabled()
+    {
+        var cut = RenderSelector(existing: [SingleInstanceWidgetId]);
+
+        var card = cut.FindAll(".tm-widget-card")
+            .Single(c => (c.GetAttribute("class") ?? "").Contains("tm-widget-card--disabled"));
+        card.QuerySelector(".tm-widget-card-badge--added")!.TextContent.Should().Contain("Added");
+        card.QuerySelector(".tm-widget-card-add").Should().BeNull("the badge replaces the plus indicator");
+        card.GetAttribute("aria-disabled").Should().Be("true");
+    }
+
+    [Fact]
+    public void WidgetSelector_PlusIndicator_AlwaysRendered()
+    {
+        var cut = RenderSelector();
+
+        // Every addable card carries the plus indicator in the DOM — it never depends on hover
+        // (the CSS keeps it permanently visible; coarse pointers get the 44px touch target).
+        var addableCards = cut.FindAll(".tm-widget-card")
+            .Where(c => c.GetAttribute("aria-disabled") != "true");
+        addableCards.Should().NotBeEmpty();
+        addableCards.Should().OnlyContain(c => c.QuerySelector(".tm-widget-card-add") != null);
+    }
+
+    [Fact]
+    public void WidgetSelector_SizeLabel_FormattedWithSpaces()
+    {
+        var cut = RenderSelector();
+
+        cut.Find(".tm-widget-card-size").TextContent.Should().Be("4 × 3",
+            "the grid size reads as a sentence-like token, not the cramped 4×3");
+    }
+
+    // ── Fáze 6: mobile presentation ────────────────────────────────────────────────────
+
+    [Fact]
+    public void WidgetSelector_Mobile_RendersCategoryChips_AsRadioGroup()
+    {
+        var cut = RenderSelector(layoutMode: TmLayoutMode.Mobile);
+
+        // The sidebar is gone; categories render as a horizontal radio group of chips.
+        cut.FindAll(".tm-widget-selector-sidebar").Should().BeEmpty();
+        var group = cut.Find(".tm-widget-selector-chips");
+        group.GetAttribute("role").Should().Be("radiogroup");
+        group.GetAttribute("aria-label").Should().Be("Categories");
+
+        var chips = group.QuerySelectorAll(".tm-widget-selector-chip");
+        chips.Should().HaveCountGreaterThan(1);
+        chips[0].GetAttribute("role").Should().Be("radio");
+        chips[0].GetAttribute("aria-checked").Should().Be("true", "'All widgets' is the default chip");
+        chips[1].GetAttribute("aria-checked").Should().Be("false");
+
+        // Activating a chip filters the grid to that category.
+        chips[1].Click();
+        cut.FindAll(".tm-widget-selector-chip")[1].GetAttribute("aria-checked").Should().Be("true");
+        cut.FindAll(".tm-widget-card").Should().OnlyContain(c => c.TextContent.Contains("KPI"),
+            "the Analytics category holds only the KPI widget");
+    }
+
+    [Fact]
+    public void WidgetSelector_MobilePresentation_IsSheetOnMobile()
+    {
+        var cut = RenderSelector(layoutMode: TmLayoutMode.Mobile);
+
+        // The F2 foundation: a forced-mobile selector presents as a bottom sheet — the modal
+        // panel carries the sheet class (tm-sheet__panel) instead of the desktop dialog chrome.
+        cut.Find(".tm-modal").ClassList.Should().Contain("tm-sheet__panel");
+    }
+
+    [Fact]
+    public void WidgetSelector_DoneButton_IsPrimary()
+    {
+        var cut = RenderSelector();
+
+        var done = cut.Find(".tm-widget-selector-footer .tm-btn");
+        done.ClassList.Should().Contain("tm-btn-primary",
+            "'Done' is the primary action of the selector footer");
     }
 }

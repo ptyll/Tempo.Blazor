@@ -7268,6 +7268,13 @@
               "description": "Additional CSS classes for the dashboard root element."
             },
             {
+              "name": "CloseOnSelect",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether selecting a widget in the widget selector closes it. With false the selector stays open while the host keeps receiving additions; the freshly added widget still gets the highlight and the scroll-into-view once the selector closes."
+            },
+            {
               "name": "DashboardId",
               "type": "string?",
               "isRequired": false,
@@ -7467,11 +7474,25 @@
           ],
           "parameters": [
             {
+              "name": "CloseOnSelect",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether selecting a widget closes the selector. With false the selector stays open: the added card flips to the green Added state, a multiple-instance widget grows an added counter, and a polite live region announces the addition."
+            },
+            {
               "name": "ExistingWidgets",
               "type": "List<string>",
               "isRequired": false,
               "default": "[]",
               "description": "Ids of the widgets already on the dashboard — single-instance ones among them cannot be added again."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the selector renders. Auto follows the viewport scope; a forced value pins the presentation — including the mobile chip row and the bottom sheet — for tests and embedded hosts. Never a viewport media query."
             },
             {
               "name": "OnClose",
@@ -7501,6 +7522,9 @@
             "tm-widget-selector-category",
             "tm-widget-selector-category--active",
             "tm-widget-selector-count",
+            "tm-widget-selector-chips",
+            "tm-widget-selector-chip",
+            "tm-widget-selector-chip-count",
             "tm-widget-selector-widgets",
             "tm-widget-selector-grid",
             "tm-widget-card",
@@ -7511,8 +7535,11 @@
             "tm-widget-card-desc",
             "tm-widget-card-size",
             "tm-widget-card-meta",
+            "tm-widget-card-badge",
+            "tm-widget-card-badge--added",
             "tm-widget-card-add",
             "tm-widget-selector-empty",
+            "tm-widget-selector-live",
             "tm-widget-selector-footer",
             "tm-widget-selector-hint"
           ],

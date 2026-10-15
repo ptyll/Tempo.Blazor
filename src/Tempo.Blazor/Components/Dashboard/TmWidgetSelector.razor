@@ -1,4 +1,6 @@
 @namespace Tempo.Blazor.Components.Dashboard
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.Icons
@@ -7,16 +9,26 @@
 @using Tempo.Blazor.Components.Inputs
 
 @* The selector is a TmModal surface (B12): dialog role, aria-modal, focus trap, Escape and the
-   scroll lock come from the modal, which also presents as a bottom sheet on a narrow viewport.
-   The extra-large surface keeps the category sidebar and the card grid from fighting for space.
+   scroll lock come from the modal, which also presents as a bottom sheet on a mobile layout
+   (F2 foundation). Fáze 6: the resolved layout — never a viewport media query — decides between
+   the desktop/tablet category sidebar and the mobile chip radio group; the cards show a pastel
+   category tile, a spaced size label and a persistent plus, and CloseOnSelect=false keeps the
+   selector open while the added card flips to a green "Added" badge with a live announcement.
    The E2E/test contract class .tm-widget-selector-modal stays on the content root. *@
 <TmModal Show="true"
          Size="ModalSize.XLarge"
+         LayoutMode="LayoutMode"
          Title="@Loc["TmWidgetSelector_Title"]"
          Subtitle="@Loc["TmWidgetSelector_Subtitle"]"
          OnClose="OnClose">
     <ChildContent>
-        <div class="tm-widget-selector-modal">
+        @if (Viewport is null && LayoutMode == TmLayoutMode.Auto)
+        {
+            @* No viewport scope: measure like the modal does, so the sidebar/chip switch is not
+               stuck on desktop for the first frame. Internal component — opened from C# (RZ10012). *@
+            @Probe
+        }
+        <div class="tm-widget-selector-modal" data-layout="@Context.CssModifier">
 
             @* Search ──────────────────────────────────────────── *@
             <div class="tm-widget-selector-search">
@@ -27,16 +39,52 @@
             @* Content ─────────────────────────────────────────── *@
             <div class="tm-widget-selector-content">
 
-                @* Category Sidebar ──────────────────────────────── *@
-                <div class="tm-widget-selector-sidebar">
-                    <div class="tm-widget-selector-categories">
-                        <button type="button"
-                                class="tm-widget-selector-category @(_selectedCategory == null ? "tm-widget-selector-category--active" : "")"
-                                aria-pressed="@(_selectedCategory == null ? "true" : "false")"
+                @* Category Sidebar (desktop + tablet) ──────────── *@
+                @if (!IsMobile)
+                {
+                    <div class="tm-widget-selector-sidebar">
+                        <div class="tm-widget-selector-categories">
+                            <button type="button"
+                                    class="tm-widget-selector-category @(_selectedCategory == null ? "tm-widget-selector-category--active" : "")"
+                                    aria-pressed="@(_selectedCategory == null ? "true" : "false")"
+                                    @onclick="() => SelectCategory(null)">
+                                <TmIcon Name="grid" Size="IconSize.Sm" />
+                                <span>@Loc["TmWidgetSelector_AllWidgets"]</span>
+                                <span class="tm-widget-selector-count">@GetTotalWidgetCount()</span>
+                            </button>
+
+                            @foreach (var category in GetCategories())
+                            {
+                                var count = GetWidgetCountByCategory(category.Id);
+                                if (count > 0)
+                                {
+                                    <button type="button"
+                                            class="tm-widget-selector-category @(_selectedCategory == category.Id ? "tm-widget-selector-category--active" : "") @GetCategoryColorClass(category.Id)"
+                                            aria-pressed="@(_selectedCategory == category.Id ? "true" : "false")"
+                                            @onclick="() => SelectCategory(category.Id)"
+                                            style="@GetCategoryColorStyle(category.Id)">
+                                        <TmIcon Name="@category.Icon" Size="IconSize.Sm" />
+                                        <span>@GetCategoryName(category)</span>
+                                        <span class="tm-widget-selector-count">@count</span>
+                                    </button>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @* Category chips (mobile): a horizontal radio group with counts — filtering
+                       stays reachable where the sidebar is hidden. Native buttons carry role=radio
+                       + aria-checked; activation is the browser's own Enter/Space handling. *@
+                    <div class="tm-widget-selector-chips" role="radiogroup"
+                         aria-label="@Loc["TmWidgetSelector_Categories"]">
+                        <button type="button" role="radio"
+                                class="tm-widget-selector-chip"
+                                aria-checked="@(_selectedCategory == null ? "true" : "false")"
                                 @onclick="() => SelectCategory(null)">
-                            <TmIcon Name="grid" Size="IconSize.Sm" />
                             <span>@Loc["TmWidgetSelector_AllWidgets"]</span>
-                            <span class="tm-widget-selector-count">@GetTotalWidgetCount()</span>
+                            <span class="tm-widget-selector-chip-count">@GetTotalWidgetCount()</span>
                         </button>
 
                         @foreach (var category in GetCategories())
@@ -44,19 +92,19 @@
                             var count = GetWidgetCountByCategory(category.Id);
                             if (count > 0)
                             {
-                                <button type="button"
-                                        class="tm-widget-selector-category @(_selectedCategory == category.Id ? "tm-widget-selector-category--active" : "") @GetCategoryColorClass(category.Id)"
-                                        aria-pressed="@(_selectedCategory == category.Id ? "true" : "false")"
+                                <button type="button" role="radio"
+                                        class="tm-widget-selector-chip @GetCategoryColorClass(category.Id)"
+                                        aria-checked="@(_selectedCategory == category.Id ? "true" : "false")"
                                         @onclick="() => SelectCategory(category.Id)"
                                         style="@GetCategoryColorStyle(category.Id)">
                                     <TmIcon Name="@category.Icon" Size="IconSize.Sm" />
                                     <span>@GetCategoryName(category)</span>
-                                    <span class="tm-widget-selector-count">@count</span>
+                                    <span class="tm-widget-selector-chip-count">@count</span>
                                 </button>
                             }
                         }
                     </div>
-                </div>
+                }
 
                 @* Widget Grid ────────────────────────────────────── *@
                 <div class="tm-widget-selector-widgets">
@@ -67,13 +115,14 @@
                             {
                                 @* A native button: Enter/Space activate it exactly once without
                                    emulation; a widget that cannot be added stays focusable and
-                                   announces aria-disabled instead of being removed from the tab order.
-                                   The card's children are phrasing content (spans, no h4/p inside a
-                                   button), and the description span is referenced by
-                                   aria-describedby so the announced name stays the widget's name. *@
+                                   announces aria-disabled instead of being removed from the tab
+                                   order. The card's children are phrasing content, and the
+                                   description span is referenced by aria-describedby so the
+                                   announced name stays the localized "Add {0}" instruction. *@
                                 <button type="button"
                                         class="tm-widget-card @(!CanAddWidget(widget) ? "tm-widget-card--disabled" : "")"
                                         aria-disabled="@(CanAddWidget(widget) ? "false" : "true")"
+                                        aria-label="@string.Format(Loc["TmWidgetSelector_AddWidgetAria"], widget.Name)"
                                         aria-describedby="@GetDescriptionId(widget)"
                                         @onclick="() => SelectWidget(widget)">
 
@@ -85,16 +134,24 @@
                                         <span class="tm-widget-card-title">@widget.Name</span>
                                         <span class="tm-widget-card-desc" id="@GetDescriptionId(widget)">@widget.Description</span>
                                         <span class="tm-widget-card-meta">
-                                            <span class="tm-widget-card-size" aria-hidden="true">@widget.DefaultWidth×@widget.DefaultHeight</span>
-                                            @if (!widget.AllowMultiple && IsAlreadyAdded(widget))
+                                            <span class="tm-widget-card-size" aria-hidden="true">@widget.DefaultWidth × @widget.DefaultHeight</span>
+                                            @if (GetAddedCount(widget) > 0)
                                             {
-                                                <span class="tm-widget-card-badge tm-widget-card-badge--added">@Loc["TmWidgetSelector_Added"]</span>
+                                                <span class="tm-widget-card-badge tm-widget-card-badge--added">
+                                                    <TmIcon Name="check" Size="IconSize.Sm" />
+                                                    @(widget.AllowMultiple
+                                                        ? string.Format(Loc["TmWidgetSelector_AddedCount"], GetAddedCount(widget))
+                                                        : Loc["TmWidgetSelector_Added"])
+                                                </span>
                                             }
                                         </span>
                                     </span>
 
                                     @if (CanAddWidget(widget))
                                     {
+                                        @* The plus is always painted (never hover-revealed): a
+                                           coarse pointer cannot hover, so an affordance that starts
+                                           at opacity 0 would not exist for touch. *@
                                         <span class="tm-widget-card-add" aria-hidden="true">
                                             <TmIcon Name="plus" Size="IconSize.Sm" />
                                         </span>
@@ -113,6 +170,10 @@
                     }
                 </div>
             </div>
+
+            @* Polite live region: with CloseOnSelect=false the modal stays open, so the addition
+               is announced here instead of through the closing surface. *@
+            <div class="tm-widget-selector-live" role="status" aria-live="polite">@_liveMessage</div>
         </div>
     </ChildContent>
     <Footer>
@@ -121,7 +182,7 @@
                 <TmIcon Name="info" Size="IconSize.Sm" />
                 @Loc["TmWidgetSelector_Hint"]
             </span>
-            <TmButton Variant="ButtonVariant.Ghost" OnClick="OnClose">
+            <TmButton Variant="ButtonVariant.Primary" OnClick="OnClose">
                 @Loc["TmWidgetSelector_Done"]
             </TmButton>
         </div>
@@ -141,8 +202,52 @@
     /// <summary>Raised when the selector should close (Escape, close button, Done, backdrop).</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
+    /// <summary>
+    /// Whether selecting a widget closes the selector. Defaults to <c>true</c> (the historical
+    /// behaviour). With <c>false</c> the selector stays open: the added card flips to the green
+    /// "Added" state, a multiple-instance widget grows an added counter, and a polite live region
+    /// announces the addition (DA1).
+    /// </summary>
+    [Parameter] public bool CloseOnSelect { get; set; } = true;
+
+    /// <summary>
+    /// The layout the selector renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope;
+    /// a forced value pins the presentation — including the mobile chip row and the bottom sheet —
+    /// for tests and embedded hosts. Never a viewport media query.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     private string _searchText = "";
     private string? _selectedCategory;
+    private string _liveMessage = "";
+    // Every add this session made, one entry per instance — a multiple-instance widget grows a
+    // count (2 adds → "Added (2)") before the host echoes the ids back.
+    private readonly List<string> _sessionAddedIds = [];
+
+    /// <summary>The viewport's layout (a modal is positioned against the viewport, not a container).</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    private readonly OverlayLayout _layout = new();
+
+    /// <summary>
+    /// The internal viewport probe, opened from C# because an internal tag compiles to a literal
+    /// element (RZ10012) — the same route TmModal uses when no viewport scope cascades in.
+    /// </summary>
+    private RenderFragment Probe => builder =>
+    {
+        builder.OpenComponent<ViewportProbe>(0);
+        builder.AddComponentParameter(1, nameof(ViewportProbe.OnMeasured),
+            EventCallback.Factory.Create<TmLayoutMode>(this, mode => _layout.Measured(mode)));
+        builder.CloseComponent();
+    };
+
+    /// <summary>
+    /// The resolved layout — the same resolution the inner TmModal performs, so the sidebar/chip
+    /// switch and the data-layout attribute never disagree with the sheet presentation.
+    /// </summary>
+    private TmLayoutContext Context => _layout.Resolve(LayoutMode, Viewport, TmLayoutMode.Desktop);
+
+    private bool IsMobile => Context.IsMobile;
 
     private IEnumerable<WidgetDefinition> _filteredWidgets => FilterWidgets();
 
@@ -213,15 +318,29 @@
         _selectedCategory = categoryId;
     }
 
+    // How many instances of the widget are on the dashboard: the host's list plus the adds this
+    // session made that the host has not echoed back yet (CloseOnSelect=false keeps the selector
+    // open across renders, so the union must never double count).
+    private int GetAddedCount(WidgetDefinition widget)
+    {
+        var hostCount = 0;
+        foreach (var id in ExistingWidgets)
+        {
+            if (id == widget.Id) hostCount++;
+        }
+
+        foreach (var id in _sessionAddedIds)
+        {
+            if (id == widget.Id && !ExistingWidgets.Contains(id)) hostCount++;
+        }
+
+        return hostCount;
+    }
+
     private bool CanAddWidget(WidgetDefinition widget)
     {
         if (widget.AllowMultiple) return true;
-        return !IsAlreadyAdded(widget);
-    }
-
-    private bool IsAlreadyAdded(WidgetDefinition widget)
-    {
-        return ExistingWidgets.Contains(widget.Id);
+        return GetAddedCount(widget) == 0;
     }
 
     /// <summary>Id of the card's description span — the card button points at it via aria-describedby.</summary>
@@ -230,6 +349,18 @@
     private async Task SelectWidget(WidgetDefinition widget)
     {
         if (!CanAddWidget(widget)) return;
+        _sessionAddedIds.Add(widget.Id);
         await OnSelect.InvokeAsync(widget);
+
+        if (CloseOnSelect)
+        {
+            await OnClose.InvokeAsync();
+            return;
+        }
+
+        // DA1: stay open, flip the card to the added state and announce the addition politely.
+        _liveMessage = widget.AllowMultiple
+            ? string.Format(Loc["TmWidgetSelector_AddedCount"], GetAddedCount(widget))
+            : string.Format(Loc["TmWidgetSelector_Added"], widget.Name);
     }
 }

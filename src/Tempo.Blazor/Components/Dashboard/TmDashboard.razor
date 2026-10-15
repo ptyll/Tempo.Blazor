@@ -485,9 +485,10 @@
 @* ── Widget Selector Modal ───────────────────────────────────── *@
 @if (_showWidgetSelector)
 {
-    <TmWidgetSelector 
+    <TmWidgetSelector
         WidgetRegistry="WidgetRegistry"
         ExistingWidgets="_widgets.Select(w => w.WidgetId).ToList()"
+        CloseOnSelect="CloseOnSelect"
         OnSelect="OnWidgetSelected"
         OnClose="() => _showWidgetSelector = false" />
 }

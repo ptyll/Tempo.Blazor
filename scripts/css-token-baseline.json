@@ -1,5 +1,5 @@
 {
-  "count": 5811,
+  "count": 5805,
   "violations": {
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #3b6ea2;": 1,
     "color-literal|src/Tempo.Blazor.Demo.InteractiveAuto/Tempo.Blazor.Demo.InteractiveAuto/Components/Layout/ReconnectModal.razor.css|background-color: #6b9ed2;": 2,
@@ -2173,7 +2173,6 @@
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_color-picker.css|background: repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 6px 6px;": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_context-menu.css|box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_context-menu.css|box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);": 1,
-    "color-literal|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|color: white;": 3,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-col-pin-btn--active { color: var(--tm-color-primary, #3b82f6); }": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-col-resize-handle:hover { background: var(--tm-color-primary, #3b82f6); opacity: 0.4; }": 1,
     "color-literal|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-data-table td.tm-col-pinned-left { box-shadow: 2px 0 3px -2px rgba(0, 0, 0, 0.18); }": 1,
@@ -3501,9 +3500,6 @@
     "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_badge.css|.tm-badge-primary.tm-badge-filled": 1,
     "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_bulk-action-bar.css|.tm-bulk-action-bar": 1,
     "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_cells.css|.tm-dbc__popup-apply": 1,
-    "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|.tm-widget-card-add": 1,
-    "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|.tm-widget-card-icon": 1,
-    "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_dashboard.css|.tm-widget-selector-category--active .tm-widget-selector-count": 1,
     "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_data-import.css|.tm-data-import__btn--primary": 1,
     "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_data-table.css|.tm-data-table-group-chip": 1,
     "white-on-primary|src/Tempo.Blazor/wwwroot/css/components/_editor-toolbar.css|.tm-rte-toolbar .tm-rte-btn[aria-pressed=\"true\"]": 1,

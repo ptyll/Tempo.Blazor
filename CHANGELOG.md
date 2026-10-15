@@ -75,6 +75,31 @@
     `TmDashboard_Grabbed` and `TmDashboard_MoveCancelled` in all four resource tables plus
     `MockTmLocalizer`.
 
+- **`TmWidgetSelector` F6 redesign — desktop, tablet and the mobile sheet (dashboard redesign
+  plan, phase F6), following `widget-selector--{desktop,tablet,mobile}.png`.**
+
+  - New parameter **`CloseOnSelect` (default `true`)** on `TmWidgetSelector` and pass-through on
+    `TmDashboard` (DA1). With `false` the selector stays open: the added card flips to a green
+    "✓ Přidáno" badge, a `AllowMultiple` widget grows an added counter
+    (`TmWidgetSelector_AddedCount`, "Added ({0})"), a polite live region announces the addition,
+    and the dashboard still highlights/scrolls to the newest widget once the selector closes.
+  - New parameter **`LayoutMode` (`TmLayoutMode`, default `Auto`)** on `TmWidgetSelector` — a
+    forced value pins the presentation (including the mobile chip row and the bottom sheet) for
+    tests and embedded hosts.
+  - Mobile: the category sidebar is replaced by a horizontally scrollable **chip radio group**
+    (`role="radiogroup"`, chips with counts, `TmWidgetSelector_Categories` as the group label);
+    cards stack in one column with a ≥ 44 px plus in the right corner; the selector presents as
+    the F2 bottom sheet with a sticky footer and safe-area padding.
+  - Tablet keeps the sidebar and goes to two card columns. All selector breakpoints follow the
+    resolved `data-layout` (layout/container), never a viewport media query.
+  - Visual refresh: 56 px pastel category tiles (shared `DashboardCategoryStyles` `color-mix`
+    tint, contrast-safe in dark mode), `--tm-radius-card` card corners, plain-text category
+    counts, spaced size label ("4 × 3", no monospace), permanently visible plus indicator
+    (40–44 px under `pointer: coarse`), primary "Hotovo" footer button.
+  - New localization keys `TmWidgetSelector_AddedCount`, `TmWidgetSelector_AddWidgetAria`
+    ("Přidat {0}") and `TmWidgetSelector_Categories` in all four resource tables plus
+    `MockTmLocalizer`.
+
 ### Breaking / Migration
 
 - **`TmDashboard` widget move/resize no longer uses HTML5 drag-and-drop or mouse events — the
@@ -120,6 +145,30 @@
   // before: querySelector('span.tm-widget-drag-handle')  → null now
   // after:  querySelector('button.tm-widget-drag-handle')
   ```
+
+- **`TmWidgetSelector` card visuals changed (F6): the plus indicator is always visible and an
+  already-added single-instance card is no longer dimmed.** Previously the 24 px plus floated in
+  at `opacity: 0` until hover/focus (invisible on touch), and a non-addable card wore a 0.5
+  opacity veil. Now the plus is a permanently painted 32 px ringed circle (≥ 44 px target under
+  `pointer: coarse` and on the mobile layout), the added state is a green "✓ Přidáno" badge
+  instead of the veil, and the icon tile is a 56 px pastel `color-mix` of the category colour.
+  Hosts overriding `.tm-widget-card-add` / `.tm-widget-card--disabled` opacity rules must drop
+  them:
+
+  ```css
+  /* before (2.9.0) */
+  .tm-widget-card-add { opacity: 0; }
+  .tm-widget-card--disabled { opacity: 0.5; }
+
+  /* after (2.9.1) — visibility is the default; the badge carries the added state */
+  .tm-widget-card-add { /* always painted */ }
+  .tm-widget-card--disabled { cursor: default; }
+  ```
+
+  The selector's responsive block also moved from the `@media (width < 768px)` viewport query to
+  `data-layout` attribute rules on `.tm-widget-selector-modal` (mobile hides the sidebar for the
+  chip radio group; tablet keeps the sidebar with two card columns) — hosts keying CSS on the old
+  media query should key on `data-layout` instead.
 
 - **`TmDashboard` default appearance changed from a wrapping card to `Plain`.** The component no
   longer paints a white rounded card around itself: the root sits directly on the workspace
